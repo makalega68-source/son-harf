@@ -27,6 +27,9 @@ data class ProfileDto(
     @SerialName("avatar_url") val avatarUrl: String? = null,
     @SerialName("avatar_visibility") val avatarVisibility: String = "hidden",
     @SerialName("allow_match_chat") val allowMatchChat: Boolean = true,
+    @SerialName("presence_status") val presenceStatus: String = "offline",
+    @SerialName("last_seen_at") val lastSeenAt: String? = null,
+    @SerialName("chat_suspended_until") val chatSuspendedUntil: String? = null,
     @SerialName("is_vip") val isVip: Boolean = false,
     val diamonds: Int = 0,
     val wins: Int = 0,
@@ -97,6 +100,33 @@ data class TriviaRoundDto(
 )
 
 @Serializable
+data class MatchmakingQueueDto(
+    @SerialName("user_id") val userId: String,
+    val language: String,
+    val status: String,
+    @SerialName("room_id") val roomId: String? = null
+)
+
+@Serializable
+data class FriendshipDto(
+    @SerialName("user_id") val userId: String,
+    @SerialName("friend_id") val friendId: String,
+    val status: String,
+    @SerialName("requested_by") val requestedBy: String
+)
+
+@Serializable
+data class GameInviteDto(
+    val id: String,
+    @SerialName("sender_id") val senderId: String,
+    @SerialName("receiver_id") val receiverId: String,
+    val language: String,
+    val status: String,
+    @SerialName("room_id") val roomId: String? = null,
+    @SerialName("expires_at") val expiresAt: String
+)
+
+@Serializable
 private data class ProfileWrite(
     val id: String,
     @SerialName("display_name") val displayName: String
@@ -130,59 +160,60 @@ class OnlineGameBackend(
     private val supabase: SupabaseClient = SupabaseProvider.client
 ) {
     suspend fun ensurePlayer(displayName: String): ProfileDto {
-        if (supabase.auth.currentUserOrNull() == null) {
-            supabase.auth.signInAnonymously()
-        }
+        if (supabase.auth.currentUserOrNull() == null) supabase.auth.signInAnonymously()
         val userId = requireNotNull(supabase.auth.currentUserOrNull()?.id) { "No authenticated user" }
         val safeName = displayName.trim().ifBlank { "Oyuncu" }.take(24)
-        return supabase.from("profiles")
+        val profile = supabase.from("profiles")
             .upsert(ProfileWrite(userId, safeName)) { select() }
             .decodeSingle<ProfileDto>()
+        runCatching { setPresence("online") }
+        return profile
     }
 
     fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
 
+    suspend fun setPresence(status: String) {
+        supabase.postgrest.rpc("set_presence", buildJsonObject { put("p_status", status) })
+    }
+
     suspend fun createRoom(language: String): GameRoomDto =
-        supabase.postgrest.rpc(
-            function = "create_room",
-            parameters = buildJsonObject { put("p_language", language) }
-        ).decodeSingle<GameRoomDto>()
+        supabase.postgrest.rpc("create_room", buildJsonObject { put("p_language", language) }).decodeSingle<GameRoomDto>()
 
     suspend fun joinRoom(code: String): GameRoomDto =
-        supabase.postgrest.rpc(
-            function = "join_room_by_code",
-            parameters = buildJsonObject { put("p_code", code.trim().uppercase()) }
-        ).decodeSingle<GameRoomDto>()
+        supabase.postgrest.rpc("join_room_by_code", buildJsonObject { put("p_code", code.trim().uppercase()) }).decodeSingle<GameRoomDto>()
+
+    suspend fun startRandomMatchmaking(language: String) {
+        supabase.postgrest.rpc("join_random_matchmaking", buildJsonObject { put("p_language", language) })
+    }
+
+    suspend fun pollRandomMatchmakingRoom(): GameRoomDto? {
+        supabase.postgrest.rpc("poll_random_matchmaking")
+        val me = currentUserId() ?: return null
+        val queue = supabase.from("matchmaking_queue").select { filter { eq("user_id", me) } }
+            .decodeList<MatchmakingQueueDto>().firstOrNull() ?: return null
+        val roomId = queue.roomId ?: return null
+        return getRoom(roomId)
+    }
+
+    suspend fun cancelRandomMatchmaking() {
+        supabase.postgrest.rpc("cancel_random_matchmaking")
+    }
 
     suspend fun submitWord(roomId: String, word: String): GameRoomDto =
-        supabase.postgrest.rpc(
-            function = "submit_word",
-            parameters = buildJsonObject {
-                put("p_room_id", roomId)
-                put("p_word", word.trim())
-            }
-        ).decodeSingle<GameRoomDto>()
+        supabase.postgrest.rpc("submit_word", buildJsonObject {
+            put("p_room_id", roomId); put("p_word", word.trim())
+        }).decodeSingle<GameRoomDto>()
 
     suspend fun claimTurnTimeout(roomId: String): GameRoomDto =
-        supabase.postgrest.rpc(
-            function = "claim_turn_timeout",
-            parameters = buildJsonObject { put("p_room_id", roomId) }
-        ).decodeSingle<GameRoomDto>()
+        supabase.postgrest.rpc("claim_turn_timeout", buildJsonObject { put("p_room_id", roomId) }).decodeSingle<GameRoomDto>()
 
     suspend fun answerTrivia(roundId: String, answerIndex: Int): GameRoomDto =
-        supabase.postgrest.rpc(
-            function = "answer_trivia",
-            parameters = buildJsonObject {
-                put("p_round_id", roundId)
-                put("p_answer_index", answerIndex)
-            }
-        ).decodeSingle<GameRoomDto>()
+        supabase.postgrest.rpc("answer_trivia", buildJsonObject {
+            put("p_round_id", roundId); put("p_answer_index", answerIndex)
+        }).decodeSingle<GameRoomDto>()
 
     suspend fun forfeit(roomId: String): GameRoomDto =
-        supabase.postgrest.rpc(
-            function = "forfeit_room",
-            parameters = buildJsonObject { put("p_room_id", roomId) }
-        ).decodeSingle<GameRoomDto>()
+        supabase.postgrest.rpc("forfeit_room", buildJsonObject { put("p_room_id", roomId) }).decodeSingle<GameRoomDto>()
 
     suspend fun sendChat(roomId: String, text: String) {
         val userId = requireNotNull(currentUserId()) { "No authenticated user" }
@@ -192,58 +223,96 @@ class OnlineGameBackend(
     }
 
     suspend fun blockUser(userId: String) {
-        supabase.postgrest.rpc(
-            function = "block_user",
-            parameters = buildJsonObject { put("p_blocked_id", userId) }
-        )
+        supabase.postgrest.rpc("block_user", buildJsonObject { put("p_blocked_id", userId) })
     }
 
-    suspend fun unblockUser(userId: String) {
-        supabase.postgrest.rpc(
-            function = "unblock_user",
-            parameters = buildJsonObject { put("p_blocked_id", userId) }
-        )
-    }
+    suspend fun reportUser(userId: String, roomId: String, reason: String): Int =
+        supabase.postgrest.rpc("report_player", buildJsonObject {
+            put("p_reported_id", userId)
+            put("p_reason", reason)
+            put("p_room_id", roomId)
+        }).decodeSingle<Int>()
 
     suspend fun setPhotoAccess(viewerId: String, allowed: Boolean) {
-        supabase.postgrest.rpc(
-            function = "set_photo_access",
-            parameters = buildJsonObject {
-                put("p_viewer_id", viewerId)
-                put("p_allowed", allowed)
-            }
-        )
+        supabase.postgrest.rpc("set_photo_access", buildJsonObject {
+            put("p_viewer_id", viewerId); put("p_allowed", allowed)
+        })
+    }
+
+    suspend fun sendFriendRequest(friendId: String) {
+        supabase.postgrest.rpc("send_friend_request", buildJsonObject { put("p_friend_id", friendId) })
+    }
+
+    suspend fun respondFriendRequest(friendId: String, accept: Boolean) {
+        supabase.postgrest.rpc("respond_friend_request", buildJsonObject {
+            put("p_friend_id", friendId); put("p_accept", accept)
+        })
+    }
+
+    suspend fun getFriendships(): List<FriendshipDto> =
+        supabase.from("friendships").select().decodeList<FriendshipDto>()
+
+    suspend fun getProfile(userId: String): ProfileDto =
+        supabase.from("profiles").select { filter { eq("id", userId) } }.decodeSingle<ProfileDto>()
+
+    suspend fun getFriends(): List<Pair<FriendshipDto, ProfileDto>> {
+        val me = currentUserId() ?: return emptyList()
+        return getFriendships().filter { it.status == "accepted" }.mapNotNull { f ->
+            val otherId = if (f.userId == me) f.friendId else f.userId
+            runCatching { f to getProfile(otherId) }.getOrNull()
+        }
+    }
+
+    suspend fun getIncomingFriendRequests(): List<Pair<FriendshipDto, ProfileDto>> {
+        val me = currentUserId() ?: return emptyList()
+        return getFriendships().filter { it.status == "pending" && it.requestedBy != me }.mapNotNull { f ->
+            runCatching { f to getProfile(f.requestedBy) }.getOrNull()
+        }
+    }
+
+    suspend fun inviteFriend(friendId: String, language: String): GameInviteDto =
+        supabase.postgrest.rpc("invite_friend_to_game", buildJsonObject {
+            put("p_friend_id", friendId); put("p_language", language)
+        }).decodeSingle<GameInviteDto>()
+
+    suspend fun getIncomingGameInvites(): List<GameInviteDto> {
+        val me = currentUserId() ?: return emptyList()
+        return supabase.from("game_invites").select { filter { eq("receiver_id", me) } }
+            .decodeList<GameInviteDto>().filter { it.status == "pending" }
+    }
+
+    suspend fun respondGameInvite(inviteId: String, accept: Boolean): GameRoomDto? {
+        supabase.postgrest.rpc("respond_game_invite", buildJsonObject {
+            put("p_invite_id", inviteId); put("p_accept", accept)
+        })
+        if (!accept) return null
+        val me = currentUserId() ?: return null
+        val invite = supabase.from("game_invites").select { filter { eq("id", inviteId) } }
+            .decodeSingle<GameInviteDto>()
+        return invite.roomId?.let { getRoom(it) }
     }
 
     suspend fun getRoom(roomId: String): GameRoomDto =
         supabase.from("game_rooms").select { filter { eq("id", roomId) } }.decodeSingle<GameRoomDto>()
 
     suspend fun getWords(roomId: String): List<GameWordDto> =
-        supabase.from("game_words").select { filter { eq("room_id", roomId) } }
-            .decodeList<GameWordDto>().sortedBy { it.id }
+        supabase.from("game_words").select { filter { eq("room_id", roomId) } }.decodeList<GameWordDto>().sortedBy { it.id }
 
     suspend fun getChat(roomId: String): List<ChatMessageDto> =
-        supabase.from("chat_messages").select { filter { eq("room_id", roomId) } }
-            .decodeList<ChatMessageDto>().sortedBy { it.id }
+        supabase.from("chat_messages").select { filter { eq("room_id", roomId) } }.decodeList<ChatMessageDto>().sortedBy { it.id }
 
     suspend fun getActiveTriviaRound(roomId: String): TriviaRoundDto? =
         supabase.from("trivia_rounds").select { filter { eq("room_id", roomId) } }
-            .decodeList<TriviaRoundDto>()
-            .filter { it.resolvedAt == null }
-            .maxByOrNull { it.milestone }
+            .decodeList<TriviaRoundDto>().filter { it.resolvedAt == null }.maxByOrNull { it.milestone }
 
     suspend fun getTriviaQuestion(questionId: Long): TriviaQuestionDto =
-        supabase.from("trivia_questions").select { filter { eq("id", questionId) } }
-            .decodeSingle<TriviaQuestionDto>()
+        supabase.from("trivia_questions").select { filter { eq("id", questionId) } }.decodeSingle<TriviaQuestionDto>()
 
     fun observeRoom(roomId: String, intervalMs: Long = 700): Flow<GameRoomDto> = flow {
         var previous: GameRoomDto? = null
         while (currentCoroutineContext().isActive) {
             val next = getRoom(roomId)
-            if (next != previous) {
-                emit(next)
-                previous = next
-            }
+            if (next != previous) { emit(next); previous = next }
             delay(intervalMs)
         }
     }
@@ -252,10 +321,7 @@ class OnlineGameBackend(
         var previous: List<GameWordDto> = emptyList()
         while (currentCoroutineContext().isActive) {
             val next = getWords(roomId)
-            if (next != previous) {
-                emit(next)
-                previous = next
-            }
+            if (next != previous) { emit(next); previous = next }
             delay(intervalMs)
         }
     }
@@ -264,10 +330,7 @@ class OnlineGameBackend(
         var previous: List<ChatMessageDto> = emptyList()
         while (currentCoroutineContext().isActive) {
             val next = getChat(roomId)
-            if (next != previous) {
-                emit(next)
-                previous = next
-            }
+            if (next != previous) { emit(next); previous = next }
             delay(intervalMs)
         }
     }
