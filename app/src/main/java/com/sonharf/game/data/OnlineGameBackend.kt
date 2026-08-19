@@ -10,6 +10,8 @@ import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.realtime.Realtime
+import io.github.jan.supabase.storage.Storage
+import io.github.jan.supabase.storage.storage
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -19,12 +21,15 @@ import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import kotlin.time.Duration.Companion.days
 
 @Serializable
 data class ProfileDto(
     val id: String,
     @SerialName("display_name") val displayName: String,
     @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("avatar_path") val avatarPath: String? = null,
+    @SerialName("avatar_thumb_path") val avatarThumbPath: String? = null,
     @SerialName("avatar_visibility") val avatarVisibility: String = "hidden",
     @SerialName("allow_match_chat") val allowMatchChat: Boolean = true,
     @SerialName("presence_status") val presenceStatus: String = "offline",
@@ -34,6 +39,13 @@ data class ProfileDto(
     val diamonds: Int = 0,
     val wins: Int = 0,
     val losses: Int = 0,
+    @SerialName("total_matches") val totalMatches: Int = 0,
+    @SerialName("total_rounds") val totalRounds: Int = 0,
+    @SerialName("rounds_won") val roundsWon: Int = 0,
+    @SerialName("valid_words") val validWords: Int = 0,
+    @SerialName("best_streak") val bestStreak: Int = 0,
+    @SerialName("word_storms") val wordStorms: Int = 0,
+    val rating: Int = 1000,
 )
 
 @Serializable
@@ -140,7 +152,19 @@ data class GameInviteDto(
     @SerialName("expires_at") val expiresAt: String,
 )
 
+@Serializable
+data class UserBlockDto(
+    @SerialName("blocker_id") val blockerId: String,
+    @SerialName("blocked_id") val blockedId: String,
+)
+
 @Serializable private data class ProfileWrite(val id: String, @SerialName("display_name") val displayName: String)
+@Serializable private data class ProfileUpdate(
+    @SerialName("display_name") val displayName: String,
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("avatar_path") val avatarPath: String? = null,
+    @SerialName("avatar_visibility") val avatarVisibility: String = "friends",
+)
 @Serializable private data class ChatWrite(@SerialName("room_id") val roomId: String, @SerialName("sender_id") val senderId: String, val body: String)
 
 object SupabaseProvider {
@@ -151,6 +175,7 @@ object SupabaseProvider {
             install(Auth)
             install(Postgrest)
             install(Realtime)
+            install(Storage)
         }
     }
 }
@@ -159,6 +184,11 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     suspend fun ensurePlayer(displayName: String): ProfileDto {
         if (supabase.auth.currentUserOrNull() == null) supabase.auth.signInAnonymously()
         val id = requireNotNull(supabase.auth.currentUserOrNull()?.id)
+        val existing = runCatching { getProfile(id) }.getOrNull()
+        if (existing != null) {
+            runCatching { setPresence("online") }
+            return existing
+        }
         val profile = supabase.from("profiles")
             .upsert(ProfileWrite(id, displayName.trim().ifBlank { "Oyuncu" }.take(24))) { select() }
             .decodeSingle<ProfileDto>()
@@ -167,6 +197,45 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     }
 
     fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
+
+    suspend fun updateMyProfile(displayName: String, avatarBytes: ByteArray? = null): ProfileDto {
+        val id = requireNotNull(currentUserId())
+        val cleanName = displayName.trim().ifBlank { "Oyuncu" }.take(24)
+        var avatarPath: String? = null
+        var avatarUrl: String? = null
+        if (avatarBytes != null && avatarBytes.isNotEmpty()) {
+            avatarPath = "$id/avatar-${System.currentTimeMillis()}.jpg"
+            val bucket = supabase.storage.from("profile-photos")
+            bucket.upload(avatarPath, avatarBytes) { upsert = true }
+            avatarUrl = bucket.createSignedUrl(avatarPath, 365.days)
+        } else {
+            val current = getProfile(id)
+            avatarPath = current.avatarPath
+            avatarUrl = current.avatarUrl
+        }
+        supabase.from("profiles").update(ProfileUpdate(cleanName, avatarUrl, avatarPath, "friends")) { filter { eq("id", id) } }
+        return getProfile(id)
+    }
+
+    suspend fun searchPlayers(query: String): List<ProfileDto> {
+        val me = currentUserId()
+        val q = query.trim().lowercase()
+        if (q.length < 2) return emptyList()
+        return supabase.from("profiles").select().decodeList<ProfileDto>()
+            .filter { it.id != me && it.displayName.lowercase().contains(q) }
+            .take(20)
+    }
+
+    suspend fun getBlockedUsers(): List<ProfileDto> {
+        val me = currentUserId() ?: return emptyList()
+        val rows = supabase.from("user_blocks").select { filter { eq("blocker_id", me) } }.decodeList<UserBlockDto>()
+        return rows.mapNotNull { runCatching { getProfile(it.blockedId) }.getOrNull() }
+    }
+
+    suspend fun unblockUser(userId: String) {
+        val me = requireNotNull(currentUserId())
+        supabase.from("user_blocks").delete { filter { eq("blocker_id", me); eq("blocked_id", userId) } }
+    }
 
     suspend fun setPresence(status: String) {
         supabase.postgrest.rpc("set_presence", buildJsonObject { put("p_status", status) })
@@ -186,24 +255,16 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
         return queue.roomId?.let { getRoom(it) }
     }
 
-    suspend fun cancelRandomMatchmaking() {
-        supabase.postgrest.rpc("cancel_random_matchmaking")
-    }
+    suspend fun cancelRandomMatchmaking() { supabase.postgrest.rpc("cancel_random_matchmaking") }
 
     suspend fun submitWord(roomId: String, word: String): GameRoomDto =
-        supabase.postgrest.rpc(
-            "submit_word_v3",
-            buildJsonObject { put("p_room_id", roomId); put("p_word", word.trim()) },
-        ).decodeSingle()
+        supabase.postgrest.rpc("submit_word_v3", buildJsonObject { put("p_room_id", roomId); put("p_word", word.trim()) }).decodeSingle()
 
     suspend fun claimTurnTimeout(roomId: String): GameRoomDto =
         supabase.postgrest.rpc("claim_turn_timeout", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()
 
     suspend fun answerTrivia(roundId: String, answerIndex: Int): GameRoomDto =
-        supabase.postgrest.rpc(
-            "answer_trivia_v3",
-            buildJsonObject { put("p_round_id", roundId); put("p_answer_index", answerIndex) },
-        ).decodeSingle()
+        supabase.postgrest.rpc("answer_trivia_v3", buildJsonObject { put("p_round_id", roundId); put("p_answer_index", answerIndex) }).decodeSingle()
 
     suspend fun heartbeatRoom(roomId: String): GameRoomDto =
         supabase.postgrest.rpc("heartbeat_room", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()
@@ -230,106 +291,64 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
         supabase.from("chat_messages").insert(ChatWrite(roomId, id, body))
     }
 
-    suspend fun blockUser(userId: String) {
-        supabase.postgrest.rpc("block_user", buildJsonObject { put("p_blocked_id", userId) })
-    }
+    suspend fun blockUser(userId: String) { supabase.postgrest.rpc("block_user", buildJsonObject { put("p_blocked_id", userId) }) }
 
     suspend fun reportUser(userId: String, roomId: String, reason: String): Int =
-        supabase.postgrest.rpc(
-            "report_player",
-            buildJsonObject { put("p_reported_id", userId); put("p_reason", reason); put("p_room_id", roomId) },
-        ).decodeSingle()
+        supabase.postgrest.rpc("report_player", buildJsonObject { put("p_reported_id", userId); put("p_reason", reason); put("p_room_id", roomId) }).decodeSingle()
 
     suspend fun setPhotoAccess(viewerId: String, allowed: Boolean) {
-        supabase.postgrest.rpc(
-            "set_photo_access",
-            buildJsonObject { put("p_viewer_id", viewerId); put("p_allowed", allowed) },
-        )
+        supabase.postgrest.rpc("set_photo_access", buildJsonObject { put("p_viewer_id", viewerId); put("p_allowed", allowed) })
     }
 
-    suspend fun sendFriendRequest(friendId: String) {
-        supabase.postgrest.rpc("send_friend_request", buildJsonObject { put("p_friend_id", friendId) })
-    }
+    suspend fun sendFriendRequest(friendId: String) { supabase.postgrest.rpc("send_friend_request", buildJsonObject { put("p_friend_id", friendId) }) }
 
     suspend fun respondFriendRequest(friendId: String, accept: Boolean) {
-        supabase.postgrest.rpc(
-            "respond_friend_request",
-            buildJsonObject { put("p_friend_id", friendId); put("p_accept", accept) },
-        )
+        supabase.postgrest.rpc("respond_friend_request", buildJsonObject { put("p_friend_id", friendId); put("p_accept", accept) })
     }
 
-    suspend fun getFriendships(): List<FriendshipDto> =
-        supabase.from("friendships").select().decodeList()
+    suspend fun getFriendships(): List<FriendshipDto> = supabase.from("friendships").select().decodeList()
 
-    suspend fun getProfile(id: String): ProfileDto =
-        supabase.from("profiles").select { filter { eq("id", id) } }.decodeSingle()
+    suspend fun getProfile(id: String): ProfileDto = supabase.from("profiles").select { filter { eq("id", id) } }.decodeSingle()
 
     suspend fun getFriends(): List<Pair<FriendshipDto, ProfileDto>> {
         val me = currentUserId() ?: return emptyList()
-        return getFriendships().filter { it.status == "accepted" }.mapNotNull { friendship ->
-            runCatching {
-                friendship to getProfile(if (friendship.userId == me) friendship.friendId else friendship.userId)
-            }.getOrNull()
+        return getFriendships().filter { it.status == "accepted" }.mapNotNull { f ->
+            runCatching { f to getProfile(if (f.userId == me) f.friendId else f.userId) }.getOrNull()
         }
     }
 
     suspend fun getIncomingFriendRequests(): List<Pair<FriendshipDto, ProfileDto>> {
         val me = currentUserId() ?: return emptyList()
-        return getFriendships().filter { it.status == "pending" && it.requestedBy != me }.mapNotNull { friendship ->
-            runCatching { friendship to getProfile(friendship.requestedBy) }.getOrNull()
+        return getFriendships().filter { it.status == "pending" && it.requestedBy != me }.mapNotNull { f ->
+            runCatching { f to getProfile(f.requestedBy) }.getOrNull()
         }
     }
 
     suspend fun inviteFriend(friendId: String, language: String): GameInviteDto =
-        supabase.postgrest.rpc(
-            "invite_friend_to_game",
-            buildJsonObject { put("p_friend_id", friendId); put("p_language", language) },
-        ).decodeSingle()
+        supabase.postgrest.rpc("invite_friend_to_game", buildJsonObject { put("p_friend_id", friendId); put("p_language", language) }).decodeSingle()
 
     suspend fun getIncomingGameInvites(): List<GameInviteDto> {
         val me = currentUserId() ?: return emptyList()
-        return supabase.from("game_invites")
-            .select { filter { eq("receiver_id", me) } }
-            .decodeList<GameInviteDto>()
-            .filter { it.status == "pending" }
+        return supabase.from("game_invites").select { filter { eq("receiver_id", me) } }.decodeList<GameInviteDto>().filter { it.status == "pending" }
     }
 
     suspend fun respondGameInvite(inviteId: String, accept: Boolean): GameRoomDto? {
-        supabase.postgrest.rpc(
-            "respond_game_invite",
-            buildJsonObject { put("p_invite_id", inviteId); put("p_accept", accept) },
-        )
+        supabase.postgrest.rpc("respond_game_invite", buildJsonObject { put("p_invite_id", inviteId); put("p_accept", accept) })
         if (!accept) return null
-        val invite = supabase.from("game_invites")
-            .select { filter { eq("id", inviteId) } }
-            .decodeSingle<GameInviteDto>()
+        val invite = supabase.from("game_invites").select { filter { eq("id", inviteId) } }.decodeSingle<GameInviteDto>()
         return invite.roomId?.let { getRoom(it) }
     }
 
-    suspend fun getRoom(id: String): GameRoomDto =
-        supabase.from("game_rooms").select { filter { eq("id", id) } }.decodeSingle()
+    suspend fun getRoom(id: String): GameRoomDto = supabase.from("game_rooms").select { filter { eq("id", id) } }.decodeSingle()
 
-    suspend fun getWords(id: String): List<GameWordDto> =
-        supabase.from("game_words")
-            .select { filter { eq("room_id", id) } }
-            .decodeList<GameWordDto>()
-            .sortedBy { it.id }
+    suspend fun getWords(id: String): List<GameWordDto> = supabase.from("game_words").select { filter { eq("room_id", id) } }.decodeList<GameWordDto>().sortedBy { it.id }
 
-    suspend fun getChat(id: String): List<ChatMessageDto> =
-        supabase.from("chat_messages")
-            .select { filter { eq("room_id", id) } }
-            .decodeList<ChatMessageDto>()
-            .sortedBy { it.id }
+    suspend fun getChat(id: String): List<ChatMessageDto> = supabase.from("chat_messages").select { filter { eq("room_id", id) } }.decodeList<ChatMessageDto>().sortedBy { it.id }
 
     suspend fun getActiveTriviaRound(id: String): TriviaRoundDto? =
-        supabase.from("trivia_rounds")
-            .select { filter { eq("room_id", id) } }
-            .decodeList<TriviaRoundDto>()
-            .filter { it.resolvedAt == null }
-            .maxByOrNull { it.milestone }
+        supabase.from("trivia_rounds").select { filter { eq("room_id", id) } }.decodeList<TriviaRoundDto>().filter { it.resolvedAt == null }.maxByOrNull { it.milestone }
 
-    suspend fun getTriviaQuestion(id: Long): TriviaQuestionDto =
-        supabase.from("trivia_questions").select { filter { eq("id", id) } }.decodeSingle()
+    suspend fun getTriviaQuestion(id: Long): TriviaQuestionDto = supabase.from("trivia_questions").select { filter { eq("id", id) } }.decodeSingle()
 
     fun observeRoom(id: String, intervalMs: Long = 700): Flow<GameRoomDto> = flow {
         var previous: GameRoomDto? = null
