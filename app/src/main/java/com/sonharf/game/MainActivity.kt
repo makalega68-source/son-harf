@@ -3,6 +3,7 @@ package com.sonharf.game
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,14 +20,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-internal val SonHarfBg = Color(0xFF080B14)
-internal val SonHarfSurface = Color(0xFF121827)
-internal val SonHarfSurface2 = Color(0xFF1A2236)
-internal val SonHarfPurple = Color(0xFF7C5CFC)
-internal val SonHarfCyan = Color(0xFF35D5FF)
+internal val SonHarfBg = Color(0xFF070A12)
+internal val SonHarfSurface = Color(0xFF101727)
+internal val SonHarfSurface2 = Color(0xFF172136)
+internal val SonHarfPurple = Color(0xFF7A5AF8)
+internal val SonHarfCyan = Color(0xFF42D7FF)
 internal val SonHarfGold = Color(0xFFFFC857)
-internal val SonHarfText = Color(0xFFF5F7FF)
-internal val SonHarfMuted = Color(0xFF9AA6BE)
+internal val SonHarfText = Color(0xFFF8FAFF)
+internal val SonHarfMuted = Color(0xFF94A3B8)
 
 enum class AppScreen { HOME, GAME, SHOP, PROFILE }
 
@@ -44,9 +45,7 @@ class MainActivity : ComponentActivity() {
                     onBackground = SonHarfText,
                     onSurface = SonHarfText
                 )
-            ) {
-                SonHarfApp()
-            }
+            ) { SonHarfApp() }
         }
     }
 }
@@ -54,11 +53,10 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun SonHarfApp() {
     var screen by remember { mutableStateOf(AppScreen.HOME) }
-
     Scaffold(
         containerColor = SonHarfBg,
         bottomBar = {
-            NavigationBar(containerColor = Color(0xFF0D1220), tonalElevation = 0.dp) {
+            NavigationBar(containerColor = Color(0xFF0B1020), tonalElevation = 0.dp) {
                 NavItem("⌂", "Ana Sayfa", screen == AppScreen.HOME) { screen = AppScreen.HOME }
                 NavItem("⚔", "Oyna", screen == AppScreen.GAME) { screen = AppScreen.GAME }
                 NavItem("◆", "Mağaza", screen == AppScreen.SHOP) { screen = AppScreen.SHOP }
@@ -72,7 +70,7 @@ private fun SonHarfApp() {
                 .padding(padding)
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFF0B1020), SonHarfBg, Color(0xFF090A11))
+                        listOf(Color(0xFF0B1020), SonHarfBg, Color(0xFF05070D))
                     )
                 )
         ) {
@@ -93,8 +91,9 @@ private fun RowScope.NavItem(icon: String, label: String, selected: Boolean, onC
         onClick = onClick,
         icon = {
             Surface(
-                color = if (selected) SonHarfPurple.copy(alpha = .18f) else Color.Transparent,
-                shape = RoundedCornerShape(16.dp)
+                color = if (selected) SonHarfPurple.copy(alpha = .2f) else Color.Transparent,
+                shape = RoundedCornerShape(16.dp),
+                border = if (selected) BorderStroke(1.dp, SonHarfPurple.copy(alpha = .28f)) else null
             ) {
                 Text(
                     icon,
@@ -127,11 +126,15 @@ private fun HomeScreen(onPlay: () -> Unit) {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("SON HARF", fontSize = 31.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
-                    Text("Kelime düellosu", color = SonHarfMuted, fontSize = 14.sp)
+                    Text("SON HARF", fontSize = 32.sp, fontWeight = FontWeight.Black, letterSpacing = 1.8.sp)
+                    Text("Gerçek zamanlı kelime düellosu", color = SonHarfMuted, fontSize = 13.sp)
                 }
-                Surface(color = SonHarfSurface2, shape = RoundedCornerShape(18.dp)) {
-                    Text("◆  0", Modifier.padding(horizontal = 14.dp, vertical = 9.dp), color = SonHarfCyan, fontWeight = FontWeight.Bold)
+                Surface(
+                    color = SonHarfCyan.copy(alpha = .08f),
+                    shape = RoundedCornerShape(999.dp),
+                    border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .25f))
+                ) {
+                    Text("● ONLINE", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 11.sp)
                 }
             }
         }
@@ -139,7 +142,7 @@ private fun HomeScreen(onPlay: () -> Unit) {
         item {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(30.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Box(
@@ -147,38 +150,33 @@ private fun HomeScreen(onPlay: () -> Unit) {
                         .fillMaxWidth()
                         .background(
                             Brush.linearGradient(
-                                listOf(Color(0xFF6A4CF4), Color(0xFF3F65F8), Color(0xFF1FB6D9))
+                                listOf(Color(0xFF7657FF), Color(0xFF4E6DFF), Color(0xFF16B8D9))
                             )
                         )
                         .padding(22.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
                         Surface(color = Color.White.copy(alpha = .15f), shape = RoundedCornerShape(999.dp)) {
-                            Text("⚡ ONLINE DÜELLO", Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("⚡ 1v1 ONLINE DÜELLO", Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 11.sp, fontWeight = FontWeight.Black)
                         }
-                        Text("Son harfi yakala,\nrakibini bitir.", fontSize = 30.sp, lineHeight = 34.sp, fontWeight = FontWeight.Black)
-                        Text("45 saniyelik turlar • canlı oda • anlık sohbet", color = Color.White.copy(alpha = .82f))
+                        Text("Son harfi yakala.\nSüreyi yönet. Kazan.", fontSize = 29.sp, lineHeight = 33.sp, fontWeight = FontWeight.Black)
+                        Text("45 saniyelik turlar • özel oda kodu • canlı sohbet", color = Color.White.copy(alpha = .84f), lineHeight = 20.sp)
                         Button(
                             onClick = onPlay,
-                            modifier = Modifier.fillMaxWidth().height(54.dp),
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
                             shape = RoundedCornerShape(18.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF1A2140))
-                        ) {
-                            Text("OYUNA GİR", fontWeight = FontWeight.Black, letterSpacing = .6.sp)
-                        }
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Color(0xFF151C34))
+                        ) { Text("DÜELLOYA GİR", fontWeight = FontWeight.Black, letterSpacing = .8.sp) }
                     }
                 }
             }
         }
 
+        item { Text("Hızlı Bakış", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
         item {
-            Text("Hızlı Bakış", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        }
-
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
-                StatCard("⏱", "45 sn", "Tur süresi", Modifier.weight(1f))
-                StatCard("⚔", "1v1", "Düello", Modifier.weight(1f))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                StatCard("⏱", "45 sn", "Tur", Modifier.weight(1f))
+                StatCard("⚔", "1v1", "Mod", Modifier.weight(1f))
                 StatCard("✦", "Canlı", "Sohbet", Modifier.weight(1f))
             }
         }
@@ -187,11 +185,12 @@ private fun HomeScreen(onPlay: () -> Unit) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
                 shape = RoundedCornerShape(24.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.fillMaxWidth(),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = .05f))
             ) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("NASIL OYNANIR?", color = SonHarfCyan, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                    Text("Bir oda oluştur, kodu arkadaşına gönder ve son harfle başlayan yeni kelimeyi süre dolmadan yaz.", color = SonHarfText, lineHeight = 22.sp)
+                    Text("NASIL OYNANIR?", color = SonHarfCyan, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                    Text("Odanı oluştur, kodu arkadaşına gönder. Her yeni kelime önceki kelimenin son harfiyle başlamalı.", color = SonHarfText, lineHeight = 22.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         MiniPill("1  Oda")
                         MiniPill("2  Kelime")
@@ -208,7 +207,8 @@ private fun StatCard(icon: String, value: String, title: String, modifier: Modif
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
-        shape = RoundedCornerShape(20.dp)
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = .045f))
     ) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(icon, fontSize = 20.sp)
@@ -233,7 +233,6 @@ private fun ShopScreen() {
         Triple("◈ Tema", "Premium Tema Paketi", "Yakında"),
         Triple("☺ Emoji", "Özel Emoji Paketi", "Yakında")
     )
-
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(18.dp),
@@ -243,38 +242,28 @@ private fun ShopScreen() {
             Text("MAĞAZA", fontSize = 30.sp, fontWeight = FontWeight.Black)
             Text("Hesabını kişiselleştir", color = SonHarfMuted)
         }
-
         item {
-            Card(shape = RoundedCornerShape(26.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent)) {
+            Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent)) {
                 Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(Brush.linearGradient(listOf(Color(0xFFFFB547), Color(0xFFFF7A59))))
-                        .padding(20.dp)
+                    Modifier.fillMaxWidth().background(Brush.linearGradient(listOf(Color(0xFFFFB547), Color(0xFFFF7A59)))).padding(20.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("VIP", fontSize = 30.sp, fontWeight = FontWeight.Black)
-                            Text("♛", fontSize = 28.sp)
+                            Text("VIP", fontSize = 30.sp, fontWeight = FontWeight.Black, color = Color(0xFF24150E))
+                            Text("♛", fontSize = 28.sp, color = Color(0xFF24150E))
                         }
                         Text("Reklamsız deneyim • VIP rozeti • özel temalar • gelişmiş istatistik", color = Color(0xFF2C1B13))
-                        Surface(color = Color.Black.copy(alpha = .18f), shape = RoundedCornerShape(14.dp)) {
-                            Text("Test tamamlanınca aktif olacak", Modifier.fillMaxWidth().padding(12.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                        Surface(color = Color.Black.copy(alpha = .15f), shape = RoundedCornerShape(14.dp)) {
+                            Text("Test tamamlanınca aktif olacak", Modifier.fillMaxWidth().padding(12.dp), textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, color = Color(0xFF24150E))
                         }
                     }
                 }
             }
         }
-
         item { Text("Paketler", fontSize = 18.sp, fontWeight = FontWeight.Bold) }
-
         items(products) { product ->
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp)) {
-                Row(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = .045f))) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text(product.first, color = SonHarfCyan, fontWeight = FontWeight.Black)
                         Text(product.second, fontWeight = FontWeight.SemiBold)
@@ -300,36 +289,29 @@ private fun ProfileScreen() {
             Text("PROFİL", fontSize = 30.sp, fontWeight = FontWeight.Black)
             Text("Oyuncu kimliğin ve istatistiklerin", color = SonHarfMuted)
         }
-
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(26.dp)) {
-                Column(
-                    Modifier.fillMaxWidth().padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Surface(color = SonHarfPurple.copy(alpha = .18f), shape = RoundedCornerShape(999.dp)) {
-                        Text("SK", Modifier.padding(20.dp), fontSize = 26.sp, fontWeight = FontWeight.Black, color = SonHarfCyan)
+            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(26.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = .05f))) {
+                Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Surface(color = SonHarfPurple.copy(alpha = .18f), shape = RoundedCornerShape(999.dp), border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .25f))) {
+                        Text("SH", Modifier.padding(20.dp), fontSize = 26.sp, fontWeight = FontWeight.Black, color = SonHarfCyan)
                     }
                     Text("TEST OYUNCUSU", fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text("Online test sürümü", color = SonHarfMuted)
                 }
             }
         }
-
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.fillMaxWidth()) {
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 ProfileMetric("0", "Galibiyet", Modifier.weight(1f))
                 ProfileMetric("0", "Mağlubiyet", Modifier.weight(1f))
                 ProfileMetric("0", "Elmas", Modifier.weight(1f))
             }
         }
-
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = .045f))) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("İstatistikler", fontWeight = FontWeight.Bold)
-                    Text("Canlı maç verileri bağlandıktan sonra galibiyet, seri ve kelime performansı burada görünecek.", color = SonHarfMuted)
+                    Text("Canlı maç verileri bağlandığında galibiyet, seri ve kelime performansı burada görünecek.", color = SonHarfMuted)
                 }
             }
         }
@@ -338,7 +320,7 @@ private fun ProfileScreen() {
 
 @Composable
 private fun ProfileMetric(value: String, label: String, modifier: Modifier) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(18.dp)) {
+    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = .045f))) {
         Column(Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, fontWeight = FontWeight.Black, fontSize = 20.sp)
             Text(label, color = SonHarfMuted, fontSize = 10.sp)
