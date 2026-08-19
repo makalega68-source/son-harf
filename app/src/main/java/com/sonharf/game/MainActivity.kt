@@ -73,7 +73,7 @@ private fun SonHarfApp() {
         ) {
             when (screen) {
                 AppScreen.HOME -> HomeScreen { SonHarfSoundFx.softNotify(); screen = AppScreen.GAME }
-                AppScreen.GAME -> OnlineGameScreenV3()
+                AppScreen.GAME -> OnlineGameScreenV4()
                 AppScreen.SHOP -> ShopScreen()
                 AppScreen.PROFILE -> FinalProfileScreen()
             }
