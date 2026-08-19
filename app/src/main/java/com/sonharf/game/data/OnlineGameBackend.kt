@@ -40,9 +40,9 @@ class OnlineGameBackend(private val supabase:SupabaseClient=SupabaseProvider.cli
  suspend fun startRandomMatchmaking(language:String){supabase.postgrest.rpc("join_random_matchmaking",buildJsonObject{put("p_language",language)})}
  suspend fun pollRandomMatchmakingRoom():GameRoomDto?{supabase.postgrest.rpc("poll_random_matchmaking");val me=currentUserId()?:return null;val q=supabase.from("matchmaking_queue").select{filter{eq("user_id",me)}}.decodeList<MatchmakingQueueDto>().firstOrNull()?:return null;return q.roomId?.let{getRoom(it)}}
  suspend fun cancelRandomMatchmaking(){supabase.postgrest.rpc("cancel_random_matchmaking")}
- suspend fun submitWord(roomId:String,word:String):GameRoomDto=supabase.postgrest.rpc("submit_word",buildJsonObject{put("p_room_id",roomId);put("p_word",word.trim())}).decodeSingle()
+ suspend fun submitWord(roomId:String,word:String):GameRoomDto=supabase.postgrest.rpc("submit_word_v2",buildJsonObject{put("p_room_id",roomId);put("p_word",word.trim())}).decodeSingle()
  suspend fun claimTurnTimeout(roomId:String):GameRoomDto=supabase.postgrest.rpc("claim_turn_timeout",buildJsonObject{put("p_room_id",roomId)}).decodeSingle()
- suspend fun answerTrivia(roundId:String,answerIndex:Int):GameRoomDto=supabase.postgrest.rpc("answer_trivia",buildJsonObject{put("p_round_id",roundId);put("p_answer_index",answerIndex)}).decodeSingle()
+ suspend fun answerTrivia(roundId:String,answerIndex:Int):GameRoomDto=supabase.postgrest.rpc("answer_trivia_v2",buildJsonObject{put("p_round_id",roundId);put("p_answer_index",answerIndex)}).decodeSingle()
  suspend fun forfeit(roomId:String):GameRoomDto=supabase.postgrest.rpc("forfeit_room",buildJsonObject{put("p_room_id",roomId)}).decodeSingle()
  suspend fun requestRematch(roomId:String):GameRoomDto=supabase.postgrest.rpc("request_rematch",buildJsonObject{put("p_room_id",roomId)}).decodeSingle()
  suspend fun sendChat(roomId:String,text:String){val id=requireNotNull(currentUserId());val b=text.trim().take(300);require(b.isNotEmpty());supabase.from("chat_messages").insert(ChatWrite(roomId,id,b))}
