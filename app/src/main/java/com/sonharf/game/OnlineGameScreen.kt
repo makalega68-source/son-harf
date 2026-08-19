@@ -3,8 +3,6 @@ package com.sonharf.game
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -21,7 +19,11 @@ import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.GameWordDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.TriviaQuestionDto
+import com.sonharf.game.data.TriviaRoundDto
+import java.time.Instant
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
@@ -36,9 +38,12 @@ fun OnlineGameScreen() {
     val scope = rememberCoroutineScope()
     var playerName by remember { mutableStateOf("") }
     var roomCode by remember { mutableStateOf("") }
+    var selectedLanguage by remember { mutableStateOf("tr") }
     var room by remember { mutableStateOf<GameRoomDto?>(null) }
     var words by remember { mutableStateOf<List<GameWordDto>>(emptyList()) }
     var chat by remember { mutableStateOf<List<ChatMessageDto>>(emptyList()) }
+    var triviaRound by remember { mutableStateOf<TriviaRoundDto?>(null) }
+    var triviaQuestion by remember { mutableStateOf<TriviaQuestionDto?>(null) }
     var wordInput by remember { mutableStateOf("") }
     var chatInput by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -50,20 +55,34 @@ fun OnlineGameScreen() {
     fun readableError(t: Throwable): String {
         val raw = t.message.orEmpty()
         return when {
-            "anonymous_provider_disabled" in raw -> "Supabase'te anonim giriş kapalı. Authentication > Providers > Anonymous bölümünden etkinleştir."
+            "anonymous_provider_disabled" in raw -> "Anonim giriş kapalı."
             "not_your_turn" in raw -> "Sıra rakibinde."
-            "wrong_start_letter" in raw -> "Kelime yanlış harfle başlıyor."
-            "word_already_used" in raw -> "Bu kelime daha önce kullanıldı."
-            "turn_expired" in raw -> "Süren doldu."
-            "room_not_available" in raw -> "Oda bulunamadı veya dolu."
+            "answers_locked" in raw -> "Şıkları görmek için 3 saniyelik okuma süresinin bitmesini bekle."
+            "room_not_available" in raw -> "Oda bulunamadı, dolu veya oyunculardan biri diğerini engellemiş."
             else -> raw.substringBefore("URL:").trim().ifBlank { "Bağlantı hatası oluştu." }
+        }
+    }
+
+    suspend fun refreshQuiz(active: GameRoomDto) {
+        if (active.status == "quiz") {
+            val q = backend.getActiveTriviaRound(active.id)
+            triviaRound = q
+            triviaQuestion = q?.let { backend.getTriviaQuestion(it.questionId) }
+        } else {
+            triviaRound = null
+            triviaQuestion = null
         }
     }
 
     fun startObservers(active: GameRoomDto) {
         roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel()
         roomJob = scope.launch {
-            backend.observeRoom(active.id).catch { message = readableError(it) }.collect { room = it }
+            backend.observeRoom(active.id)
+                .catch { message = readableError(it) }
+                .collect {
+                    room = it
+                    refreshQuiz(it)
+                }
         }
         wordsJob = scope.launch {
             backend.observeWords(active.id).catch { message = readableError(it) }.collect { words = it }
@@ -90,6 +109,8 @@ fun OnlineGameScreen() {
                 onPlayerNameChange = { playerName = it.take(24) },
                 roomCode = roomCode,
                 onRoomCodeChange = { roomCode = it.uppercase().take(6) },
+                selectedLanguage = selectedLanguage,
+                onLanguageChange = { selectedLanguage = it },
                 busy = busy,
                 message = message,
                 onCreateRoom = {
@@ -97,7 +118,7 @@ fun OnlineGameScreen() {
                         busy = true
                         runCatching {
                             backend.ensurePlayer(playerName)
-                            backend.createRoom()
+                            backend.createRoom(selectedLanguage)
                         }.onSuccess {
                             room = it
                             roomCode = it.code
@@ -115,6 +136,7 @@ fun OnlineGameScreen() {
                             backend.joinRoom(roomCode)
                         }.onSuccess {
                             room = it
+                            selectedLanguage = it.language
                             message = "Odaya katıldın. Düello başladı."
                             startObservers(it)
                         }.onFailure { message = readableError(it) }
@@ -125,8 +147,9 @@ fun OnlineGameScreen() {
         } else {
             val activeRoom = room ?: return@Box
             val me = backend.currentUserId()
-            val myTurn = activeRoom.currentPlayerId == me && activeRoom.status == "playing"
+            val myTurn = activeRoom.currentPlayerId == me && activeRoom.status in listOf("playing", "final", "sudden_death")
             val waiting = activeRoom.status == "waiting"
+            val opponentId = if (me == activeRoom.hostId) activeRoom.guestId else activeRoom.hostId
 
             ActiveGameScreen(
                 activeRoom = activeRoom,
@@ -135,6 +158,8 @@ fun OnlineGameScreen() {
                 waiting = waiting,
                 words = words,
                 chat = chat,
+                triviaRound = triviaRound,
+                triviaQuestion = triviaQuestion,
                 wordInput = wordInput,
                 onWordInputChange = { wordInput = it.take(40) },
                 chatInput = chatInput,
@@ -145,9 +170,28 @@ fun OnlineGameScreen() {
                     scope.launch {
                         busy = true
                         runCatching { backend.submitWord(activeRoom.id, wordInput) }
-                            .onSuccess { room = it; wordInput = ""; message = "Hamle gönderildi." }
+                            .onSuccess {
+                                room = it
+                                wordInput = ""
+                                message = eventText(it, me)
+                            }
                             .onFailure { message = readableError(it) }
                         busy = false
+                    }
+                },
+                onTimeout = {
+                    scope.launch {
+                        runCatching { backend.claimTurnTimeout(activeRoom.id) }
+                            .onSuccess { room = it; message = eventText(it, me) }
+                            .onFailure { message = readableError(it) }
+                    }
+                },
+                onAnswerTrivia = { index ->
+                    val roundId = triviaRound?.id ?: return@ActiveGameScreen
+                    scope.launch {
+                        runCatching { backend.answerTrivia(roundId, index) }
+                            .onSuccess { room = it; refreshQuiz(it); message = eventText(it, me) }
+                            .onFailure { message = readableError(it) }
                     }
                 },
                 onForfeit = {
@@ -163,10 +207,39 @@ fun OnlineGameScreen() {
                             .onSuccess { chatInput = "" }
                             .onFailure { message = readableError(it) }
                     }
+                },
+                onBlockOpponent = {
+                    val target = opponentId ?: return@ActiveGameScreen
+                    scope.launch {
+                        runCatching { backend.blockUser(target) }
+                            .onSuccess { message = "Oyuncu engellendi. Sohbet ve yeniden eşleşme kapatıldı." }
+                            .onFailure { message = readableError(it) }
+                    }
+                },
+                onAllowPhoto = {
+                    val target = opponentId ?: return@ActiveGameScreen
+                    scope.launch {
+                        runCatching { backend.setPhotoAccess(target, true) }
+                            .onSuccess { message = "Profil fotoğrafı bu oyuncuya özel açıldı." }
+                            .onFailure { message = readableError(it) }
+                    }
                 }
             )
         }
     }
+}
+
+private fun eventText(room: GameRoomDto, me: String?): String = when (room.lastEvent) {
+    "streak_bonus" -> if (room.lastEventPlayerId == me) "🔥 KELİME SERİSİ! +3 ekstra puan" else "Rakip seri yaptı. Baskı artıyor!"
+    "invalid_word" -> "Geçersiz kelime: -1 puan ve sıra değişti."
+    "not_in_dictionary" -> "Sözlükte kabul edilmeyen kelime: -1 puan."
+    "wrong_start_letter" -> "Yanlış başlangıç harfi: -1 puan."
+    "word_already_used" -> "Bu kelime daha önce kullanıldı: -1 puan."
+    "turn_expired" -> "Süre doldu: -1 puan ve sıra rakibe geçti."
+    "quiz_started" -> "🧠 Bonus soru! Önce 3 saniye oku."
+    "quiz_won" -> "⚡ Bonus kapıldı! Oyun devam ediyor."
+    "final_started" -> "🏁 FİNAL ZİNCİRİ başladı!"
+    else -> "Hamle işlendi."
 }
 
 @Composable
@@ -175,84 +248,63 @@ private fun LobbyScreen(
     onPlayerNameChange: (String) -> Unit,
     roomCode: String,
     onRoomCodeChange: (String) -> Unit,
+    selectedLanguage: String,
+    onLanguageChange: (String) -> Unit,
     busy: Boolean,
     message: String,
     onCreateRoom: () -> Unit,
     onJoinRoom: () -> Unit
 ) {
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(18.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    Column(
+        modifier = Modifier.fillMaxSize().padding(18.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        item {
-            Text("ONLINE DÜELLO", fontSize = 30.sp, fontWeight = FontWeight.Black)
-            Text("Arkadaşını çağır, son harfle kapış.", color = SonHarfMuted)
+        Text("ONLINE DÜELLO", fontSize = 30.sp, fontWeight = FontWeight.Black)
+        Text("Önce oyun dilini seç, sonra odanı aç.", color = SonHarfMuted)
+
+        Surface(color = SonHarfPurple.copy(alpha = .12f), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .35f))) {
+            Text(message, Modifier.fillMaxWidth().padding(14.dp), color = SonHarfText, fontSize = 13.sp)
         }
 
-        item {
-            Surface(color = SonHarfPurple.copy(alpha = .12f), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .35f))) {
-                Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("⚡", fontSize = 18.sp)
-                    Text(message, color = SonHarfText, fontSize = 13.sp, lineHeight = 18.sp)
+        Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp)) {
+            Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("OYUN DİLİ", color = SonHarfCyan, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FilterChip(
+                        selected = selectedLanguage == "tr",
+                        onClick = { onLanguageChange("tr") },
+                        label = { Text("🇹🇷 Türkçe") }
+                    )
+                    FilterChip(
+                        selected = selectedLanguage == "en",
+                        onClick = { onLanguageChange("en") },
+                        label = { Text("🇬🇧 English") }
+                    )
                 }
+                Text("Oda açıldıktan sonra dil değişmez.", color = SonHarfMuted, fontSize = 11.sp)
             }
         }
 
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp)) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("OYUNCU KİMLİĞİ", color = SonHarfCyan, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                    DarkTextField(value = playerName, onValueChange = onPlayerNameChange, label = "Oyuncu adı", placeholder = "Örn. Ümit")
-                }
-            }
-        }
+        DarkTextField(value = playerName, onValueChange = onPlayerNameChange, label = "Oyuncu adı", placeholder = "Oyuncu")
 
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp)) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column {
-                            Text("ODA OLUŞTUR", color = SonHarfCyan, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                            Text("Davet kodunu sen üret", color = SonHarfMuted, fontSize = 12.sp)
-                        }
-                        Text("＋", fontSize = 26.sp, color = SonHarfPurple)
-                    }
-                    Button(
-                        onClick = onCreateRoom,
-                        enabled = !busy && playerName.trim().length >= 2,
-                        modifier = Modifier.fillMaxWidth().height(54.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple)
-                    ) { Text(if (busy) "HAZIRLANIYOR…" else "ÖZEL ODA OLUŞTUR", fontWeight = FontWeight.Black) }
-                }
-            }
-        }
+        Button(
+            onClick = onCreateRoom,
+            enabled = !busy && playerName.trim().length >= 2,
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+            shape = RoundedCornerShape(18.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple)
+        ) { Text(if (busy) "HAZIRLANIYOR…" else "ÖZEL ODA OLUŞTUR", fontWeight = FontWeight.Black) }
 
-        item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HorizontalDivider(Modifier.weight(1f), color = SonHarfSurface2)
-                Text("VEYA", color = SonHarfMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                HorizontalDivider(Modifier.weight(1f), color = SonHarfSurface2)
-            }
-        }
-
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp)) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Text("KODLA KATIL", color = SonHarfGold, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                    DarkTextField(value = roomCode, onValueChange = onRoomCodeChange, label = "6 haneli oda kodu", placeholder = "ABC123")
-                    OutlinedButton(
-                        onClick = onJoinRoom,
-                        enabled = !busy && playerName.trim().length >= 2 && roomCode.length == 6,
-                        modifier = Modifier.fillMaxWidth().height(54.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .7f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = SonHarfCyan)
-                    ) { Text("ODAYA KATIL", fontWeight = FontWeight.Black) }
-                }
-            }
-        }
+        HorizontalDivider(color = SonHarfSurface2)
+        DarkTextField(value = roomCode, onValueChange = onRoomCodeChange, label = "6 haneli oda kodu", placeholder = "ABC123")
+        OutlinedButton(
+            onClick = onJoinRoom,
+            enabled = !busy && playerName.trim().length >= 2 && roomCode.length == 6,
+            modifier = Modifier.fillMaxWidth().height(54.dp),
+            shape = RoundedCornerShape(18.dp),
+            border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .7f)),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = SonHarfCyan)
+        ) { Text("ODAYA KATIL", fontWeight = FontWeight.Black) }
     }
 }
 
@@ -285,6 +337,8 @@ private fun ActiveGameScreen(
     waiting: Boolean,
     words: List<GameWordDto>,
     chat: List<ChatMessageDto>,
+    triviaRound: TriviaRoundDto?,
+    triviaQuestion: TriviaQuestionDto?,
     wordInput: String,
     onWordInputChange: (String) -> Unit,
     chatInput: String,
@@ -292,96 +346,92 @@ private fun ActiveGameScreen(
     message: String,
     busy: Boolean,
     onSubmitWord: () -> Unit,
+    onTimeout: () -> Unit,
+    onAnswerTrivia: (Int) -> Unit,
     onForfeit: () -> Unit,
-    onSendChat: () -> Unit
+    onSendChat: () -> Unit,
+    onBlockOpponent: () -> Unit,
+    onAllowPhoto: () -> Unit
 ) {
-    Column(
-        Modifier.fillMaxSize().padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
+    val isHost = me == activeRoom.hostId
+    val myScore = if (isHost) activeRoom.hostScore else activeRoom.guestScore
+    val opponentScore = if (isHost) activeRoom.guestScore else activeRoom.hostScore
+    val myStreak = if (isHost) activeRoom.hostStreak else activeRoom.guestStreak
+    val required = words.lastOrNull()?.normalizedWord?.lastOrNull()?.uppercaseChar()
+
+    var secondsLeft by remember(activeRoom.turnDeadline) { mutableStateOf(45) }
+    LaunchedEffect(activeRoom.turnDeadline, activeRoom.currentPlayerId, activeRoom.status) {
+        while (activeRoom.turnDeadline != null && activeRoom.status in listOf("playing", "final", "sudden_death")) {
+            val deadline = runCatching { Instant.parse(activeRoom.turnDeadline) }.getOrNull()
+            val left = deadline?.epochSecond?.minus(Instant.now().epochSecond)?.toInt()?.coerceAtLeast(0) ?: 45
+            secondsLeft = left
+            if (left <= 0) {
+                onTimeout()
+                break
+            }
+            delay(1000)
+        }
+    }
+
+    Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(22.dp)) {
-            Row(
-                Modifier.fillMaxWidth().padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text("ODA ${activeRoom.code}", color = SonHarfCyan, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
-                    Text(if (waiting) "Rakip bekleniyor" else if (myTurn) "SIRA SENDE" else "RAKİBİN SIRASI", fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column {
+                        Text("ODA ${activeRoom.code}  •  ${if (activeRoom.language == "tr") "TR" else "EN"}", color = SonHarfCyan, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        Text(if (waiting) "Rakip bekleniyor" else if (myTurn) "SIRA SENDE" else "RAKİBİN SIRASI", fontSize = 20.sp, fontWeight = FontWeight.Black)
+                    }
+                    Surface(color = if (secondsLeft <= 10) Color(0xFF5A202C) else SonHarfPurple, shape = RoundedCornerShape(999.dp)) {
+                        Text("$secondsLeft sn", Modifier.padding(horizontal = 14.dp, vertical = 8.dp), fontWeight = FontWeight.Black)
+                    }
                 }
-                Surface(color = if (myTurn) SonHarfPurple else SonHarfSurface2, shape = RoundedCornerShape(999.dp)) {
-                    Text("45 sn", Modifier.padding(horizontal = 14.dp, vertical = 8.dp), fontWeight = FontWeight.Black)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text("SEN  $myScore", fontWeight = FontWeight.Black)
+                    Text("Kelime ${activeRoom.validWordCount}/45", color = SonHarfMuted)
+                    Text("$opponentScore  RAKİP", fontWeight = FontWeight.Black)
                 }
+                if (myStreak >= 4) Text("🔥 Seri: $myStreak doğru", color = SonHarfGold, fontWeight = FontWeight.Bold)
             }
         }
 
         if (waiting) {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfPurple.copy(alpha = .15f)), shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .35f))) {
-                Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("ARKADAŞINA BU KODU GÖNDER", color = SonHarfMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    Text(activeRoom.code, fontSize = 38.sp, fontWeight = FontWeight.Black, letterSpacing = 5.sp, color = SonHarfCyan)
-                    Text("İkinci telefonda Kodla Katıl alanına yazılmalı.", color = SonHarfMuted, fontSize = 12.sp)
+            Surface(color = SonHarfPurple.copy(alpha = .15f), shape = RoundedCornerShape(20.dp)) {
+                Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("DAVET KODU", color = SonHarfMuted)
+                    Text(activeRoom.code, fontSize = 36.sp, fontWeight = FontWeight.Black, letterSpacing = 5.sp, color = SonHarfCyan)
                 }
             }
         }
 
-        LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(vertical = 4.dp)
-        ) {
-            if (words.isEmpty()) {
-                item {
-                    Surface(color = SonHarfSurface.copy(alpha = .7f), shape = RoundedCornerShape(18.dp)) {
-                        Text(
-                            if (waiting) "Rakip bağlandığında oyun başlayacak." else "İlk kelimeyi oynayacak kişi hamlesini yapabilir.",
-                            Modifier.fillMaxWidth().padding(18.dp),
-                            color = SonHarfMuted,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+        if (activeRoom.status == "quiz") {
+            TriviaPanel(triviaRound, triviaQuestion, onAnswerTrivia)
+        } else if (!waiting && activeRoom.status != "finished") {
+            Surface(color = SonHarfSurface, shape = RoundedCornerShape(24.dp), modifier = Modifier.weight(1f)) {
+                Column(
+                    Modifier.fillMaxSize().padding(18.dp),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text("SON HARF", color = SonHarfMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(required?.toString() ?: "•", fontSize = 64.sp, fontWeight = FontWeight.Black, color = SonHarfCyan)
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        if (required == null) "İlk kelimeyi yaz" else "${required} ile başlayan yeni bir kelime yaz",
+                        color = SonHarfMuted,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    DarkTextField(wordInput, onWordInputChange, if (myTurn) "Kelime" else "Rakibin hamlesini bekle", "Kelime")
+                    Spacer(Modifier.height(10.dp))
+                    Button(
+                        onClick = onSubmitWord,
+                        enabled = myTurn && wordInput.trim().length >= 2 && !busy,
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple)
+                    ) { Text("GÖNDER", fontWeight = FontWeight.Black) }
+                    Text("Geçerli +3 • Hatalı/Süre −1 • Her 5 kusursuz doğru +3", color = SonHarfMuted, fontSize = 10.sp, modifier = Modifier.padding(top = 10.dp))
                 }
-            }
-            items(words, key = { it.id }) { item ->
-                val mine = item.playerId == me
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
-                    Surface(
-                        color = if (mine) SonHarfPurple.copy(alpha = .28f) else SonHarfSurface,
-                        shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, if (mine) SonHarfPurple.copy(alpha = .5f) else SonHarfSurface2)
-                    ) {
-                        Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
-                            Text(item.word.uppercase(), fontWeight = FontWeight.Black, fontSize = 18.sp)
-                            Text(if (mine) "Sen" else "Rakip", color = SonHarfMuted, fontSize = 10.sp)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (activeRoom.status == "playing") {
-            val required = words.lastOrNull()?.normalizedWord?.lastOrNull()?.uppercaseChar()
-            if (required != null) {
-                Surface(color = SonHarfCyan.copy(alpha = .1f), shape = RoundedCornerShape(14.dp)) {
-                    Text("Yeni kelime  $required  ile başlamalı", Modifier.fillMaxWidth().padding(10.dp), color = SonHarfCyan, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
-                }
-            }
-            DarkTextField(wordInput, onWordInputChange, if (myTurn) "Kelime yaz" else "Rakibin hamlesini bekle", "Kelime")
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = onSubmitWord,
-                    enabled = myTurn && wordInput.trim().length >= 2 && !busy,
-                    modifier = Modifier.weight(1f).height(50.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple)
-                ) { Text("GÖNDER", fontWeight = FontWeight.Black) }
-                OutlinedButton(
-                    onClick = onForfeit,
-                    modifier = Modifier.weight(1f).height(50.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0xFFFF6B7A)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8894))
-                ) { Text("PES ET") }
             }
         }
 
@@ -396,9 +446,15 @@ private fun ActiveGameScreen(
 
         Surface(color = SonHarfSurface, shape = RoundedCornerShape(18.dp)) {
             Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("CANLI SOHBET", color = SonHarfCyan, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("CANLI SOHBET", color = SonHarfCyan, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        TextButton(onClick = onAllowPhoto) { Text("Fotoğrafı aç", fontSize = 10.sp) }
+                        TextButton(onClick = onBlockOpponent) { Text("Engelle", color = Color(0xFFFF8894), fontSize = 10.sp) }
+                    }
+                }
                 if (chat.isNotEmpty()) {
-                    Text(chat.takeLast(2).joinToString("\n") { (if (it.senderId == me) "Sen: " else "Rakip: ") + it.body }, fontSize = 12.sp, color = SonHarfMuted)
+                    Text(chat.takeLast(3).joinToString("\n") { (if (it.senderId == me) "Sen: " else "Rakip: ") + it.body }, fontSize = 12.sp, color = SonHarfMuted)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedTextField(
@@ -410,10 +466,54 @@ private fun ActiveGameScreen(
                         shape = RoundedCornerShape(14.dp),
                         colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SonHarfCyan, unfocusedBorderColor = SonHarfSurface2)
                     )
-                    Button(onClick = onSendChat, enabled = chatInput.isNotBlank(), shape = RoundedCornerShape(14.dp), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp)) {
-                        Text("➤")
+                    Button(onClick = onSendChat, enabled = chatInput.isNotBlank(), shape = RoundedCornerShape(14.dp)) { Text("➤") }
+                }
+            }
+        }
+
+        OutlinedButton(onClick = onForfeit, modifier = Modifier.fillMaxWidth(), border = BorderStroke(1.dp, Color(0xFF6C3340))) {
+            Text("PES ET", color = Color(0xFFFF8894))
+        }
+    }
+}
+
+@Composable
+private fun TriviaPanel(round: TriviaRoundDto?, question: TriviaQuestionDto?, onAnswer: (Int) -> Unit) {
+    if (round == null || question == null) {
+        Surface(color = SonHarfSurface, shape = RoundedCornerShape(24.dp), modifier = Modifier.weight(1f)) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+        }
+        return
+    }
+
+    var unlocked by remember(round.revealAt) { mutableStateOf(false) }
+    var readSeconds by remember(round.revealAt) { mutableStateOf(3) }
+    LaunchedEffect(round.revealAt) {
+        while (true) {
+            val reveal = runCatching { Instant.parse(round.revealAt) }.getOrNull()
+            val left = reveal?.epochSecond?.minus(Instant.now().epochSecond)?.toInt()?.coerceAtLeast(0) ?: 0
+            readSeconds = left
+            unlocked = left <= 0
+            if (unlocked) break
+            delay(250)
+        }
+    }
+
+    Surface(color = SonHarfSurface, shape = RoundedCornerShape(24.dp), modifier = Modifier.weight(1f)) {
+        Column(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.Center) {
+            Text("🧠 GENEL KÜLTÜR • +${round.bonusPoints}", color = SonHarfGold, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(14.dp))
+            Text(question.question, fontSize = 22.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(14.dp))
+            if (!unlocked) {
+                Text("Şıklar $readSeconds saniye sonra açılacak…", color = SonHarfCyan, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+            } else {
+                listOf(question.optionA, question.optionB, question.optionC, question.optionD).forEachIndexed { index, option ->
+                    OutlinedButton(onClick = { onAnswer(index) }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), shape = RoundedCornerShape(14.dp)) {
+                        Text("${'A' + index})  $option", modifier = Modifier.fillMaxWidth())
                     }
                 }
+                Text("İlk doğru cevap bonusu kapar.", color = SonHarfMuted, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
             }
         }
     }
@@ -421,16 +521,12 @@ private fun ActiveGameScreen(
 
 @Composable
 private fun MissingBackendConfig() {
-    Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
+    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(color = SonHarfPurple.copy(alpha = .15f), shape = RoundedCornerShape(28.dp)) {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text("⚡", fontSize = 34.sp)
                 Text("Online altyapı hazır", fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Text("Supabase publishable key bağlandığında iki telefonlu oda testi aktif olacak.", color = SonHarfMuted, textAlign = TextAlign.Center)
+                Text("Supabase bağlantısı tamamlandığında iki telefonlu oda testi aktif olacak.", color = SonHarfMuted, textAlign = TextAlign.Center)
             }
         }
     }
