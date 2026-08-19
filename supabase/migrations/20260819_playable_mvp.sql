@@ -134,11 +134,13 @@ $$;
 
 grant execute on function public.forfeit_room(uuid) to authenticated;
 
+drop policy if exists "rooms participant update profile-safe" on public.game_rooms;
 create policy "rooms participant update profile-safe" on public.game_rooms
 for update to authenticated
 using (host_id = auth.uid() or guest_id = auth.uid())
 with check (host_id = auth.uid() or guest_id = auth.uid());
 
+drop policy if exists "chat participant insert" on public.chat_messages;
 create policy "chat participant insert" on public.chat_messages
 for insert to authenticated
 with check (
