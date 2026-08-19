@@ -51,7 +51,7 @@ class OnlineGameBackend(private val supabase:SupabaseClient=SupabaseProvider.cli
  suspend fun setPhotoAccess(viewerId:String,allowed:Boolean){supabase.postgrest.rpc("set_photo_access",buildJsonObject{put("p_viewer_id",viewerId);put("p_allowed",allowed)})}
  suspend fun sendFriendRequest(friendId:String){supabase.postgrest.rpc("send_friend_request",buildJsonObject{put("p_friend_id",friendId)})}
  suspend fun respondFriendRequest(friendId:String,accept:Boolean){supabase.postgrest.rpc("respond_friend_request",buildJsonObject{put("p_friend_id",friendId);put("p_accept",accept)})}
- suspend fun getFriendships():List<FriendshipDto>=supabase.from("friendships").select().decodeList()
+ suspend fun getFriendships(): List<FriendshipDto> = supabase.from("friendships").select().decodeList()
  suspend fun getProfile(id:String):ProfileDto=supabase.from("profiles").select{filter{eq("id",id)}}.decodeSingle()
  suspend fun getFriends():List<Pair<FriendshipDto,ProfileDto>>{val me=currentUserId()?:return emptyList();return getFriendships().filter{it.status=="accepted"}.mapNotNull{f->runCatching{f to getProfile(if(f.userId==me)f.friendId else f.userId)}.getOrNull()}}
  suspend fun getIncomingFriendRequests():List<Pair<FriendshipDto,ProfileDto>>{val me=currentUserId()?:return emptyList();return getFriendships().filter{it.status=="pending"&&it.requestedBy!=me}.mapNotNull{f->runCatching{f to getProfile(f.requestedBy)}.getOrNull()}}
@@ -59,11 +59,11 @@ class OnlineGameBackend(private val supabase:SupabaseClient=SupabaseProvider.cli
  suspend fun getIncomingGameInvites():List<GameInviteDto>{val me=currentUserId()?:return emptyList();return supabase.from("game_invites").select{filter{eq("receiver_id",me)}}.decodeList<GameInviteDto>().filter{it.status=="pending"}}
  suspend fun respondGameInvite(inviteId:String,accept:Boolean):GameRoomDto?{supabase.postgrest.rpc("respond_game_invite",buildJsonObject{put("p_invite_id",inviteId);put("p_accept",accept)});if(!accept)return null;val inv=supabase.from("game_invites").select{filter{eq("id",inviteId)}}.decodeSingle<GameInviteDto>();return inv.roomId?.let{getRoom(it)}}
  suspend fun getRoom(id:String):GameRoomDto=supabase.from("game_rooms").select{filter{eq("id",id)}}.decodeSingle()
- suspend fun getWords(id:String):List<GameWordDto>=supabase.from("game_words").select{filter{eq("room_id",id)}}.decodeList<GameWordDto>().sortedBy{it.id}
- suspend fun getChat(id:String):List<ChatMessageDto>=supabase.from("chat_messages").select{filter{eq("room_id",id)}}.decodeList<ChatMessageDto>().sortedBy{it.id}
+ suspend fun getWords(id:String): List<GameWordDto> = supabase.from("game_words").select{filter{eq("room_id",id)}}.decodeList<GameWordDto>().sortedBy{it.id}
+ suspend fun getChat(id:String): List<ChatMessageDto> = supabase.from("chat_messages").select{filter{eq("room_id",id)}}.decodeList<ChatMessageDto>().sortedBy{it.id}
  suspend fun getActiveTriviaRound(id:String):TriviaRoundDto?=supabase.from("trivia_rounds").select{filter{eq("room_id",id)}}.decodeList<TriviaRoundDto>().filter{it.resolvedAt==null}.maxByOrNull{it.milestone}
  suspend fun getTriviaQuestion(id:Long):TriviaQuestionDto=supabase.from("trivia_questions").select{filter{eq("id",id)}}.decodeSingle()
- fun observeRoom(id:String,intervalMs:Long=700):Flow<GameRoomDto>=flow{var p:GameRoomDto?=null;while(currentCoroutineContext().isActive){val n=getRoom(id);if(n!=p){emit(n);p=n};delay(intervalMs)}}
- fun observeWords(id:String,intervalMs:Long=700):Flow<List<GameWordDto>> = flow{var p=listOf<GameWordDto>();while(currentCoroutineContext().isActive){val n=getWords(id);if(n!=p){emit(n);p=n};delay(intervalMs)}}
- fun observeChat(id:String,intervalMs:Long=900):Flow<List<ChatMessageDto>> = flow{var p=listOf<ChatMessageDto>();while(currentCoroutineContext().isActive){val n=getChat(id);if(n!=p){emit(n);p=n};delay(intervalMs)}}
+ fun observeRoom(id:String,intervalMs:Long=700): Flow<GameRoomDto> = flow{var p:GameRoomDto?=null;while(currentCoroutineContext().isActive){val n=getRoom(id);if(n!=p){emit(n);p=n};delay(intervalMs)}}
+ fun observeWords(id:String,intervalMs:Long=700): Flow<List<GameWordDto>> = flow{var p=listOf<GameWordDto>();while(currentCoroutineContext().isActive){val n=getWords(id);if(n!=p){emit(n);p=n};delay(intervalMs)}}
+ fun observeChat(id:String,intervalMs:Long=900): Flow<List<ChatMessageDto>> = flow{var p=listOf<ChatMessageDto>();while(currentCoroutineContext().isActive){val n=getChat(id);if(n!=p){emit(n);p=n};delay(intervalMs)}}
 }
