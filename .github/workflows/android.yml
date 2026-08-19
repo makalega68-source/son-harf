@@ -3,6 +3,8 @@ name: Android CI
 on:
   push:
     branches: [ main ]
+    paths-ignore:
+      - 'dist/**'
   pull_request:
     branches: [ main ]
 
@@ -40,3 +42,14 @@ jobs:
         run: |
           gh release view final-test >/dev/null 2>&1 || gh release create final-test --title "Son Harf Final Test" --notes "Son Harf Android final test build."
           gh release upload final-test SonHarf-Final-Test.apk --clobber
+      - name: Publish direct-download APK in repository
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p dist
+          cp SonHarf-Final-Test.apk dist/SonHarf-Final-Test.apk
+          printf 'commit=%s\nbuilt_at=%s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/BUILD_OK.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/SonHarf-Final-Test.apk dist/BUILD_OK.txt
+          git diff --cached --quiet || git commit -m "Publish final APK [skip ci]"
+          git push
