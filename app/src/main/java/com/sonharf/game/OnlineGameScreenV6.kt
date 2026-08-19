@@ -28,7 +28,7 @@ import io.github.jan.supabase.postgrest.from
 import java.time.Instant
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.launch
 
 @Composable
@@ -58,6 +58,7 @@ fun OnlineGameScreenV6() {
     var showChat by remember { mutableStateOf(false) }
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var invites by remember { mutableStateOf<List<GameInviteDto>>(emptyList()) }
+    var friendRequests by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var roomJob by remember { mutableStateOf<Job?>(null) }
     var wordsJob by remember { mutableStateOf<Job?>(null) }
     var chatJob by remember { mutableStateOf<Job?>(null) }
@@ -68,18 +69,19 @@ fun OnlineGameScreenV6() {
         "not_your_turn" in raw -> "Sıra rakibinde."
         "word_already_used" in raw -> "Bu kelime daha önce kullanıldı."
         "wrong_start_letter" in raw -> "Kelime son harfle başlamalı."
-        "not_in_dictionary" in raw -> "Bu kelime sözlükte bulunamadı."
-        "invalid_word" in raw -> "Bu kelime geçerli değil."
+        "not_in_dictionary" in raw -> "Bu kelime sözlükte bulunamadı. Başka bir kelime dene."
+        "invalid_word" in raw -> "Bu kelime geçerli değil. Başka bir kelime dene."
         "turn_expired" in raw -> "Süren doldu. −1 puan."
-        "vip_required" in raw -> "Özel oda açmak için VIP gerekli."
-        else -> "Bağlantı sorunu. Yeniden deneniyor."
+        "vip_required" in raw -> "Özel oda oluşturmak yalnızca VIP oyunculara açık."
+        raw.isNotBlank() -> "İşlem yapılamadı: ${raw.takeLast(120)}"
+        else -> "İşlem yapılamadı."
     }
     fun failedEvent(e: String?) = e in setOf("word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "turn_expired")
     fun eventMessage(e: String?) = when (e) {
         "word_already_used" -> "Bu kelime daha önce kullanıldı."
         "wrong_start_letter" -> "Kelime son harfle başlamalı."
-        "not_in_dictionary" -> "Bu kelime sözlükte bulunamadı."
-        "invalid_word" -> "Bu kelime geçerli değil."
+        "not_in_dictionary" -> "Bu kelime sözlükte bulunamadı. Başka bir kelime dene."
+        "invalid_word" -> "Bu kelime geçerli değil. Başka bir kelime dene."
         "turn_expired" -> "Süren doldu. −1 puan."
         else -> "Hamle işlenemedi."
     }
@@ -110,9 +112,17 @@ fun OnlineGameScreenV6() {
     fun observe(r: GameRoomDto) {
         roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); matchJob?.cancel(); matching = false
         scope.launch { refreshOpponent(r) }
-        roomJob = scope.launch { backend.observeRoom(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { room = it; refreshQuiz(it); refreshOpponent(it) } }
-        wordsJob = scope.launch { backend.observeWords(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { words = it } }
-        if (!r.isBot) chatJob = scope.launch { backend.observeChat(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { chat = it } }
+        roomJob = scope.launch {
+            backend.observeRoom(r.id).retryWhen { _, _ -> delay(900); true }.collect {
+                room = it; refreshQuiz(it); refreshOpponent(it)
+            }
+        }
+        wordsJob = scope.launch {
+            backend.observeWords(r.id).retryWhen { _, _ -> delay(900); true }.collect { words = it }
+        }
+        if (!r.isBot) chatJob = scope.launch {
+            backend.observeChat(r.id).retryWhen { _, _ -> delay(1200); true }.collect { chat = it }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -128,8 +138,8 @@ fun OnlineGameScreenV6() {
     val active = room
     if (active == null) {
         AuroraDuelLobby(
-            playerName = profile?.displayName ?: "Oyuncu", language = language, matching = matching, notice = notice,
-            showPrivate = showPrivate, showFriends = showFriends, privateCode = privateCode, friends = friends, invites = invites,
+            playerName = profile?.displayName ?: "Oyuncu", isVip = profile?.isVip == true, language = language, matching = matching, notice = notice,
+            showPrivate = showPrivate, showFriends = showFriends, privateCode = privateCode, friends = friends, invites = invites, friendRequests = friendRequests,
             onLanguage = { language = it; SonHarfSoundFx.tap() },
             onPrivateCode = { privateCode = it.filter(Char::isLetterOrDigit).uppercase().take(6) },
             onRandom = {
@@ -155,11 +165,12 @@ fun OnlineGameScreenV6() {
             },
             onCancel = { scope.launch { matching = false; matchJob?.cancel(); runCatching { backend.cancelRandomMatchmaking() }; notice = "Eşleşme iptal edildi." } },
             onPrivate = { showPrivate = !showPrivate; showFriends = false },
-            onFriends = { scope.launch { friends = runCatching { backend.getFriends() }.getOrDefault(emptyList()); invites = runCatching { backend.getIncomingGameInvites() }.getOrDefault(emptyList()); showFriends = !showFriends; showPrivate = false } },
-            onCreate = { scope.launch { busy = true; runCatching { backend.createPrivateRoom(language) }.onSuccess { room = it; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
+            onFriends = { scope.launch { friends = runCatching { backend.getFriends() }.getOrDefault(emptyList()); invites = runCatching { backend.getIncomingGameInvites() }.getOrDefault(emptyList()); friendRequests = runCatching { backend.getIncomingFriendRequests() }.getOrDefault(emptyList()); showFriends = !showFriends; showPrivate = false } },
+            onCreate = { scope.launch { if (profile?.isVip != true) { notice = "Özel oda oluşturmak yalnızca VIP oyunculara açık."; return@launch }; busy = true; runCatching { backend.createPrivateRoom(language) }.onSuccess { room = it; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
             onJoin = { scope.launch { busy = true; runCatching { backend.joinPrivateRoom(privateCode) }.onSuccess { room = it; language = it.language; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
-            onInvite = { id -> scope.launch { runCatching { backend.inviteFriend(id, language) }; notice = "Davet gönderildi." } },
-            onInviteResponse = { id, accept -> scope.launch { runCatching { backend.respondGameInvite(id, accept) }.onSuccess { if (it != null) { room = it; observe(it) } } } }
+            onInvite = { id -> scope.launch { runCatching { backend.inviteFriend(id, language) }.onSuccess { notice = "Davet gönderildi." }.onFailure { notice = friendly(it.message.orEmpty()) } } },
+            onInviteResponse = { id, accept -> scope.launch { runCatching { backend.respondGameInvite(id, accept) }.onSuccess { if (it != null) { room = it; observe(it) }; invites = runCatching { backend.getIncomingGameInvites() }.getOrDefault(emptyList()) }.onFailure { notice = friendly(it.message.orEmpty()) } } },
+            onFriendResponse = { id, accept -> scope.launch { runCatching { backend.respondFriendRequest(id, accept) }.onSuccess { friendRequests = runCatching { backend.getIncomingFriendRequests() }.getOrDefault(emptyList()); friends = runCatching { backend.getFriends() }.getOrDefault(emptyList()) }.onFailure { notice = friendly(it.message.orEmpty()) } } }
         )
     } else {
         val me = backend.currentUserId()
@@ -179,12 +190,24 @@ fun OnlineGameScreenV6() {
             onSubmit = {
                 scope.launch {
                     val submitted = wordInput.trim(); if (submitted.isBlank()) return@launch
-                    wordInput = ""; busy = true; SonHarfSoundFx.tap()
-                    runCatching { backend.submitWord(active.id, submitted) }.onSuccess { result ->
+                    busy = true; SonHarfSoundFx.tap()
+                    val fresh = runCatching { backend.getRoom(active.id) }.getOrElse { active }
+                    if (fresh.currentPlayerId != me || fresh.botTurn) {
+                        room = fresh; notice = "Sıra rakibinde."; busy = false; return@launch
+                    }
+                    runCatching { backend.submitWord(fresh.id, submitted) }.onSuccess { result ->
                         room = result
-                        if (failedEvent(result.lastEvent) && result.lastEventPlayerId == me) { notice = eventMessage(result.lastEvent); SonHarfSoundFx.warning() }
-                        else { notice = "Kelime kabul edildi: ${submitted.uppercase()}"; SonHarfSoundFx.wordAccepted() }
-                    }.onFailure { notice = friendly(it.message.orEmpty()); SonHarfSoundFx.warning() }
+                        wordInput = ""
+                        words = runCatching { backend.getWords(result.id) }.getOrDefault(words)
+                        if (failedEvent(result.lastEvent) && result.lastEventPlayerId == me) {
+                            notice = eventMessage(result.lastEvent); SonHarfSoundFx.warning()
+                        } else {
+                            notice = "Kelime kabul edildi: ${submitted.uppercase()}"; SonHarfSoundFx.wordAccepted()
+                        }
+                    }.onFailure {
+                        notice = friendly(it.message.orEmpty())
+                        SonHarfSoundFx.warning()
+                    }
                     busy = false
                 }
             },
@@ -201,16 +224,17 @@ fun OnlineGameScreenV6() {
 
 @Composable
 private fun AuroraDuelLobby(
-    playerName: String, language: String, matching: Boolean, notice: String, showPrivate: Boolean, showFriends: Boolean,
-    privateCode: String, friends: List<Pair<FriendshipDto, ProfileDto>>, invites: List<GameInviteDto>, onLanguage: (String) -> Unit,
+    playerName: String, isVip: Boolean, language: String, matching: Boolean, notice: String, showPrivate: Boolean, showFriends: Boolean,
+    privateCode: String, friends: List<Pair<FriendshipDto, ProfileDto>>, invites: List<GameInviteDto>, friendRequests: List<Pair<FriendshipDto, ProfileDto>>, onLanguage: (String) -> Unit,
     onPrivateCode: (String) -> Unit, onRandom: () -> Unit, onCancel: () -> Unit, onPrivate: () -> Unit, onFriends: () -> Unit,
-    onCreate: () -> Unit, onJoin: () -> Unit, onInvite: (String) -> Unit, onInviteResponse: (String, Boolean) -> Unit
+    onCreate: () -> Unit, onJoin: () -> Unit, onInvite: (String) -> Unit, onInviteResponse: (String, Boolean) -> Unit,
+    onFriendResponse: (String, Boolean) -> Unit
 ) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("DÜELLO", fontSize = 24.sp, fontWeight = FontWeight.Black)
-                Surface(shape = RoundedCornerShape(99.dp), color = SonHarfSurface2) { Text(playerName, Modifier.padding(horizontal = 12.dp, vertical = 7.dp), color = SonHarfCyan, fontWeight = FontWeight.Bold) }
+                Surface(shape = RoundedCornerShape(99.dp), color = MaterialTheme.colorScheme.surface) { Text(playerName, Modifier.padding(horizontal = 12.dp, vertical = 7.dp), color = SonHarfCyan, fontWeight = FontWeight.Bold) }
             }
         }
         item {
@@ -247,20 +271,26 @@ private fun AuroraDuelLobby(
         }
         item { Text(notice, color = SonHarfMuted, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
         if (showPrivate) item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(18.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(18.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text("ÖZEL ODA", color = SonHarfPurple, fontWeight = FontWeight.Black)
-                    Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) { Text("VIP ODA OLUŞTUR") }
+                    Button(onClick = onCreate, enabled = isVip, modifier = Modifier.fillMaxWidth()) { Text(if (isVip) "VIP ODA OLUŞTUR" else "VIP GEREKLİ") }
+                    if (!isVip) Text("Oda oluşturma VIP oyunculara özeldir. Oda koduyla katılabilirsin.", color = SonHarfGold, fontSize = 9.sp)
                     OutlinedTextField(privateCode, onPrivateCode, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("6 haneli oda kodu") })
                     OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6, modifier = Modifier.fillMaxWidth()) { Text("ODA KODUYLA KATIL") }
                 }
             }
         }
         if (showFriends) item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(18.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(18.dp)) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (friendRequests.isNotEmpty()) Text("ARKADAŞLIK İSTEKLERİ", color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    friendRequests.forEach { (_, p) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text(p.displayName); Row { TextButton(onClick = { onFriendResponse(p.id, true) }) { Text("Kabul") }; TextButton(onClick = { onFriendResponse(p.id, false) }) { Text("Reddet") } } } }
+                    if (invites.isNotEmpty()) Text("OYUN DAVETLERİ", color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 10.sp)
                     invites.forEach { i -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text("Maç daveti"); Row { TextButton(onClick = { onInviteResponse(i.id, true) }) { Text("Kabul") }; TextButton(onClick = { onInviteResponse(i.id, false) }) { Text("Reddet") } } } }
-                    friends.forEach { (_, p) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text(p.displayName); Button(onClick = { onInvite(p.id) }, enabled = p.presenceStatus == "online") { Text("Davet") } } }
+                    Text("ARKADAŞLAR", color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    if (friends.isEmpty()) Text("Arkadaş eklemek için Ayarlar > Arkadaşlar ve İstekler bölümünü kullan.", color = SonHarfMuted, fontSize = 9.sp)
+                    friends.forEach { (_, p) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text(p.displayName); Button(onClick = { onInvite(p.id) }, enabled = p.presenceStatus == "online") { Text(if (p.presenceStatus == "online") "Davet" else "Çevrimdışı") } } }
                 }
             }
         }
@@ -297,7 +327,7 @@ private fun AuroraArena(
     if (room.status == "finished") {
         val won = room.winnerId == me
         Box(Modifier.fillMaxSize().padding(18.dp), contentAlignment = Alignment.Center) {
-            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF0A1324)), shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, if (won) SonHarfGold.copy(alpha = .5f) else SonHarfPink.copy(alpha = .35f))) {
+            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, if (won) SonHarfGold.copy(alpha = .5f) else SonHarfPink.copy(alpha = .35f))) {
                 Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     Text("MAÇ SONUCU", fontWeight = FontWeight.Black)
                     Text(if (won) "KAZANAN" else "MAÇ BİTTİ", color = if (won) SonHarfCyan else SonHarfMuted, fontSize = 14.sp)
@@ -320,7 +350,7 @@ private fun AuroraArena(
             AuroraPlayerCard(opponentName, oppScore, oppRounds, !myTurn, SonHarfPink, Modifier.weight(1f))
         }
 
-        Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF081220)), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = .05f))) {
+        Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = .05f))) {
             Column(Modifier.fillMaxWidth().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     Text(if (room.status == "sudden_death") "ANİ ÖLÜM" else "ROUND ${room.roundNo}/3", fontWeight = FontWeight.Black, fontSize = 12.sp)
@@ -342,13 +372,13 @@ private fun AuroraArena(
                 Text("KELİME ZİNCİRİ", color = SonHarfMuted, fontSize = 9.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(5.dp))
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(words.takeLast(18)) { w -> Surface(shape = RoundedCornerShape(12.dp), color = SonHarfSurface2, border = BorderStroke(1.dp, Color.White.copy(alpha = .05f))) { Text(w.word.uppercase(), Modifier.padding(horizontal = 11.dp, vertical = 7.dp), fontWeight = FontWeight.Bold, fontSize = 10.sp) } }
+                    items(words.takeLast(18)) { w -> Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, Color.White.copy(alpha = .05f))) { Text(w.word.uppercase(), Modifier.padding(horizontal = 11.dp, vertical = 7.dp), fontWeight = FontWeight.Bold, fontSize = 10.sp) } }
                 }
             }
         }
 
-        Surface(color = if (notice.startsWith("Bu ") || notice.contains("doldu")) Color(0xFF391520) else Color(0xFF0A1323), shape = RoundedCornerShape(12.dp)) {
-            Text(notice, Modifier.fillMaxWidth().padding(8.dp), color = if (notice.startsWith("Bu ") || notice.contains("doldu")) Color(0xFFFF7D9B) else SonHarfMuted, fontSize = 10.sp, textAlign = TextAlign.Center)
+        Surface(color = if (notice.startsWith("Bu ") || notice.contains("geçerli") || notice.contains("sözlük")) Color(0xFF391520) else MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(12.dp)) {
+            Text(notice, Modifier.fillMaxWidth().padding(8.dp), color = if (notice.startsWith("Bu ") || notice.contains("geçerli") || notice.contains("sözlük")) Color(0xFFFF7D9B) else SonHarfMuted, fontSize = 10.sp, textAlign = TextAlign.Center)
         }
 
         if (room.status == "quiz" && triviaRound != null && triviaQuestion != null) {
@@ -379,7 +409,7 @@ private fun AuroraArena(
 }
 
 @Composable private fun AuroraPlayerCard(name: String, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = if (active) accent.copy(alpha = .11f) else SonHarfSurface), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (active) accent.copy(alpha = .5f) else Color.White.copy(alpha = .05f))) {
+    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = if (active) accent.copy(alpha = .11f) else MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (active) accent.copy(alpha = .5f) else Color.White.copy(alpha = .05f))) {
         Row(Modifier.padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(34.dp).clip(CircleShape).background(accent.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Text(name.take(1).uppercase(), fontWeight = FontWeight.Black) }
             Spacer(Modifier.width(7.dp))
@@ -394,7 +424,7 @@ private fun AuroraArena(
         title = { Text("SOHBET", fontWeight = FontWeight.Black) },
         text = {
             Column(Modifier.heightIn(max = 420.dp)) {
-                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) { items(chat.takeLast(30)) { m -> Surface(color = if (m.senderId == me) SonHarfPurple.copy(alpha = .14f) else SonHarfSurface2, shape = RoundedCornerShape(12.dp)) { Text(m.body, Modifier.padding(9.dp), fontSize = 11.sp) } } }
+                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) { items(chat.takeLast(30)) { m -> Surface(color = if (m.senderId == me) SonHarfPurple.copy(alpha = .14f) else MaterialTheme.colorScheme.surface, shape = RoundedCornerShape(12.dp)) { Text(m.body, Modifier.padding(9.dp), fontSize = 11.sp) } } }
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(input, onInput, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Mesaj yaz…") })
             }
