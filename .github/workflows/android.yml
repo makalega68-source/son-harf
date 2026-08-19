@@ -20,6 +20,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.4'
@@ -48,8 +51,19 @@ jobs:
           mkdir -p dist
           cp SonHarf-Final-Test.apk dist/SonHarf-Final-Test.apk
           printf 'commit=%s\nbuilt_at=%s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/BUILD_OK.txt
+          rm -f dist/BUILD_FAIL.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/SonHarf-Final-Test.apk dist/BUILD_OK.txt
+          git add dist/SonHarf-Final-Test.apk dist/BUILD_OK.txt dist/BUILD_FAIL.txt || true
           git diff --cached --quiet || git commit -m "Publish final APK [skip ci]"
+          git push
+      - name: Publish build failure marker
+        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          mkdir -p dist
+          printf 'commit=%s\nfailed_at=%s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/BUILD_FAIL.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/BUILD_FAIL.txt
+          git diff --cached --quiet || git commit -m "Record Android build failure [skip ci]"
           git push
