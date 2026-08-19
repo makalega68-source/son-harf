@@ -20,7 +20,7 @@ android {
             .orElse("https://bzdtftzdjtjoqhtcqtxb.supabase.co")
             .get()
         val supabaseKey = providers.gradleProperty("SON_HARF_SUPABASE_KEY")
-            .orElse("")
+            .orElse("sb_publishable_e0SbZKPDCfEcRlxaJsXC7g_D9xkaDjf")
             .get()
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
