@@ -102,7 +102,8 @@ class OnlineGameBackend(
         val safeName = displayName.trim().ifBlank { "Oyuncu" }.take(24)
         return supabase.from("profiles")
             .upsert(ProfileWrite(userId, safeName)) { select() }
-            .decodeSingle<ProfileDto>()
+            .decodeList<ProfileDto>()
+            .single()
     }
 
     fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
