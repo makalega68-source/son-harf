@@ -73,7 +73,7 @@ private fun SonHarfApp() {
         ) {
             when (screen) {
                 AppScreen.HOME -> HomeScreen { SonHarfSoundFx.softNotify(); screen = AppScreen.GAME }
-                AppScreen.GAME -> OnlineGameScreenV2()
+                AppScreen.GAME -> OnlineGameScreenV3()
                 AppScreen.SHOP -> ShopScreen()
                 AppScreen.PROFILE -> FinalProfileScreen()
             }
@@ -158,7 +158,7 @@ private fun HomeScreen(onPlay: () -> Unit) {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp), modifier = Modifier.fillMaxWidth(), border = BorderStroke(1.dp, Color.White.copy(alpha = .05f))) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("NASIL OYNANIR?", color = SonHarfCyan, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
-                    Text("Dilini seç. Rastgele bir rakip bul veya çevrimiçi arkadaşını davet et. Her round 10 geçerli kelimede tamamlanır. Her kelime öncekinin son harfiyle başlamalı; süre dolarsa sıra rakibine geçer.", color = SonHarfText, lineHeight = 22.sp)
+                    Text("Dilini seç. Rastgele rakip, arkadaş daveti veya özel oda ile maça gir. Her round 10 geçerli kelimede tamamlanır. Her kelime öncekinin son harfiyle başlamalı; süre dolarsa sıra rakibine geçer.", color = SonHarfText, lineHeight = 22.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { MiniPill("1  Dil"); MiniPill("2  Rakip"); MiniPill("3  3 Round") }
                 }
             }
@@ -177,7 +177,7 @@ private fun HeroFeatureGrid() {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             HeroFeature("⚡", "RASTGELE", Modifier.weight(1f))
             HeroFeature("👥", "ARKADAŞ", Modifier.weight(1f))
-            HeroFeature("✦", "SOHBET", Modifier.weight(1f))
+            HeroFeature("⌘", "ÖZEL ODA", Modifier.weight(1f))
         }
     }
 }
