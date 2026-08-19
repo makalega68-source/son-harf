@@ -56,6 +56,7 @@ fun OnlineGameScreenV2() {
             "not_your_turn" in raw -> "Sıra rakibinde."
             "answers_locked" in raw -> "Şıklar 3 saniye sonra açılır."
             "blocked_relationship" in raw -> "Bu oyuncuyla etkileşim kapalı."
+            "not_bot_match" in raw -> "Bot maçı hazır değil."
             else -> raw.substringBefore("URL:").trim().ifBlank { "Bağlantı hatası." }
         }
     }
@@ -81,7 +82,7 @@ fun OnlineGameScreenV2() {
             }
         }
         wordsJob = scope.launch { backend.observeWords(r.id).catch { status = friendly(it) }.collect { words = it } }
-        chatJob = scope.launch { backend.observeChat(r.id).catch { status = friendly(it) }.collect { chat = it } }
+        if (!r.isBot) chatJob = scope.launch { backend.observeChat(r.id).catch { status = friendly(it) }.collect { chat = it } }
     }
 
     suspend fun ensure() {
@@ -124,7 +125,7 @@ fun OnlineGameScreenV2() {
                     scope.launch {
                         busy = true
                         runCatching { ensure(); backend.startRandomMatchmaking(language) }
-                            .onSuccess { matching = true; status = "Rakip aranıyor…" }
+                            .onSuccess { matching = true; status = "Gerçek rakip aranıyor… 10 sn sonra bot devreye girebilir." }
                             .onFailure { status = friendly(it) }
                         busy = false
                         if (matching) {
@@ -134,11 +135,11 @@ fun OnlineGameScreenV2() {
                                     val found = runCatching { backend.pollRandomMatchmakingRoom() }.getOrNull()
                                     if (found != null) {
                                         room = found
-                                        status = "Rakip bulundu!"
+                                        status = if (found.isBot) "🤖 ${found.botName ?: "Bot"} hazır. Bot maçı başlıyor." else "Rakip bulundu!"
                                         observe(found)
                                         break
                                     }
-                                    delay(1500)
+                                    delay(1200)
                                 }
                             }
                         }
@@ -148,7 +149,7 @@ fun OnlineGameScreenV2() {
                     scope.launch {
                         matching = false
                         matchJob?.cancel()
-                        backend.cancelRandomMatchmaking()
+                        runCatching { backend.cancelRandomMatchmaking() }
                         status = "Eşleşme iptal edildi."
                     }
                 },
@@ -166,17 +167,45 @@ fun OnlineGameScreenV2() {
                 onInviteResponse = { id, accept ->
                     scope.launch {
                         runCatching { backend.respondGameInvite(id, accept) }
-                            .onSuccess { joined ->
-                                if (joined != null) { room = joined; observe(joined) }
-                                refreshSocial()
-                            }
+                            .onSuccess { joined -> if (joined != null) { room = joined; observe(joined) }; refreshSocial() }
                             .onFailure { status = friendly(it) }
                     }
                 }
             )
         } else {
             val me = backend.currentUserId()
-            val opponent = if (me == active.hostId) active.guestId else active.hostId
+            val opponent = if (active.isBot) null else if (me == active.hostId) active.guestId else active.hostId
+
+            LaunchedEffect(active.id) {
+                while (true) {
+                    if (!active.isBot) {
+                        runCatching { backend.heartbeatRoom(active.id) }.onSuccess { updated -> room = updated; refreshQuiz(updated) }
+                    }
+                    delay(5000)
+                }
+            }
+
+            LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount) {
+                if (active.isBot && active.botTurn && active.status in listOf("playing", "final", "sudden_death")) {
+                    delay(1800L + (active.validWordCount % 4) * 450L)
+                    runCatching { backend.botTakeTurn(active.id) }
+                        .onSuccess { room = it; status = gameEvent(it, me) }
+                        .onFailure { status = friendly(it) }
+                }
+            }
+
+            LaunchedEffect(active.id, active.status, triviaRound?.id, triviaRound?.botAttempted) {
+                val tr = triviaRound
+                if (active.isBot && active.status == "quiz" && tr != null && !tr.botAttempted) {
+                    val reveal = runCatching { Instant.parse(tr.revealAt) }.getOrNull()
+                    val wait = ((reveal?.toEpochMilli() ?: 0L) - System.currentTimeMillis()).coerceAtLeast(0L) + 1600L
+                    delay(wait)
+                    runCatching { backend.botAnswerTrivia(active.id) }
+                        .onSuccess { room = it; refreshQuiz(it); status = gameEvent(it, me) }
+                        .onFailure { status = friendly(it) }
+                }
+            }
+
             GameV2(
                 room = active,
                 me = me,
@@ -200,7 +229,7 @@ fun OnlineGameScreenV2() {
                         busy = false
                     }
                 },
-                onTimeout = { scope.launch { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it; status = gameEvent(it, me) } } },
+                onTimeout = { if (!active.isBot) scope.launch { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it; status = gameEvent(it, me) } } else scope.launch { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it; status = gameEvent(it, me) } } },
                 onTrivia = { idx -> scope.launch { val q = triviaRound ?: return@launch; runCatching { backend.answerTrivia(q.id, idx) }.onSuccess { room = it; refreshQuiz(it); status = gameEvent(it, me) }.onFailure { status = friendly(it) } } },
                 onSendChat = { scope.launch { runCatching { backend.sendChat(active.id, chatInput) }.onSuccess { chatInput = "" }.onFailure { status = friendly(it) } } },
                 onBlock = { if (opponent != null) scope.launch { runCatching { backend.blockUser(opponent) }; status = "Oyuncu engellendi." } },
@@ -211,24 +240,28 @@ fun OnlineGameScreenV2() {
                 onExit = {
                     roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); rematchJob?.cancel()
                     room = null; words = emptyList(); chat = emptyList(); status = "Yeni rakibini seç."
+                    scope.launch { runCatching { backend.setPresence("online") } }
                 },
                 onRematch = {
                     if (!rematchRequested) {
                         rematchRequested = true
-                        status = "Rövanş isteği gönderildi. Rakip bekleniyor…"
-                        rematchJob?.cancel()
-                        rematchJob = scope.launch {
-                            while (rematchRequested && room?.id == active.id) {
-                                val next = runCatching { backend.requestRematch(active.id) }.getOrNull()
-                                if (next != null && next.id != active.id) {
-                                    room = next
-                                    words = emptyList()
-                                    chat = emptyList()
-                                    status = "Rövanş başlıyor!"
-                                    observe(next)
-                                    break
+                        if (active.isBot) {
+                            scope.launch {
+                                runCatching { backend.restartBotMatch(active.id) }
+                                    .onSuccess { next -> room = next; words = emptyList(); chat = emptyList(); status = "🤖 Rövanş başlıyor!"; observe(next) }
+                                    .onFailure { rematchRequested = false; status = friendly(it) }
+                            }
+                        } else {
+                            status = "Rövanş isteği gönderildi. Rakip bekleniyor…"
+                            rematchJob?.cancel()
+                            rematchJob = scope.launch {
+                                while (rematchRequested && room?.id == active.id) {
+                                    val next = runCatching { backend.requestRematch(active.id) }.getOrNull()
+                                    if (next != null && next.id != active.id) {
+                                        room = next; words = emptyList(); chat = emptyList(); status = "Rövanş başlıyor!"; observe(next); break
+                                    }
+                                    delay(1500)
                                 }
-                                delay(1500)
                             }
                         }
                     }
@@ -256,7 +289,7 @@ private fun LobbyV2(
     onFriends: () -> Unit,
     onInvite: (String) -> Unit,
     onAcceptRequest: (String) -> Unit,
-    onInviteResponse: (String, Boolean) -> Unit
+    onInviteResponse: (String, Boolean) -> Unit,
 ) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text("ONLINE DÜELLO", fontSize = 30.sp, fontWeight = FontWeight.Black); Text("3 round • her round 10 geçerli kelime", color = SonHarfMuted) }
@@ -264,22 +297,29 @@ private fun LobbyV2(
         item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { FilterChip(selected = language == "tr", onClick = { onLanguageChange("tr") }, label = { Text("🇹🇷 Türkçe") }); FilterChip(selected = language == "en", onClick = { onLanguageChange("en") }, label = { Text("🇬🇧 English") }) } }
         item { DarkFieldV2(name, onNameChange, "Oyuncu adı") }
         item {
-            if (!matching) Button(onClick = onRandom, enabled = !busy && name.trim().length >= 2, modifier = Modifier.fillMaxWidth().height(60.dp), shape = RoundedCornerShape(20.dp)) { Text("⚡ RASTGELE RAKİP BUL", fontWeight = FontWeight.Black) }
-            else Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(22.dp)) { Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) { CircularProgressIndicator(); Spacer(Modifier.height(8.dp)); Text("RAKİP ARANIYOR…", fontWeight = FontWeight.Black); TextButton(onClick = onCancel) { Text("İPTAL ET") } } }
+            if (!matching) {
+                Button(onClick = onRandom, enabled = !busy && name.trim().length >= 2, modifier = Modifier.fillMaxWidth().height(60.dp), shape = RoundedCornerShape(20.dp)) { Text("⚡ RASTGELE RAKİP BUL", fontWeight = FontWeight.Black) }
+            } else {
+                Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(22.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(); Spacer(Modifier.height(8.dp)); Text("RAKİP ARANIYOR…", fontWeight = FontWeight.Black)
+                        Text("Önce gerçek oyuncu • 10 sn sonra bot desteği", color = SonHarfMuted, fontSize = 11.sp)
+                        TextButton(onClick = onCancel) { Text("İPTAL ET") }
+                    }
+                }
+            }
         }
         item { OutlinedButton(onClick = onFriends, enabled = !busy && name.trim().length >= 2, modifier = Modifier.fillMaxWidth().height(54.dp), border = BorderStroke(1.dp, SonHarfCyan)) { Text("👥 ARKADAŞLARINLA OYNA", fontWeight = FontWeight.Black) } }
-        if (showFriends) {
-            item {
-                Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(22.dp)) {
-                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (invites.isNotEmpty()) Text("OYUN DAVETLERİ", color = SonHarfGold, fontWeight = FontWeight.Black)
-                        invites.forEach { inv -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("${if (inv.language == "tr") "TR" else "EN"} daveti"); Row { TextButton(onClick = { onInviteResponse(inv.id, true) }) { Text("Kabul") }; TextButton(onClick = { onInviteResponse(inv.id, false) }) { Text("Reddet") } } } }
-                        if (requests.isNotEmpty()) Text("ARKADAŞLIK İSTEKLERİ", color = SonHarfGold, fontWeight = FontWeight.Black)
-                        requests.forEach { (_, p) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(p.displayName); TextButton(onClick = { onAcceptRequest(p.id) }) { Text("Kabul") } } }
-                        Text("ARKADAŞLAR", color = SonHarfCyan, fontWeight = FontWeight.Black)
-                        if (friends.isEmpty()) Text("Henüz arkadaş yok.", color = SonHarfMuted)
-                        friends.forEach { (_, p) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column { Text(p.displayName, fontWeight = FontWeight.Bold); Text(when (p.presenceStatus) { "online" -> "Çevrimiçi"; "in_game" -> "Oyunda"; else -> "Çevrimdışı" }, color = SonHarfMuted, fontSize = 11.sp) }; Button(onClick = { onInvite(p.id) }, enabled = p.presenceStatus == "online") { Text("Davet") } } }
-                    }
+        if (showFriends) item {
+            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(22.dp)) {
+                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (invites.isNotEmpty()) Text("OYUN DAVETLERİ", color = SonHarfGold, fontWeight = FontWeight.Black)
+                    invites.forEach { inv -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("${if (inv.language == "tr") "TR" else "EN"} daveti"); Row { TextButton(onClick = { onInviteResponse(inv.id, true) }) { Text("Kabul") }; TextButton(onClick = { onInviteResponse(inv.id, false) }) { Text("Reddet") } } } }
+                    if (requests.isNotEmpty()) Text("ARKADAŞLIK İSTEKLERİ", color = SonHarfGold, fontWeight = FontWeight.Black)
+                    requests.forEach { (_, p) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(p.displayName); TextButton(onClick = { onAcceptRequest(p.id) }) { Text("Kabul") } } }
+                    Text("ARKADAŞLAR", color = SonHarfCyan, fontWeight = FontWeight.Black)
+                    if (friends.isEmpty()) Text("Henüz arkadaş yok.", color = SonHarfMuted)
+                    friends.forEach { (_, p) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column { Text(p.displayName, fontWeight = FontWeight.Bold); Text(when (p.presenceStatus) { "online" -> "Çevrimiçi"; "in_game" -> "Oyunda"; else -> "Çevrimdışı" }, color = SonHarfMuted, fontSize = 11.sp) }; Button(onClick = { onInvite(p.id) }, enabled = p.presenceStatus == "online") { Text("Davet") } } }
                 }
             }
         }
@@ -311,7 +351,7 @@ private fun GameV2(
     onFriend: () -> Unit,
     onForfeit: () -> Unit,
     onExit: () -> Unit,
-    onRematch: () -> Unit
+    onRematch: () -> Unit,
 ) {
     val host = me == room.hostId
     val myScore = if (host) room.hostScore else room.guestScore
@@ -320,6 +360,7 @@ private fun GameV2(
     val oppRounds = if (host) room.guestRounds else room.hostRounds
     val myTurn = room.currentPlayerId == me && room.status in listOf("playing", "sudden_death", "final")
     val required = words.lastOrNull()?.normalizedWord?.lastOrNull()?.uppercaseChar()
+    val opponentLabel = if (room.isBot) "${room.botName ?: "KelimeBot"} • BOT" else "RAKİP"
     var seconds by remember(room.turnDeadline) { mutableStateOf(45) }
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
@@ -336,16 +377,24 @@ private fun GameV2(
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(22.dp)) {
                 Column(Modifier.fillMaxWidth().padding(14.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Column { Text(if (room.status == "sudden_death") "ANİ ÖLÜM" else "ROUND ${room.roundNo}/3", color = SonHarfCyan, fontWeight = FontWeight.Black); Text(if (myTurn) "SIRA SENDE" else "RAKİBİN SIRASI", fontSize = 20.sp, fontWeight = FontWeight.Black) }
-                        Surface(color = if (seconds <= 10) Color(0xFF5A202C) else SonHarfPurple, shape = RoundedCornerShape(999.dp)) { Text("$seconds sn", Modifier.padding(horizontal = 14.dp, vertical = 8.dp), fontWeight = FontWeight.Black) }
+                        Column {
+                            Text(if (room.status == "sudden_death") "ANİ ÖLÜM" else "ROUND ${room.roundNo}/3", color = SonHarfCyan, fontWeight = FontWeight.Black)
+                            Text(when { room.status == "paused" -> "MAÇ DURAKLATILDI"; room.isBot && room.botTurn -> "BOT DÜŞÜNÜYOR"; myTurn -> "SIRA SENDE"; else -> "RAKİBİN SIRASI" }, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                        }
+                        if (room.status != "paused") Surface(color = if (seconds <= 10) Color(0xFF5A202C) else SonHarfPurple, shape = RoundedCornerShape(999.dp)) { Text("$seconds sn", Modifier.padding(horizontal = 14.dp, vertical = 8.dp), fontWeight = FontWeight.Black) }
                     }
                     Spacer(Modifier.height(8.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("SEN $myScore • $myRounds round", fontWeight = FontWeight.Bold); Text("${room.roundWordCount}/10", color = SonHarfMuted); Text("$oppRounds round • $oppScore RAKİP", fontWeight = FontWeight.Bold) }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("SEN $myScore • $myRounds round", fontWeight = FontWeight.Bold)
+                        Text("${room.roundWordCount}/10", color = SonHarfMuted)
+                        Text("$oppRounds round • $oppScore $opponentLabel", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
                 }
             }
         }
 
-        if (room.status == "quiz") item { TriviaV2(triviaRound, triviaQuestion, onTrivia) }
+        if (room.status == "paused") item { ReconnectPanel(room, me) }
+        else if (room.status == "quiz") item { TriviaV2(triviaRound, triviaQuestion, onTrivia) }
         else if (room.status != "finished") item {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -362,12 +411,14 @@ private fun GameV2(
         }
 
         if (room.status == "finished") item {
+            val botWon = room.isBot && room.winnerId == null && room.guestScore > room.hostScore
+            val title = when { room.winnerId == me -> "KAZANDIN ✦"; botWon -> "BOT KAZANDI"; else -> "MAÇ BİTTİ" }
             Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF11263A)), shape = RoundedCornerShape(24.dp)) {
                 Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(if (room.winnerId == me) "KAZANDIN ✦" else "MAÇ BİTTİ", fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    Text(title, fontSize = 24.sp, fontWeight = FontWeight.Black)
                     Text("Round $myRounds - $oppRounds • Puan $myScore - $oppScore", color = SonHarfMuted)
-                    Button(onClick = onRematch, enabled = !rematchRequested, modifier = Modifier.fillMaxWidth()) { Text(if (rematchRequested) "RAKİP BEKLENİYOR…" else "↻ TEKRAR OYNA", fontWeight = FontWeight.Black) }
-                    OutlinedButton(onClick = onFriend, modifier = Modifier.fillMaxWidth()) { Text("+ ARKADAŞ EKLE") }
+                    Button(onClick = onRematch, enabled = !rematchRequested, modifier = Modifier.fillMaxWidth()) { Text(if (rematchRequested) "HAZIRLANIYOR…" else "↻ TEKRAR OYNA", fontWeight = FontWeight.Black) }
+                    if (!room.isBot) OutlinedButton(onClick = onFriend, modifier = Modifier.fillMaxWidth()) { Text("+ ARKADAŞ EKLE") }
                     TextButton(onClick = onExit) { Text("LOBİYE DÖN") }
                 }
             }
@@ -375,7 +426,7 @@ private fun GameV2(
 
         item { if (status.isNotBlank()) Text(status, color = SonHarfMuted, fontSize = 11.sp) }
 
-        item {
+        if (!room.isBot) item {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(18.dp)) {
                 Column(Modifier.padding(12.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -384,14 +435,35 @@ private fun GameV2(
                     }
                     if (chat.isNotEmpty()) Text(chat.takeLast(3).joinToString("\n") { (if (it.senderId == me) "Sen: " else "Rakip: ") + it.body }, color = SonHarfMuted, fontSize = 12.sp)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(chatInput, onChatInputChange, placeholder = { Text("Mesaj yaz") }, singleLine = true, modifier = Modifier.weight(1f))
-                        Button(onClick = onSendChat, enabled = chatInput.isNotBlank()) { Text("➤") }
+                        OutlinedTextField(value = chatInput, onValueChange = onChatInputChange, placeholder = { Text("Mesaj yaz") }, singleLine = true, modifier = Modifier.weight(1f))
+                        Button(onClick = onSendChat, enabled = chatInput.isNotBlank() && room.status != "paused") { Text("➤") }
                     }
                 }
             }
         }
 
-        if (room.status != "finished") item { OutlinedButton(onClick = onForfeit, modifier = Modifier.fillMaxWidth(), border = BorderStroke(1.dp, Color(0xFF6C3340))) { Text("PES ET", color = Color(0xFFFF8894)) } }
+        if (room.status != "finished" && room.status != "paused") item { OutlinedButton(onClick = onForfeit, modifier = Modifier.fillMaxWidth(), border = BorderStroke(1.dp, Color(0xFF6C3340))) { Text("PES ET", color = Color(0xFFFF8894)) } }
+    }
+}
+
+@Composable
+private fun ReconnectPanel(room: GameRoomDto, me: String?) {
+    var seconds by remember(room.reconnectDeadline) { mutableStateOf(60) }
+    LaunchedEffect(room.reconnectDeadline) {
+        while (room.reconnectDeadline != null) {
+            val deadline = runCatching { Instant.parse(room.reconnectDeadline) }.getOrNull()
+            seconds = deadline?.epochSecond?.minus(Instant.now().epochSecond)?.toInt()?.coerceAtLeast(0) ?: 0
+            if (seconds <= 0) break
+            delay(1000)
+        }
+    }
+    Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF2A2134)), shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .45f))) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("BAĞLANTI KOPTU", color = SonHarfGold, fontWeight = FontWeight.Black)
+            Text(if (room.disconnectedPlayerId == me) "Bağlantın geri geldiğinde maç otomatik devam eder." else "Rakibin yeniden bağlanması bekleniyor.", textAlign = TextAlign.Center)
+            Text("$seconds sn", fontSize = 30.sp, fontWeight = FontWeight.Black)
+            Text("60 saniye içinde dönmezse bağlı kalan oyuncu hükmen kazanır.", color = SonHarfMuted, fontSize = 11.sp, textAlign = TextAlign.Center)
+        }
     }
 }
 
@@ -412,9 +484,7 @@ private fun TriviaV2(round: TriviaRoundDto?, q: TriviaQuestionDto?, onAnswer: (I
     Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp)) {
         Column(Modifier.fillMaxWidth().padding(18.dp)) {
             Text("🧠 GENEL KÜLTÜR • +${round.bonusPoints}", color = SonHarfGold, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(10.dp))
-            Text(q.question, fontSize = 20.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(10.dp)); Text(q.question, fontSize = 20.sp, fontWeight = FontWeight.Black); Spacer(Modifier.height(10.dp))
             if (!unlocked) Text("Şıklar $seconds saniye sonra açılacak…", color = SonHarfCyan)
             else listOf(q.optionA, q.optionB, q.optionC, q.optionD).forEachIndexed { i, option -> OutlinedButton(onClick = { onAnswer(i) }, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) { Text("${'A' + i}) $option", modifier = Modifier.fillMaxWidth()) } }
         }
@@ -423,7 +493,7 @@ private fun TriviaV2(round: TriviaRoundDto?, q: TriviaQuestionDto?, onAnswer: (I
 
 @Composable
 private fun DarkFieldV2(value: String, onValueChange: (String) -> Unit, label: String) {
-    OutlinedTextField(value, onValueChange, label = { Text(label) }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SonHarfCyan, unfocusedBorderColor = SonHarfSurface2, focusedContainerColor = Color(0xFF0D1322), unfocusedContainerColor = Color(0xFF0D1322)))
+    OutlinedTextField(value = value, onValueChange = onValueChange, label = { Text(label) }, singleLine = true, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = SonHarfCyan, unfocusedBorderColor = SonHarfSurface2, focusedContainerColor = Color(0xFF0D1322), unfocusedContainerColor = Color(0xFF0D1322)))
 }
 
 @Composable
@@ -431,9 +501,17 @@ private fun MissingBackendV2() { Box(Modifier.fillMaxSize(), contentAlignment = 
 
 private fun gameEvent(room: GameRoomDto, me: String?): String = when (room.lastEvent) {
     "streak_bonus" -> if (room.lastEventPlayerId == me) "🔥 SÖZ FIRTINASI! +3 ekstra" else "Rakip seri yaptı!"
+    "bot_streak_bonus" -> "🤖 Bot seri bonusu aldı."
+    "bot_valid_word" -> "🤖 Bot kelimesini oynadı."
+    "bot_failed" -> "🤖 Bot hata yaptı; sıra sende."
     "invalid_word", "not_in_dictionary", "wrong_start_letter", "word_already_used" -> "Geçersiz hamle: −1 ve sıra değişti."
     "turn_expired" -> "Süre doldu: −1 ve sıra değişti."
     "quiz_started" -> "🧠 Bonus soru! 3 saniye oku."
+    "bot_quiz_won" -> "🤖 Bot bonus soruyu aldı."
+    "quiz_no_winner" -> "Bonus soruda doğru cevap çıkmadı."
+    "opponent_disconnected" -> "Rakibin bağlantısı koptu; maç duraklatıldı."
+    "player_reconnected" -> "Bağlantı geri geldi; maç devam ediyor."
+    "disconnect_forfeit" -> "Bağlantı süresi doldu; maç hükmen sonuçlandı."
     "match_finished" -> "Maç tamamlandı."
     "sudden_death_started" -> "⚡ ANİ ÖLÜM! İlk hata kaybettirir."
     else -> "Hamle işlendi."
