@@ -9,7 +9,6 @@ import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
-import io.github.jan.supabase.postgrest.rpc
 import io.github.jan.supabase.realtime.Realtime
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -18,6 +17,8 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.isActive
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 @Serializable
 data class ProfileDto(
@@ -67,18 +68,6 @@ private data class ProfileWrite(
 )
 
 @Serializable
-private data class JoinRoomParams(@SerialName("p_code") val code: String)
-
-@Serializable
-private data class SubmitWordParams(
-    @SerialName("p_room_id") val roomId: String,
-    @SerialName("p_word") val word: String
-)
-
-@Serializable
-private data class ForfeitParams(@SerialName("p_room_id") val roomId: String)
-
-@Serializable
 private data class ChatWrite(
     @SerialName("room_id") val roomId: String,
     @SerialName("sender_id") val senderId: String,
@@ -113,22 +102,38 @@ class OnlineGameBackend(
         val safeName = displayName.trim().ifBlank { "Oyuncu" }.take(24)
         return supabase.from("profiles")
             .upsert(ProfileWrite(userId, safeName)) { select() }
-            .decodeSingle()
+            .decodeSingle<ProfileDto>()
     }
 
     fun currentUserId(): String? = supabase.auth.currentUserOrNull()?.id
 
     suspend fun createRoom(): GameRoomDto =
-        supabase.postgrest.rpc("create_room").decodeSingle()
+        supabase.postgrest.rpc("create_room").decodeSingle<GameRoomDto>()
 
     suspend fun joinRoom(code: String): GameRoomDto =
-        supabase.postgrest.rpc("join_room_by_code", JoinRoomParams(code.trim().uppercase())).decodeSingle()
+        supabase.postgrest.rpc(
+            function = "join_room_by_code",
+            parameters = buildJsonObject {
+                put("p_code", code.trim().uppercase())
+            }
+        ).decodeSingle<GameRoomDto>()
 
     suspend fun submitWord(roomId: String, word: String): GameRoomDto =
-        supabase.postgrest.rpc("submit_word", SubmitWordParams(roomId, word.trim())).decodeSingle()
+        supabase.postgrest.rpc(
+            function = "submit_word",
+            parameters = buildJsonObject {
+                put("p_room_id", roomId)
+                put("p_word", word.trim())
+            }
+        ).decodeSingle<GameRoomDto>()
 
     suspend fun forfeit(roomId: String): GameRoomDto =
-        supabase.postgrest.rpc("forfeit_room", ForfeitParams(roomId)).decodeSingle()
+        supabase.postgrest.rpc(
+            function = "forfeit_room",
+            parameters = buildJsonObject {
+                put("p_room_id", roomId)
+            }
+        ).decodeSingle<GameRoomDto>()
 
     suspend fun sendChat(roomId: String, text: String) {
         val userId = requireNotNull(currentUserId()) { "No authenticated user" }
@@ -140,7 +145,7 @@ class OnlineGameBackend(
     suspend fun getRoom(roomId: String): GameRoomDto =
         supabase.from("game_rooms").select {
             filter { eq("id", roomId) }
-        }.decodeSingle()
+        }.decodeSingle<GameRoomDto>()
 
     suspend fun getWords(roomId: String): List<GameWordDto> =
         supabase.from("game_words").select {
