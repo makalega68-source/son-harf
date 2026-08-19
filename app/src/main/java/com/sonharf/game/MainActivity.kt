@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -34,6 +35,7 @@ enum class AppScreen { HOME, GAME, SHOP, PROFILE }
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SonHarfPreferences.syncSound(this)
         setContent {
             MaterialTheme(
                 colorScheme = darkColorScheme(
@@ -73,7 +75,7 @@ private fun SonHarfApp() {
                 AppScreen.HOME -> HomeScreen { SonHarfSoundFx.softNotify(); screen = AppScreen.GAME }
                 AppScreen.GAME -> OnlineGameScreenV2()
                 AppScreen.SHOP -> ShopScreen()
-                AppScreen.PROFILE -> ProfileScreen()
+                AppScreen.PROFILE -> FinalProfileScreen()
             }
         }
     }
@@ -81,9 +83,14 @@ private fun SonHarfApp() {
 
 @Composable
 private fun RowScope.NavItem(icon: String, label: String, selected: Boolean, onClick: () -> Unit) {
+    val context = LocalContext.current
     NavigationBarItem(
         selected = selected,
-        onClick = { SonHarfSoundFx.tap(); onClick() },
+        onClick = {
+            SonHarfSoundFx.tap()
+            SonHarfPreferences.hapticTap(context)
+            onClick()
+        },
         icon = {
             Surface(
                 color = if (selected) SonHarfPurple.copy(alpha = .2f) else Color.Transparent,
@@ -228,31 +235,5 @@ private fun ShopScreen() {
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ProfileScreen() {
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item { Text("PROFİL", fontSize = 30.sp, fontWeight = FontWeight.Black); Text("Oyuncu kimliğin, gizliliğin ve istatistiklerin", color = SonHarfMuted) }
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(26.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = .05f))) {
-                Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Surface(color = SonHarfPurple.copy(alpha = .18f), shape = RoundedCornerShape(999.dp), border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .25f))) { Text("SH", Modifier.padding(20.dp), fontSize = 26.sp, fontWeight = FontWeight.Black, color = SonHarfCyan) }
-                    Text("OYUNCU PROFİLİ", fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text("Oyuncu adın ve maç istatistiklerin burada tutulur", color = SonHarfMuted, textAlign = TextAlign.Center)
-                }
-            }
-        }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) { ProfileMetric("0", "Galibiyet", Modifier.weight(1f)); ProfileMetric("0", "Mağlubiyet", Modifier.weight(1f)); ProfileMetric("0", "Elmas", Modifier.weight(1f)) } }
-        item { Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = .045f))) { Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("Profil fotoğrafı ve gizlilik", fontWeight = FontWeight.Bold); Text("Fotoğrafını gizli tutabilir, maç sırasında rakibine veya izin verdiğin kişilere açabilirsin.", color = SonHarfMuted) } } }
-        item { Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = .045f))) { Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { Text("İstatistikler", fontWeight = FontWeight.Bold); Text("Galibiyet, mağlubiyet, seri ve kelime performansı online maçlardan hesaplanır.", color = SonHarfMuted) } } }
-    }
-}
-
-@Composable
-private fun ProfileMetric(value: String, label: String, modifier: Modifier) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = .045f))) {
-        Column(Modifier.fillMaxWidth().padding(vertical = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(value, fontWeight = FontWeight.Black, fontSize = 20.sp); Text(label, color = SonHarfMuted, fontSize = 10.sp) }
     }
 }
