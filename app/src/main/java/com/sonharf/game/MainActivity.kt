@@ -1,0 +1,41 @@
+package com.sonharf.game
+
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        setContent { SonHarfApp() }
+    }
+}
+
+@Composable
+fun SonHarfApp() {
+    MaterialTheme {
+        Surface(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier.fillMaxSize().padding(24.dp),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("SON HARF", style = MaterialTheme.typography.displaySmall)
+                Spacer(Modifier.height(12.dp))
+                Text("Kelimeyi kap, rakibini yakala.")
+                Spacer(Modifier.height(32.dp))
+                Button(onClick = { }) { Text("ODA OLUŞTUR") }
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = { }) { Text("KODLA KATIL") }
+                Spacer(Modifier.height(24.dp))
+                Text("MVP • Android", style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
