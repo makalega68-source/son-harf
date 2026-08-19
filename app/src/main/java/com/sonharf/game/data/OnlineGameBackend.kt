@@ -220,6 +220,9 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     suspend fun requestRematch(roomId: String): GameRoomDto =
         supabase.postgrest.rpc("request_rematch", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()
 
+    suspend fun restartBotMatch(roomId: String): GameRoomDto =
+        supabase.postgrest.rpc("restart_bot_match", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()
+
     suspend fun sendChat(roomId: String, text: String) {
         val id = requireNotNull(currentUserId())
         val body = text.trim().take(300)
