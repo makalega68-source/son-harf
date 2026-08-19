@@ -15,10 +15,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
+import kotlinx.coroutines.launch
 
 @Composable
 fun FinalProfileScreen() {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var blocked by remember { mutableStateOf<List<ProfileDto>>(emptyList()) }
@@ -143,7 +145,7 @@ fun FinalProfileScreen() {
                             Text(p.displayName, fontWeight = FontWeight.SemiBold)
                             TextButton(onClick = {
                                 val b = backend ?: return@TextButton
-                                kotlinx.coroutines.MainScope().launch {
+                                scope.launch {
                                     runCatching { b.unblockUser(p.id) }
                                     refresh()
                                 }
