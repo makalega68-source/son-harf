@@ -10,13 +10,12 @@ create or replace function public.is_admin()
 returns boolean language sql stable security definer set search_path=public as $$
   select exists(select 1 from public.admin_users where user_id=auth.uid());
 $$;
-
 grant execute on function public.is_admin() to authenticated;
 
+drop policy if exists admin_users_self_read on public.admin_users;
 create policy admin_users_self_read on public.admin_users
 for select to authenticated using (user_id=auth.uid());
 
--- Harden previously-created operations functions.
 revoke execute on function public.run_game_maintenance() from public, anon, authenticated;
 revoke execute on function public.system_health_snapshot() from public, anon, authenticated;
 
@@ -26,7 +25,6 @@ begin
   if not public.is_admin() then raise exception 'admin_required'; end if;
   return public.system_health_snapshot();
 end $$;
-
 grant execute on function public.admin_system_health() to authenticated;
 
 create or replace function public.admin_run_maintenance()
@@ -66,16 +64,16 @@ end $$;
 grant execute on function public.admin_close_room(uuid,text) to authenticated;
 
 create or replace function public.admin_clear_chat_suspension(p_user_id uuid)
-returns void language plpgsql security definer set search_path=public as $$;
+returns void language plpgsql security definer set search_path=public as $$
 begin
   if not public.is_admin() then raise exception 'admin_required'; end if;
   update public.profiles set chat_suspended_until=null where id=p_user_id;
   insert into public.admin_audit_log(admin_id,action,target_type,target_id)
   values(auth.uid(),'clear_chat_suspension','profile',p_user_id::text);
-end;
-$$;
+end $$;
 grant execute on function public.admin_clear_chat_suspension(uuid) to authenticated;
 
--- Admin-only read policies for operational tables.
+drop policy if exists system_events_admin_read on public.system_events;
 create policy system_events_admin_read on public.system_events for select to authenticated using(public.is_admin());
+drop policy if exists admin_audit_admin_read on public.admin_audit_log;
 create policy admin_audit_admin_read on public.admin_audit_log for select to authenticated using(public.is_admin());
