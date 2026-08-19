@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 
 internal val SonHarfBg = Color(0xFF030711)
@@ -26,8 +27,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SonHarfPreferences.syncSound(this)
         setContent {
-            MaterialTheme(
-                colorScheme = darkColorScheme(
+            val dark = SonHarfPreferences.darkModeEnabled(this)
+            val scheme = if (dark) {
+                darkColorScheme(
                     primary = SonHarfPurple,
                     secondary = SonHarfCyan,
                     tertiary = SonHarfGold,
@@ -36,7 +38,18 @@ class MainActivity : ComponentActivity() {
                     onBackground = SonHarfText,
                     onSurface = SonHarfText,
                 )
-            ) { AuroraSonHarfApp() }
+            } else {
+                lightColorScheme(
+                    primary = Color(0xFF6D35E8),
+                    secondary = Color(0xFF007EAA),
+                    tertiary = Color(0xFF9B6500),
+                    background = Color(0xFFF4F7FC),
+                    surface = Color.White,
+                    onBackground = Color(0xFF111827),
+                    onSurface = Color(0xFF111827),
+                )
+            }
+            MaterialTheme(colorScheme = scheme) { AuroraSonHarfApp() }
         }
     }
 }
