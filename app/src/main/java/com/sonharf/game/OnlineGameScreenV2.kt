@@ -122,11 +122,12 @@ fun OnlineGameScreenV2() {
                 invites = invites,
                 requests = requests,
                 onRandom = {
+                    SonHarfSoundFx.tap()
                     scope.launch {
                         busy = true
                         runCatching { ensure(); backend.startRandomMatchmaking(language) }
                             .onSuccess { matching = true; status = "Gerçek rakip aranıyor… 10 sn sonra bot devreye girebilir." }
-                            .onFailure { status = friendly(it) }
+                            .onFailure { SonHarfSoundFx.warning(); status = friendly(it) }
                         busy = false
                         if (matching) {
                             matchJob?.cancel()
@@ -135,6 +136,7 @@ fun OnlineGameScreenV2() {
                                     val found = runCatching { backend.pollRandomMatchmakingRoom() }.getOrNull()
                                     if (found != null) {
                                         room = found
+                                        SonHarfSoundFx.softNotify()
                                         status = if (found.isBot) "🤖 ${found.botName ?: "Bot"} hazır. Bot maçı başlıyor." else "Rakip bulundu!"
                                         observe(found)
                                         break
@@ -146,6 +148,7 @@ fun OnlineGameScreenV2() {
                     }
                 },
                 onCancel = {
+                    SonHarfSoundFx.tap()
                     scope.launch {
                         matching = false
                         matchJob?.cancel()
@@ -154,27 +157,50 @@ fun OnlineGameScreenV2() {
                     }
                 },
                 onFriends = {
+                    SonHarfSoundFx.tap()
                     scope.launch {
                         busy = true
                         runCatching { ensure(); refreshSocial() }
                             .onSuccess { showFriends = !showFriends }
-                            .onFailure { status = friendly(it) }
+                            .onFailure { SonHarfSoundFx.warning(); status = friendly(it) }
                         busy = false
                     }
                 },
-                onInvite = { id -> scope.launch { runCatching { backend.inviteFriend(id, language); refreshSocial() }.onSuccess { status = "Oyun daveti gönderildi." }.onFailure { status = friendly(it) } } },
-                onAcceptRequest = { id -> scope.launch { runCatching { backend.respondFriendRequest(id, true); refreshSocial() }.onFailure { status = friendly(it) } } },
+                onInvite = { id -> scope.launch { SonHarfSoundFx.tap(); runCatching { backend.inviteFriend(id, language); refreshSocial() }.onSuccess { SonHarfSoundFx.softNotify(); status = "Oyun daveti gönderildi." }.onFailure { SonHarfSoundFx.warning(); status = friendly(it) } } },
+                onAcceptRequest = { id -> scope.launch { SonHarfSoundFx.tap(); runCatching { backend.respondFriendRequest(id, true); refreshSocial() }.onFailure { SonHarfSoundFx.warning(); status = friendly(it) } } },
                 onInviteResponse = { id, accept ->
                     scope.launch {
+                        SonHarfSoundFx.tap()
                         runCatching { backend.respondGameInvite(id, accept) }
-                            .onSuccess { joined -> if (joined != null) { room = joined; observe(joined) }; refreshSocial() }
-                            .onFailure { status = friendly(it) }
+                            .onSuccess { joined -> if (joined != null) { SonHarfSoundFx.softNotify(); room = joined; observe(joined) }; refreshSocial() }
+                            .onFailure { SonHarfSoundFx.warning(); status = friendly(it) }
                     }
                 }
             )
         } else {
             val me = backend.currentUserId()
             val opponent = if (active.isBot) null else if (me == active.hostId) active.guestId else active.hostId
+            var lastSoundSignature by remember(active.id) { mutableStateOf<String?>(null) }
+
+            LaunchedEffect(active.id, active.status, active.lastEvent, active.hostScore, active.guestScore, active.winnerId) {
+                val signature = "${active.status}|${active.lastEvent}|${active.hostScore}|${active.guestScore}|${active.winnerId}"
+                if (lastSoundSignature != signature) {
+                    when {
+                        active.status == "finished" -> {
+                            val host = me == active.hostId
+                            val myScore = if (host) active.hostScore else active.guestScore
+                            val oppScore = if (host) active.guestScore else active.hostScore
+                            val won = active.winnerId == me || (active.isBot && active.winnerId == null && myScore > oppScore)
+                            if (won) SonHarfSoundFx.victory() else SonHarfSoundFx.defeat()
+                        }
+                        active.lastEvent in listOf("streak_bonus", "bot_streak_bonus", "quiz_started") -> SonHarfSoundFx.bonus()
+                        active.lastEvent in listOf("invalid_word", "not_in_dictionary", "wrong_start_letter", "word_already_used", "turn_expired", "bot_failed", "opponent_disconnected") -> SonHarfSoundFx.warning()
+                        active.lastEvent in listOf("valid_word", "bot_valid_word", "player_reconnected") -> SonHarfSoundFx.wordAccepted()
+                        active.lastEvent in listOf("bot_quiz_won", "quiz_no_winner", "disconnect_forfeit", "sudden_death_started") -> SonHarfSoundFx.softNotify()
+                    }
+                    lastSoundSignature = signature
+                }
+            }
 
             LaunchedEffect(active.id) {
                 while (true) {
@@ -190,7 +216,7 @@ fun OnlineGameScreenV2() {
                     delay(1800L + (active.validWordCount % 4) * 450L)
                     runCatching { backend.botTakeTurn(active.id) }
                         .onSuccess { room = it; status = gameEvent(it, me) }
-                        .onFailure { status = friendly(it) }
+                        .onFailure { SonHarfSoundFx.warning(); status = friendly(it) }
                 }
             }
 
@@ -202,7 +228,7 @@ fun OnlineGameScreenV2() {
                     delay(wait)
                     runCatching { backend.botAnswerTrivia(active.id) }
                         .onSuccess { room = it; refreshQuiz(it); status = gameEvent(it, me) }
-                        .onFailure { status = friendly(it) }
+                        .onFailure { SonHarfSoundFx.warning(); status = friendly(it) }
                 }
             }
 
@@ -221,35 +247,38 @@ fun OnlineGameScreenV2() {
                 busy = busy,
                 rematchRequested = rematchRequested,
                 onSubmitWord = {
+                    SonHarfSoundFx.tap()
                     scope.launch {
                         busy = true
                         runCatching { backend.submitWord(active.id, wordInput) }
                             .onSuccess { room = it; wordInput = ""; status = gameEvent(it, me) }
-                            .onFailure { status = friendly(it) }
+                            .onFailure { SonHarfSoundFx.warning(); status = friendly(it) }
                         busy = false
                     }
                 },
-                onTimeout = { if (!active.isBot) scope.launch { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it; status = gameEvent(it, me) } } else scope.launch { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it; status = gameEvent(it, me) } } },
-                onTrivia = { idx -> scope.launch { val q = triviaRound ?: return@launch; runCatching { backend.answerTrivia(q.id, idx) }.onSuccess { room = it; refreshQuiz(it); status = gameEvent(it, me) }.onFailure { status = friendly(it) } } },
-                onSendChat = { scope.launch { runCatching { backend.sendChat(active.id, chatInput) }.onSuccess { chatInput = "" }.onFailure { status = friendly(it) } } },
-                onBlock = { if (opponent != null) scope.launch { runCatching { backend.blockUser(opponent) }; status = "Oyuncu engellendi." } },
-                onReport = { if (opponent != null) scope.launch { runCatching { backend.reportUser(opponent, active.id, "Uygunsuz sohbet") }; status = "Rapor kaydedildi." } },
-                onPhoto = { if (opponent != null) scope.launch { runCatching { backend.setPhotoAccess(opponent, true) }; status = "Fotoğraf bu oyuncuya açıldı." } },
-                onFriend = { if (opponent != null) scope.launch { runCatching { backend.sendFriendRequest(opponent) }; status = "Arkadaşlık isteği gönderildi." } },
-                onForfeit = { scope.launch { runCatching { backend.forfeit(active.id) }.onSuccess { room = it } } },
+                onTimeout = { scope.launch { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it; status = gameEvent(it, me) }.onFailure { SonHarfSoundFx.warning() } } },
+                onTrivia = { idx -> scope.launch { SonHarfSoundFx.tap(); val q = triviaRound ?: return@launch; runCatching { backend.answerTrivia(q.id, idx) }.onSuccess { room = it; refreshQuiz(it); status = gameEvent(it, me) }.onFailure { SonHarfSoundFx.warning(); status = friendly(it) } } },
+                onSendChat = { scope.launch { SonHarfSoundFx.tap(); runCatching { backend.sendChat(active.id, chatInput) }.onSuccess { chatInput = "" }.onFailure { SonHarfSoundFx.warning(); status = friendly(it) } } },
+                onBlock = { if (opponent != null) scope.launch { SonHarfSoundFx.tap(); runCatching { backend.blockUser(opponent) }; status = "Oyuncu engellendi." } },
+                onReport = { if (opponent != null) scope.launch { SonHarfSoundFx.tap(); runCatching { backend.reportUser(opponent, active.id, "Uygunsuz sohbet") }; status = "Rapor kaydedildi." } },
+                onPhoto = { if (opponent != null) scope.launch { SonHarfSoundFx.tap(); runCatching { backend.setPhotoAccess(opponent, true) }; status = "Fotoğraf bu oyuncuya açıldı." } },
+                onFriend = { if (opponent != null) scope.launch { SonHarfSoundFx.tap(); runCatching { backend.sendFriendRequest(opponent) }; status = "Arkadaşlık isteği gönderildi." } },
+                onForfeit = { scope.launch { SonHarfSoundFx.warning(); runCatching { backend.forfeit(active.id) }.onSuccess { room = it } } },
                 onExit = {
+                    SonHarfSoundFx.tap()
                     roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); rematchJob?.cancel()
                     room = null; words = emptyList(); chat = emptyList(); status = "Yeni rakibini seç."
                     scope.launch { runCatching { backend.setPresence("online") } }
                 },
                 onRematch = {
                     if (!rematchRequested) {
+                        SonHarfSoundFx.softNotify()
                         rematchRequested = true
                         if (active.isBot) {
                             scope.launch {
                                 runCatching { backend.restartBotMatch(active.id) }
                                     .onSuccess { next -> room = next; words = emptyList(); chat = emptyList(); status = "🤖 Rövanş başlıyor!"; observe(next) }
-                                    .onFailure { rematchRequested = false; status = friendly(it) }
+                                    .onFailure { SonHarfSoundFx.warning(); rematchRequested = false; status = friendly(it) }
                             }
                         } else {
                             status = "Rövanş isteği gönderildi. Rakip bekleniyor…"
@@ -258,6 +287,7 @@ fun OnlineGameScreenV2() {
                                 while (rematchRequested && room?.id == active.id) {
                                     val next = runCatching { backend.requestRematch(active.id) }.getOrNull()
                                     if (next != null && next.id != active.id) {
+                                        SonHarfSoundFx.softNotify()
                                         room = next; words = emptyList(); chat = emptyList(); status = "Rövanş başlıyor!"; observe(next); break
                                     }
                                     delay(1500)
@@ -294,7 +324,7 @@ private fun LobbyV2(
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { Text("ONLINE DÜELLO", fontSize = 30.sp, fontWeight = FontWeight.Black); Text("3 round • her round 10 geçerli kelime", color = SonHarfMuted) }
         item { Surface(color = SonHarfPurple.copy(alpha = .12f), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .35f))) { Text(status, Modifier.fillMaxWidth().padding(14.dp)) } }
-        item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { FilterChip(selected = language == "tr", onClick = { onLanguageChange("tr") }, label = { Text("🇹🇷 Türkçe") }); FilterChip(selected = language == "en", onClick = { onLanguageChange("en") }, label = { Text("🇬🇧 English") }) } }
+        item { Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { FilterChip(selected = language == "tr", onClick = { SonHarfSoundFx.tap(); onLanguageChange("tr") }, label = { Text("🇹🇷 Türkçe") }); FilterChip(selected = language == "en", onClick = { SonHarfSoundFx.tap(); onLanguageChange("en") }, label = { Text("🇬🇧 English") }) } }
         item { DarkFieldV2(name, onNameChange, "Oyuncu adı") }
         item {
             if (!matching) {
@@ -486,7 +516,7 @@ private fun TriviaV2(round: TriviaRoundDto?, q: TriviaQuestionDto?, onAnswer: (I
             Text("🧠 GENEL KÜLTÜR • +${round.bonusPoints}", color = SonHarfGold, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(10.dp)); Text(q.question, fontSize = 20.sp, fontWeight = FontWeight.Black); Spacer(Modifier.height(10.dp))
             if (!unlocked) Text("Şıklar $seconds saniye sonra açılacak…", color = SonHarfCyan)
-            else listOf(q.optionA, q.optionB, q.optionC, q.optionD).forEachIndexed { i, option -> OutlinedButton(onClick = { onAnswer(i) }, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) { Text("${'A' + i}) $option", modifier = Modifier.fillMaxWidth()) } }
+            else listOf(q.optionA, q.optionB, q.optionC, q.optionD).forEachIndexed { i, option -> OutlinedButton(onClick = { SonHarfSoundFx.tap(); onAnswer(i) }, modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp)) { Text("${'A' + i}) $option", modifier = Modifier.fillMaxWidth()) } }
         }
     }
 }
