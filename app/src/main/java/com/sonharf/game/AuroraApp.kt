@@ -42,7 +42,7 @@ fun AuroraSonHarfApp() {
                 AppScreen.HOME -> AuroraHome({ screen = AppScreen.GAME }, { screen = AppScreen.LEADERBOARD })
                 AppScreen.GAME -> OnlineGameScreenV6()
                 AppScreen.SHOP -> AuroraShop()
-                AppScreen.PROFILE -> AuroraProfile()
+                AppScreen.PROFILE -> ProfileExperienceScreen()
                 AppScreen.MORE -> AuroraSettings()
                 AppScreen.LEADERBOARD -> AuroraLeaderboard { screen = AppScreen.HOME }
             }
