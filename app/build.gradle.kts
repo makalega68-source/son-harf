@@ -22,8 +22,16 @@ android {
         val supabaseKey = providers.gradleProperty("SON_HARF_SUPABASE_KEY")
             .orElse("sb_publishable_e0SbZKPDCfEcRlxaJsXC7g_D9xkaDjf")
             .get()
+        val admobAppId = providers.gradleProperty("SON_HARF_ADMOB_APP_ID")
+            .orElse("ca-app-pub-3940256099942544~3347511713")
+            .get()
+        val rewardedAdUnitId = providers.gradleProperty("SON_HARF_ADMOB_REWARDED_ID")
+            .orElse("ca-app-pub-3940256099942544/5224354917")
+            .get()
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
+        buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", "\"$rewardedAdUnitId\"")
+        manifestPlaceholders["ADMOB_APP_ID"] = admobAppId
     }
 
     buildFeatures {
@@ -52,5 +60,6 @@ dependencies {
     implementation("io.ktor:ktor-client-okhttp:3.5.1")
 
     implementation("com.android.billingclient:billing-ktx:8.0.0")
+    implementation("com.google.android.gms:play-services-ads:24.5.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
