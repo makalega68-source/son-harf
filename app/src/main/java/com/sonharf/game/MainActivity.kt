@@ -64,7 +64,7 @@ class MainActivity : ComponentActivity() {
                 typography = SonHarfNeonTypography,
             ) {
                 Box {
-                    MockupSonHarfApp()
+                    FullHistoryNeonApp()
                     WinnerFireworkOverlay()
                     FriendsQuickAccessOverlay()
                 }
