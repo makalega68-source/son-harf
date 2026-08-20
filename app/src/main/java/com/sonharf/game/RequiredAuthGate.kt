@@ -8,8 +8,10 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -71,6 +73,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var success by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
     val pulse by rememberInfiniteTransition(label = "authLogo").animateFloat(
         initialValue = .96f, targetValue = 1.04f,
         animationSpec = infiniteRepeatable(tween(950), RepeatMode.Reverse), label = "authLogoPulse",
@@ -90,11 +93,10 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     else listOf(Color(0xFFDDF3FF), Color(0xFFEAF8FF), Color(0xFFD8EEFF))
 
     Box(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(authGradient)).statusBarsPadding().navigationBarsPadding(),
-        contentAlignment = Alignment.Center,
+        Modifier.fillMaxSize().background(Brush.verticalGradient(authGradient)).statusBarsPadding().navigationBarsPadding().imePadding(),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 14.dp),
+            Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 22.dp, vertical = 14.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
@@ -114,7 +116,6 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                         FilterChip(selected = register, onClick = { register = true; notice = "" }, label = { Text("ÜYE OL", fontSize = 15.sp) }, modifier = Modifier.weight(1f))
                         FilterChip(selected = !register, onClick = { register = false; notice = "" }, label = { Text("GİRİŞ YAP", fontSize = 15.sp) }, modifier = Modifier.weight(1f))
                     }
-
                     if (register) {
                         OutlinedTextField(displayName, { displayName = it.take(24) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Oyuncu adı") })
                         Text("Bu ad kayıt tamamlandığında kalıcı olur.", color = SonHarfMuted, fontSize = 13.sp)
@@ -138,7 +139,6 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             Text(if (rememberMe) "Oturum korunur" else "Sonraki açılışta çıkış", color = SonHarfMuted, fontSize = 12.sp)
                         }
                     }
-
                     Button(
                         onClick = {
                             if (busy) return@Button
@@ -152,12 +152,8 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                     runCatching {
                                         SupabaseProvider.client.auth.signOut()
                                         SupabaseProvider.client.auth.signUpWith(Email) {
-                                            this.email = email.trim()
-                                            this.password = password
-                                            data = buildJsonObject {
-                                                put("display_name", displayName.trim())
-                                                put("gender", gender)
-                                            }
+                                            this.email = email.trim(); this.password = password
+                                            data = buildJsonObject { put("display_name", displayName.trim()); put("gender", gender) }
                                         }
                                     }.onSuccess {
                                         SonHarfPreferences.rememberPendingRegistration(context, email, displayName, gender)
@@ -178,8 +174,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                         }
                                         SonHarfPreferences.clearPendingRegistration(context, email)
                                         SonHarfPreferences.setRememberLogin(context, rememberMe, email)
-                                    }.onSuccess { onAuthenticated() }
-                                        .onFailure { notice = friendly(it.message.orEmpty()) }
+                                    }.onSuccess { onAuthenticated() }.onFailure { notice = friendly(it.message.orEmpty()) }
                                 }
                                 busy = false
                             }
@@ -187,7 +182,6 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                         enabled = !busy, modifier = Modifier.fillMaxWidth().height(58.dp), shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = if (register) SonHarfPurple else SonHarfCyan, contentColor = Color.White),
                     ) { Text(if (busy) "…" else if (register) "ÜYELİK OLUŞTUR" else "OYUNA GİR", fontWeight = FontWeight.Black, fontSize = 17.sp) }
-
                     if (notice.isNotBlank()) {
                         Surface(color = if (success) SonHarfGreen.copy(alpha = .12f) else SonHarfGold.copy(alpha = .12f), shape = RoundedCornerShape(14.dp)) {
                             Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfText, fontSize = 14.sp, textAlign = TextAlign.Center)
@@ -196,6 +190,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     Text("E-posta doğrulaması tamamlanmadan oyun ekranları açılmaz.", color = SonHarfMuted, fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                 }
             }
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
