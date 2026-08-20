@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
                     onSurface = SonHarfText,
                 )
             }
-            MaterialTheme(colorScheme = scheme) { AuroraSonHarfAppEnhanced() }
+            MaterialTheme(colorScheme = scheme) { AuroraSonHarfAppPrivateEnhanced() }
         }
     }
 }
