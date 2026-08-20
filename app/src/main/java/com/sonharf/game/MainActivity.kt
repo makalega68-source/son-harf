@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
                     onSurface = Color(0xFF111827),
                 )
             }
-            MaterialTheme(colorScheme = scheme) { AuroraSonHarfApp() }
+            MaterialTheme(colorScheme = scheme) { ReferenceSonHarfApp() }
         }
     }
 }
