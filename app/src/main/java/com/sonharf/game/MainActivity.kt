@@ -7,6 +7,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import com.sonharf.game.data.SupabaseProvider
+import io.github.jan.supabase.auth.auth
+import kotlinx.coroutines.runBlocking
 
 internal val SonHarfBg: Color get() = if (SonHarfUiState.darkMode) Color(0xFF030B16) else Color(0xFFE8F6FF)
 internal val SonHarfSurface: Color get() = if (SonHarfUiState.darkMode) Color(0xFF0A1626) else Color(0xFFF8FCFF)
@@ -27,6 +30,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SonHarfPreferences.syncSound(this)
         SonHarfPreferences.syncUi(this)
+        if (SupabaseProvider.configured && !SonHarfPreferences.rememberLogin(this)) {
+            runBlocking { runCatching { SupabaseProvider.client.auth.signOut() } }
+        }
         setContent {
             val scheme = if (SonHarfUiState.darkMode) {
                 darkColorScheme(
