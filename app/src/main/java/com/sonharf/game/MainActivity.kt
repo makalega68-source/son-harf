@@ -68,6 +68,7 @@ class MainActivity : ComponentActivity() {
                     FullHistoryNeonApp()
                     WinnerFireworkOverlay()
                     FriendsQuickAccessOverlay()
+                    GameInviteOverlay()
                 }
             }
         }
