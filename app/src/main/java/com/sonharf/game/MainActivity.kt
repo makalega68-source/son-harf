@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
                     onBackground = SonHarfText,
                     onSurface = SonHarfText,
                 )
-            ) { AuroraSonHarfAppWithCombo() }
+            ) { AuroraSonHarfAppEnhanced() }
         }
     }
 }
