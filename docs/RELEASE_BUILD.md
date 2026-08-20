@@ -15,6 +15,22 @@ The signed release step runs only when all of these secrets exist:
 
 Do not commit a keystore or passwords to the repository.
 
+## Supabase / Google Play verification secrets
+
+The live `verify-play-purchase` Edge Function requires Google Play Developer API credentials before real purchases can be granted:
+
+- `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`: complete service-account JSON with Android Publisher access to the Son Harf Play Console app
+- `GOOGLE_PLAY_PACKAGE_NAME`: optional; defaults to `com.sonharf.game`
+
+The function verifies the authenticated Supabase user, checks the purchase token directly against Google Play, validates product and purchase/subscription state, applies the entitlement through the service-role-only database RPC, and then attempts server-side acknowledgement. Purchase tokens are unique in `public.purchases`, so retries are idempotent.
+
+Configured Play product IDs used by the app are:
+
+- subscriptions: `vip_monthly`, `vip_yearly`
+- one-time products: `coins_500`, `coins_1500`, `theme_neon`
+
+Until `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON` is configured, the verifier deliberately returns `google_play_not_configured` and no entitlement is granted.
+
 ## Outputs
 
 Every PR to `main` builds the debug APK used for QA. A push to `main` also builds the signed release artifacts when the release secrets above are configured:
