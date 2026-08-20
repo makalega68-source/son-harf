@@ -32,6 +32,15 @@ suspend fun OnlineGameBackend.joinPrivateRoom(code: String): GameRoomDto =
         buildJsonObject { put("p_code", code.trim().uppercase()) },
     ).decodeSingle()
 
+suspend fun OnlineGameBackend.inviteFriendToPrivateRoom(roomId: String, friendId: String): GameInviteDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "invite_friend_to_private_room",
+        buildJsonObject {
+            put("p_room_id", roomId)
+            put("p_friend_id", friendId)
+        },
+    ).decodeSingle()
+
 suspend fun OnlineGameBackend.unblockUser(userId: String) {
     SupabaseProvider.client.postgrest.rpc(
         "unblock_user",
