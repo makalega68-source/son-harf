@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -29,6 +30,9 @@ fun FinalProfileScreen() {
     var sound by remember { mutableStateOf(SonHarfPreferences.soundEnabled(context)) }
     var vibration by remember { mutableStateOf(SonHarfPreferences.vibrationEnabled(context)) }
     var notifications by remember { mutableStateOf(SonHarfPreferences.notificationsEnabled(context)) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var deleteBusy by remember { mutableStateOf(false) }
+    var deleteNotice by remember { mutableStateOf<String?>(null) }
 
     suspend fun refresh() {
         loading = true
@@ -175,12 +179,61 @@ fun FinalProfileScreen() {
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("GİZLİLİK & HAKKINDA", color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 12.sp)
                     Text("Son Harf; maç, sohbet, arkadaşlık, raporlama ve profil verilerini çevrimiçi oyun özelliklerini çalıştırmak için kullanır. Kritik skor ve oyun kuralları sunucuda doğrulanır.", color = SonHarfMuted, lineHeight = 20.sp)
-                    Text("Sürüm 0.3.0 • Android", color = SonHarfMuted, fontSize = 11.sp)
+                    Text("Sürüm ${BuildConfig.VERSION_NAME} • Android", color = SonHarfMuted, fontSize = 11.sp)
+                }
+            }
+        }
+
+        item {
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1116)), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, Color(0xFF7A2634))) {
+                Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("HESAP YÖNETİMİ", color = Color(0xFFFF8394), fontWeight = FontWeight.Black, fontSize = 12.sp)
+                    Text("Hesabını silersen üyeliğin ve hesabına bağlı oyun verileri kalıcı olarak silinir. Bu işlem geri alınamaz.", color = SonHarfMuted, fontSize = 11.sp, lineHeight = 18.sp)
+                    OutlinedButton(
+                        onClick = { showDeleteDialog = true; deleteNotice = null },
+                        enabled = !deleteBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8394)),
+                        border = BorderStroke(1.dp, Color(0xFF7A2634)),
+                    ) { Text("HESABIMI SİL", fontWeight = FontWeight.Black) }
+                    if (!deleteNotice.isNullOrBlank()) Text(deleteNotice!!, color = Color(0xFFFFB4BE), fontSize = 10.sp)
                 }
             }
         }
 
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { if (!deleteBusy) showDeleteDialog = false },
+            title = { Text("Hesabı kalıcı olarak sil?") },
+            text = { Text("Profilin, ilerlemen ve hesabına bağlı veriler silinecek. Bu işlemi geri alamazsın.") },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }, enabled = !deleteBusy) { Text("VAZGEÇ") }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            deleteBusy = true
+                            runCatching { AccountDeletion.deleteCurrentAccount() }
+                                .onSuccess {
+                                    showDeleteDialog = false
+                                    (context as? Activity)?.recreate()
+                                }
+                                .onFailure {
+                                    deleteNotice = "Hesap silinemedi. Bağlantını kontrol edip tekrar dene."
+                                    showDeleteDialog = false
+                                }
+                            deleteBusy = false
+                        }
+                    },
+                    enabled = !deleteBusy,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB3263B)),
+                ) { Text(if (deleteBusy) "SİLİNİYOR…" else "KALICI OLARAK SİL") }
+            },
+        )
     }
 }
 
