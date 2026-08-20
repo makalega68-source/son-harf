@@ -208,10 +208,7 @@ private fun AuroraDuelLobby(
 ) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(sh("DÜELLO", "DUEL"), fontSize = 24.sp, fontWeight = FontWeight.Black)
-                Surface(shape = RoundedCornerShape(99.dp), color = SonHarfSurface2) { Text(playerName, Modifier.padding(horizontal = 12.dp, vertical = 7.dp), color = SonHarfCyan, fontWeight = FontWeight.Bold) }
-            }
+            Text(sh("DÜELLO", "DUEL"), fontSize = 24.sp, fontWeight = FontWeight.Black)
         }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .12f))) {

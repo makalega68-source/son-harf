@@ -44,7 +44,7 @@ fun AuroraSonHarfApp() {
                 AppScreen.SHOP -> AuroraShop()
                 AppScreen.PROFILE -> ProfileExperienceScreen()
                 AppScreen.MORE -> AuroraSettings()
-                AppScreen.LEADERBOARD -> AuroraLeaderboard { screen = AppScreen.HOME }
+                AppScreen.LEADERBOARD -> LeaderboardExperienceScreen { screen = AppScreen.HOME }
             }
         }
     }
