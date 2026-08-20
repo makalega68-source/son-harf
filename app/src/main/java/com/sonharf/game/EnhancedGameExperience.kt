@@ -27,12 +27,7 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-/**
- * Final root used by MainActivity.
- * Keeps the existing Aurora UI and combo effects intact, then adds two gameplay-only layers:
- * 1) last accepted word -> required last letter transition in the same visual focal point
- * 2) an always-visible in-game keyboard so Android's system keyboard never covers word entry
- */
+/** Final root used by MainActivity. */
 @Composable
 fun AuroraSonHarfAppEnhanced() {
     Box(Modifier.fillMaxSize()) {
@@ -109,7 +104,7 @@ private fun EnhancedGameLayer() {
     val normalizedLast = lastWord?.normalizedWord
     val requiredLetter = normalizedLast?.lastOrNull()?.uppercaseChar()?.toString() ?: "•"
     val centerText = if (showLastWord && normalizedLast != null) normalizedLast.uppercase() else requiredLetter
-    val centerLabel = if (showLastWord && normalizedLast != null) "SON KELİME" else "SON HARF"
+    val centerLabel = if (showLastWord && normalizedLast != null) sh("SON KELİME", "LAST WORD") else sh("SON HARF", "LAST LETTER")
 
     Box(Modifier.fillMaxSize()) {
         LastWordToLetterFocus(
@@ -147,12 +142,12 @@ private fun EnhancedGameLayer() {
                         .onSuccess { result ->
                             room = result
                             notice = when (result.lastEvent) {
-                                "word_already_used" -> "Bu kelime daha önce kullanıldı."
-                                "wrong_start_letter" -> "Kelime $requiredLetter ile başlamalı."
-                                "not_in_dictionary" -> "Bu kelime sözlükte bulunamadı."
-                                "invalid_word" -> "Bu kelime geçerli değil."
-                                "turn_expired" -> "Süren doldu. −1 puan."
-                                else -> "${submitted.uppercase()} kabul edildi."
+                                "word_already_used" -> sh("Bu kelime daha önce kullanıldı.", "This word has already been used.")
+                                "wrong_start_letter" -> sh("Kelime $requiredLetter ile başlamalı.", "The word must start with $requiredLetter.")
+                                "not_in_dictionary" -> sh("Bu kelime sözlükte bulunamadı.", "This word was not found in the dictionary.")
+                                "invalid_word" -> sh("Bu kelime geçerli değil.", "This word is not valid.")
+                                "turn_expired" -> sh("Süren doldu. −1 puan.", "Your time expired. −1 point.")
+                                else -> sh("${submitted.uppercase()} kabul edildi.", "${submitted.uppercase()} accepted.")
                             }
                             if (result.lastEvent in setOf("word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "turn_expired")) {
                                 SonHarfSoundFx.warning()
@@ -161,7 +156,7 @@ private fun EnhancedGameLayer() {
                             }
                         }
                         .onFailure {
-                            notice = "Bağlantı sorunu. Yeniden deneniyor."
+                            notice = sh("Bağlantı sorunu. Yeniden deneniyor.", "Connection problem. Retrying.")
                             SonHarfSoundFx.warning()
                         }
                     busy = false
@@ -174,7 +169,7 @@ private fun EnhancedGameLayer() {
                 }
             },
             onForfeit = { confirmForfeit = true },
-            onBonus = { notice = "Bonus turu geldiğinde soru otomatik açılır." },
+            onBonus = { notice = sh("Bonus turu geldiğinde soru otomatik açılır.", "The question opens automatically when the bonus round starts.") },
             modifier = Modifier.align(Alignment.BottomCenter)
         )
     }
@@ -195,7 +190,7 @@ private fun EnhancedGameLayer() {
                                 chatInput = ""
                                 chat = runCatching { backend.getChat(active.id) }.getOrDefault(chat)
                             }
-                            .onFailure { notice = "Mesaj gönderilemedi." }
+                            .onFailure { notice = sh("Mesaj gönderilemedi.", "Message could not be sent.") }
                     }
                 }
             }
@@ -205,15 +200,15 @@ private fun EnhancedGameLayer() {
     if (confirmForfeit) {
         AlertDialog(
             onDismissRequest = { confirmForfeit = false },
-            title = { Text("PES ET") },
-            text = { Text("Maçtan çıkarsan mağlup sayılacaksın. Emin misin?") },
+            title = { Text(sh("PES ET", "FORFEIT")) },
+            text = { Text(sh("Maçtan çıkarsan mağlup sayılacaksın. Emin misin?", "If you leave the match, you will be counted as defeated. Are you sure?")) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmForfeit = false
                     scope.launch { runCatching { backend.forfeit(active.id) } }
-                }) { Text("EVET, PES ET", color = SonHarfPink) }
+                }) { Text(sh("EVET, PES ET", "YES, FORFEIT"), color = SonHarfPink) }
             },
-            dismissButton = { TextButton(onClick = { confirmForfeit = false }) { Text("VAZGEÇ") } }
+            dismissButton = { TextButton(onClick = { confirmForfeit = false }) { Text(sh("VAZGEÇ", "CANCEL")) } }
         )
     }
 }
@@ -238,7 +233,7 @@ private fun LastWordToLetterFocus(label: String, text: String, isWord: Boolean, 
     ) {
         Box(
             Modifier.fillMaxSize().clip(CircleShape)
-                .background(Brush.radialGradient(listOf(Color(0xFF17203A), Color(0xFF090E19)))),
+                .background(Brush.radialGradient(listOf(SonHarfSurface2, SonHarfSurface))),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -288,31 +283,31 @@ private fun InGameKeyboard(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = Color(0xFF050B15),
+        color = SonHarfSurface,
         tonalElevation = 0.dp,
         shadowElevation = 10.dp,
-        border = BorderStroke(1.dp, Color.White.copy(alpha = .08f))
+        border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .14f))
     ) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                KeyboardActionButton("⚑ PES ET", SonHarfPink, onForfeit, Modifier.weight(1f))
-                KeyboardActionButton("● SOHBET", SonHarfCyan, onChat, Modifier.weight(1f), enabled = chatEnabled)
+                KeyboardActionButton(sh("⚑ PES ET", "⚑ FORFEIT"), SonHarfPink, onForfeit, Modifier.weight(1f))
+                KeyboardActionButton(sh("● SOHBET", "● CHAT"), SonHarfCyan, onChat, Modifier.weight(1f), enabled = chatEnabled)
                 KeyboardActionButton("★ BONUS", SonHarfGold, onBonus, Modifier.weight(1f))
             }
 
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Surface(
                     modifier = Modifier.weight(1f).height(48.dp),
-                    color = SonHarfSurface,
+                    color = SonHarfSurface2,
                     shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, if (enabled) SonHarfCyan.copy(alpha = .45f) else Color.White.copy(alpha = .08f))
+                    border = BorderStroke(1.dp, if (enabled) SonHarfCyan.copy(alpha = .45f) else SonHarfMuted.copy(alpha = .14f))
                 ) {
                     Box(Modifier.fillMaxSize().padding(horizontal = 14.dp), contentAlignment = Alignment.CenterStart) {
                         Text(
-                            if (value.isBlank()) if (enabled) "Kelimenizi yazın…" else "Rakibin sırası…" else value.uppercase(),
+                            if (value.isBlank()) if (enabled) sh("Kelimenizi yazın…", "Type your word…") else sh("Rakibin sırası…", "Opponent's turn…") else value.uppercase(),
                             color = if (value.isBlank()) SonHarfMuted else SonHarfText,
                             fontSize = 18.sp,
                             fontWeight = if (value.isBlank()) FontWeight.Normal else FontWeight.Bold,
@@ -331,9 +326,11 @@ private fun InGameKeyboard(
             }
 
             if (!notice.isNullOrBlank()) {
+                val warning = notice.contains("geçerli") || notice.contains("bulunamadı") || notice.contains("başlamalı") || notice.contains("sorunu") ||
+                    notice.contains("valid") || notice.contains("found") || notice.contains("start with") || notice.contains("problem")
                 Text(
                     notice,
-                    color = if (notice.contains("geçerli") || notice.contains("bulunamadı") || notice.contains("başlamalı") || notice.contains("sorunu")) Color(0xFFFF829D) else SonHarfMuted,
+                    color = if (warning) SonHarfPink else SonHarfMuted,
                     modifier = Modifier.fillMaxWidth(),
                     textAlign = TextAlign.Center,
                     fontSize = 9.sp,
@@ -352,9 +349,9 @@ private fun InGameKeyboard(
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(0.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFF152137),
+                                containerColor = SonHarfSurface2,
                                 contentColor = SonHarfText,
-                                disabledContainerColor = Color(0xFF0C1422),
+                                disabledContainerColor = SonHarfSurface2.copy(alpha = .55f),
                                 disabledContentColor = SonHarfMuted.copy(alpha = .45f)
                             )
                         ) { Text(key, fontSize = 12.sp, fontWeight = FontWeight.Bold) }
@@ -366,7 +363,7 @@ private fun InGameKeyboard(
                             modifier = Modifier.weight(1.35f).height(36.dp),
                             shape = RoundedCornerShape(8.dp),
                             contentPadding = PaddingValues(0.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25182A))
+                            colors = ButtonDefaults.buttonColors(containerColor = SonHarfPink.copy(alpha = .16f))
                         ) { Text("⌫", fontSize = 18.sp) }
                         Spacer(Modifier.weight(.35f))
                     }
@@ -404,7 +401,7 @@ private fun EnhancedChatDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("MAÇ SOHBETİ", fontWeight = FontWeight.Black) },
+        title = { Text(sh("MAÇ SOHBETİ", "MATCH CHAT"), fontWeight = FontWeight.Black) },
         text = {
             Column(Modifier.heightIn(max = 420.dp)) {
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -426,11 +423,11 @@ private fun EnhancedChatDialog(
                     onValueChange = onInput,
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
-                    placeholder = { Text("Mesaj yaz…") }
+                    placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) }
                 )
             }
         },
-        confirmButton = { TextButton(onClick = onSend, enabled = input.isNotBlank()) { Text("GÖNDER") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("KAPAT") } }
+        confirmButton = { TextButton(onClick = onSend, enabled = input.isNotBlank()) { Text(sh("GÖNDER", "SEND")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(sh("KAPAT", "CLOSE")) } }
     )
 }
