@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,6 +25,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun GameInviteOverlay() {
     if (!SupabaseProvider.configured || SupabaseProvider.client.auth.currentUserOrNull() == null) return
+    val context = LocalContext.current
+    if (!SonHarfPreferences.gameInviteNotificationsEnabled(context)) return
 
     val backend = remember { OnlineGameBackend() }
     val scope = rememberCoroutineScope()
@@ -39,6 +42,7 @@ fun GameInviteOverlay() {
                     invite = next
                     sender = runCatching { backend.getProfile(next.senderId) }.getOrNull()
                     SonHarfSoundFx.softNotify()
+                    SonHarfPreferences.hapticTap(context)
                 }
             }
             delay(2500)
