@@ -109,7 +109,7 @@ fun SocialAvatar(
         Modifier
             .size(size)
             .clip(CircleShape)
-            .background(Brush.radialGradient(listOf(accent.copy(alpha = .24f), SonHarfSurface2)))
+            .background(Brush.sweepGradient(listOf(accent, SonHarfPurple, SonHarfPink, accent)))
             .padding(2.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -130,15 +130,19 @@ object FriendsQuickAccessState {
 fun FriendsQuickAccessOverlay() {
     if (!SupabaseProvider.configured || SupabaseProvider.client.auth.currentUserOrNull() == null) return
     if (!FriendsQuickAccessState.open) {
-        Box(Modifier.fillMaxSize().statusBarsPadding().padding(top = 6.dp, end = 12.dp), contentAlignment = Alignment.TopEnd) {
+        // Keep the historical quick-access feature, but make it visually part of the neon HUD.
+        Box(
+            Modifier.fillMaxSize().statusBarsPadding().padding(top = 7.dp, end = 10.dp),
+            contentAlignment = Alignment.TopEnd,
+        ) {
             Surface(
-                modifier = Modifier.size(46.dp).clickable { FriendsQuickAccessState.open = true },
-                shape = CircleShape,
-                color = SonHarfSurface.copy(alpha = .96f),
-                border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f)),
-                shadowElevation = 5.dp,
+                modifier = Modifier.size(42.dp).clickable { FriendsQuickAccessState.open = true },
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFF071027).copy(alpha = .96f),
+                border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .48f)),
+                shadowElevation = 3.dp,
             ) {
-                Box(contentAlignment = Alignment.Center) { Text("👥", fontSize = 22.sp) }
+                Box(contentAlignment = Alignment.Center) { Text("👥", fontSize = 20.sp) }
             }
         }
         return
@@ -155,6 +159,8 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
     var messages by remember { mutableStateOf<List<DirectMessageDto>>(emptyList()) }
     var input by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
+    var notice by remember { mutableStateOf("") }
+    var inviteBusy by remember { mutableStateOf(false) }
     val me = backend.currentUserId()
 
     suspend fun reloadFriends() {
@@ -170,6 +176,7 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
 
     LaunchedEffect(Unit) { reloadFriends() }
     LaunchedEffect(selected?.id) {
+        notice = ""
         while (selected != null) {
             reloadMessages()
             delay(900)
@@ -178,25 +185,41 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onClose,
-        title = { Text(if (selected == null) sh("ARKADAŞLAR", "FRIENDS") else selected!!.displayName, fontWeight = FontWeight.Black, fontSize = 22.sp) },
+        containerColor = Color(0xFF071027),
+        shape = RoundedCornerShape(26.dp),
+        title = {
+            Text(
+                if (selected == null) sh("ARKADAŞLAR", "FRIENDS") else selected!!.displayName,
+                color = SonHarfText,
+                fontWeight = FontWeight.Black,
+                fontSize = 22.sp,
+            )
+        },
         text = {
             if (selected == null) {
                 Column(Modifier.fillMaxWidth().heightIn(min = 250.dp, max = 520.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(sh("Yalnızca kabul edilmiş arkadaşlarınla özel sohbet edebilirsin.", "You can privately chat only with accepted friends."), color = SonHarfMuted, fontSize = 13.sp)
-                    if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-                    if (!loading && friends.isEmpty()) Text(sh("Henüz kabul edilmiş arkadaşın yok.", "You do not have accepted friends yet."), Modifier.fillMaxWidth().padding(vertical = 30.dp), textAlign = TextAlign.Center, color = SonHarfMuted)
+                    Text(sh("Kabul edilmiş arkadaşlarınla sohbet et veya düello başlat.", "Chat with accepted friends or start a duel."), color = SonHarfMuted, fontSize = 13.sp)
+                    if (loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfCyan)
+                    if (!loading && friends.isEmpty()) {
+                        Text(sh("Henüz kabul edilmiş arkadaşın yok.", "You do not have accepted friends yet."), Modifier.fillMaxWidth().padding(vertical = 30.dp), textAlign = TextAlign.Center, color = SonHarfMuted)
+                    }
                     LazyColumn(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         items(friends, key = { it.second.id }) { (_, profile) ->
                             Card(
                                 modifier = Modifier.fillMaxWidth().clickable { selected = profile },
-                                colors = CardDefaults.cardColors(containerColor = SonHarfSurface2.copy(alpha = .72f)),
+                                colors = CardDefaults.cardColors(containerColor = SonHarfSurface2.copy(alpha = .82f)),
                                 shape = RoundedCornerShape(16.dp),
+                                border = BorderStroke(1.dp, if (profile.presenceStatus == "online") SonHarfCyan.copy(alpha = .25f) else Color.White.copy(alpha = .05f)),
                             ) {
                                 Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                                     SocialAvatar(profile.gender, profile.displayName, 48.dp, accent = if (profile.isVip) SonHarfGold else SonHarfCyan)
                                     Column(Modifier.weight(1f)) {
-                                        Text(profile.displayName, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                                        Text(if (profile.presenceStatus == "online") sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"), color = if (profile.presenceStatus == "online") SonHarfGreen else SonHarfMuted, fontSize = 12.sp)
+                                        Text(profile.displayName, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                                        Text(
+                                            if (profile.presenceStatus == "online") "● ${sh("Çevrimiçi", "Online")}" else sh("Çevrimdışı", "Offline"),
+                                            color = if (profile.presenceStatus == "online") SonHarfGreen else SonHarfMuted,
+                                            fontSize = 12.sp,
+                                        )
                                     }
                                     Text("›", fontSize = 28.sp, color = SonHarfPurple)
                                 }
@@ -206,43 +229,73 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
                 }
             } else {
                 val friend = selected!!
-                Column(Modifier.fillMaxWidth().heightIn(min = 380.dp, max = 560.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Column(Modifier.fillMaxWidth().heightIn(min = 410.dp, max = 600.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         SocialAvatar(friend.gender, friend.displayName, 64.dp, accent = if (friend.isVip) SonHarfGold else SonHarfPurple)
-                        Column {
-                            Text(friend.displayName, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                        Column(Modifier.weight(1f)) {
+                            Text(friend.displayName, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 20.sp)
                             Text("${friend.wins}W • ${friend.losses}L", color = SonHarfMuted, fontSize = 12.sp)
-                            Text(sh("✓ Arkadaşın — sohbet açık", "✓ Friend — chat enabled"), color = SonHarfGreen, fontSize = 12.sp)
+                            Text(sh("✓ Arkadaşın — özel sohbet açık", "✓ Friend — private chat enabled"), color = SonHarfGreen, fontSize = 11.sp)
                         }
                     }
-                    HorizontalDivider()
+
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                inviteBusy = true
+                                runCatching { backend.inviteFriend(friend.id, SonHarfUiState.language) }
+                                    .onSuccess { notice = sh("Düello daveti gönderildi.", "Duel invitation sent."); SonHarfSoundFx.softNotify() }
+                                    .onFailure { notice = sh("Davet gönderilemedi.", "Invitation could not be sent.") }
+                                inviteBusy = false
+                            }
+                        },
+                        enabled = friend.presenceStatus == "online" && !inviteBusy,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
+                        shape = RoundedCornerShape(14.dp),
+                    ) {
+                        Text(if (inviteBusy) "…" else "⚔ ${sh("DÜELLOYA DAVET ET", "INVITE TO DUEL")}", fontWeight = FontWeight.Black)
+                    }
+                    if (friend.presenceStatus != "online") Text(sh("Düello daveti için arkadaşının çevrimiçi olması gerekir.", "Your friend must be online for a duel invitation."), color = SonHarfMuted, fontSize = 10.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                    if (notice.isNotBlank()) Text(notice, color = SonHarfGold, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+
+                    HorizontalDivider(color = Color.White.copy(alpha = .08f))
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(messages.takeLast(80), key = { it.id }) { msg ->
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = if (msg.senderId == me) Arrangement.End else Arrangement.Start) {
                                 Surface(
-                                    color = if (msg.senderId == me) SonHarfPurple.copy(alpha = .16f) else SonHarfSurface2,
+                                    color = if (msg.senderId == me) SonHarfPurple.copy(alpha = .22f) else SonHarfSurface2,
                                     shape = RoundedCornerShape(14.dp),
                                 ) {
-                                    Text(msg.body, Modifier.padding(horizontal = 11.dp, vertical = 8.dp).widthIn(max = 250.dp), fontSize = 14.sp)
+                                    Text(msg.body, Modifier.padding(horizontal = 11.dp, vertical = 8.dp).widthIn(max = 250.dp), color = SonHarfText, fontSize = 14.sp)
                                 }
                             }
                         }
                     }
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                        OutlinedTextField(input, { input = it.take(300) }, modifier = Modifier.weight(1f), singleLine = true, placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) })
-                        Button(onClick = {
-                            if (input.isBlank()) return@Button
-                            val outgoing = input
-                            input = ""
-                            scope.launch { runCatching { backend.sendDirectMessage(friend.id, outgoing) }; reloadMessages() }
-                        }, enabled = input.isNotBlank()) { Text("➤") }
+                        OutlinedTextField(
+                            value = input,
+                            onValueChange = { input = it.take(300) },
+                            modifier = Modifier.weight(1f),
+                            singleLine = true,
+                            placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) },
+                        )
+                        Button(
+                            onClick = {
+                                if (input.isBlank()) return@Button
+                                val outgoing = input
+                                input = ""
+                                scope.launch { runCatching { backend.sendDirectMessage(friend.id, outgoing) }; reloadMessages() }
+                            },
+                            enabled = input.isNotBlank(),
+                        ) { Text("➤") }
                     }
                 }
             }
         },
         confirmButton = {
             if (selected == null) TextButton(onClick = onClose) { Text(sh("KAPAT", "CLOSE")) }
-            else TextButton(onClick = { selected = null; messages = emptyList(); input = "" }) { Text(sh("ARKADAŞLARA DÖN", "BACK TO FRIENDS")) }
+            else TextButton(onClick = { selected = null; messages = emptyList(); input = ""; notice = "" }) { Text(sh("ARKADAŞLARA DÖN", "BACK TO FRIENDS")) }
         },
         dismissButton = {
             if (selected != null) TextButton(onClick = onClose) { Text(sh("KAPAT", "CLOSE")) }
