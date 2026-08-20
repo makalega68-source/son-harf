@@ -33,69 +33,43 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
 
     LaunchedEffect(language, period) {
         val b = backend
-        if (b == null) {
-            rows = emptyList()
-            error = true
-            return@LaunchedEffect
-        }
+        if (b == null) { rows = emptyList(); error = true; return@LaunchedEffect }
         loading = true
         error = false
-        runCatching { b.getLeaderboardV2(language, period, 50) }
-            .onSuccess { rows = it }
-            .onFailure { rows = emptyList(); error = true }
+        runCatching { b.getLeaderboardV2(language, period, 50) }.onSuccess { rows = it }.onFailure { rows = emptyList(); error = true }
         loading = false
     }
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
-    ) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = onBack) { Text("‹", fontSize = 30.sp, color = SonHarfPurple) }
                 Text(sh("LİDERLİK TABLOSU", "LEADERBOARD"), fontWeight = FontWeight.Black, fontSize = 22.sp)
             }
         }
-
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = language == "tr",
-                    onClick = { language = "tr" },
-                    label = { Text("🇹🇷 TÜRKÇE") },
-                    modifier = Modifier.weight(1f),
-                )
-                FilterChip(
-                    selected = language == "en",
-                    onClick = { language = "en" },
-                    label = { Text("🇬🇧 ENGLISH") },
-                    modifier = Modifier.weight(1f),
-                )
+                FilterChip(selected = language == "tr", onClick = { language = "tr" }, label = { Text("🇹🇷 TÜRKÇE") }, modifier = Modifier.weight(1f))
+                FilterChip(selected = language == "en", onClick = { language = "en" }, label = { Text("🇬🇧 ENGLISH") }, modifier = Modifier.weight(1f))
             }
         }
-
         item {
-            Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(SonHarfSurface2).padding(4.dp),
-            ) {
-                listOf(
-                    "total" to sh("TOPLAM", "TOTAL"),
-                    "week" to sh("BU HAFTA", "THIS WEEK"),
-                    "month" to sh("BU AY", "THIS MONTH"),
-                ).forEach { (key, title) ->
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(SonHarfSurface2).padding(4.dp)) {
+                listOf("total" to sh("TOPLAM", "TOTAL"), "week" to sh("BU HAFTA", "THIS WEEK"), "month" to sh("BU AY", "THIS MONTH")).forEach { (key, title) ->
+                    val selected = period == key
                     Button(
                         onClick = { period = key },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (period == key) SonHarfBlue else Color.Transparent),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (selected) SonHarfBlue else Color.Transparent,
+                            contentColor = if (selected) Color.White else SonHarfText,
+                        ),
                         shape = RoundedCornerShape(12.dp),
-                    ) { Text(title, fontSize = 10.sp) }
+                    ) { Text(title, fontSize = 10.sp, fontWeight = if (selected) FontWeight.Black else FontWeight.Bold) }
                 }
             }
         }
-
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-
         item {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                 Text(sh("SIRA", "RANK"), Modifier.width(42.dp), color = SonHarfMuted, fontSize = 9.sp)
@@ -104,27 +78,12 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                 Text(sh("KAZANMA %", "WIN %"), Modifier.width(72.dp), color = SonHarfMuted, fontSize = 9.sp)
             }
         }
-
         itemsIndexed(rows, key = { _, row -> row.userId }) { index, row ->
-            Card(
-                colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
-                shape = RoundedCornerShape(15.dp),
-                border = BorderStroke(1.dp, if (index == 0) SonHarfGold.copy(alpha = .35f) else SonHarfMuted.copy(alpha = .12f)),
-            ) {
+            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(15.dp), border = BorderStroke(1.dp, if (index == 0) SonHarfGold.copy(alpha = .35f) else SonHarfMuted.copy(alpha = .12f))) {
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        if (index < 3) listOf("♛", "♜", "♝")[index] else "${index + 1}",
-                        Modifier.width(42.dp),
-                        color = if (index == 0) SonHarfGold else SonHarfMuted,
-                        textAlign = TextAlign.Center,
-                    )
+                    Text(if (index < 3) listOf("♛", "♜", "♝")[index] else "${index + 1}", Modifier.width(42.dp), color = if (index == 0) SonHarfGold else SonHarfMuted, textAlign = TextAlign.Center)
                     Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier.size(34.dp).clip(CircleShape).background(SonHarfSurface2),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(row.displayName.take(1).uppercase(), fontWeight = FontWeight.Black, color = SonHarfCyan)
-                        }
+                        Box(Modifier.size(34.dp).clip(CircleShape).background(SonHarfSurface2), contentAlignment = Alignment.Center) { Text(row.displayName.take(1).uppercase(), fontWeight = FontWeight.Black, color = SonHarfCyan) }
                         Spacer(Modifier.width(9.dp))
                         Text(row.displayName, fontWeight = FontWeight.Bold, maxLines = 1)
                     }
@@ -134,7 +93,6 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                 }
             }
         }
-
         if (!loading && rows.isEmpty()) item {
             val message = when {
                 error -> sh("Liderlik verisi alınamadı.", "Leaderboard data could not be loaded.")

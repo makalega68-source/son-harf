@@ -19,13 +19,11 @@ object SonHarfPreferences {
 
     fun soundEnabled(context: Context): Boolean = prefs(context).getBoolean(SOUND, true)
     fun vibrationEnabled(context: Context): Boolean = prefs(context).getBoolean(VIBRATION, true)
-    fun darkModeEnabled(context: Context): Boolean = prefs(context).getBoolean(DARK_MODE, true)
+    fun darkModeEnabled(context: Context): Boolean = prefs(context).getBoolean(DARK_MODE, false)
     fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"
 
     fun notificationsEnabled(context: Context): Boolean =
-        gameInviteNotificationsEnabled(context) ||
-            friendRequestNotificationsEnabled(context) ||
-            systemNotificationsEnabled(context)
+        gameInviteNotificationsEnabled(context) || friendRequestNotificationsEnabled(context) || systemNotificationsEnabled(context)
 
     fun gameInviteNotificationsEnabled(context: Context): Boolean =
         prefs(context).getBoolean(GAME_INVITE_NOTIFICATIONS, prefs(context).getBoolean(NOTIFICATIONS, true))
@@ -41,8 +39,7 @@ object SonHarfPreferences {
         SonHarfSoundFx.setEnabled(value)
     }
 
-    fun setVibrationEnabled(context: Context, value: Boolean) =
-        prefs(context).edit().putBoolean(VIBRATION, value).apply()
+    fun setVibrationEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(VIBRATION, value).apply()
 
     fun setDarkModeEnabled(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(DARK_MODE, value).apply()
@@ -56,22 +53,12 @@ object SonHarfPreferences {
     }
 
     fun setNotificationsEnabled(context: Context, value: Boolean) {
-        prefs(context).edit()
-            .putBoolean(NOTIFICATIONS, value)
-            .putBoolean(GAME_INVITE_NOTIFICATIONS, value)
-            .putBoolean(FRIEND_REQUEST_NOTIFICATIONS, value)
-            .putBoolean(SYSTEM_NOTIFICATIONS, value)
-            .apply()
+        prefs(context).edit().putBoolean(NOTIFICATIONS, value).putBoolean(GAME_INVITE_NOTIFICATIONS, value).putBoolean(FRIEND_REQUEST_NOTIFICATIONS, value).putBoolean(SYSTEM_NOTIFICATIONS, value).apply()
     }
 
-    fun setGameInviteNotificationsEnabled(context: Context, value: Boolean) =
-        prefs(context).edit().putBoolean(GAME_INVITE_NOTIFICATIONS, value).apply()
-
-    fun setFriendRequestNotificationsEnabled(context: Context, value: Boolean) =
-        prefs(context).edit().putBoolean(FRIEND_REQUEST_NOTIFICATIONS, value).apply()
-
-    fun setSystemNotificationsEnabled(context: Context, value: Boolean) =
-        prefs(context).edit().putBoolean(SYSTEM_NOTIFICATIONS, value).apply()
+    fun setGameInviteNotificationsEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(GAME_INVITE_NOTIFICATIONS, value).apply()
+    fun setFriendRequestNotificationsEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(FRIEND_REQUEST_NOTIFICATIONS, value).apply()
+    fun setSystemNotificationsEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(SYSTEM_NOTIFICATIONS, value).apply()
 
     fun syncSound(context: Context) = SonHarfSoundFx.setEnabled(soundEnabled(context))
 
@@ -83,16 +70,10 @@ object SonHarfPreferences {
     fun hapticTap(context: Context) {
         if (!vibrationEnabled(context)) return
         runCatching {
-            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                context.getSystemService(VibratorManager::class.java).defaultVibrator
-            } else {
-                @Suppress("DEPRECATION") context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                vibrator.vibrate(VibrationEffect.createOneShot(12L, 28))
-            } else {
-                @Suppress("DEPRECATION") vibrator.vibrate(12L)
-            }
+            val vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) context.getSystemService(VibratorManager::class.java).defaultVibrator
+            else @Suppress("DEPRECATION") (context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) vibrator.vibrate(VibrationEffect.createOneShot(12L, 28))
+            else @Suppress("DEPRECATION") vibrator.vibrate(12L)
         }
     }
 
