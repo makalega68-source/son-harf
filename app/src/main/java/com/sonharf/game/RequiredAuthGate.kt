@@ -38,9 +38,10 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     val scope = rememberCoroutineScope()
     var register by remember { mutableStateOf(true) }
     var displayName by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf(SonHarfPreferences.rememberedEmail(context)) }
     var password by remember { mutableStateOf("") }
     var password2 by remember { mutableStateOf("") }
+    var rememberMe by remember { mutableStateOf(SonHarfPreferences.rememberLogin(context)) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var success by remember { mutableStateOf(false) }
@@ -108,6 +109,18 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     OutlinedTextField(password, { password = it.take(64) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Şifre") }, visualTransformation = PasswordVisualTransformation())
                     if (register) {
                         OutlinedTextField(password2, { password2 = it.take(64) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Şifre tekrar") }, visualTransformation = PasswordVisualTransformation())
+                    } else {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
+                                Text("Beni hatırla", fontWeight = FontWeight.SemiBold)
+                            }
+                            Text(if (rememberMe) "Oturum korunur" else "Sonraki açılışta çıkış yapılır", color = SonHarfMuted, fontSize = 8.sp)
+                        }
                     }
 
                     Button(
@@ -152,6 +165,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                             backend.ensurePlayer(email.substringBefore('@').take(20).ifBlank { "Oyuncu" })
                                         }
                                         if (pendingName != null) SonHarfPreferences.clearPendingRegistration(context, email)
+                                        SonHarfPreferences.setRememberLogin(context, rememberMe, email)
                                     }.onSuccess { onAuthenticated() }
                                         .onFailure { notice = friendly(it.message.orEmpty()) }
                                 }

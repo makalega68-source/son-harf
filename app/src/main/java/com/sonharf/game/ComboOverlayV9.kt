@@ -77,7 +77,7 @@ fun ComboOverlayV9() {
     var shown by remember { mutableStateOf<Pair<String, Long>?>(null) }
     var activeRoom by remember { mutableStateOf<ActionRoomV9?>(null) }
     var finishedRoom by remember { mutableStateOf<ActionRoomV9?>(null) }
-    var dismissedFinished by remember { mutableStateOf<String?>(null) }
+    var dismissedFinished by remember { mutableStateOf(SonHarfPreferences.dismissedMatchSummaryId(context)) }
     var resultWords by remember { mutableStateOf<List<GameWordDto>>(emptyList()) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
     var reaction by remember { mutableStateOf<String?>(null) }
@@ -86,6 +86,12 @@ fun ComboOverlayV9() {
     val pieces = remember {
         val colors = listOf(SonHarfPink, SonHarfCyan, SonHarfGold, SonHarfGreen, SonHarfPurple, Color(0xFFFF6B35))
         List(64) { ConfettiPiece(Random.nextFloat(), Random.nextFloat() * .20f, .75f + Random.nextFloat() * .70f, 5f + Random.nextFloat() * 8f, Random.nextFloat() * 180f, colors[it % colors.size]) }
+    }
+
+    fun dismissSummary(roomId: String) {
+        dismissedFinished = roomId
+        SonHarfPreferences.setDismissedMatchSummaryId(context, roomId)
+        finishedRoom = null
     }
 
     LaunchedEffect(Unit) {
@@ -181,7 +187,7 @@ fun ComboOverlayV9() {
                 Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                         Column { Text(if(won)"🏆 ${sh("ZAFER ÖZETİ","VICTORY SUMMARY")}" else "📊 ${sh("MAÇ ÖZETİ","MATCH SUMMARY")}",fontWeight=FontWeight.Black);Text("$myRounds - $oppRounds  •  $myScore - $oppScore",color=SonHarfMuted,fontSize=10.sp) }
-                        TextButton(onClick={dismissedFinished=fin.id;finishedRoom=null}){Text("×",fontSize=20.sp)}
+                        IconButton(onClick={dismissSummary(fin.id)},modifier=Modifier.size(48.dp)){Text("×",fontSize=28.sp,fontWeight=FontWeight.Black,color=SonHarfPurple)}
                     }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                         SummaryMetric("🧠",myWords.toString(),sh("Kelime","Words"),Modifier.weight(1f));SummaryMetric("📏",longest,sh("En uzun","Longest"),Modifier.weight(1f));SummaryMetric("🔥",(growth?.currentWinStreak?:0).toString(),sh("Seri","Streak"),Modifier.weight(1f))
@@ -189,6 +195,9 @@ fun ComboOverlayV9() {
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)) {
                         OutlinedButton(onClick={SonHarfShare.result(context,growth?.displayName?:sh("Oyuncu","Player"),myScore,oppScore,myWords,growth?.currentWinStreak?:0);scope.launch{backend.logEvent("match_result_share",fin.id)}},modifier=Modifier.weight(1f)){Text("↗ ${sh("SONUCU PAYLAŞ","SHARE RESULT")}",fontSize=9.sp)}
                         Button(onClick={SonHarfShare.challenge(context,growth?.displayName?:sh("Oyuncu","Player"),if(fin.isBot)null else fin.code);scope.launch{backend.logEvent("challenge_share",fin.id)}},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=SonHarfGold,contentColor=Color(0xFF261700))){Text("⚔ ${sh("MEYDAN OKU","CHALLENGE")}",fontWeight=FontWeight.Black,fontSize=9.sp)}
+                    }
+                    TextButton(onClick={dismissSummary(fin.id)},modifier=Modifier.fillMaxWidth()) {
+                        Text(sh("ÖZETİ KAPAT VE DEVAM ET","CLOSE SUMMARY AND CONTINUE"),fontWeight=FontWeight.Black)
                     }
                 }
             }
