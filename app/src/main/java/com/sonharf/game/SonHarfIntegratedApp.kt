@@ -138,13 +138,17 @@ private fun IntegratedHomeScreen(
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var socialProfile by remember { mutableStateOf<SocialProfileDto?>(null) }
     var goals by remember { mutableStateOf<List<GoalRowDto>>(emptyList()) }
     var weeklyTop by remember { mutableStateOf<List<LeaderboardV2Row>>(emptyList()) }
     var mode by remember { mutableStateOf(SonHarfGameModeState.mode) }
 
     LaunchedEffect(Unit) {
         val id = backend?.currentUserId()
-        if (id != null) profile = runCatching { backend.getProfile(id) }.getOrNull()
+        if (id != null) {
+            profile = runCatching { backend.getProfile(id) }.getOrNull()
+            socialProfile = runCatching { backend.getSocialProfile(id) }.getOrNull()
+        }
         goals = runCatching { backend?.getGoals().orEmpty() }.getOrDefault(emptyList())
         weeklyTop = runCatching { backend?.getLeaderboardV2(SonHarfUiState.language, "week", 3).orEmpty() }.getOrDefault(emptyList())
         val remoteMode = runCatching { backend?.getPreferredGameMode() }.getOrNull()
@@ -173,9 +177,12 @@ private fun IntegratedHomeScreen(
 
         item {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                Surface(shape = CircleShape, color = SonHarfSurface, border = BorderStroke(3.dp, SonHarfCosmetics.profileAccent.copy(alpha = .8f))) {
-                    Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { Text((profile?.displayName ?: "O").take(1).uppercase(), fontSize = 20.sp, fontWeight = FontWeight.Black) }
-                }
+                SocialAvatar(
+                    gender = socialProfile?.gender,
+                    name = profile?.displayName ?: sh("Oyuncu", "Player"),
+                    size = 52.dp,
+                    accent = SonHarfCosmetics.profileAccent,
+                )
                 Column {
                     Text(profile?.displayName ?: sh("Oyuncu", "Player"), color = SonHarfCosmetics.playerNameColor, fontSize = 19.sp, fontWeight = FontWeight.Black)
                     Text(if (profile?.isVip == true) "VIP AKTİF" else sh("Düelloya hazır", "Ready to duel"), color = if (profile?.isVip == true) SonHarfGold else SonHarfMuted, fontSize = 10.sp)
@@ -230,7 +237,7 @@ private fun IntegratedHomeScreen(
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 QuickHomeCard("🎯", sh("Hedefler", "Goals"), onHub, Modifier.weight(1f))
-                QuickHomeCard("🏆", sh("Haftalık Lig", "Weekly League"), onLeaderboard, Modifier.weight(1f))
+                QuickHomeCard("👥", sh("Arkadaşlar", "Friends"), { FriendsQuickAccessState.open = true }, Modifier.weight(1f))
                 QuickHomeCard("🛍", sh("Mağaza", "Shop"), onShop, Modifier.weight(1f))
             }
         }
@@ -326,9 +333,14 @@ private fun WeeklyPodium(rows: List<LeaderboardV2Row>, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.Bottom) {
         rows.forEachIndexed { index, row ->
             val medal = when (index) { 0 -> "🥇"; 1 -> "🥈"; else -> "🥉" }
-            Card(onClick = onClick, modifier = Modifier.weight(1f).height(if (index == 0) 118.dp else 104.dp), colors = CardDefaults.cardColors(containerColor = if (index == 0) SonHarfGold.copy(alpha = .12f) else SonHarfSurface), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (index == 0) SonHarfGold.copy(alpha = .45f) else SonHarfMuted.copy(alpha = .12f))) {
+            val podiumGender = when (index) { 0 -> "kadın"; 1 -> "erkek"; else -> "kadın" }
+            Card(onClick = onClick, modifier = Modifier.weight(1f).height(if (index == 0) 142.dp else 128.dp), colors = CardDefaults.cardColors(containerColor = if (index == 0) SonHarfGold.copy(alpha = .12f) else SonHarfSurface), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (index == 0) SonHarfGold.copy(alpha = .45f) else SonHarfMuted.copy(alpha = .12f))) {
                 Column(Modifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    Text(medal, fontSize = 26.sp)
+                    Box(contentAlignment = Alignment.TopCenter) {
+                        SocialAvatar(podiumGender, row.displayName, size = if (index == 0) 58.dp else 50.dp, fallbackIndex = index, accent = if (index == 0) SonHarfGold else SonHarfCyan)
+                        Text(medal, fontSize = 21.sp, modifier = Modifier.offset(y = (-8).dp, x = 20.dp))
+                    }
+                    Spacer(Modifier.height(4.dp))
                     Text(row.displayName, fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
                     Text("${row.wins}W • ${row.winRate.toInt()}%", color = SonHarfCyan, fontSize = 8.sp)
                 }
