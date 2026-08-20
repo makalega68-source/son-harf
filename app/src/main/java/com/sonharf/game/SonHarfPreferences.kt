@@ -14,13 +14,14 @@ object SonHarfPreferences {
     private const val GAME_INVITE_NOTIFICATIONS = "game_invite_notifications_enabled"
     private const val FRIEND_REQUEST_NOTIFICATIONS = "friend_request_notifications_enabled"
     private const val SYSTEM_NOTIFICATIONS = "system_notifications_enabled"
+    private const val DARK_MODE = "dark_mode_enabled"
+    private const val LANGUAGE = "app_language"
 
     fun soundEnabled(context: Context): Boolean = prefs(context).getBoolean(SOUND, true)
     fun vibrationEnabled(context: Context): Boolean = prefs(context).getBoolean(VIBRATION, true)
+    fun darkModeEnabled(context: Context): Boolean = prefs(context).getBoolean(DARK_MODE, true)
+    fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"
 
-    // Kept for backward compatibility with older code. It now reflects whether
-    // at least one notification category is enabled instead of acting as one
-    // shared switch for every category.
     fun notificationsEnabled(context: Context): Boolean =
         gameInviteNotificationsEnabled(context) ||
             friendRequestNotificationsEnabled(context) ||
@@ -43,8 +44,17 @@ object SonHarfPreferences {
     fun setVibrationEnabled(context: Context, value: Boolean) =
         prefs(context).edit().putBoolean(VIBRATION, value).apply()
 
-    // Backward-compatible master setter for callers that intentionally want to
-    // set all categories together. The settings screen no longer uses it.
+    fun setDarkModeEnabled(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(DARK_MODE, value).apply()
+        SonHarfUiState.darkMode = value
+    }
+
+    fun setLanguage(context: Context, value: String) {
+        val normalized = if (value.lowercase() == "en") "en" else "tr"
+        prefs(context).edit().putString(LANGUAGE, normalized).apply()
+        SonHarfUiState.language = normalized
+    }
+
     fun setNotificationsEnabled(context: Context, value: Boolean) {
         prefs(context).edit()
             .putBoolean(NOTIFICATIONS, value)
@@ -64,6 +74,11 @@ object SonHarfPreferences {
         prefs(context).edit().putBoolean(SYSTEM_NOTIFICATIONS, value).apply()
 
     fun syncSound(context: Context) = SonHarfSoundFx.setEnabled(soundEnabled(context))
+
+    fun syncUi(context: Context) {
+        SonHarfUiState.darkMode = darkModeEnabled(context)
+        SonHarfUiState.language = language(context)
+    }
 
     fun hapticTap(context: Context) {
         if (!vibrationEnabled(context)) return
