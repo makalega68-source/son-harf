@@ -1,6 +1,7 @@
 name: Android CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [ main ]
     paths-ignore:
@@ -11,9 +12,15 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      HAS_RELEASE_CONFIG: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 != '' && secrets.SON_HARF_RELEASE_STORE_PASSWORD != '' && secrets.SON_HARF_RELEASE_KEY_ALIAS != '' && secrets.SON_HARF_RELEASE_KEY_PASSWORD != '' && secrets.SON_HARF_ADMOB_APP_ID != '' && secrets.SON_HARF_ADMOB_REWARDED_ID != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v5
@@ -26,11 +33,14 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.4'
+
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace --warning-mode all
-      - name: Prepare final APK name
+
+      - name: Prepare QA APK name
         if: success()
         run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Final-Test.apk
+
       - name: Upload debug APK artifact
         if: success()
         uses: actions/upload-artifact@v4
@@ -38,6 +48,40 @@ jobs:
           name: son-harf-debug-apk
           path: SonHarf-Final-Test.apk
           if-no-files-found: error
+
+      - name: Build signed release APK and AAB
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 }}
+          SON_HARF_RELEASE_STORE_PASSWORD: ${{ secrets.SON_HARF_RELEASE_STORE_PASSWORD }}
+          SON_HARF_RELEASE_KEY_ALIAS: ${{ secrets.SON_HARF_RELEASE_KEY_ALIAS }}
+          SON_HARF_RELEASE_KEY_PASSWORD: ${{ secrets.SON_HARF_RELEASE_KEY_PASSWORD }}
+          SON_HARF_ADMOB_APP_ID: ${{ secrets.SON_HARF_ADMOB_APP_ID }}
+          SON_HARF_ADMOB_REWARDED_ID: ${{ secrets.SON_HARF_ADMOB_REWARDED_ID }}
+        run: |
+          printf '%s' "$RELEASE_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/son-harf-upload.jks"
+          gradle assembleRelease bundleRelease --stacktrace --warning-mode all \
+            -PSON_HARF_RELEASE_STORE_FILE="$RUNNER_TEMP/son-harf-upload.jks" \
+            -PSON_HARF_RELEASE_STORE_PASSWORD="$SON_HARF_RELEASE_STORE_PASSWORD" \
+            -PSON_HARF_RELEASE_KEY_ALIAS="$SON_HARF_RELEASE_KEY_ALIAS" \
+            -PSON_HARF_RELEASE_KEY_PASSWORD="$SON_HARF_RELEASE_KEY_PASSWORD" \
+            -PSON_HARF_ADMOB_APP_ID="$SON_HARF_ADMOB_APP_ID" \
+            -PSON_HARF_ADMOB_REWARDED_ID="$SON_HARF_ADMOB_REWARDED_ID"
+
+      - name: Upload signed release artifacts
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: son-harf-release-v0.8.0
+          path: |
+            app/build/outputs/apk/release/app-release.apk
+            app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+
+      - name: Report missing release secrets
+        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG != 'true'
+        run: echo "::warning::Debug build passed, but signed release AAB was skipped because release signing and/or production AdMob secrets are not configured."
+
       - name: Publish stable final-test release
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         env:
@@ -45,6 +89,7 @@ jobs:
         run: |
           gh release view final-test >/dev/null 2>&1 || gh release create final-test --title "Son Harf Final Test" --notes "Son Harf Android final test build."
           gh release upload final-test SonHarf-Final-Test.apk --clobber
+
       - name: Publish direct-download APK in repository
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
@@ -54,9 +99,11 @@ jobs:
           rm -f dist/BUILD_FAIL.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/SonHarf-Final-Test.apk dist/BUILD_OK.txt dist/BUILD_FAIL.txt || true
+          git add dist/SonHarf-Final-Test.apk dist/BUILD_OK.txt
+          if [ -f dist/BUILD_FAIL.txt ]; then git add dist/BUILD_FAIL.txt; fi
           git diff --cached --quiet || git commit -m "Publish final APK [skip ci]"
           git push
+
       - name: Publish build failure marker
         if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |

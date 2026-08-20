@@ -13,8 +13,8 @@ android {
         applicationId = "com.sonharf.game"
         minSdk = 26
         targetSdk = 36
-        versionCode = 8
-        versionName = "0.7.0"
+        versionCode = 9
+        versionName = "0.8.0"
 
         val supabaseUrl = providers.gradleProperty("SON_HARF_SUPABASE_URL")
             .orElse("https://bzdtftzdjtjoqhtcqtxb.supabase.co")
@@ -32,6 +32,41 @@ android {
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
         buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", "\"$rewardedAdUnitId\"")
         manifestPlaceholders["ADMOB_APP_ID"] = admobAppId
+    }
+
+    val releaseStorePath = providers.gradleProperty("SON_HARF_RELEASE_STORE_FILE")
+        .orElse(providers.environmentVariable("SON_HARF_RELEASE_STORE_FILE"))
+        .getOrNull()
+    val releaseStorePassword = providers.gradleProperty("SON_HARF_RELEASE_STORE_PASSWORD")
+        .orElse(providers.environmentVariable("SON_HARF_RELEASE_STORE_PASSWORD"))
+        .getOrNull()
+    val releaseKeyAlias = providers.gradleProperty("SON_HARF_RELEASE_KEY_ALIAS")
+        .orElse(providers.environmentVariable("SON_HARF_RELEASE_KEY_ALIAS"))
+        .getOrNull()
+    val releaseKeyPassword = providers.gradleProperty("SON_HARF_RELEASE_KEY_PASSWORD")
+        .orElse(providers.environmentVariable("SON_HARF_RELEASE_KEY_PASSWORD"))
+        .getOrNull()
+
+    signingConfigs {
+        if (!releaseStorePath.isNullOrBlank() &&
+            !releaseStorePassword.isNullOrBlank() &&
+            !releaseKeyAlias.isNullOrBlank() &&
+            !releaseKeyPassword.isNullOrBlank()
+        ) {
+            create("release") {
+                storeFile = file(releaseStorePath)
+                storePassword = releaseStorePassword
+                keyAlias = releaseKeyAlias
+                keyPassword = releaseKeyPassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("release") {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
+        }
     }
 
     buildFeatures {
