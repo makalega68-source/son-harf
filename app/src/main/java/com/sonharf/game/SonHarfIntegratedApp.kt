@@ -87,7 +87,8 @@ private fun IntegratedHomeScreen(onPlay: () -> Unit, onShop: () -> Unit, onHub: 
         val id = backend?.currentUserId()
         if (id != null) profile = runCatching { backend.getProfile(id) }.getOrNull()
         goals = runCatching { backend?.getGoals().orEmpty() }.getOrDefault(emptyList())
-        mode = runCatching { backend?.getPreferredGameMode() }.getOrDefault(mode)
+        val remoteMode = runCatching { backend?.getPreferredGameMode() }.getOrNull()
+        if (remoteMode != null) mode = remoteMode
         SonHarfGameModeState.mode = mode
     }
     Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
