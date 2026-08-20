@@ -3,10 +3,12 @@ package com.sonharf.game
 import android.media.AudioAttributes
 import android.media.AudioFormat
 import android.media.AudioTrack
+import kotlin.math.PI
 import kotlin.math.exp
+import kotlin.math.sin
 import kotlin.random.Random
 
-/** Short dry effects palette used by the game UI. */
+/** Procedural lightweight effects palette; no external audio asset is required. */
 object SonHarfSoundFx {
     private const val SAMPLE_RATE = 24000
     @Volatile private var enabled = true
@@ -20,12 +22,51 @@ object SonHarfSoundFx {
     fun victory() { click(18, 0.17, 0.50); delayedClick(38, 16, 0.15, 0.56); delayedClick(76, 15, 0.13, 0.60) }
     fun defeat() = click(26, 0.14, 0.28)
     fun countdown() = click(13, 0.08, 0.38)
+
+    /** Rising launch whistle + low boom + decaying crackle, closer to a real firework than the old click stack. */
     fun fireworks() {
-        // A restrained crackle/burst: audible enough to celebrate, short enough not to interrupt play.
-        click(58, 0.10, 0.72)
-        delayedClick(34, 44, 0.075, 0.84)
-        delayedClick(78, 34, 0.060, 0.76)
-        delayedClick(118, 24, 0.045, 0.68)
+        if (!enabled) return
+        Thread {
+            val durationSec = 1.65
+            val count = (SAMPLE_RATE * durationSec).toInt()
+            val pcm = ShortArray(count)
+            var phase = 0.0
+            var lp = 0.0
+            for (i in pcm.indices) {
+                val t = i.toDouble() / SAMPLE_RATE
+                var sample = 0.0
+
+                // Rocket launch / ascending whistle: 620 Hz -> ~2100 Hz.
+                if (t < 0.58) {
+                    val p = t / 0.58
+                    val freq = 620.0 + 1480.0 * p * p
+                    phase += 2.0 * PI * freq / SAMPLE_RATE
+                    val whistleEnv = sin(PI * p).coerceAtLeast(0.0) * 0.22
+                    val hiss = Random.nextDouble(-1.0, 1.0) * 0.045 * (1.0 - p * .35)
+                    sample += sin(phase) * whistleEnv + hiss
+                }
+
+                // Main boom around 600ms with a strong low body and short noise transient.
+                if (t >= 0.58) {
+                    val x = t - 0.58
+                    val boomEnv = exp(-x * 7.0)
+                    val low = sin(2.0 * PI * 74.0 * x) * 0.48 + sin(2.0 * PI * 112.0 * x) * 0.22
+                    val white = Random.nextDouble(-1.0, 1.0)
+                    lp = lp * 0.86 + white * 0.14
+                    val blast = (white * 0.42 + lp * 0.30) * exp(-x * 15.0)
+                    sample += (low + blast) * boomEnv
+
+                    // Spark crackles: random impulses distributed after the boom.
+                    if (x in 0.05..0.95 && Random.nextDouble() < 0.013) {
+                        sample += Random.nextDouble(0.20, 0.55) * (1.0 - x / 1.1).coerceAtLeast(0.0)
+                    }
+                    sample += Random.nextDouble(-1.0, 1.0) * 0.055 * exp(-x * 2.8)
+                }
+
+                pcm[i] = (sample.coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt().toShort()
+            }
+            play(pcm)
+        }.start()
     }
 
     private fun delayedClick(delayMs: Long, durationMs: Int, gain: Double, brightness: Double) {
@@ -57,7 +98,7 @@ object SonHarfSoundFx {
 
     private fun play(pcm: ShortArray) {
         runCatching {
-            val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
+            val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_GAME).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
             val format = AudioFormat.Builder().setSampleRate(SAMPLE_RATE).setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build()
             val bytes = pcm.size * 2
             val min = AudioTrack.getMinBufferSize(SAMPLE_RATE, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
