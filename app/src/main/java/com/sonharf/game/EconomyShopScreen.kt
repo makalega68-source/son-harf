@@ -97,6 +97,7 @@ private fun EconomyCatalogScreen() {
         }
 
         item { AnimatedVipShopCard(profile?.isVip == true) { showVip = true } }
+        item { GooglePlayProductsCard { scope.launch { reload() } } }
 
         item {
             ScrollableTabRow(selectedTabIndex = category, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
