@@ -8,9 +8,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
@@ -74,11 +77,14 @@ class MainActivity : ComponentActivity() {
                     onSurface = SonHarfText,
                 )
             }
-            MaterialTheme(colorScheme = scheme, typography = SonHarfAccessibleTypography) {
-                Box {
-                    AuroraSonHarfAppPrivateEnhanced()
-                    WinnerFireworkOverlay()
-                    FriendsQuickAccessOverlay()
+            val density = LocalDensity.current
+            CompositionLocalProvider(LocalDensity provides Density(density.density, fontScale = maxOf(density.fontScale, 1.14f))) {
+                MaterialTheme(colorScheme = scheme, typography = SonHarfAccessibleTypography) {
+                    Box {
+                        AuroraSonHarfAppPrivateEnhanced()
+                        WinnerFireworkOverlay()
+                        FriendsQuickAccessOverlay()
+                    }
                 }
             }
         }
