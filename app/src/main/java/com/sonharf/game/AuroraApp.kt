@@ -191,11 +191,38 @@ private fun AuroraLeaderboard(onBack: () -> Unit) {
 @Composable private fun AuroraShop() { LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) { item { Text("MAĞAZA", fontSize = 27.sp, fontWeight = FontWeight.Black); Text("Kozmetik ve premium içerikler", color = SonHarfMuted, fontSize = 11.sp) }; item { ShopCard("◆", "VIP", "Reklamsız deneyim, özel temalar ve gelişmiş istatistikler", SonHarfGold) }; item { ShopCard("💎", "ELMAS", "Google Play Billing bağlandığında satın alma aktif olacak", SonHarfCyan) }; item { ShopCard("✦", "TEMALAR", "Profil ve oyun görünümünü kişiselleştir", SonHarfPurple) }; item { ShopCard("☺", "EMOJİ PAKETLERİ", "Sohbette kullanabileceğin kozmetik paketler", SonHarfGreen) } } }
 
 @Composable private fun AuroraSettings() {
-    val context = LocalContext.current; var sound by remember { mutableStateOf(SonHarfPreferences.soundEnabled(context)) }; var vibration by remember { mutableStateOf(SonHarfPreferences.vibrationEnabled(context)) }
+    val context = LocalContext.current
+    var sound by remember { mutableStateOf(SonHarfPreferences.soundEnabled(context)) }
+    var vibration by remember { mutableStateOf(SonHarfPreferences.vibrationEnabled(context)) }
+    var gameInvites by remember { mutableStateOf(SonHarfPreferences.gameInviteNotificationsEnabled(context)) }
+    var friendRequests by remember { mutableStateOf(SonHarfPreferences.friendRequestNotificationsEnabled(context)) }
+    var systemNotifications by remember { mutableStateOf(SonHarfPreferences.systemNotificationsEnabled(context)) }
+
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("AYARLAR", fontSize = 27.sp, fontWeight = FontWeight.Black) }
-        item { SettingsGroup("SES & TİTREŞİM") { SettingSwitch("Ses Efektleri", sound) { sound = it; SonHarfPreferences.setSoundEnabled(context, it) }; SettingSwitch("Müzik", false) {}; SettingSwitch("Titreşim", vibration) { vibration = it; SonHarfPreferences.setVibrationEnabled(context, it) } } }
-        item { SettingsGroup("BİLDİRİMLER") { SettingSwitch("Oyun Davetleri", true) {}; SettingSwitch("Arkadaşlık İstekleri", true) {}; SettingSwitch("Sistem Bildirimleri", true) {} } }
+        item {
+            SettingsGroup("SES & TİTREŞİM") {
+                SettingSwitch("Ses Efektleri", sound) { sound = it; SonHarfPreferences.setSoundEnabled(context, it) }
+                SettingSwitch("Müzik", false) {}
+                SettingSwitch("Titreşim", vibration) { vibration = it; SonHarfPreferences.setVibrationEnabled(context, it) }
+            }
+        }
+        item {
+            SettingsGroup("BİLDİRİMLER") {
+                SettingSwitch("Oyun Davetleri", gameInvites) {
+                    gameInvites = it
+                    SonHarfPreferences.setGameInviteNotificationsEnabled(context, it)
+                }
+                SettingSwitch("Arkadaşlık İstekleri", friendRequests) {
+                    friendRequests = it
+                    SonHarfPreferences.setFriendRequestNotificationsEnabled(context, it)
+                }
+                SettingSwitch("Sistem Bildirimleri", systemNotifications) {
+                    systemNotifications = it
+                    SonHarfPreferences.setSystemNotificationsEnabled(context, it)
+                }
+            }
+        }
         item { SettingsGroup("DİĞER") { SettingLine("Dil", "Türkçe  ›"); SettingSwitch("Karanlık Mod", true) {}; SettingLine("Engellenenler", "›") } }
     }
 }
