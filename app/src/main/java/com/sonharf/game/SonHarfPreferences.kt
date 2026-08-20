@@ -5,6 +5,13 @@ import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import com.sonharf.game.data.SupabaseProvider
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 object SonHarfPreferences {
     private const val FILE = "son_harf_preferences"
@@ -34,7 +41,15 @@ object SonHarfPreferences {
     fun setSoundEnabled(context: Context, value: Boolean) { prefs(context).edit().putBoolean(SOUND, value).apply(); SonHarfSoundFx.setEnabled(value) }
     fun setVibrationEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(VIBRATION, value).apply()
     fun setDarkModeEnabled(context: Context, value: Boolean) { prefs(context).edit().putBoolean(DARK_MODE, value).apply(); SonHarfUiState.darkMode = value }
-    fun setBotDifficulty(context: Context, value: String) = prefs(context).edit().putString(BOT_DIFFICULTY, if(value in setOf("easy","hard")) value else "normal").apply()
+    fun setBotDifficulty(context: Context, value: String) {
+        val normalized = if(value in setOf("easy","hard")) value else "normal"
+        prefs(context).edit().putString(BOT_DIFFICULTY, normalized).apply()
+        if (SupabaseProvider.configured) CoroutineScope(Dispatchers.IO).launch {
+            runCatching {
+                SupabaseProvider.client.postgrest.rpc("set_bot_difficulty_v1", buildJsonObject { put("p_difficulty", normalized) })
+            }
+        }
+    }
 
     fun setLanguage(context: Context, value: String) {
         val normalized = if (value.lowercase() == "en") "en" else "tr"
