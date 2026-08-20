@@ -78,6 +78,7 @@ class MainActivity : ComponentActivity() {
                 Box {
                     AuroraSonHarfAppPrivateEnhanced()
                     WinnerFireworkOverlay()
+                    FriendsQuickAccessOverlay()
                 }
             }
         }
