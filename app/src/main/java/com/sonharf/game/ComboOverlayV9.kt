@@ -2,23 +2,29 @@ package com.sonharf.game
 
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.GameWordDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlin.random.Random
@@ -26,6 +32,7 @@ import kotlin.random.Random
 @Serializable
 private data class ActionRoomV9(
     val id: String,
+    val code: String = "",
     @SerialName("host_id") val hostId: String,
     @SerialName("guest_id") val guestId: String? = null,
     val status: String,
@@ -36,6 +43,11 @@ private data class ActionRoomV9(
     @SerialName("last_action_bonus") val lastActionBonus: Int? = null,
     @SerialName("last_action_player_id") val lastActionPlayerId: String? = null,
     @SerialName("last_action_is_bot") val lastActionIsBot: Boolean = false,
+    @SerialName("host_score") val hostScore: Int = 0,
+    @SerialName("guest_score") val guestScore: Int = 0,
+    @SerialName("host_rounds") val hostRounds: Int = 0,
+    @SerialName("guest_rounds") val guestRounds: Int = 0,
+    @SerialName("winner_id") val winnerId: String? = null,
 )
 
 private data class ComboV9(val title: String, val color: Color)
@@ -56,11 +68,20 @@ private data class ConfettiPiece(val x: Float, val delay: Float, val speed: Floa
 fun ComboOverlayV9() {
     if (!SupabaseProvider.configured) return
     val backend = remember { OnlineGameBackend() }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
     var combo by remember { mutableStateOf<ComboV9?>(null) }
     var streak by remember { mutableIntStateOf(0) }
     var bonus by remember { mutableIntStateOf(0) }
     var actor by remember { mutableStateOf("") }
     var shown by remember { mutableStateOf<Pair<String, Long>?>(null) }
+    var activeRoom by remember { mutableStateOf<ActionRoomV9?>(null) }
+    var finishedRoom by remember { mutableStateOf<ActionRoomV9?>(null) }
+    var dismissedFinished by remember { mutableStateOf<String?>(null) }
+    var resultWords by remember { mutableStateOf<List<GameWordDto>>(emptyList()) }
+    var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
+    var reaction by remember { mutableStateOf<String?>(null) }
+    var reactionKey by remember { mutableStateOf<Long?>(null) }
     val progress = remember { Animatable(1f) }
     val pieces = remember {
         val colors = listOf(SonHarfPink, SonHarfCyan, SonHarfGold, SonHarfGreen, SonHarfPurple, Color(0xFFFF6B35))
@@ -71,54 +92,110 @@ fun ComboOverlayV9() {
         while (true) {
             val me = backend.currentUserId()
             if (me != null) {
-                val room = runCatching {
+                val rooms = runCatching {
                     SupabaseProvider.client.from("game_rooms").select().decodeList<ActionRoomV9>()
-                        .filter { (it.hostId == me || it.guestId == me) && it.status in listOf("playing", "quiz", "final", "sudden_death") }
-                        .maxByOrNull { it.actionSeq }
-                }.getOrNull()
-                if (room != null && room.actionSeq > 0) {
-                    val key = room.id to room.actionSeq
-                    val c = comboV9(room.lastActionStreak ?: 0)
-                    if (c != null && key != shown) {
-                        shown = key
-                        combo = c
-                        streak = room.lastActionStreak ?: 0
-                        bonus = room.lastActionBonus ?: 0
-                        actor = when {
-                            room.lastActionIsBot -> room.botName ?: "BOT"
-                            room.lastActionPlayerId == me -> sh("SEN", "YOU")
-                            else -> sh("RAKİP", "OPPONENT")
+                        .filter { it.hostId == me || it.guestId == me }
+                }.getOrDefault(emptyList())
+                val current = rooms.filter { it.status in listOf("playing","quiz","final","sudden_death","paused") }.maxByOrNull { it.actionSeq }
+                activeRoom = current
+                if (current != null) {
+                    val key = current.id to current.actionSeq
+                    val c = comboV9(current.lastActionStreak ?: 0)
+                    if (c != null && current.actionSeq > 0 && key != shown) {
+                        shown = key; combo = c; streak = current.lastActionStreak ?: 0; bonus = current.lastActionBonus ?: 0
+                        actor = when { current.lastActionIsBot -> current.botName ?: "BOT"; current.lastActionPlayerId == me -> sh("SEN","YOU"); else -> sh("RAKİP","OPPONENT") }
+                        SonHarfSoundFx.fireworks(); progress.snapTo(0f); progress.animateTo(1f, tween(1050)); combo = null
+                    }
+                    if (!current.isBot) {
+                        val chat = runCatching { backend.getChat(current.id) }.getOrDefault(emptyList())
+                        val last = chat.lastOrNull { it.body in setOf("🔥","👏","😎","⚡","💎","😂") }
+                        if (last != null && last.id != reactionKey) { reactionKey = last.id; reaction = last.body }
+                    }
+                }
+                val fin = rooms.filter { it.status == "finished" && it.id != dismissedFinished }.maxByOrNull { it.actionSeq }
+                if (fin != null && finishedRoom?.id != fin.id) {
+                    finishedRoom = fin
+                    resultWords = runCatching { backend.getWords(fin.id) }.getOrDefault(emptyList())
+                    growth = runCatching { backend.getGrowthDashboard() }.getOrNull()
+                    runCatching { backend.logEvent("match_finished_seen", fin.id) }
+                }
+            }
+            delay(500)
+        }
+    }
+    LaunchedEffect(reactionKey) { if (reaction != null) { delay(1400); reaction = null } }
+
+    val me = backend.currentUserId()
+    val c = combo
+    if (c != null) {
+        Box(Modifier.fillMaxSize().statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
+            Canvas(Modifier.fillMaxSize()) {
+                val p = progress.value
+                pieces.forEach { piece ->
+                    val local = ((p - piece.delay) / (1f - piece.delay)).coerceIn(0f, 1f)
+                    if (local > 0f && local < 1f) {
+                        val x = size.width * piece.x + kotlin.math.sin(local * 9f + piece.x * 12f) * 22f
+                        val y = size.height * (.08f + local * piece.speed * .82f)
+                        rotate(piece.angle + local * 280f, pivot = Offset(x, y)) {
+                            drawRect(piece.color.copy(alpha = (1f - local * .65f).coerceAtLeast(.2f)), topLeft = Offset(x, y), size = androidx.compose.ui.geometry.Size(piece.size, piece.size * 1.8f))
                         }
-                        SonHarfSoundFx.fireworks()
-                        progress.snapTo(0f)
-                        progress.animateTo(1f, tween(1050))
-                        combo = null
                     }
                 }
             }
-            delay(280)
+            Column(Modifier.padding(top = 86.dp, start = 20.dp, end = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(actor, color = SonHarfMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(c.title, color = c.color, fontSize = 29.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                Text("$streak ${sh("DOĞRU SERİ", "WORD STREAK")}" + if (bonus > 0) "  •  +$bonus" else "", color = SonHarfText, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            }
         }
     }
 
-    val c = combo ?: return
-    Box(Modifier.fillMaxSize().statusBarsPadding(), contentAlignment = Alignment.TopCenter) {
-        Canvas(Modifier.fillMaxSize()) {
-            val p = progress.value
-            pieces.forEach { piece ->
-                val local = ((p - piece.delay) / (1f - piece.delay)).coerceIn(0f, 1f)
-                if (local > 0f && local < 1f) {
-                    val x = size.width * piece.x + kotlin.math.sin(local * 9f + piece.x * 12f) * 22f
-                    val y = size.height * (.08f + local * piece.speed * .82f)
-                    rotate(piece.angle + local * 280f, pivot = Offset(x, y)) {
-                        drawRect(piece.color.copy(alpha = (1f - local * .65f).coerceAtLeast(.2f)), topLeft = Offset(x, y), size = androidx.compose.ui.geometry.Size(piece.size, piece.size * 1.8f))
+    val active = activeRoom
+    if (active != null && !active.isBot && active.status in listOf("playing","final","sudden_death")) {
+        Box(Modifier.fillMaxSize().statusBarsPadding().padding(top=8.dp,end=8.dp),contentAlignment=Alignment.TopEnd) {
+            Surface(shape=RoundedCornerShape(18.dp),color=SonHarfSurface.copy(alpha=.90f),shadowElevation=3.dp) {
+                Row(Modifier.padding(horizontal=5.dp,vertical=2.dp)) {
+                    listOf("🔥","👏","😎","⚡").forEach { e -> TextButton(onClick={scope.launch{runCatching{backend.sendChat(active.id,e)};runCatching{backend.logEvent("quick_reaction",e)}}},contentPadding=PaddingValues(4.dp)){Text(e,fontSize=17.sp)} }
+                }
+            }
+        }
+    }
+    reaction?.let { r ->
+        Box(Modifier.fillMaxSize().statusBarsPadding().padding(top=62.dp),contentAlignment=Alignment.TopCenter) {
+            Surface(shape=RoundedCornerShape(22.dp),color=SonHarfPurple.copy(alpha=.92f)) { Text(r,Modifier.padding(horizontal=18.dp,vertical=8.dp),fontSize=28.sp) }
+        }
+    }
+
+    val fin = finishedRoom
+    if (fin != null && fin.id != dismissedFinished) {
+        val host = me == fin.hostId
+        val myScore = if(host) fin.hostScore else fin.guestScore
+        val oppScore = if(host) fin.guestScore else fin.hostScore
+        val myRounds = if(host) fin.hostRounds else fin.guestRounds
+        val oppRounds = if(host) fin.guestRounds else fin.hostRounds
+        val myWords = resultWords.count { it.playerId == me }
+        val longest = resultWords.filter { it.playerId == me }.maxByOrNull { it.word.length }?.word?.uppercase() ?: "—"
+        val won = fin.winnerId == me
+        Box(Modifier.fillMaxSize().navigationBarsPadding().padding(12.dp),contentAlignment=Alignment.BottomCenter) {
+            Card(colors=CardDefaults.cardColors(containerColor=SonHarfSurface.copy(alpha=.98f)),shape=RoundedCornerShape(24.dp),border=BorderStroke(1.dp,if(won)SonHarfGold.copy(alpha=.55f) else SonHarfCyan.copy(alpha=.25f))) {
+                Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+                        Column { Text(if(won)"🏆 ${sh("ZAFER ÖZETİ","VICTORY SUMMARY")}" else "📊 ${sh("MAÇ ÖZETİ","MATCH SUMMARY")}",fontWeight=FontWeight.Black);Text("$myRounds - $oppRounds  •  $myScore - $oppScore",color=SonHarfMuted,fontSize=10.sp) }
+                        TextButton(onClick={dismissedFinished=fin.id;finishedRoom=null}){Text("×",fontSize=20.sp)}
+                    }
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                        SummaryMetric("🧠",myWords.toString(),sh("Kelime","Words"),Modifier.weight(1f));SummaryMetric("📏",longest,sh("En uzun","Longest"),Modifier.weight(1f));SummaryMetric("🔥",(growth?.currentWinStreak?:0).toString(),sh("Seri","Streak"),Modifier.weight(1f))
+                    }
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)) {
+                        OutlinedButton(onClick={SonHarfShare.result(context,growth?.displayName?:sh("Oyuncu","Player"),myScore,oppScore,myWords,growth?.currentWinStreak?:0);scope.launch{backend.logEvent("match_result_share",fin.id)}},modifier=Modifier.weight(1f)){Text("↗ ${sh("SONUCU PAYLAŞ","SHARE RESULT")}",fontSize=9.sp)}
+                        Button(onClick={SonHarfShare.challenge(context,growth?.displayName?:sh("Oyuncu","Player"),if(fin.isBot)null else fin.code);scope.launch{backend.logEvent("challenge_share",fin.id)}},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=SonHarfGold,contentColor=Color(0xFF261700))){Text("⚔ ${sh("MEYDAN OKU","CHALLENGE")}",fontWeight=FontWeight.Black,fontSize=9.sp)}
                     }
                 }
             }
         }
-        Column(Modifier.padding(top = 86.dp, start = 20.dp, end = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(actor, color = SonHarfMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            Text(c.title, color = c.color, fontSize = 29.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-            Text("$streak ${sh("DOĞRU SERİ", "WORD STREAK")}" + if (bonus > 0) "  •  +$bonus" else "", color = SonHarfText, fontSize = 13.sp, fontWeight = FontWeight.Black)
-        }
     }
+}
+
+@Composable private fun SummaryMetric(icon:String,value:String,label:String,modifier:Modifier){
+    Surface(modifier=modifier,shape=RoundedCornerShape(13.dp),color=SonHarfSurface2){Column(Modifier.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(icon,fontSize=16.sp);Text(value,maxLines=1,fontWeight=FontWeight.Black,fontSize=11.sp);Text(label,color=SonHarfMuted,fontSize=7.sp)}}
 }
