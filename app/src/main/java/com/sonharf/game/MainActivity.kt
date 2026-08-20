@@ -16,17 +16,17 @@ import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.runBlocking
 
-internal val SonHarfBg: Color get() = if (SonHarfUiState.darkMode) Color(0xFF030B16) else Color(0xFFE8F6FF)
-internal val SonHarfSurface: Color get() = if (SonHarfUiState.darkMode) Color(0xFF0A1626) else Color(0xFFF8FCFF)
-internal val SonHarfSurface2: Color get() = if (SonHarfUiState.darkMode) Color(0xFF102238) else Color(0xFFDDF1FF)
-internal val SonHarfPurple = Color(0xFF8B32E6)
-internal val SonHarfCyan = Color(0xFF12BFEF)
-internal val SonHarfBlue = Color(0xFF2D79E8)
-internal val SonHarfGold = Color(0xFFFFB52E)
-internal val SonHarfGreen = Color(0xFF20C979)
-internal val SonHarfText: Color get() = if (SonHarfUiState.darkMode) Color(0xFFF5FAFF) else Color(0xFF101A2A)
-internal val SonHarfMuted: Color get() = if (SonHarfUiState.darkMode) Color(0xFF8FA5BD) else Color(0xFF5E7085)
-internal val SonHarfPink = Color(0xFFFF4386)
+internal val SonHarfBg: Color get() = if (SonHarfUiState.darkMode) Color(0xFF050816) else Color(0xFFF2F7FF)
+internal val SonHarfSurface: Color get() = if (SonHarfUiState.darkMode) Color(0xFF0B1024) else Color(0xFFFFFFFF)
+internal val SonHarfSurface2: Color get() = if (SonHarfUiState.darkMode) Color(0xFF111936) else Color(0xFFE8F0FF)
+internal val SonHarfPurple = Color(0xFF7B2FFF)
+internal val SonHarfCyan = Color(0xFF00E5FF)
+internal val SonHarfBlue = Color(0xFF178BFF)
+internal val SonHarfGold = Color(0xFFFFC107)
+internal val SonHarfGreen = Color(0xFF41E38A)
+internal val SonHarfText: Color get() = if (SonHarfUiState.darkMode) Color(0xFFF8FBFF) else Color(0xFF10162A)
+internal val SonHarfMuted: Color get() = if (SonHarfUiState.darkMode) Color(0xFF9AA8C2) else Color(0xFF5D6A82)
+internal val SonHarfPink = Color(0xFFFF4D8D)
 
 private val SonHarfAccessibleTypography = Typography(
     bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 24.sp),
@@ -64,9 +64,9 @@ class MainActivity : ComponentActivity() {
                 )
             } else {
                 lightColorScheme(
-                    primary = Color(0xFF7130C8),
-                    secondary = Color(0xFF007EA8),
-                    tertiary = Color(0xFF9B6500),
+                    primary = Color(0xFF6331C7),
+                    secondary = Color(0xFF007F96),
+                    tertiary = Color(0xFF9A6A00),
                     background = SonHarfBg,
                     surface = SonHarfSurface,
                     surfaceVariant = SonHarfSurface2,
@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
             }
             MaterialTheme(colorScheme = scheme, typography = SonHarfAccessibleTypography) {
                 Box {
-                    AuroraSonHarfAppPrivateEnhanced()
+                    NeonSonHarfApp()
                     WinnerFireworkOverlay()
                     FriendsQuickAccessOverlay()
                 }
