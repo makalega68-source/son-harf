@@ -21,7 +21,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -84,6 +83,20 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         onDispose { manager.close() }
     }
 
+    fun buy(productId: String) {
+        val product = products[productId]
+        if (activity == null || product == null) {
+            notice = sh("Ürün henüz Google Play'de kullanılabilir değil.", "Product is not available on Google Play yet.")
+            return
+        }
+        busy = productId
+        val result = manager.launchProduct(activity, product)
+        if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+            busy = null
+            notice = sh("Google Play ödeme ekranı açılamadı (${result.responseCode}).", "Google Play billing could not open (${result.responseCode}).")
+        }
+    }
+
     Card(
         colors = CardDefaults.cardColors(containerColor = SonHarfSurface.copy(alpha = .96f)),
         shape = RoundedCornerShape(22.dp),
@@ -98,21 +111,21 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 subtitle = sh("Kozmetik mağazası için", "For the cosmetics shop"),
                 product = products[ProductCatalog.COINS_500],
                 busy = busy == ProductCatalog.COINS_500,
-            ) { launchPlayProduct(activity, manager, products[ProductCatalog.COINS_500], ProductCatalog.COINS_500) { busy = it; notice = sh("Ürün henüz Google Play'de kullanılabilir değil.", "Product is not available on Google Play yet.") } }
+            ) { buy(ProductCatalog.COINS_500) }
 
             PlayProductRow(
                 title = sh("1500 Elmas", "1500 Diamonds"),
                 subtitle = sh("Daha büyük elmas paketi", "Larger diamond pack"),
                 product = products[ProductCatalog.COINS_1500],
                 busy = busy == ProductCatalog.COINS_1500,
-            ) { launchPlayProduct(activity, manager, products[ProductCatalog.COINS_1500], ProductCatalog.COINS_1500) { busy = it; notice = sh("Ürün henüz Google Play'de kullanılabilir değil.", "Product is not available on Google Play yet.") } }
+            ) { buy(ProductCatalog.COINS_1500) }
 
             PlayProductRow(
                 title = sh("Neon Tema", "Neon Theme"),
                 subtitle = sh("Kalıcı tema kilidi", "Permanent theme unlock"),
                 product = products[ProductCatalog.THEME_NEON],
                 busy = busy == ProductCatalog.THEME_NEON,
-            ) { launchPlayProduct(activity, manager, products[ProductCatalog.THEME_NEON], ProductCatalog.THEME_NEON) { busy = it; notice = sh("Ürün henüz Google Play'de kullanılabilir değil.", "Product is not available on Google Play yet.") } }
+            ) { buy(ProductCatalog.THEME_NEON) }
 
             if (notice.isNotBlank()) Text(notice, color = SonHarfMuted, fontSize = 9.sp)
         }
@@ -138,23 +151,7 @@ private fun PlayProductRow(
             colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
             shape = RoundedCornerShape(14.dp),
         ) {
-            Text(if (busy) "…" else product?.oneTimePurchaseOfferDetails?.formattedPrice ?: sh("PLAY", "PLAY"), fontWeight = FontWeight.Black)
+            Text(if (busy) "…" else product?.oneTimePurchaseOfferDetails?.formattedPrice ?: "PLAY", fontWeight = FontWeight.Black)
         }
     }
-}
-
-private fun launchPlayProduct(
-    activity: Activity?,
-    manager: BillingManager,
-    product: ProductDetails?,
-    productId: String,
-    onUnavailable: (String?) -> Unit,
-) {
-    if (activity == null || product == null) {
-        onUnavailable(null)
-        return
-    }
-    onUnavailable(productId)
-    val result = manager.launchProduct(activity, product)
-    if (result.responseCode != BillingClient.BillingResponseCode.OK) onUnavailable(null)
 }
