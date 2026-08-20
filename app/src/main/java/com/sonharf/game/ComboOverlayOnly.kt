@@ -29,14 +29,14 @@ import kotlinx.coroutines.delay
 
 private data class LiveCombo(val n:Int,val title:String,val sub:String,val mark:String,val color:Color)
 private fun liveCombo(n:Int):LiveCombo?=when(n){
-    3->LiveCombo(n,"İSABET!","GÜZEL BAŞLADIN!","◎",SonHarfCyan)
-    4->LiveCombo(n,"AFERİN!","RİTMİN YERİNE OTURDU!","ϟ",SonHarfGreen)
-    5->LiveCombo(n,"MÜKEMMEL!","DURDURULAMIYORSUN!","★",SonHarfGold)
-    6->LiveCombo(n,"SERİ KATİL!","KELİMELER SENİNLE!","◉",SonHarfPink)
-    7->LiveCombo(n,"EFSANE!","BÖYLESİNİ AZ GÖRÜRÜZ!","♛",SonHarfPurple)
-    8->LiveCombo(n,"HARİKASIN!","ZİRVEYE YAKLAŞTIN!","◆",SonHarfCyan)
-    9->LiveCombo(n,"ŞOV ZAMANI!","RAKİBİNİ SOLLADIN!","↗",SonHarfGold)
-    else->if(n>=10&&n%5==0)LiveCombo(n,"EFSANELER LİGİ!","SEN BİR KELİME USTASISIN!","🏆",SonHarfPink)else null
+    3->LiveCombo(n,sh("İSABET!","NICE!"),sh("GÜZEL BAŞLADIN!","GREAT START!"),"◎",SonHarfCyan)
+    4->LiveCombo(n,sh("AFERİN!","WELL DONE!"),sh("RİTMİN YERİNE OTURDU!","YOU FOUND YOUR RHYTHM!"),"ϟ",SonHarfGreen)
+    5->LiveCombo(n,sh("MÜKEMMEL!","PERFECT!"),sh("DURDURULAMIYORSUN!","YOU'RE UNSTOPPABLE!"),"★",SonHarfGold)
+    6->LiveCombo(n,sh("SERİ KATİL!","STREAK MASTER!"),sh("KELİMELER SENİNLE!","WORDS ARE ON YOUR SIDE!"),"◉",SonHarfPink)
+    7->LiveCombo(n,sh("EFSANE!","LEGENDARY!"),sh("BÖYLESİNİ AZ GÖRÜRÜZ!","WHAT A PERFORMANCE!"),"♛",SonHarfPurple)
+    8->LiveCombo(n,sh("HARİKASIN!","AMAZING!"),sh("ZİRVEYE YAKLAŞTIN!","YOU'RE NEAR THE TOP!"),"◆",SonHarfCyan)
+    9->LiveCombo(n,sh("ŞOV ZAMANI!","SHOWTIME!"),sh("RAKİBİNİ SOLLADIN!","YOU'VE PULLED AHEAD!"),"↗",SonHarfGold)
+    else->if(n>=10&&n%5==0)LiveCombo(n,sh("EFSANELER LİGİ!","LEAGUE OF LEGENDS!"),sh("SEN BİR KELİME USTASISIN!","YOU ARE A WORD MASTER!"),"🏆",SonHarfPink)else null
 }
 
 @Composable
@@ -64,11 +64,11 @@ fun OnlineGameScreenComboOverlayOnly(){
     Box(Modifier.fillMaxSize(),contentAlignment=Alignment.TopCenter){
         AnimatedVisibility(show&&combo!=null,modifier=Modifier.padding(horizontal=22.dp,vertical=92.dp),enter=fadeIn(tween(120))+scaleIn(initialScale=.7f,animationSpec=tween(180)),exit=fadeOut(tween(220))+scaleOut(targetScale=1.08f,animationSpec=tween(220))){
             val c=combo?:return@AnimatedVisibility
-            Surface(color=Color(0xF20A1020),shape=RoundedCornerShape(26.dp),border=BorderStroke(2.dp,c.color.copy(alpha=.78f)),shadowElevation=16.dp){
+            Surface(color=SonHarfSurface.copy(alpha=.95f),shape=RoundedCornerShape(26.dp),border=BorderStroke(2.dp,c.color.copy(alpha=.78f)),shadowElevation=16.dp){
                 Column(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(c.color.copy(alpha=.05f),c.color.copy(alpha=.24f),c.color.copy(alpha=.05f)))).padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally){
                     Text(c.mark,color=c.color,fontSize=30.sp,fontWeight=FontWeight.Black)
                     Text(c.title,color=c.color,fontSize=30.sp,fontWeight=FontWeight.Black,textAlign=TextAlign.Center)
-                    Text("${c.n} DOĞRU SERİ!",color=SonHarfText,fontSize=14.sp,fontWeight=FontWeight.Black)
+                    Text("${c.n} ${sh("DOĞRU SERİ!","WORD STREAK!" )}",color=SonHarfText,fontSize=14.sp,fontWeight=FontWeight.Black)
                     Text(c.sub,color=SonHarfMuted,fontSize=11.sp,fontWeight=FontWeight.Bold,textAlign=TextAlign.Center)
                 }
             }
