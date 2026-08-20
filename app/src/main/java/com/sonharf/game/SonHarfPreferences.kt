@@ -26,6 +26,7 @@ object SonHarfPreferences {
     private const val BOT_DIFFICULTY = "bot_difficulty"
     private const val PENDING_REGISTER_EMAIL = "pending_register_email"
     private const val PENDING_REGISTER_NAME = "pending_register_name"
+    private const val PENDING_REGISTER_GENDER = "pending_register_gender"
     private const val REMEMBER_LOGIN = "remember_login"
     private const val REMEMBERED_EMAIL = "remembered_email"
     private const val DISMISSED_MATCH_SUMMARY_ID = "dismissed_match_summary_id"
@@ -61,9 +62,7 @@ object SonHarfPreferences {
         val normalized = if(value in setOf("easy","hard")) value else "normal"
         prefs(context).edit().putString(BOT_DIFFICULTY, normalized).apply()
         if (SupabaseProvider.configured) CoroutineScope(Dispatchers.IO).launch {
-            runCatching {
-                SupabaseProvider.client.postgrest.rpc("set_bot_difficulty_v1", buildJsonObject { put("p_difficulty", normalized) })
-            }
+            runCatching { SupabaseProvider.client.postgrest.rpc("set_bot_difficulty_v1", buildJsonObject { put("p_difficulty", normalized) }) }
         }
     }
 
@@ -79,9 +78,15 @@ object SonHarfPreferences {
     fun setFriendRequestNotificationsEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(FRIEND_REQUEST_NOTIFICATIONS, value).apply()
     fun setSystemNotificationsEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(SYSTEM_NOTIFICATIONS, value).apply()
 
-    fun rememberPendingRegistration(context: Context, email: String, displayName: String) {
-        val cleanName = displayName.trim().take(24); if (cleanName.isBlank()) return
-        prefs(context).edit().putString(PENDING_REGISTER_EMAIL, email.trim().lowercase()).putString(PENDING_REGISTER_NAME, cleanName).apply()
+    fun rememberPendingRegistration(context: Context, email: String, displayName: String, gender: String = "") {
+        val cleanName = displayName.trim().take(24)
+        if (cleanName.isBlank()) return
+        val normalizedGender = normalizeGender(gender)
+        prefs(context).edit()
+            .putString(PENDING_REGISTER_EMAIL, email.trim().lowercase())
+            .putString(PENDING_REGISTER_NAME, cleanName)
+            .putString(PENDING_REGISTER_GENDER, normalizedGender)
+            .apply()
     }
 
     fun pendingRegistrationName(context: Context, email: String): String? {
@@ -90,9 +95,24 @@ object SonHarfPreferences {
         return p.getString(PENDING_REGISTER_NAME, null)?.trim()?.takeIf { it.isNotBlank() }
     }
 
+    fun pendingRegistrationGender(context: Context, email: String): String? {
+        val p = prefs(context); val savedEmail = p.getString(PENDING_REGISTER_EMAIL, null)?.lowercase()
+        if (savedEmail != email.trim().lowercase()) return null
+        return p.getString(PENDING_REGISTER_GENDER, null)?.let(::normalizeGender)?.takeIf { it.isNotBlank() }
+    }
+
     fun clearPendingRegistration(context: Context, email: String) {
         val p = prefs(context)
-        if (p.getString(PENDING_REGISTER_EMAIL, null)?.lowercase() == email.trim().lowercase()) p.edit().remove(PENDING_REGISTER_EMAIL).remove(PENDING_REGISTER_NAME).apply()
+        if (p.getString(PENDING_REGISTER_EMAIL, null)?.lowercase() == email.trim().lowercase()) {
+            p.edit().remove(PENDING_REGISTER_EMAIL).remove(PENDING_REGISTER_NAME).remove(PENDING_REGISTER_GENDER).apply()
+        }
+    }
+
+    private fun normalizeGender(value: String): String = when (value.trim().lowercase()) {
+        "erkek" -> "erkek"
+        "kadın", "kadin" -> "kadın"
+        "diğer", "diger" -> "diğer"
+        else -> ""
     }
 
     fun syncSound(context: Context) = SonHarfSoundFx.setEnabled(soundEnabled(context))
