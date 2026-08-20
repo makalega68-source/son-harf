@@ -25,13 +25,24 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
 
+object SonHarfGameNavigation {
+    var lobbyRequest by mutableIntStateOf(0)
+        private set
+
+    fun requestLobby() {
+        lobbyRequest += 1
+    }
+}
+
 @Composable
 fun SonHarfIntegratedApp() {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var screen by remember { mutableStateOf(AppScreen.HOME) }
+    var gameKey by remember { mutableIntStateOf(0) }
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
     var showVip by remember { mutableStateOf(false) }
+    val lobbyRequest = SonHarfGameNavigation.lobbyRequest
 
     LaunchedEffect(Unit) {
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
@@ -42,6 +53,12 @@ fun SonHarfIntegratedApp() {
         val mode = runCatching { backend?.getPreferredGameMode() }.getOrNull()
         if (mode != null) SonHarfGameModeState.mode = mode
         SonHarfCosmetics.apply(runCatching { backend?.getEquippedCosmetics() }.getOrNull())
+    }
+    LaunchedEffect(lobbyRequest) {
+        if (lobbyRequest > 0 && authenticated) {
+            gameKey += 1
+            screen = AppScreen.GAME
+        }
     }
 
     if (!authChecked) {
@@ -75,7 +92,7 @@ fun SonHarfIntegratedApp() {
                         onLeaderboard = { screen = AppScreen.LEADERBOARD },
                         onVip = { showVip = true },
                     )
-                    AppScreen.GAME -> OnlineGameScreenV6()
+                    AppScreen.GAME -> key(gameKey) { OnlineGameScreenV6() }
                     AppScreen.SHOP -> EconomyShopScreen()
                     AppScreen.PROFILE -> ProfileExperienceScreen()
                     AppScreen.MORE -> MetaHubScreen()
