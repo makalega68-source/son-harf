@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
@@ -33,6 +34,7 @@ fun hasVerifiedMembershipSession(): Boolean =
 
 @Composable
 fun RequiredAuthGate(onAuthenticated: () -> Unit) {
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var register by remember { mutableStateOf(true) }
     var displayName by remember { mutableStateOf("") }
@@ -57,10 +59,19 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         else -> raw.take(170).ifBlank { "İşlem tamamlanamadı. Tekrar dene." }
     }
 
+    fun generatedName(value: String): Boolean {
+        val v = value.trim()
+        return v.isBlank() || Regex("^(Oyuncu|Player)-[A-Za-z0-9]{3,8}$", RegexOption.IGNORE_CASE).matches(v)
+    }
+
+    val authGradient = if (SonHarfUiState.darkMode) {
+        listOf(Color(0xFF020711), SonHarfBg, Color(0xFF08192A))
+    } else {
+        listOf(Color(0xFFDDF3FF), Color(0xFFEAF8FF), Color(0xFFD8EEFF))
+    }
+
     Box(
-        Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFFDDF3FF), Color(0xFFEAF8FF), Color(0xFFD8EEFF))),
-        ).statusBarsPadding().navigationBarsPadding(),
+        Modifier.fillMaxSize().background(Brush.verticalGradient(authGradient)).statusBarsPadding().navigationBarsPadding(),
         contentAlignment = Alignment.Center,
     ) {
         Column(
@@ -103,6 +114,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                         onClick = {
                             if (busy) return@Button
                             if (!email.contains("@") || password.length < 6) { notice = "Geçerli e-posta ve en az 6 karakterli şifre gir."; return@Button }
+                            if (register && displayName.trim().length < 2) { notice = "Oyuncu adı en az 2 karakter olmalı."; return@Button }
                             if (register && password != password2) { notice = "Şifreler aynı değil."; return@Button }
                             scope.launch {
                                 busy = true; notice = ""; success = false
@@ -114,8 +126,9 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                             this.password = password
                                         }
                                     }.onSuccess {
+                                        SonHarfPreferences.rememberPendingRegistration(context, email, displayName)
                                         success = true
-                                        notice = "Onay e-postası gönderildi. E-postadaki bağlantıya dokun; ardından Giriş Yap bölümünden giriş yap."
+                                        notice = "Onay e-postası gönderildi. Bağlantıya dokun; ardından aynı e-posta ile giriş yap. Seçtiğin oyuncu adı korunacak."
                                         register = false
                                     }.onFailure { notice = friendly(it.message.orEmpty()) }
                                 } else {
@@ -128,9 +141,17 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                         check(hasVerifiedMembershipSession()) { "Email not confirmed" }
                                         val backend = OnlineGameBackend()
                                         val id = requireNotNull(backend.currentUserId())
-                                        if (runCatching { backend.getProfile(id) }.getOrNull() == null) {
-                                            backend.ensurePlayer(displayName.ifBlank { email.substringBefore('@').take(20).ifBlank { "Oyuncu" } })
+                                        val existing = runCatching { backend.getProfile(id) }.getOrNull()
+                                        val pendingName = SonHarfPreferences.pendingRegistrationName(context, email)
+                                        val sameSessionName = displayName.trim().takeIf { it.length >= 2 }
+                                        val desiredName = pendingName ?: sameSessionName
+
+                                        if (desiredName != null && (existing == null || generatedName(existing.displayName))) {
+                                            backend.ensurePlayer(desiredName)
+                                        } else if (existing == null) {
+                                            backend.ensurePlayer(email.substringBefore('@').take(20).ifBlank { "Oyuncu" })
                                         }
+                                        if (pendingName != null) SonHarfPreferences.clearPendingRegistration(context, email)
                                     }.onSuccess { onAuthenticated() }
                                         .onFailure { notice = friendly(it.message.orEmpty()) }
                                 }
