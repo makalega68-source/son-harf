@@ -26,12 +26,18 @@ object SonHarfPreferences {
     private const val BOT_DIFFICULTY = "bot_difficulty"
     private const val PENDING_REGISTER_EMAIL = "pending_register_email"
     private const val PENDING_REGISTER_NAME = "pending_register_name"
+    private const val REMEMBER_LOGIN = "remember_login"
+    private const val REMEMBERED_EMAIL = "remembered_email"
+    private const val DISMISSED_MATCH_SUMMARY_ID = "dismissed_match_summary_id"
 
     fun soundEnabled(context: Context): Boolean = prefs(context).getBoolean(SOUND, true)
     fun vibrationEnabled(context: Context): Boolean = prefs(context).getBoolean(VIBRATION, true)
     fun darkModeEnabled(context: Context): Boolean = prefs(context).getBoolean(DARK_MODE, false)
     fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"
     fun botDifficulty(context: Context): String = prefs(context).getString(BOT_DIFFICULTY, "normal")?.takeIf { it in setOf("easy","normal","hard") } ?: "normal"
+    fun rememberLogin(context: Context): Boolean = prefs(context).getBoolean(REMEMBER_LOGIN, true)
+    fun rememberedEmail(context: Context): String = prefs(context).getString(REMEMBERED_EMAIL, "").orEmpty()
+    fun dismissedMatchSummaryId(context: Context): String? = prefs(context).getString(DISMISSED_MATCH_SUMMARY_ID, null)
 
     fun notificationsEnabled(context: Context): Boolean = gameInviteNotificationsEnabled(context) || friendRequestNotificationsEnabled(context) || systemNotificationsEnabled(context)
     fun gameInviteNotificationsEnabled(context: Context): Boolean = prefs(context).getBoolean(GAME_INVITE_NOTIFICATIONS, prefs(context).getBoolean(NOTIFICATIONS, true))
@@ -41,6 +47,16 @@ object SonHarfPreferences {
     fun setSoundEnabled(context: Context, value: Boolean) { prefs(context).edit().putBoolean(SOUND, value).apply(); SonHarfSoundFx.setEnabled(value) }
     fun setVibrationEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(VIBRATION, value).apply()
     fun setDarkModeEnabled(context: Context, value: Boolean) { prefs(context).edit().putBoolean(DARK_MODE, value).apply(); SonHarfUiState.darkMode = value }
+    fun setRememberLogin(context: Context, value: Boolean, email: String = "") {
+        val editor = prefs(context).edit().putBoolean(REMEMBER_LOGIN, value)
+        if (value && email.isNotBlank()) editor.putString(REMEMBERED_EMAIL, email.trim().lowercase()) else if (!value) editor.remove(REMEMBERED_EMAIL)
+        editor.apply()
+    }
+    fun setDismissedMatchSummaryId(context: Context, roomId: String?) {
+        val editor = prefs(context).edit()
+        if (roomId.isNullOrBlank()) editor.remove(DISMISSED_MATCH_SUMMARY_ID) else editor.putString(DISMISSED_MATCH_SUMMARY_ID, roomId)
+        editor.apply()
+    }
     fun setBotDifficulty(context: Context, value: String) {
         val normalized = if(value in setOf("easy","hard")) value else "normal"
         prefs(context).edit().putString(BOT_DIFFICULTY, normalized).apply()
