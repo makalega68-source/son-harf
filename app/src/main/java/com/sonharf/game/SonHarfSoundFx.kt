@@ -16,49 +16,15 @@ object SonHarfSoundFx {
     fun softNotify() { click(20, 0.16, 0.48); delayedClick(55, 17, 0.13, 0.52) }
     fun wordAccepted() { click(17, 0.15, 0.50); delayedClick(42, 14, 0.11, 0.56) }
     fun warning() = click(24, 0.16, 0.30)
-    fun bonus() { click(19, 0.17, 0.48); delayedClick(45, 18, 0.15, 0.54) }
-    fun victory() { click(18, 0.17, 0.50); delayedClick(38, 16, 0.15, 0.56); delayedClick(76, 15, 0.13, 0.60) }
-    fun defeat() = click(26, 0.14, 0.28)
+
+    // Combo/aksiyon ve kutlama sesleri bilinçli olarak sessizdir.
+    // Görsel efektler devam eder; rahatsız edici prosedürel patlama sesi çalmaz.
+    fun bonus() = Unit
+    fun victory() = Unit
+    fun defeat() = Unit
+    fun fireworks() = Unit
+
     fun countdown() = click(13, 0.08, 0.38)
-
-    /** Soft, low-volume applause used by victory/confetti effects. Kept under the old API name for compatibility. */
-    fun fireworks() {
-        if (!enabled) return
-        Thread {
-            val durationSec = 1.35
-            val count = (SAMPLE_RATE * durationSec).toInt()
-            val pcm = ShortArray(count)
-            val clapTimes = doubleArrayOf(.05, .17, .29, .42, .55, .69, .84, 1.00, 1.16)
-            var roomTone = 0.0
-
-            for (i in pcm.indices) {
-                val t = i.toDouble() / SAMPLE_RATE
-                var sample = 0.0
-
-                // Quiet crowd/room texture so individual claps do not sound like hard digital clicks.
-                val white = Random.nextDouble(-1.0, 1.0)
-                roomTone = roomTone * .91 + white * .09
-                sample += roomTone * .012 * exp(-t * .55)
-
-                for ((index, start) in clapTimes.withIndex()) {
-                    val x = t - start
-                    if (x in 0.0..0.13) {
-                        val attack = (x / .008).coerceIn(0.0, 1.0)
-                        val decay = exp(-x * (28.0 + (index % 3) * 3.0))
-                        val n = Random.nextDouble(-1.0, 1.0)
-                        val body = n * .62 + roomTone * .38
-                        val gain = .085 + (index % 4) * .006
-                        sample += body * attack * decay * gain
-                    }
-                }
-
-                // A few very soft distant claps make it feel like applause rather than a metronome.
-                if (Random.nextDouble() < .0022) sample += Random.nextDouble(-.035, .035) * exp(-t * .4)
-                pcm[i] = (sample.coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt().toShort()
-            }
-            play(pcm)
-        }.start()
-    }
 
     private fun delayedClick(delayMs: Long, durationMs: Int, gain: Double, brightness: Double) {
         if (!enabled) return

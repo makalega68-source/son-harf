@@ -51,15 +51,18 @@ private data class ActionRoomV9(
 )
 
 private data class ComboV9(val title: String, val color: Color)
+
+/**
+ * Combo celebrations are intentionally sparse. They should feel special rather
+ * than interrupting normal play after almost every accepted word.
+ */
 private fun comboV9(n: Int): ComboV9? = when (n) {
-    3 -> ComboV9(sh("İSABET!", "NICE!"), SonHarfCyan)
-    4 -> ComboV9(sh("AFERİN!", "WELL DONE!"), SonHarfGreen)
     5 -> ComboV9(sh("MÜKEMMEL!", "PERFECT!"), SonHarfGold)
-    6 -> ComboV9(sh("KELİME KATİLİ!", "STREAK MASTER!"), SonHarfPink)
-    7 -> ComboV9(sh("EFSANE!", "LEGENDARY!"), SonHarfPurple)
-    8 -> ComboV9(sh("HARİKASIN!", "AMAZING!"), SonHarfCyan)
-    9 -> ComboV9(sh("ŞOV ZAMANI!", "SHOWTIME!"), SonHarfGold)
-    else -> if (n >= 10) ComboV9(sh("EFSANELER LİGİ!", "LEAGUE OF LEGENDS!"), SonHarfPink) else null
+    8 -> ComboV9(sh("KELİME KATİLİ!", "STREAK MASTER!"), SonHarfPink)
+    12 -> ComboV9(sh("EFSANE!", "LEGENDARY!"), SonHarfPurple)
+    16 -> ComboV9(sh("ŞOV ZAMANI!", "SHOWTIME!"), SonHarfGold)
+    20 -> ComboV9(sh("EFSANELER LİGİ!", "LEAGUE OF LEGENDS!"), SonHarfPink)
+    else -> null
 }
 
 private data class ConfettiPiece(val x: Float, val delay: Float, val speed: Float, val size: Float, val angle: Float, val color: Color)
