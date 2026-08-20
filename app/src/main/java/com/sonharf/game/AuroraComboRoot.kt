@@ -5,12 +5,12 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
-/** Main app + final active-match arena + short-lived action animations. */
+/** Main app + V9 active-match arena + frameless confetti action overlay. */
 @Composable
 fun AuroraSonHarfAppWithCombo() {
     Box(Modifier.fillMaxSize()) {
         AuroraSonHarfApp()
-        SketchGameOverlayV8()
-        OnlineGameScreenComboOverlayOnly()
+        SketchGameOverlayV9()
+        ComboOverlayV9()
     }
 }
