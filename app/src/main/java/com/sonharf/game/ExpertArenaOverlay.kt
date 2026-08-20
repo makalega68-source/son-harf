@@ -69,13 +69,22 @@ fun ExpertArenaOverlay() {
     if (active.status == "finished") {
         Surface(Modifier.fillMaxSize(), color = SonHarfBg) {
             Box(Modifier.statusBarsPadding().navigationBarsPadding().padding(22.dp), contentAlignment = Alignment.Center) {
-                Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp)) {
+                Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .24f))) {
                     Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(sh("UZMAN MODU TAMAMLANDI", "EXPERT MODE COMPLETE"), color = SonHarfGold, fontWeight = FontWeight.Black)
                         Text("$myRounds - $oppRounds", fontSize = 42.sp, fontWeight = FontWeight.Black)
                         Text("$myScore - $oppScore", color = SonHarfMuted)
                         Button(onClick = { scope.launch { runCatching { backend.restartBotMatch(active.id) }.onSuccess { room = it; words = emptyList() } } }, enabled = active.isBot, modifier = Modifier.fillMaxWidth()) { Text(sh("TEKRAR OYNA", "PLAY AGAIN")) }
-                        OutlinedButton(onClick = { dismissed = active.id; room = null; words = emptyList() }, modifier = Modifier.fillMaxWidth()) { Text(sh("LOBİYE DÖN", "BACK TO LOBBY")) }
+                        OutlinedButton(
+                            onClick = {
+                                dismissed = active.id
+                                room = null
+                                words = emptyList()
+                                input = ""
+                                SonHarfGameNavigation.requestLobby()
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text(sh("LOBİYE DÖN", "BACK TO LOBBY")) }
                     }
                 }
             }
