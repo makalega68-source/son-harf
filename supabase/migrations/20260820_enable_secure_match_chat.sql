@@ -1,3 +1,5 @@
+drop policy if exists "chat participant insert" on public.chat_messages;
+drop policy if exists "chat participants read" on public.chat_messages;
 drop policy if exists chat_messages_select_participants on public.chat_messages;
 drop policy if exists chat_messages_insert_sender on public.chat_messages;
 
