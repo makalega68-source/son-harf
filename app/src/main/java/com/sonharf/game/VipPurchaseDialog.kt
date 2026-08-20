@@ -31,7 +31,7 @@ import com.sonharf.game.billing.ProductCatalog
 import kotlinx.coroutines.launch
 
 @Composable
-fun VipPurchaseDialog(onDismiss: () -> Unit, onVerified: () -> Unit = {}) {
+fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
