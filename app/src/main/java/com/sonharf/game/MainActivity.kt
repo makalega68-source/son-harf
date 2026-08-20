@@ -62,7 +62,7 @@ class MainActivity : ComponentActivity() {
                 ),
                 typography = SonHarfNeonTypography,
             ) {
-                FinalNeonSonHarfApp()
+                MockupSonHarfApp()
             }
         }
     }
