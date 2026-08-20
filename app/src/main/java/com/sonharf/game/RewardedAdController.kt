@@ -64,7 +64,7 @@ class RewardedAdController(private val context: Context) {
         }
         rewardedAd = null
         ready = false
-        val responseId = ad.responseInfo.responseId.ifBlank { "reward-${UUID.randomUUID()}" }
+        val responseId = ad.responseInfo.responseId.orEmpty().ifBlank { "reward-${UUID.randomUUID()}" }
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 onClosed?.invoke()
