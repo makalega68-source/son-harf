@@ -16,6 +16,8 @@ object SonHarfPreferences {
     private const val SYSTEM_NOTIFICATIONS = "system_notifications_enabled"
     private const val DARK_MODE = "dark_mode_enabled"
     private const val LANGUAGE = "app_language"
+    private const val PENDING_REGISTER_EMAIL = "pending_register_email"
+    private const val PENDING_REGISTER_NAME = "pending_register_name"
 
     fun soundEnabled(context: Context): Boolean = prefs(context).getBoolean(SOUND, true)
     fun vibrationEnabled(context: Context): Boolean = prefs(context).getBoolean(VIBRATION, true)
@@ -59,6 +61,29 @@ object SonHarfPreferences {
     fun setGameInviteNotificationsEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(GAME_INVITE_NOTIFICATIONS, value).apply()
     fun setFriendRequestNotificationsEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(FRIEND_REQUEST_NOTIFICATIONS, value).apply()
     fun setSystemNotificationsEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(SYSTEM_NOTIFICATIONS, value).apply()
+
+    fun rememberPendingRegistration(context: Context, email: String, displayName: String) {
+        val cleanName = displayName.trim().take(24)
+        if (cleanName.isBlank()) return
+        prefs(context).edit()
+            .putString(PENDING_REGISTER_EMAIL, email.trim().lowercase())
+            .putString(PENDING_REGISTER_NAME, cleanName)
+            .apply()
+    }
+
+    fun pendingRegistrationName(context: Context, email: String): String? {
+        val p = prefs(context)
+        val savedEmail = p.getString(PENDING_REGISTER_EMAIL, null)?.lowercase()
+        if (savedEmail != email.trim().lowercase()) return null
+        return p.getString(PENDING_REGISTER_NAME, null)?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    fun clearPendingRegistration(context: Context, email: String) {
+        val p = prefs(context)
+        if (p.getString(PENDING_REGISTER_EMAIL, null)?.lowercase() == email.trim().lowercase()) {
+            p.edit().remove(PENDING_REGISTER_EMAIL).remove(PENDING_REGISTER_NAME).apply()
+        }
+    }
 
     fun syncSound(context: Context) = SonHarfSoundFx.setEnabled(soundEnabled(context))
 
