@@ -11,10 +11,29 @@ object SonHarfPreferences {
     private const val SOUND = "sound_enabled"
     private const val VIBRATION = "vibration_enabled"
     private const val NOTIFICATIONS = "notifications_enabled"
+    private const val GAME_INVITE_NOTIFICATIONS = "game_invite_notifications_enabled"
+    private const val FRIEND_REQUEST_NOTIFICATIONS = "friend_request_notifications_enabled"
+    private const val SYSTEM_NOTIFICATIONS = "system_notifications_enabled"
 
     fun soundEnabled(context: Context): Boolean = prefs(context).getBoolean(SOUND, true)
     fun vibrationEnabled(context: Context): Boolean = prefs(context).getBoolean(VIBRATION, true)
-    fun notificationsEnabled(context: Context): Boolean = prefs(context).getBoolean(NOTIFICATIONS, true)
+
+    // Kept for backward compatibility with older code. It now reflects whether
+    // at least one notification category is enabled instead of acting as one
+    // shared switch for every category.
+    fun notificationsEnabled(context: Context): Boolean =
+        gameInviteNotificationsEnabled(context) ||
+            friendRequestNotificationsEnabled(context) ||
+            systemNotificationsEnabled(context)
+
+    fun gameInviteNotificationsEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(GAME_INVITE_NOTIFICATIONS, prefs(context).getBoolean(NOTIFICATIONS, true))
+
+    fun friendRequestNotificationsEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(FRIEND_REQUEST_NOTIFICATIONS, prefs(context).getBoolean(NOTIFICATIONS, true))
+
+    fun systemNotificationsEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(SYSTEM_NOTIFICATIONS, prefs(context).getBoolean(NOTIFICATIONS, true))
 
     fun setSoundEnabled(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(SOUND, value).apply()
@@ -24,8 +43,25 @@ object SonHarfPreferences {
     fun setVibrationEnabled(context: Context, value: Boolean) =
         prefs(context).edit().putBoolean(VIBRATION, value).apply()
 
-    fun setNotificationsEnabled(context: Context, value: Boolean) =
-        prefs(context).edit().putBoolean(NOTIFICATIONS, value).apply()
+    // Backward-compatible master setter for callers that intentionally want to
+    // set all categories together. The settings screen no longer uses it.
+    fun setNotificationsEnabled(context: Context, value: Boolean) {
+        prefs(context).edit()
+            .putBoolean(NOTIFICATIONS, value)
+            .putBoolean(GAME_INVITE_NOTIFICATIONS, value)
+            .putBoolean(FRIEND_REQUEST_NOTIFICATIONS, value)
+            .putBoolean(SYSTEM_NOTIFICATIONS, value)
+            .apply()
+    }
+
+    fun setGameInviteNotificationsEnabled(context: Context, value: Boolean) =
+        prefs(context).edit().putBoolean(GAME_INVITE_NOTIFICATIONS, value).apply()
+
+    fun setFriendRequestNotificationsEnabled(context: Context, value: Boolean) =
+        prefs(context).edit().putBoolean(FRIEND_REQUEST_NOTIFICATIONS, value).apply()
+
+    fun setSystemNotificationsEnabled(context: Context, value: Boolean) =
+        prefs(context).edit().putBoolean(SYSTEM_NOTIFICATIONS, value).apply()
 
     fun syncSound(context: Context) = SonHarfSoundFx.setEnabled(soundEnabled(context))
 
