@@ -28,10 +28,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.LeaderboardEntry
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
-import com.sonharf.game.data.getLeaderboard
+import com.sonharf.game.data.getLanguageLeaderboard
 import kotlinx.coroutines.launch
 
 private val RefBg = Color(0xFF020713)
@@ -118,14 +119,19 @@ private fun RefBottomBar(screen: RefScreen, onChange: (RefScreen) -> Unit) {
 
 @Composable
 private fun RefHome(onPlay: () -> Unit, onProfile: () -> Unit, onSettings: () -> Unit, onLeaderboard: () -> Unit) {
+    val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var top by remember { mutableStateOf<List<ProfileDto>>(emptyList()) }
+    var leaderLanguage by remember { mutableStateOf(SonHarfPreferences.language(context)) }
     LaunchedEffect(Unit) {
         val b = backend ?: return@LaunchedEffect
         if (b.currentUserId() == null) runCatching { b.ensurePlayer("Oyuncu") }
         profile = b.currentUserId()?.let { runCatching { b.getProfile(it) }.getOrNull() }
-        top = runCatching { b.getLeaderboard(3).map { it.profile } }.getOrDefault(emptyList())
+    }
+    LaunchedEffect(leaderLanguage) {
+        val b = backend ?: return@LaunchedEffect
+        top = runCatching { b.getLanguageLeaderboard(leaderLanguage, "week", 3).map { it.profile } }.getOrDefault(emptyList())
     }
     val p = profile
     LazyColumn(
@@ -167,9 +173,7 @@ private fun RefHome(onPlay: () -> Unit, onProfile: () -> Unit, onSettings: () ->
                 }
             }
         }
-        item {
-            RefGradientButton("DÜELLOYA GİR", "Rastgele rakip bul", onPlay)
-        }
+        item { RefGradientButton("DÜELLOYA GİR", "Rastgele rakip bul", onPlay) }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 RefModeButton("♟", "ARKADAŞLAR", "Çevrimiçi: —", RefBlue, Modifier.weight(1f), onPlay)
@@ -179,20 +183,22 @@ private fun RefHome(onPlay: () -> Unit, onProfile: () -> Unit, onSettings: () ->
         item {
             Card(colors = CardDefaults.cardColors(containerColor = RefPanel), border = BorderStroke(1.dp, RefStroke), shape = RoundedCornerShape(15.dp)) {
                 Row(Modifier.fillMaxWidth().padding(vertical = 12.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    RefRule("3 × 10", "KELİME")
-                    RefDivider()
-                    RefRule("45 sn", "SÜRE")
-                    RefDivider()
-                    RefRule("3", "ROUND")
-                    RefDivider()
-                    RefRule("TR / EN", "DİL")
+                    RefRule("3 × 10", "KELİME"); RefDivider(); RefRule("45 sn", "SÜRE"); RefDivider(); RefRule("3", "ROUND"); RefDivider(); RefRule("TR / EN", "DİL")
                 }
             }
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("HAFTANIN EN İYİLERİ", color = RefText, fontWeight = FontWeight.Black, fontSize = 11.sp)
-                Surface(color = RefPanel2, shape = RoundedCornerShape(8.dp)) { Text("Bu hafta⌄", Modifier.padding(horizontal = 9.dp, vertical = 6.dp), color = RefMuted, fontSize = 8.sp) }
+                Row(Modifier.clip(RoundedCornerShape(8.dp)).background(RefPanel2).padding(2.dp)) {
+                    listOf("tr" to "🇹🇷 TR", "en" to "🇬🇧 EN").forEach { (code, label) ->
+                        Surface(
+                            modifier = Modifier.clickable { leaderLanguage = code },
+                            color = if (leaderLanguage == code) RefPurple.copy(alpha = .55f) else Color.Transparent,
+                            shape = RoundedCornerShape(7.dp)
+                        ) { Text(label, Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = if (leaderLanguage == code) RefText else RefMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold) }
+                    }
+                }
             }
         }
         item {
@@ -251,35 +257,22 @@ private fun RefProfile(onBack: () -> Unit) {
                 Text(if (p?.isVip == true) "SON HARF USTASI  ♥" else "SON HARF OYUNCUSU", color = RefMuted, fontSize = 9.sp)
                 Spacer(Modifier.height(15.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Seviye 23", color = RefText, fontSize = 9.sp)
-                    Spacer(Modifier.width(8.dp))
-                    LinearProgressIndicator(progress = { .64f }, modifier = Modifier.weight(1f).height(5.dp), color = RefPurple, trackColor = RefPanel2)
-                    Spacer(Modifier.width(8.dp))
-                    Text("3.250 / 5.000", color = RefMuted, fontSize = 8.sp)
+                    Text("Seviye 23", color = RefText, fontSize = 9.sp); Spacer(Modifier.width(8.dp)); LinearProgressIndicator(progress = { .64f }, modifier = Modifier.weight(1f).height(5.dp), color = RefPurple, trackColor = RefPanel2); Spacer(Modifier.width(8.dp)); Text("3.250 / 5.000", color = RefMuted, fontSize = 8.sp)
                 }
             }
         }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    RefMetric((p?.wins ?: 0).toString(), "Galibiyet", Modifier.weight(1f)); RefMetric((p?.losses ?: 0).toString(), "Mağlubiyet", Modifier.weight(1f)); RefMetric("%$rate", "Kazanma Oranı", Modifier.weight(1f))
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    RefMetric(matches.toString(), "Toplam Maç", Modifier.weight(1f)); RefMetric((p?.totalRounds ?: 0).toString(), "Toplam Round", Modifier.weight(1f)); RefMetric((p?.validWords ?: 0).toString(), "Toplam Kelime", Modifier.weight(1f))
-                }
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    RefMetric((p?.bestStreak ?: 0).toString(), "En Uzun Seri", Modifier.weight(1f)); RefMetric((p?.wordStorms ?: 0).toString(), "Söz Fırtınası", Modifier.weight(1f)); RefMetric((p?.rating ?: 1000).toString(), "En Yüksek Puan", Modifier.weight(1f))
-                }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { RefMetric((p?.wins ?: 0).toString(), "Galibiyet", Modifier.weight(1f)); RefMetric((p?.losses ?: 0).toString(), "Mağlubiyet", Modifier.weight(1f)); RefMetric("%$rate", "Kazanma Oranı", Modifier.weight(1f)) }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { RefMetric(matches.toString(), "Toplam Maç", Modifier.weight(1f)); RefMetric((p?.totalRounds ?: 0).toString(), "Toplam Round", Modifier.weight(1f)); RefMetric((p?.validWords ?: 0).toString(), "Toplam Kelime", Modifier.weight(1f)) }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { RefMetric((p?.bestStreak ?: 0).toString(), "En Uzun Seri", Modifier.weight(1f)); RefMetric((p?.wordStorms ?: 0).toString(), "Söz Fırtınası", Modifier.weight(1f)); RefMetric((p?.rating ?: 1000).toString(), "En Yüksek Puan", Modifier.weight(1f)) }
             }
         }
         item {
-            Text("SON BAŞARILAR", color = RefText, fontWeight = FontWeight.Black, fontSize = 10.sp)
-            Spacer(Modifier.height(9.dp))
+            Text("SON BAŞARILAR", color = RefText, fontWeight = FontWeight.Black, fontSize = 10.sp); Spacer(Modifier.height(9.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
                 listOf("♛", "★", "✦", "♟", "✪").forEachIndexed { i, icon ->
-                    Surface(shape = CircleShape, color = if (i < 3) RefGold.copy(alpha = .12f) else RefPanel2, border = BorderStroke(1.dp, if (i < 3) RefGold.copy(alpha = .7f) else RefStroke)) {
-                        Text(icon, Modifier.padding(13.dp), color = if (i < 3) RefGold else RefMuted, fontSize = 18.sp)
-                    }
+                    Surface(shape = CircleShape, color = if (i < 3) RefGold.copy(alpha = .12f) else RefPanel2, border = BorderStroke(1.dp, if (i < 3) RefGold.copy(alpha = .7f) else RefStroke)) { Text(icon, Modifier.padding(13.dp), color = if (i < 3) RefGold else RefMuted, fontSize = 18.sp) }
                 }
             }
         }
@@ -310,17 +303,30 @@ private fun RefProfile(onBack: () -> Unit) {
 
 @Composable
 private fun RefLeaderboard(onBack: () -> Unit) {
+    val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
-    var rows by remember { mutableStateOf<List<ProfileDto>>(emptyList()) }
+    var rows by remember { mutableStateOf<List<LeaderboardEntry>>(emptyList()) }
     var tab by remember { mutableStateOf(0) }
+    var language by remember { mutableStateOf(SonHarfPreferences.language(context)) }
     var me by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(Unit) {
+    val period = when (tab) { 1 -> "week"; 2 -> "month"; else -> "total" }
+    LaunchedEffect(language, tab) {
         me = backend?.currentUserId()
-        rows = runCatching { backend?.getLeaderboard(50)?.map { it.profile } ?: emptyList() }.getOrDefault(emptyList())
+        rows = runCatching { backend?.getLanguageLeaderboard(language, period, 50) ?: emptyList() }.getOrDefault(emptyList())
     }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        item { Row(verticalAlignment = Alignment.CenterVertically) { RefIconButton("‹", onBack); Spacer(Modifier.width(9.dp)); Text("LİDERLİK TABLOSU", color = RefText, fontSize = 20.sp, fontWeight = FontWeight.Black) } }
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) { RefIconButton("‹", onBack); Spacer(Modifier.width(9.dp)); Text("LİDERLİK TABLOSU", color = RefText, fontSize = 20.sp, fontWeight = FontWeight.Black) }
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(RefPanel).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                listOf("tr" to "🇹🇷 TÜRKÇE", "en" to "🇬🇧 ENGLISH").forEach { (code, label) ->
+                    Button(
+                        onClick = { language = code },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (language == code) RefPurple else Color.Transparent),
+                        shape = RoundedCornerShape(10.dp)
+                    ) { Text(label, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                }
+            }
         }
         item {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(RefPanel).padding(4.dp)) {
@@ -330,6 +336,9 @@ private fun RefLeaderboard(onBack: () -> Unit) {
             }
         }
         item {
+            Text(if (language == "tr") "Türkçe maçların sıralaması" else "English match rankings", color = RefBlue, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        }
+        item {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
                 Text("#", Modifier.width(32.dp), color = RefMuted, fontSize = 8.sp)
                 Text("Oyuncu", Modifier.weight(1f), color = RefMuted, fontSize = 8.sp)
@@ -337,19 +346,19 @@ private fun RefLeaderboard(onBack: () -> Unit) {
                 Text("Kazanma %", Modifier.width(70.dp), color = RefMuted, fontSize = 8.sp, textAlign = TextAlign.Center)
             }
         }
-        itemsIndexed(rows) { index, p ->
-            val matches = p.totalMatches.takeIf { it > 0 } ?: (p.wins + p.losses)
-            val wr = if (matches == 0) 0 else p.wins * 100 / matches
+        itemsIndexed(rows) { index, entry ->
+            val p = entry.profile
             val mine = p.id == me
             Card(colors = CardDefaults.cardColors(containerColor = if (mine) RefPurple.copy(alpha = .26f) else RefPanel), border = BorderStroke(1.dp, if (mine) RefPurple.copy(alpha = .7f) else RefStroke), shape = RoundedCornerShape(10.dp)) {
                 Row(Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(if (index < 3) listOf("♛", "♜", "♝")[index] else "${index + 1}", Modifier.width(32.dp), color = if (index == 0) RefGold else RefMuted, textAlign = TextAlign.Center)
                     Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) { RefAvatar(p.displayName, 28.dp, if (index == 0) RefGold else RefBlue); Spacer(Modifier.width(7.dp)); Text(if (mine) "Sen (${p.displayName})" else p.displayName, color = RefText, fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1) }
                     Text(p.wins.toString(), Modifier.width(64.dp), color = RefText, textAlign = TextAlign.Center, fontSize = 10.sp)
-                    Text("%$wr", Modifier.width(70.dp), color = RefText, textAlign = TextAlign.Center, fontSize = 10.sp)
+                    Text("%${entry.winRate}", Modifier.width(70.dp), color = RefText, textAlign = TextAlign.Center, fontSize = 10.sp)
                 }
             }
         }
+        if (rows.isEmpty()) item { Text(if (language == "tr") "Bu dönem için Türkçe maç verisi yok." else "No English match data for this period.", color = RefMuted, modifier = Modifier.fillMaxWidth().padding(22.dp), textAlign = TextAlign.Center, fontSize = 10.sp) }
     }
 }
 
