@@ -5,9 +5,13 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.runBlocking
@@ -23,6 +27,18 @@ internal val SonHarfGreen = Color(0xFF20C979)
 internal val SonHarfText: Color get() = if (SonHarfUiState.darkMode) Color(0xFFF5FAFF) else Color(0xFF101A2A)
 internal val SonHarfMuted: Color get() = if (SonHarfUiState.darkMode) Color(0xFF8FA5BD) else Color(0xFF5E7085)
 internal val SonHarfPink = Color(0xFFFF4386)
+
+private val SonHarfAccessibleTypography = Typography(
+    bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 24.sp),
+    bodyMedium = TextStyle(fontSize = 16.sp, lineHeight = 22.sp),
+    bodySmall = TextStyle(fontSize = 14.sp, lineHeight = 19.sp),
+    labelLarge = TextStyle(fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
+    labelMedium = TextStyle(fontSize = 14.sp, lineHeight = 18.sp),
+    labelSmall = TextStyle(fontSize = 13.sp, lineHeight = 17.sp),
+    titleLarge = TextStyle(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold),
+    titleMedium = TextStyle(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold),
+    titleSmall = TextStyle(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),
+)
 
 enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
 
@@ -58,7 +74,7 @@ class MainActivity : ComponentActivity() {
                     onSurface = SonHarfText,
                 )
             }
-            MaterialTheme(colorScheme = scheme) {
+            MaterialTheme(colorScheme = scheme, typography = SonHarfAccessibleTypography) {
                 Box {
                     AuroraSonHarfAppPrivateEnhanced()
                     WinnerFireworkOverlay()
