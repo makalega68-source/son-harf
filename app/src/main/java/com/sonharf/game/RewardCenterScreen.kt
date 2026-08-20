@@ -170,11 +170,25 @@ fun RewardCenterScreen() {
 
         if (s?.trialItemId != null) item {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfPurple.copy(alpha = .12f)), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .45f))) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(sh("AKTİF DENEME", "ACTIVE TRIAL"), color = SonHarfPurple, fontWeight = FontWeight.Black)
                     Text(if (SonHarfUiState.isEnglish) trialItem?.nameEn ?: s.trialItemId else trialItem?.nameTr ?: s.trialItemId, fontWeight = FontWeight.Bold)
-                    Text(sh("Bu premium kozmetik 24 saatlik deneme süresince hesabında aktif deneme olarak kullanılabilir. Süre bitince sahiplik verilmez.", "This premium cosmetic is available as an active trial for 24 hours. Ownership is not granted when the trial expires."), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(sh("Bu premium kozmetiği 24 saat boyunca kullanabilirsin. Süre dolunca, ürünü satın almadıysan otomatik olarak çıkarılır.", "You can use this premium cosmetic for 24 hours. When the trial expires, it is automatically unequipped unless you own it."), color = SonHarfMuted, fontSize = 9.sp)
                     Text(s.trialExpiresAt.orEmpty(), color = SonHarfMuted, fontSize = 8.sp)
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                busy = "equip_trial"
+                                runCatching { backend?.equipRewardTrial() }
+                                    .onSuccess { notice = sh("Deneme kozmetiği etkinleştirildi.", "Trial cosmetic equipped."); reload() }
+                                    .onFailure { notice = sh("Deneme artık aktif değil.", "The trial is no longer active."); reload() }
+                                busy = null
+                            }
+                        },
+                        enabled = busy == null,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
+                    ) { Text(if (busy == "equip_trial") "…" else sh("DENEMEYİ KULLAN", "USE TRIAL"), fontWeight = FontWeight.Black) }
                 }
             }
         }

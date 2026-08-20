@@ -46,3 +46,6 @@ suspend fun OnlineGameBackend.claimRewardedAd(rewardType: String, adResponseId: 
 
 suspend fun OnlineGameBackend.openRewardChest(): RewardClaimDto =
     SupabaseProvider.client.postgrest.rpc("open_reward_chest").decodeSingle()
+
+suspend fun OnlineGameBackend.equipRewardTrial(): RewardClaimDto =
+    SupabaseProvider.client.postgrest.rpc("equip_reward_trial").decodeSingle()
