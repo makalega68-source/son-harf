@@ -7,13 +7,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-@Serializable
-data class UserBlockDto(
-    @SerialName("blocker_id") val blockerId: String,
-    @SerialName("blocked_id") val blockedId: String,
-    @SerialName("created_at") val createdAt: String? = null,
-)
-
 data class LeaderboardEntry(
     val profile: ProfileDto,
     val matches: Int,
