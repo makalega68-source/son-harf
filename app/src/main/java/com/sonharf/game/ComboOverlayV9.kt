@@ -90,8 +90,8 @@ fun ComboOverlayV9() {
 
     fun dismissSummary(roomId: String) {
         dismissedFinished = roomId
-        SonHarfPreferences.setDismissedMatchSummaryId(context, roomId)
         finishedRoom = null
+        SonHarfPreferences.setDismissedMatchSummaryId(context, roomId)
     }
 
     LaunchedEffect(Unit) {
@@ -118,12 +118,15 @@ fun ComboOverlayV9() {
                         if (last != null && last.id != reactionKey) { reactionKey = last.id; reaction = last.body }
                     }
                 }
-                val fin = rooms.filter { it.status == "finished" && it.id != dismissedFinished }.maxByOrNull { it.actionSeq }
+                val latestFinished = rooms.filter { it.status == "finished" }.maxByOrNull { it.actionSeq }
+                val fin = latestFinished?.takeIf { it.id != dismissedFinished }
                 if (fin != null && finishedRoom?.id != fin.id) {
                     finishedRoom = fin
                     resultWords = runCatching { backend.getWords(fin.id) }.getOrDefault(emptyList())
                     growth = runCatching { backend.getGrowthDashboard() }.getOrNull()
                     runCatching { backend.logEvent("match_finished_seen", fin.id) }
+                } else if (fin == null) {
+                    finishedRoom = null
                 }
             }
             delay(500)
@@ -195,9 +198,6 @@ fun ComboOverlayV9() {
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)) {
                         OutlinedButton(onClick={SonHarfShare.result(context,growth?.displayName?:sh("Oyuncu","Player"),myScore,oppScore,myWords,growth?.currentWinStreak?:0);scope.launch{backend.logEvent("match_result_share",fin.id)}},modifier=Modifier.weight(1f)){Text("↗ ${sh("SONUCU PAYLAŞ","SHARE RESULT")}",fontSize=9.sp)}
                         Button(onClick={SonHarfShare.challenge(context,growth?.displayName?:sh("Oyuncu","Player"),if(fin.isBot)null else fin.code);scope.launch{backend.logEvent("challenge_share",fin.id)}},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=SonHarfGold,contentColor=Color(0xFF261700))){Text("⚔ ${sh("MEYDAN OKU","CHALLENGE")}",fontWeight=FontWeight.Black,fontSize=9.sp)}
-                    }
-                    TextButton(onClick={dismissSummary(fin.id)},modifier=Modifier.fillMaxWidth()) {
-                        Text(sh("ÖZETİ KAPAT VE DEVAM ET","CLOSE SUMMARY AND CONTINUE"),fontWeight=FontWeight.Black)
                     }
                 }
             }
