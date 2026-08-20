@@ -53,15 +53,19 @@ fun SonHarfIntegratedApp() {
         return
     }
 
+    val pageGradient = if (SonHarfUiState.darkMode) {
+        listOf(Color(0xFF020711), SonHarfBg, Color(0xFF08192A))
+    } else {
+        listOf(Color(0xFFDDF2FF), SonHarfBg, Color(0xFFE6F6FF))
+    }
+
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = SonHarfBg,
             bottomBar = { if (screen != AppScreen.LEADERBOARD) IntegratedBottomBar(screen) { screen = it } },
         ) { pad ->
             Box(
-                Modifier.fillMaxSize().padding(pad).background(
-                    Brush.verticalGradient(listOf(Color(0xFFDDF2FF), SonHarfBg, Color(0xFFE6F6FF))),
-                ),
+                Modifier.fillMaxSize().padding(pad).background(Brush.verticalGradient(pageGradient)),
             ) {
                 when (screen) {
                     AppScreen.HOME -> IntegratedHomeScreen(
@@ -247,15 +251,49 @@ private fun SonHarfLogo() {
 
 @Composable
 private fun AnimatedVipHomeCard(active: Boolean, onClick: () -> Unit) {
-    val glow by rememberInfiniteTransition(label = "vipHome").animateFloat(.12f, .34f, infiniteRepeatable(tween(1000), RepeatMode.Reverse), label = "vipHomeGlow")
-    Card(onClick = onClick, colors = CardDefaults.cardColors(containerColor = SonHarfGold.copy(alpha = .10f + glow / 5f)), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.4.dp, SonHarfGold.copy(alpha = .55f))) {
-        Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box(Modifier.size(58.dp).background(SonHarfGold.copy(alpha = glow), CircleShape), contentAlignment = Alignment.Center) { Text("♛", fontSize = 34.sp, color = SonHarfGold, fontWeight = FontWeight.Black) }
-            Column(Modifier.weight(1f)) {
-                Text(if (active) "VIP AKTİF" else "VIP'E GEÇ", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                Text(sh("Özel kozmetikler • reklamsız • özel oda • aylık 400 elmas", "Exclusive cosmetics • no ads • private rooms • 400 diamonds monthly"), color = SonHarfMuted, fontSize = 9.sp)
+    val transition = rememberInfiniteTransition(label = "vipHome")
+    val glow by transition.animateFloat(.14f, .46f, infiniteRepeatable(tween(1150), RepeatMode.Reverse), label = "vipHomeGlow")
+    val crownScale by transition.animateFloat(.96f, 1.06f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "vipHomeCrown")
+    val base = if (SonHarfUiState.darkMode) Color(0xFF171006) else Color(0xFFFFFAED)
+
+    Card(
+        onClick = onClick,
+        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+        shape = RoundedCornerShape(26.dp),
+        border = BorderStroke(1.6.dp, SonHarfGold.copy(alpha = .62f + glow / 5f)),
+    ) {
+        Box(
+            Modifier.fillMaxWidth().background(
+                Brush.horizontalGradient(
+                    listOf(
+                        SonHarfGold.copy(alpha = .16f + glow / 3f),
+                        base,
+                        SonHarfPurple.copy(alpha = .13f),
+                    )
+                )
+            ).padding(16.dp)
+        ) {
+            Text("✦", color = SonHarfGold.copy(alpha = .50f + glow), fontSize = 17.sp, modifier = Modifier.align(Alignment.TopEnd))
+            Text("✧", color = SonHarfGold.copy(alpha = .34f + glow), fontSize = 13.sp, modifier = Modifier.align(Alignment.BottomCenter))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(13.dp)) {
+                Box(
+                    Modifier.size(64.dp).scale(crownScale).background(
+                        Brush.radialGradient(listOf(Color(0xFFFFE6A3), SonHarfGold.copy(alpha = .30f))), CircleShape
+                    ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("♛", fontSize = 39.sp, color = Color(0xFF9B6200), fontWeight = FontWeight.Black)
+                }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Surface(color = SonHarfGold.copy(alpha = .16f), shape = RoundedCornerShape(99.dp), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .35f))) {
+                        Text("SON HARF VIP  ✦", Modifier.padding(horizontal = 9.dp, vertical = 3.dp), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 8.sp, letterSpacing = .8.sp)
+                    }
+                    Text(if (active) sh("VIP AYRICALIKLARIN AKTİF", "VIP BENEFITS ACTIVE") else sh("VIP'E GEÇ", "GO VIP"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                    Text(sh("Reklamsız • özel oda • premium kozmetik", "No ads • private rooms • premium cosmetics"), color = SonHarfText, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                    Text(sh("Her ay 400 elmas  •  Gelişmiş istatistik", "400 diamonds monthly  •  Advanced stats"), color = SonHarfMuted, fontSize = 8.sp)
+                }
+                Text("›", color = SonHarfGold, fontSize = 32.sp, fontWeight = FontWeight.Black)
             }
-            Text("›", color = SonHarfGold, fontSize = 30.sp)
         }
     }
 }
