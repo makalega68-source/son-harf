@@ -19,11 +19,14 @@ class RewardedAdController(private val context: Context) {
         private set
 
     init {
-        MobileAds.initialize(context.applicationContext) { load() }
+        MobileAds.initialize(context.applicationContext) {}
     }
 
     fun load(onState: (() -> Unit)? = null) {
-        if (loading || rewardedAd != null) return
+        if (loading || rewardedAd != null) {
+            onState?.invoke()
+            return
+        }
         loading = true
         RewardedAd.load(
             context.applicationContext,
