@@ -6,7 +6,7 @@ import android.media.AudioTrack
 import kotlin.math.exp
 import kotlin.random.Random
 
-/** Short dry key-click palette. No musical beeps/chimes. */
+/** Short dry effects palette used by the game UI. */
 object SonHarfSoundFx {
     private const val SAMPLE_RATE = 24000
     @Volatile private var enabled = true
@@ -20,6 +20,13 @@ object SonHarfSoundFx {
     fun victory() { click(18, 0.17, 0.50); delayedClick(38, 16, 0.15, 0.56); delayedClick(76, 15, 0.13, 0.60) }
     fun defeat() = click(26, 0.14, 0.28)
     fun countdown() = click(13, 0.08, 0.38)
+    fun fireworks() {
+        // A restrained crackle/burst: audible enough to celebrate, short enough not to interrupt play.
+        click(58, 0.10, 0.72)
+        delayedClick(34, 44, 0.075, 0.84)
+        delayedClick(78, 34, 0.060, 0.76)
+        delayedClick(118, 24, 0.045, 0.68)
+    }
 
     private fun delayedClick(delayMs: Long, durationMs: Int, gain: Double, brightness: Double) {
         if (!enabled) return
