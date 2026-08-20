@@ -57,47 +57,24 @@ fun SketchGameOverlayV9() {
         if (r.status == "quiz") {
             triviaRound = runCatching { backend.getActiveTriviaRound(r.id) }.getOrNull()
             triviaQuestion = triviaRound?.let { runCatching { backend.getTriviaQuestion(it.questionId) }.getOrNull() }
-        } else {
-            triviaRound = null
-            triviaQuestion = null
-        }
+        } else { triviaRound = null; triviaQuestion = null }
     }
 
     LaunchedEffect(Unit) {
         while (true) {
             val current = room
-            if (current == null) {
-                val found = runCatching { discover() }.getOrNull()
-                if (found != null) {
-                    room = found
-                    words = runCatching { backend.getWords(found.id) }.getOrDefault(emptyList())
-                    refreshTrivia(found)
-                }
-            } else {
-                val updated = runCatching { backend.getRoom(current.id) }.getOrNull()
-                if (updated != null) {
-                    room = updated
-                    words = runCatching { backend.getWords(updated.id) }.getOrDefault(words)
-                    refreshTrivia(updated)
-                    if (showChat && !updated.isBot) chat = runCatching { backend.getChat(updated.id) }.getOrDefault(chat)
-                }
+            val updated = if (current == null) runCatching { discover() }.getOrNull() else runCatching { backend.getRoom(current.id) }.getOrNull()
+            if (updated != null) {
+                room = updated
+                words = runCatching { backend.getWords(updated.id) }.getOrDefault(words)
+                refreshTrivia(updated)
+                if (showChat && !updated.isBot) chat = runCatching { backend.getChat(updated.id) }.getOrDefault(chat)
             }
             delay(500)
         }
     }
-
-    LaunchedEffect(notice) {
-        if (notice.isNotBlank()) {
-            delay(1800)
-            notice = ""
-        }
-    }
-    LaunchedEffect(triviaFeedback) {
-        if (triviaFeedback != null) {
-            delay(1500)
-            triviaFeedback = null
-        }
-    }
+    LaunchedEffect(notice) { if (notice.isNotBlank()) { delay(1800); notice = "" } }
+    LaunchedEffect(triviaFeedback) { if (triviaFeedback != null) { delay(1500); triviaFeedback = null } }
 
     val active = room ?: return
     val me = backend.currentUserId()
@@ -108,7 +85,6 @@ fun SketchGameOverlayV9() {
         r.lastEventPlayerId == me && r.lastEvent == "wrong_start_letter" -> sh("Kelime son harfle başlamalı. −1", "Word must start with the last letter. −1")
         r.lastEventPlayerId == me && r.lastEvent == "invalid_word" -> sh("Geçersiz kelime. −1", "Invalid word. −1")
         r.lastEventPlayerId == me && r.lastEvent == "turn_expired" -> sh("Süre doldu. −1", "Time expired. −1")
-        r.lastEvent == "provisional_word" -> sh("${submitted.uppercase()} kabul edildi", "${submitted.uppercase()} accepted")
         else -> sh("${submitted.uppercase()} kabul edildi", "${submitted.uppercase()} accepted")
     }
 
@@ -117,38 +93,20 @@ fun SketchGameOverlayV9() {
             room = active, me = me, words = words, input = input, onInput = { input = it.take(40) }, busy = busy,
             notice = notice, isVip = isVip, triviaRound = triviaRound, triviaQuestion = triviaQuestion, triviaFeedback = triviaFeedback,
             onSubmit = {
-                val submitted = input.trim()
-                if (submitted.isBlank() || busy) return@ArenaV9
+                val submitted = input.trim(); if (submitted.isBlank() || busy) return@ArenaV9
                 scope.launch {
                     busy = true
                     val latest = runCatching { backend.getRoom(active.id) }.getOrNull()
-                    if (latest == null) {
-                        notice = sh("Bağlantı yenileniyor…", "Refreshing connection…")
-                        busy = false
-                        return@launch
-                    }
-                    room = latest
-                    if (latest.currentPlayerId != me || latest.status !in listOf("playing", "final", "sudden_death")) {
-                        input = ""
-                        notice = ""
-                        busy = false
-                        return@launch
+                    if (latest == null || latest.currentPlayerId != me || latest.status !in listOf("playing", "final", "sudden_death")) {
+                        notice = if (latest == null) sh("Bağlantı yenileniyor…", "Refreshing connection…") else ""
+                        input = ""; busy = false; return@launch
                     }
                     runCatching { backend.submitWord(active.id, submitted) }
                         .onSuccess { result ->
-                            room = result
-                            input = ""
-                            notice = eventNotice(result, submitted)
+                            room = result; input = ""; notice = eventNotice(result, submitted)
                             if (result.lastEventPlayerId == me && result.lastEvent in setOf("word_already_used", "wrong_start_letter", "invalid_word", "turn_expired")) SonHarfSoundFx.warning() else SonHarfSoundFx.wordAccepted()
                         }
-                        .onFailure {
-                            val refreshed = runCatching { backend.getRoom(active.id) }.getOrNull()
-                            if (refreshed != null) {
-                                room = refreshed
-                                notice = if (refreshed.currentPlayerId == me && refreshed.status in listOf("playing", "final", "sudden_death")) sh("Bağlantı yenilendi. Tekrar gönder.", "Connection refreshed. Send again.") else ""
-                            } else notice = sh("Bağlantı zayıf. Tekrar dene.", "Weak connection. Try again.")
-                            if (notice.isNotBlank()) SonHarfSoundFx.warning()
-                        }
+                        .onFailure { notice = sh("Bağlantı zayıf. Tekrar dene.", "Weak connection. Try again."); SonHarfSoundFx.warning() }
                     busy = false
                 }
             },
@@ -165,17 +123,14 @@ fun SketchGameOverlayV9() {
                             if (correct) SonHarfSoundFx.bonus() else SonHarfSoundFx.warning()
                             refreshTrivia(updated)
                         }
-                        .onFailure {
-                            triviaFeedback = false to sh("Cevap gönderilemedi", "Answer could not be sent")
+                        .onFailure { e ->
+                            triviaFeedback = false to if ("answers_locked" in e.message.orEmpty()) sh("Soru hazırlanıyor…", "Question is preparing…") else sh("Cevap gönderilemedi", "Answer could not be sent")
                             SonHarfSoundFx.warning()
                         }
                 }
             },
             onForfeit = { scope.launch { runCatching { backend.forfeit(active.id) }.onSuccess { room = it } } },
-            onChat = {
-                if (active.isBot) notice = sh("Bot maçında sohbet kapalı.", "Chat is disabled in bot matches.")
-                else scope.launch { chat = runCatching { backend.getChat(active.id) }.getOrDefault(emptyList()); showChat = true }
-            },
+            onChat = { if (active.isBot) notice = sh("Bot maçında sohbet kapalı.", "Chat is disabled in bot matches.") else scope.launch { chat = runCatching { backend.getChat(active.id) }.getOrDefault(emptyList()); showChat = true } },
             onRematch = { scope.launch { runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }.onSuccess { room = it; words = emptyList(); input = "" } } },
             onExit = { dismissedRoomId = active.id; room = null; words = emptyList(); input = "" },
         )
@@ -186,9 +141,13 @@ fun SketchGameOverlayV9() {
             onDismissRequest = { showChat = false },
             title = { Text(sh("SOHBET", "CHAT"), fontWeight = FontWeight.Black) },
             text = {
-                Column {
-                    chat.takeLast(8).forEach { m -> Text((if (m.senderId == me) sh("Sen: ", "You: ") else sh("Rakip: ", "Opponent: ")) + m.body, fontSize = 11.sp, modifier = Modifier.padding(vertical = 3.dp)) }
-                    Spacer(Modifier.height(8.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    chat.takeLast(8).forEach { m -> Text((if (m.senderId == me) sh("Sen: ", "You: ") else sh("Rakip: ", "Opponent: ")) + m.body, fontSize = 11.sp) }
+                    if (SonHarfCosmetics.emojiPackId == "emoji_vip") {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                            listOf("👑","⚡","😎","🔥","💎").forEach { emoji -> TextButton(onClick = { chatInput = (chatInput + emoji).take(300) }) { Text(emoji, fontSize = 21.sp) } }
+                        }
+                    }
                     OutlinedTextField(chatInput, { chatInput = it.take(300) }, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) })
                 }
             },
@@ -226,11 +185,16 @@ private fun ArenaV9(
 
     if (room.status == "finished") {
         val won = room.winnerId == me || (room.isBot && room.winnerId == null && myScore > oppScore)
-        Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(22.dp), contentAlignment = Alignment.Center) {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp)) {
+        LaunchedEffect(room.id, won) {
+            if (won) { SonHarfSoundFx.victory(); if (SonHarfCosmetics.crownVictory) SonHarfSoundFx.fireworks() }
+            else SonHarfSoundFx.defeat()
+        }
+        Box(Modifier.fillMaxSize().background(SonHarfBg).statusBarsPadding().navigationBarsPadding().padding(22.dp), contentAlignment = Alignment.Center) {
+            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(26.dp), border = BorderStroke(1.dp, if (won) SonHarfGold.copy(alpha=.45f) else SonHarfMuted.copy(alpha=.15f))) {
                 Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(if (won) sh("KAZANDIN", "YOU WON") else sh("MAÇ BİTTİ", "MATCH OVER"), fontSize = 26.sp, fontWeight = FontWeight.Black)
-                    Text("$myRounds - $oppRounds", fontSize = 40.sp, fontWeight = FontWeight.Black)
+                    if (won && SonHarfCosmetics.crownVictory) Text("♛", color = SonHarfGold, fontSize = 58.sp, fontWeight = FontWeight.Black)
+                    Text(if (won) sh("KAZANDIN", "YOU WON") else sh("MAÇ BİTTİ", "MATCH OVER"), fontSize = 28.sp, fontWeight = FontWeight.Black)
+                    Text("$myRounds - $oppRounds", fontSize = 42.sp, fontWeight = FontWeight.Black)
                     Button(onClick = onRematch, modifier = Modifier.fillMaxWidth()) { Text(sh("TEKRAR OYNA", "PLAY AGAIN")) }
                     OutlinedButton(onClick = onExit, modifier = Modifier.fillMaxWidth()) { Text(sh("LOBİYE DÖN", "BACK TO LOBBY")) }
                 }
@@ -239,10 +203,8 @@ private fun ArenaV9(
         return
     }
 
-    Column(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SonHarfSurface2, SonHarfBg, SonHarfSurface))).statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp),
-    ) {
+    val arenaBrush = if (SonHarfCosmetics.auroraTheme) Brush.verticalGradient(listOf(Color(0xFFD9F1FF), Color(0xFFE8E2FF), Color(0xFFDDF9FF))) else Brush.verticalGradient(listOf(SonHarfSurface2, SonHarfBg, Color(0xFFE7F6FF)))
+    Column(Modifier.fillMaxSize().background(arenaBrush).statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             PlayerV9(sh("SEN", "YOU"), myScore, myRounds, myTurn, SonHarfCyan, Modifier.weight(1f))
             Box(Modifier.size(60.dp).clip(CircleShape).background(if (seconds <= 10) SonHarfPink else SonHarfGold).padding(3.dp), contentAlignment = Alignment.Center) {
@@ -251,11 +213,7 @@ private fun ArenaV9(
             PlayerV9(if (room.isBot) "${room.botName ?: "KelimeBot"} BOT" else sh("RAKİP", "OPPONENT"), oppScore, oppRounds, !myTurn, SonHarfPink, Modifier.weight(1f))
         }
 
-        Card(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
-            shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .16f)),
-        ) {
+        Card(modifier = Modifier.fillMaxWidth().weight(1f), colors = CardDefaults.cardColors(containerColor = SonHarfSurface.copy(alpha=.96f)), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, if (SonHarfCosmetics.auroraTheme) SonHarfPurple.copy(alpha=.3f) else SonHarfMuted.copy(alpha=.16f))) {
             Box(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize().padding(11.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceBetween) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -267,7 +225,7 @@ private fun ArenaV9(
                             Text(sh("GENEL KÜLTÜR • +${triviaRound.bonusPoints}", "TRIVIA • +${triviaRound.bonusPoints}"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 11.sp)
                             Text(triviaQuestion.question, fontWeight = FontWeight.Bold, fontSize = 14.sp, textAlign = TextAlign.Center)
                             listOf(triviaQuestion.optionA, triviaQuestion.optionB, triviaQuestion.optionC, triviaQuestion.optionD).forEachIndexed { i, option ->
-                                OutlinedButton(onClick = { onTrivia(i) }, modifier = Modifier.fillMaxWidth().heightIn(min = 33.dp), contentPadding = PaddingValues(3.dp)) { Text(option, fontSize = 10.sp, textAlign = TextAlign.Center) }
+                                OutlinedButton(onClick = { onTrivia(i) }, modifier = Modifier.fillMaxWidth().heightIn(min = 38.dp), contentPadding = PaddingValues(4.dp)) { Text(option, fontSize = 11.sp, textAlign = TextAlign.Center) }
                             }
                         }
                     } else {
@@ -277,68 +235,59 @@ private fun ArenaV9(
                         Text(if (required.isBlank()) sh("İlk kelimeyi yaz", "Enter the first word") else sh("$required ile başlayan bir kelime yaz", "Enter a word starting with $required"), color = SonHarfMuted, fontSize = 11.sp)
                     }
                 }
-                triviaFeedback?.let { (ok, msg) ->
-                    Surface(Modifier.align(Alignment.Center).padding(14.dp), color = (if (ok) SonHarfGreen else SonHarfPink).copy(alpha = .92f), shape = RoundedCornerShape(16.dp)) {
-                        Text(msg, Modifier.padding(horizontal = 18.dp, vertical = 12.dp), color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp, textAlign = TextAlign.Center)
-                    }
-                }
+                triviaFeedback?.let { (ok, msg) -> Surface(Modifier.align(Alignment.Center).padding(14.dp), color = (if (ok) SonHarfGreen else SonHarfPink).copy(alpha=.92f), shape = RoundedCornerShape(16.dp)) { Text(msg, Modifier.padding(horizontal=18.dp, vertical=12.dp), color=Color.White, fontWeight=FontWeight.Black, fontSize=17.sp, textAlign=TextAlign.Center) } }
             }
         }
 
-        if (words.isNotEmpty()) {
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                if (isVip) Text("♛ ${sh("VIP KELİME ZİNCİRİ", "VIP WORD CHAIN")}", color = SonHarfGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.height(43.dp)) {
-                    items(words.takeLast(7)) { w ->
-                        Surface(shape = RoundedCornerShape(11.dp), color = if (isVip) SonHarfGold.copy(alpha = .10f) else SonHarfSurface2, border = BorderStroke(1.dp, if (isVip) SonHarfGold.copy(alpha = .45f) else SonHarfMuted.copy(alpha = .14f))) {
-                            Text(w.word.uppercase(), Modifier.padding(horizontal = 10.dp, vertical = 7.dp), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    }
-                }
+        if (words.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(5.dp), modifier = Modifier.height(43.dp)) { items(words.takeLast(7)) { w -> Surface(shape = RoundedCornerShape(11.dp), color = if (isVip) SonHarfGold.copy(alpha=.10f) else SonHarfSurface2, border = BorderStroke(1.dp, if (isVip) SonHarfGold.copy(alpha=.45f) else SonHarfMuted.copy(alpha=.14f))) { Text(w.word.uppercase(), Modifier.padding(horizontal=10.dp, vertical=7.dp), fontSize=10.sp, fontWeight=FontWeight.Bold) } } }
+        if (notice.isNotBlank()) Text(notice, Modifier.fillMaxWidth(), color = if ("−1" in notice) SonHarfPink else SonHarfMuted, fontSize = 10.sp, textAlign = TextAlign.Center, maxLines = 1)
+
+        Surface(Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(16.dp), color = SonHarfSurface, border = BorderStroke(1.4.dp, if (myTurn) SonHarfCyan.copy(alpha=.7f) else SonHarfMuted.copy(alpha=.25f))) {
+            Row(Modifier.fillMaxSize().padding(horizontal=14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (input.isBlank()) if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Rakibin sırası…", "Opponent's turn…") else input.uppercase(), Modifier.weight(1f), color = if (input.isBlank()) SonHarfMuted else SonHarfText, fontSize=17.sp)
+                TextButton(onClick=onSubmit, enabled=myTurn && input.length>=2 && !busy) { Text("➤", fontSize=23.sp) }
             }
         }
-
-        if (notice.isNotBlank()) {
-            val bad = notice.contains("−1") || notice.contains("zayıf") || notice.contains("Weak")
-            Text(notice, modifier = Modifier.fillMaxWidth(), color = if (bad) SonHarfPink else SonHarfMuted, fontSize = 10.sp, textAlign = TextAlign.Center, maxLines = 1)
-        }
-
-        Surface(Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(16.dp), color = SonHarfSurface, border = BorderStroke(1.4.dp, if (myTurn) SonHarfCyan.copy(alpha = .7f) else SonHarfMuted.copy(alpha = .25f))) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(if (input.isBlank()) if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Rakibin sırası…", "Opponent's turn…") else input.uppercase(), Modifier.weight(1f), color = if (input.isBlank()) SonHarfMuted else SonHarfText, fontSize = 17.sp)
-                TextButton(onClick = onSubmit, enabled = myTurn && input.length >= 2 && !busy) { Text("➤", fontSize = 23.sp) }
-            }
-        }
-
         KeyboardV9(room.language, myTurn && !busy && room.status != "quiz", input, onInput, onSubmit)
-
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onForfeit, modifier = Modifier.weight(1f).height(40.dp), border = BorderStroke(1.dp, SonHarfPink.copy(alpha = .55f))) { Text(sh("⚑ PES ET", "⚑ FORFEIT"), color = SonHarfPink, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
-            OutlinedButton(onClick = onChat, modifier = Modifier.weight(1f).height(40.dp), border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .55f))) { Text(sh("● SOHBET", "● CHAT"), color = SonHarfCyan, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+            OutlinedButton(onClick=onForfeit, modifier=Modifier.weight(1f).height(40.dp), border=BorderStroke(1.dp, SonHarfPink.copy(alpha=.55f))) { Text(sh("⚑ PES ET", "⚑ FORFEIT"), color=SonHarfPink, fontWeight=FontWeight.Bold, fontSize=11.sp) }
+            OutlinedButton(onClick=onChat, modifier=Modifier.weight(1f).height(40.dp), border=BorderStroke(1.dp, SonHarfCyan.copy(alpha=.55f))) { Text(sh("● SOHBET", "● CHAT"), color=SonHarfCyan, fontWeight=FontWeight.Bold, fontSize=11.sp) }
         }
     }
 }
 
 @Composable
 private fun KeyboardV9(language: String, enabled: Boolean, input: String, onInput: (String) -> Unit, onSubmit: () -> Unit) {
-    val rows = if (language == "en") listOf(listOf("q","w","e","r","t","y","u","i","o","p"), listOf("a","s","d","f","g","h","j","k","l"), listOf("z","x","c","v","b","n","m"))
-    else listOf(listOf("q","w","e","r","t","y","u","ı","o","p","ğ","ü"), listOf("a","s","d","f","g","h","j","k","l","ş","i"), listOf("z","x","c","v","b","n","m","ö","ç"))
+    val rows = if (language == "en") listOf(listOf("q","w","e","r","t","y","u","i","o","p"), listOf("a","s","d","f","g","h","j","k","l"), listOf("z","x","c","v","b","n","m")) else listOf(listOf("q","w","e","r","t","y","u","ı","o","p","ğ","ü"), listOf("a","s","d","f","g","h","j","k","l","ş","i"), listOf("z","x","c","v","b","n","m","ö","ç"))
+    val neon = SonHarfCosmetics.keyboardIsNeon
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        rows.forEach { keys -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) { keys.forEach { k -> Button(onClick = { onInput(input + k) }, enabled = enabled && input.length < 40, modifier = Modifier.weight(1f).height(41.dp), shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = SonHarfSurface2, contentColor = SonHarfText, disabledContainerColor = SonHarfSurface2.copy(alpha = .45f)), contentPadding = PaddingValues(0.dp)) { Text(k.uppercase(), fontSize = 11.sp, fontWeight = FontWeight.Bold) } } } }
+        rows.forEach { keys ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                keys.forEach { k ->
+                    val label = if (language == "tr") when (k) { "i" -> "İ"; "ı" -> "I"; else -> k.uppercase() } else k.uppercase()
+                    Button(
+                        onClick = { onInput(input + k) }, enabled = enabled && input.length < 40,
+                        modifier = Modifier.weight(1f).height(41.dp), shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (neon) Color(0xFF10283D) else SonHarfSurface2, contentColor = if (neon) SonHarfCyan else SonHarfText, disabledContainerColor = if (neon) Color(0xFF10283D).copy(alpha=.45f) else SonHarfSurface2.copy(alpha=.45f)),
+                        border = if (neon) BorderStroke(1.dp, SonHarfCyan.copy(alpha=.65f)) else null,
+                        contentPadding = PaddingValues(0.dp),
+                    ) { Text(label, fontSize=11.sp, fontWeight=FontWeight.Bold) }
+                }
+            }
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            Button(onClick = { if (input.isNotEmpty()) onInput(input.dropLast(1)) }, enabled = enabled && input.isNotEmpty(), modifier = Modifier.weight(1f).height(42.dp), shape = RoundedCornerShape(9.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE3E5EA), contentColor = Color(0xFF29303D))) { Text("⌫", fontSize = 20.sp, fontWeight = FontWeight.Black) }
-            Button(onClick = onSubmit, enabled = enabled && input.length >= 2, modifier = Modifier.weight(2.1f).height(42.dp), shape = RoundedCornerShape(9.dp), colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue)) { Text(sh("GÖNDER", "SEND"), fontWeight = FontWeight.Black) }
+            Button(onClick={ if(input.isNotEmpty()) onInput(input.dropLast(1)) }, enabled=enabled && input.isNotEmpty(), modifier=Modifier.weight(1f).height(42.dp), shape=RoundedCornerShape(9.dp), colors=ButtonDefaults.buttonColors(containerColor=if(neon) Color(0xFF10283D) else Color(0xFFE3E5EA), contentColor=if(neon) SonHarfCyan else Color(0xFF29303D)), border=if(neon) BorderStroke(1.dp, SonHarfCyan.copy(alpha=.65f)) else null) { Text("⌫", fontSize=20.sp, fontWeight=FontWeight.Black) }
+            Button(onClick=onSubmit, enabled=enabled && input.length>=2, modifier=Modifier.weight(2.1f).height(42.dp), shape=RoundedCornerShape(9.dp), colors=ButtonDefaults.buttonColors(containerColor=if(neon) SonHarfCyan else SonHarfBlue, contentColor=if(neon) Color(0xFF062033) else Color.White)) { Text(sh("GÖNDER", "SEND"), fontWeight=FontWeight.Black) }
         }
     }
 }
 
 @Composable
 private fun PlayerV9(name: String, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier) {
-    Card(modifier = modifier.height(74.dp), colors = CardDefaults.cardColors(containerColor = if (active) accent.copy(alpha = .10f) else SonHarfSurface), shape = RoundedCornerShape(17.dp), border = BorderStroke(1.dp, if (active) accent.copy(alpha = .55f) else SonHarfMuted.copy(alpha = .13f))) {
-        Row(Modifier.fillMaxSize().padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(31.dp).clip(CircleShape).background(accent.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Text(name.take(1).uppercase(), fontWeight = FontWeight.Black) }
-            Spacer(Modifier.width(6.dp))
-            Column { Text(name, maxLines = 1, color = if (active) accent else SonHarfMuted, fontSize = 8.sp); Text(score.toString(), fontWeight = FontWeight.Black, fontSize = 20.sp); Text("$rounds round", color = SonHarfMuted, fontSize = 7.sp) }
+    Card(modifier=modifier.height(74.dp), colors=CardDefaults.cardColors(containerColor=if(active) accent.copy(alpha=.10f) else SonHarfSurface), shape=RoundedCornerShape(17.dp), border=BorderStroke(1.dp, if(active) accent.copy(alpha=.55f) else SonHarfMuted.copy(alpha=.13f))) {
+        Row(Modifier.fillMaxSize().padding(8.dp), verticalAlignment=Alignment.CenterVertically) {
+            Box(Modifier.size(31.dp).clip(CircleShape).background(accent.copy(alpha=.18f)), contentAlignment=Alignment.Center) { Text(name.take(1).uppercase(), fontWeight=FontWeight.Black) }
+            Spacer(Modifier.width(6.dp)); Column { Text(name, maxLines=1, color=if(active) accent else SonHarfMuted, fontSize=8.sp); Text(score.toString(), fontWeight=FontWeight.Black, fontSize=20.sp); Text("$rounds round", color=SonHarfMuted, fontSize=7.sp) }
         }
     }
 }
