@@ -102,7 +102,6 @@ fun AccessibleLightV3SonHarfApp() {
     }
 
     WinnerFireworkOverlay()
-    FriendsQuickAccessOverlay()
     GameInviteOverlay()
     FriendRequestOverlay()
 }
