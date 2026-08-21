@@ -8,6 +8,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
 
 /**
@@ -20,12 +21,23 @@ import com.sonharf.game.data.SupabaseProvider
  */
 @Composable
 fun IntegratedNeonSonHarfApp() {
+    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
         authChecked = true
+    }
+
+    // Preserve the production post-auth bootstrap without mounting any legacy UI.
+    // Game-mode overlays and cosmetic rendering depend on these singleton states
+    // being hydrated before the user reaches gameplay/profile surfaces.
+    LaunchedEffect(authenticated) {
+        if (!authenticated) return@LaunchedEffect
+        val mode = runCatching { backend?.getPreferredGameMode() }.getOrNull()
+        if (mode != null) SonHarfGameModeState.mode = mode
+        SonHarfCosmetics.apply(runCatching { backend?.getEquippedCosmetics() }.getOrNull())
     }
 
     if (!authChecked) {
