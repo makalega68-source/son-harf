@@ -65,7 +65,7 @@ fun V6HomeRoute(
         }
     }
 
-    FullHomeScreen(
+    V8HomeScreen(
         state = state,
         onStartGameMode = onStartGameMode,
         onClaimDailyReward = {
@@ -84,6 +84,7 @@ fun V6HomeRoute(
         onOpenLeaderboard = onOpenLeague,
         onOpenProfile = onOpenProfile,
         onClaimTaskReward = { goalId ->
+            if (state.isActionBusy) return@V8HomeScreen
             scope.launch {
                 state = state.copy(isActionBusy = true, notice = "")
                 runCatching { backend.claimGoal(goalId) }
