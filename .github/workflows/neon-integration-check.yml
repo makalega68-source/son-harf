@@ -3,6 +3,8 @@ name: Neon integration compile check
 on:
   push:
     branches: [ fix/full-history-integration ]
+  pull_request:
+    branches: [ validation/neon-integration ]
 
 permissions:
   contents: read
