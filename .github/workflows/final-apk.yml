@@ -4,6 +4,8 @@ on:
   push:
     paths:
       - '.github/workflows/final-apk.yml'
+  pull_request:
+    branches: [ main ]
 
 permissions:
   contents: read
