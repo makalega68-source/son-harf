@@ -41,6 +41,26 @@ suspend fun OnlineGameBackend.inviteFriendToPrivateRoom(roomId: String, friendId
         },
     ).decodeSingle()
 
+/**
+ * Finds the current user's resumable room without creating a second gameplay
+ * state machine. The neon route can feed the returned DTO into its existing
+ * observeRoom/observeWords pipeline and continue the server-owned state.
+ */
+suspend fun OnlineGameBackend.getActiveRoomForCurrentUser(): GameRoomDto? {
+    val me = currentUserId() ?: return null
+    val activeStatuses = setOf("waiting", "playing", "final", "sudden_death")
+
+    val hosted = SupabaseProvider.client.from("game_rooms")
+        .select { filter { eq("host_id", me) } }
+        .decodeList<GameRoomDto>()
+    hosted.firstOrNull { it.status in activeStatuses }?.let { return it }
+
+    val joined = SupabaseProvider.client.from("game_rooms")
+        .select { filter { eq("guest_id", me) } }
+        .decodeList<GameRoomDto>()
+    return joined.firstOrNull { it.status in activeStatuses }
+}
+
 suspend fun OnlineGameBackend.unblockUser(userId: String) {
     SupabaseProvider.client.postgrest.rpc(
         "unblock_user",
