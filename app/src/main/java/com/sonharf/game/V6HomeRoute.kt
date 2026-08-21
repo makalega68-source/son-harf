@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import com.sonharf.game.data.*
@@ -19,6 +20,7 @@ fun V6HomeRoute(
     val scope = rememberCoroutineScope()
     var state by remember { mutableStateOf(FullHomeUiState()) }
     var showVip by remember { mutableStateOf(false) }
+    var showGameModePicker by remember { mutableStateOf(false) }
 
     suspend fun reload(showSpinner: Boolean) {
         if (showSpinner) state = state.copy(isLoading = true)
@@ -67,7 +69,9 @@ fun V6HomeRoute(
 
     V8HomeScreen(
         state = state,
-        onStartGameMode = onStartGameMode,
+        onStartGameMode = { mode ->
+            if (mode == "1v1_RANKED") showGameModePicker = true else onStartGameMode(mode)
+        },
         onClaimDailyReward = {
             if (!state.isActionBusy) scope.launch {
                 state = state.copy(isActionBusy = true, notice = "")
@@ -95,6 +99,20 @@ fun V6HomeRoute(
             }
         },
     )
+
+    if (showGameModePicker) {
+        AlertDialog(
+            onDismissRequest = { showGameModePicker = false },
+            title = { Text("Oyun Modu") },
+            text = { Text("Normal mod klasik Son Harf kurallarıyla oynanır. Uzman modda 2. tur son 2 harf, 3. tur son 3 harf ile devam eder ve puan çarpanı yükselir.") },
+            confirmButton = {
+                Button(onClick = { showGameModePicker = false; onStartGameMode("EXPERT_MATCH") }) { Text("UZMAN") }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showGameModePicker = false; onStartGameMode("NORMAL_MATCH") }) { Text("NORMAL") }
+            },
+        )
+    }
 
     if (showVip) {
         VipPurchaseDialog(
