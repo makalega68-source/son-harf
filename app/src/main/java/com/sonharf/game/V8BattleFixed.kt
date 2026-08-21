@@ -66,6 +66,7 @@ fun V8BattleScreenFixed(onLeaveBattle: () -> Unit) {
         meAvatar = runCatching { AvatarSignedUrl.resolve(meProfile?.avatarPath) }.getOrNull()
         meVip = runCatching { backend.getProfile(id).isVip }.getOrDefault(false)
     }
+
     suspend fun loadOpponent(r: GameRoomDto) {
         if (r.isBot) { opponent = null; opponentAvatar = null; return }
         val me = backend.currentUserId()
@@ -73,6 +74,7 @@ fun V8BattleScreenFixed(onLeaveBattle: () -> Unit) {
         opponent = id?.let { runCatching { v6LoadProfile(it) }.getOrNull() }
         opponentAvatar = runCatching { AvatarSignedUrl.resolve(opponent?.avatarPath) }.getOrNull()
     }
+
     suspend fun findActive(): GameRoomDto? {
         val me = backend.currentUserId() ?: return null
         return SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
@@ -124,8 +126,7 @@ fun V8BattleScreenFixed(onLeaveBattle: () -> Unit) {
     }
 
     LaunchedEffect(active.currentPlayerId, active.validWordCount, active.roundNo, words.size) {
-        val req = words.lastOrNull()?.normalizedWord?.lastOrNull()?.uppercaseChar()
-        input = if (active.currentPlayerId == me && active.status in listOf("playing", "final", "sudden_death") && req != null) req.toString() else ""
+        input = ""
     }
 
     LaunchedEffect(active.turnDeadline, active.currentPlayerId, active.status) {
@@ -214,7 +215,7 @@ fun V8BattleScreenFixed(onLeaveBattle: () -> Unit) {
     )
 
     if (showChat) {
-        BattleChatSheetFixed(chat, me, active.language, meProfile?.allowMatchChat != false, { showChat = false }) { text ->
+        BattleChatFullScreenFixed(chat, me, active.language, meProfile?.allowMatchChat != false, { showChat = false }) { text ->
             scope.launch {
                 runCatching { backend.sendChat(active.id, text) }
                     .onSuccess { chat = runCatching { backend.getChat(active.id) }.getOrDefault(chat) }
@@ -250,13 +251,49 @@ private fun BattleArenaFixed(room: GameRoomDto, me: String?, myName: String, myA
     Column(Modifier.fillMaxSize().background(Color(0xFFF9F6F0)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) { Text("🔥 Kelime Düellosu", Modifier.weight(1f), fontWeight = FontWeight.Black, fontSize = 18.sp, color = B8Text); Surface(onClick = onWords, shape = RoundedCornerShape(12.dp), color = if (vip) B8Purple else B8White, border = BorderStroke(1.dp, B8Purple)) { Text(if (vip) "📜 Çıkan Kelimeler" else "🔒 Çıkan Kelimeler", Modifier.padding(9.dp), color = if (vip) Color.White else B8Purple, fontSize = 11.sp, fontWeight = FontWeight.Bold) }; IconButton(onClick = onExit) { Icon(Icons.Rounded.Close, "Çık") } }
         Surface(shape = RoundedCornerShape(14.dp), color = B8White) { Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) { Text("CANLI 1v1 • Klasik Son Harf", Modifier.weight(1f), color = B8Green, fontWeight = FontWeight.Bold); TextButton(onClick = onChat) { Icon(Icons.Rounded.ChatBubble, null); Spacer(Modifier.width(4.dp)); Text("Sohbet") } } }
-        Surface(shape = RoundedCornerShape(20.dp), color = B8White, shadowElevation = 3.dp) { Column(Modifier.fillMaxWidth().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { BattlePlayerFixed(myName, myAvatar, myScore, myTurn, Modifier.weight(1f)); Box(Modifier.size(64.dp).clip(CircleShape).background(if (seconds <= 5) B8Coral else B8Amber), contentAlignment = Alignment.Center) { Text("$seconds", color = Color.White, fontWeight = FontWeight.Black, fontSize = 25.sp) }; BattlePlayerFixed(oppName, oppAvatar, oppScore, !myTurn, Modifier.weight(1f)) }; Spacer(Modifier.height(8.dp)); Text(when { room.status == "quiz" -> "BİLGİ SORUSU"; room.status == "paused" -> "BAĞLANTI BEKLENİYOR"; myTurn -> "SIRA SİZDE"; else -> "RAKİP BEKLENİYOR…" }, fontWeight = FontWeight.Black, color = if (myTurn) B8Green else B8Muted); Spacer(Modifier.height(7.dp)); Text(if (last.isBlank()) "İlk kelimeyi siz başlatın" else "Son Kelime: $last", color = B8Muted, fontSize = 16.sp) } }
+        Surface(shape = RoundedCornerShape(20.dp), color = B8White, shadowElevation = 3.dp) {
+            Column(Modifier.fillMaxWidth().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    BattlePlayerFixed(myName, myAvatar, myScore, myTurn, Modifier.weight(1f))
+                    Box(Modifier.size(64.dp).clip(CircleShape).background(if (seconds <= 5) B8Coral else B8Amber), contentAlignment = Alignment.Center) { Text("$seconds", color = Color.White, fontWeight = FontWeight.Black, fontSize = 25.sp) }
+                    BattlePlayerFixed(oppName, oppAvatar, oppScore, !myTurn, Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(when { room.status == "quiz" -> "BİLGİ SORUSU"; room.status == "paused" -> "BAĞLANTI BEKLENİYOR"; myTurn -> "SIRA SİZDE"; else -> "RAKİP BEKLENİYOR…" }, fontWeight = FontWeight.Black, color = if (myTurn) B8Green else B8Muted)
+                Spacer(Modifier.height(8.dp))
+                if (last.isBlank()) {
+                    Text("İlk kelimeyi siz başlatın", color = B8Muted, fontSize = 16.sp, textAlign = TextAlign.Center)
+                } else {
+                    Text("Son Kelime", color = B8Muted, fontSize = 13.sp, textAlign = TextAlign.Center)
+                    Text(last, color = B8Text, fontSize = 29.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                }
+            }
+        }
         if (room.status == "quiz") {
             Surface(shape = RoundedCornerShape(16.dp), color = B8White, border = BorderStroke(1.dp, B8Amber)) { Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) { Text(trivia?.question ?: "Bilgi sorusu yükleniyor…", fontWeight = FontWeight.Black, color = B8Text); listOf(trivia?.optionA, trivia?.optionB, trivia?.optionC, trivia?.optionD).forEachIndexed { i, o -> if (o != null) OutlinedButton(onClick = { onTrivia(i) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(o) } } } }
         } else {
-            Surface(Modifier.fillMaxWidth().heightIn(min = 82.dp), shape = RoundedCornerShape(14.dp), color = B8White, border = BorderStroke(2.dp, B8Blue.copy(alpha = .42f))) { Column(Modifier.fillMaxWidth().padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(if (input.isBlank()) if (req == null) "Kelime yazın…" else "'$req' ile başlayan kelime yazın…" else input, fontWeight = FontWeight.Black, fontSize = 30.sp, color = if (input.isBlank()) B8Muted else B8Blue); if (notice.isNotBlank()) Text(notice, color = if (notice.contains("kabul edildi")) B8Green else B8Coral, fontSize = 11.sp, textAlign = TextAlign.Center) } }
+            Surface(Modifier.fillMaxWidth().heightIn(min = 82.dp), shape = RoundedCornerShape(14.dp), color = B8White, border = BorderStroke(2.dp, B8Blue.copy(alpha = .42f))) {
+                Column(Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = if (input.isBlank()) if (req == null) "Kelime yazın…" else "$req ile başlayan kelime yazın…" else input,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontWeight = FontWeight.Black,
+                        fontSize = if (input.isBlank()) 20.sp else 30.sp,
+                        lineHeight = if (input.isBlank()) 24.sp else 34.sp,
+                        textAlign = TextAlign.Center,
+                        color = if (input.isBlank()) B8Muted else B8Blue
+                    )
+                    if (notice.isNotBlank()) Text(notice, color = if (notice.contains("kabul edildi")) B8Green else B8Coral, fontSize = 11.sp, textAlign = TextAlign.Center)
+                }
+            }
             Spacer(Modifier.weight(1f))
-            BattleKeyboardFixed(myTurn && !busy, myTurn && !busy && input.length >= 2 && (req == null || input.firstOrNull()?.uppercaseChar() == req), { c -> onInput(if (input.isEmpty() && req != null) "$req$c" else input + c) }, { if (input.length > if (req == null) 0 else 1) onInput(input.dropLast(1)) }, onSubmit)
+            BattleKeyboardFixed(
+                myTurn && !busy,
+                myTurn && !busy && input.length >= 2 && (req == null || input.firstOrNull()?.uppercaseChar() == req),
+                { c -> onInput(input + c) },
+                { if (input.isNotEmpty()) onInput(input.dropLast(1)) },
+                onSubmit
+            )
         }
         TextButton(onClick = onForfeit, modifier = Modifier.align(Alignment.CenterHorizontally)) { Icon(Icons.Rounded.Flag, null, tint = B8Coral); Text(" Pes Et", color = B8Coral, fontWeight = FontWeight.Bold) }
     }
@@ -269,11 +306,11 @@ private fun BattleKeyboardFixed(enabled: Boolean, submitEnabled: Boolean, onKey:
     val r1 = listOf('Q','W','E','R','T','Y','U','I','O','P','Ğ','Ü'); val r2 = listOf('A','S','D','F','G','H','J','K','L','Ş','İ'); val r3 = listOf('Z','X','C','V','B','N','M','Ö','Ç')
     Surface(shape = RoundedCornerShape(16.dp), color = B8White, shadowElevation = 2.dp) { Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) { listOf(r1, r2).forEach { row -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) { row.forEach { c -> BattleKeyFixed(c, Modifier.weight(1f), enabled) { onKey(c) } } } }; Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) { Button(onClick = onDelete, enabled = enabled, modifier = Modifier.weight(1.7f).height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = B8Coral), contentPadding = PaddingValues(0.dp)) { Text("⌫ SİL", fontSize = 11.sp) }; r3.forEach { c -> BattleKeyFixed(c, Modifier.weight(1f), enabled) { onKey(c) } }; Button(onClick = onSubmit, enabled = submitEnabled, modifier = Modifier.weight(1.9f).height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = B8Green), contentPadding = PaddingValues(0.dp)) { Text("✓ ONAY", fontSize = 11.sp) } } } }
 }
+
 @Composable private fun BattleKeyFixed(c: Char, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) { Surface(onClick = onClick, enabled = enabled, modifier = modifier.height(46.dp), shape = RoundedCornerShape(8.dp), color = Color(0xFFECE7DE), border = BorderStroke(1.dp, Color(0xFFD6CFC4))) { Box(contentAlignment = Alignment.Center) { Text(c.toString(), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = B8Text) } } }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun BattleChatSheetFixed(messages: List<ChatMessageDto>, me: String?, language: String, enabled: Boolean, onDismiss: () -> Unit, onSend: (String) -> Unit) {
+private fun BattleChatFullScreenFixed(messages: List<ChatMessageDto>, me: String?, language: String, enabled: Boolean, onDismiss: () -> Unit, onSend: (String) -> Unit) {
     var input by remember { mutableStateOf("") }
     val isEnglish = language.lowercase().startsWith("en")
     val rows = if (isEnglish) listOf(
@@ -285,19 +322,65 @@ private fun BattleChatSheetFixed(messages: List<ChatMessageDto>, me: String?, la
         listOf("A","S","D","F","G","H","J","K","L","Ş","İ"),
         listOf("Z","X","C","V","B","N","M","Ö","Ç")
     )
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = B8White) {
-        Column(Modifier.fillMaxWidth().heightIn(min = 430.dp, max = 690.dp).padding(horizontal = 12.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) { Text(if (isEnglish) "In-Game Chat" else "Oyun İçi Sohbet", Modifier.weight(1f), fontWeight = FontWeight.Black, fontSize = 21.sp); IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, "Kapat") } }
-            Surface(Modifier.fillMaxWidth().heightIn(min = 50.dp), shape = RoundedCornerShape(13.dp), color = B8White, border = BorderStroke(1.2.dp, B8Blue.copy(alpha = .55f))) { Text(if (input.isBlank()) if (isEnglish) "Type a message…" else "Mesaj yaz…" else input, Modifier.padding(12.dp), color = if (input.isBlank()) B8Muted else B8Text, maxLines = 2, fontSize = 14.sp) }
-            rows.forEach { row -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) { row.forEach { key -> Button(onClick = { if (enabled && input.length < 300) input += key }, enabled = enabled && input.length < 300, modifier = Modifier.weight(1f).height(38.dp), shape = RoundedCornerShape(7.dp), contentPadding = PaddingValues(0.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFECE7DE), contentColor = B8Text)) { Text(key, fontSize = 11.sp, fontWeight = FontWeight.Bold) } } } }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Button(onClick = { if (input.isNotEmpty()) input = input.dropLast(1) }, enabled = enabled && input.isNotEmpty(), modifier = Modifier.weight(1f).height(40.dp), colors = ButtonDefaults.buttonColors(containerColor = B8Coral)) { Text(if (isEnglish) "⌫ DEL" else "⌫ SİL", fontSize = 11.sp) }
-                Button(onClick = { if (enabled && input.length < 300 && input.isNotEmpty() && !input.endsWith(" ")) input += " " }, enabled = enabled && input.isNotEmpty() && input.length < 300, modifier = Modifier.weight(1.4f).height(40.dp)) { Text(if (isEnglish) "SPACE" else "BOŞLUK", fontSize = 11.sp) }
-                Button(onClick = { val t = input.trim(); if (t.isNotBlank()) { onSend(t); input = "" } }, enabled = enabled && input.isNotBlank(), modifier = Modifier.weight(1.4f).height(40.dp), colors = ButtonDefaults.buttonColors(containerColor = B8Green)) { Text(if (isEnglish) "SEND" else "GÖNDER", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+
+    Surface(modifier = Modifier.fillMaxSize(), color = B8White) {
+        Column(
+            Modifier.fillMaxSize().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp)
+        ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, if (isEnglish) "Close" else "Kapat") }
             }
-            HorizontalDivider()
-            Text(if (isEnglish) "Messages" else "Mesajlar", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = B8Muted)
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(bottom = 6.dp)) { items(messages, key = { it.id }) { m -> Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.senderId == me) Arrangement.End else Arrangement.Start) { Surface(shape = RoundedCornerShape(12.dp), color = if (m.senderId == me) B8Blue else B8BlueLight) { Text(m.body, Modifier.widthIn(max = 260.dp).padding(10.dp), color = if (m.senderId == me) Color.White else B8Text) } } } }
+
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+                contentPadding = PaddingValues(vertical = 6.dp)
+            ) {
+                items(messages, key = { it.id }) { m ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.senderId == me) Arrangement.End else Arrangement.Start) {
+                        Surface(shape = RoundedCornerShape(12.dp), color = if (m.senderId == me) B8Blue else B8BlueLight) {
+                            Text(m.body, Modifier.widthIn(max = 280.dp).padding(10.dp), color = if (m.senderId == me) Color.White else B8Text)
+                        }
+                    }
+                }
+            }
+
+            Surface(
+                Modifier.fillMaxWidth().heightIn(min = 52.dp),
+                shape = RoundedCornerShape(13.dp),
+                color = B8White,
+                border = BorderStroke(1.2.dp, B8Blue.copy(alpha = .55f))
+            ) {
+                Text(
+                    if (input.isBlank()) if (isEnglish) "Type a message…" else "Mesaj yaz…" else input,
+                    Modifier.padding(12.dp),
+                    color = if (input.isBlank()) B8Muted else B8Text,
+                    maxLines = 3,
+                    fontSize = 14.sp
+                )
+            }
+
+            rows.forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    row.forEach { key ->
+                        Button(
+                            onClick = { if (enabled && input.length < 300) input += key },
+                            enabled = enabled && input.length < 300,
+                            modifier = Modifier.weight(1f).height(40.dp),
+                            shape = RoundedCornerShape(7.dp),
+                            contentPadding = PaddingValues(0.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFECE7DE), contentColor = B8Text)
+                        ) { Text(key, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                    }
+                }
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                Button(onClick = { if (input.isNotEmpty()) input = input.dropLast(1) }, enabled = enabled && input.isNotEmpty(), modifier = Modifier.weight(1f).height(42.dp), colors = ButtonDefaults.buttonColors(containerColor = B8Coral)) { Text(if (isEnglish) "⌫ DEL" else "⌫ SİL", fontSize = 11.sp) }
+                Button(onClick = { if (enabled && input.length < 300 && input.isNotEmpty() && !input.endsWith(" ")) input += " " }, enabled = enabled && input.isNotEmpty() && input.length < 300, modifier = Modifier.weight(1.4f).height(42.dp)) { Text(if (isEnglish) "SPACE" else "BOŞLUK", fontSize = 11.sp) }
+                Button(onClick = { val t = input.trim(); if (t.isNotBlank()) { onSend(t); input = "" } }, enabled = enabled && input.isNotBlank(), modifier = Modifier.weight(1.4f).height(42.dp), colors = ButtonDefaults.buttonColors(containerColor = B8Green)) { Text(if (isEnglish) "SEND" else "GÖNDER", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+            }
         }
     }
 }
