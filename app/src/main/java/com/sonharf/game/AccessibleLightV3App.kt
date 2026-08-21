@@ -13,13 +13,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import com.sonharf.game.data.*
+import kotlinx.coroutines.launch
 
 private enum class LightV3Screen { HOME, GAME, STORE, FRIENDS, VIP, PROFILE, PREFERENCES, HUB, LEAGUE }
 
 @Composable
 fun AccessibleLightV3SonHarfApp() {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var screen by remember { mutableStateOf(LightV3Screen.HOME) }
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
@@ -73,19 +77,36 @@ fun AccessibleLightV3SonHarfApp() {
                     onStartGameMode = { mode ->
                         when (mode) {
                             "LEAGUE" -> screen = LightV3Screen.LEAGUE
-                            "PRACTICE_BOT" -> {
+                            "EXPERT_MATCH" -> scope.launch {
+                                runCatching { backend?.setPreferredGameMode("expert") }
+                                SonHarfPreferences.setBotDifficulty(context, "hard")
+                                SonHarfGameModeState.mode = "expert"
+                                gameKey += 1
+                                screen = LightV3Screen.GAME
+                            }
+                            "NORMAL_MATCH", "PRACTICE_BOT" -> scope.launch {
+                                runCatching { backend?.setPreferredGameMode("normal") }
+                                if (mode == "PRACTICE_BOT") SonHarfPreferences.setBotDifficulty(context, "normal")
                                 SonHarfGameModeState.mode = "normal"
                                 gameKey += 1
                                 screen = LightV3Screen.GAME
                             }
-                            else -> { gameKey += 1; screen = LightV3Screen.GAME }
+                            else -> scope.launch {
+                                runCatching { backend?.setPreferredGameMode("normal") }
+                                SonHarfGameModeState.mode = "normal"
+                                gameKey += 1
+                                screen = LightV3Screen.GAME
+                            }
                         }
                     },
                     onOpenLeague = { screen = LightV3Screen.LEAGUE },
                     onOpenProfile = { screen = LightV3Screen.PROFILE },
                 )
                 LightV3Screen.GAME -> key(gameKey) {
-                    V8BattleScreenFixed(onLeaveBattle = { screen = LightV3Screen.HOME })
+                    Box(Modifier.fillMaxSize()) {
+                        V8BattleScreenFixed(onLeaveBattle = { screen = LightV3Screen.HOME })
+                        if (SonHarfGameModeState.mode == "expert") ExpertArenaOverlay()
+                    }
                 }
                 LightV3Screen.STORE -> V4StoreScreen()
                 LightV3Screen.FRIENDS -> V7FriendsScreen { screen = LightV3Screen.HOME }
