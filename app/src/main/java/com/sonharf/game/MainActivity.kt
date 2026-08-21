@@ -6,7 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
-import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -15,28 +15,28 @@ import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.runBlocking
 
-internal val SonHarfBg: Color get() = if (SonHarfUiState.darkMode) Color(0xFF071525) else Color(0xFF10253A)
-internal val SonHarfSurface: Color get() = if (SonHarfUiState.darkMode) Color(0xFF0D2033) else Color(0xFF173149)
-internal val SonHarfSurface2: Color get() = if (SonHarfUiState.darkMode) Color(0xFF132A40) else Color(0xFF1C3953)
-internal val SonHarfPurple = Color(0xFF9B8667)
-internal val SonHarfCyan = Color(0xFF84AFCB)
-internal val SonHarfBlue = Color(0xFF6F94B0)
-internal val SonHarfGold = Color(0xFFD8AD62)
-internal val SonHarfGreen = Color(0xFF7DA887)
-internal val SonHarfText: Color get() = Color(0xFFF4F6F8)
-internal val SonHarfMuted: Color get() = Color(0xFFA9B6C3)
-internal val SonHarfPink = Color(0xFFB98B8B)
+internal val SonHarfBg: Color get() = Color(0xFFF8FAFC)
+internal val SonHarfSurface: Color get() = Color(0xFFFFFFFF)
+internal val SonHarfSurface2: Color get() = Color(0xFFF1F5F9)
+internal val SonHarfPurple = Color(0xFF0369A1)
+internal val SonHarfCyan = Color(0xFF0284C7)
+internal val SonHarfBlue = Color(0xFF0284C7)
+internal val SonHarfGold = Color(0xFFD97706)
+internal val SonHarfGreen = Color(0xFF16A34A)
+internal val SonHarfText: Color get() = Color(0xFF0F172A)
+internal val SonHarfMuted: Color get() = Color(0xFF475569)
+internal val SonHarfPink = Color(0xFFDC2626)
 
-private val SonHarfNeonTypography = Typography(
-    bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 25.sp),
-    bodyMedium = TextStyle(fontSize = 16.sp, lineHeight = 23.sp),
-    bodySmall = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
-    labelLarge = TextStyle(fontSize = 16.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold),
-    labelMedium = TextStyle(fontSize = 14.sp, lineHeight = 19.sp),
-    labelSmall = TextStyle(fontSize = 13.sp, lineHeight = 18.sp),
-    titleLarge = TextStyle(fontSize = 24.sp, lineHeight = 31.sp, fontWeight = FontWeight.Bold),
-    titleMedium = TextStyle(fontSize = 20.sp, lineHeight = 27.sp, fontWeight = FontWeight.Bold),
-    titleSmall = TextStyle(fontSize = 17.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold),
+private val SonHarfAccessibleTypography = Typography(
+    bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 26.sp),
+    bodyMedium = TextStyle(fontSize = 16.sp, lineHeight = 24.sp),
+    bodySmall = TextStyle(fontSize = 14.sp, lineHeight = 21.sp),
+    labelLarge = TextStyle(fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),
+    labelMedium = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
+    labelSmall = TextStyle(fontSize = 13.sp, lineHeight = 19.sp),
+    titleLarge = TextStyle(fontSize = 25.sp, lineHeight = 32.sp, fontWeight = FontWeight.Bold),
+    titleMedium = TextStyle(fontSize = 21.sp, lineHeight = 28.sp, fontWeight = FontWeight.Bold),
+    titleSmall = TextStyle(fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.SemiBold),
 )
 
 enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
@@ -51,24 +51,21 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             MaterialTheme(
-                colorScheme = darkColorScheme(
-                    primary = SonHarfGold,
-                    secondary = SonHarfCyan,
+                colorScheme = lightColorScheme(
+                    primary = SonHarfCyan,
+                    secondary = SonHarfBlue,
                     tertiary = SonHarfGreen,
                     background = SonHarfBg,
                     surface = SonHarfSurface,
                     surfaceVariant = SonHarfSurface2,
+                    onPrimary = Color.White,
                     onBackground = SonHarfText,
                     onSurface = SonHarfText,
                 ),
-                typography = SonHarfNeonTypography,
+                typography = SonHarfAccessibleTypography,
             ) {
                 Box {
-                    ClassicPremiumApp()
-                    WinnerFireworkOverlay()
-                    FriendsQuickAccessOverlay()
-                    GameInviteOverlay()
-                    FriendRequestOverlay()
+                    AccessibleLightSonHarfApp()
                 }
             }
         }
