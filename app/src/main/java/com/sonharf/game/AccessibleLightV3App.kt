@@ -15,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.sonharf.game.data.*
-import com.sonharf.game.ui.home.V3HomeRoute
+import com.sonharf.game.ui.home.SecureV3HomeRoute
 
 private enum class LightV3Screen { HOME, GAME, STORE, PROFILE, HUB, LEAGUE }
 
@@ -69,7 +69,7 @@ fun AccessibleLightV3SonHarfApp() {
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).background(Color(0xFFF8FAFC))) {
             when (screen) {
-                LightV3Screen.HOME -> V3HomeRoute(
+                LightV3Screen.HOME -> SecureV3HomeRoute(
                     onStartGameMode = { mode ->
                         when (mode) {
                             "LEAGUE" -> screen = LightV3Screen.LEAGUE
