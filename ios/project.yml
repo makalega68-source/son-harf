@@ -1,0 +1,29 @@
+name: SonHarfIOS
+options:
+  bundleIdPrefix: com.sonharf
+settings:
+  base:
+    IPHONEOS_DEPLOYMENT_TARGET: 17.0
+targets:
+  SonHarfIOS:
+    type: application
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - path: SonHarfIOS
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.sonharf.game.ios
+        PRODUCT_NAME: Son Harf
+        SWIFT_VERSION: 5.10
+        TARGETED_DEVICE_FAMILY: "1,2"
+        CODE_SIGN_STYLE: Automatic
+    info:
+      path: SonHarfIOS/Info.plist
+      properties:
+        CFBundleDisplayName: Son Harf
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIUserInterfaceStyle: Light
+        ITSAppUsesNonExemptEncryption: false
