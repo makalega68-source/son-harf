@@ -27,6 +27,16 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
+private val BattleCream = Color(0xFFF9F6F0)
+private val BattleWhite = Color(0xFFFFFFFF)
+private val BattleSage = Color(0xFF2E6F5E)
+private val BattleCoral = Color(0xFFE05A47)
+private val BattleAmber = Color(0xFFE5A93C)
+private val BattleText = Color(0xFF1E293B)
+private val BattleMuted = Color(0xFF64748B)
+private val BattleKey = Color(0xFFECE7DE)
+private val BattleKeyBorder = Color(0xFFD6CFC4)
+
 @Composable
 fun V6BattleScreen(onLeaveBattle: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
@@ -124,7 +134,6 @@ fun V6BattleScreen(onLeaveBattle: () -> Unit) {
 
     val me = backend.currentUserId()
 
-    // Deliberately resilient polling: one transient failure cannot permanently freeze turn/chat state.
     LaunchedEffect(active.id) {
         while (isActive) {
             runCatching { backend.getRoom(active.id) }
@@ -201,6 +210,7 @@ fun V6BattleScreen(onLeaveBattle: () -> Unit) {
         },
         onExit = onLeaveBattle,
         onChat = { showChat = true },
+        onTacticInfo = { tactic -> notice = "$tactic jokeri backend oyun davranışı tamamlandığında aktif olacak." },
     )
 
     if (showChat) {
@@ -309,6 +319,7 @@ private fun V6BattleArena(
     onForfeit: () -> Unit,
     onExit: () -> Unit,
     onChat: () -> Unit,
+    onTacticInfo: (String) -> Unit,
 ) {
     val host = me == room.hostId
     val myScore = if (host) room.hostScore else room.guestScore
@@ -329,76 +340,147 @@ private fun V6BattleArena(
     }
 
     Column(
-        Modifier.fillMaxSize().background(V6Light.bg).padding(12.dp),
+        Modifier.fillMaxSize().background(BattleCream).padding(horizontal = 12.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = onForfeit, border = BorderStroke(1.dp, V6Light.red)) {
-                Icon(Icons.Rounded.Flag, null, tint = V6Light.red)
-                Spacer(Modifier.width(4.dp))
-                Text("Pes Et", color = V6Light.red)
+            Surface(shape = CircleShape, color = BattleAmber, modifier = Modifier.size(38.dp)) {
+                Box(contentAlignment = Alignment.Center) { Text("🔥", fontSize = 18.sp) }
             }
+            Spacer(Modifier.width(8.dp))
+            Text(
+                if (streak > 1) "$streak Kelime Seri" else "Kelime Düellosu",
+                color = BattleText,
+                fontWeight = FontWeight.Black,
+                fontSize = 15.sp,
+            )
             Spacer(Modifier.weight(1f))
-            if (streak > 1) Text("🔥 ${streak}x Seri", color = V6Light.fire, fontWeight = FontWeight.Black)
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = onExit) { Icon(Icons.Rounded.Close, "Ayrıl", tint = V6Light.text) }
+            Surface(shape = RoundedCornerShape(18.dp), color = BattleSage.copy(alpha = .12f), border = BorderStroke(1.dp, BattleSage)) {
+                Text("Puan: $myScore", Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = BattleSage, fontWeight = FontWeight.Black, fontSize = 13.sp)
+            }
+            IconButton(onClick = onExit) { Icon(Icons.Rounded.Close, "Ayrıl", tint = BattleText) }
+        }
+
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = BattleWhite,
+            shadowElevation = 2.dp,
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text("CANLI 1v1", color = BattleMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (room.status == "quiz") "Bilgi Sorusu Turu" else "Klasik Son Harf",
+                        color = BattleSage,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+                Surface(onClick = onChat, shape = RoundedCornerShape(20.dp), color = BattleCoral.copy(alpha = .10f)) {
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.ChatBubble, null, tint = BattleCoral, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text("Canlı Sohbet", color = BattleCoral, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    }
+                }
+            }
         }
 
         Surface(
             Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            color = V6Light.white,
-            border = BorderStroke(1.dp, V6Light.border),
+            shape = RoundedCornerShape(20.dp),
+            color = BattleWhite,
+            shadowElevation = 4.dp,
         ) {
-            Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                V6BattlePlayer(myName, myAvatar, myScore, myTurn, Modifier.weight(1f))
-                Box(Modifier.size(54.dp).clip(CircleShape).background(V6Light.blueLight), contentAlignment = Alignment.Center) {
-                    Text("$seconds", color = V6Light.blueDark, fontWeight = FontWeight.Black, fontSize = 19.sp)
+            Column(Modifier.fillMaxWidth().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    V6ModernBattlePlayer(myName, myAvatar, myScore, myTurn, Modifier.weight(1f))
+                    Box(
+                        Modifier.size(62.dp).clip(CircleShape).background(if (seconds <= 5) BattleCoral else BattleAmber),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("$seconds", color = Color.White, fontWeight = FontWeight.Black, fontSize = 25.sp)
+                    }
+                    V6ModernBattlePlayer(opponentName, opponentAvatar, opponentScore, !myTurn, Modifier.weight(1f))
                 }
-                V6BattlePlayer(opponentName, opponentAvatar, opponentScore, !myTurn, Modifier.weight(1f))
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    when {
+                        room.status == "quiz" -> "BİLGİ SORUSU TURU"
+                        room.status == "paused" -> "MAÇ DURAKLATILDI"
+                        myTurn -> "SIRA SİZDE"
+                        else -> "RAKİP BEKLENİYOR…"
+                    },
+                    color = if (myTurn) BattleSage else BattleMuted,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 12.sp,
+                )
+                Spacer(Modifier.height(6.dp))
+                if (lastWord.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Son Kelime: ", color = BattleMuted, fontSize = 14.sp)
+                        if (lastWord.length > 1) Text(lastWord.dropLast(1), color = BattleText, fontSize = 19.sp, fontWeight = FontWeight.Bold)
+                        Text(lastWord.takeLast(1), color = BattleCoral, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                    }
+                } else {
+                    Text("İlk kelimeyi siz başlatın", color = BattleMuted, fontSize = 14.sp)
+                }
+            }
+        }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = { onTacticInfo("Ğ Kilidi") },
+                enabled = myTurn && !busy,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BattleAmber),
+                contentPadding = PaddingValues(vertical = 8.dp),
+            ) {
+                Icon(Icons.Rounded.Bolt, null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Ğ Kilidi", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+            Button(
+                onClick = { onTacticInfo("Süre Dondur") },
+                enabled = myTurn && !busy,
+                modifier = Modifier.weight(1f),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = BattleSage),
+                contentPadding = PaddingValues(vertical = 8.dp),
+            ) {
+                Text("❄ Süre Dondur", fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         }
 
         Surface(
-            Modifier.fillMaxWidth().weight(1f),
-            shape = RoundedCornerShape(20.dp),
-            color = V6Light.white,
-            border = BorderStroke(1.dp, V6Light.border),
+            Modifier.fillMaxWidth().heightIn(min = 70.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = BattleWhite,
+            border = BorderStroke(2.dp, BattleSage.copy(alpha = .42f)),
         ) {
-            Box(Modifier.fillMaxSize().padding(14.dp)) {
-                Column(
-                    Modifier.fillMaxSize(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                if (input.isBlank()) {
                     Text(
-                        when {
-                            room.status == "quiz" -> "Bilgi sorusu turu"
-                            myTurn -> "Sıra Sende!"
-                            else -> "Rakibin Sırası…"
-                        },
-                        fontWeight = FontWeight.Bold,
-                        color = if (myTurn) V6Light.green else V6Light.muted,
+                        if (required == null) "Kelime yazın…" else "'$required' ile başlayan kelime yazın…",
+                        color = BattleMuted.copy(alpha = .72f),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium,
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        if (required == null) "İlk kelimeyi yaz" else "Başlangıç Harfi: '$required'",
-                        color = V6Light.amber,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    V6LetterTiles(if (input.isBlank()) required?.toString().orEmpty() else input)
-                    Spacer(Modifier.height(12.dp))
-                    if (lastWord.isNotBlank()) Text("Son Kelime: $lastWord", color = V6Light.muted)
-                    Spacer(Modifier.height(8.dp))
-                    Text(notice, color = V6Light.muted, fontSize = 12.sp, textAlign = TextAlign.Center)
+                } else {
+                    Text(input, color = BattleText, fontSize = 23.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 }
-                IconButton(
-                    onClick = onChat,
-                    modifier = Modifier.align(Alignment.BottomEnd).size(46.dp).clip(RoundedCornerShape(13.dp)).background(V6Light.blue),
-                ) { Icon(Icons.Rounded.ChatBubble, "Sohbet", tint = Color.White) }
+                if (notice.isNotBlank()) {
+                    Spacer(Modifier.height(3.dp))
+                    Text(notice, color = BattleCoral, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                }
             }
         }
+
+        Spacer(Modifier.weight(1f))
 
         V6OnScreenKeyboard(
             enabled = myTurn && !busy,
@@ -413,28 +495,28 @@ private fun V6BattleArena(
             },
             onSubmit = onSubmit,
         )
-    }
-}
 
-@Composable
-private fun V6BattlePlayer(name: String, avatar: String?, score: Int, active: Boolean, modifier: Modifier) {
-    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        V6Avatar(avatar, name, 48)
-        Text(name, maxLines = 1, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = V6Light.text)
-        Text("$score puan", fontSize = 10.sp, color = if (active) V6Light.blueDark else V6Light.muted)
-    }
-}
-
-@Composable
-private fun V6LetterTiles(word: String) {
-    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        word.take(9).forEachIndexed { index, char ->
-            val amber = index == 0 || (index == word.take(9).lastIndex && word.length > 1)
-            Box(
-                Modifier.size(42.dp).clip(RoundedCornerShape(10.dp)).background(if (amber) V6Light.amber else V6Light.blue),
-                contentAlignment = Alignment.Center,
-            ) { Text(char.toString(), color = Color.White, fontWeight = FontWeight.Black, fontSize = 20.sp) }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+            TextButton(onClick = onForfeit) {
+                Icon(Icons.Rounded.Flag, null, tint = BattleCoral, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Pes Et", color = BattleCoral, fontWeight = FontWeight.Bold)
+            }
         }
+    }
+}
+
+@Composable
+private fun V6ModernBattlePlayer(name: String, avatar: String?, score: Int, active: Boolean, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.size(50.dp).clip(CircleShape).background(if (active) BattleSage.copy(alpha = .16f) else BattleCream).padding(2.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            V6Avatar(avatar, name, 46)
+        }
+        Text(name, maxLines = 1, color = BattleText, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+        Text("$score puan", color = if (active) BattleSage else BattleMuted, fontWeight = FontWeight.Bold, fontSize = 10.sp)
     }
 }
 
@@ -449,28 +531,40 @@ private fun V6OnScreenKeyboard(
     val row1 = listOf('Q','W','E','R','T','Y','U','I','O','P','Ğ','Ü')
     val row2 = listOf('A','S','D','F','G','H','J','K','L','Ş','İ')
     val row3 = listOf('Z','X','C','V','B','N','M','Ö','Ç')
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        listOf(row1, row2).forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                row.forEach { char -> V6KeyboardKey(char, Modifier.weight(1f), enabled) { onKey(char) } }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = BattleWhite,
+        shadowElevation = 2.dp,
+    ) {
+        Column(Modifier.fillMaxWidth().padding(6.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            listOf(row1, row2).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    row.forEach { char -> V6KeyboardKey(char, Modifier.weight(1f), enabled) { onKey(char) } }
+                }
             }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-            Button(
-                onClick = onSubmit,
-                enabled = submitEnabled,
-                modifier = Modifier.weight(2f).height(46.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = V6Light.blue),
-                contentPadding = PaddingValues(0.dp),
-            ) { Text("ONAY", fontWeight = FontWeight.Black, fontSize = 12.sp) }
-            row3.forEach { char -> V6KeyboardKey(char, Modifier.weight(1f), enabled) { onKey(char) } }
-            OutlinedButton(
-                onClick = onDelete,
-                enabled = enabled,
-                modifier = Modifier.weight(1.7f).height(46.dp),
-                border = BorderStroke(1.dp, V6Light.red),
-                contentPadding = PaddingValues(0.dp),
-            ) { Text("SİL", color = V6Light.red, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Button(
+                    onClick = onDelete,
+                    enabled = enabled,
+                    modifier = Modifier.weight(1.7f).height(46.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BattleCoral, disabledContainerColor = BattleCoral.copy(alpha = .35f)),
+                    contentPadding = PaddingValues(0.dp),
+                    shape = RoundedCornerShape(8.dp),
+                ) { Text("⌫ SİL", color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp) }
+
+                row3.forEach { char -> V6KeyboardKey(char, Modifier.weight(1f), enabled) { onKey(char) } }
+
+                Button(
+                    onClick = onSubmit,
+                    enabled = submitEnabled,
+                    modifier = Modifier.weight(1.9f).height(46.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BattleSage, disabledContainerColor = BattleSage.copy(alpha = .35f)),
+                    contentPadding = PaddingValues(0.dp),
+                    shape = RoundedCornerShape(8.dp),
+                ) { Text("✓ ONAY", color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp) }
+            }
         }
     }
 }
@@ -481,12 +575,12 @@ private fun V6KeyboardKey(char: Char, modifier: Modifier, enabled: Boolean, onCl
         onClick = onClick,
         enabled = enabled,
         modifier = modifier.height(46.dp),
-        color = V6Light.white,
+        color = if (enabled) BattleKey else BattleKey.copy(alpha = .55f),
         shape = RoundedCornerShape(8.dp),
-        border = BorderStroke(1.dp, V6Light.border),
+        border = BorderStroke(1.dp, BattleKeyBorder),
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(char.toString(), color = if (enabled) V6Light.text else V6Light.muted, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+            Text(char.toString(), color = if (enabled) BattleText else BattleMuted, fontWeight = FontWeight.Bold, fontSize = 15.sp)
         }
     }
 }
