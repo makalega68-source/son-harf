@@ -1,0 +1,45 @@
+name: Apply neon source layout fixes
+
+on:
+  push:
+    branches: [ fix/full-history-integration ]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[auto-layout]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/full-history-integration
+      - name: Remove doubled top inset and duplicate finished-game screen
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          root = Path('app/src/main/java/com/sonharf/game/FullHistoryNeonApp.kt')
+          text = root.read_text()
+          old = '''    LazyColumn(\n        Modifier.fillMaxSize().statusBarsPadding(),\n        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),'''
+          new = '''    LazyColumn(\n        Modifier.fillMaxSize(),\n        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),'''
+          if old not in text:
+              raise SystemExit('home inset target not found')
+          root.write_text(text.replace(old, new, 1))
+
+          game = Path('app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt')
+          text = game.read_text()
+          old = '''    if (room.status == "finished") {\n        TargetWinner(room.winnerId == me, playerName, opponentName, myScore, oppScore, onRematch, onExit)\n        return\n    }'''
+          new = '''    if (room.status == "finished") {\n        // The persistent ComboOverlayV9 is the single match-result owner.\n        // Keep the underlying arena neutral so two result UIs never overlap.\n        Box(Modifier.fillMaxSize().background(TGbg))\n        return\n    }'''
+          if old not in text:
+              raise SystemExit('finished-game target not found')
+          game.write_text(text.replace(old, new, 1))
+          PY
+      - name: Commit source-only fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/FullHistoryNeonApp.kt app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
+          git diff --cached --quiet || git commit -m "Fix neon insets and single result ownership [auto-layout]"
+          git push origin HEAD:fix/full-history-integration

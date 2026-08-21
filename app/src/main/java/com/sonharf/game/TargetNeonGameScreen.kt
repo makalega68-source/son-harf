@@ -300,7 +300,9 @@ private fun TargetArena(
     }
 
     if (room.status == "finished") {
-        TargetWinner(room.winnerId == me, playerName, opponentName, myScore, oppScore, onRematch, onExit)
+        // The persistent ComboOverlayV9 is the single match-result owner.
+        // Keep the underlying arena neutral so two result UIs never overlap.
+        Box(Modifier.fillMaxSize().background(TGbg))
         return
     }
 

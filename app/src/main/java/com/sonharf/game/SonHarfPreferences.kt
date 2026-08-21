@@ -57,6 +57,7 @@ object SonHarfPreferences {
         val editor = prefs(context).edit()
         if (roomId.isNullOrBlank()) editor.remove(DISMISSED_MATCH_SUMMARY_ID) else editor.putString(DISMISSED_MATCH_SUMMARY_ID, roomId)
         editor.apply()
+        if (!roomId.isNullOrBlank()) SonHarfGameNavigation.requestLobby()
     }
     fun setBotDifficulty(context: Context, value: String) {
         val normalized = if(value in setOf("easy","hard")) value else "normal"

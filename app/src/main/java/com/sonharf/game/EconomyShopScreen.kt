@@ -29,7 +29,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun EconomyShopScreen() {
     var tab by remember { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFDDF2FF), SonHarfBg, Color(0xFFEAF8FF))))) {
+    Column(
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(Color(0xFF040717), SonHarfBg, Color(0xFF070C1D)))
+        )
+    ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("MAĞAZA", "SHOP")) }, modifier = Modifier.weight(1f))
             FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("ÜCRETSİZ ÖDÜLLER", "FREE REWARDS")) }, modifier = Modifier.weight(1f))
@@ -87,11 +91,11 @@ private fun EconomyCatalogScreen() {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text(sh("MAĞAZA", "SHOP"), fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text(sh("MAĞAZA", "SHOP"), color = SonHarfText, fontSize = 30.sp, fontWeight = FontWeight.Black)
                     Text(sh("Görünümünü seç • satın al • hemen kullan", "Choose • buy • equip instantly"), color = SonHarfMuted, fontSize = 10.sp)
                 }
                 Surface(shape = RoundedCornerShape(99.dp), color = SonHarfCyan.copy(alpha = .13f), border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f))) {
-                    Text("💎 ${profile?.diamonds ?: 0}", Modifier.padding(horizontal = 13.dp, vertical = 8.dp), color = SonHarfCyan, fontWeight = FontWeight.Black)
+                    Text("◆ ${profile?.diamonds ?: 0}", Modifier.padding(horizontal = 13.dp, vertical = 8.dp), color = SonHarfCyan, fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -102,7 +106,7 @@ private fun EconomyCatalogScreen() {
         item {
             ScrollableTabRow(selectedTabIndex = category, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
                 listOf(sh("TÜMÜ", "ALL"), sh("ROZET & PROFİL", "PROFILE"), sh("TEMA & KLAVYE", "THEME"), sh("EFEKT", "EFFECTS")).forEachIndexed { index, label ->
-                    Tab(selected = category == index, onClick = { category = index }, text = { Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold) })
+                    Tab(selected = category == index, onClick = { category = index }, text = { Text(label, color = if (category == index) SonHarfCyan else SonHarfMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold) })
                 }
             }
         }
@@ -112,7 +116,7 @@ private fun EconomyCatalogScreen() {
             Text(sh("Elmaslar maç avantajı vermez; yalnızca görünüm ve kişiselleştirme içindir.", "Diamonds never give match advantages; they are for appearance only."), color = SonHarfMuted, fontSize = 9.sp)
         }
 
-        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfCyan) }
 
         items(filtered, key = { it.id }) { item ->
             val name = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
@@ -128,13 +132,13 @@ private fun EconomyCatalogScreen() {
                     CosmeticPreview(item)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.Top) {
                         Column(Modifier.weight(1f)) {
-                            Text(name, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                            Text(name, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 17.sp)
                             Text(description, color = SonHarfMuted, fontSize = 10.sp)
                         }
                         if (item.vipOnly) Surface(color = SonHarfGold.copy(alpha = .15f), shape = RoundedCornerShape(9.dp)) { Text("VIP", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = SonHarfGold, fontWeight = FontWeight.Black) }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (mine) sh("✓ SAHİPSİN", "✓ OWNED") else "💎 ${item.diamondPrice}", color = if (mine) SonHarfGreen else SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                        Text(if (mine) sh("✓ SAHİPSİN", "✓ OWNED") else "◆ ${item.diamondPrice}", color = if (mine) SonHarfGreen else SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 15.sp)
                         Button(
                             onClick = {
                                 scope.launch {
@@ -207,14 +211,14 @@ private fun CosmeticPreview(item: ShopItemDto) {
                 "profile_frame" -> {
                     val accent = if (item.id == "frame_gold") SonHarfGold else SonHarfCyan
                     Box(Modifier.size(76.dp).scale(pulse).background(accent.copy(alpha = .16f), CircleShape), contentAlignment = Alignment.Center) {
-                        Surface(shape = CircleShape, color = SonHarfSurface, border = BorderStroke(5.dp, accent)) { Box(Modifier.size(50.dp), contentAlignment = Alignment.Center) { Text("A", fontSize = 24.sp, fontWeight = FontWeight.Black) } }
+                        Surface(shape = CircleShape, color = SonHarfSurface, border = BorderStroke(5.dp, accent)) { Box(Modifier.size(50.dp), contentAlignment = Alignment.Center) { Text("A", color = SonHarfText, fontSize = 24.sp, fontWeight = FontWeight.Black) } }
                     }
                 }
                 "name_style" -> Text("Oyuncu-10DD", color = SonHarfCyan, fontSize = 25.sp, fontWeight = FontWeight.Black)
                 "game_theme" -> Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(SonHarfPurple.copy(alpha = .35f), SonHarfCyan.copy(alpha = .28f), SonHarfGold.copy(alpha = .20f))), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text("AURORA ARENA", fontWeight = FontWeight.Black, color = SonHarfText) }
                 "keyboard_theme" -> Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("S","O","N","H","A","R","F").forEach { k -> Surface(color = Color(0xFF122840), shape = RoundedCornerShape(7.dp), border = BorderStroke(1.5.dp, SonHarfCyan)) { Text(k, Modifier.padding(horizontal = 8.dp, vertical = 10.dp), color = SonHarfCyan, fontWeight = FontWeight.Black) } } }
                 "victory_effect" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text("✦", color = SonHarfCyan, fontSize = 30.sp); Text("♛", color = SonHarfGold, fontSize = 50.sp, fontWeight = FontWeight.Black, modifier = Modifier.scale(pulse)); Text("✦", color = SonHarfPink, fontSize = 30.sp) }
-                "emoji_pack" -> Text("👑  ⚡  😎  🔥  💎", fontSize = 30.sp)
+                "emoji_pack" -> Text("👑  ⚡  😎  🔥  ◆", fontSize = 30.sp)
                 else -> Text("◇", fontSize = 44.sp, color = SonHarfCyan)
             }
         }
