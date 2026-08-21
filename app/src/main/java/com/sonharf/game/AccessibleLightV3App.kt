@@ -65,7 +65,7 @@ fun AccessibleLightV3SonHarfApp() {
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding).background(Color(0xFFF8FAFC))) {
             when (screen) {
-                LightV3Screen.HOME -> V4HomeRoute(
+                LightV3Screen.HOME -> V6HomeRoute(
                     onStartGameMode = { mode ->
                         when (mode) {
                             "LEAGUE" -> screen = LightV3Screen.LEAGUE
@@ -80,12 +80,12 @@ fun AccessibleLightV3SonHarfApp() {
                     onOpenLeague = { screen = LightV3Screen.LEAGUE },
                     onOpenProfile = { screen = LightV3Screen.PROFILE },
                 )
-                LightV3Screen.GAME -> key(gameKey) { V5BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME }) }
+                LightV3Screen.GAME -> key(gameKey) { V6BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME }) }
                 LightV3Screen.STORE -> V4StoreScreen()
                 LightV3Screen.PROFILE -> V5ProfileScreen(onOpenPreferences = { screen = LightV3Screen.PREFERENCES })
                 LightV3Screen.PREFERENCES -> V4PreferencesScreen(onBack = { screen = LightV3Screen.PROFILE })
                 LightV3Screen.HUB -> MetaHubScreen()
-                LightV3Screen.LEAGUE -> LeaderboardExperienceScreen { screen = LightV3Screen.HOME }
+                LightV3Screen.LEAGUE -> V6LeaderboardScreen { screen = LightV3Screen.HOME }
             }
         }
     }
