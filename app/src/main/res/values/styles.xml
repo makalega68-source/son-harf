@@ -3,5 +3,8 @@
     <style name="Theme.SonHarf" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowBackground">#F9F6F0</item>
+        <item name="android:statusBarColor">#F9F6F0</item>
+        <item name="android:navigationBarColor">#FFFFFF</item>
     </style>
 </resources>
