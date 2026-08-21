@@ -38,7 +38,6 @@ fun ExpertArenaOverlay() {
         return SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
             .filter {
                 (it.hostId == uid || it.guestId == uid) &&
-                    it.gameMode == "expert" &&
                     it.status in listOf("playing", "sudden_death")
             }
             .maxByOrNull { it.validWordCount }
