@@ -3,9 +3,11 @@ package com.sonharf.game
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Group
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.ShoppingCart
+import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -13,7 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.sonharf.game.data.*
 
-private enum class LightV3Screen { HOME, GAME, STORE, PROFILE, PREFERENCES, HUB, LEAGUE }
+private enum class LightV3Screen { HOME, GAME, STORE, FRIENDS, VIP, PROFILE, PREFERENCES, HUB, LEAGUE }
 
 @Composable
 fun AccessibleLightV3SonHarfApp() {
@@ -54,10 +56,12 @@ fun AccessibleLightV3SonHarfApp() {
     Scaffold(
         containerColor = Color(0xFFF8FAFC),
         bottomBar = {
-            if (screen in setOf(LightV3Screen.HOME, LightV3Screen.STORE, LightV3Screen.PROFILE, LightV3Screen.PREFERENCES)) {
+            if (screen in setOf(LightV3Screen.HOME, LightV3Screen.STORE, LightV3Screen.FRIENDS, LightV3Screen.VIP, LightV3Screen.PROFILE, LightV3Screen.PREFERENCES)) {
                 NavigationBar(containerColor = Color.White) {
                     NavigationBarItem(selected = screen == LightV3Screen.HOME, onClick = { screen = LightV3Screen.HOME }, icon = { Icon(Icons.Rounded.Home, "Ana Sayfa") }, label = { Text("Ana Sayfa") })
+                    NavigationBarItem(selected = screen == LightV3Screen.FRIENDS, onClick = { screen = LightV3Screen.FRIENDS }, icon = { Icon(Icons.Rounded.Group, "Arkadaşlar") }, label = { Text("Arkadaşlar") })
                     NavigationBarItem(selected = screen == LightV3Screen.STORE, onClick = { screen = LightV3Screen.STORE }, icon = { Icon(Icons.Rounded.ShoppingCart, "Mağaza") }, label = { Text("Mağaza") })
+                    NavigationBarItem(selected = screen == LightV3Screen.VIP, onClick = { screen = LightV3Screen.VIP }, icon = { Icon(Icons.Rounded.WorkspacePremium, "VIP", tint = Color(0xFF7C3AED)) }, label = { Text("VIP") })
                     NavigationBarItem(selected = screen == LightV3Screen.PROFILE || screen == LightV3Screen.PREFERENCES, onClick = { screen = LightV3Screen.PROFILE }, icon = { Icon(Icons.Rounded.Person, "Profil") }, label = { Text("Profil") })
                 }
             }
@@ -80,8 +84,15 @@ fun AccessibleLightV3SonHarfApp() {
                     onOpenLeague = { screen = LightV3Screen.LEAGUE },
                     onOpenProfile = { screen = LightV3Screen.PROFILE },
                 )
-                LightV3Screen.GAME -> key(gameKey) { V6BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME }) }
+                LightV3Screen.GAME -> key(gameKey) {
+                    Box(Modifier.fillMaxSize()) {
+                        V6BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME })
+                        V7BattleVipOverlay()
+                    }
+                }
                 LightV3Screen.STORE -> V4StoreScreen()
+                LightV3Screen.FRIENDS -> V7FriendsScreen { screen = LightV3Screen.HOME }
+                LightV3Screen.VIP -> V7VipHubScreen { screen = LightV3Screen.HOME }
                 LightV3Screen.PROFILE -> V5ProfileScreen(onOpenPreferences = { screen = LightV3Screen.PREFERENCES })
                 LightV3Screen.PREFERENCES -> V4PreferencesScreen(onBack = { screen = LightV3Screen.PROFILE })
                 LightV3Screen.HUB -> MetaHubScreen()
