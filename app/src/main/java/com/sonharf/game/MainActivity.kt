@@ -15,30 +15,28 @@ import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.runBlocking
 
-// Both modes stay inside the approved dark-neon identity; the toggle changes density/contrast,
-// rather than falling back to the old bright interface.
-internal val SonHarfBg: Color get() = if (SonHarfUiState.darkMode) Color(0xFF02040E) else Color(0xFF07101F)
-internal val SonHarfSurface: Color get() = if (SonHarfUiState.darkMode) Color(0xFF071027) else Color(0xFF0D1A31)
-internal val SonHarfSurface2: Color get() = if (SonHarfUiState.darkMode) Color(0xFF0E1732) else Color(0xFF152544)
-internal val SonHarfPurple = Color(0xFF7A35FF)
-internal val SonHarfCyan = Color(0xFF00E9FF)
-internal val SonHarfBlue = Color(0xFF2A75FF)
-internal val SonHarfGold = Color(0xFFFFB817)
-internal val SonHarfGreen = Color(0xFF41E38A)
-internal val SonHarfText: Color get() = Color(0xFFF7F8FF)
-internal val SonHarfMuted: Color get() = if (SonHarfUiState.darkMode) Color(0xFF8D98B8) else Color(0xFFA8B4CF)
-internal val SonHarfPink = Color(0xFFFF3FCF)
+internal val SonHarfBg: Color get() = if (SonHarfUiState.darkMode) Color(0xFF071525) else Color(0xFF10253A)
+internal val SonHarfSurface: Color get() = if (SonHarfUiState.darkMode) Color(0xFF0D2033) else Color(0xFF173149)
+internal val SonHarfSurface2: Color get() = if (SonHarfUiState.darkMode) Color(0xFF132A40) else Color(0xFF1C3953)
+internal val SonHarfPurple = Color(0xFF9B8667)
+internal val SonHarfCyan = Color(0xFF84AFCB)
+internal val SonHarfBlue = Color(0xFF6F94B0)
+internal val SonHarfGold = Color(0xFFD8AD62)
+internal val SonHarfGreen = Color(0xFF7DA887)
+internal val SonHarfText: Color get() = Color(0xFFF4F6F8)
+internal val SonHarfMuted: Color get() = Color(0xFFA9B6C3)
+internal val SonHarfPink = Color(0xFFB98B8B)
 
 private val SonHarfNeonTypography = Typography(
-    bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 24.sp),
-    bodyMedium = TextStyle(fontSize = 16.sp, lineHeight = 22.sp),
-    bodySmall = TextStyle(fontSize = 14.sp, lineHeight = 19.sp),
-    labelLarge = TextStyle(fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold),
-    labelMedium = TextStyle(fontSize = 14.sp, lineHeight = 18.sp),
-    labelSmall = TextStyle(fontSize = 13.sp, lineHeight = 17.sp),
-    titleLarge = TextStyle(fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.Bold),
-    titleMedium = TextStyle(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold),
-    titleSmall = TextStyle(fontSize = 17.sp, lineHeight = 22.sp, fontWeight = FontWeight.SemiBold),
+    bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 25.sp),
+    bodyMedium = TextStyle(fontSize = 16.sp, lineHeight = 23.sp),
+    bodySmall = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
+    labelLarge = TextStyle(fontSize = 16.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold),
+    labelMedium = TextStyle(fontSize = 14.sp, lineHeight = 19.sp),
+    labelSmall = TextStyle(fontSize = 13.sp, lineHeight = 18.sp),
+    titleLarge = TextStyle(fontSize = 24.sp, lineHeight = 31.sp, fontWeight = FontWeight.Bold),
+    titleMedium = TextStyle(fontSize = 20.sp, lineHeight = 27.sp, fontWeight = FontWeight.Bold),
+    titleSmall = TextStyle(fontSize = 17.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold),
 )
 
 enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
@@ -54,9 +52,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme(
                 colorScheme = darkColorScheme(
-                    primary = SonHarfPurple,
+                    primary = SonHarfGold,
                     secondary = SonHarfCyan,
-                    tertiary = SonHarfGold,
+                    tertiary = SonHarfGreen,
                     background = SonHarfBg,
                     surface = SonHarfSurface,
                     surfaceVariant = SonHarfSurface2,
@@ -66,7 +64,7 @@ class MainActivity : ComponentActivity() {
                 typography = SonHarfNeonTypography,
             ) {
                 Box {
-                    FullHistoryNeonApp()
+                    ClassicPremiumApp()
                     WinnerFireworkOverlay()
                     FriendsQuickAccessOverlay()
                     GameInviteOverlay()
