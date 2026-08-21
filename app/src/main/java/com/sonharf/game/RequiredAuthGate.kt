@@ -182,6 +182,34 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 }
                                 Text(if (rememberMe) "Oturum korunur" else "Sonraki açılışta çıkış", color = Color(0xFF697086), fontSize = 12.sp)
                             }
+                            TextButton(
+                                onClick = {
+                                    if (busy) return@TextButton
+                                    if (!email.contains("@")) {
+                                        notice = "Önce geçerli e-posta adresini gir."
+                                        success = false
+                                        return@TextButton
+                                    }
+                                    scope.launch {
+                                        busy = true
+                                        notice = ""
+                                        success = false
+                                        runCatching {
+                                            SupabaseProvider.client.auth.resetPasswordForEmail(email.trim())
+                                        }.onSuccess {
+                                            success = true
+                                            notice = "Şifre sıfırlama bağlantısı e-posta adresine gönderildi. Gelen kutunu ve spam klasörünü kontrol et."
+                                        }.onFailure {
+                                            notice = friendly(it.message.orEmpty())
+                                        }
+                                        busy = false
+                                    }
+                                },
+                                enabled = !busy,
+                                modifier = Modifier.align(Alignment.End),
+                            ) {
+                                Text("Şifremi unuttum", color = SonHarfPurple, fontWeight = FontWeight.Bold)
+                            }
                         }
                         Button(
                             onClick = {
