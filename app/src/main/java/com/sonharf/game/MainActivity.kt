@@ -65,7 +65,7 @@ class MainActivity : ComponentActivity() {
                 typography = SonHarfAccessibleTypography,
             ) {
                 Box {
-                    AccessibleLightSonHarfApp()
+                    AccessibleLightV3SonHarfApp()
                 }
             }
         }
