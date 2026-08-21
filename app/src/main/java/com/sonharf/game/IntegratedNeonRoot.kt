@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.getEquippedCosmetics
 
 /**
  * Production wrapper for the approved mockup UI.
