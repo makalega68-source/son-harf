@@ -110,7 +110,7 @@ fun AccessibleLightV3SonHarfApp() {
                 }
                 LightV3Screen.STORE -> V4StoreScreen()
                 LightV3Screen.FRIENDS -> V7FriendsScreen { screen = LightV3Screen.HOME }
-                LightV3Screen.VIP -> V7VipHubScreen { screen = LightV3Screen.HOME }
+                LightV3Screen.VIP -> V9VipHubScreen { screen = LightV3Screen.HOME }
                 LightV3Screen.PROFILE -> V9ProfilePhotoScreen(onOpenPreferences = { screen = LightV3Screen.PREFERENCES })
                 LightV3Screen.PREFERENCES -> V4PreferencesScreen(onBack = { screen = LightV3Screen.PROFILE })
                 LightV3Screen.HUB -> MetaHubScreen()
