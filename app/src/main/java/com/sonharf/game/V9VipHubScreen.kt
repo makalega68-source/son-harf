@@ -7,6 +7,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,9 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
-import com.sonharf.game.data.AvatarSignedUrl
-import com.sonharf.game.data.OnlineGameBackend
-import com.sonharf.game.data.ProfileDto
+import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
 
 private val V9VipPurple = Color(0xFF7C3AED)
@@ -53,7 +52,7 @@ fun V9VipHubScreen(onBack: () -> Unit) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var avatarUrl by remember { mutableStateOf<String?>(null) }
     var entitlements by remember { mutableStateOf<V7VipEntitlementsDto?>(null) }
-    var rewardStatus by remember { mutableStateOf<com.sonharf.game.data.RewardCenterStatusDto?>(null) }
+    var rewardStatus by remember { mutableStateOf<RewardCenterStatusDto?>(null) }
     var adReady by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
