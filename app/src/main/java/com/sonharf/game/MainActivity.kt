@@ -66,7 +66,7 @@ class MainActivity : ComponentActivity() {
                 typography = SonHarfNeonTypography,
             ) {
                 Box {
-                    FullHistoryNeonApp()
+                    ArenaNextApp()
                     WinnerFireworkOverlay()
                     FriendsQuickAccessOverlay()
                     GameInviteOverlay()
