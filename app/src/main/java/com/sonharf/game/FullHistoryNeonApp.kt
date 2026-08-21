@@ -203,7 +203,7 @@ private fun FullNeonHome(
     LaunchedEffect(Unit) { reload() }
 
     LazyColumn(
-        Modifier.fillMaxSize().statusBarsPadding(),
+        Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(13.dp),
     ) {
