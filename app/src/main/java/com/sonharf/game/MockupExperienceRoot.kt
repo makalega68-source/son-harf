@@ -251,6 +251,21 @@ private fun MockGameScreen(onBack: () -> Unit, initialPrivate: Boolean) {
         roomJob = scope.launch { backend.observeRoom(r.id).catch { notice = "Bağlantı yenileniyor…" }.collect { room = it; loadOpponent(it) } }
         wordsJob = scope.launch { backend.observeWords(r.id).catch { }.collect { words = it } }
     }
+    fun cancelMatching(afterCancel: (() -> Unit)? = null) {
+        if (!matching) {
+            afterCancel?.invoke()
+            return
+        }
+        matching = false
+        matchJob?.cancel()
+        matchJob = null
+        scope.launch {
+            runCatching { backend.cancelRandomMatchmaking() }
+                .onSuccess { notice = "Eşleşme iptal edildi" }
+                .onFailure { notice = "Eşleşme iptal edilemedi" }
+            afterCancel?.invoke()
+        }
+    }
 
     LaunchedEffect(Unit) { runCatching { ensureProfile() } }
 
@@ -281,7 +296,7 @@ private fun MockGameScreen(onBack: () -> Unit, initialPrivate: Boolean) {
                 player = profile?.displayName ?: "Oyuncu",
                 matching = matching,
                 notice = notice,
-                onBack = onBack,
+                onBack = { cancelMatching(onBack) },
                 onRandom = {
                     scope.launch {
                         runCatching { ensureProfile(); backend.startRandomMatchmaking("tr") }
@@ -298,6 +313,7 @@ private fun MockGameScreen(onBack: () -> Unit, initialPrivate: Boolean) {
                             .onFailure { notice = "Eşleşme başlatılamadı" }
                     }
                 },
+                onCancel = { cancelMatching() },
                 onPrivate = { privateMode = true }
             )
         }
@@ -341,7 +357,7 @@ private fun MockGameScreen(onBack: () -> Unit, initialPrivate: Boolean) {
 }
 
 @Composable
-private fun DuelLobbyPanel(player: String, matching: Boolean, notice: String, onBack: () -> Unit, onRandom: () -> Unit, onPrivate: () -> Unit) {
+private fun DuelLobbyPanel(player: String, matching: Boolean, notice: String, onBack: () -> Unit, onRandom: () -> Unit, onCancel: () -> Unit, onPrivate: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
         item { TopTitle("‹", "DÜELLO", onBack) }
         item {
@@ -352,14 +368,14 @@ private fun DuelLobbyPanel(player: String, matching: Boolean, notice: String, on
                     Text(notice, color = NCyan, fontSize = 12.sp)
                     Spacer(Modifier.height(20.dp))
                     Button(
-                        onClick = onRandom,
+                        onClick = if (matching) onCancel else onRandom,
                         modifier = Modifier.fillMaxWidth().height(58.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = NPink)
-                    ) { Text(if (matching) "RAKİP ARANIYOR…" else "⚡ HEMEN OYNA", fontWeight = FontWeight.Black) }
+                        colors = ButtonDefaults.buttonColors(containerColor = if (matching) NPurple else NPink)
+                    ) { Text(if (matching) "✕ EŞLEŞMEYİ İPTAL ET" else "⚡ HEMEN OYNA", fontWeight = FontWeight.Black) }
                     Spacer(Modifier.height(10.dp))
-                    OutlinedButton(onClick = onPrivate, modifier = Modifier.fillMaxWidth().height(54.dp), border = BorderStroke(1.dp, NPurple), shape = RoundedCornerShape(14.dp)) {
-                        Text("🔒 ÖZEL ODA", color = NText, fontWeight = FontWeight.Bold)
+                    OutlinedButton(onClick = onPrivate, enabled = !matching, modifier = Modifier.fillMaxWidth().height(54.dp), border = BorderStroke(1.dp, NPurple), shape = RoundedCornerShape(14.dp)) {
+                        Text("🔒 ÖZEL ODA", color = if (matching) NMuted else NText, fontWeight = FontWeight.Bold)
                     }
                 }
             }
