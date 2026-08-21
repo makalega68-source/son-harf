@@ -10,14 +10,15 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import io.github.jan.supabase.postgrest.from
+import java.time.Instant
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /** Expert arena only. Finished matches are deliberately handled by ComboOverlayV9. */
@@ -37,6 +38,7 @@ fun ExpertArenaOverlay() {
         return SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
             .filter {
                 (it.hostId == uid || it.guestId == uid) &&
+                    it.gameMode == "expert" &&
                     it.status in listOf("playing", "sudden_death")
             }
             .maxByOrNull { it.validWordCount }
@@ -74,6 +76,21 @@ fun ExpertArenaOverlay() {
     val suffixLen = active.roundNo.coerceIn(1, 3)
     val last = words.lastOrNull()?.normalizedWord?.uppercase().orEmpty()
     val required = if (last.isBlank()) "" else last.takeLast(suffixLen)
+    var seconds by remember(active.id, active.turnDeadline, active.currentPlayerId) { mutableIntStateOf(30) }
+
+    LaunchedEffect(active.id, active.turnDeadline, active.currentPlayerId, active.status) {
+        val deadline = active.turnDeadline ?: return@LaunchedEffect
+        while (isActive && active.status in listOf("playing", "sudden_death")) {
+            seconds = runCatching {
+                (Instant.parse(deadline).epochSecond - Instant.now().epochSecond).toInt().coerceIn(0, 30)
+            }.getOrDefault(30)
+            if (seconds <= 0) {
+                runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it }
+                break
+            }
+            delay(500)
+        }
+    }
 
     Surface(Modifier.fillMaxSize(), color = SonHarfBg) {
         Column(
@@ -102,12 +119,19 @@ fun ExpertArenaOverlay() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("${sh("UZMAN", "EXPERT")} • ROUND ${active.roundNo}/3", color = SonHarfGold, fontWeight = FontWeight.Black)
-                        Text("${active.roundWordCount}/15", color = SonHarfCyan, fontWeight = FontWeight.Black)
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("${active.roundWordCount}/15", color = SonHarfCyan, fontWeight = FontWeight.Black)
+                            if (active.turnDeadline != null) {
+                                Surface(shape = RoundedCornerShape(99.dp), color = if (seconds <= 8) SonHarfPink.copy(alpha = .12f) else SonHarfCyan.copy(alpha = .10f)) {
+                                    Text("⏱ ${seconds}s", Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = if (seconds <= 8) SonHarfPink else SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                                }
+                            }
+                        }
                     }
                     Text(
-                        if (myTurn) sh("SIRA SENDE", "YOUR TURN") else if (active.isBot && active.botTurn) sh("BOT DÜŞÜNÜYOR", "BOT IS THINKING") else sh("RAKİBİN SIRASI", "OPPONENT'S TURN"),
+                        if (myTurn) sh("SIRA SENDE • 30 SANİYE", "YOUR TURN • 30 SECONDS") else if (active.isBot && active.botTurn) sh("BOT STRATEJİ KURUYOR", "BOT IS PLANNING") else sh("RAKİBİN SIRASI", "OPPONENT'S TURN"),
                         color = if (myTurn) SonHarfCyan else SonHarfMuted,
                         fontWeight = FontWeight.Black,
                     )
@@ -142,14 +166,14 @@ fun ExpertArenaOverlay() {
             OutlinedTextField(
                 value = input,
                 onValueChange = { input = it.take(40) },
-                enabled = myTurn && !busy,
+                enabled = myTurn && !busy && seconds > 0,
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text(if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Rakibin sırası…", "Opponent's turn…")) },
                 trailingIcon = {
                     IconButton(onClick = {
                         val submitted = input.trim()
-                        if (submitted.isBlank() || !myTurn || busy) return@IconButton
+                        if (submitted.isBlank() || !myTurn || busy || seconds <= 0) return@IconButton
                         scope.launch {
                             busy = true
                             runCatching { backend.submitWord(active.id, submitted) }
@@ -160,6 +184,7 @@ fun ExpertArenaOverlay() {
                                         "wrong_start_letter" -> sh("Yanlış başlangıç. −1", "Wrong prefix. −1")
                                         "invalid_word" -> sh("Geçersiz kelime. −1", "Invalid word. −1")
                                         "word_already_used" -> sh("Kelime tekrarlandı. −1", "Word repeated. −1")
+                                        "turn_expired" -> sh("Süre doldu. −1", "Time expired. −1")
                                         "expert_x2" -> sh("×2 PUAN!", "×2 SCORE!")
                                         "expert_x3" -> sh("×3 PUAN!", "×3 SCORE!")
                                         else -> sh("Kelime kabul edildi.", "Word accepted.")
@@ -177,7 +202,7 @@ fun ExpertArenaOverlay() {
                     modifier = Modifier.weight(1f),
                     border = BorderStroke(1.dp, SonHarfPink.copy(alpha = .5f)),
                 ) { Text(sh("⚑ PES ET", "⚑ FORFEIT"), color = SonHarfPink) }
-                OutlinedButton(onClick = {}, modifier = Modifier.weight(1f), enabled = false) { Text(sh("UZMAN MODU", "EXPERT MODE"), color = SonHarfGold) }
+                OutlinedButton(onClick = {}, modifier = Modifier.weight(1f), enabled = false) { Text(sh("UZMAN • 30 sn", "EXPERT • 30s"), color = SonHarfGold) }
             }
         }
     }
