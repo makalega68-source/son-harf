@@ -80,9 +80,9 @@ fun AccessibleLightV3SonHarfApp() {
                     onOpenLeague = { screen = LightV3Screen.LEAGUE },
                     onOpenProfile = { screen = LightV3Screen.PROFILE },
                 )
-                LightV3Screen.GAME -> key(gameKey) { V4BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME }) }
+                LightV3Screen.GAME -> key(gameKey) { V5BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME }) }
                 LightV3Screen.STORE -> V4StoreScreen()
-                LightV3Screen.PROFILE -> V4ProfileScreen(onOpenPreferences = { screen = LightV3Screen.PREFERENCES })
+                LightV3Screen.PROFILE -> V5ProfileScreen(onOpenPreferences = { screen = LightV3Screen.PREFERENCES })
                 LightV3Screen.PREFERENCES -> V4PreferencesScreen(onBack = { screen = LightV3Screen.PROFILE })
                 LightV3Screen.HUB -> MetaHubScreen()
                 LightV3Screen.LEAGUE -> LeaderboardExperienceScreen { screen = LightV3Screen.HOME }
