@@ -3,9 +3,12 @@ package com.sonharf.game
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -62,7 +65,13 @@ class MainActivity : ComponentActivity() {
                 ),
                 typography = SonHarfNeonTypography,
             ) {
-                IntegratedNeonSonHarfApp()
+                // Keep the approved neon root inside status/navigation/gesture-safe bounds.
+                // The mockup scaffold still owns its own bottom-bar padding; this outer
+                // inset prevents device-specific system bars from clipping headings or
+                // colliding with navigation controls on small/tall Android aspect ratios.
+                Box(Modifier.safeDrawingPadding()) {
+                    IntegratedNeonSonHarfApp()
+                }
             }
         }
     }
