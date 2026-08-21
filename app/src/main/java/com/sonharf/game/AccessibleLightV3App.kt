@@ -85,7 +85,7 @@ fun AccessibleLightV3SonHarfApp() {
                     onOpenProfile = { screen = LightV3Screen.PROFILE },
                 )
                 LightV3Screen.GAME -> key(gameKey) {
-                    V8BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME })
+                    V8BattleScreenFixed(onLeaveBattle = { screen = LightV3Screen.HOME })
                 }
                 LightV3Screen.STORE -> V4StoreScreen()
                 LightV3Screen.FRIENDS -> V7FriendsScreen { screen = LightV3Screen.HOME }
