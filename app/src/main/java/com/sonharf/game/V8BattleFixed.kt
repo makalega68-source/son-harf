@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -312,75 +313,146 @@ private fun BattleKeyboardFixed(enabled: Boolean, submitEnabled: Boolean, onKey:
 @Composable
 private fun BattleChatFullScreenFixed(messages: List<ChatMessageDto>, me: String?, language: String, enabled: Boolean, onDismiss: () -> Unit, onSend: (String) -> Unit) {
     var input by remember { mutableStateOf("") }
+    var shifted by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
     val isEnglish = language.lowercase().startsWith("en")
-    val rows = if (isEnglish) listOf(
-        listOf("Q","W","E","R","T","Y","U","I","O","P"),
-        listOf("A","S","D","F","G","H","J","K","L"),
-        listOf("Z","X","C","V","B","N","M")
+    val lowerRows = if (isEnglish) listOf(
+        listOf("q","w","e","r","t","y","u","i","o","p"),
+        listOf("a","s","d","f","g","h","j","k","l"),
+        listOf("z","x","c","v","b","n","m")
     ) else listOf(
+        listOf("q","w","e","r","t","y","u","ı","o","p","ğ","ü"),
+        listOf("a","s","d","f","g","h","j","k","l","ş","i"),
+        listOf("z","x","c","v","b","n","m","ö","ç")
+    )
+    val upperRows = if (isEnglish) lowerRows.map { row -> row.map { it.uppercase() } } else listOf(
         listOf("Q","W","E","R","T","Y","U","I","O","P","Ğ","Ü"),
         listOf("A","S","D","F","G","H","J","K","L","Ş","İ"),
         listOf("Z","X","C","V","B","N","M","Ö","Ç")
     )
+    val rows = if (shifted) upperRows else lowerRows
+
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
+    }
 
     Surface(modifier = Modifier.fillMaxSize(), color = B8White) {
-        Column(
-            Modifier.fillMaxSize().padding(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp)
-        ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 12.dp, end = 6.dp, top = 6.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, if (isEnglish) "Close" else "Kapat") }
             }
 
             LazyColumn(
-                modifier = Modifier.weight(1f).fillMaxWidth(),
+                state = listState,
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(7.dp),
                 contentPadding = PaddingValues(vertical = 6.dp)
             ) {
                 items(messages, key = { it.id }) { m ->
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.senderId == me) Arrangement.End else Arrangement.Start) {
-                        Surface(shape = RoundedCornerShape(12.dp), color = if (m.senderId == me) B8Blue else B8BlueLight) {
-                            Text(m.body, Modifier.widthIn(max = 280.dp).padding(10.dp), color = if (m.senderId == me) Color.White else B8Text)
+                        Surface(shape = RoundedCornerShape(16.dp), color = if (m.senderId == me) B8Blue else B8BlueLight) {
+                            Text(
+                                m.body,
+                                Modifier.widthIn(max = 300.dp).padding(horizontal = 12.dp, vertical = 9.dp),
+                                color = if (m.senderId == me) Color.White else B8Text,
+                                fontSize = 14.sp,
+                                lineHeight = 19.sp
+                            )
                         }
                     }
                 }
             }
 
             Surface(
-                Modifier.fillMaxWidth().heightIn(min = 52.dp),
-                shape = RoundedCornerShape(13.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp).heightIn(min = 50.dp, max = 88.dp),
+                shape = RoundedCornerShape(15.dp),
                 color = B8White,
                 border = BorderStroke(1.2.dp, B8Blue.copy(alpha = .55f))
             ) {
                 Text(
                     if (input.isBlank()) if (isEnglish) "Type a message…" else "Mesaj yaz…" else input,
-                    Modifier.padding(12.dp),
+                    Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
                     color = if (input.isBlank()) B8Muted else B8Text,
                     maxLines = 3,
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    lineHeight = 19.sp
                 )
             }
 
-            rows.forEach { row ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    row.forEach { key ->
+            Surface(color = Color(0xFFDDE3E9), tonalElevation = 2.dp) {
+                Column(
+                    Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 7.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    ChatKeyboardRowFixed(rows[0], enabled, input.length < 300) { key -> input += key }
+                    Row(Modifier.fillMaxWidth().padding(horizontal = if (isEnglish) 14.dp else 3.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        rows[1].forEach { key -> ChatKeyboardKeyFixed(key, Modifier.weight(1f), enabled && input.length < 300) { input += key } }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ChatKeyboardActionFixed(if (shifted) "⇧" else "⇧", Modifier.weight(1.35f), enabled, shifted) { shifted = !shifted }
+                        rows[2].forEach { key -> ChatKeyboardKeyFixed(key, Modifier.weight(1f), enabled && input.length < 300) { input += key } }
+                        ChatKeyboardActionFixed("⌫", Modifier.weight(1.45f), enabled && input.isNotEmpty()) { if (input.isNotEmpty()) input = input.dropLast(1) }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        ChatKeyboardKeyFixed(",", Modifier.weight(.85f), enabled && input.length < 300) { input += "," }
+                        ChatKeyboardActionFixed(if (isEnglish) "SPACE" else "BOŞLUK", Modifier.weight(4.4f), enabled && input.length < 300) {
+                            if (input.isNotEmpty() && !input.endsWith(" ")) input += " "
+                        }
+                        ChatKeyboardKeyFixed(".", Modifier.weight(.85f), enabled && input.length < 300) { input += "." }
                         Button(
-                            onClick = { if (enabled && input.length < 300) input += key },
-                            enabled = enabled && input.length < 300,
-                            modifier = Modifier.weight(1f).height(40.dp),
-                            shape = RoundedCornerShape(7.dp),
-                            contentPadding = PaddingValues(0.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFECE7DE), contentColor = B8Text)
-                        ) { Text(key, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                            onClick = { val t = input.trim(); if (t.isNotBlank()) { onSend(t); input = ""; shifted = false } },
+                            enabled = enabled && input.isNotBlank(),
+                            modifier = Modifier.weight(1.9f).height(46.dp),
+                            shape = RoundedCornerShape(9.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = B8Blue),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) { Text(if (isEnglish) "SEND" else "GÖNDER", fontSize = 10.sp, fontWeight = FontWeight.Black) }
                     }
                 }
             }
+        }
+    }
+}
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                Button(onClick = { if (input.isNotEmpty()) input = input.dropLast(1) }, enabled = enabled && input.isNotEmpty(), modifier = Modifier.weight(1f).height(42.dp), colors = ButtonDefaults.buttonColors(containerColor = B8Coral)) { Text(if (isEnglish) "⌫ DEL" else "⌫ SİL", fontSize = 11.sp) }
-                Button(onClick = { if (enabled && input.length < 300 && input.isNotEmpty() && !input.endsWith(" ")) input += " " }, enabled = enabled && input.isNotEmpty() && input.length < 300, modifier = Modifier.weight(1.4f).height(42.dp)) { Text(if (isEnglish) "SPACE" else "BOŞLUK", fontSize = 11.sp) }
-                Button(onClick = { val t = input.trim(); if (t.isNotBlank()) { onSend(t); input = "" } }, enabled = enabled && input.isNotBlank(), modifier = Modifier.weight(1.4f).height(42.dp), colors = ButtonDefaults.buttonColors(containerColor = B8Green)) { Text(if (isEnglish) "SEND" else "GÖNDER", fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-            }
+@Composable
+private fun ChatKeyboardRowFixed(keys: List<String>, enabled: Boolean, roomForText: Boolean, onKey: (String) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        keys.forEach { key -> ChatKeyboardKeyFixed(key, Modifier.weight(1f), enabled && roomForText) { onKey(key) } }
+    }
+}
+
+@Composable
+private fun ChatKeyboardKeyFixed(label: String, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(46.dp),
+        shape = RoundedCornerShape(7.dp),
+        color = Color(0xFFFFFFFF),
+        shadowElevation = 1.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(label, color = B8Text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+@Composable
+private fun ChatKeyboardActionFixed(label: String, modifier: Modifier, enabled: Boolean, active: Boolean = false, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(46.dp),
+        shape = RoundedCornerShape(7.dp),
+        color = if (active) Color(0xFFBCC8D3) else Color(0xFFC7D0D9),
+        shadowElevation = 1.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(label, color = B8Text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
