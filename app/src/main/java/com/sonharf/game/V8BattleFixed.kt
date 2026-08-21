@@ -181,8 +181,8 @@ fun V8BattleScreenFixed(onLeaveBattle: () -> Unit) {
                     val refreshedRoom = runCatching { backend.getRoom(active.id) }.getOrNull()
                     val refreshedWords = runCatching { backend.getWords(active.id) }.getOrDefault(words)
                     val last = refreshedWords.lastOrNull()
-                    val acceptedOnServer = (refreshedRoom?.validWordCount ?: beforeCount) > beforeCount ||
-                        (last?.playerId == me && last.word.trim().equals(submitted, ignoreCase = true))
+                    val lastAcceptedByMe = last?.let { it.playerId == me && it.word.trim().equals(submitted, ignoreCase = true) } == true
+                    val acceptedOnServer = (refreshedRoom?.validWordCount ?: beforeCount) > beforeCount || lastAcceptedByMe
                     if (acceptedOnServer) {
                         if (refreshedRoom != null) room = refreshedRoom
                         words = refreshedWords
