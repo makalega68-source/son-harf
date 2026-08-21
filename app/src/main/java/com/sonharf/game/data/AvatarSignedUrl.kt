@@ -21,7 +21,7 @@ object AvatarSignedUrl {
         if (value.isBlank()) return null
         if (value.startsWith("http://") || value.startsWith("https://")) return value
         val session = SupabaseProvider.client.auth.currentSessionOrNull() ?: return null
-        val encodedPath = value.split('/').joinToString("/") { encodeURLPathPart(it) }
+        val encodedPath = value.split('/').joinToString("/") { it.encodeURLPathPart() }
         val response = http.post("${BuildConfig.SUPABASE_URL}/storage/v1/object/sign/profile-photos/$encodedPath") {
             header(HttpHeaders.Authorization, "Bearer ${session.accessToken}")
             header("apikey", BuildConfig.SUPABASE_KEY)
