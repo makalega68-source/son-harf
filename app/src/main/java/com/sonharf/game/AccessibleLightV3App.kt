@@ -13,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 import com.sonharf.game.data.*
 
 private enum class LightV3Screen { HOME, GAME, STORE, FRIENDS, VIP, PROFILE, PREFERENCES, HUB, LEAGUE }
@@ -86,24 +85,12 @@ fun AccessibleLightV3SonHarfApp() {
                     onOpenProfile = { screen = LightV3Screen.PROFILE },
                 )
                 LightV3Screen.GAME -> key(gameKey) {
-                    Box(Modifier.fillMaxSize()) {
-                        V6BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME })
-                        // Keep the V7 VIP affordance above the battle UI, but constrain its layout/hit-test
-                        // region to the top-right badge area instead of layering a full-screen box over gameplay.
-                        Box(
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .width(220.dp)
-                                .height(140.dp),
-                        ) {
-                            V7BattleVipOverlay()
-                        }
-                    }
+                    V8BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME })
                 }
                 LightV3Screen.STORE -> V4StoreScreen()
                 LightV3Screen.FRIENDS -> V7FriendsScreen { screen = LightV3Screen.HOME }
                 LightV3Screen.VIP -> V7VipHubScreen { screen = LightV3Screen.HOME }
-                LightV3Screen.PROFILE -> V5ProfileScreen(onOpenPreferences = { screen = LightV3Screen.PREFERENCES })
+                LightV3Screen.PROFILE -> V8ProfileScreen(onOpenPreferences = { screen = LightV3Screen.PREFERENCES })
                 LightV3Screen.PREFERENCES -> V4PreferencesScreen(onBack = { screen = LightV3Screen.PROFILE })
                 LightV3Screen.HUB -> MetaHubScreen()
                 LightV3Screen.LEAGUE -> V6LeaderboardScreen { screen = LightV3Screen.HOME }
