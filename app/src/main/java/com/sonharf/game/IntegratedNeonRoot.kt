@@ -60,6 +60,10 @@ fun IntegratedNeonSonHarfApp() {
         MockupSonHarfApp()
         // v0.8.4 winner celebration retained above the new interface.
         WinnerFireworkOverlay()
+        // Reuse the production frameless action layer: streak celebration,
+        // quick reactions, one dismissible match summary and sharing actions.
+        // It renders only transient overlays, so no legacy light route is exposed.
+        ComboOverlayV9()
         // v0.8.6 friend-only direct-chat quick access retained globally.
         FriendsQuickAccessOverlay()
     }
