@@ -88,6 +88,7 @@ internal fun ProfilePhotoAvatar(
     size: Dp,
     visible: Boolean = true,
     accent: Color = SonHarfCyan,
+    shape: androidx.compose.ui.graphics.Shape = CircleShape,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(avatarPath) {
@@ -95,13 +96,13 @@ internal fun ProfilePhotoAvatar(
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     Box(
-        Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
+        Modifier.size(size).clip(shape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (bitmap != null) {
-            Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+            Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(shape), contentScale = ContentScale.Crop)
         } else {
-            Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxSize().clip(shape).background(Color.White), contentAlignment = Alignment.Center) {
                 Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (size.value * .38f).sp)
             }
         }
