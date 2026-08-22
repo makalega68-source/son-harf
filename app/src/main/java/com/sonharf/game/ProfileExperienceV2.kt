@@ -49,7 +49,7 @@ private data class ProfileV2Dto(
     val id: String,
     @SerialName("display_name") val displayName: String,
     @SerialName("avatar_path") val avatarPath: String? = null,
-    @SerialName("avatar_visibility") val avatarVisibility: String = "hidden",
+    @SerialName("avatar_visibility") val avatarVisibility: String = "visible",
     @SerialName("is_vip") val isVip: Boolean = false,
     val diamonds: Int = 0,
     val wins: Int = 0,
@@ -233,12 +233,14 @@ fun ProfileExperienceV2Screen() {
                     busy = true
                     runCatching {
                         val bytes = withContext(Dispatchers.IO) { context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: error("photo_read_failed") }
-                        require(bytes.isNotEmpty() && bytes.size <= 8 * 1024 * 1024) { "photo_size" }
+                        require(bytes.isNotEmpty()) { "photo_size" }
                         val type = context.contentResolver.getType(uri) ?: "image/jpeg"
                         require(type.startsWith("image/")) { "photo_type" }
-                        val path = ProfilePhotoStorageV2.upload(bytes, type)
-                        profile = saveAvatarV2(path)
-                        avatarBytes = bytes
+                        val compact = ProfilePhotoRuntime.compactForUpload(bytes)
+                        val path = ProfilePhotoStorageV2.upload(compact, "image/webp")
+                        saveAvatarV2(path)
+                        profile = setAvatarHiddenV2(false)
+                        avatarBytes = compact
                     }.onSuccess { notice = sh("Profil fotoğrafı güncellendi.", "Profile photo updated.") }
                         .onFailure { notice = sh("Fotoğraf yüklenemedi. JPG/PNG/WEBP ve 8 MB sınırını kontrol et.", "Photo could not be uploaded. Check JPG/PNG/WEBP and the 8 MB limit.") }
                     busy = false
@@ -300,7 +302,7 @@ private fun PhotoEditorDialogV2(
                     }
                     Switch(checked = hide, onCheckedChange = { hide = it; onHidden(it) }, enabled = !busy)
                 }
-                Text(sh("JPG, PNG veya WEBP • en fazla 8 MB", "JPG, PNG or WEBP • max 8 MB"), color = SonHarfMuted, fontSize = 13.sp)
+                Text(sh("Her boyut kabul edilir • otomatik yüksek kaliteli WEBP küçültme", "Any image size • automatic high-quality WEBP compression"), color = SonHarfMuted, fontSize = 13.sp)
             }
         },
         confirmButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(sh("BİTTİ", "DONE"), fontSize = 17.sp, fontWeight = FontWeight.Black) } },
