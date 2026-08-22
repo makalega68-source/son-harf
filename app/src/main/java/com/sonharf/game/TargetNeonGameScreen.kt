@@ -184,15 +184,28 @@ fun TargetNeonGameScreen() {
                 onSubmit = {
                     scope.launch {
                         val submitted = wordInput.trim(); if (submitted.isBlank()) return@launch
-                        wordInput = ""; busy = true
+                        busy = true
                         runCatching { backend.submitWord(active.id, submitted) }
-                            .onSuccess { room = it; notice = if (it.lastEventPlayerId == me && it.lastEvent != null && it.lastEvent != "word_accepted") friendly(it.lastEvent ?: "") else "${submitted.uppercase()} kabul edildi" }
+                            .onSuccess {
+                                room = it
+                                wordInput = ""
+                                notice = if (it.lastEventPlayerId == me && it.lastEvent != null && it.lastEvent != "word_accepted") friendly(it.lastEvent ?: "") else "${submitted.uppercase()} kabul edildi"
+                            }
                             .onFailure { notice = friendly(it.message.orEmpty()) }
                         busy = false
                     }
                 },
                 onTimeout = { scope.launch { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it } } },
-                onForfeit = { scope.launch { runCatching { backend.forfeit(active.id) }.onSuccess { room = it } } },
+                onForfeit = {
+                    scope.launch {
+                        runCatching { backend.forfeit(active.id) }
+                            .onSuccess {
+                                room = it
+                                if (it.status == "finished") SonHarfUiState.homeRequest += 1
+                            }
+                            .onFailure { notice = friendly(it.message.orEmpty()) }
+                    }
+                },
                 onSendChat = { text -> scope.launch { runCatching { backend.sendChat(active.id, text) }.onFailure { notice = friendly(it.message.orEmpty()) } } },
                 onExit = { roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); room = null; words = emptyList(); chatMessages = emptyList(); notice = "Yeni düelloya hazırsın" },
                 onRematch = { scope.launch { runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }.onSuccess { room = it; words = emptyList(); if (it.id != active.id) observe(it) } } },
@@ -326,9 +339,15 @@ private fun TargetArena(
     }
 
     if (room.status == "finished") {
-        // The persistent ComboOverlayV9 is the single match-result owner.
-        // Keep the underlying arena neutral so two result UIs never overlap.
-        Box(Modifier.fillMaxSize().background(TGbg))
+        Box(Modifier.fillMaxSize().background(TGbg), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(sh("MAÇ TAMAMLANDI", "MATCH FINISHED"), color = TGtext, fontWeight = FontWeight.Black, fontSize = 24.sp)
+                Text(sh("Sonuç özeti açılmazsa ana menüye güvenle dönebilirsin.", "If the result summary does not open, you can safely return home."), color = TGmuted, fontSize = 12.sp, textAlign = TextAlign.Center)
+                Button(onClick = onExit, colors = ButtonDefaults.buttonColors(containerColor = TGcyan)) {
+                    Text(sh("ANA MENÜ", "HOME"), color = Color.White, fontWeight = FontWeight.Black)
+                }
+            }
+        }
         return
     }
 

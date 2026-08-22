@@ -71,7 +71,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
     val progress = (((myRow?.wins ?: 0) - currentFloor).toFloat() / (nextAt - currentFloor).coerceAtLeast(1)).coerceIn(0f, 1f)
 
     LazyColumn(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF040717), SonHarfBg, Color(0xFF06091A)))),
+        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(11.dp),
     ) {
@@ -97,7 +97,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
             ) {
                 Column(
                     Modifier.fillMaxWidth().background(
-                        Brush.radialGradient(listOf(SonHarfPurple.copy(alpha = .28f), SonHarfSurface, Color(0xFF050918)))
+                        Brush.radialGradient(listOf(SonHarfCyan.copy(alpha = .18f), SonHarfSurface2, SonHarfSurface))
                     ).padding(18.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -115,7 +115,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                             progress = { progress },
                             modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
                             color = SonHarfPurple,
-                            trackColor = Color(0xFF1A2440),
+                            trackColor = SonHarfMuted.copy(alpha = .16f),
                         )
                         Text("${myRow.wins} ${sh("galibiyet", "wins")} • ${sh("sonraki lig", "next league")}: $nextAt", color = SonHarfMuted, fontSize = 10.sp)
                     }
