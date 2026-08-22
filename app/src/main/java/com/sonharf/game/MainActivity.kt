@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 Box {
                     ClassicPremiumApp()
+                    RegressionGuardOverlay()
                     WinnerFireworkOverlay()
                     FriendsQuickAccessOverlay()
                     GameInviteOverlay()
