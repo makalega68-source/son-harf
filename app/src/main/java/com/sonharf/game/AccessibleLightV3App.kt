@@ -29,6 +29,8 @@ fun AccessibleLightV3SonHarfApp() {
     var authenticated by remember { mutableStateOf(false) }
     var gameKey by remember { mutableIntStateOf(0) }
     val lobbyRequest = SonHarfGameNavigation.lobbyRequest
+    val appBg = Color(0xFFF2EFE6)
+    val navTeal = Color(0xFF1C8C8C)
 
     LaunchedEffect(Unit) {
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
@@ -47,8 +49,8 @@ fun AccessibleLightV3SonHarfApp() {
     }
 
     if (!authChecked) {
-        Box(Modifier.fillMaxSize().background(Color(0xFFF8FAFC)), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = Color(0xFF0284C7))
+        Box(Modifier.fillMaxSize().background(appBg), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = navTeal)
         }
         return
     }
@@ -58,20 +60,20 @@ fun AccessibleLightV3SonHarfApp() {
     }
 
     Scaffold(
-        containerColor = Color(0xFFF8FAFC),
+        containerColor = appBg,
         bottomBar = {
             if (screen in setOf(LightV3Screen.HOME, LightV3Screen.STORE, LightV3Screen.FRIENDS, LightV3Screen.VIP, LightV3Screen.PROFILE, LightV3Screen.PREFERENCES)) {
-                NavigationBar(containerColor = Color.White) {
-                    NavigationBarItem(selected = screen == LightV3Screen.HOME, onClick = { screen = LightV3Screen.HOME }, icon = { Icon(Icons.Rounded.Home, "Ana Sayfa") }, label = { Text("Ana Sayfa") })
-                    NavigationBarItem(selected = screen == LightV3Screen.FRIENDS, onClick = { screen = LightV3Screen.FRIENDS }, icon = { Icon(Icons.Rounded.Group, "Arkadaşlar") }, label = { Text("Arkadaşlar") })
-                    NavigationBarItem(selected = screen == LightV3Screen.STORE, onClick = { screen = LightV3Screen.STORE }, icon = { Icon(Icons.Rounded.ShoppingCart, "Mağaza") }, label = { Text("Mağaza") })
-                    NavigationBarItem(selected = screen == LightV3Screen.VIP, onClick = { screen = LightV3Screen.VIP }, icon = { Icon(Icons.Rounded.WorkspacePremium, "VIP", tint = Color(0xFF7C3AED)) }, label = { Text("VIP") })
-                    NavigationBarItem(selected = screen == LightV3Screen.PROFILE || screen == LightV3Screen.PREFERENCES, onClick = { screen = LightV3Screen.PROFILE }, icon = { Icon(Icons.Rounded.Person, "Profil") }, label = { Text("Profil") })
+                NavigationBar(containerColor = Color(0xFFFFFCF4)) {
+                    NavigationBarItem(selected = screen == LightV3Screen.HOME, onClick = { screen = LightV3Screen.HOME }, icon = { Icon(Icons.Rounded.Home, "Ana Sayfa") }, label = { Text("Ana Sayfa") }, colors = NavigationBarItemDefaults.colors(indicatorColor = Color(0xFFD9EEE8), selectedIconColor = navTeal, selectedTextColor = navTeal))
+                    NavigationBarItem(selected = screen == LightV3Screen.FRIENDS, onClick = { screen = LightV3Screen.FRIENDS }, icon = { Icon(Icons.Rounded.Group, "Arkadaşlar") }, label = { Text("Arkadaşlar") }, colors = NavigationBarItemDefaults.colors(indicatorColor = Color(0xFFD9EEE8), selectedIconColor = navTeal, selectedTextColor = navTeal))
+                    NavigationBarItem(selected = screen == LightV3Screen.STORE, onClick = { screen = LightV3Screen.STORE }, icon = { Icon(Icons.Rounded.ShoppingCart, "Mağaza") }, label = { Text("Mağaza") }, colors = NavigationBarItemDefaults.colors(indicatorColor = Color(0xFFFFF0B7), selectedIconColor = Color(0xFF9A6A00), selectedTextColor = Color(0xFF9A6A00)))
+                    NavigationBarItem(selected = screen == LightV3Screen.VIP, onClick = { screen = LightV3Screen.VIP }, icon = { Icon(Icons.Rounded.WorkspacePremium, "VIP", tint = Color(0xFF8066A8)) }, label = { Text("VIP") }, colors = NavigationBarItemDefaults.colors(indicatorColor = Color(0xFFEDE3F5), selectedTextColor = Color(0xFF8066A8)))
+                    NavigationBarItem(selected = screen == LightV3Screen.PROFILE || screen == LightV3Screen.PREFERENCES, onClick = { screen = LightV3Screen.PROFILE }, icon = { Icon(Icons.Rounded.Person, "Profil") }, label = { Text("Profil") }, colors = NavigationBarItemDefaults.colors(indicatorColor = Color(0xFFD9EEE8), selectedIconColor = navTeal, selectedTextColor = navTeal))
                 }
             }
         },
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(padding).background(Color(0xFFF8FAFC))) {
+        Box(Modifier.fillMaxSize().padding(padding).background(appBg)) {
             when (screen) {
                 LightV3Screen.HOME -> V6HomeRoute(
                     onStartGameMode = { mode ->
@@ -104,7 +106,7 @@ fun AccessibleLightV3SonHarfApp() {
                 )
                 LightV3Screen.GAME -> key(gameKey) {
                     Box(Modifier.fillMaxSize()) {
-                        V8BattleScreenFixed(onLeaveBattle = { screen = LightV3Screen.HOME })
+                        V10BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME })
                         if (SonHarfGameModeState.mode == "expert") ExpertArenaOverlay()
                     }
                 }
