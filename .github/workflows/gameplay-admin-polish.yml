@@ -32,7 +32,9 @@ jobs:
         with:
           gradle-version: '8.14.4'
       - name: Apply protected polish
-        run: python3 scripts/apply_gameplay_admin_polish.py
+        run: |
+          python3 scripts/apply_gameplay_admin_polish.py
+          grep -q 'import androidx.compose.ui.graphics.Color' app/src/main/java/com/sonharf/game/ExpertArenaOverlay.kt || sed -i '/import androidx.compose.ui.focus.focusRequester/a import androidx.compose.ui.graphics.Color' app/src/main/java/com/sonharf/game/ExpertArenaOverlay.kt
       - name: Verify requested contracts
         run: |
           grep -q 'focusRequester(focusRequester)' app/src/main/java/com/sonharf/game/ExpertArenaOverlay.kt
