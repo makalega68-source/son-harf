@@ -32,11 +32,25 @@ jobs:
         with:
           gradle-version: '8.14.4'
       - name: Apply responsive repairs
-        run: python3 scripts/apply_responsive_gameflow_fix.py
+        run: |
+          python3 scripts/apply_responsive_gameflow_fix.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/sonharf/game/BilBakalimFeature.kt')
+          t = p.read_text()
+          if 'import androidx.compose.foundation.shape.CircleShape\n' not in t:
+              t = t.replace(
+                  'import androidx.compose.foundation.shape.RoundedCornerShape\n',
+                  'import androidx.compose.foundation.shape.CircleShape\nimport androidx.compose.foundation.shape.RoundedCornerShape\n',
+                  1,
+              )
+          p.write_text(t)
+          PY
       - name: Verify requested contracts
         run: |
           grep -q 'aspectRatio(1f)' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
           grep -q 'BoxWithConstraints' app/src/main/java/com/sonharf/game/BilBakalimFeature.kt
+          grep -q 'import androidx.compose.foundation.shape.CircleShape' app/src/main/java/com/sonharf/game/BilBakalimFeature.kt
           ! grep -q 'verticalScroll(rememberScrollState())' app/src/main/java/com/sonharf/game/BilBakalimFeature.kt
           grep -q 'imeVisible = WindowInsets.ime.getBottom' app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
           grep -q 'KATIL / ONAYLA' app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
