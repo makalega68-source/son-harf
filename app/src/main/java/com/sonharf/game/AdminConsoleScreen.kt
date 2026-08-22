@@ -44,6 +44,10 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
     var products by remember { mutableStateOf<List<AdminTopProductDto>>(emptyList()) }
     var storeItems by remember { mutableStateOf<List<AdminTopStoreItemDto>>(emptyList()) }
     var health by remember { mutableStateOf<List<AdminHealthDto>>(emptyList()) }
+    var monthlyRevenue by remember { mutableStateOf<List<AdminMonthlyRevenueDto>>(emptyList()) }
+    var announcement by remember { mutableStateOf(AdminAnnouncementDto()) }
+    var announcementText by remember { mutableStateOf("") }
+    var announcementEnabled by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -60,6 +64,10 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
             products = backend.getAdminTopProducts()
             storeItems = backend.getAdminTopStoreItems()
             health = backend.getAdminHealth()
+            monthlyRevenue = backend.getAdminMonthlyRevenue()
+            announcement = backend.getAdminAnnouncement()
+            announcementText = announcement.message
+            announcementEnabled = announcement.enabled
         }.onFailure {
             dashboard = null
             error = "Bu panel yalnızca yetkili yönetici hesabında açılabilir."
@@ -159,6 +167,36 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                     modifier = Modifier.fillMaxWidth(),
                     border = BorderStroke(1.dp, AdminGold.copy(alpha=.55f)),
                 ) { Text("ÜRÜN FİYATI TANIMLA / GÜNCELLE", color = AdminGold) }
+            }
+
+            item { AdminSectionTitle("AYLIK GELİR", Icons.Rounded.CalendarMonth) }
+            item {
+                AdminWideCard {
+                    val current = monthlyRevenue.firstOrNull()
+                    Text("Bu ay kayıtlı brüt gelir", color = AdminMuted, fontSize = 12.sp)
+                    Text(formatMoney(current?.revenueMinor ?: 0, current?.currency ?: "TRY"), color = AdminGold, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                    monthlyRevenue.take(6).forEach { m -> AdminSimpleRow(m.month, formatMoney(m.revenueMinor, m.currency)) }
+                }
+            }
+
+            item { AdminSectionTitle("DUYURU PANOSU", Icons.Rounded.Campaign) }
+            item {
+                AdminWideCard {
+                    OutlinedTextField(announcementText, { announcementText = it.take(500) }, modifier = Modifier.fillMaxWidth(), label = { Text("Duyuru metni") }, minLines = 2, maxLines = 5)
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Duyuruyu yayınla", color = AdminText, fontWeight = FontWeight.Bold)
+                        Switch(checked = announcementEnabled, onCheckedChange = { announcementEnabled = it })
+                    }
+                    Button(onClick = {
+                        scope.launch {
+                            busy = true
+                            runCatching { backend.adminSetAnnouncement(announcementText.trim(), announcementEnabled) }
+                                .onSuccess { notice = "Duyuru panosu güncellendi." }
+                                .onFailure { error = it.message ?: "Duyuru güncellenemedi." }
+                            reload(); busy = false
+                        }
+                    }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("DUYURUYU KAYDET") }
+                }
             }
 
             item { AdminSectionTitle("OYUN TERCİHİ", Icons.Rounded.SportsEsports) }

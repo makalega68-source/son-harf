@@ -1,5 +1,10 @@
 package com.sonharf.game
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +19,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -26,6 +36,7 @@ import com.sonharf.game.data.*
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.time.Instant
 
 /** Expert arena only. Finished matches are deliberately handled by ComboOverlayV9. */
 @Composable
@@ -42,6 +53,8 @@ fun ExpertArenaOverlay() {
     var showChat by remember { mutableStateOf(false) }
     var chat by remember { mutableStateOf<List<ChatMessageDto>>(emptyList()) }
     var chatInput by remember { mutableStateOf("") }
+    var playerProfile by remember { mutableStateOf<ProfileDto?>(null) }
+    var opponentProfile by remember { mutableStateOf<ProfileDto?>(null) }
 
     suspend fun refreshVip() {
         val me = backend.currentUserId() ?: return
@@ -75,6 +88,12 @@ fun ExpertArenaOverlay() {
             } else if (next != null) {
                 room = next
                 words = runCatching { backend.getWords(next.id) }.getOrDefault(words)
+                val me = backend.currentUserId()
+                if (me != null) {
+                    playerProfile = runCatching { backend.getProfile(me) }.getOrNull()
+                    val opponentId = if (next.hostId == me) next.guestId else next.hostId
+                    opponentProfile = if (next.isBot) null else opponentId?.let { runCatching { backend.getProfile(it) }.getOrNull() }
+                }
                 if (showChat && !next.isBot && isVip) chat = runCatching { backend.getChat(next.id) }.getOrDefault(chat)
             }
             delay(500)
@@ -90,6 +109,28 @@ fun ExpertArenaOverlay() {
     val myRounds = if (host) active.hostRounds else active.guestRounds
     val oppRounds = if (host) active.guestRounds else active.hostRounds
     val myTurn = active.currentPlayerId == me && active.status in listOf("playing", "sudden_death")
+    var seconds by remember(active.turnDeadline) { mutableIntStateOf(45) }
+    val focusRequester = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val timerPulse by rememberInfiniteTransition(label = "expertTimerPulse").animateFloat(
+        initialValue = 1f,
+        targetValue = if (seconds <= 10) 1.09f else 1f,
+        animationSpec = infiniteRepeatable(tween(if (seconds <= 10) 420 else 1000), RepeatMode.Reverse),
+        label = "expertTimerBeat",
+    )
+    LaunchedEffect(active.turnDeadline, active.currentPlayerId, active.status) {
+        while (active.turnDeadline != null && active.status in listOf("playing", "sudden_death")) {
+            seconds = runCatching { (Instant.parse(active.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0) }.getOrDefault(45)
+            delay(250)
+        }
+    }
+    LaunchedEffect(myTurn, active.id) {
+        if (myTurn) {
+            delay(140)
+            runCatching { focusRequester.requestFocus() }
+            keyboard?.show()
+        }
+    }
     val suffixLen = active.roundNo.coerceIn(1, 3)
     val last = words.lastOrNull()?.normalizedWord?.uppercase().orEmpty()
     val required = if (last.isBlank()) "" else last.takeLast(suffixLen)
@@ -97,12 +138,12 @@ fun ExpertArenaOverlay() {
     fun submitWord() {
         val submitted = input.trim()
         if (submitted.isBlank() || !myTurn || busy) return
+        input = ""
         scope.launch {
             busy = true
             runCatching { backend.submitWord(active.id, submitted) }
                 .onSuccess { r ->
                     room = r
-                    input = ""
                     notice = when (r.lastEvent) {
                         "wrong_start_letter" -> sh("Yanlış başlangıç. −1", "Wrong prefix. −1")
                         "invalid_word" -> sh("Geçersiz kelime. −1", "Invalid word. −1")
@@ -124,14 +165,19 @@ fun ExpertArenaOverlay() {
             verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-                ExpertPlayerCard(sh("SEN", "YOU"), myScore, myRounds, myTurn, Modifier.weight(1f))
-                Surface(shape = CircleShape, color = SonHarfGold.copy(alpha = .16f), border = BorderStroke(2.dp, SonHarfGold)) {
-                    Column(Modifier.size(64.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Text("×$suffixLen", color = SonHarfGold, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                        Text(sh("PUAN", "SCORE"), color = SonHarfMuted, fontSize = 7.sp)
+                ExpertPlayerCard(playerProfile?.displayName ?: sh("SEN", "YOU"), playerProfile?.avatarPath, playerProfile?.gender, myScore, myRounds, myTurn, Modifier.weight(1f))
+                Surface(
+                    modifier = Modifier.scale(timerPulse),
+                    shape = CircleShape,
+                    color = if (seconds <= 10) SonHarfPink.copy(alpha = .16f) else SonHarfGold.copy(alpha = .16f),
+                    border = BorderStroke(2.dp, if (seconds <= 10) SonHarfPink else SonHarfGold),
+                ) {
+                    Column(Modifier.size(72.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Text("$seconds", color = if (seconds <= 10) SonHarfPink else SonHarfText, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                        Text("sn • ×$suffixLen", color = if (seconds <= 10) SonHarfPink else SonHarfGold, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-                ExpertPlayerCard(if (active.isBot) "${active.botName ?: "KelimeBot"} BOT" else sh("RAKİP", "OPPONENT"), oppScore, oppRounds, !myTurn, Modifier.weight(1f))
+                ExpertPlayerCard(if (active.isBot) "${active.botName ?: "KelimeBot"} BOT" else opponentProfile?.displayName ?: sh("RAKİP", "OPPONENT"), opponentProfile?.avatarPath, opponentProfile?.gender, oppScore, oppRounds, !myTurn, Modifier.weight(1f), isBot = active.isBot)
             }
 
             Card(
@@ -145,9 +191,9 @@ fun ExpertArenaOverlay() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceBetween,
                 ) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${sh("UZMAN", "EXPERT")} • ROUND ${active.roundNo}/3", color = SonHarfGold, fontWeight = FontWeight.Black)
-                        Text("${active.roundWordCount}/15", color = SonHarfCyan, fontWeight = FontWeight.Black)
+                    Box(Modifier.fillMaxWidth()) {
+                        Text("${sh("UZMAN", "EXPERT")} • ROUND ${active.roundNo}/3", color = SonHarfGold, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.Center), textAlign = TextAlign.Center)
+                        Text("${active.roundWordCount}/15", color = SonHarfCyan, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.CenterEnd))
                     }
                     Text(
                         if (active.status == "quiz") sh("BİL BAKALIM", "BIL BAKALIM") else if (myTurn) sh("SIRA SENDE", "YOUR TURN") else if (active.isBot && active.botTurn) sh("BOT DÜŞÜNÜYOR", "BOT IS THINKING") else sh("RAKİBİN SIRASI", "OPPONENT'S TURN"),
@@ -193,7 +239,7 @@ fun ExpertArenaOverlay() {
                 onValueChange = { input = it.take(40) },
                 enabled = myTurn && !busy && active.status != "quiz",
                 singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().focusRequester(focusRequester),
                 placeholder = { Text(if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Rakibin sırası…", "Opponent's turn…")) },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Text,
@@ -275,17 +321,34 @@ fun ExpertArenaOverlay() {
 }
 
 @Composable
-private fun ExpertPlayerCard(name: String, score: Int, rounds: Int, active: Boolean, modifier: Modifier) {
+private fun ExpertPlayerCard(name: String, avatarPath: String?, gender: String?, score: Int, rounds: Int, active: Boolean, modifier: Modifier, isBot: Boolean = false) {
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = if (active) SonHarfCyan.copy(alpha = .11f) else SonHarfSurface),
         shape = RoundedCornerShape(16.dp),
         border = BorderStroke(1.dp, if (active) SonHarfCyan.copy(alpha = .5f) else SonHarfMuted.copy(alpha = .12f)),
     ) {
-        Column(Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(name, maxLines = 1, fontSize = 9.sp, color = SonHarfMuted)
-            Text("$score", fontSize = 24.sp, fontWeight = FontWeight.Black)
-            Text("$rounds ${sh("round", "round")}", fontSize = 7.sp, color = SonHarfMuted)
+        Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            if (isBot) {
+                Surface(modifier = Modifier.size(42.dp), shape = CircleShape, color = SonHarfPink.copy(alpha = .12f)) { Box(contentAlignment = Alignment.Center) { Text("🤖", fontSize = 23.sp) } }
+            } else {
+                Box {
+                    ProfilePhotoAvatar(avatarPath, name, 42.dp, visible = true, accent = if (active) SonHarfCyan else SonHarfPurple)
+                    val g = gender?.trim()?.lowercase()
+                    val female = g in setOf("kadın", "kadin", "female", "woman")
+                    val male = g in setOf("erkek", "male", "man")
+                    if (female || male) {
+                        Surface(Modifier.align(Alignment.BottomEnd).size(15.dp), shape = CircleShape, color = if (female) Color(0xFFFF76A8) else Color(0xFF439EF2), border = BorderStroke(1.dp, Color.White)) {
+                            Box(contentAlignment = Alignment.Center) { Text(if (female) "♀" else "♂", color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                        }
+                    }
+                }
+            }
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(name, maxLines = 1, fontSize = 9.sp, color = SonHarfMuted, textAlign = TextAlign.Center)
+                Text("$score", fontSize = 23.sp, fontWeight = FontWeight.Black)
+                Text("$rounds ${sh("round", "round")}", fontSize = 7.sp, color = SonHarfMuted)
+            }
         }
     }
 }

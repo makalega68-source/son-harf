@@ -46,6 +46,20 @@ data class AdminTopStoreItemDto(
     @SerialName("acquisition_count") val acquisitionCount: Long = 0,
 )
 
+
+@Serializable
+data class AdminMonthlyRevenueDto(
+    val month: String,
+    @SerialName("revenue_minor") val revenueMinor: Long = 0,
+    val currency: String = "TRY",
+)
+
+@Serializable
+data class AdminAnnouncementDto(
+    val message: String = "",
+    val enabled: Boolean = false,
+)
+
 @Serializable
 data class AdminHealthDto(
     @SerialName("metric_key") val metricKey: String,
@@ -103,5 +117,19 @@ suspend fun OnlineGameBackend.adminGrantTestProduct(productId: String) {
     SupabaseProvider.client.postgrest.rpc(
         "admin_grant_test_product_v1",
         buildJsonObject { put("p_product_id", productId) },
+    )
+}
+
+
+suspend fun OnlineGameBackend.getAdminMonthlyRevenue(): List<AdminMonthlyRevenueDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_monthly_revenue_v1").decodeList()
+
+suspend fun OnlineGameBackend.getAdminAnnouncement(): AdminAnnouncementDto =
+    SupabaseProvider.client.postgrest.rpc("admin_get_announcement_v1").decodeSingle()
+
+suspend fun OnlineGameBackend.adminSetAnnouncement(message: String, enabled: Boolean) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_set_announcement_v1",
+        buildJsonObject { put("p_message", message.take(500)); put("p_enabled", enabled) },
     )
 }
