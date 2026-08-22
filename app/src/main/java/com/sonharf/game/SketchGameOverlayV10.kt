@@ -15,7 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -192,7 +198,8 @@ fun SketchGameOverlayV10() {
             },
             onForfeit = { scope.launch { runCatching { backend.forfeit(active.id) }.onSuccess { room = it } } },
             onChat = {
-                if (active.isBot) notice = sh("Bot maçında sohbet kapalı.", "Chat is disabled in bot matches.")
+                if (!isVip) notice = sh("Sohbet VIP üyelerine özeldir.", "Chat is for VIP members.")
+                else if (active.isBot) notice = sh("Bot maçında sohbet kapalı.", "Chat is disabled in bot matches.")
                 else scope.launch { chat = runCatching { backend.getChat(active.id) }.getOrDefault(emptyList()); showChat = true }
             },
             onRematch = { scope.launch { runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }.onSuccess { room = it; words = emptyList(); input = ""; feedback = null; loadProfiles(it) } } },
@@ -218,7 +225,28 @@ fun SketchGameOverlayV10() {
                             Text((if (m.senderId == me) sh("Sen: ", "You: ") else sh("Rakip: ", "Opponent: ")) + m.body, fontSize = 15.sp)
                         }
                     }
-                    OutlinedTextField(chatInput, { chatInput = it.take(300) }, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) })
+                    OutlinedTextField(
+                        value = chatInput,
+                        onValueChange = { chatInput = it.take(300) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) },
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Text,
+                            imeAction = ImeAction.Send,
+                            showKeyboardOnFocus = true,
+                            hintLocales = LocaleList(Locale(if (active.language == "tr") "tr-TR" else "en-US")),
+                        ),
+                        keyboardActions = KeyboardActions(onSend = {
+                            val message = chatInput.trim()
+                            if (message.isNotEmpty()) scope.launch {
+                                runCatching { backend.sendChat(active.id, message) }.onSuccess {
+                                    chatInput = ""
+                                    chat = runCatching { backend.getChat(active.id) }.getOrDefault(chat)
+                                }
+                            }
+                        }),
+                    )
                 }
             },
             confirmButton = { TextButton(onClick = { if (chatInput.isNotBlank()) scope.launch { runCatching { backend.sendChat(active.id, chatInput) }.onSuccess { chatInput = ""; chat = runCatching { backend.getChat(active.id) }.getOrDefault(chat) } } }) { Text(sh("GÖNDER", "SEND"), fontSize = 16.sp) } },
@@ -360,11 +388,15 @@ private fun ArenaV10(
         }
 
         Box(Modifier.fillMaxWidth().height(52.dp), contentAlignment = Alignment.CenterStart) {
-            if (words.isNotEmpty()) {
+            if (!isVip) {
+                Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), color = SonHarfSurface2, border = BorderStroke(1.dp, SonHarfGold.copy(alpha=.35f))) {
+                    Text(sh("🔒 KELİME ZİNCİRİ • VIP", "🔒 WORD CHAIN • VIP"), Modifier.fillMaxWidth().padding(vertical=10.dp), color=SonHarfGold, fontWeight=FontWeight.Black, fontSize=13.sp, textAlign=TextAlign.Center)
+                }
+            } else if (words.isNotEmpty()) {
                 LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
-                    items(words.takeLast(if (isVip) 16 else 7)) { w ->
+                    items(words.takeLast(30)) { w ->
                         val duplicate = feedback?.duplicateWord?.equals(w.word, ignoreCase = true) == true
-                        Surface(shape = RoundedCornerShape(12.dp), color = when { duplicate -> SonHarfPink.copy(alpha=.22f); isVip -> SonHarfGold.copy(alpha=.12f); else -> SonHarfSurface2 }, border = BorderStroke(if (duplicate) 2.dp else 1.dp, when { duplicate -> SonHarfPink; isVip -> SonHarfGold.copy(alpha=.5f); else -> SonHarfMuted.copy(alpha=.14f) })) {
+                        Surface(shape = RoundedCornerShape(12.dp), color = if (duplicate) SonHarfPink.copy(alpha=.22f) else SonHarfGold.copy(alpha=.12f), border = BorderStroke(if (duplicate) 2.dp else 1.dp, if (duplicate) SonHarfPink else SonHarfGold.copy(alpha=.5f))) {
                             Text(w.word.uppercase(), Modifier.padding(horizontal=12.dp, vertical=8.dp), color = if (duplicate) SonHarfPink else SonHarfText, fontSize = if (duplicate) 17.sp else 14.sp, fontWeight = FontWeight.Black)
                         }
                     }
@@ -386,7 +418,7 @@ private fun ArenaV10(
         KeyboardV10(room.language, myTurn && !busy && room.status != "quiz", input, onInput, onSubmit)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick=onForfeit, modifier=Modifier.weight(1f).height(44.dp), border=BorderStroke(1.dp, SonHarfPink.copy(alpha=.55f))) { Text(sh("⚑ PES ET", "⚑ FORFEIT"), color=SonHarfPink, fontWeight=FontWeight.Bold, fontSize=14.sp) }
-            OutlinedButton(onClick=onChat, modifier=Modifier.weight(1f).height(44.dp), border=BorderStroke(1.dp, SonHarfCyan.copy(alpha=.55f))) { Text(sh("● SOHBET", "● CHAT"), color=SonHarfCyan, fontWeight=FontWeight.Bold, fontSize=14.sp) }
+            OutlinedButton(onClick=onChat, modifier=Modifier.weight(1f).height(44.dp), border=BorderStroke(1.dp, SonHarfCyan.copy(alpha=.55f))) { Text(if (isVip) sh("● SOHBET", "● CHAT") else sh("🔒 SOHBET • VIP", "🔒 CHAT • VIP"), color=if (isVip) SonHarfCyan else SonHarfGold, fontWeight=FontWeight.Bold, fontSize=14.sp) }
         }
     }
 }

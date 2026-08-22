@@ -26,8 +26,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sonharf.game.data.OnlineGameBackend
-import com.sonharf.game.data.SupabaseProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -127,7 +125,6 @@ private enum class BilPhase { ANSWER, LOCKED, RESULT }
 @Composable
 fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
-    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var questionIndex by remember { mutableIntStateOf(Random.nextInt(bilBakalimQuestions.size)) }
     var questionNo by remember { mutableIntStateOf(1) }
     var playerScore by remember { mutableIntStateOf(0) }
@@ -172,11 +169,9 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
             playerWon = pDiff <= bDiff
             if (playerWon == true) playerScore += 10 else botScore += 10
             phase = BilPhase.RESULT
-            runCatching { backend?.logEvent(if (playerWon == true) "bil_bakalim_round_win" else "bil_bakalim_round_loss") }
         }
     }
 
-    LaunchedEffect(Unit) { runCatching { backend?.logEvent("bil_bakalim_open") } }
     LaunchedEffect(questionIndex, phase) {
         if (phase != BilPhase.ANSWER) return@LaunchedEffect
         seconds = 20

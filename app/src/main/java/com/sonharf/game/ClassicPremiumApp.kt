@@ -138,7 +138,7 @@ fun ClassicPremiumApp() {
                         onFullShop = { screen = ClassicScreen.SHOP_FULL },
                     )
                     ClassicScreen.GAME -> key(gameKey) { TargetNeonGameScreen() }
-                    ClassicScreen.BIL_BAKALIM -> BilBakalimStandaloneScreen { screen = ClassicScreen.HOME }
+                    ClassicScreen.BIL_BAKALIM -> TrackedBilBakalimStandaloneScreen { screen = ClassicScreen.HOME }
                     ClassicScreen.HUB -> MetaHubScreen()
                     ClassicScreen.LEAGUE -> LeaderboardExperienceScreen { screen = ClassicScreen.HOME }
                     ClassicScreen.PROFILE_FULL -> ProfileExperienceScreen()
@@ -150,6 +150,7 @@ fun ClassicPremiumApp() {
         if (screen == ClassicScreen.GAME) {
             if (SonHarfGameModeState.mode == "expert") ExpertArenaOverlay() else SketchGameOverlayV9()
             ComboOverlayV9()
+            BilBakalimBonusOverlay()
         }
     }
 }
