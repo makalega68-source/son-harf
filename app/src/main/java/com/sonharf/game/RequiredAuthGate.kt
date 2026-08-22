@@ -60,6 +60,12 @@ private suspend fun lockIdentity(name: String, gender: String): AuthIdentityProf
         buildJsonObject { put("p_display_name", name.trim()); put("p_gender", gender) },
     ).decodeSingle()
 
+private suspend fun displayNameAvailable(name: String): Boolean =
+    SupabaseProvider.client.postgrest.rpc(
+        "display_name_available",
+        buildJsonObject { put("p_name", name.trim()) },
+    ).decodeSingle()
+
 @Composable
 fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     val context = LocalContext.current
@@ -78,8 +84,10 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     var success by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val pulse by rememberInfiniteTransition(label = "authLogo").animateFloat(
-        initialValue = .96f, targetValue = 1.04f,
-        animationSpec = infiniteRepeatable(tween(950), RepeatMode.Reverse), label = "authLogoPulse",
+        initialValue = .96f,
+        targetValue = 1.04f,
+        animationSpec = infiniteRepeatable(tween(950), RepeatMode.Reverse),
+        label = "authLogoPulse",
     )
 
     fun friendly(raw: String): String = when {
@@ -87,6 +95,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         "Invalid login credentials" in raw -> "E-posta veya şifre hatalı."
         "already registered" in raw.lowercase() || "user_already_exists" in raw.lowercase() -> "Bu e-posta zaten kayıtlı. Giriş Yap sekmesini kullan."
         "Unable to validate email address" in raw || "validation_failed" in raw.lowercase() -> "E-posta adresi geçerli görünmüyor. Adresi kontrol edip tekrar dene."
+        "display_name_taken" in raw -> "Bu oyuncu adı kullanımda. Başka bir ad seç."
         "invalid_display_name" in raw -> "Oyuncu adı 2-24 karakter olmalı."
         "invalid_gender" in raw -> "Cinsiyet seçimi gerekli."
         "password" in raw.lowercase() && "6" in raw -> "Şifre en az 6 karakter olmalı."
@@ -106,12 +115,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
 
     MaterialTheme(colorScheme = authColors) {
         Box(
-            Modifier
-                .fillMaxSize()
-                .background(Color.White)
-                .statusBarsPadding()
-                .navigationBarsPadding()
-                .imePadding(),
+            Modifier.fillMaxSize().background(Color.White).statusBarsPadding().navigationBarsPadding().imePadding(),
         ) {
             Column(
                 Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 22.dp, vertical = 14.dp),
@@ -119,7 +123,8 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
                 Box(
-                    Modifier.size(88.dp).scale(pulse).background(Brush.radialGradient(listOf(SonHarfCyan, SonHarfPurple)), CircleShape),
+                    Modifier.size(88.dp).scale(pulse)
+                        .background(Brush.radialGradient(listOf(SonHarfCyan, SonHarfPurple)), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) { Text("S↻H", color = Color.White, fontWeight = FontWeight.Black, fontSize = 30.sp) }
                 Text("SON HARF", color = Color(0xFF111522), fontWeight = FontWeight.Black, fontSize = 36.sp, letterSpacing = 2.sp)
@@ -138,7 +143,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                         }
                         if (register) {
                             OutlinedTextField(displayName, { displayName = it.take(24) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Oyuncu adı") })
-                            Text("Bu ad kayıt tamamlandığında kalıcı olur.", color = Color(0xFF697086), fontSize = 13.sp)
+                            Text("Her oyuncu adı benzersizdir. Büyük/küçük harf farkı aynı ad sayılır.", color = Color(0xFF697086), fontSize = 13.sp)
                             Text("Cinsiyet", color = Color(0xFF111522), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 listOf("erkek" to "Erkek", "kadın" to "Kadın", "diğer" to "Diğer").forEach { (value, label) ->
@@ -154,11 +159,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             singleLine = true,
                             label = { Text("Şifre") },
                             visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
-                            trailingIcon = {
-                                TextButton(onClick = { showPassword = !showPassword }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                    Text(if (showPassword) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                                }
-                            },
+                            trailingIcon = { TextButton(onClick = { showPassword = !showPassword }) { Text(if (showPassword) "GİZLE" else "GÖSTER", fontSize = 11.sp, fontWeight = FontWeight.Bold) } },
                         )
                         if (register) {
                             OutlinedTextField(
@@ -168,49 +169,30 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 singleLine = true,
                                 label = { Text("Şifre tekrar") },
                                 visualTransformation = if (showPassword2) VisualTransformation.None else PasswordVisualTransformation(),
-                                trailingIcon = {
-                                    TextButton(onClick = { showPassword2 = !showPassword2 }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                        Text(if (showPassword2) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                                    }
-                                },
+                                trailingIcon = { TextButton(onClick = { showPassword2 = !showPassword2 }) { Text(if (showPassword2) "GİZLE" else "GÖSTER", fontSize = 11.sp, fontWeight = FontWeight.Bold) } },
                             )
                         } else {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
-                                    Text("Beni hatırla", color = Color(0xFF111522), fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
-                                }
-                                Text(if (rememberMe) "Oturum korunur" else "Sonraki açılışta çıkış", color = Color(0xFF697086), fontSize = 12.sp)
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
+                                Text("Beni hatırla", color = Color(0xFF111522), fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
                             }
                             TextButton(
                                 onClick = {
                                     if (busy) return@TextButton
-                                    if (!email.contains("@")) {
-                                        notice = "Önce geçerli e-posta adresini gir."
-                                        success = false
-                                        return@TextButton
-                                    }
+                                    if (!email.contains("@")) { notice = "Önce geçerli e-posta adresini gir."; success = false; return@TextButton }
                                     scope.launch {
-                                        busy = true
-                                        notice = ""
-                                        success = false
-                                        runCatching {
-                                            SupabaseProvider.client.auth.resetPasswordForEmail(email.trim())
-                                        }.onSuccess {
-                                            success = true
-                                            notice = "Şifre sıfırlama bağlantısı e-posta adresine gönderildi. Gelen kutunu ve spam klasörünü kontrol et."
-                                        }.onFailure {
-                                            notice = friendly(it.message.orEmpty())
-                                        }
+                                        busy = true; notice = ""; success = false
+                                        runCatching { SupabaseProvider.client.auth.resetPasswordForEmail(email.trim()) }
+                                            .onSuccess { success = true; notice = "Şifre sıfırlama bağlantısı e-posta adresine gönderildi. Gelen kutunu ve spam klasörünü kontrol et." }
+                                            .onFailure { notice = friendly(it.message.orEmpty()) }
                                         busy = false
                                     }
                                 },
                                 enabled = !busy,
                                 modifier = Modifier.align(Alignment.End),
-                            ) {
-                                Text("Şifremi unuttum", color = SonHarfPurple, fontWeight = FontWeight.Bold)
-                            }
+                            ) { Text("Şifremi unuttum", color = SonHarfPurple, fontWeight = FontWeight.Bold) }
                         }
+
                         Button(
                             onClick = {
                                 if (busy) return@Button
@@ -222,6 +204,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                     busy = true; notice = ""; success = false
                                     if (register) {
                                         runCatching {
+                                            check(displayNameAvailable(displayName)) { "display_name_taken" }
                                             SupabaseProvider.client.auth.signOut()
                                             SupabaseProvider.client.auth.signUpWith(Email) {
                                                 this.email = email.trim(); this.password = password
@@ -230,7 +213,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                         }.onSuccess {
                                             SonHarfPreferences.rememberPendingRegistration(context, email, displayName, gender)
                                             success = true
-                                            notice = "Onay e-postası gönderildi. Bağlantıya dokun; sonra Giriş Yap sekmesinden oturum aç. Oyuncu adın ve cinsiyet seçimin korunacak."
+                                            notice = "Onay e-postası gönderildi. Bağlantıya dokun; sonra Giriş Yap sekmesinden oturum aç."
                                             register = false
                                         }.onFailure { notice = friendly(it.message.orEmpty()) }
                                     } else {
@@ -256,6 +239,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             shape = RoundedCornerShape(18.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = if (register) SonHarfPurple else SonHarfCyan, contentColor = Color.White),
                         ) { Text(if (busy) "…" else if (register) "ÜYELİK OLUŞTUR" else "OYUNA GİR", fontWeight = FontWeight.Black, fontSize = 17.sp) }
+
                         if (notice.isNotBlank()) {
                             Surface(color = if (success) Color(0xFFE8F8EF) else Color(0xFFFFF4D7), shape = RoundedCornerShape(14.dp)) {
                                 Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = Color(0xFF232735), fontSize = 14.sp, textAlign = TextAlign.Center)

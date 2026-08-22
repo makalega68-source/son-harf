@@ -1,0 +1,462 @@
+package com.sonharf.game
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
+import com.sonharf.game.data.*
+import io.github.jan.supabase.postgrest.from
+import java.time.Instant
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+
+private val B8Bg = Color(0xFFF8FAFC)
+private val B8White = Color.White
+private val B8Blue = Color(0xFF0284C7)
+private val B8BlueLight = Color(0xFFE0F2FE)
+private val B8Text = Color(0xFF0F172A)
+private val B8Muted = Color(0xFF64748B)
+private val B8Green = Color(0xFF2E6F5E)
+private val B8Coral = Color(0xFFE05A47)
+private val B8Amber = Color(0xFFE5A93C)
+private val B8Purple = Color(0xFF7C3AED)
+
+@Composable
+fun V8BattleScreenFixed(onLeaveBattle: () -> Unit) {
+    val backend = remember { OnlineGameBackend() }
+    val scope = rememberCoroutineScope()
+    var meProfile by remember { mutableStateOf<V6ProfileDto?>(null) }
+    var meVip by remember { mutableStateOf(false) }
+    var meAvatar by remember { mutableStateOf<String?>(null) }
+    var opponent by remember { mutableStateOf<V6ProfileDto?>(null) }
+    var opponentAvatar by remember { mutableStateOf<String?>(null) }
+    var room by remember { mutableStateOf<GameRoomDto?>(null) }
+    var words by remember { mutableStateOf<List<GameWordDto>>(emptyList()) }
+    var chat by remember { mutableStateOf<List<ChatMessageDto>>(emptyList()) }
+    var input by remember { mutableStateOf("") }
+    var notice by remember { mutableStateOf("Düelloya hazır") }
+    var matching by remember { mutableStateOf(false) }
+    var busy by remember { mutableStateOf(false) }
+    var showChat by remember { mutableStateOf(false) }
+    var showWords by remember { mutableStateOf(false) }
+    var triviaRound by remember { mutableStateOf<TriviaRoundDto?>(null) }
+    var triviaQuestion by remember { mutableStateOf<TriviaQuestionDto?>(null) }
+
+    suspend fun loadSelf() {
+        val id = backend.currentUserId() ?: return
+        meProfile = runCatching { v6LoadProfile(id) }.getOrNull()
+        meAvatar = runCatching { AvatarSignedUrl.resolve(meProfile?.avatarPath) }.getOrNull()
+        meVip = runCatching { backend.getProfile(id).isVip }.getOrDefault(false)
+    }
+
+    suspend fun loadOpponent(r: GameRoomDto) {
+        if (r.isBot) { opponent = null; opponentAvatar = null; return }
+        val me = backend.currentUserId()
+        val id = if (r.hostId == me) r.guestId else r.hostId
+        opponent = id?.let { runCatching { v6LoadProfile(it) }.getOrNull() }
+        opponentAvatar = runCatching { AvatarSignedUrl.resolve(opponent?.avatarPath) }.getOrNull()
+    }
+
+    suspend fun findActive(): GameRoomDto? {
+        val me = backend.currentUserId() ?: return null
+        return SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
+            .filter { (it.hostId == me || it.guestId == me) && it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused") }
+            .maxByOrNull { it.validWordCount }
+    }
+
+    LaunchedEffect(Unit) {
+        loadSelf()
+        room = runCatching { findActive() }.getOrNull()
+        room?.let { loadOpponent(it) }
+    }
+
+    val active = room
+    if (active == null) {
+        BattleLobbyFixed(meProfile, meAvatar, matching, notice, onLeaveBattle,
+            onRandom = {
+                scope.launch {
+                    if (busy) return@launch
+                    busy = true
+                    runCatching { backend.startRandomMatchmaking("tr") }
+                        .onSuccess { matching = true; notice = "Rakip aranıyor…" }
+                        .onFailure { notice = "Eşleşme başlatılamadı." }
+                    busy = false
+                    while (matching && room == null) {
+                        val found = runCatching { backend.pollRandomMatchmakingRoom() }.getOrNull()
+                        if (found != null) { room = found; loadOpponent(found); matching = false; break }
+                        delay(800)
+                    }
+                }
+            },
+            onCancel = { scope.launch { matching = false; runCatching { backend.cancelRandomMatchmaking() } } }
+        )
+        return
+    }
+
+    val me = backend.currentUserId()
+
+    LaunchedEffect(active.id) {
+        var heartbeatTick = 0
+        while (isActive) {
+            runCatching { backend.getRoom(active.id) }.onSuccess { room = it; loadOpponent(it) }
+            runCatching { backend.getWords(active.id) }.onSuccess { words = it }
+            runCatching { backend.getChat(active.id) }.onSuccess { chat = it }
+            heartbeatTick++
+            if (heartbeatTick % 7 == 0 && !active.isBot) runCatching { backend.heartbeatRoom(active.id) }.onSuccess { room = it }
+            delay(700)
+        }
+    }
+
+    LaunchedEffect(active.currentPlayerId, active.validWordCount, active.roundNo, words.size) {
+        input = ""
+    }
+
+    LaunchedEffect(active.turnDeadline, active.currentPlayerId, active.status) {
+        if (active.status in listOf("playing", "final", "sudden_death") && active.turnDeadline != null) {
+            while (isActive) {
+                val left = runCatching { Instant.parse(active.turnDeadline).epochSecond - Instant.now().epochSecond }.getOrDefault(1)
+                if (left <= 0) { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it }; break }
+                delay(800)
+            }
+        }
+    }
+
+    LaunchedEffect(active.id, active.botTurn, active.status, active.validWordCount) {
+        if (active.isBot && active.botTurn && active.status in listOf("playing", "final", "sudden_death")) {
+            delay(900)
+            runCatching { backend.botTakeTurn(active.id) }
+                .onSuccess { room = it; notice = "" }
+                .onFailure {
+                    notice = "Bot sırası yenileniyor…"
+                    delay(900)
+                    runCatching { backend.botTakeTurn(active.id) }.onSuccess { room = it }
+                }
+        }
+    }
+
+    LaunchedEffect(active.id, active.status, active.validWordCount) {
+        if (active.status == "quiz") {
+            triviaRound = runCatching { backend.getActiveTriviaRound(active.id) }.getOrNull()
+            triviaQuestion = triviaRound?.let { runCatching { backend.getTriviaQuestion(it.questionId) }.getOrNull() }
+            if (active.isBot) { delay(1200); runCatching { backend.botAnswerTrivia(active.id) }.onSuccess { room = it } }
+        } else { triviaRound = null; triviaQuestion = null }
+    }
+
+    if (active.status == "finished") { BattleFinishedFixed(active, me, onLeaveBattle); return }
+
+    BattleArenaFixed(
+        room = active, me = me,
+        myName = meProfile?.displayName ?: "Sen", myAvatar = meAvatar,
+        oppName = if (active.isBot) active.botName ?: "KelimeBot" else opponent?.displayName ?: "Rakip",
+        oppAvatar = opponentAvatar, words = words, input = input, notice = notice, busy = busy, vip = meVip,
+        onInput = { input = it.take(40) },
+        onSubmit = {
+            val submitted = input.trim()
+            if (submitted.length < 2) return@BattleArenaFixed
+            scope.launch {
+                busy = true
+                val beforeCount = active.validWordCount
+                val result = runCatching { backend.submitWord(active.id, submitted) }
+                if (result.isSuccess) {
+                    room = result.getOrThrow(); input = ""; notice = "${submitted.uppercase()} kabul edildi."
+                } else {
+                    delay(180)
+                    val refreshedRoom = runCatching { backend.getRoom(active.id) }.getOrNull()
+                    val refreshedWords = runCatching { backend.getWords(active.id) }.getOrDefault(words)
+                    val last = refreshedWords.lastOrNull()
+                    val lastAcceptedByMe = last?.let { it.playerId == me && it.word.trim().equals(submitted, ignoreCase = true) } == true
+                    val acceptedOnServer = (refreshedRoom?.validWordCount ?: beforeCount) > beforeCount || lastAcceptedByMe
+                    if (acceptedOnServer) {
+                        if (refreshedRoom != null) room = refreshedRoom
+                        words = refreshedWords
+                        input = ""
+                        notice = "${submitted.uppercase()} kabul edildi."
+                    } else {
+                        val raw = result.exceptionOrNull()?.message.orEmpty()
+                        notice = when {
+                            "not_your_turn" in raw -> "Sıra rakibinde."
+                            "wrong_start_letter" in raw -> "Kelime doğru harfle başlamalı."
+                            "word_already_used" in raw -> "Bu kelime daha önce kullanıldı."
+                            "not_in_dictionary" in raw -> "Kelime sözlükte bulunamadı."
+                            "turn_expired" in raw -> "Süren doldu."
+                            else -> "Hamle doğrulanamadı. Tekrar deneyin."
+                        }
+                        if (refreshedRoom != null) room = refreshedRoom
+                        words = refreshedWords
+                    }
+                }
+                busy = false
+            }
+        },
+        onForfeit = { scope.launch { runCatching { backend.forfeit(active.id) }.onSuccess { room = it } } },
+        onExit = onLeaveBattle,
+        onChat = { showChat = true },
+        onWords = { if (meVip) showWords = true else notice = "Çıkan Kelimeler VIP özelliğidir." },
+        trivia = triviaQuestion,
+        onTrivia = { index -> scope.launch { val r = triviaRound ?: return@launch; busy = true; runCatching { backend.answerTrivia(r.id, index) }.onSuccess { room = it; notice = "Bilgi sorusu yanıtlandı." }.onFailure { notice = "Yanıt gönderilemedi." }; busy = false } }
+    )
+
+    if (showChat) {
+        BattleChatFullScreenFixed(chat, me, active.language, meProfile?.allowMatchChat != false, { showChat = false }) { text ->
+            scope.launch {
+                runCatching { backend.sendChat(active.id, text) }
+                    .onSuccess { chat = runCatching { backend.getChat(active.id) }.getOrDefault(chat) }
+                    .onFailure { notice = "Mesaj gönderilemedi." }
+            }
+        }
+    }
+
+    if (showWords) AlertDialog(onDismissRequest = { showWords = false }, title = { Text("Çıkan Kelimeler") }, text = { LazyColumn(Modifier.heightIn(max = 420.dp)) { items(words, key = { it.id }) { Text(it.word.uppercase(), Modifier.fillMaxWidth().padding(8.dp)) } } }, confirmButton = { TextButton(onClick = { showWords = false }) { Text("Kapat") } })
+}
+
+@Composable
+private fun BattleLobbyFixed(profile: V6ProfileDto?, avatar: String?, matching: Boolean, notice: String, onBack: () -> Unit, onRandom: () -> Unit, onCancel: () -> Unit) {
+    LazyColumn(Modifier.fillMaxSize().background(B8Bg), contentPadding = PaddingValues(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        item { Row(verticalAlignment = Alignment.CenterVertically) { IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Geri") }; Text("SON HARF", Modifier.weight(1f), textAlign = TextAlign.Center, fontWeight = FontWeight.Black, fontSize = 22.sp); Spacer(Modifier.width(48.dp)) } }
+        item { Surface(shape = RoundedCornerShape(18.dp), color = B8White) { Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) { BattleAvatarFixed(avatar, profile?.displayName ?: "Oyuncu", 56); Spacer(Modifier.width(12.dp)); Text(if (matching) "Rakip aranıyor…" else "Düelloya hazırsın", fontWeight = FontWeight.Bold) } } }
+        item { if (matching) OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(56.dp)) { Text("EŞLEŞMEYİ İPTAL ET") } else Button(onClick = onRandom, modifier = Modifier.fillMaxWidth().height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = B8Blue)) { Text("1v1 HIZLI KARŞILAŞMA", fontWeight = FontWeight.Black) } }
+        item { Text(notice, Modifier.fillMaxWidth(), textAlign = TextAlign.Center, color = B8Muted) }
+    }
+}
+
+@Composable
+private fun BattleArenaFixed(room: GameRoomDto, me: String?, myName: String, myAvatar: String?, oppName: String, oppAvatar: String?, words: List<GameWordDto>, input: String, notice: String, busy: Boolean, vip: Boolean, onInput: (String) -> Unit, onSubmit: () -> Unit, onForfeit: () -> Unit, onExit: () -> Unit, onChat: () -> Unit, onWords: () -> Unit, trivia: TriviaQuestionDto?, onTrivia: (Int) -> Unit) {
+    val host = me == room.hostId
+    val myScore = if (host) room.hostScore else room.guestScore
+    val oppScore = if (host) room.guestScore else room.hostScore
+    val myTurn = room.currentPlayerId == me && room.status in listOf("playing", "final", "sudden_death")
+    val last = words.lastOrNull()?.word?.uppercase().orEmpty()
+    val req = words.lastOrNull()?.normalizedWord?.lastOrNull()?.uppercaseChar()
+    var seconds by remember(room.turnDeadline) { mutableIntStateOf(45) }
+    LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) { while (isActive && room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) { seconds = runCatching { (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0) }.getOrDefault(45); delay(1000) } }
+
+    Column(Modifier.fillMaxSize().background(Color(0xFFF9F6F0)).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) { Text("🔥 Kelime Düellosu", Modifier.weight(1f), fontWeight = FontWeight.Black, fontSize = 18.sp, color = B8Text); Surface(onClick = onWords, shape = RoundedCornerShape(12.dp), color = if (vip) B8Purple else B8White, border = BorderStroke(1.dp, B8Purple)) { Text(if (vip) "📜 Çıkan Kelimeler" else "🔒 Çıkan Kelimeler", Modifier.padding(9.dp), color = if (vip) Color.White else B8Purple, fontSize = 11.sp, fontWeight = FontWeight.Bold) }; IconButton(onClick = onExit) { Icon(Icons.Rounded.Close, "Çık") } }
+        Surface(shape = RoundedCornerShape(14.dp), color = B8White) { Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) { Text("CANLI 1v1 • Klasik Son Harf", Modifier.weight(1f), color = B8Green, fontWeight = FontWeight.Bold); TextButton(onClick = onChat) { Icon(Icons.Rounded.ChatBubble, null); Spacer(Modifier.width(4.dp)); Text("Sohbet") } } }
+        Surface(shape = RoundedCornerShape(20.dp), color = B8White, shadowElevation = 3.dp) {
+            Column(Modifier.fillMaxWidth().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    BattlePlayerFixed(myName, myAvatar, myScore, myTurn, Modifier.weight(1f))
+                    Box(Modifier.size(64.dp).clip(CircleShape).background(if (seconds <= 5) B8Coral else B8Amber), contentAlignment = Alignment.Center) { Text("$seconds", color = Color.White, fontWeight = FontWeight.Black, fontSize = 25.sp) }
+                    BattlePlayerFixed(oppName, oppAvatar, oppScore, !myTurn, Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(8.dp))
+                Text(when { room.status == "quiz" -> "BİLGİ SORUSU"; room.status == "paused" -> "BAĞLANTI BEKLENİYOR"; myTurn -> "SIRA SİZDE"; else -> "RAKİP BEKLENİYOR…" }, fontWeight = FontWeight.Black, color = if (myTurn) B8Green else B8Muted)
+                Spacer(Modifier.height(8.dp))
+                if (last.isBlank()) {
+                    Text("İlk kelimeyi siz başlatın", color = B8Muted, fontSize = 16.sp, textAlign = TextAlign.Center)
+                } else {
+                    Text("Son Kelime", color = B8Muted, fontSize = 13.sp, textAlign = TextAlign.Center)
+                    Text(last, color = B8Text, fontSize = 29.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                }
+            }
+        }
+        if (room.status == "quiz") {
+            Surface(shape = RoundedCornerShape(16.dp), color = B8White, border = BorderStroke(1.dp, B8Amber)) { Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) { Text(trivia?.question ?: "Bilgi sorusu yükleniyor…", fontWeight = FontWeight.Black, color = B8Text); listOf(trivia?.optionA, trivia?.optionB, trivia?.optionC, trivia?.optionD).forEachIndexed { i, o -> if (o != null) OutlinedButton(onClick = { onTrivia(i) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(o) } } } }
+        } else {
+            Surface(Modifier.fillMaxWidth().heightIn(min = 82.dp), shape = RoundedCornerShape(14.dp), color = B8White, border = BorderStroke(2.dp, B8Blue.copy(alpha = .42f))) {
+                Column(Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = if (input.isBlank()) if (req == null) "Kelime yazın…" else "$req ile başlayan kelime yazın…" else input,
+                        modifier = Modifier.fillMaxWidth(),
+                        fontWeight = FontWeight.Black,
+                        fontSize = if (input.isBlank()) 20.sp else 30.sp,
+                        lineHeight = if (input.isBlank()) 24.sp else 34.sp,
+                        textAlign = TextAlign.Center,
+                        color = if (input.isBlank()) B8Muted else B8Blue
+                    )
+                    if (notice.isNotBlank()) Text(notice, color = if (notice.contains("kabul edildi")) B8Green else B8Coral, fontSize = 11.sp, textAlign = TextAlign.Center)
+                }
+            }
+            Spacer(Modifier.weight(1f))
+            BattleKeyboardFixed(
+                myTurn && !busy,
+                myTurn && !busy && input.length >= 2 && (req == null || input.firstOrNull()?.uppercaseChar() == req),
+                { c -> onInput(input + c) },
+                { if (input.isNotEmpty()) onInput(input.dropLast(1)) },
+                onSubmit
+            )
+        }
+        TextButton(onClick = onForfeit, modifier = Modifier.align(Alignment.CenterHorizontally)) { Icon(Icons.Rounded.Flag, null, tint = B8Coral); Text(" Pes Et", color = B8Coral, fontWeight = FontWeight.Bold) }
+    }
+}
+
+@Composable private fun BattlePlayerFixed(name: String, url: String?, score: Int, active: Boolean, modifier: Modifier) { Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) { BattleAvatarFixed(url, name, 50); Text(name, maxLines = 1, fontWeight = FontWeight.Bold, fontSize = 11.sp, color = B8Text); Text("$score puan", fontSize = 10.sp, color = if (active) B8Green else B8Muted) } }
+
+@Composable
+private fun BattleKeyboardFixed(enabled: Boolean, submitEnabled: Boolean, onKey: (Char) -> Unit, onDelete: () -> Unit, onSubmit: () -> Unit) {
+    val r1 = listOf('Q','W','E','R','T','Y','U','I','O','P','Ğ','Ü'); val r2 = listOf('A','S','D','F','G','H','J','K','L','Ş','İ'); val r3 = listOf('Z','X','C','V','B','N','M','Ö','Ç')
+    Surface(shape = RoundedCornerShape(16.dp), color = B8White, shadowElevation = 2.dp) { Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) { listOf(r1, r2).forEach { row -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) { row.forEach { c -> BattleKeyFixed(c, Modifier.weight(1f), enabled) { onKey(c) } } } }; Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) { Button(onClick = onDelete, enabled = enabled, modifier = Modifier.weight(1.7f).height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = B8Coral), contentPadding = PaddingValues(0.dp)) { Text("⌫ SİL", fontSize = 11.sp) }; r3.forEach { c -> BattleKeyFixed(c, Modifier.weight(1f), enabled) { onKey(c) } }; Button(onClick = onSubmit, enabled = submitEnabled, modifier = Modifier.weight(1.9f).height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = B8Green), contentPadding = PaddingValues(0.dp)) { Text("✓ ONAY", fontSize = 11.sp) } } } }
+}
+
+@Composable private fun BattleKeyFixed(c: Char, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) { Surface(onClick = onClick, enabled = enabled, modifier = modifier.height(46.dp), shape = RoundedCornerShape(8.dp), color = Color(0xFFECE7DE), border = BorderStroke(1.dp, Color(0xFFD6CFC4))) { Box(contentAlignment = Alignment.Center) { Text(c.toString(), fontWeight = FontWeight.Bold, fontSize = 15.sp, color = B8Text) } } }
+
+@Composable
+private fun BattleChatFullScreenFixed(messages: List<ChatMessageDto>, me: String?, language: String, enabled: Boolean, onDismiss: () -> Unit, onSend: (String) -> Unit) {
+    var input by remember { mutableStateOf("") }
+    var shifted by remember { mutableStateOf(false) }
+    val listState = rememberLazyListState()
+    val isEnglish = language.lowercase().startsWith("en")
+    val lowerRows = if (isEnglish) listOf(
+        listOf("q","w","e","r","t","y","u","i","o","p"),
+        listOf("a","s","d","f","g","h","j","k","l"),
+        listOf("z","x","c","v","b","n","m")
+    ) else listOf(
+        listOf("q","w","e","r","t","y","u","ı","o","p","ğ","ü"),
+        listOf("a","s","d","f","g","h","j","k","l","ş","i"),
+        listOf("z","x","c","v","b","n","m","ö","ç")
+    )
+    val upperRows = if (isEnglish) lowerRows.map { row -> row.map { it.uppercase() } } else listOf(
+        listOf("Q","W","E","R","T","Y","U","I","O","P","Ğ","Ü"),
+        listOf("A","S","D","F","G","H","J","K","L","Ş","İ"),
+        listOf("Z","X","C","V","B","N","M","Ö","Ç")
+    )
+    val rows = if (shifted) upperRows else lowerRows
+
+    LaunchedEffect(messages.size) {
+        if (messages.isNotEmpty()) listState.animateScrollToItem(messages.lastIndex)
+    }
+
+    Surface(modifier = Modifier.fillMaxSize(), color = B8White) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 12.dp, end = 6.dp, top = 6.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onDismiss) { Icon(Icons.Rounded.Close, if (isEnglish) "Close" else "Kapat") }
+            }
+
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.weight(1f).fillMaxWidth().padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+                contentPadding = PaddingValues(vertical = 6.dp)
+            ) {
+                items(messages, key = { it.id }) { m ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (m.senderId == me) Arrangement.End else Arrangement.Start) {
+                        Surface(shape = RoundedCornerShape(16.dp), color = if (m.senderId == me) B8Blue else B8BlueLight) {
+                            Text(
+                                m.body,
+                                Modifier.widthIn(max = 300.dp).padding(horizontal = 12.dp, vertical = 9.dp),
+                                color = if (m.senderId == me) Color.White else B8Text,
+                                fontSize = 14.sp,
+                                lineHeight = 19.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            Surface(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 7.dp).heightIn(min = 50.dp, max = 88.dp),
+                shape = RoundedCornerShape(15.dp),
+                color = B8White,
+                border = BorderStroke(1.2.dp, B8Blue.copy(alpha = .55f))
+            ) {
+                Text(
+                    if (input.isBlank()) if (isEnglish) "Type a message…" else "Mesaj yaz…" else input,
+                    Modifier.padding(horizontal = 13.dp, vertical = 11.dp),
+                    color = if (input.isBlank()) B8Muted else B8Text,
+                    maxLines = 3,
+                    fontSize = 14.sp,
+                    lineHeight = 19.sp
+                )
+            }
+
+            Surface(color = Color(0xFFDDE3E9), tonalElevation = 2.dp) {
+                Column(
+                    Modifier.fillMaxWidth().padding(start = 4.dp, end = 4.dp, top = 7.dp, bottom = 8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    ChatKeyboardRowFixed(rows[0], enabled, input.length < 300) { key -> input += key }
+                    Row(Modifier.fillMaxWidth().padding(horizontal = if (isEnglish) 14.dp else 3.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        rows[1].forEach { key -> ChatKeyboardKeyFixed(key, Modifier.weight(1f), enabled && input.length < 300) { input += key } }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ChatKeyboardActionFixed(if (shifted) "⇧" else "⇧", Modifier.weight(1.35f), enabled, shifted) { shifted = !shifted }
+                        rows[2].forEach { key -> ChatKeyboardKeyFixed(key, Modifier.weight(1f), enabled && input.length < 300) { input += key } }
+                        ChatKeyboardActionFixed("⌫", Modifier.weight(1.45f), enabled && input.isNotEmpty()) { if (input.isNotEmpty()) input = input.dropLast(1) }
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        ChatKeyboardKeyFixed(",", Modifier.weight(.85f), enabled && input.length < 300) { input += "," }
+                        ChatKeyboardActionFixed(if (isEnglish) "SPACE" else "BOŞLUK", Modifier.weight(4.4f), enabled && input.length < 300) {
+                            if (input.isNotEmpty() && !input.endsWith(" ")) input += " "
+                        }
+                        ChatKeyboardKeyFixed(".", Modifier.weight(.85f), enabled && input.length < 300) { input += "." }
+                        Button(
+                            onClick = { val t = input.trim(); if (t.isNotBlank()) { onSend(t); input = ""; shifted = false } },
+                            enabled = enabled && input.isNotBlank(),
+                            modifier = Modifier.weight(1.9f).height(46.dp),
+                            shape = RoundedCornerShape(9.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = B8Blue),
+                            contentPadding = PaddingValues(horizontal = 4.dp)
+                        ) { Text(if (isEnglish) "SEND" else "GÖNDER", fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChatKeyboardRowFixed(keys: List<String>, enabled: Boolean, roomForText: Boolean, onKey: (String) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        keys.forEach { key -> ChatKeyboardKeyFixed(key, Modifier.weight(1f), enabled && roomForText) { onKey(key) } }
+    }
+}
+
+@Composable
+private fun ChatKeyboardKeyFixed(label: String, modifier: Modifier, enabled: Boolean, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(46.dp),
+        shape = RoundedCornerShape(7.dp),
+        color = Color(0xFFFFFFFF),
+        shadowElevation = 1.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(label, color = B8Text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        }
+    }
+}
+
+@Composable
+private fun ChatKeyboardActionFixed(label: String, modifier: Modifier, enabled: Boolean, active: Boolean = false, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(46.dp),
+        shape = RoundedCornerShape(7.dp),
+        color = if (active) Color(0xFFBCC8D3) else Color(0xFFC7D0D9),
+        shadowElevation = 1.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(label, color = B8Text, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable private fun BattleFinishedFixed(room: GameRoomDto, me: String?, onExit: () -> Unit) { val won = room.winnerId == me; Box(Modifier.fillMaxSize().background(B8Bg).padding(24.dp), contentAlignment = Alignment.Center) { Surface(shape = RoundedCornerShape(22.dp), color = B8White) { Column(Modifier.padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(if (won) "🏆 Kazandınız!" else "Maç Tamamlandı", fontWeight = FontWeight.Black, fontSize = 26.sp, color = B8Text); Spacer(Modifier.height(10.dp)); Text("${room.hostScore} - ${room.guestScore}", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = B8Green); Spacer(Modifier.height(18.dp)); Button(onClick = onExit) { Text("Ana Sayfaya Dön") } } } } }
+
+@Composable private fun BattleAvatarFixed(url: String?, name: String, size: Int) { var failed by remember(url) { mutableStateOf(false) }; if (!url.isNullOrBlank() && !failed) { AsyncImage(model = url, contentDescription = "$name profil fotoğrafı", contentScale = ContentScale.Crop, modifier = Modifier.size(size.dp).clip(CircleShape).background(B8BlueLight), onError = { failed = true }) } else Box(Modifier.size(size.dp).clip(CircleShape).background(B8BlueLight), contentAlignment = Alignment.Center) { Text(name.take(1).uppercase(), fontWeight = FontWeight.Black, fontSize = (size / 2.2).sp, color = B8Blue) } }

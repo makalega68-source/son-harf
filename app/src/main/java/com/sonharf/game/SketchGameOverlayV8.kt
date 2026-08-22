@@ -410,19 +410,107 @@ private fun SketchPlayerCardV8(name: String, score: Int, rounds: Int, active: Bo
 
 @Composable
 private fun SketchChatDialogV8(messages: List<ChatMessageDto>, me: String?, input: String, onInput: (String) -> Unit, onClose: () -> Unit, onSend: () -> Unit) {
+    val rows = listOf(
+        listOf("q","w","e","r","t","y","u","ı","o","p","ğ","ü"),
+        listOf("a","s","d","f","g","h","j","k","l","ş","i"),
+        listOf("z","x","c","v","b","n","m","ö","ç"),
+    )
+
     AlertDialog(
         onDismissRequest = onClose,
-        title = { Text(sh("SOHBET", "CHAT"), fontWeight = FontWeight.Black) },
-        text = {
-            Column {
-                messages.takeLast(8).forEach { message ->
-                    Text((if (message.senderId == me) sh("Sen: ", "You: ") else sh("Rakip: ", "Opponent: ")) + message.body, fontSize = 11.sp, modifier = Modifier.padding(vertical = 3.dp))
-                }
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(value = input, onValueChange = onInput, singleLine = true, modifier = Modifier.fillMaxWidth(), placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) })
+        title = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(sh("SOHBET", "CHAT"), fontWeight = FontWeight.Black)
+                TextButton(onClick = onClose) { Text("✕", fontSize = 20.sp) }
             }
         },
-        confirmButton = { TextButton(onClick = onSend, enabled = input.isNotBlank()) { Text(sh("GÖNDER", "SEND")) } },
-        dismissButton = { TextButton(onClick = onClose) { Text(sh("KAPAT", "CLOSE")) } },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Column(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 90.dp, max = 160.dp),
+                    verticalArrangement = Arrangement.Bottom,
+                ) {
+                    if (messages.isEmpty()) {
+                        Text(sh("Henüz mesaj yok.", "No messages yet."), color = SonHarfMuted, fontSize = 11.sp)
+                    } else {
+                        messages.takeLast(6).forEach { message ->
+                            val mine = message.senderId == me
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = if (mine) SonHarfCyan.copy(alpha = .14f) else SonHarfSurface2,
+                                ) {
+                                    Text(
+                                        message.body,
+                                        modifier = Modifier.widthIn(max = 235.dp).padding(horizontal = 10.dp, vertical = 7.dp),
+                                        fontSize = 11.sp,
+                                        color = SonHarfText,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Surface(
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    shape = RoundedCornerShape(13.dp),
+                    color = SonHarfSurface,
+                    border = BorderStroke(1.2.dp, SonHarfCyan.copy(alpha = .55f)),
+                ) {
+                    Text(
+                        text = if (input.isBlank()) sh("Mesajını ekran klavyesiyle yaz…", "Type with the on-screen keyboard…") else input,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                        color = if (input.isBlank()) SonHarfMuted else SonHarfText,
+                        fontSize = 13.sp,
+                        maxLines = 3,
+                    )
+                }
+
+                rows.forEach { keys ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                        keys.forEach { key ->
+                            Button(
+                                onClick = { if (input.length < 300) onInput(input + key) },
+                                enabled = input.length < 300,
+                                modifier = Modifier.weight(1f).height(34.dp),
+                                shape = RoundedCornerShape(7.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = SonHarfSurface2, contentColor = SonHarfText),
+                                contentPadding = PaddingValues(0.dp),
+                            ) {
+                                Text(key.uppercase(), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Button(
+                        onClick = { if (input.isNotEmpty()) onInput(input.dropLast(1)) },
+                        enabled = input.isNotEmpty(),
+                        modifier = Modifier.weight(1f).height(36.dp),
+                        contentPadding = PaddingValues(0.dp),
+                    ) { Text("⌫", fontSize = 16.sp) }
+                    Button(
+                        onClick = { if (input.isNotEmpty() && input.length < 300) onInput(input + " ") },
+                        enabled = input.isNotEmpty() && input.length < 300,
+                        modifier = Modifier.weight(1.7f).height(36.dp),
+                        contentPadding = PaddingValues(0.dp),
+                    ) { Text(sh("BOŞLUK", "SPACE"), fontSize = 9.sp) }
+                    Button(
+                        onClick = onSend,
+                        enabled = input.isNotBlank(),
+                        modifier = Modifier.weight(1.7f).height(36.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfCyan),
+                        contentPadding = PaddingValues(0.dp),
+                    ) { Text(sh("GÖNDER", "SEND"), fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {},
     )
 }
