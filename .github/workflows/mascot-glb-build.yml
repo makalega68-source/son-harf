@@ -3,6 +3,8 @@ name: Hero Code Mascot APK Build
 on:
   push:
     branches: [ feat/mascot-glb-sceneview-20260822 ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -54,6 +56,7 @@ jobs:
         run: gradle :app:assembleDebug --stacktrace --warning-mode all
 
       - name: Commit tested code mascot source
+        if: github.event_name == 'push'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
