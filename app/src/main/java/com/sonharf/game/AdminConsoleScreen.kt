@@ -235,6 +235,35 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                 }
             }
 
+            item { AdminSectionTitle("ÜCRETSİZ TEST PAKETLERİ", Icons.Rounded.CardGiftcard) }
+            item {
+                AdminWideCard {
+                    Text("Bu paketler yalnızca yönetici hesabına test verisi verir; Google Play satın alımı ve gerçek gelir kaydı oluşturmaz.", color = AdminMuted, fontSize = 10.sp)
+                    listOf(
+                        "vip_monthly" to "VIP Aylık Test",
+                        "vip_yearly" to "VIP Yıllık Test",
+                        "coins_500" to "+500 Elmas Test",
+                        "coins_1500" to "+1500 Elmas Test",
+                        "theme_neon" to "Neon Tema Test",
+                    ).forEach { (productId, label) ->
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    busy = true
+                                    runCatching { backend.adminGrantTestProduct(productId) }
+                                        .onSuccess { notice = "$label ücretsiz olarak uygulandı." }
+                                        .onFailure { error = it.message ?: "Test ürünü uygulanamadı." }
+                                    reload(); busy = false
+                                }
+                            },
+                            enabled = !busy,
+                            modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, AdminGold.copy(alpha=.4f)),
+                        ) { Text(label, color = AdminText) }
+                    }
+                }
+            }
+
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
@@ -428,13 +457,14 @@ private fun formatMoney(minor: Long, currency: String): String {
     val amount = minor / 100.0
     return when (currency.uppercase()) {
         "TRY" -> String.format(Locale("tr","TR"), "₺%,.2f", amount)
-        "USD" -> String.format(Locale.US, "$%,.2f", amount)
+        "USD" -> String.format(Locale.US, "\$%,.2f", amount)
         "EUR" -> String.format(Locale.GERMANY, "€%,.2f", amount)
         else -> String.format(Locale.US, "%,.2f %s", amount, currency.uppercase())
     }
 }
 
 private fun parseMoneyMinor(raw: String): Long? {
-    val normalized = raw.trim().replace(".", "").replace(',', '.')
+    val cleaned = raw.trim()
+    val normalized = if (cleaned.contains(',')) cleaned.replace(".", "").replace(',', '.') else cleaned
     return normalized.toBigDecimalOrNull()?.movePointRight(2)?.toLong()
 }
