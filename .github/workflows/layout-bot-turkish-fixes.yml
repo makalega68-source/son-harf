@@ -4,16 +4,13 @@ on:
   push:
     branches: [ fix/layout-bot-turkish-20260822 ]
     paths:
-      - 'scripts/apply_layout_bot_turkish_fixes.py'
       - '.github/workflows/layout-bot-turkish-fixes.yml'
-  pull_request:
-    branches: [ main ]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  apply-test-publish:
+  test-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,8 +27,6 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.4'
-      - name: Apply guarded fixes
-        run: python3 scripts/apply_layout_bot_turkish_fixes.py
       - name: Contract checks
         run: |
           set -euxo pipefail
@@ -41,15 +36,9 @@ jobs:
           grep -q 'java.util.Locale("tr", "TR")' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
           grep -q 'repeat(3) { attempt' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
           grep -q 'Color(0xFFEF6FA7)' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'Color(0xFF3C9EEB)' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
       - name: Compile debug APK
         run: gradle :app:assembleDebug --stacktrace --warning-mode all
-      - name: Commit tested source repairs
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/sonharf/game
-          git diff --cached --quiet || git commit -m "Fix daily, Bil Bakalim, Turkish casing and bot watchdog"
-          git push
       - name: Stage APK
         run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Layout-Bot-Turkish-Fixed.apk
       - uses: actions/upload-artifact@v4
