@@ -108,3 +108,5 @@ jobs:
           name: SonHarf-Rigged-Kitten-Test-APK
           path: SonHarf-Rigged-Kitten-Test.apk
           if-no-files-found: error
+
+# build-trigger: sceneview-4.17-minimal-patch-20260822
