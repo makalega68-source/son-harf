@@ -4,10 +4,10 @@ import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.get
 import io.ktor.client.statement.bodyAsText
-import io.ktor.http.encodeURLPath
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import java.net.URLEncoder
 
 internal object WordMeaningRuntime {
     private val http = HttpClient(OkHttp)
@@ -19,7 +19,8 @@ internal object WordMeaningRuntime {
         val key = "$language:$normalized"
         cache[key]?.let { return it }
         val host = if (language == "en") "en.wiktionary.org" else "tr.wiktionary.org"
-        val url = "https://$host/api/rest_v1/page/summary/${normalized.encodeURLPath()}"
+        val encoded = URLEncoder.encode(normalized, Charsets.UTF_8.name()).replace("+", "%20")
+        val url = "https://$host/api/rest_v1/page/summary/$encoded"
         val result = runCatching {
             val root = json.parseToJsonElement(http.get(url).bodyAsText()).jsonObject
             root["extract"]?.jsonPrimitive?.content?.trim().orEmpty()
