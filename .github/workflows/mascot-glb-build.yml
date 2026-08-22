@@ -3,6 +3,8 @@ name: Mascot GLB SceneView Build
 on:
   push:
     branches: [ feat/mascot-glb-sceneview-20260822 ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
