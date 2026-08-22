@@ -173,8 +173,10 @@ fun TargetNeonGameScreen() {
                 playerName = profile?.displayName ?: "Sen",
                 opponentName = if (active.isBot) "${active.botName ?: "KelimeBot"} BOT" else opponentProfile?.displayName ?: "Rakip",
                 playerAvatarPath = profile?.avatarPath,
+                playerGender = profile?.gender,
                 opponentAvatarPath = opponentProfile?.avatarPath,
-                opponentAvatarVisible = active.isBot || opponentProfile?.avatarVisibility != "hidden",
+                opponentGender = opponentProfile?.gender,
+                opponentAvatarVisible = true,
                 isVip = profile?.isVip == true,
                 words = words,
                 chatMessages = chatMessages,
@@ -185,12 +187,15 @@ fun TargetNeonGameScreen() {
                 onSubmit = {
                     scope.launch {
                         val submitted = wordInput.trim(); if (submitted.isBlank()) return@launch
+                        wordInput = ""
                         busy = true
                         runCatching { backend.submitWord(active.id, submitted) }
-                            .onSuccess {
-                                room = it
-                                wordInput = ""
-                                notice = if (it.lastEventPlayerId == me && it.lastEvent != null && it.lastEvent != "word_accepted") friendly(it.lastEvent ?: "") else "${submitted.uppercase()} kabul edildi"
+                            .onSuccess { updated ->
+                                room = updated
+                                val rejected = updated.lastEventPlayerId == me && updated.lastEvent in setOf(
+                                    "word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "turn_expired"
+                                )
+                                notice = if (rejected) friendly(updated.lastEvent.orEmpty()) else "${submitted.uppercase()} kabul edildi"
                             }
                             .onFailure { notice = friendly(it.message.orEmpty()) }
                         busy = false
@@ -299,7 +304,9 @@ private fun TargetArena(
     playerName: String,
     opponentName: String,
     playerAvatarPath: String?,
+    playerGender: String?,
     opponentAvatarPath: String?,
+    opponentGender: String?,
     opponentAvatarVisible: Boolean,
     isVip: Boolean,
     words: List<GameWordDto>,
@@ -354,13 +361,13 @@ private fun TargetArena(
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp).imePadding()) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            TargetArenaPlayer(playerName, playerAvatarPath, true, myScore, myRounds, myTurn, TGcyan, Modifier.weight(1f))
+            TargetArenaPlayer(playerName, playerAvatarPath, playerGender, true, myScore, myRounds, myTurn, TGcyan, Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             Box(Modifier.size(76.dp).clip(CircleShape).background(Brush.sweepGradient(listOf(TGcyan, TGpurple, TGpink, TGcyan))).padding(3.dp), contentAlignment = Alignment.Center) {
                 Box(Modifier.fillMaxSize().clip(CircleShape).background(TGpanel), contentAlignment = Alignment.Center) { Text("$seconds", color = TGtext, fontWeight = FontWeight.Black, fontSize = 28.sp) }
             }
             Spacer(Modifier.width(8.dp))
-            TargetArenaPlayer(opponentName, opponentAvatarPath, opponentAvatarVisible, oppScore, oppRounds, !myTurn, TGpink, Modifier.weight(1f))
+            TargetArenaPlayer(opponentName, opponentAvatarPath, opponentGender, opponentAvatarVisible, oppScore, oppRounds, !myTurn, TGpink, Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(14.dp))
@@ -439,10 +446,29 @@ private fun TargetArena(
         if (confirmForfeit) {
             AlertDialog(
                 onDismissRequest = { confirmForfeit = false },
-                title = { Text(sh("PES ETMEK İSTEDİĞİNE EMİN MİSİN?", "ARE YOU SURE YOU WANT TO FORFEIT?"), fontWeight = FontWeight.Black) },
-                text = { Text(sh("Maç devam ederken çıkış yapılamaz. Çıkmak için maçı pes ederek bitirmen gerekir.", "You cannot leave during a live match. Forfeit the match to exit.")) },
-                confirmButton = { Button(onClick = { confirmForfeit = false; onForfeit() }, colors = ButtonDefaults.buttonColors(containerColor = TGpink)) { Text(sh("EVET, PES ET", "YES, FORFEIT")) } },
-                dismissButton = { TextButton(onClick = { confirmForfeit = false }) { Text(sh("OYUNA DÖN", "RETURN TO GAME")) } },
+                icon = {
+                    Surface(shape = CircleShape, color = TGpink.copy(alpha = .12f)) {
+                        Text("⚑", modifier = Modifier.padding(14.dp), color = TGpink, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                    }
+                },
+                title = { Text(sh("Maçtan çıkılsın mı?", "Leave the match?"), fontWeight = FontWeight.Black, textAlign = TextAlign.Center) },
+                text = { Text(sh("Pes edersen maç rakibin lehine tamamlanır. Bu işlem geri alınamaz.", "If you forfeit, the match ends in your opponent's favor. This cannot be undone."), textAlign = TextAlign.Center) },
+                confirmButton = {
+                    Button(
+                        onClick = { confirmForfeit = false; onForfeit() },
+                        colors = ButtonDefaults.buttonColors(containerColor = TGpink),
+                        shape = RoundedCornerShape(14.dp),
+                    ) { Text(sh("PES ET VE ÇIK", "FORFEIT & LEAVE"), color = Color.White, fontWeight = FontWeight.Black) }
+                },
+                dismissButton = {
+                    OutlinedButton(onClick = { confirmForfeit = false }, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, TGcyan.copy(alpha = .55f))) {
+                        Text(sh("OYUNA DÖN", "RETURN TO GAME"), color = TGblue, fontWeight = FontWeight.Bold)
+                    }
+                },
+                containerColor = TGpanel,
+                titleContentColor = TGtext,
+                textContentColor = TGmuted,
+                shape = RoundedCornerShape(28.dp),
             )
         }
         if (showVipNotice) {
@@ -517,9 +543,22 @@ private fun TargetArena(
     }
 }
 
-@Composable private fun TargetArenaPlayer(name: String, avatarPath: String?, avatarVisible: Boolean, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier) {
+@Composable private fun TargetArenaPlayer(name: String, avatarPath: String?, gender: String?, avatarVisible: Boolean, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        ProfilePhotoAvatar(avatarPath, name, 48.dp, visible = avatarVisible, accent = accent)
+        Box {
+            ProfilePhotoAvatar(avatarPath, name, 48.dp, visible = avatarVisible, accent = accent)
+            val normalizedGender = gender?.trim()?.lowercase()
+            val female = normalizedGender in setOf("kadın", "kadin", "female", "woman")
+            val male = normalizedGender in setOf("erkek", "male", "man")
+            if (female || male) {
+                Surface(
+                    modifier = Modifier.align(Alignment.BottomEnd).size(17.dp),
+                    shape = CircleShape,
+                    color = if (female) Color(0xFFFF76A8) else Color(0xFF439EF2),
+                    border = BorderStroke(1.dp, Color.White),
+                ) { Box(contentAlignment = Alignment.Center) { Text(if (female) "♀" else "♂", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black) } }
+            }
+        }
         Spacer(Modifier.height(5.dp))
         Text(name, color = TGtext, fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
         Text("🏆 $score", color = TGgold, fontSize = 8.sp)

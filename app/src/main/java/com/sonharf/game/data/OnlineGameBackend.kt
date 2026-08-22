@@ -27,6 +27,7 @@ data class ProfileDto(
     @SerialName("avatar_url") val avatarUrl: String? = null,
     @SerialName("avatar_path") val avatarPath: String? = null,
     @SerialName("avatar_visibility") val avatarVisibility: String = "visible",
+    val gender: String? = null,
     @SerialName("allow_match_chat") val allowMatchChat: Boolean = true,
     @SerialName("presence_status") val presenceStatus: String = "offline",
     @SerialName("last_seen_at") val lastSeenAt: String? = null,
