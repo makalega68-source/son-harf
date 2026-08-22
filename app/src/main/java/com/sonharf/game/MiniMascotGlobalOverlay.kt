@@ -15,17 +15,13 @@ import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.postgrest.from
-import io.github.sceneview.SceneView
-import io.github.sceneview.math.Position
-import io.github.sceneview.rememberEngine
-import io.github.sceneview.rememberModelInstance
-import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
 import kotlin.random.Random
 
 /**
- * Global, non-gameplay-mutating mascot host.
- * The character is a rigged GLB rendered by Filament/SceneView, not a procedural drawing.
+ * Single global mascot host.
+ * The mascot is rendered with our own OpenGL code so the same character appears everywhere.
+ * Legacy in-arena mascot calls are disabled by default in MiniMascot3D; this host is the owner.
  */
 @Composable
 internal fun MiniMascotGlobalOverlay() {
@@ -59,6 +55,7 @@ internal fun MiniMascotGlobalOverlay() {
             if (room == null) {
                 lastWordCount = -1
                 myAccepted = 0
+                if (motion == MascotMotion.OPPONENT) motion = MascotMotion.IDLE
             } else if (previousRoomId != room.id || lastWordCount < 0) {
                 lastWordCount = room.validWordCount
                 myAccepted = 0
@@ -91,7 +88,6 @@ internal fun MiniMascotGlobalOverlay() {
         }
     }
 
-    // Organic idle variation: no clockwork blink/pose cadence.
     LaunchedEffect(activeRoom?.id) {
         while (true) {
             delay(Random.nextLong(4200L, 7600L))
@@ -114,68 +110,44 @@ internal fun MiniMascotGlobalOverlay() {
     val inMatch = activeRoom != null
     val x by animateDpAsState(
         targetValue = when {
-            !inMatch -> (-10).dp
-            motion == MascotMotion.HAPPY -> (-42).dp
-            motion == MascotMotion.STREAK -> (-68).dp
-            motion == MascotMotion.COLLECT -> (-28).dp
-            else -> (-8).dp
+            !inMatch -> (-22).dp
+            motion == MascotMotion.HAPPY -> (-20).dp
+            motion == MascotMotion.STREAK -> (-34).dp
+            motion == MascotMotion.COLLECT -> (-18).dp
+            else -> (-16).dp
         },
         animationSpec = tween(520, easing = FastOutSlowInEasing),
-        label = "mascotSafeX",
+        label = "heroMascotX",
     )
     val y by animateDpAsState(
         targetValue = when {
-            !inMatch -> (-106).dp
-            motion == MascotMotion.SAD -> 54.dp
-            motion == MascotMotion.STREAK -> (-54).dp
-            motion == MascotMotion.HAPPY -> (-28).dp
-            else -> 36.dp
+            !inMatch -> (-82).dp
+            motion == MascotMotion.SAD -> 28.dp
+            motion == MascotMotion.STREAK -> (-18).dp
+            motion == MascotMotion.HAPPY -> (-8).dp
+            else -> 24.dp
         },
         animationSpec = tween(520, easing = FastOutSlowInEasing),
-        label = "mascotSafeY",
+        label = "heroMascotY",
     )
 
-    Box(Modifier.fillMaxSize()) {
-        RiggedKittenScene(
-            motion = motion,
-            modifier = Modifier
-                .align(if (inMatch) Alignment.CenterEnd else Alignment.CenterEnd)
-                .offset(x = x, y = y)
-                .size(if (inMatch) 94.dp else 132.dp),
-        )
+    val mood = when (motion) {
+        MascotMotion.HAPPY -> MiniMood.HAPPY
+        MascotMotion.SAD -> MiniMood.SAD
+        MascotMotion.STREAK, MascotMotion.VICTORY -> MiniMood.STREAK
+        MascotMotion.COLLECT -> MiniMood.COLLECT
+        MascotMotion.CURIOUS -> MiniMood.CUTE
+        MascotMotion.IDLE, MascotMotion.OPPONENT -> MiniMood.IDLE
     }
-}
 
-@Composable
-private fun RiggedKittenScene(
-    motion: MascotMotion,
-    modifier: Modifier,
-) {
-    val engine = rememberEngine()
-    val modelLoader = rememberModelLoader(engine)
-    val modelInstance = rememberModelInstance(modelLoader, "models/mascot_kitten.glb")
-
-    SceneView(
-        modifier = modifier,
-        engine = engine,
-        modelLoader = modelLoader,
-        isOpaque = false,
-    ) {
-        modelInstance?.let { model ->
-            ModelNode(
-                modelInstance = model,
-                animationName = motion.animationName,
-                animationLoop = motion.looping,
-                animationSpeed = when (motion) {
-                    MascotMotion.HAPPY -> 1.08f
-                    MascotMotion.STREAK -> 1.12f
-                    MascotMotion.SAD -> 0.88f
-                    else -> 1.0f
-                },
-                scaleToUnits = 1.0f,
-                centerOrigin = Position(y = -0.45f),
-                isEditable = false,
-            )
-        }
+    Box(Modifier.fillMaxSize()) {
+        MiniMascot3D(
+            mood = mood,
+            enabled = true,
+            modifier = Modifier
+                .align(if (inMatch) Alignment.CenterStart else Alignment.Center)
+                .offset(x = x, y = y)
+                .size(if (inMatch) 188.dp else 218.dp),
+        )
     }
 }
