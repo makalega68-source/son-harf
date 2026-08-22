@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
@@ -153,9 +152,8 @@ private fun RiggedKittenScene(
     motion: MascotMotion,
     modifier: Modifier,
 ) {
-    val context = LocalContext.current
-    val engine = rememberEngine(context = context)
-    val modelLoader = rememberModelLoader(engine = engine, context = context)
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, "models/mascot_kitten.glb")
 
     SceneView(
