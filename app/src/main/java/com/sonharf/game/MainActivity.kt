@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
                     FriendsQuickAccessOverlay()
                     GameInviteOverlay()
                     FriendRequestOverlay()
+                    MiniMascotGlobalOverlay()
                 }
             }
         }
