@@ -1,0 +1,1 @@
+Verification-only change. The branch was created from main after TDK word-meaning integration; CI must compile this exact source tree before final APK handoff.
