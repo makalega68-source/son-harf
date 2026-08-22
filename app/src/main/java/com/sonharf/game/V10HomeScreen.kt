@@ -66,7 +66,7 @@ fun V10HomeScreen(
         item {
             Surface(onClick = onOpenProfile, shape = RoundedCornerShape(20.dp), color = H10Card, border = BorderStroke(1.dp, H10Border)) {
                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    V8Avatar(state.userPhotoUrl, state.userName, 56)
+                    V10HomeAvatar(state.userPhotoUrl, state.userName, 56)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(state.userName, color = H10Ink, fontSize = 19.sp, fontWeight = FontWeight.Black)
