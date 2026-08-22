@@ -17,7 +17,6 @@ import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.postgrest.from
 import io.github.sceneview.SceneView
 import io.github.sceneview.math.Position
-import io.github.sceneview.node.ModelNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
@@ -161,7 +160,6 @@ private fun RiggedKittenScene(
         engine = engine,
         modelLoader = modelLoader,
         isOpaque = false,
-        gestureDetector = null,
     ) {
         modelInstance?.let { model ->
             ModelNode(
