@@ -1,0 +1,84 @@
+name: Gameplay Experience Upgrade
+
+on:
+  push:
+    branches: [ feat/gameplay-experience-20260822 ]
+    paths:
+      - 'scripts/apply_gameplay_experience_upgrade.py'
+      - '.github/workflows/gameplay-experience-upgrade.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: gameplay-experience-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apply-test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/gameplay-experience-20260822
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Apply guarded gameplay upgrade
+        run: |
+          if grep -q 'Tepki gönderildi' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt && \
+             grep -q 'Two soft low-frequency body thumps' app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt; then
+            echo "Upgrade already applied; verification-only run."
+          else
+            python3 scripts/apply_gameplay_experience_upgrade.py
+          fi
+
+      - name: Regression contract checks
+        run: |
+          set -euxo pipefail
+          grep -q 'ProfilePhotoAvatar' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'SonHarfSoundFx.heartbeat()' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'backend.submitWord(active.id, submitted)' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'backend.restartBotMatch(active.id)' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'backend.requestRematch(active.id)' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'Tepki gönderildi' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'BAŞA BAŞ' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'HapticFeedbackType.LongPress' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'Two soft low-frequency body thumps' app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt
+          ! grep -q 'Text(sh("GÖNDER", "SEND")' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+
+      - name: Unit tests
+        run: gradle :app:testDebugUnitTest --stacktrace --warning-mode all
+
+      - name: Compile debug APK
+        run: gradle :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Commit tested source upgrade
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt
+          git diff --cached --quiet || git commit -m "Upgrade gameplay tension audio and social feedback"
+          git push
+
+      - name: Stage APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Rekabet-Deneyim.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-Rekabet-Deneyim-APK
+          path: SonHarf-Rekabet-Deneyim.apk
+          if-no-files-found: error
