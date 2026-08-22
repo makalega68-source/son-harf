@@ -35,15 +35,15 @@ jobs:
         run: python3 scripts/apply_ux_lock_v2.py
       - name: Verify protected UX contracts
         run: |
-          ! grep -q 'RegressionGuardOverlay()' app/src/main/java/com/sonharf/game/MainActivity.kt
-          grep -q 'hintLocales = LocaleList(Locale(if (room.language == "tr") "tr-TR" else "en-US"))' app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
-          grep -q 'wordInput = ""' app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
-          grep -q '"provisional_word"' supabase/migrations/20260820_gameplay_dictionary_fallback.sql
-          grep -q 'playerProfile?.avatarPath' app/src/main/java/com/sonharf/game/BilBakalimFeature.kt
-          grep -q 'KAZANAN' app/src/main/java/com/sonharf/game/BilBakalimFeature.kt
-          grep -q 'navigationBarsPadding().verticalScroll' app/src/main/java/com/sonharf/game/BilBakalimFeature.kt
-          grep -q 'Color(0xFFFF76A8)' app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
-          grep -q 'Color(0xFF439EF2)' app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
+          ! grep -Fq 'RegressionGuardOverlay()' app/src/main/java/com/sonharf/game/MainActivity.kt
+          grep -Fq 'hintLocales = LocaleList(Locale(if (room.language == "tr") "tr-TR" else "en-US"))' app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
+          grep -Fq 'wordInput = ""' app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
+          grep -Fq 'provisional_word' supabase/migrations/20260820_gameplay_dictionary_fallback.sql
+          grep -Fq 'playerProfile?.avatarPath' app/src/main/java/com/sonharf/game/BilBakalimFeature.kt
+          grep -Fq 'KAZANAN' app/src/main/java/com/sonharf/game/BilBakalimFeature.kt
+          grep -Fq 'navigationBarsPadding().verticalScroll' app/src/main/java/com/sonharf/game/BilBakalimFeature.kt
+          grep -Fq 'Color(0xFFFF76A8)' app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
+          grep -Fq 'Color(0xFF439EF2)' app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
       - name: Compile debug APK
         run: gradle assembleDebug --stacktrace --warning-mode all
       - name: Commit tested repairs
