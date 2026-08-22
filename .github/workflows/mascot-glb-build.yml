@@ -29,26 +29,39 @@ jobs:
         with:
           gradle-version: '8.14.4'
 
-      - name: Install Blender and Git LFS
+      - name: Install Blender, Git LFS and zstd
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender git-lfs
+          sudo apt-get install -y blender git-lfs zstd
           git lfs install
           blender --version | head -n 2
 
-      - name: Fetch real CC0 cat rig and animation sources
+      - name: Fetch and normalize CC0 cat rig and animation sources
         run: |
           set -euxo pipefail
           mkdir -p build/mascot-src app/src/main/assets/models
           git clone --depth 1 https://github.com/Mesh2Motion/mesh2motion-assets.git build/mesh2motion-assets
           git -C build/mesh2motion-assets lfs pull
-          cp build/mesh2motion-assets/rig-variations/fox-cat.blend build/mascot-src/fox-cat.blend
+
+          normalize_blend() {
+            src="$1"
+            dst="$2"
+            cp "$src" "$dst"
+            if file "$dst" | grep -q 'Zstandard compressed data'; then
+              zstd -d -f "$dst" -o "${dst}.raw"
+              mv "${dst}.raw" "$dst"
+            fi
+            file "$dst"
+            test "$(head -c 7 "$dst")" = "BLENDER"
+          }
+
+          normalize_blend build/mesh2motion-assets/rig-variations/fox-cat.blend build/mascot-src/fox-cat.blend
           for name in idle idle-alert walk run jump sit sneak fetch howl; do
-            cp "build/mesh2motion-assets/rigs/fox/animation-fox-$name.blend" "build/mascot-src/animation-fox-$name.blend"
+            normalize_blend \
+              "build/mesh2motion-assets/rigs/fox/animation-fox-$name.blend" \
+              "build/mascot-src/animation-fox-$name.blend"
           done
-          file build/mascot-src/fox-cat.blend
-          ls -lh build/mascot-src/fox-cat.blend
-          test -s build/mascot-src/fox-cat.blend
+          ls -lh build/mascot-src/*.blend
 
       - name: Build white blue-eyed rigged kitten GLB
         run: |
