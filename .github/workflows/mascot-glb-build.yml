@@ -29,21 +29,25 @@ jobs:
         with:
           gradle-version: '8.14.4'
 
-      - name: Install Blender for deterministic mascot asset build
+      - name: Install Blender and Git LFS
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender
+          sudo apt-get install -y blender git-lfs
+          git lfs install
           blender --version | head -n 2
 
-      - name: Fetch CC0 cat rig and compatible animation sources
+      - name: Fetch real CC0 cat rig and animation sources
         run: |
           set -euxo pipefail
           mkdir -p build/mascot-src app/src/main/assets/models
-          BASE=https://raw.githubusercontent.com/Mesh2Motion/mesh2motion-assets/main
-          curl -fL "$BASE/rig-variations/fox-cat.blend" -o build/mascot-src/fox-cat.blend
+          git clone --depth 1 https://github.com/Mesh2Motion/mesh2motion-assets.git build/mesh2motion-assets
+          git -C build/mesh2motion-assets lfs pull
+          cp build/mesh2motion-assets/rig-variations/fox-cat.blend build/mascot-src/fox-cat.blend
           for name in idle idle-alert walk run jump sit sneak fetch howl; do
-            curl -fL "$BASE/rigs/fox/animation-fox-$name.blend" -o "build/mascot-src/animation-fox-$name.blend"
+            cp "build/mesh2motion-assets/rigs/fox/animation-fox-$name.blend" "build/mascot-src/animation-fox-$name.blend"
           done
+          file build/mascot-src/fox-cat.blend
+          test "$(head -c 7 build/mascot-src/fox-cat.blend)" = "BLENDER"
 
       - name: Build white blue-eyed rigged kitten GLB
         run: |
