@@ -190,11 +190,11 @@ fun ComboOverlayV9() {
         val myWords = resultWords.count { it.playerId == me }
         val longest = resultWords.filter { it.playerId == me }.maxByOrNull { it.word.length }?.word?.uppercase() ?: "—"
         val won = fin.winnerId == me
-        Box(Modifier.fillMaxSize().navigationBarsPadding().padding(12.dp),contentAlignment=Alignment.BottomCenter) {
-            Card(colors=CardDefaults.cardColors(containerColor=SonHarfSurface.copy(alpha=.98f)),shape=RoundedCornerShape(24.dp),border=BorderStroke(1.dp,if(won)SonHarfGold.copy(alpha=.55f) else SonHarfCyan.copy(alpha=.25f))) {
+        Box(Modifier.fillMaxSize().background(SonHarfBg).statusBarsPadding().navigationBarsPadding().padding(14.dp),contentAlignment=Alignment.Center) {
+            Card(modifier=Modifier.fillMaxWidth(),colors=CardDefaults.cardColors(containerColor=SonHarfSurface),shape=RoundedCornerShape(26.dp),border=BorderStroke(2.dp,if(won)SonHarfGold.copy(alpha=.75f) else SonHarfCyan.copy(alpha=.45f)),elevation=CardDefaults.cardElevation(defaultElevation=8.dp)) {
                 Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
-                        Column { Text(if(won)"🏆 ${sh("ZAFER ÖZETİ","VICTORY SUMMARY")}" else "📊 ${sh("MAÇ ÖZETİ","MATCH SUMMARY")}",fontWeight=FontWeight.Black);Text("$myRounds - $oppRounds  •  $myScore - $oppScore",color=SonHarfMuted,fontSize=10.sp) }
+                        Column { Text(if(won)"🏆 ${sh("ZAFER ÖZETİ","VICTORY SUMMARY")}" else "📊 ${sh("MAÇ ÖZETİ","MATCH SUMMARY")}",fontWeight=FontWeight.Black,fontSize=23.sp,color=SonHarfText);Text("$myRounds - $oppRounds  •  $myScore - $oppScore",color=SonHarfText,fontSize=14.sp,fontWeight=FontWeight.Bold) }
                         IconButton(onClick={dismissSummary(fin.id)},modifier=Modifier.size(48.dp)){Text("×",fontSize=28.sp,fontWeight=FontWeight.Black,color=SonHarfPurple)}
                     }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
@@ -227,5 +227,5 @@ fun ComboOverlayV9() {
 }
 
 @Composable private fun SummaryMetric(icon:String,value:String,label:String,modifier:Modifier){
-    Surface(modifier=modifier,shape=RoundedCornerShape(13.dp),color=SonHarfSurface2){Column(Modifier.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(icon,fontSize=16.sp);Text(value,maxLines=1,fontWeight=FontWeight.Black,fontSize=11.sp);Text(label,color=SonHarfMuted,fontSize=7.sp)}}
+    Surface(modifier=modifier,shape=RoundedCornerShape(15.dp),color=SonHarfSurface2,border=BorderStroke(1.dp,SonHarfCyan.copy(alpha=.24f))){Column(Modifier.padding(vertical=12.dp,horizontal=8.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(icon,fontSize=20.sp);Text(value,maxLines=1,fontWeight=FontWeight.Black,fontSize=15.sp,color=SonHarfText);Text(label,color=SonHarfMuted,fontSize=9.sp,fontWeight=FontWeight.Bold)}}
 }

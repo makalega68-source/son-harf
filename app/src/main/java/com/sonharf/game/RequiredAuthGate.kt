@@ -180,7 +180,6 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                     Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
                                     Text("Beni hatırla", color = Color(0xFF111522), fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
                                 }
-                                Text(if (rememberMe) "Oturum korunur" else "Sonraki açılışta çıkış", color = Color(0xFF697086), fontSize = 12.sp)
                             }
                             TextButton(
                                 onClick = {
@@ -261,7 +260,6 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = Color(0xFF232735), fontSize = 14.sp, textAlign = TextAlign.Center)
                             }
                         }
-                        Text("E-posta doğrulaması tamamlanmadan oyun ekranları açılmaz.", color = Color(0xFF697086), fontSize = 13.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     }
                 }
                 Spacer(Modifier.height(24.dp))
