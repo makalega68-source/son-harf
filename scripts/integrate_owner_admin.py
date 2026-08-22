@@ -125,5 +125,6 @@ if new_money not in admin:
         raise SystemExit('Patch target not found: money parser')
     admin = admin.replace(old_money, new_money, 1)
 
+admin = admin.replace('String.format(Locale.US, "$%,.2f", amount)', 'String.format(Locale.US, "\\$%,.2f", amount)')
 admin_path.write_text(admin)
 print('Owner free test grants integrated into AdminConsoleScreen.kt')
