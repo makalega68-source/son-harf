@@ -34,5 +34,8 @@ fun SketchGameOverlayV9() {
         }
     }
 
-    if (active) SketchGameOverlayV10()
+    if (active) {
+        SketchGameOverlayV10()
+        MiniMascotMatchOverlay()
+    }
 }
