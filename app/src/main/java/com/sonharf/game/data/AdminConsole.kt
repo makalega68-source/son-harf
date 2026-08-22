@@ -98,3 +98,10 @@ suspend fun OnlineGameBackend.adminRepair(action: String) {
         buildJsonObject { put("p_action", action) },
     )
 }
+
+suspend fun OnlineGameBackend.adminGrantTestProduct(productId: String) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_grant_test_product_v1",
+        buildJsonObject { put("p_product_id", productId) },
+    )
+}
