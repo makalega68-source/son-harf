@@ -3,6 +3,8 @@ package com.sonharf.game
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -27,6 +29,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.ProfileDto
+import com.sonharf.game.data.SupabaseProvider
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -126,6 +131,13 @@ private enum class BilPhase { ANSWER, LOCKED, RESULT, MATCH_END }
 @Composable
 fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
+    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
+    var playerProfile by remember { mutableStateOf<ProfileDto?>(null) }
+    LaunchedEffect(Unit) {
+        val b = backend ?: return@LaunchedEffect
+        val id = b.currentUserId() ?: return@LaunchedEffect
+        playerProfile = runCatching { b.getProfile(id) }.getOrNull()
+    }
     var deck by remember { mutableStateOf(bilBakalimQuestions.shuffled().take(15)) }
     var questionIndex by remember { mutableIntStateOf(0) }
     var playerScore by remember { mutableIntStateOf(0) }
@@ -177,7 +189,10 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
 
     BackHandler { onBack() }
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, Color(0xFFF5FBFF), Color(0xFFE8F6FF))))) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            Modifier.fillMaxSize().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Geri", tint = Color(0xFF18344A)) }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -194,18 +209,40 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
             Spacer(Modifier.height(8.dp))
 
             if (phase == BilPhase.MATCH_END) {
-                Spacer(Modifier.weight(1f))
+                val playerIsWinner = playerScore >= botScore
+                val winnerName = if (playerIsWinner) playerProfile?.displayName ?: "Sen" else "KelimeBot BOT"
+                Spacer(Modifier.height(24.dp))
                 Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(2.dp, Color(0xFF69C9EF)), shape = RoundedCornerShape(26.dp)) {
-                    Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFF45B8E5), modifier = Modifier.size(52.dp))
-                        Text(if (playerScore >= botScore) "KAZANDIN!" else "MAÇ BİTTİ", color = Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = 32.sp)
+                    Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFF45B8E5), modifier = Modifier.size(48.dp))
+                        Text(if (playerIsWinner) "KAZANDIN!" else "MAÇ BİTTİ", color = Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = 32.sp)
                         Text("15 SORU TAMAMLANDI", color = Color(0xFF6C8293), fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        if (playerIsWinner) {
+                            Box {
+                                ProfilePhotoAvatar(playerProfile?.avatarPath, winnerName, 82.dp, visible = true, accent = Color(0xFF2CA9DC))
+                                val g = playerProfile?.gender?.trim()?.lowercase()
+                                val female = g in setOf("kadın", "kadin", "female", "woman")
+                                val male = g in setOf("erkek", "male", "man")
+                                if (female || male) {
+                                    Surface(modifier = Modifier.align(Alignment.BottomEnd).size(22.dp), shape = RoundedCornerShape(100.dp), color = if (female) Color(0xFFFF76A8) else Color(0xFF439EF2), border = BorderStroke(1.dp, Color.White)) {
+                                        Box(contentAlignment = Alignment.Center) { Text(if (female) "♀" else "♂", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black) }
+                                    }
+                                }
+                            }
+                        } else {
+                            Surface(modifier = Modifier.size(82.dp), shape = RoundedCornerShape(100.dp), color = Color(0xFFFFEEF2), border = BorderStroke(2.dp, Color(0xFFEA7484))) {
+                                Box(contentAlignment = Alignment.Center) { Text("🤖", fontSize = 42.sp) }
+                            }
+                        }
+                        Text(winnerName, color = if (playerIsWinner) Color(0xFF2CA9DC) else Color(0xFFEA7484), fontSize = 19.sp, fontWeight = FontWeight.Black)
+                        Text("KAZANAN", color = Color(0xFF6C8293), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Text("$playerScore  -  $botScore", color = Color(0xFF2CA9DC), fontSize = 42.sp, fontWeight = FontWeight.Black)
-                        Button(onClick = ::resetMatch, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8))) { Text("BİR OYUN DAHA", fontWeight = FontWeight.Black) }
-                        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("ANA MENÜ") }
+                        Button(onClick = ::resetMatch, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8)), shape = RoundedCornerShape(18.dp)) { Text("BİR OYUN DAHA", fontWeight = FontWeight.Black) }
+                        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(18.dp)) { Text("ANA MENÜ") }
                     }
                 }
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(24.dp))
                 return@Column
             }
 
@@ -243,9 +280,10 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
                         Text(q.displayAnswer, color = Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = 30.sp, textAlign = TextAlign.Center)
                         Text(if (playerWon == true) "KAZANDIN! • +10 PUAN" else "YANLIŞ CEVAP", color = if (playerWon == true) Color(0xFF18B864) else Color(0xFFDD5968), fontWeight = FontWeight.Black, fontSize = 19.sp)
                         Spacer(Modifier.height(8.dp))
-                        Button(onClick = ::advance, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8))) { Text(if (questionNo == 15) "MAÇI BİTİR" else "SONRAKİ SORU", fontWeight = FontWeight.Black) }
+                        Button(onClick = ::advance, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8)), shape = RoundedCornerShape(16.dp)) { Text(if (questionNo == 15) "MAÇI BİTİR" else "SONRAKİ SORU", fontWeight = FontWeight.Black) }
                     }
                 }
+                Spacer(Modifier.height(22.dp))
             }
         }
     }
