@@ -34,7 +34,7 @@ import com.sonharf.game.data.SupabaseProvider
 import kotlinx.coroutines.launch
 
 private enum class ClassicScreen {
-    HOME, PLAY, GAME, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL
+    HOME, PLAY, GAME, BIL_BAKALIM, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL
 }
 
 private val ClassicBg = Color(0xFF071525)
@@ -114,6 +114,7 @@ fun ClassicPremiumApp() {
                         backend = backend,
                         onPlay = { screen = ClassicScreen.PLAY },
                         onQuickGame = { gameKey += 1; screen = ClassicScreen.GAME },
+                        onBilBakalim = { screen = ClassicScreen.BIL_BAKALIM },
                         onHub = { screen = ClassicScreen.HUB },
                         onLeague = { screen = ClassicScreen.LEAGUE },
                         onShop = { screen = ClassicScreen.SHOP },
@@ -137,6 +138,7 @@ fun ClassicPremiumApp() {
                         onFullShop = { screen = ClassicScreen.SHOP_FULL },
                     )
                     ClassicScreen.GAME -> key(gameKey) { TargetNeonGameScreen() }
+                    ClassicScreen.BIL_BAKALIM -> BilBakalimStandaloneScreen { screen = ClassicScreen.HOME }
                     ClassicScreen.HUB -> MetaHubScreen()
                     ClassicScreen.LEAGUE -> LeaderboardExperienceScreen { screen = ClassicScreen.HOME }
                     ClassicScreen.PROFILE_FULL -> ProfileExperienceScreen()
@@ -157,6 +159,7 @@ private fun ClassicHome(
     backend: OnlineGameBackend?,
     onPlay: () -> Unit,
     onQuickGame: () -> Unit,
+    onBilBakalim: () -> Unit,
     onHub: () -> Unit,
     onLeague: () -> Unit,
     onShop: () -> Unit,
@@ -187,6 +190,7 @@ private fun ClassicHome(
     ) {
         item { ClassicHeader(profile, growth, onProfile) }
         item { ClassicHero(onQuickGame) }
+        item { BilBakalimHomeCard(onBilBakalim) }
         item {
             ClassicModeSelector(mode) { next ->
                 mode = next

@@ -19,6 +19,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,6 +59,7 @@ fun TargetNeonGameScreen() {
     var language by remember { mutableStateOf(SonHarfUiState.language) }
     var room by remember { mutableStateOf<GameRoomDto?>(null) }
     var words by remember { mutableStateOf<List<GameWordDto>>(emptyList()) }
+    var chatMessages by remember { mutableStateOf<List<ChatMessageDto>>(emptyList()) }
     var wordInput by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("Düelloya hazır") }
     var busy by remember { mutableStateOf(false) }
@@ -64,6 +68,7 @@ fun TargetNeonGameScreen() {
     var showPrivate by remember { mutableStateOf(false) }
     var roomJob by remember { mutableStateOf<Job?>(null) }
     var wordsJob by remember { mutableStateOf<Job?>(null) }
+    var chatJob by remember { mutableStateOf<Job?>(null) }
     var matchJob by remember { mutableStateOf<Job?>(null) }
 
     fun friendly(raw: String) = when {
@@ -98,10 +103,11 @@ fun TargetNeonGameScreen() {
     }
 
     fun observe(r: GameRoomDto) {
-        roomJob?.cancel(); wordsJob?.cancel(); matchJob?.cancel(); matching = false
+        roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); matchJob?.cancel(); matching = false
         scope.launch { refreshOpponent(r) }
         roomJob = scope.launch { backend.observeRoom(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { room = it; refreshOpponent(it) } }
         wordsJob = scope.launch { backend.observeWords(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { words = it } }
+        chatJob = scope.launch { backend.observeChat(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { chatMessages = it } }
     }
 
     LaunchedEffect(Unit) {
@@ -164,7 +170,9 @@ fun TargetNeonGameScreen() {
                 me = me,
                 playerName = profile?.displayName ?: "Sen",
                 opponentName = if (active.isBot) "${active.botName ?: "KelimeBot"} BOT" else opponentProfile?.displayName ?: "Rakip",
+                isVip = profile?.isVip == true,
                 words = words,
+                chatMessages = chatMessages,
                 wordInput = wordInput,
                 onWordInput = { wordInput = it.take(40) },
                 notice = notice,
@@ -181,7 +189,8 @@ fun TargetNeonGameScreen() {
                 },
                 onTimeout = { scope.launch { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it } } },
                 onForfeit = { scope.launch { runCatching { backend.forfeit(active.id) }.onSuccess { room = it } } },
-                onExit = { roomJob?.cancel(); wordsJob?.cancel(); room = null; words = emptyList(); notice = "Yeni düelloya hazırsın" },
+                onSendChat = { text -> scope.launch { runCatching { backend.sendChat(active.id, text) }.onFailure { notice = friendly(it.message.orEmpty()) } } },
+                onExit = { roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); room = null; words = emptyList(); chatMessages = emptyList(); notice = "Yeni düelloya hazırsın" },
                 onRematch = { scope.launch { runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }.onSuccess { room = it; words = emptyList(); if (it.id != active.id) observe(it) } } },
             )
         }
@@ -271,7 +280,9 @@ private fun TargetArena(
     me: String?,
     playerName: String,
     opponentName: String,
+    isVip: Boolean,
     words: List<GameWordDto>,
+    chatMessages: List<ChatMessageDto>,
     wordInput: String,
     onWordInput: (String) -> Unit,
     notice: String,
@@ -279,6 +290,7 @@ private fun TargetArena(
     onSubmit: () -> Unit,
     onTimeout: () -> Unit,
     onForfeit: () -> Unit,
+    onSendChat: (String) -> Unit,
     onExit: () -> Unit,
     onRematch: () -> Unit,
 ) {
@@ -290,6 +302,10 @@ private fun TargetArena(
     val myTurn = room.currentPlayerId == me && room.status in listOf("playing", "final", "sudden_death")
     var seconds by remember(room.turnDeadline) { mutableStateOf(45) }
     val focus = LocalFocusManager.current
+    var showChat by remember { mutableStateOf(false) }
+    var showChain by remember { mutableStateOf(false) }
+    var showVipNotice by remember { mutableStateOf(false) }
+    var chatInput by remember { mutableStateOf("") }
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
         while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
@@ -357,6 +373,11 @@ private fun TargetArena(
             TargetPower("💡", "JOKER", "3", TGgold, Modifier.weight(1f))
             TargetPower("⤨", "KARIŞTIR", "2", TGcyan, Modifier.weight(1f))
         }
+        Spacer(Modifier.height(8.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            VipLockedAction("💬 SOHBET", isVip, { showChat = true }, { showVipNotice = true }, Modifier.weight(1f))
+            VipLockedAction("⛓ KELİME ZİNCİRİ", isVip, { showChain = true }, { showVipNotice = true }, Modifier.weight(1f))
+        }
         Spacer(Modifier.weight(1f))
 
         OutlinedTextField(
@@ -367,7 +388,12 @@ private fun TargetArena(
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text(if (myTurn) "Kelimenizi yazın…" else "Rakibin sırası…") },
             shape = RoundedCornerShape(16.dp),
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Send,
+                showKeyboardOnFocus = true,
+                hintLocales = LocaleList(Locale(if (room.language == "tr") "tr-TR" else "en-US")),
+            ),
             keyboardActions = KeyboardActions(onSend = { if (myTurn && wordInput.isNotBlank() && !busy) { focus.clearFocus(); onSubmit() } }),
             colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TGcyan, unfocusedBorderColor = Color.White.copy(alpha = .16f), focusedTextColor = TGtext, unfocusedTextColor = TGtext),
         )
@@ -377,6 +403,76 @@ private fun TargetArena(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onForfeit, modifier = Modifier.weight(1f), border = BorderStroke(1.dp, TGpink)) { Text("⚑ PES ET", color = TGpink, fontSize = 10.sp) }
             Surface(modifier = Modifier.weight(1f), color = TGpanel, shape = RoundedCornerShape(12.dp)) { Text(notice, Modifier.padding(12.dp), color = TGmuted, fontSize = 9.sp, textAlign = TextAlign.Center) }
+        }
+
+        if (showVipNotice) {
+            AlertDialog(
+                onDismissRequest = { showVipNotice = false },
+                confirmButton = { TextButton(onClick = { showVipNotice = false }) { Text("TAMAM") } },
+                title = { Text("VIP ÖZELLİĞİ") },
+                text = { Text("Oyun içi sohbet ve tam kelime zinciri VIP üyelerine özeldir.") },
+            )
+        }
+        if (showChain) {
+            AlertDialog(
+                onDismissRequest = { showChain = false },
+                confirmButton = { TextButton(onClick = { showChain = false }) { Text("KAPAT") } },
+                title = { Text("KELİME ZİNCİRİ") },
+                text = {
+                    LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp)) {
+                        items(words.takeLast(30)) { w ->
+                            Text(w.word.uppercase(), modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp), color = TGtext, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            HorizontalDivider(color = Color.White.copy(alpha = .08f))
+                        }
+                    }
+                },
+            )
+        }
+        if (showChat) {
+            AlertDialog(
+                onDismissRequest = { showChat = false },
+                confirmButton = { TextButton(onClick = { showChat = false }) { Text("KAPAT") } },
+                title = { Text("OYUN SOHBETİ") },
+                text = {
+                    Column(Modifier.fillMaxWidth().heightIn(max = 440.dp)) {
+                        LazyColumn(Modifier.weight(1f, fill = false).fillMaxWidth().heightIn(min = 120.dp, max = 300.dp)) {
+                            items(chatMessages.takeLast(40)) { message ->
+                                val mine = message.senderId == me
+                                Column(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
+                                    Text(if (mine) "Sen" else opponentName, color = if (mine) TGcyan else TGpink, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    Surface(color = if (mine) TGcyan.copy(alpha = .12f) else TGpink.copy(alpha = .12f), shape = RoundedCornerShape(10.dp)) {
+                                        Text(message.body, Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = TGtext, fontSize = 13.sp)
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = chatInput,
+                            onValueChange = { chatInput = it.take(300) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            placeholder = { Text("Mesaj yaz…") },
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Send,
+                                showKeyboardOnFocus = true,
+                                hintLocales = LocaleList(Locale(if (room.language == "tr") "tr-TR" else "en-US")),
+                            ),
+                            keyboardActions = KeyboardActions(onSend = {
+                                val text = chatInput.trim()
+                                if (text.isNotEmpty()) { onSendChat(text); chatInput = "" }
+                            }),
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Button(
+                            onClick = { val text = chatInput.trim(); if (text.isNotEmpty()) { onSendChat(text); chatInput = "" } },
+                            enabled = chatInput.isNotBlank(),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) { Text("GÖNDER") }
+                    }
+                },
+            )
         }
     }
 }
