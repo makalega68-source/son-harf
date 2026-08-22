@@ -97,5 +97,6 @@ dependencies {
 
     implementation("com.android.billingclient:billing-ktx:8.0.0")
     implementation("com.google.android.gms:play-services-ads:24.5.0")
+    implementation("io.github.sceneview:sceneview:4.17.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
