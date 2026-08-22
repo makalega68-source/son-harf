@@ -35,8 +35,14 @@ jobs:
         with:
           gradle-version: '8.14.4'
 
-      - name: Apply guarded patches
-        run: python3 scripts/apply_user_requested_gameplay_ui_fixes.py
+      - name: Apply guarded patches if needed
+        run: |
+          if grep -q 'WeeklyTopThreeCard' app/src/main/java/com/sonharf/game/GamePortalApp.kt && \
+             grep -q 'ProfilePhotoAvatarWithGender' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt; then
+            echo "Requested patches are already present; verification-only run."
+          else
+            python3 scripts/apply_user_requested_gameplay_ui_fixes.py
+          fi
 
       - name: Contract checks
         run: |
