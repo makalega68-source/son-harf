@@ -24,7 +24,7 @@ object SonHarfGameModeState { var mode by mutableStateOf("normal") }
 fun MetaHubScreen() {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var tab by remember { mutableIntStateOf(0) }
-    val labels = listOf(sh("Kariyer","Career"), sh("Görevler","Goals"), sh("Lig","League"), sh("Oyunlarım","Games"), sh("Rehber","Guide"), sh("Ayarlar","Settings"))
+    val labels = listOf(sh("Kariyer","Career"), sh("Sezon","Season"), sh("Görevler","Goals"), sh("Lig","League"), sh("Oyunlarım","Games"), sh("Rehber","Guide"), sh("Ayarlar","Settings"))
     Column(Modifier.fillMaxSize()) {
         Text(sh("OYUNCU MERKEZİ","PLAYER HUB"),Modifier.padding(horizontal=16.dp,vertical=12.dp),fontSize=24.sp,fontWeight=FontWeight.Black)
         ScrollableTabRow(selectedTabIndex=tab,edgePadding=8.dp,containerColor=SonHarfSurface) {
@@ -33,10 +33,11 @@ fun MetaHubScreen() {
         Box(Modifier.weight(1f)) {
             when(tab){
                 0 -> GrowthCenterScreen()
-                1 -> RetentionGoalsPanel(backend)
-                2 -> RetentionLeaguePanel(backend)
-                3 -> RetentionGamesPanel(backend)
-                4 -> RetentionGuidePanel(backend)
+                1 -> MetaProgressV2Screen()
+                2 -> RetentionGoalsPanel(backend)
+                3 -> RetentionLeaguePanel(backend)
+                4 -> RetentionGamesPanel(backend)
+                5 -> RetentionGuidePanel(backend)
                 else -> RetentionSettingsPanel(backend)
             }
         }
@@ -54,7 +55,7 @@ private fun RetentionGoalsPanel(backend: OnlineGameBackend?) {
             val title=if(SonHarfUiState.isEnglish)g.titleEn else g.titleTr; val desc=if(SonHarfUiState.isEnglish)g.descriptionEn else g.descriptionTr; val done=g.progress>=g.target
             Card(colors=CardDefaults.cardColors(containerColor=SonHarfSurface),shape=RoundedCornerShape(18.dp)){
                 Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(title,fontWeight=FontWeight.Black);Text("💎 ${g.rewardDiamonds}",color=SonHarfCyan,fontWeight=FontWeight.Black)}
+                    Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(title,fontWeight=FontWeight.Black);Text("◈ ${g.rewardDiamonds} SC",color=SonHarfCyan,fontWeight=FontWeight.Black)}
                     Text(desc,color=SonHarfMuted,fontSize=10.sp)
                     LinearProgressIndicator(progress={g.progress.toFloat()/g.target.coerceAtLeast(1)},modifier=Modifier.fillMaxWidth())
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
@@ -103,7 +104,7 @@ private fun RetentionGuidePanel(backend: OnlineGameBackend?) {
         item{HubInfo("👑",sh("UZMAN MODU","EXPERT MODE"),sh("15/15/15 kelime. 1. round son 1 harf, 2. round son 2 harf ×2, 3. round son 3 harf ×3.","15/15/15 words. Round 1 last 1 letter, round 2 last 2 letters ×2, round 3 last 3 letters ×3."))}
         item{HubInfo("👥",sh("ARKADAŞ DÜELLOSU","FRIEND DUEL"),sh("Oyna ekranından çevrimiçi arkadaşını seç, Düello butonuna bas veya paylaşım bağlantısı gönder.","Choose an online friend from Play, tap Duel or send a shared challenge."))}
         item{HubInfo("🎁",sh("ÖDÜLLER","REWARDS"),sh("Kariyer bölümünden günlük giriş ödülünü al. Günlük 3 maç meydan okumasını ve haftalık hedefleri tamamla.","Claim daily check-in rewards, complete the 3-match daily challenge and weekly goals."))}
-        item{HubInfo("💎",sh("VIP ADİL KALIR","VIP STAYS FAIR"),sh("VIP kozmetik ve konfor sağlar; kelime gücü veya skor avantajı vermez.","VIP adds cosmetics and convenience, never word or score advantage."))}
+        item{HubInfo("⚖",sh("PREMIUM ADİL KALIR","PREMIUM STAYS FAIR"),sh("Premium Style ve konfor sağlar; kelime gücü, skor, süre, rating veya lig avantajı vermez.","Premium adds Style and convenience, never word power, score, time, rating or league advantage."))}
         items(news.take(5)){n->HubInfo("📰",if(SonHarfUiState.isEnglish)n.titleEn else n.titleTr,if(SonHarfUiState.isEnglish)n.bodyEn else n.bodyTr)}
     }
 }
