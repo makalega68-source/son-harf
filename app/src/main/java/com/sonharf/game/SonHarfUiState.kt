@@ -8,6 +8,8 @@ import androidx.compose.runtime.setValue
 object SonHarfUiState {
     var darkMode by mutableStateOf(true)
     var language by mutableStateOf("tr")
+    var inMatch by mutableStateOf(false)
+    var homeRequest by mutableStateOf(0)
 
     val isEnglish: Boolean get() = language == "en"
 }

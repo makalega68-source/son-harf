@@ -1,5 +1,7 @@
 package com.sonharf.game
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -21,6 +23,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -38,18 +41,18 @@ private enum class ClassicScreen {
     HOME, PLAY, GAME, BIL_BAKALIM, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL
 }
 
-private val ClassicBg = Color(0xFF071525)
-private val ClassicBgDeep = Color(0xFF04101D)
-private val ClassicPanel = Color(0xFF0D2136)
-private val ClassicPanel2 = Color(0xFF122A43)
-private val ClassicBorder = Color(0xFF29445E)
-private val ClassicGold = Color(0xFFD8AC5C)
-private val ClassicGoldSoft = Color(0xFFF0D59A)
-private val ClassicCream = Color(0xFFF3E8CF)
-private val ClassicText = Color(0xFFF7F4EC)
-private val ClassicMuted = Color(0xFFB6C0CA)
+private val ClassicBg = Color(0xFFF7FBFF)
+private val ClassicBgDeep = Color(0xFFE8F6FF)
+private val ClassicPanel = Color(0xFFFFFFFF)
+private val ClassicPanel2 = Color(0xFFEAF7FF)
+private val ClassicBorder = Color(0xFFB9E5F8)
+private val ClassicGold = Color(0xFF56BDE8)
+private val ClassicGoldSoft = Color(0xFF299FD3)
+private val ClassicCream = Color(0xFF16324A)
+private val ClassicText = Color(0xFF16324A)
+private val ClassicMuted = Color(0xFF698296)
 private val ClassicGreen = Color(0xFF77A878)
-private val ClassicBlue = Color(0xFF76A7C7)
+private val ClassicBlue = Color(0xFF43B6E8)
 private val ClassicRed = Color(0xFFB66A68)
 
 /**
@@ -65,6 +68,8 @@ fun ClassicPremiumApp() {
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
     val lobbyRequest = SonHarfGameNavigation.lobbyRequest
+    val context = LocalContext.current
+    var lastHomeBack by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) {
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
@@ -84,6 +89,17 @@ fun ClassicPremiumApp() {
     LaunchedEffect(screen, gameKey) {
         if (authenticated && screen == ClassicScreen.GAME) {
             runCatching { backend?.logEvent("son_harf_open") }
+        }
+    }
+    LaunchedEffect(SonHarfUiState.homeRequest) {
+        if (SonHarfUiState.homeRequest > 0) screen = ClassicScreen.HOME
+    }
+    BackHandler(enabled = authenticated) {
+        if (screen != ClassicScreen.HOME) {
+            screen = ClassicScreen.HOME
+        } else {
+            val now = System.currentTimeMillis()
+            if (now - lastHomeBack < 1800L) (context as? Activity)?.finish() else lastHomeBack = now
         }
     }
 
@@ -201,6 +217,11 @@ private fun ClassicHome(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { ClassicHeader(profile, growth, onProfile, isAdmin, onAdmin) }
+        if (isAdmin) item {
+            Button(onClick = onAdmin, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = ClassicBlue, contentColor = Color.White), shape = RoundedCornerShape(15.dp)) {
+                Icon(Icons.Rounded.AdminPanelSettings, null); Spacer(Modifier.width(8.dp)); Text("YÖNETİCİ PANELİ", fontWeight = FontWeight.Black)
+            }
+        }
         item { ClassicHero(onQuickGame) }
         item { BilBakalimHomeCard(onBilBakalim) }
         item {
@@ -242,16 +263,8 @@ private fun ClassicHome(
 @Composable
 private fun ClassicHeader(profile: ProfileDto?, growth: GrowthDashboardDto?, onProfile: () -> Unit, isAdmin: Boolean, onAdmin: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Surface(
-            onClick = onProfile,
-            modifier = Modifier.size(56.dp),
-            shape = CircleShape,
-            color = ClassicPanel2,
-            border = BorderStroke(2.dp, ClassicGold),
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text((profile?.displayName ?: "S").take(1).uppercase(), color = ClassicCream, fontSize = 23.sp, fontWeight = FontWeight.Bold)
-            }
+        Box(Modifier.clickable(onClick = onProfile)) {
+            ProfilePhotoAvatar(profile?.avatarPath, profile?.displayName ?: "S", 56.dp, visible = true, accent = ClassicBlue)
         }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
@@ -306,7 +319,7 @@ private fun ClassicHero(onPlay: () -> Unit) {
             LibraryScene(Modifier.matchParentSize())
             Box(
                 Modifier.matchParentSize().background(
-                    Brush.horizontalGradient(listOf(Color(0xE6071525), Color(0xA2071525), Color(0x30071525)))
+                    Brush.horizontalGradient(listOf(Color(0xF7FFFFFF), Color(0xD9FFFFFF), Color(0x80E8F6FF)))
                 )
             )
             Column(

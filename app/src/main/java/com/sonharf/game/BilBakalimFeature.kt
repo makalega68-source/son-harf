@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -111,7 +112,7 @@ internal fun BilBakalimHomeCard(onClick: () -> Unit) {
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text("BİL BAKALIM", color = Color(0xFFF7F4EC), fontWeight = FontWeight.Black, fontSize = 20.sp)
-                Text("Doğru cevaba en yakın tahmin kazanır", color = Color(0xFFB6C0CA), fontSize = 12.sp)
+                Text("Doğru cevaba en yakın tahmin kazanır", color = Color(0xFF6C8293), fontSize = 12.sp)
                 Spacer(Modifier.height(5.dp))
                 Text("20 sn • +10 puan", color = Color(0xFFF0D59A), fontWeight = FontWeight.Bold, fontSize = 11.sp)
             }
@@ -120,13 +121,13 @@ internal fun BilBakalimHomeCard(onClick: () -> Unit) {
     }
 }
 
-private enum class BilPhase { ANSWER, LOCKED, RESULT }
+private enum class BilPhase { ANSWER, LOCKED, RESULT, MATCH_END }
 
 @Composable
 fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
     val scope = rememberCoroutineScope()
-    var questionIndex by remember { mutableIntStateOf(Random.nextInt(bilBakalimQuestions.size)) }
-    var questionNo by remember { mutableIntStateOf(1) }
+    var deck by remember { mutableStateOf(bilBakalimQuestions.shuffled().take(15)) }
+    var questionIndex by remember { mutableIntStateOf(0) }
     var playerScore by remember { mutableIntStateOf(0) }
     var botScore by remember { mutableIntStateOf(0) }
     var input by remember { mutableStateOf("") }
@@ -135,159 +136,114 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
     var playerAnswer by remember { mutableStateOf<Double?>(null) }
     var botAnswer by remember { mutableStateOf<Double?>(null) }
     var playerWon by remember { mutableStateOf<Boolean?>(null) }
-    val focus = LocalFocusManager.current
-    val q = bilBakalimQuestions[questionIndex]
+    val q = deck[questionIndex]
+    val questionNo = questionIndex + 1
 
-    fun nextQuestion() {
-        var next = Random.nextInt(bilBakalimQuestions.size)
-        if (bilBakalimQuestions.size > 1) while (next == questionIndex) next = Random.nextInt(bilBakalimQuestions.size)
-        questionIndex = next
-        questionNo += 1
-        input = ""
-        seconds = 20
-        phase = BilPhase.ANSWER
-        playerAnswer = null
-        botAnswer = null
-        playerWon = null
+    fun resetQuestion() {
+        input = ""; seconds = 20; phase = BilPhase.ANSWER
+        playerAnswer = null; botAnswer = null; playerWon = null
     }
-
+    fun resetMatch() {
+        deck = bilBakalimQuestions.shuffled().take(15)
+        questionIndex = 0; playerScore = 0; botScore = 0; resetQuestion()
+    }
+    fun advance() {
+        if (questionIndex >= 14) phase = BilPhase.MATCH_END
+        else { questionIndex += 1; resetQuestion() }
+    }
     fun finishRound(answer: Double?) {
         if (phase != BilPhase.ANSWER) return
-        playerAnswer = answer
-        phase = BilPhase.LOCKED
-        focus.clearFocus()
+        playerAnswer = answer; phase = BilPhase.LOCKED
         scope.launch {
-            delay(800)
+            delay(550)
             val spread = max(1.0, abs(q.answer) * Random.nextDouble(.08, .42))
             val sign = if (Random.nextBoolean()) 1 else -1
             val generated = if (q.answer == 0.0) Random.nextDouble(0.0, 4.0) else max(0.0, q.answer + sign * spread)
             botAnswer = generated
-            delay(500)
-            val p = playerAnswer
-            val pDiff = if (p == null) Double.POSITIVE_INFINITY else abs(p - q.answer)
+            delay(350)
+            val pDiff = playerAnswer?.let { abs(it - q.answer) } ?: Double.POSITIVE_INFINITY
             val bDiff = abs(generated - q.answer)
             playerWon = pDiff <= bDiff
             if (playerWon == true) playerScore += 10 else botScore += 10
             phase = BilPhase.RESULT
         }
     }
-
     LaunchedEffect(questionIndex, phase) {
         if (phase != BilPhase.ANSWER) return@LaunchedEffect
         seconds = 20
-        while (seconds > 0 && phase == BilPhase.ANSWER) {
-            delay(1000)
-            seconds -= 1
-        }
+        while (seconds > 0 && phase == BilPhase.ANSWER) { delay(1000); seconds -= 1 }
         if (seconds <= 0 && phase == BilPhase.ANSWER) finishRound(null)
     }
 
-    Box(
-        Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFF071525), Color(0xFF0C1D2E), Color(0xFF07111D)))
-        )
-    ) {
-        Column(
-            Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp).imePadding(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+    BackHandler { onBack() }
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, Color(0xFFF5FBFF), Color(0xFFE8F6FF))))) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Geri", tint = Color(0xFFF7F4EC)) }
+                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, "Geri", tint = Color(0xFF18344A)) }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("BİL BAKALIM", color = Color(0xFFF0D59A), fontWeight = FontWeight.Black, fontSize = 24.sp)
-                    Text("Doğru cevaba en yakın cevap kazanır.", color = Color(0xFFB6C0CA), fontSize = 11.sp)
+                    Text("BİL BAKALIM", color = Color(0xFF2CA9DC), fontWeight = FontWeight.Black, fontSize = 25.sp)
+                    Text("Doğru cevaba en yakın cevap kazanır.", color = Color(0xFF6C8293), fontSize = 11.sp)
                 }
                 Spacer(Modifier.width(48.dp))
             }
-
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ScoreBox("SEN", playerScore, Color(0xFF76A7C7), Modifier.weight(1f))
-                ScoreBox("BOT", botScore, Color(0xFFB66A68), Modifier.weight(1f))
+                ScoreBox("SEN", playerScore, Color(0xFF2CA9DC), Modifier.weight(1f))
+                ScoreBox("BOT", botScore, Color(0xFFEA7484), Modifier.weight(1f))
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
 
-            Surface(shape = RoundedCornerShape(100.dp), color = if (seconds <= 5) Color(0xFFB66A68) else Color(0xFFD8AC5C)) {
-                Text("$seconds", Modifier.padding(horizontal = 20.dp, vertical = 8.dp), color = Color(0xFF071525), fontWeight = FontWeight.Black, fontSize = 24.sp)
+            if (phase == BilPhase.MATCH_END) {
+                Spacer(Modifier.weight(1f))
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(2.dp, Color(0xFF69C9EF)), shape = RoundedCornerShape(26.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFF45B8E5), modifier = Modifier.size(52.dp))
+                        Text(if (playerScore >= botScore) "KAZANDIN!" else "MAÇ BİTTİ", color = Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = 32.sp)
+                        Text("15 SORU TAMAMLANDI", color = Color(0xFF6C8293), fontWeight = FontWeight.Bold)
+                        Text("$playerScore  -  $botScore", color = Color(0xFF2CA9DC), fontSize = 42.sp, fontWeight = FontWeight.Black)
+                        Button(onClick = ::resetMatch, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8))) { Text("BİR OYUN DAHA", fontWeight = FontWeight.Black) }
+                        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("ANA MENÜ") }
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+                return@Column
             }
-            Spacer(Modifier.height(12.dp))
 
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF10263A)),
-                border = BorderStroke(1.dp, Color(0xFF2A4962)),
-            ) {
-                Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("${q.category.uppercase()} • SORU $questionNo", color = Color(0xFFD8AC5C), fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                    Spacer(Modifier.height(16.dp))
-                    Text(q.question, color = Color(0xFFF7F4EC), fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 31.sp, textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(22.dp))
-
+            Surface(shape = RoundedCornerShape(100.dp), color = if (seconds <= 5) Color(0xFFEA7484) else Color(0xFF65C7EE)) {
+                Text("$seconds", Modifier.padding(horizontal = 20.dp, vertical = 7.dp), color = Color.White, fontWeight = FontWeight.Black, fontSize = 23.sp)
+            }
+            Spacer(Modifier.height(8.dp))
+            Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, Color(0xFFB9E5F8))) {
+                Column(Modifier.fillMaxWidth().padding(17.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("${q.category.uppercase()} • SORU $questionNo/15", color = Color(0xFF2CA9DC), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Spacer(Modifier.height(10.dp))
+                    Text(q.question, color = Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 28.sp, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(14.dp))
                     if (phase == BilPhase.ANSWER) {
-                        OutlinedTextField(
-                            value = input,
-                            onValueChange = { raw -> input = raw.filter { it.isDigit() || it == ',' || it == '.' || it == '-' }.take(18) },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true,
-                            textStyle = LocalTextStyle.current.copy(fontSize = 30.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center),
-                            placeholder = { Text("Tahminin", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = { input.replace(',', '.').toDoubleOrNull()?.let(::finishRound) }),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFFD8AC5C),
-                                unfocusedBorderColor = Color(0xFF496174),
-                                focusedTextColor = Color.White,
-                                unfocusedTextColor = Color.White,
-                            ),
-                        )
-                        Spacer(Modifier.height(12.dp))
-                        Button(
-                            onClick = { finishRound(input.replace(',', '.').toDoubleOrNull()) },
-                            enabled = input.replace(',', '.').toDoubleOrNull() != null,
-                            modifier = Modifier.fillMaxWidth().height(58.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD8AC5C), contentColor = Color(0xFF2A1E0D)),
-                            shape = RoundedCornerShape(16.dp),
-                        ) { Text("CEVABI KİLİTLE", fontWeight = FontWeight.Black, fontSize = 16.sp) }
+                        Surface(Modifier.fillMaxWidth(), color = Color(0xFFF0F9FE), shape = RoundedCornerShape(16.dp), border = BorderStroke(2.dp, Color(0xFF69C9EF))) {
+                            Text(input.ifBlank { "Tahminin" }, Modifier.fillMaxWidth().padding(13.dp), textAlign = TextAlign.Center, color = if (input.isBlank()) Color(0xFF8EA2B1) else Color(0xFF17344A), fontSize = 30.sp, fontWeight = FontWeight.Black)
+                        }
+                        Spacer(Modifier.height(10.dp))
+                        NumericEstimatePad(input, { input = it })
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = { finishRound(input.replace(',', '.').toDoubleOrNull()) }, enabled = input.replace(',', '.').toDoubleOrNull() != null, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8)), shape = RoundedCornerShape(15.dp)) { Text("CEVABI KİLİTLE", fontWeight = FontWeight.Black) }
                     } else {
                         AnswerLine("Senin cevabın", playerAnswer?.let(::prettyNumber) ?: "Cevap yok", phase == BilPhase.RESULT && playerWon == true)
-                        Spacer(Modifier.height(10.dp))
+                        Spacer(Modifier.height(8.dp))
                         AnswerLine("Bot cevabı", botAnswer?.let(::prettyNumber) ?: "Cevap bekleniyor…", phase == BilPhase.RESULT && playerWon == false)
                     }
                 }
             }
-
-            if (phase == BilPhase.LOCKED) {
-                Spacer(Modifier.height(18.dp))
-                CircularProgressIndicator(color = Color(0xFFD8AC5C))
-                Spacer(Modifier.height(8.dp))
-                Text("İki cevap kilitleniyor…", color = Color(0xFFB6C0CA), fontSize = 12.sp)
-            }
-
+            if (phase == BilPhase.LOCKED) { Spacer(Modifier.height(12.dp)); CircularProgressIndicator(color = Color(0xFF42B7E5)) }
             if (phase == BilPhase.RESULT) {
-                Spacer(Modifier.height(14.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF0C2A22)),
-                    border = BorderStroke(1.dp, Color(0xFF39D875)),
-                    shape = RoundedCornerShape(22.dp),
-                ) {
-                    Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFFFFD54F), modifier = Modifier.size(38.dp))
-                        Text("DOĞRU CEVAP", color = Color(0xFFB6C0CA), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text(q.displayAnswer, color = Color.White, fontWeight = FontWeight.Black, fontSize = 34.sp, textAlign = TextAlign.Center)
-                        Spacer(Modifier.height(10.dp))
-                        if (playerWon == true) {
-                            Text("KAZANDIN!", color = Color(0xFF39D875), fontWeight = FontWeight.Black, fontSize = 30.sp)
-                            Text("Doğru cevap • +10 puan", color = Color(0xFF39D875), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                        } else {
-                            Text("YANLIŞ CEVAP", color = Color(0xFFFF6B6B), fontWeight = FontWeight.Black, fontSize = 28.sp)
-                        }
-                        Spacer(Modifier.height(14.dp))
-                        Button(onClick = ::nextQuestion, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD8AC5C), contentColor = Color(0xFF2A1E0D))) {
-                            Text("SONRAKİ SORU", fontWeight = FontWeight.Black)
-                        }
+                Spacer(Modifier.height(9.dp))
+                Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1FFF7)), border = BorderStroke(1.dp, Color(0xFF39D875)), shape = RoundedCornerShape(20.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(13.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("DOĞRU CEVAP", color = Color(0xFF6C8293), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(q.displayAnswer, color = Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = 30.sp, textAlign = TextAlign.Center)
+                        Text(if (playerWon == true) "KAZANDIN! • +10 PUAN" else "YANLIŞ CEVAP", color = if (playerWon == true) Color(0xFF18B864) else Color(0xFFDD5968), fontWeight = FontWeight.Black, fontSize = 19.sp)
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = ::advance, modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8))) { Text(if (questionNo == 15) "MAÇI BİTİR" else "SONRAKİ SORU", fontWeight = FontWeight.Black) }
                     }
                 }
             }
@@ -296,10 +252,37 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
 }
 
 @Composable
+private fun NumericEstimatePad(value: String, onValue: (String) -> Unit) {
+    val rows = listOf(listOf("1","2","3"), listOf("4","5","6"), listOf("7","8","9"), listOf(",","0","⌫"))
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        rows.forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { key ->
+                    Button(
+                        onClick = {
+                            val next = when (key) {
+                                "⌫" -> value.dropLast(1)
+                                "," -> if (value.contains(',') || value.contains('.')) value else if (value.isBlank()) "0," else value + ","
+                                else -> if (value.length >= 15) value else value + key
+                            }
+                            onValue(next)
+                        },
+                        modifier = Modifier.weight(1f).height(43.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE7F6FD), contentColor = Color(0xFF17344A)),
+                        contentPadding = PaddingValues(0.dp),
+                        shape = RoundedCornerShape(12.dp),
+                    ) { Text(key, fontWeight = FontWeight.Black, fontSize = 20.sp) }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ScoreBox(label: String, score: Int, accent: Color, modifier: Modifier) {
-    Surface(modifier = modifier, color = Color(0xFF10263A), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, accent.copy(alpha = .65f))) {
+    Surface(modifier = modifier, color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, accent.copy(alpha = .65f))) {
         Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, color = Color(0xFFB6C0CA), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = Color(0xFF6C8293), fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Text("$score", color = accent, fontSize = 30.sp, fontWeight = FontWeight.Black)
         }
     }
@@ -314,8 +297,8 @@ private fun AnswerLine(label: String, value: String, winner: Boolean) {
         border = BorderStroke(1.dp, if (winner) Color(0xFF39D875) else Color(0xFF29445E)),
     ) {
         Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, color = Color(0xFFB6C0CA), fontSize = 11.sp)
-            Text(value, color = if (winner) Color(0xFF39D875) else Color.White, fontWeight = FontWeight.Black, fontSize = if (winner) 31.sp else 26.sp, textAlign = TextAlign.Center)
+            Text(label, color = Color(0xFF6C8293), fontSize = 11.sp)
+            Text(value, color = if (winner) Color(0xFF39D875) else Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = if (winner) 31.sp else 26.sp, textAlign = TextAlign.Center)
         }
     }
 }

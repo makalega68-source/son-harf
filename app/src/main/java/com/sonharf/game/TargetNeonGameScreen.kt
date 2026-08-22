@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -33,17 +34,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
-private val TGbg = Color(0xFF090F1A)
-private val TGpanel = Color(0xFF10172B)
-private val TGpanel2 = Color(0xFF131D35)
-private val TGcyan = Color(0xFF00E5FF)
-private val TGpurple = Color(0xFF7B2FFF)
-private val TGpink = Color(0xFFFF4D6D)
-private val TGgold = Color(0xFFFFC107)
-private val TGblue = Color(0xFF168CFF)
+private val TGbg = Color(0xFFF7FBFF)
+private val TGpanel = Color(0xFFFFFFFF)
+private val TGpanel2 = Color(0xFFEAF7FF)
+private val TGcyan = Color(0xFF46BFEF)
+private val TGpurple = Color(0xFF6CC8ED)
+private val TGpink = Color(0xFFEA7484)
+private val TGgold = Color(0xFF52BCE8)
+private val TGblue = Color(0xFF2FA8DC)
 private val TGgreen = Color(0xFF39D875)
-private val TGtext = Color(0xFFF5F7FF)
-private val TGmuted = Color(0xFF91A1BE)
+private val TGtext = Color(0xFF16324A)
+private val TGmuted = Color(0xFF6B8294)
 
 @Composable
 fun TargetNeonGameScreen() {
@@ -119,7 +120,7 @@ fun TargetNeonGameScreen() {
         busy = false
     }
 
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF080D19), TGbg, Color(0xFF060A13))))) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, TGbg, Color(0xFFE7F6FF))))) {
         val active = room
         if (active == null) {
             TargetLobby(
@@ -129,7 +130,7 @@ fun TargetNeonGameScreen() {
                 notice = notice,
                 privateCode = privateCode,
                 showPrivate = showPrivate,
-                onLanguage = { language = it },
+                onLanguage = { next -> language = next; SonHarfUiState.language = next },
                 onPrivateCode = { privateCode = it.filter(Char::isLetterOrDigit).uppercase().take(6) },
                 onPrivateToggle = { showPrivate = !showPrivate },
                 onRandom = {
@@ -170,6 +171,9 @@ fun TargetNeonGameScreen() {
                 me = me,
                 playerName = profile?.displayName ?: "Sen",
                 opponentName = if (active.isBot) "${active.botName ?: "KelimeBot"} BOT" else opponentProfile?.displayName ?: "Rakip",
+                playerAvatarPath = profile?.avatarPath,
+                opponentAvatarPath = opponentProfile?.avatarPath,
+                opponentAvatarVisible = active.isBot || opponentProfile?.avatarVisibility != "hidden",
                 isVip = profile?.isVip == true,
                 words = words,
                 chatMessages = chatMessages,
@@ -280,6 +284,9 @@ private fun TargetArena(
     me: String?,
     playerName: String,
     opponentName: String,
+    playerAvatarPath: String?,
+    opponentAvatarPath: String?,
+    opponentAvatarVisible: Boolean,
     isVip: Boolean,
     words: List<GameWordDto>,
     chatMessages: List<ChatMessageDto>,
@@ -306,6 +313,9 @@ private fun TargetArena(
     var showChain by remember { mutableStateOf(false) }
     var showVipNotice by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
+    var confirmForfeit by remember { mutableStateOf(false) }
+    DisposableEffect(room.id) { SonHarfUiState.inMatch = true; onDispose { SonHarfUiState.inMatch = false } }
+    BackHandler { confirmForfeit = true }
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
         while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
@@ -324,13 +334,13 @@ private fun TargetArena(
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp).imePadding()) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            TargetArenaPlayer(playerName, myScore, myRounds, myTurn, TGcyan, Modifier.weight(1f))
+            TargetArenaPlayer(playerName, playerAvatarPath, true, myScore, myRounds, myTurn, TGcyan, Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
             Box(Modifier.size(76.dp).clip(CircleShape).background(Brush.sweepGradient(listOf(TGcyan, TGpurple, TGpink, TGcyan))).padding(3.dp), contentAlignment = Alignment.Center) {
                 Box(Modifier.fillMaxSize().clip(CircleShape).background(TGpanel), contentAlignment = Alignment.Center) { Text("$seconds", color = TGtext, fontWeight = FontWeight.Black, fontSize = 28.sp) }
             }
             Spacer(Modifier.width(8.dp))
-            TargetArenaPlayer(opponentName, oppScore, oppRounds, !myTurn, TGpink, Modifier.weight(1f))
+            TargetArenaPlayer(opponentName, opponentAvatarPath, opponentAvatarVisible, oppScore, oppRounds, !myTurn, TGpink, Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(14.dp))
@@ -356,7 +366,8 @@ private fun TargetArena(
                             Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (selected) TGgold.copy(alpha = .06f) else Color.Transparent).padding(horizontal = 10.dp, vertical = 9.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text(w.word.uppercase(), color = TGtext, fontSize = 23.sp, letterSpacing = 1.5.sp, modifier = Modifier.weight(1f))
+                            val wordSize = when { w.word.length >= 18 -> 15.sp; w.word.length >= 14 -> 17.sp; w.word.length >= 10 -> 20.sp; else -> 23.sp }
+                            Text(w.word.uppercase(), color = TGtext, fontSize = wordSize, letterSpacing = if (w.word.length >= 14) .3.sp else 1.2.sp, maxLines = 1, modifier = Modifier.weight(1f))
                             Surface(color = Color.Transparent, shape = RoundedCornerShape(5.dp), border = BorderStroke(1.dp, if (selected) TGgold else TGcyan)) {
                                 Text(lastChar, modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = TGtext, fontWeight = FontWeight.Black, fontSize = 18.sp)
                             }
@@ -401,10 +412,19 @@ private fun TargetArena(
         Button(onClick = { focus.clearFocus(); onSubmit() }, enabled = myTurn && wordInput.isNotBlank() && !busy, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(14.dp)) { Text("GÖNDER", fontWeight = FontWeight.Black, fontSize = 16.sp) }
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = onForfeit, modifier = Modifier.weight(1f), border = BorderStroke(1.dp, TGpink)) { Text("⚑ PES ET", color = TGpink, fontSize = 10.sp) }
+            OutlinedButton(onClick = { confirmForfeit = true }, modifier = Modifier.weight(1f), border = BorderStroke(1.dp, TGpink)) { Text("⚑ PES ET", color = TGpink, fontSize = 10.sp) }
             Surface(modifier = Modifier.weight(1f), color = TGpanel, shape = RoundedCornerShape(12.dp)) { Text(notice, Modifier.padding(12.dp), color = TGmuted, fontSize = 9.sp, textAlign = TextAlign.Center) }
         }
 
+        if (confirmForfeit) {
+            AlertDialog(
+                onDismissRequest = { confirmForfeit = false },
+                title = { Text(sh("PES ETMEK İSTEDİĞİNE EMİN MİSİN?", "ARE YOU SURE YOU WANT TO FORFEIT?"), fontWeight = FontWeight.Black) },
+                text = { Text(sh("Maç devam ederken çıkış yapılamaz. Çıkmak için maçı pes ederek bitirmen gerekir.", "You cannot leave during a live match. Forfeit the match to exit.")) },
+                confirmButton = { Button(onClick = { confirmForfeit = false; onForfeit() }, colors = ButtonDefaults.buttonColors(containerColor = TGpink)) { Text(sh("EVET, PES ET", "YES, FORFEIT")) } },
+                dismissButton = { TextButton(onClick = { confirmForfeit = false }) { Text(sh("OYUNA DÖN", "RETURN TO GAME")) } },
+            )
+        }
         if (showVipNotice) {
             AlertDialog(
                 onDismissRequest = { showVipNotice = false },
@@ -477,9 +497,9 @@ private fun TargetArena(
     }
 }
 
-@Composable private fun TargetArenaPlayer(name: String, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier) {
+@Composable private fun TargetArenaPlayer(name: String, avatarPath: String?, avatarVisible: Boolean, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        TargetAvatar(name, accent, 48.dp)
+        ProfilePhotoAvatar(avatarPath, name, 48.dp, visible = avatarVisible, accent = accent)
         Spacer(Modifier.height(5.dp))
         Text(name, color = TGtext, fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
         Text("🏆 $score", color = TGgold, fontSize = 8.sp)

@@ -15,17 +15,17 @@ import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.runBlocking
 
-internal val SonHarfBg: Color get() = if (SonHarfUiState.darkMode) Color(0xFF071525) else Color(0xFF10253A)
-internal val SonHarfSurface: Color get() = if (SonHarfUiState.darkMode) Color(0xFF0D2033) else Color(0xFF173149)
-internal val SonHarfSurface2: Color get() = if (SonHarfUiState.darkMode) Color(0xFF132A40) else Color(0xFF1C3953)
-internal val SonHarfPurple = Color(0xFF9B8667)
-internal val SonHarfCyan = Color(0xFF84AFCB)
-internal val SonHarfBlue = Color(0xFF6F94B0)
-internal val SonHarfGold = Color(0xFFD8AD62)
-internal val SonHarfGreen = Color(0xFF7DA887)
-internal val SonHarfText: Color get() = Color(0xFFF4F6F8)
-internal val SonHarfMuted: Color get() = Color(0xFFA9B6C3)
-internal val SonHarfPink = Color(0xFFB98B8B)
+internal val SonHarfBg: Color get() = if (SonHarfUiState.darkMode) Color(0xFFF7FBFF) else Color(0xFFF7FBFF)
+internal val SonHarfSurface: Color get() = if (SonHarfUiState.darkMode) Color(0xFFFFFFFF) else Color(0xFFFFFFFF)
+internal val SonHarfSurface2: Color get() = if (SonHarfUiState.darkMode) Color(0xFFEAF7FF) else Color(0xFFEAF7FF)
+internal val SonHarfPurple = Color(0xFF56BDE8)
+internal val SonHarfCyan = Color(0xFF55C2F0)
+internal val SonHarfBlue = Color(0xFF3DAFE0)
+internal val SonHarfGold = Color(0xFF55C2F0)
+internal val SonHarfGreen = Color(0xFF39B978)
+internal val SonHarfText: Color get() = Color(0xFF16324A)
+internal val SonHarfMuted: Color get() = Color(0xFF698296)
+internal val SonHarfPink = Color(0xFFEF7C8E)
 
 private val SonHarfNeonTypography = Typography(
     bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 25.sp),

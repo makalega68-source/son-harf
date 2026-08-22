@@ -5,7 +5,9 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -48,6 +50,7 @@ private data class ActionRoomV9(
     @SerialName("host_rounds") val hostRounds: Int = 0,
     @SerialName("guest_rounds") val guestRounds: Int = 0,
     @SerialName("winner_id") val winnerId: String? = null,
+    val language: String = "tr",
 )
 
 private data class ComboV9(val title: String, val color: Color)
@@ -82,6 +85,8 @@ fun ComboOverlayV9() {
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
     var reaction by remember { mutableStateOf<String?>(null) }
     var reactionKey by remember { mutableStateOf<Long?>(null) }
+    var selectedWord by remember { mutableStateOf<String?>(null) }
+    var selectedMeaning by remember { mutableStateOf<String?>(null) }
     val progress = remember { Animatable(1f) }
     val pieces = remember {
         val colors = listOf(SonHarfPink, SonHarfCyan, SonHarfGold, SonHarfGreen, SonHarfPurple, Color(0xFFFF6B35))
@@ -195,13 +200,29 @@ fun ComboOverlayV9() {
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                         SummaryMetric("🧠",myWords.toString(),sh("Kelime","Words"),Modifier.weight(1f));SummaryMetric("📏",longest,sh("En uzun","Longest"),Modifier.weight(1f));SummaryMetric("🔥",(growth?.currentWinStreak?:0).toString(),sh("Seri","Streak"),Modifier.weight(1f))
                     }
+                    Text(sh("KELİMELER • ANLAM İÇİN DOKUN", "WORDS • TAP FOR MEANING"), color=SonHarfMuted, fontSize=9.sp, fontWeight=FontWeight.Bold)
+                    androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().heightIn(max=130.dp), verticalArrangement=Arrangement.spacedBy(4.dp)) {
+                        items(resultWords) { w ->
+                            Surface(Modifier.fillMaxWidth().clickable { selectedWord=w.word; selectedMeaning=null; scope.launch { selectedMeaning=WordMeaningRuntime.meaning(w.word, fin.language) } }, shape=RoundedCornerShape(10.dp), color=SonHarfSurface2) {
+                                Text(w.word.uppercase(), Modifier.padding(horizontal=10.dp,vertical=7.dp), fontWeight=FontWeight.Bold, fontSize=12.sp)
+                            }
+                        }
+                    }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                        OutlinedButton(onClick={SonHarfShare.result(context,growth?.displayName?:sh("Oyuncu","Player"),myScore,oppScore,myWords,growth?.currentWinStreak?:0);scope.launch{backend.logEvent("match_result_share",fin.id)}},modifier=Modifier.weight(1f)){Text("↗ ${sh("SONUCU PAYLAŞ","SHARE RESULT")}",fontSize=9.sp)}
-                        Button(onClick={SonHarfShare.challenge(context,growth?.displayName?:sh("Oyuncu","Player"),if(fin.isBot)null else fin.code);scope.launch{backend.logEvent("challenge_share",fin.id)}},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=SonHarfGold,contentColor=Color(0xFF261700))){Text("⚔ ${sh("MEYDAN OKU","CHALLENGE")}",fontWeight=FontWeight.Black,fontSize=9.sp)}
+                        OutlinedButton(onClick={dismissSummary(fin.id); SonHarfUiState.homeRequest += 1},modifier=Modifier.weight(1f)){Text("← ${sh("GERİ","BACK")}",fontSize=10.sp,fontWeight=FontWeight.Bold)}
+                        Button(onClick={scope.launch { runCatching { if(fin.isBot) backend.restartBotMatch(fin.id) else backend.requestRematch(fin.id) }; dismissSummary(fin.id) }},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=SonHarfCyan)){Text(sh("AYNI OYUNCUYLA TEKRAR","REMATCH"),fontWeight=FontWeight.Black,fontSize=9.sp)}
                     }
                 }
             }
         }
+    }
+    selectedWord?.let { word ->
+        AlertDialog(
+            onDismissRequest={selectedWord=null;selectedMeaning=null},
+            title={Text(word.uppercase(),fontWeight=FontWeight.Black)},
+            text={if(selectedMeaning==null) CircularProgressIndicator() else Text(selectedMeaning!!)},
+            confirmButton={TextButton(onClick={selectedWord=null;selectedMeaning=null}){Text(sh("KAPAT","CLOSE"))}}
+        )
     }
 }
 
