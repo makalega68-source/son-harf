@@ -4,6 +4,7 @@ import android.content.Context
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
+import android.view.SurfaceHolder
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
@@ -70,12 +71,17 @@ private class MascotSurface(context: Context) : GLSurfaceView(context) {
     val renderer = MiniRenderer()
     init {
         setEGLContextClientVersion(2)
-        setZOrderOnTop(true)
         holder.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
+        holder.setType(SurfaceHolder.SURFACE_TYPE_NORMAL)
+        setZOrderMediaOverlay(true)
+        setZOrderOnTop(true)
         setEGLConfigChooser(8, 8, 8, 8, 16, 0)
         setRenderer(renderer)
         renderMode = RENDERMODE_CONTINUOUSLY
         preserveEGLContextOnPause = true
+        isClickable = false
+        isFocusable = false
+        isFocusableInTouchMode = false
     }
 }
 
@@ -144,22 +150,18 @@ private class MiniRenderer : GLSurfaceView.Renderer {
         val sad = mood == MiniMood.SAD
         val collect = mood == MiniMood.COLLECT
 
-        // body and head
         drawSphere(0f, -0.55f + bob, 0f, 0.78f, 0.92f, 0.62f, WHITE)
         drawSphere(0f, 0.52f + bob, 0.03f, 1.02f, 0.88f, 0.86f, WHITE, rz = sway)
 
-        // ears
         drawCone(-0.58f, 1.23f + bob, 0f, 0.38f, 0.58f, 0.28f, WHITE, rz = -10f + sway)
         drawCone(0.58f, 1.23f + bob, 0f, 0.38f, 0.58f, 0.28f, WHITE, rz = 10f + sway)
         drawCone(-0.58f, 1.24f + bob, 0.10f, 0.21f, 0.38f, 0.15f, PINK, rz = -10f + sway)
         drawCone(0.58f, 1.24f + bob, 0.10f, 0.21f, 0.38f, 0.15f, PINK, rz = 10f + sway)
 
-        // muzzle
         drawSphere(-0.18f, 0.28f + bob, 0.76f, 0.34f, 0.24f, 0.18f, MUZZLE)
         drawSphere(0.18f, 0.28f + bob, 0.76f, 0.34f, 0.24f, 0.18f, MUZZLE)
         drawSphere(0f, 0.38f + bob, 0.91f, 0.12f, 0.09f, 0.08f, NOSE)
 
-        // eyes: oversized blue irises with dark pupils
         val eyeY = if (sad) 0.64f else 0.72f
         val eyeScaleY = if (eyeSquint) 0.10f else 0.33f
         for (x in floatArrayOf(-0.37f, 0.37f)) {
@@ -168,7 +170,6 @@ private class MiniRenderer : GLSurfaceView.Renderer {
             if (!eyeSquint) drawSphere(x - 0.05f, eyeY + 0.08f + bob, 0.93f, 0.055f, 0.055f, 0.03f, HIGHLIGHT)
         }
 
-        // paws/arms
         val leftArmY = when (mood) { MiniMood.HAPPY, MiniMood.STREAK -> 0.03f; MiniMood.SAD -> -0.53f; else -> -0.18f }
         val rightArmY = if (collect) -0.65f else leftArmY
         drawSphere(-0.78f, leftArmY + bob, 0.22f, 0.27f, 0.55f, 0.24f, WHITE, rz = if (mood == MiniMood.HAPPY) -38f else 14f)
@@ -176,7 +177,6 @@ private class MiniRenderer : GLSurfaceView.Renderer {
         drawSphere(-0.34f, -1.30f + bob, 0.2f, 0.39f, 0.28f, 0.47f, WHITE)
         drawSphere(0.34f, -1.30f + bob, 0.2f, 0.39f, 0.28f, 0.47f, WHITE)
 
-        // tail made from curved overlapping 3D segments
         for (i in 0..5) {
             val a = i / 5f
             val tx = 0.72f + a * 0.68f
@@ -184,11 +184,8 @@ private class MiniRenderer : GLSurfaceView.Renderer {
             drawSphere(tx, ty, -0.18f, 0.26f, 0.30f, 0.25f, WHITE)
         }
 
-        // blue Son Harf scarf
         drawSphere(0f, -0.02f + bob, 0.62f, 0.64f, 0.16f, 0.12f, SCARF)
         drawCone(0f, -0.42f + bob, 0.61f, 0.42f, 0.62f, 0.10f, SCARF, rz = 180f)
-
-        // tiny gold bell
         drawSphere(0f, -0.12f + bob, 0.80f, 0.11f, 0.12f, 0.09f, GOLD)
     }
 
@@ -293,16 +290,16 @@ private class SphereMesh(lon: Int, lat: Int) : Mesh {
         }
         for (iy in 0 until lat) for (ix in 0 until lon) {
             val a = (iy * (lon + 1) + ix).toShort()
-            val b = ((iy + 1) * (lon + 1) + ix).toShort()
-            val c = (a + 1).toShort(); val d = (b + 1).toShort()
-            idx.add(a); idx.add(b); idx.add(c); idx.add(c); idx.add(b); idx.add(d)
+            val b = (a + lon + 1).toShort()
+            idx.add(a); idx.add(b); idx.add((a + 1).toShort())
+            idx.add(b); idx.add((b + 1).toShort()); idx.add((a + 1).toShort())
         }
-        vertices = floatBuffer(v); normals = floatBuffer(n); indices = shortBuffer(idx); count = idx.size
+        vertices = floats(v); normals = floats(n); indices = shorts(idx); count = idx.size
     }
     override fun draw(positionLoc: Int, normalLoc: Int) {
-        GLES20.glEnableVertexAttribArray(positionLoc); GLES20.glEnableVertexAttribArray(normalLoc)
-        GLES20.glVertexAttribPointer(positionLoc, 3, GLES20.GL_FLOAT, false, 0, vertices)
-        GLES20.glVertexAttribPointer(normalLoc, 3, GLES20.GL_FLOAT, false, 0, normals)
+        vertices.position(0); normals.position(0); indices.position(0)
+        GLES20.glEnableVertexAttribArray(positionLoc); GLES20.glVertexAttribPointer(positionLoc, 3, GLES20.GL_FLOAT, false, 0, vertices)
+        GLES20.glEnableVertexAttribArray(normalLoc); GLES20.glVertexAttribPointer(normalLoc, 3, GLES20.GL_FLOAT, false, 0, normals)
         GLES20.glDrawElements(GLES20.GL_TRIANGLES, count, GLES20.GL_UNSIGNED_SHORT, indices)
     }
 }
@@ -314,26 +311,22 @@ private class ConeMesh(segments: Int) : Mesh {
     private val count: Int
     init {
         val v = ArrayList<Float>(); val n = ArrayList<Float>(); val idx = ArrayList<Short>()
-        v.add(0f); v.add(1f); v.add(0f); n.add(0f); n.add(0.6f); n.add(0.8f)
-        for (i in 0..segments) {
+        v.add(0f); v.add(1f); v.add(0f); n.add(0f); n.add(0.7f); n.add(0.7f)
+        for (i in 0 until segments) {
             val a = 2.0 * PI * i / segments
             val x = cos(a).toFloat(); val z = sin(a).toFloat()
             v.add(x); v.add(-1f); v.add(z); n.add(x); n.add(0.45f); n.add(z)
         }
-        for (i in 1..segments) { idx.add(0); idx.add(i.toShort()); idx.add((i + 1).toShort()) }
-        vertices = floatBuffer(v); normals = floatBuffer(n); indices = shortBuffer(idx); count = idx.size
+        for (i in 0 until segments) { idx.add(0); idx.add((1+i).toShort()); idx.add((1+(i+1)%segments).toShort()) }
+        vertices=floats(v); normals=floats(n); indices=shorts(idx); count=idx.size
     }
     override fun draw(positionLoc: Int, normalLoc: Int) {
-        GLES20.glEnableVertexAttribArray(positionLoc); GLES20.glEnableVertexAttribArray(normalLoc)
-        GLES20.glVertexAttribPointer(positionLoc, 3, GLES20.GL_FLOAT, false, 0, vertices)
-        GLES20.glVertexAttribPointer(normalLoc, 3, GLES20.GL_FLOAT, false, 0, normals)
-        GLES20.glDrawElements(GLES20.GL_TRIANGLES, count, GLES20.GL_UNSIGNED_SHORT, indices)
+        vertices.position(0); normals.position(0); indices.position(0)
+        GLES20.glEnableVertexAttribArray(positionLoc); GLES20.glVertexAttribPointer(positionLoc,3,GLES20.GL_FLOAT,false,0,vertices)
+        GLES20.glEnableVertexAttribArray(normalLoc); GLES20.glVertexAttribPointer(normalLoc,3,GLES20.GL_FLOAT,false,0,normals)
+        GLES20.glDrawElements(GLES20.GL_TRIANGLES,count,GLES20.GL_UNSIGNED_SHORT,indices)
     }
 }
 
-private fun floatBuffer(values: List<Float>): FloatBuffer = ByteBuffer.allocateDirect(values.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply {
-    values.forEach { put(it) }; position(0)
-}
-private fun shortBuffer(values: List<Short>): ShortBuffer = ByteBuffer.allocateDirect(values.size * 2).order(ByteOrder.nativeOrder()).asShortBuffer().apply {
-    values.forEach { put(it) }; position(0)
-}
+private fun floats(values: List<Float>): FloatBuffer = ByteBuffer.allocateDirect(values.size * 4).order(ByteOrder.nativeOrder()).asFloatBuffer().apply { values.forEach(::put); position(0) }
+private fun shorts(values: List<Short>): ShortBuffer = ByteBuffer.allocateDirect(values.size * 2).order(ByteOrder.nativeOrder()).asShortBuffer().apply { values.forEach(::put); position(0) }
