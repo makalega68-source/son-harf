@@ -121,7 +121,8 @@ fun AccessibleLightV3SonHarfApp() {
         }
     }
 
-    WinnerFireworkOverlay()
+    // Legacy WinnerFireworkOverlay contained direct AudioTrack pop synthesis.
+    // It is intentionally not mounted: gameplay and turn changes are fully silent.
     GameInviteOverlay()
     FriendRequestOverlay()
 }
