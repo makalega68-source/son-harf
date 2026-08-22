@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -236,51 +237,61 @@ private fun TargetLobby(
     onCreate: () -> Unit,
     onJoin: () -> Unit,
 ) {
-    Column(Modifier.fillMaxSize().padding(horizontal = 22.dp, vertical = 24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
+    val privateCompact = showPrivate || imeVisible
+    Column(
+        Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().padding(horizontal = 18.dp, vertical = if (privateCompact) 8.dp else 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(if (privateCompact) 8.dp else 12.dp),
+    ) {
         Text(if (matching) "RAKİP BULUNUYOR" else "DÜELLO", color = TGtext, fontWeight = FontWeight.Black, fontSize = 18.sp)
-        Spacer(Modifier.height(28.dp))
-
         if (matching) {
-            Text("RAKİP\nBULUNUYOR!", color = TGcyan, fontWeight = FontWeight.Black, fontSize = 42.sp, textAlign = TextAlign.Center, lineHeight = 44.sp)
-            Spacer(Modifier.height(24.dp))
+            Text("RAKİP\nBULUNUYOR!", color = TGcyan, fontWeight = FontWeight.Black, fontSize = 36.sp, textAlign = TextAlign.Center, lineHeight = 38.sp)
             TargetMatchCard(playerName, "Usta", "1250", TGcyan)
-            Text("VS", color = TGpurple, fontWeight = FontWeight.Black, fontSize = 54.sp)
+            Text("VS", color = TGpurple, fontWeight = FontWeight.Black, fontSize = 42.sp)
             TargetMatchCard("RAKİP ARANIYOR", "…", "", TGpink)
             Spacer(Modifier.weight(1f))
             CircularProgressIndicator(color = TGcyan, strokeWidth = 3.dp)
-            Spacer(Modifier.height(16.dp))
-            OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(54.dp), border = BorderStroke(1.dp, TGpink), shape = RoundedCornerShape(18.dp)) { Text("İPTAL", color = TGpink, fontWeight = FontWeight.Black) }
+            OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(50.dp), border = BorderStroke(1.dp, TGpink), shape = RoundedCornerShape(16.dp)) { Text("İPTAL", color = TGpink, fontWeight = FontWeight.Black) }
         } else {
-            Card(colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(30.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .55f))) {
-                Box(Modifier.fillMaxWidth().height(250.dp).background(Brush.radialGradient(listOf(TGpurple.copy(alpha = .28f), TGpanel))), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("SON", color = TGgold, fontSize = 48.sp, fontWeight = FontWeight.Black)
-                        Text("HARF", color = TGcyan, fontSize = 48.sp, fontWeight = FontWeight.Black)
-                        Text("NEON KELİME DÜELLOSU", color = TGtext, fontSize = 10.sp, letterSpacing = 1.3.sp)
+            if (!imeVisible) {
+                Card(colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(26.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .55f))) {
+                    Box(Modifier.fillMaxWidth().height(if (privateCompact) 138.dp else 205.dp).background(Brush.radialGradient(listOf(TGpurple.copy(alpha = .28f), TGpanel))), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("SON HARF", color = TGcyan, fontSize = if (privateCompact) 34.sp else 43.sp, fontWeight = FontWeight.Black)
+                            Text("NEON KELİME DÜELLOSU", color = TGtext, fontSize = 9.sp, letterSpacing = 1.1.sp)
+                        }
                     }
                 }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = language == "tr", onClick = { onLanguage("tr") }, label = { Text("🇹🇷 TÜRKÇE", maxLines = 1) }, modifier = Modifier.weight(1f))
+                    FilterChip(selected = language == "en", onClick = { onLanguage("en") }, label = { Text("🇬🇧 ENGLISH", maxLines = 1) }, modifier = Modifier.weight(1f))
+                }
+                if (!showPrivate) {
+                    Button(onClick = onRandom, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(17.dp)) { Text("HEMEN OYNA", fontSize = 17.sp, fontWeight = FontWeight.Black) }
+                }
+                Button(onClick = onPrivateToggle, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = TGblue), shape = RoundedCornerShape(17.dp)) { Text(if (showPrivate) "ÖZEL ODAYI KAPAT" else "ODA KUR / ODAYA KATIL", fontWeight = FontWeight.Black, maxLines = 1) }
             }
-            Spacer(Modifier.height(18.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FilterChip(selected = language == "tr", onClick = { onLanguage("tr") }, label = { Text("🇹🇷 TÜRKÇE") }, modifier = Modifier.weight(1f))
-                FilterChip(selected = language == "en", onClick = { onLanguage("en") }, label = { Text("🇬🇧 ENGLISH") }, modifier = Modifier.weight(1f))
-            }
-            Spacer(Modifier.height(16.dp))
-            Button(onClick = onRandom, modifier = Modifier.fillMaxWidth().height(64.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(18.dp)) { Text("HEMEN OYNA", fontSize = 18.sp, fontWeight = FontWeight.Black) }
-            Spacer(Modifier.height(10.dp))
-            Button(onClick = onPrivateToggle, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = TGblue), shape = RoundedCornerShape(18.dp)) { Text("ODA KUR / ODAYA KATIL", fontWeight = FontWeight.Black) }
             if (showPrivate) {
-                Spacer(Modifier.height(12.dp))
-                Card(colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .45f))) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Button(onClick = onCreate, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = TGpurple)) { Text("VIP ODA OLUŞTUR") }
-                        OutlinedTextField(privateCode, onPrivateCode, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("6 haneli oda kodu") })
-                        OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6, modifier = Modifier.fillMaxWidth()) { Text("KATIL") }
+                Card(modifier = Modifier.fillMaxWidth().weight(1f, fill = false), colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .45f))) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("ÖZEL ODA", color = TGtext, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+                        Button(onClick = onCreate, modifier = Modifier.fillMaxWidth().height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = TGpurple)) { Text("VIP ODA OLUŞTUR", fontWeight = FontWeight.Black, maxLines = 1) }
+                        OutlinedTextField(
+                            privateCode,
+                            onPrivateCode,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("Oda kodu") },
+                            placeholder = { Text("6 haneli kod") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done),
+                        )
+                        OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6, modifier = Modifier.fillMaxWidth().height(46.dp)) { Text("KATIL / ONAYLA", fontWeight = FontWeight.Black) }
                     }
                 }
             }
-            Spacer(Modifier.height(12.dp))
-            Text(notice, color = TGmuted, fontSize = 10.sp, textAlign = TextAlign.Center)
+            if (!imeVisible) Text(notice, color = TGmuted, fontSize = 10.sp, textAlign = TextAlign.Center, maxLines = 2)
         }
     }
 }

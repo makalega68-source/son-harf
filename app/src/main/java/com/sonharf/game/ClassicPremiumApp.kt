@@ -251,8 +251,8 @@ private fun ClassicHome(
         item { ClassicDailySeries(growth, dailyMessage) }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ClassicSeasonCard(Modifier.weight(1f), onHub)
-                ClassicLeagueCard(growth, Modifier.weight(1f), onLeague)
+                ClassicSeasonCard(Modifier.weight(1f).aspectRatio(1f), onHub)
+                ClassicLeagueCard(growth, Modifier.weight(1f).aspectRatio(1f), onLeague)
             }
         }
         item { ClassicStats(growth) }
@@ -423,16 +423,16 @@ private fun ModeCard(icon: ImageVector, title: String, subtitle: String, selecte
 @Composable
 private fun ClassicShortcut(icon: ImageVector, label: String, badge: Int, modifier: Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = modifier.height(88.dp).clickable(onClick = onClick),
+        modifier = modifier.height(96.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(15.dp),
         color = ClassicPanel,
         border = BorderStroke(1.dp, ClassicBorder),
     ) {
         Box(Modifier.fillMaxSize().padding(8.dp)) {
             Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                Icon(icon, null, tint = ClassicGoldSoft, modifier = Modifier.size(26.dp))
+                Icon(icon, null, tint = ClassicGoldSoft, modifier = Modifier.size(24.dp))
                 Spacer(Modifier.height(7.dp))
-                Text(label, color = ClassicText, fontSize = 8.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 2)
+                Text(label, color = ClassicText, fontSize = 7.5.sp, lineHeight = 10.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 2)
             }
             if (badge > 0) {
                 Surface(Modifier.align(Alignment.TopEnd).size(20.dp), shape = CircleShape, color = ClassicRed) {
@@ -485,17 +485,17 @@ private fun ClassicDailySeries(growth: GrowthDashboardDto?, message: String) {
 @Composable
 private fun ClassicSeasonCard(modifier: Modifier, onClick: () -> Unit) {
     Surface(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), color = ClassicPanel, border = BorderStroke(1.dp, ClassicBorder)) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(sh("SEZON 12", "SEASON 12"), color = ClassicGoldSoft, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            Text(sh("ARENA ŞAMPİYONASI", "ARENA CHAMPIONSHIP"), color = ClassicText, fontSize = 10.sp)
+        Column(Modifier.fillMaxSize().padding(11.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Text(sh("SEZON 12", "SEASON 12"), color = ClassicGoldSoft, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
+            Text(sh("ARENA ŞAMPİYONASI", "ARENA CHAMPIONSHIP"), color = ClassicText, fontSize = 8.5.sp, lineHeight = 11.sp, maxLines = 2)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ProfessionalLogo(54.dp)
-                Spacer(Modifier.width(10.dp))
-                Column {
-                    Text(sh("24 gün 18 saat kaldı", "24 days 18 hours left"), color = ClassicMuted, fontSize = 9.sp)
-                    Spacer(Modifier.height(8.dp))
-                    LinearProgressIndicator(progress = { .72f }, modifier = Modifier.width(100.dp).height(5.dp).clip(CircleShape), color = ClassicGold, trackColor = Color.White.copy(alpha = .08f))
-                    Text("7.250 / 10.000", color = ClassicMuted, fontSize = 8.sp)
+                ProfessionalLogo(45.dp)
+                Spacer(Modifier.width(7.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(sh("24 gün 18 saat kaldı", "24 days 18 hours left"), color = ClassicMuted, fontSize = 7.5.sp, lineHeight = 10.sp, maxLines = 2)
+                    Spacer(Modifier.height(5.dp))
+                    LinearProgressIndicator(progress = { .72f }, modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape), color = ClassicGold, trackColor = Color.White.copy(alpha = .08f))
+                    Text("7.250 / 10.000", color = ClassicMuted, fontSize = 7.5.sp, maxLines = 1)
                 }
             }
         }
@@ -505,18 +505,18 @@ private fun ClassicSeasonCard(modifier: Modifier, onClick: () -> Unit) {
 @Composable
 private fun ClassicLeagueCard(growth: GrowthDashboardDto?, modifier: Modifier, onClick: () -> Unit) {
     Surface(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), color = ClassicPanel, border = BorderStroke(1.dp, ClassicBorder)) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Text(sh("LİGİN", "YOUR LEAGUE"), color = ClassicGoldSoft, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Column(Modifier.fillMaxSize().padding(11.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Text(sh("LİGİN", "YOUR LEAGUE"), color = ClassicGoldSoft, fontWeight = FontWeight.Bold, fontSize = 14.sp, maxLines = 1)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.EmojiEvents, null, tint = ClassicGold, modifier = Modifier.size(45.dp))
-                Spacer(Modifier.width(8.dp))
-                Column {
-                    Text(growth?.leagueName ?: "ALTIN I", color = ClassicText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    Text("2.150 / 3.000", color = ClassicMuted, fontSize = 9.sp)
+                Icon(Icons.Rounded.EmojiEvents, null, tint = ClassicGold, modifier = Modifier.size(39.dp))
+                Spacer(Modifier.width(7.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(growth?.leagueName ?: "ALTIN I", color = ClassicText, fontWeight = FontWeight.Bold, fontSize = 11.sp, maxLines = 1)
+                    Text("2.150 / 3.000", color = ClassicMuted, fontSize = 8.sp, maxLines = 1)
                 }
             }
-            LinearProgressIndicator(progress = { .72f }, modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape), color = ClassicGold, trackColor = Color.White.copy(alpha = .08f))
-            Text(sh("Sıralamanı yükselt", "Climb the ranking"), color = ClassicMuted, fontSize = 8.sp)
+            LinearProgressIndicator(progress = { .72f }, modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape), color = ClassicGold, trackColor = Color.White.copy(alpha = .08f))
+            Text(sh("Sıralamanı yükselt", "Climb the ranking"), color = ClassicMuted, fontSize = 7.5.sp, maxLines = 1)
         }
     }
 }
