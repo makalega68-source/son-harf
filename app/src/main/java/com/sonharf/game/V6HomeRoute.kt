@@ -1,13 +1,22 @@
 package com.sonharf.game
 
+import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import com.sonharf.game.ui.home.*
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+
+private data class RewardVisual(val title: String, val diamonds: Int)
 
 @Composable
 fun V6HomeRoute(
@@ -23,6 +32,7 @@ fun V6HomeRoute(
     var dailyGoals by remember { mutableStateOf<List<DailyGoalV10Dto>>(emptyList()) }
     var showVip by remember { mutableStateOf(false) }
     var showGameModePicker by remember { mutableStateOf(false) }
+    var rewardVisual by remember { mutableStateOf<RewardVisual?>(null) }
 
     suspend fun reload(showSpinner: Boolean) {
         if (showSpinner) state = state.copy(isLoading = true)
@@ -70,22 +80,30 @@ fun V6HomeRoute(
             reload(false)
         }
     }
+    LaunchedEffect("dictionary-bootstrap") {
+        // Does not block the home screen. Once the server reports both dictionaries ready,
+        // word validation automatically switches from bootstrap mode to strict dictionary mode.
+        runCatching { GameDictionaryBootstrap.syncIfNeeded() }
+    }
 
     V10HomeScreen(
         state = state,
         meta = meta,
         dailyGoals = dailyGoals,
-        onStartGameMode = { mode ->
-            if (mode == "1v1_RANKED") showGameModePicker = true else onStartGameMode(mode)
-        },
+        onStartGameMode = { mode -> if (mode == "1v1_RANKED") showGameModePicker = true else onStartGameMode(mode) },
         onClaimDailyReward = {
             if (!state.isActionBusy) scope.launch {
-                state = state.copy(isActionBusy = true, notice = "")
+                state = state.copy(isActionBusy = true, notice = "Ödül alınıyor…")
                 runCatching { backend.claimDailyCheckin() }
-                    .onSuccess { reward -> state = state.copy(notice = if (reward > 0) "+$reward elmas hesabına işlendi." else "Bugünkü ödül zaten alınmış.") }
+                    .onSuccess { reward ->
+                        if (reward > 0) {
+                            state = state.copy(diamonds = state.diamonds + reward, isDailyRewardAvailable = false, notice = "+$reward elmas hesabına işlendi.")
+                            rewardVisual = RewardVisual("Günlük Ödül", reward)
+                        } else state = state.copy(isDailyRewardAvailable = false, notice = "Bugünkü ödül zaten alınmış.")
+                    }
                     .onFailure { state = state.copy(notice = "Günlük ödül alınamadı.") }
-                reload(false)
                 state = state.copy(isActionBusy = false)
+                reload(false)
             }
         },
         onOpenVipModal = { showVip = true },
@@ -95,10 +113,16 @@ fun V6HomeRoute(
         onOpenProfile = onOpenProfile,
         onClaimWeeklyGoal = { goalId ->
             if (state.isActionBusy) return@V10HomeScreen
+            val goal = state.tasks.firstOrNull { it.id == goalId }
             scope.launch {
-                state = state.copy(isActionBusy = true, notice = "")
+                val oldBalance = state.diamonds
+                state = state.copy(isActionBusy = true, notice = "Ödül alınıyor…")
                 runCatching { backend.claimGoal(goalId) }
-                    .onSuccess { state = state.copy(notice = "Haftalık görev ödülü hesabına işlendi.") }
+                    .onSuccess { newBalance ->
+                        val delta = (newBalance - oldBalance).coerceAtLeast(goal?.rewardDiamonds ?: 0)
+                        state = state.copy(diamonds = newBalance, notice = "Haftalık görev ödülü hesabına işlendi.")
+                        rewardVisual = RewardVisual(goal?.title ?: "Haftalık Görev", delta)
+                    }
                     .onFailure { e ->
                         state = state.copy(notice = when {
                             "goal_already_claimed" in e.message.orEmpty() -> "Bu görev ödülü zaten alındı."
@@ -106,16 +130,22 @@ fun V6HomeRoute(
                             else -> "Görev ödülü alınamadı."
                         })
                     }
-                reload(false)
                 state = state.copy(isActionBusy = false)
+                reload(false)
             }
         },
         onClaimDailyGoal = { goalId ->
             if (state.isActionBusy) return@V10HomeScreen
+            val goal = dailyGoals.firstOrNull { it.id == goalId }
             scope.launch {
-                state = state.copy(isActionBusy = true, notice = "")
+                val oldBalance = state.diamonds
+                state = state.copy(isActionBusy = true, notice = "Ödül alınıyor…")
                 runCatching { backend.claimDailyGoalV10(goalId) }
-                    .onSuccess { state = state.copy(notice = "Günlük görev ödülü hesabına işlendi.") }
+                    .onSuccess { newBalance ->
+                        val delta = (newBalance - oldBalance).coerceAtLeast(goal?.rewardDiamonds ?: 0)
+                        state = state.copy(diamonds = newBalance, notice = "Günlük görev ödülü hesabına işlendi.")
+                        rewardVisual = RewardVisual(goal?.titleTr ?: "Günlük Görev", delta)
+                    }
                     .onFailure { e ->
                         state = state.copy(notice = when {
                             "goal_already_claimed" in e.message.orEmpty() -> "Bu günlük ödül zaten alındı."
@@ -123,30 +153,39 @@ fun V6HomeRoute(
                             else -> "Günlük görev ödülü alınamadı."
                         })
                     }
-                reload(false)
                 state = state.copy(isActionBusy = false)
+                reload(false)
             }
         },
     )
+
+    rewardVisual?.let { reward ->
+        AlertDialog(
+            onDismissRequest = { rewardVisual = null },
+            title = { Text("🎉 ÖDÜL ALINDI", fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) },
+            text = {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("💎", fontSize = 68.sp)
+                    Text("+${reward.diamonds}", fontSize = 32.sp, fontWeight = FontWeight.Black)
+                    Text(reward.title, textAlign = TextAlign.Center)
+                    Text("Elmaslar hesabına eklendi.", textAlign = TextAlign.Center)
+                }
+            },
+            confirmButton = { Button(onClick = { rewardVisual = null }, modifier = Modifier.fillMaxWidth()) { Text("DEVAM") } },
+        )
+    }
 
     if (showGameModePicker) {
         AlertDialog(
             onDismissRequest = { showGameModePicker = false },
             title = { Text("Oyun Modu") },
-            text = { Text("Normal mod klasik Son Harf kurallarıyla oynanır. Uzman mod daha kısa süre, daha stratejik bot ve gelişmiş son-harf baskısıyla oynanır.") },
-            confirmButton = {
-                Button(onClick = { showGameModePicker = false; onStartGameMode("EXPERT_MATCH") }) { Text("UZMAN") }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showGameModePicker = false; onStartGameMode("NORMAL_MATCH") }) { Text("NORMAL") }
-            },
+            text = { Text("Normal mod klasik Son Harf kurallarıyla oynanır. Uzman mod daha kısa süre ve gelişmiş son-harf baskısıyla oynanır.") },
+            confirmButton = { Button(onClick = { showGameModePicker = false; onStartGameMode("EXPERT_MATCH") }) { Text("UZMAN") } },
+            dismissButton = { OutlinedButton(onClick = { showGameModePicker = false; onStartGameMode("NORMAL_MATCH") }) { Text("NORMAL") } },
         )
     }
 
     if (showVip) {
-        VipPurchaseDialog(
-            onVerified = { scope.launch { reload(false) } },
-            onDismiss = { showVip = false },
-        )
+        VipPurchaseDialog(onVerified = { scope.launch { reload(false) } }, onDismiss = { showVip = false })
     }
 }
