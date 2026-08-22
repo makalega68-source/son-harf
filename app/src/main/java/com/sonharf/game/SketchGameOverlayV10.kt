@@ -18,6 +18,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.SpanStyle
@@ -188,6 +190,7 @@ fun SketchGameOverlayV10() {
                                 val f = messageForEvent(result.lastEvent, submitted)
                                 if (result.lastEvent == "word_already_used" && duplicate != null) f.copy(duplicateWord = duplicate.word.uppercase()) else f
                             } else messageForEvent(null, submitted)
+                            if (rejected) SonHarfSoundFx.warning() else SonHarfSoundFx.wordAccepted()
                         }
                         .onFailure { e ->
                             input = ""
@@ -206,6 +209,7 @@ fun SketchGameOverlayV10() {
                             } else {
                                 val f = failureFeedback(e.message.orEmpty(), submitted)
                                 feedback = if (f.duplicateWord != null && duplicate != null) f.copy(duplicateWord = duplicate.word.uppercase()) else f
+                                SonHarfSoundFx.warning()
                             }
                         }
                     busy = false
@@ -231,6 +235,13 @@ fun SketchGameOverlayV10() {
                 if (!isVip) notice = sh("Sohbet VIP üyelerine özeldir.", "Chat is for VIP members.")
                 else if (active.isBot) notice = sh("Bot maçında sohbet kapalı.", "Chat is disabled in bot matches.")
                 else scope.launch { chat = runCatching { backend.getChat(active.id) }.getOrDefault(emptyList()); showChat = true }
+            },
+            onReaction = { message ->
+                if (!active.isBot) scope.launch {
+                    runCatching { backend.sendChat(active.id, message) }
+                        .onSuccess { notice = sh("Tepki gönderildi", "Reaction sent"); SonHarfSoundFx.softNotify() }
+                        .onFailure { notice = sh("Tepki gönderilemedi", "Reaction could not be sent") }
+                }
             },
             onRematch = { scope.launch { runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }.onSuccess { room = it; words = emptyList(); input = ""; feedback = null; loadProfiles(it) } } },
             onExit = {
@@ -305,6 +316,7 @@ private fun ArenaV10(
     onTrivia: (Int) -> Unit,
     onForfeit: () -> Unit,
     onChat: () -> Unit,
+    onReaction: (String) -> Unit,
     onRematch: () -> Unit,
     onExit: () -> Unit,
 ) {
@@ -325,6 +337,14 @@ private fun ArenaV10(
         lastWord.length >= 10 -> 35.sp
         else -> 44.sp
     }
+    val scoreDelta = myScore - oppScore
+    val tensionLabel = when {
+        room.status == "sudden_death" -> sh("SON DÜELLO", "FINAL DUEL")
+        scoreDelta >= 3 -> sh("ÖNDESİN +$scoreDelta", "LEADING +$scoreDelta")
+        scoreDelta <= -3 -> sh("RAKİP ÖNDE ${-scoreDelta}", "OPPONENT +${-scoreDelta}")
+        else -> sh("BAŞA BAŞ", "NECK & NECK")
+    }
+    val haptics = LocalHapticFeedback.current
     var seconds by remember(room.turnDeadline) { mutableIntStateOf(45) }
     val timerScale by animateFloatAsState(
         targetValue = if (seconds in 1..10 && seconds % 2 == 0) 1.10f else 1f,
@@ -336,7 +356,11 @@ private fun ArenaV10(
         var lastTick = -1
         while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
             seconds = runCatching { (java.time.Instant.parse(room.turnDeadline).epochSecond - java.time.Instant.now().epochSecond).toInt().coerceAtLeast(0) }.getOrDefault(45)
-            if (seconds in 1..10 && seconds != lastTick) { lastTick = seconds; SonHarfSoundFx.heartbeat() }
+            if (seconds in 1..10 && seconds != lastTick) {
+                lastTick = seconds
+                SonHarfSoundFx.heartbeat()
+                if (myTurn) haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+            }
             if (seconds <= 0) break
             delay(250)
         }
@@ -385,13 +409,14 @@ private fun ArenaV10(
             modifier = Modifier.fillMaxWidth().weight(1f),
             colors = CardDefaults.cardColors(containerColor = SonHarfSurface.copy(alpha=.96f)),
             shape = RoundedCornerShape(22.dp),
-            border = BorderStroke(1.dp, if (SonHarfCosmetics.auroraTheme) SonHarfPurple.copy(alpha=.3f) else SonHarfMuted.copy(alpha=.16f)),
+            border = BorderStroke(if (myTurn && seconds <= 10) 1.8.dp else 1.dp, if (myTurn && seconds <= 10) SonHarfPink.copy(alpha=.72f) else if (SonHarfCosmetics.auroraTheme) SonHarfPurple.copy(alpha=.3f) else SonHarfMuted.copy(alpha=.16f)),
         ) {
             Box(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize().padding(13.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceBetween) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(if (room.status == "sudden_death") sh("ANİ ÖLÜM", "SUDDEN DEATH") else "ROUND ${room.roundNo}/3", fontWeight = FontWeight.Black, fontSize = 16.sp)
-                        Text("${room.roundWordCount}/10", color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (room.status == "sudden_death") sh("ANİ ÖLÜM", "SUDDEN DEATH") else "ROUND ${room.roundNo}/3", fontWeight = FontWeight.Black, fontSize = 15.sp, maxLines = 1)
+                        Text(tensionLabel, color = if (scoreDelta < 0) SonHarfPink else if (scoreDelta > 0) SonHarfGreen else SonHarfGold, fontWeight = FontWeight.Black, fontSize = 11.sp, maxLines = 1)
+                        Text("${room.roundWordCount}/10", color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 15.sp, maxLines = 1)
                     }
                     if (room.status == "quiz" && triviaRound != null && triviaQuestion != null) {
                         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -470,9 +495,10 @@ private fun ArenaV10(
             }
         }
         KeyboardV10(room.language, myTurn && !busy && room.status != "quiz", input, onInput, onSubmit)
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick=onForfeit, modifier=Modifier.weight(1f).height(44.dp), border=BorderStroke(1.dp, SonHarfPink.copy(alpha=.55f))) { Text(sh("⚑ PES ET", "⚑ FORFEIT"), color=SonHarfPink, fontWeight=FontWeight.Bold, fontSize=14.sp) }
-            OutlinedButton(onClick=onChat, modifier=Modifier.weight(1f).height(44.dp), border=BorderStroke(1.dp, SonHarfCyan.copy(alpha=.55f))) { Text(if (isVip) sh("● SOHBET", "● CHAT") else sh("🔒 SOHBET • VIP", "🔒 CHAT • VIP"), color=if (isVip) SonHarfCyan else SonHarfGold, fontWeight=FontWeight.Bold, fontSize=14.sp) }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            OutlinedButton(onClick=onForfeit, modifier=Modifier.weight(1f).height(44.dp), contentPadding=PaddingValues(horizontal=3.dp), border=BorderStroke(1.dp, SonHarfPink.copy(alpha=.55f))) { Text(sh("⚑ PES", "⚑ QUIT"), color=SonHarfPink, fontWeight=FontWeight.Bold, fontSize=12.sp, maxLines=1) }
+            OutlinedButton(onClick={ onReaction(if (room.language == "tr") "👏 İyi kelime!" else "👏 Nice word!") }, enabled=!room.isBot, modifier=Modifier.weight(1.15f).height(44.dp), contentPadding=PaddingValues(horizontal=3.dp), border=BorderStroke(1.dp, SonHarfGold.copy(alpha=.6f))) { Text(sh("👏 İYİ KELİME", "👏 NICE WORD"), color=if (room.isBot) SonHarfMuted else SonHarfGold, fontWeight=FontWeight.Bold, fontSize=10.sp, maxLines=1) }
+            OutlinedButton(onClick=onChat, modifier=Modifier.weight(1.15f).height(44.dp), contentPadding=PaddingValues(horizontal=3.dp), border=BorderStroke(1.dp, SonHarfCyan.copy(alpha=.55f))) { Text(if (isVip) sh("● SOHBET", "● CHAT") else sh("🔒 CHAT • VIP", "🔒 CHAT • VIP"), color=if (isVip) SonHarfCyan else SonHarfGold, fontWeight=FontWeight.Bold, fontSize=11.sp, maxLines=1) }
         }
     }
 }
