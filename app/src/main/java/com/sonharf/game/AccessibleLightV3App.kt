@@ -42,16 +42,11 @@ fun AccessibleLightV3SonHarfApp() {
         SonHarfCosmetics.apply(runCatching { backend?.getEquippedCosmetics() }.getOrNull())
     }
     LaunchedEffect(lobbyRequest) {
-        if (authenticated && lobbyRequest > 0) {
-            gameKey += 1
-            screen = LightV3Screen.GAME
-        }
+        if (authenticated && lobbyRequest > 0) { gameKey += 1; screen = LightV3Screen.GAME }
     }
 
     if (!authChecked) {
-        Box(Modifier.fillMaxSize().background(appBg), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = navTeal)
-        }
+        Box(Modifier.fillMaxSize().background(appBg), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = navTeal) }
         return
     }
     if (!authenticated) {
@@ -83,21 +78,18 @@ fun AccessibleLightV3SonHarfApp() {
                                 runCatching { backend?.setPreferredGameMode("expert") }
                                 SonHarfPreferences.setBotDifficulty(context, "hard")
                                 SonHarfGameModeState.mode = "expert"
-                                gameKey += 1
-                                screen = LightV3Screen.GAME
+                                gameKey += 1; screen = LightV3Screen.GAME
                             }
                             "NORMAL_MATCH", "PRACTICE_BOT" -> scope.launch {
                                 runCatching { backend?.setPreferredGameMode("normal") }
                                 if (mode == "PRACTICE_BOT") SonHarfPreferences.setBotDifficulty(context, "normal")
                                 SonHarfGameModeState.mode = "normal"
-                                gameKey += 1
-                                screen = LightV3Screen.GAME
+                                gameKey += 1; screen = LightV3Screen.GAME
                             }
                             else -> scope.launch {
                                 runCatching { backend?.setPreferredGameMode("normal") }
                                 SonHarfGameModeState.mode = "normal"
-                                gameKey += 1
-                                screen = LightV3Screen.GAME
+                                gameKey += 1; screen = LightV3Screen.GAME
                             }
                         }
                     },
@@ -106,7 +98,7 @@ fun AccessibleLightV3SonHarfApp() {
                 )
                 LightV3Screen.GAME -> key(gameKey) {
                     Box(Modifier.fillMaxSize()) {
-                        V10BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME })
+                        V11BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME })
                         if (SonHarfGameModeState.mode == "expert") ExpertArenaOverlay()
                     }
                 }
@@ -121,8 +113,7 @@ fun AccessibleLightV3SonHarfApp() {
         }
     }
 
-    // Legacy WinnerFireworkOverlay contained direct AudioTrack pop synthesis.
-    // It is intentionally not mounted: gameplay and turn changes are fully silent.
+    // Direct AudioTrack celebration/pop code is intentionally not mounted.
     GameInviteOverlay()
     FriendRequestOverlay()
 }
