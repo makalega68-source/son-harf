@@ -91,9 +91,10 @@ fun TargetNeonGameScreen() {
 
     suspend fun activeRoom(): GameRoomDto? {
         val me = backend.currentUserId() ?: return null
-        return SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
+        val candidates = SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
             .filter { (it.hostId == me || it.guestId == me) && it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused") }
-            .maxByOrNull { it.validWordCount }
+        val sameLanguage = candidates.filter { it.language == language }
+        return (sameLanguage.ifEmpty { candidates }).maxByOrNull { it.validWordCount }
     }
 
     suspend fun refreshOpponent(r: GameRoomDto) {
@@ -115,7 +116,7 @@ fun TargetNeonGameScreen() {
         busy = true
         runCatching { ensureProfile() }.onSuccess {
             val old = runCatching { activeRoom() }.getOrNull()
-            if (old != null) { room = old; language = old.language; observe(old) }
+            if (old != null) { room = old; language = old.language; SonHarfUiState.language = old.language; observe(old) }
         }.onFailure { notice = friendly(it.message.orEmpty()) }
         busy = false
     }
@@ -146,7 +147,7 @@ fun TargetNeonGameScreen() {
                         if (matching) matchJob = launch {
                             while (matching && room == null) {
                                 val found = runCatching { backend.pollRandomMatchmakingRoom() }.getOrNull()
-                                if (found != null) { room = found; language = found.language; observe(found); SonHarfSoundFx.softNotify(); break }
+                                if (found != null) { room = found; language = found.language; SonHarfUiState.language = found.language; observe(found); SonHarfSoundFx.softNotify(); break }
                                 delay(800)
                             }
                         }
@@ -154,7 +155,7 @@ fun TargetNeonGameScreen() {
                 },
                 onCancel = { scope.launch { matching = false; matchJob?.cancel(); runCatching { backend.cancelRandomMatchmaking() }; notice = "Eşleşme iptal edildi" } },
                 onCreate = { scope.launch { busy = true; runCatching { backend.createPrivateRoom(language) }.onSuccess { room = it; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
-                onJoin = { scope.launch { busy = true; runCatching { backend.joinPrivateRoom(privateCode) }.onSuccess { room = it; language = it.language; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
+                onJoin = { scope.launch { busy = true; runCatching { backend.joinPrivateRoom(privateCode) }.onSuccess { room = it; language = it.language; SonHarfUiState.language = it.language; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
             )
         } else {
             val me = backend.currentUserId()
