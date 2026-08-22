@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +23,7 @@ import java.time.Instant
 import java.util.Locale
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
@@ -65,11 +65,11 @@ private data class BilQuestionDto(
 )
 
 @Serializable private data class BilOwnAnswerDto(@SerialName("answer_index") val answerIndex: Long)
-@Serializable private data class BilNameDto(@SerialName("display_name") val displayName: String)
 
 @Composable
 fun BilBakalimOverlay() {
     val backend = remember { OnlineGameBackend() }
+    val scope = rememberCoroutineScope()
     val me = backend.currentUserId() ?: return
     var room by remember { mutableStateOf<GameRoomDto?>(null) }
     var round by remember { mutableStateOf<BilRoundDto?>(null) }
@@ -94,7 +94,7 @@ fun BilBakalimOverlay() {
 
             if (activeRoom == null) {
                 room = null; round = null; question = null; myAnswer = null
-                delay(350)
+                delay(300)
                 continue
             }
 
@@ -114,7 +114,7 @@ fun BilBakalimOverlay() {
 
             if (latestRound == null || q?.questionKind != "bil_bakalim") {
                 room = null; round = null; question = null; myAnswer = null
-                delay(350)
+                delay(300)
                 continue
             }
 
@@ -127,17 +127,8 @@ fun BilBakalimOverlay() {
                     .decodeList<BilOwnAnswerDto>()
                     .firstOrNull()?.answerIndex
             }.getOrNull()
-
-            if (activeRoom.hostId == me) {
-                hostName = runCatching { backend.getProfile(activeRoom.hostId).displayName }.getOrDefault("Sen")
-            } else {
-                hostName = runCatching { backend.getProfile(activeRoom.hostId).displayName }.getOrDefault("1. Oyuncu")
-            }
-            guestName = if (activeRoom.isBot) {
-                activeRoom.botName ?: "KelimeBot"
-            } else {
-                activeRoom.guestId?.let { runCatching { backend.getProfile(it).displayName }.getOrNull() } ?: "2. Oyuncu"
-            }
+            hostName = runCatching { backend.getProfile(activeRoom.hostId).displayName }.getOrDefault(if (activeRoom.hostId == me) "Sen" else "1. Oyuncu")
+            guestName = if (activeRoom.isBot) activeRoom.botName ?: "KelimeBot" else activeRoom.guestId?.let { runCatching { backend.getProfile(it).displayName }.getOrNull() } ?: "2. Oyuncu"
 
             val deadline = latestRound.answerDeadline?.let { runCatching { Instant.parse(it).epochSecond }.getOrNull() }
             if (latestRound.resolvedAt == null && deadline != null && nowEpoch >= deadline) {
@@ -158,7 +149,7 @@ fun BilBakalimOverlay() {
                     ).decodeSingle<GameRoomDto>()
                 }
             }
-            delay(350)
+            delay(300)
         }
     }
 
@@ -171,10 +162,8 @@ fun BilBakalimOverlay() {
     val seconds = ((deadlineEpoch ?: nowEpoch) - nowEpoch).toInt().coerceIn(0, 20)
     val resolved = r.resolvedAt != null
     val submitted = myAnswer != null
-    val meIsHost = g.hostId == me
-    val mySide = if (meIsHost) "host" else "guest"
-    val opponentSide = if (g.isBot) "bot" else if (meIsHost) "guest" else "host"
-    val secondAnswer = if (g.isBot) r.botAnswer else r.guestAnswer
+    val meSide = if (g.hostId == me) "host" else "guest"
+    val secondSide = if (g.isBot) "bot" else "guest"
 
     Surface(Modifier.fillMaxSize(), color = BilBg) {
         Column(
@@ -197,9 +186,15 @@ fun BilBakalimOverlay() {
                 color = BilCard,
                 border = BorderStroke(2.dp, BilGold.copy(alpha = 0.75f)),
             ) {
-                Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(q.question, color = BilInk, fontWeight = FontWeight.Black, fontSize = 22.sp, lineHeight = 28.sp, textAlign = TextAlign.Center)
-                }
+                Text(
+                    q.question,
+                    modifier = Modifier.fillMaxWidth().padding(20.dp),
+                    color = BilInk,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 22.sp,
+                    lineHeight = 28.sp,
+                    textAlign = TextAlign.Center,
+                )
             }
 
             if (!resolved) {
@@ -230,30 +225,23 @@ fun BilBakalimOverlay() {
                     onSubmit = {
                         val value = input.toIntOrNull() ?: return@BilNumberPad
                         sending = true
-                        kotlinx.coroutines.GlobalScope
-                        val localBackend = backend
-                        @Suppress("UNUSED_VARIABLE") val ignored = localBackend
+                        scope.launch {
+                            runCatching { backend.answerTrivia(r.id, value) }
+                            sending = false
+                        }
                     },
                 )
-                Button(
-                    onClick = {
-                        val value = input.toIntOrNull() ?: return@Button
-                        sending = true
-                    },
-                    enabled = false,
-                    modifier = Modifier.size(0.dp),
-                ) { }
             } else {
                 BilResultCard(
                     hostName = hostName,
                     guestName = guestName,
                     hostAnswer = r.hostAnswer,
-                    guestAnswer = secondAnswer,
+                    guestAnswer = if (g.isBot) r.botAnswer else r.guestAnswer,
+                    secondSide = secondSide,
                     winnerSide = r.winnerSide,
                     correctAnswer = r.correctAnswer,
                     unit = q.answerUnit,
-                    meSide = mySide,
-                    opponentSide = opponentSide,
+                    meSide = meSide,
                     myAnswered = myAnswer != null,
                 )
                 Spacer(Modifier.weight(1f))
@@ -261,25 +249,19 @@ fun BilBakalimOverlay() {
             }
         }
     }
-
-    if (!resolved && !submitted && sending) {
-        LaunchedEffect(sending) {
-            val value = input.toIntOrNull()
-            if (value != null) runCatching { backend.answerTrivia(r.id, value) }
-            sending = false
-        }
-    }
 }
 
 @Composable
 private fun BilNumberPad(enabled: Boolean, submitEnabled: Boolean, onDigit: (String) -> Unit, onDelete: () -> Unit, onSubmit: () -> Unit) {
-    val rows = listOf(listOf("1","2","3"), listOf("4","5","6"), listOf("7","8","9"))
+    val rows = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"))
     Surface(shape = RoundedCornerShape(20.dp), color = Color(0xFFDDEBE6), modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             rows.forEach { row ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     row.forEach { digit ->
-                        Button(onClick = { onDigit(digit) }, enabled = enabled, modifier = Modifier.weight(1f).height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = BilCard, contentColor = BilInk)) { Text(digit, fontWeight = FontWeight.Black, fontSize = 20.sp) }
+                        Button(onClick = { onDigit(digit) }, enabled = enabled, modifier = Modifier.weight(1f).height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = BilCard, contentColor = BilInk)) {
+                            Text(digit, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                        }
                     }
                 }
             }
@@ -293,9 +275,9 @@ private fun BilNumberPad(enabled: Boolean, submitEnabled: Boolean, onDigit: (Str
 }
 
 @Composable
-private fun BilResultCard(hostName: String, guestName: String, hostAnswer: Long?, guestAnswer: Long?, winnerSide: String?, correctAnswer: Long?, unit: String?, meSide: String, opponentSide: String, myAnswered: Boolean) {
+private fun BilResultCard(hostName: String, guestName: String, hostAnswer: Long?, guestAnswer: Long?, secondSide: String, winnerSide: String?, correctAnswer: Long?, unit: String?, meSide: String, myAnswered: Boolean) {
     val hostWinner = winnerSide == "host" || winnerSide == "tie"
-    val guestWinner = winnerSide == opponentSide || winnerSide == "tie"
+    val guestWinner = winnerSide == secondSide || winnerSide == "tie"
     val iWon = winnerSide == meSide || winnerSide == "tie"
     val winnerName = when (winnerSide) {
         "host" -> hostName
