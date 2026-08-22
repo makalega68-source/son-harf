@@ -151,3 +151,5 @@ internal fun MiniMascotGlobalOverlay() {
         )
     }
 }
+
+// build-trigger: approved-hero-code-cat
