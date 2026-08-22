@@ -35,7 +35,7 @@ fun EconomyShopScreen() {
         )
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("MAĞAZA", "SHOP")) }, modifier = Modifier.weight(1f))
+            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("STYLE", "STYLE")) }, modifier = Modifier.weight(1f))
             FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("ÜCRETSİZ ÖDÜLLER", "FREE REWARDS")) }, modifier = Modifier.weight(1f))
         }
         Box(Modifier.weight(1f)) { if (tab == 0) EconomyCatalogScreen() else RewardCenterScreen() }
@@ -91,11 +91,11 @@ private fun EconomyCatalogScreen() {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text(sh("MAĞAZA", "SHOP"), color = SonHarfText, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Görünümünü seç • satın al • hemen kullan", "Choose • buy • equip instantly"), color = SonHarfMuted, fontSize = 10.sp)
+                    Text("STYLE", color = SonHarfText, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Tarzını seç • aç • hemen kullan", "Choose your style • unlock • equip instantly"), color = SonHarfMuted, fontSize = 10.sp)
                 }
                 Surface(shape = RoundedCornerShape(99.dp), color = SonHarfCyan.copy(alpha = .13f), border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f))) {
-                    Text("◆ ${profile?.diamonds ?: 0}", Modifier.padding(horizontal = 13.dp, vertical = 8.dp), color = SonHarfCyan, fontWeight = FontWeight.Black)
+                    Text("◈ ${profile?.diamonds ?: 0} SC", Modifier.padding(horizontal = 13.dp, vertical = 8.dp), color = SonHarfCyan, fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -105,15 +105,15 @@ private fun EconomyCatalogScreen() {
 
         item {
             ScrollableTabRow(selectedTabIndex = category, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
-                listOf(sh("TÜMÜ", "ALL"), sh("ROZET & PROFİL", "PROFILE"), sh("TEMA & KLAVYE", "THEME"), sh("EFEKT", "EFFECTS")).forEachIndexed { index, label ->
+                listOf(sh("TÜMÜ", "ALL"), sh("PROFİL", "PROFILE"), sh("TEMA", "THEME"), sh("EFEKT", "EFFECTS")).forEachIndexed { index, label ->
                     Tab(selected = category == index, onClick = { category = index }, text = { Text(label, color = if (category == index) SonHarfCyan else SonHarfMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold) })
                 }
             }
         }
 
         item {
-            Text(sh("ELMASLA KOZMETİK", "COSMETICS WITH DIAMONDS"), color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 13.sp)
-            Text(sh("Elmaslar maç avantajı vermez; yalnızca görünüm ve kişiselleştirme içindir.", "Diamonds never give match advantages; they are for appearance only."), color = SonHarfMuted, fontSize = 9.sp)
+            Text(sh("SON COIN İLE STYLE", "STYLE WITH SON COIN"), color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 13.sp)
+            Text(sh("Son Coin maç avantajı vermez; yalnızca Style, görünüm ve kişiselleştirme içindir.", "Son Coin never gives match advantages; it is only for Style and personalization."), color = SonHarfMuted, fontSize = 9.sp)
         }
 
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfCyan) }
@@ -138,7 +138,7 @@ private fun EconomyCatalogScreen() {
                         if (item.vipOnly) Surface(color = SonHarfGold.copy(alpha = .15f), shape = RoundedCornerShape(9.dp)) { Text("VIP", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = SonHarfGold, fontWeight = FontWeight.Black) }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(if (mine) sh("✓ SAHİPSİN", "✓ OWNED") else "◆ ${item.diamondPrice}", color = if (mine) SonHarfGreen else SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                        Text(if (mine) sh("✓ SAHİPSİN", "✓ OWNED") else "◈ ${item.diamondPrice} SC", color = if (mine) SonHarfGreen else SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 15.sp)
                         Button(
                             onClick = {
                                 scope.launch {
@@ -146,15 +146,15 @@ private fun EconomyCatalogScreen() {
                                     if (mine) {
                                         runCatching { backend?.equipShopItem(item.id) }
                                             .onSuccess { notice = sh("${name} etkinleştirildi.", "$name equipped."); reload() }
-                                            .onFailure { notice = sh("Kozmetik etkinleştirilemedi.", "Cosmetic could not be equipped.") }
+                                            .onFailure { notice = sh("Style öğesi etkinleştirilemedi.", "Style item could not be equipped.") }
                                     } else {
                                         runCatching { backend?.purchaseShopItem(item.id) }
                                             .onSuccess { notice = sh("Satın alma tamamlandı. Şimdi kullanabilirsin.", "Purchase complete. You can equip it now."); reload() }
                                             .onFailure {
                                                 val raw = it.message.orEmpty()
                                                 notice = when {
-                                                    "insufficient_diamonds" in raw -> sh("Yeterli elmasın yok.", "Not enough diamonds.")
-                                                    "vip_required" in raw -> sh("Bu ürün VIP üyelerine özel.", "This item is VIP only.")
+                                                    "insufficient_diamonds" in raw -> sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                                                    "vip_required" in raw -> sh("Bu Style öğesi VIP üyelerine özel.", "This Style item is VIP only.")
                                                     "already_owned" in raw -> sh("Bu ürüne zaten sahipsin.", "Already owned.")
                                                     else -> sh("Satın alma tamamlanamadı.", "Purchase failed.")
                                                 }
@@ -192,11 +192,12 @@ private fun AnimatedVipShopCard(active: Boolean, onClick: () -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Box(Modifier.size(48.dp).scale(pulse).background(SonHarfGold.copy(alpha = glow), CircleShape), contentAlignment = Alignment.Center) { Text("♛", color = SonHarfGold, fontSize = 30.sp, fontWeight = FontWeight.Black) }
-                    Column { Text("VIP", color = SonHarfGold, fontSize = 24.sp, fontWeight = FontWeight.Black); Text(sh("Premium üyelik", "Premium membership"), color = SonHarfMuted, fontSize = 9.sp) }
+                    Column { Text("PREMIUM", color = SonHarfGold, fontSize = 24.sp, fontWeight = FontWeight.Black); Text(sh("Reklamsız + özel Style", "Ad-free + exclusive Style"), color = SonHarfMuted, fontSize = 9.sp) }
                 }
                 Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) SonHarfGreen else SonHarfGold, fontWeight = FontWeight.Black)
             }
-            Text(sh("Özel oda • özel kozmetikler • gelişmiş istatistik • reklamsız deneyim • aylık 400 elmas", "Private rooms • exclusive cosmetics • advanced stats • no ads • 400 diamonds monthly"), color = SonHarfText, fontSize = 10.sp)
+            Text(sh("Özel oda • özel Style • gelişmiş istatistik • reklamsız deneyim • aylık 400 Son Coin", "Private rooms • exclusive Style • advanced stats • no ads • 400 Son Coin monthly"), color = SonHarfText, fontSize = 10.sp)
+            Text(sh("Premium maç gücü, süre veya lig avantajı vermez.", "Premium never gives match power, time or league advantages."), color = SonHarfGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -218,7 +219,7 @@ private fun CosmeticPreview(item: ShopItemDto) {
                 "game_theme" -> Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(SonHarfPurple.copy(alpha = .35f), SonHarfCyan.copy(alpha = .28f), SonHarfGold.copy(alpha = .20f))), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text("AURORA ARENA", fontWeight = FontWeight.Black, color = SonHarfText) }
                 "keyboard_theme" -> Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("S","O","N","H","A","R","F").forEach { k -> Surface(color = Color(0xFF122840), shape = RoundedCornerShape(7.dp), border = BorderStroke(1.5.dp, SonHarfCyan)) { Text(k, Modifier.padding(horizontal = 8.dp, vertical = 10.dp), color = SonHarfCyan, fontWeight = FontWeight.Black) } } }
                 "victory_effect" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text("✦", color = SonHarfCyan, fontSize = 30.sp); Text("♛", color = SonHarfGold, fontSize = 50.sp, fontWeight = FontWeight.Black, modifier = Modifier.scale(pulse)); Text("✦", color = SonHarfPink, fontSize = 30.sp) }
-                "emoji_pack" -> Text("👑  ⚡  😎  🔥  ◆", fontSize = 30.sp)
+                "emoji_pack" -> Text("👑  ⚡  😎  🔥  ◈", fontSize = 30.sp)
                 else -> Text("◇", fontSize = 44.sp, color = SonHarfCyan)
             }
         }
