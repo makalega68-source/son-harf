@@ -63,19 +63,11 @@ jobs:
           grep -q 'HapticFeedbackType.LongPress' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
           grep -q 'Two soft low-frequency body thumps' app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt
 
-      - name: Unit tests
+      - name: Unit-test task / Kotlin compilation
         run: gradle :app:testDebugUnitTest --stacktrace --warning-mode all
 
       - name: Compile debug APK
         run: gradle :app:assembleDebug --stacktrace --warning-mode all
-
-      - name: Commit tested source upgrade
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt
-          git diff --cached --quiet || git commit -m "Upgrade gameplay tension audio and social feedback"
-          git push origin HEAD:feat/gameplay-experience-20260822
 
       - name: Stage APK
         run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Rekabet-Deneyim.apk
