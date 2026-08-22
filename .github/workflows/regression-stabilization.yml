@@ -3,6 +3,8 @@ name: Regression Stabilization
 on:
   push:
     branches: [ fix/regression-lock-20260822 ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -33,13 +35,14 @@ jobs:
           gradle-version: '8.14.4'
       - name: Apply locked regression repairs
         run: python3 scripts/apply_regression_stabilization.py
-      - name: Verify no old dark-theme regression remains
+      - name: Verify protected regressions
         run: |
           ! grep -q 'Color(0xFF040717)' app/src/main/java/com/sonharf/game/CompleteProfileScreen.kt
           ! grep -q 'Color(0xFF06091A)' app/src/main/java/com/sonharf/game/LeaderboardExperience.kt
           grep -q 'RegressionGuardOverlay()' app/src/main/java/com/sonharf/game/MainActivity.kt
           grep -q 'Color(0xFFFF76A8)' app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt
           grep -q 'Color(0xFF439EF2)' app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt
+          grep -q 'SonHarfUiState.homeRequest += 1' app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt
       - name: Compile stabilized debug APK
         run: gradle assembleDebug --stacktrace --warning-mode all
       - name: Commit only after successful build
