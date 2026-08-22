@@ -26,6 +26,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import com.sonharf.game.data.SupabaseProvider
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.random.Random
@@ -41,6 +47,52 @@ private val PortalGold = Color(0xFFD8AC5C)
 private val PortalGreen = Color(0xFF39B978)
 private val PortalRed = Color(0xFFCE6470)
 
+
+@Serializable
+private data class WeeklyPlayerDto(
+    @SerialName("user_id") val userId: String,
+    @SerialName("display_name") val displayName: String,
+    val wins: Long = 0,
+    @SerialName("win_rate") val winRate: Int = 0,
+    val rating: Int = 0,
+)
+
+@Composable
+private fun WeeklyTopThreeCard() {
+    var players by remember { mutableStateOf<List<WeeklyPlayerDto>>(emptyList()) }
+    var loaded by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        players = if (!SupabaseProvider.configured) emptyList() else runCatching {
+            SupabaseProvider.client.postgrest.rpc(
+                "get_weekly_leaderboard",
+                buildJsonObject { put("p_limit", 3) },
+            ).decodeList<WeeklyPlayerDto>()
+        }.getOrDefault(emptyList())
+        loaded = true
+    }
+    Surface(shape = RoundedCornerShape(20.dp), color = PortalCard, border = BorderStroke(1.dp, Color(0xFFB9E5F8))) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.EmojiEvents, null, tint = PortalGold, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(7.dp))
+                Text("HAFTANIN EN İYİ 3 OYUNCUSU", color = PortalText, fontWeight = FontWeight.Black, fontSize = 13.sp)
+            }
+            if (!loaded) LinearProgressIndicator(Modifier.fillMaxWidth())
+            else if (players.isEmpty()) Text("Bu hafta henüz sıralama oluşmadı.", color = PortalMuted, fontSize = 11.sp)
+            else players.take(3).forEachIndexed { index, p ->
+                Surface(shape = RoundedCornerShape(12.dp), color = if (index == 0) PortalGold.copy(alpha = .10f) else PortalBg) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(listOf("🥇", "🥈", "🥉")[index], fontSize = 18.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(p.displayName, modifier = Modifier.weight(1f), color = PortalText, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
+                        Text("${p.wins} G • %${p.winRate}", color = PortalMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 fun GamePortalApp() {
     var game by remember { mutableStateOf(PortalGame.MENU) }
@@ -51,29 +103,8 @@ fun GamePortalApp() {
             onSonHarf = { game = PortalGame.SON_HARF },
             onBilBakalim = { game = PortalGame.BIL_BAKALIM },
         )
-        PortalGame.SON_HARF -> Box(Modifier.fillMaxSize()) {
-            ClassicPremiumApp()
-            PortalReturnButton { game = PortalGame.MENU }
-        }
+        PortalGame.SON_HARF -> ClassicPremiumApp()
         PortalGame.BIL_BAKALIM -> CompetitiveBilBakalimScreen { game = PortalGame.MENU }
-    }
-}
-
-@Composable
-private fun PortalReturnButton(onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = Modifier.statusBarsPadding().padding(start = 10.dp, top = 6.dp),
-        shape = RoundedCornerShape(14.dp),
-        color = Color.White.copy(alpha = .94f),
-        shadowElevation = 6.dp,
-        border = BorderStroke(1.dp, Color(0xFFB9E5F8)),
-    ) {
-        Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Games, null, tint = PortalBlue, modifier = Modifier.size(17.dp))
-            Spacer(Modifier.width(5.dp))
-            Text("OYUNLAR", color = PortalText, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-        }
     }
 }
 
@@ -119,6 +150,8 @@ private fun GamePortalMenu(onSonHarf: () -> Unit, onBilBakalim: () -> Unit) {
             onClick = onBilBakalim,
         )
 
+        WeeklyTopThreeCard()
+
         Surface(shape = RoundedCornerShape(18.dp), color = PortalCard, border = BorderStroke(1.dp, Color(0xFFB9E5F8))) {
             Column(Modifier.padding(14.dp)) {
                 Text("ORTAK REKABET DÖNGÜSÜ", color = PortalText, fontWeight = FontWeight.Black, fontSize = 13.sp)
@@ -158,11 +191,11 @@ private fun GamePortalCard(
             Spacer(Modifier.height(12.dp))
             Text(description, color = PortalMuted, fontSize = 12.sp, lineHeight = 18.sp)
             Spacer(Modifier.height(12.dp))
-            tags.chunked(3).forEach { rowTags ->
+            tags.chunked(2).forEach { rowTags ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     rowTags.forEach { tag ->
-                        Surface(shape = RoundedCornerShape(10.dp), color = accent.copy(alpha = .10f)) {
-                            Text(tag, Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = PortalText, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp), color = accent.copy(alpha = .10f)) {
+                            Text(tag, Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 5.dp), color = PortalText, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 2)
                         }
                     }
                 }
@@ -282,11 +315,15 @@ private fun CompetitiveBilBakalimScreen(onBack: () -> Unit) {
             }
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            MetaStat("🔥", "Seri", "$winStreak", Modifier.weight(1f))
-            MetaStat("🏆", "En İyi", "$bestStreak", Modifier.weight(1f))
-            MetaStat("⚔️", "Rakiplik", "$rivalWins-$rivalLosses", Modifier.weight(1f))
-            MetaStat("🎯", "Günlük", "10 Soru", Modifier.weight(1f))
+        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                MetaStat("🔥", "Seri", "$winStreak", Modifier.weight(1f))
+                MetaStat("🏆", "En İyi", "$bestStreak", Modifier.weight(1f))
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                MetaStat("⚔️", "Rakiplik", "$rivalWins-$rivalLosses", Modifier.weight(1f))
+                MetaStat("🎯", "Günlük", "10 Soru", Modifier.weight(1f))
+            }
         }
 
         Surface(shape = RoundedCornerShape(16.dp), color = PortalCard, border = BorderStroke(1.dp, Color(0xFFE5D2A9))) {
@@ -322,10 +359,10 @@ private fun CompetitiveBilBakalimScreen(onBack: () -> Unit) {
                             keyboardActions = KeyboardActions(onDone = { submit(input) }),
                         )
                         Spacer(Modifier.height(10.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterChip(selected = riskMode, onClick = { riskMode = !riskMode }, label = { Text(if (riskMode) "💣 RİSK x2 AÇIK" else "💣 RİSK SORUSU x2", fontSize = 10.sp) }, modifier = Modifier.weight(1f))
-                            Button(onClick = { submit(input) }, enabled = input.isNotBlank(), modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = PortalGold, contentColor = Color(0xFF2B1E0B))) {
-                                Text("KİLİTLE", fontWeight = FontWeight.Black)
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                            FilterChip(selected = riskMode, onClick = { riskMode = !riskMode }, label = { Text(if (riskMode) "💣 RİSK x2 AÇIK" else "💣 RİSK SORUSU x2", fontSize = 11.sp) }, modifier = Modifier.fillMaxWidth())
+                            Button(onClick = { submit(input) }, enabled = input.isNotBlank(), modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = PortalGold, contentColor = Color(0xFF2B1E0B))) {
+                                Text("TAHMİNİ KİLİTLE", fontWeight = FontWeight.Black)
                             }
                         }
                         Text("Hızlı doğru tahmin ekstra puan verir.", color = PortalMuted, fontSize = 9.sp)
@@ -385,7 +422,7 @@ private fun MetaStat(icon: String, label: String, value: String, modifier: Modif
         Column(Modifier.padding(vertical = 9.dp, horizontal = 5.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(icon, fontSize = 16.sp)
             Text(value, color = PortalText, fontWeight = FontWeight.Black, fontSize = 11.sp)
-            Text(label, color = PortalMuted, fontSize = 7.5.sp, textAlign = TextAlign.Center)
+            Text(label, color = PortalMuted, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 2)
         }
     }
 }

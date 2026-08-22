@@ -1,0 +1,77 @@
+name: User Requested Gameplay UI Fixes
+
+on:
+  push:
+    branches: [ fix/ui-gameplay-stability-20260822 ]
+    paths:
+      - 'scripts/apply_user_requested_gameplay_ui_fixes.py'
+      - '.github/workflows/user-requested-gameplay-ui-fixes.yml'
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: requested-fixes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  apply-test-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/ui-gameplay-stability-20260822
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Apply guarded patches if needed
+        run: |
+          if grep -q 'WeeklyTopThreeCard' app/src/main/java/com/sonharf/game/GamePortalApp.kt && \
+             grep -q 'ProfilePhotoAvatarWithGender' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt; then
+            echo "Requested patches are already present; verification-only run."
+          else
+            python3 scripts/apply_user_requested_gameplay_ui_fixes.py
+          fi
+
+      - name: Contract checks
+        run: |
+          set -euxo pipefail
+          ! grep -q 'YÖNETİCİ PANELİ' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
+          ! grep -q 'PortalReturnButton' app/src/main/java/com/sonharf/game/GamePortalApp.kt
+          ! grep -q 'Text(sh("GÖNDER", "SEND")' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'ProfilePhotoAvatarWithGender' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'SonHarfSoundFx.heartbeat()' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'WeeklyTopThreeCard' app/src/main/java/com/sonharf/game/GamePortalApp.kt
+          grep -q 'PrivateRoomWaitingLayer()' app/src/main/java/com/sonharf/game/MainActivity.kt
+          grep -q 'private fun comboV9(n: Int): ComboV9? = null' app/src/main/java/com/sonharf/game/ComboOverlayV9.kt
+
+      - name: Compile debug APK
+        run: gradle :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Commit tested source repairs
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game
+          git diff --cached --quiet || git commit -m "Apply requested gameplay UI fixes"
+          git push
+
+      - name: Stage APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-UI-Gameplay-Fixed.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-UI-Gameplay-Fixed-APK
+          path: SonHarf-UI-Gameplay-Fixed.apk
+          if-no-files-found: error

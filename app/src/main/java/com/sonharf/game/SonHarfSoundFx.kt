@@ -20,6 +20,7 @@ object SonHarfSoundFx {
     fun victory() { click(18, 0.17, 0.50); delayedClick(38, 16, 0.15, 0.56); delayedClick(76, 15, 0.13, 0.60) }
     fun defeat() = click(26, 0.14, 0.28)
     fun countdown() = click(13, 0.08, 0.38)
+    fun heartbeat() { click(58, 0.15, 0.07); delayedClick(118, 46, 0.11, 0.05) }
 
     /** Soft, low-volume applause used by victory/confetti effects. Kept under the old API name for compatibility. */
     fun fireworks() {
