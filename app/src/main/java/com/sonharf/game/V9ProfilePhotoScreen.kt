@@ -12,6 +12,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -80,11 +82,7 @@ private object V9ProfilePhotoStorage {
                 data
             } ?: error("image_read_failed")
         }
-        val ext = when (mime) {
-            "image/png" -> "png"
-            "image/webp" -> "webp"
-            else -> "jpg"
-        }
+        val ext = when (mime) { "image/png" -> "png"; "image/webp" -> "webp"; else -> "jpg" }
         val path = "$uid/avatar-${System.currentTimeMillis()}.$ext"
         val response = http.post("${BuildConfig.SUPABASE_URL}/storage/v1/object/profile-photos/$path") {
             header(HttpHeaders.Authorization, "Bearer ${session.accessToken}")
@@ -94,31 +92,23 @@ private object V9ProfilePhotoStorage {
             setBody(bytes)
         }
         check(response.status.isSuccess()) { "upload_failed_${response.status.value}" }
-        SupabaseProvider.client.postgrest.rpc(
-            "set_avatar_path",
-            buildJsonObject { put("p_path", path) },
-        )
-        SupabaseProvider.client.postgrest.rpc(
-            "set_avatar_visibility",
-            buildJsonObject { put("p_hidden", false) },
-        )
+        SupabaseProvider.client.postgrest.rpc("set_avatar_path", buildJsonObject { put("p_path", path) })
+        SupabaseProvider.client.postgrest.rpc("set_avatar_visibility", buildJsonObject { put("p_hidden", false) })
         return path
     }
 
     suspend fun publishExisting() {
-        SupabaseProvider.client.postgrest.rpc(
-            "set_avatar_visibility",
-            buildJsonObject { put("p_hidden", false) },
-        )
+        SupabaseProvider.client.postgrest.rpc("set_avatar_visibility", buildJsonObject { put("p_hidden", false) })
+    }
+
+    suspend fun saveDisplayName(name: String) {
+        SupabaseProvider.client.postgrest.rpc("set_display_name", buildJsonObject { put("p_name", name.trim()) })
     }
 }
 
 private suspend fun loadV9Profile(): V9ProfilePhotoDto? {
     val uid = SupabaseProvider.client.auth.currentUserOrNull()?.id ?: return null
-    return SupabaseProvider.client.from("profiles")
-        .select { filter { eq("id", uid) } }
-        .decodeList<V9ProfilePhotoDto>()
-        .firstOrNull()
+    return SupabaseProvider.client.from("profiles").select { filter { eq("id", uid) } }.decodeList<V9ProfilePhotoDto>().firstOrNull()
 }
 
 @Composable
@@ -130,11 +120,14 @@ fun V9ProfilePhotoScreen(onOpenPreferences: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
+    var editingName by remember { mutableStateOf(false) }
+    var nameDraft by remember { mutableStateOf("") }
 
     suspend fun reload() {
         loading = true
         val p = runCatching { loadV9Profile() }.getOrNull()
         profile = p
+        if (!editingName) nameDraft = p?.displayName.orEmpty()
         avatarUrl = runCatching { AvatarSignedUrl.resolve(p?.avatarPath) }.getOrNull()
         loading = false
     }
@@ -146,14 +139,14 @@ fun V9ProfilePhotoScreen(onOpenPreferences: () -> Unit) {
             notice = "Fotoğraf yükleniyor…"
             runCatching { V9ProfilePhotoStorage.upload(context, uri) }
                 .onSuccess {
-                    notice = "Profil fotoğrafı yüklendi ve oyunun tüm profil yüzeylerinde görünür hale getirildi."
                     reload()
+                    notice = if (avatarUrl.isNullOrBlank()) "Fotoğraf kaydedildi ancak görüntü adresi alınamadı. Tekrar deneyin." else "Profil fotoğrafı yüklendi ve tüm profil alanlarında görünür."
                 }
                 .onFailure { error ->
                     notice = when {
                         "image_too_large" in error.message.orEmpty() -> "Fotoğraf en fazla 5 MB olabilir."
                         "unsupported_image_type" in error.message.orEmpty() -> "JPG, PNG veya WEBP fotoğraf seçin."
-                        else -> "Fotoğraf yüklenemedi. Bağlantıyı kontrol edip tekrar deneyin."
+                        else -> "Fotoğraf yüklenemedi: ${error.message.orEmpty().take(80)}"
                     }
                 }
             busy = false
@@ -163,9 +156,7 @@ fun V9ProfilePhotoScreen(onOpenPreferences: () -> Unit) {
     LaunchedEffect(Unit) { reload() }
 
     if (loading && profile == null) {
-        Box(Modifier.fillMaxSize().background(P9Bg), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = P9Blue)
-        }
+        Box(Modifier.fillMaxSize().background(P9Bg), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = P9Blue) }
         return
     }
 
@@ -182,23 +173,41 @@ fun V9ProfilePhotoScreen(onOpenPreferences: () -> Unit) {
             }
         }
         item {
-            Surface(
-                shape = RoundedCornerShape(22.dp),
-                color = P9White,
-                border = BorderStroke(1.dp, P9Border),
-            ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
+            Surface(shape = RoundedCornerShape(22.dp), color = P9White, border = BorderStroke(1.dp, P9Border)) {
+                Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     V9Avatar(avatarUrl, p?.displayName ?: "Oyuncu", 112)
-                    Text(p?.displayName ?: "Oyuncu", fontWeight = FontWeight.Black, fontSize = 22.sp, color = P9Text)
-                    Text(
-                        if (p?.avatarPath.isNullOrBlank()) "Henüz profil fotoğrafı yok" else "Profil fotoğrafın kayıtlı",
-                        color = P9Muted,
-                        fontSize = 12.sp,
-                    )
+                    if (editingName) {
+                        OutlinedTextField(
+                            value = nameDraft,
+                            onValueChange = { nameDraft = it.take(24) },
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            label = { Text("Oyuncu adı") },
+                            supportingText = { Text("2–24 karakter") },
+                        )
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(onClick = { nameDraft = p?.displayName.orEmpty(); editingName = false }, modifier = Modifier.weight(1f)) { Text("VAZGEÇ") }
+                            Button(
+                                onClick = {
+                                    if (!busy) scope.launch {
+                                        busy = true
+                                        runCatching { V9ProfilePhotoStorage.saveDisplayName(nameDraft) }
+                                            .onSuccess { editingName = false; notice = "Oyuncu adı güncellendi."; reload() }
+                                            .onFailure { notice = if ("invalid_display_name" in it.message.orEmpty()) "Oyuncu adı 2–24 karakter olmalı." else "Oyuncu adı güncellenemedi." }
+                                        busy = false
+                                    }
+                                },
+                                enabled = !busy && nameDraft.trim().length in 2..24,
+                                modifier = Modifier.weight(1f),
+                            ) { Icon(Icons.Rounded.Save, null); Spacer(Modifier.width(4.dp)); Text("KAYDET") }
+                        }
+                    } else {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(p?.displayName ?: "Oyuncu", fontWeight = FontWeight.Black, fontSize = 22.sp, color = P9Text)
+                            IconButton(onClick = { nameDraft = p?.displayName.orEmpty(); editingName = true }) { Icon(Icons.Rounded.Edit, "Oyuncu adını düzenle", tint = P9Blue) }
+                        }
+                    }
+                    Text(if (p?.avatarPath.isNullOrBlank()) "Henüz profil fotoğrafı yok" else if (avatarUrl.isNullOrBlank()) "Fotoğraf kayıtlı • görüntü bağlantısı yenileniyor" else "Profil fotoğrafın aktif", color = P9Muted, fontSize = 12.sp)
                     Button(
                         onClick = { picker.launch("image/*") },
                         enabled = !busy,
@@ -206,8 +215,7 @@ fun V9ProfilePhotoScreen(onOpenPreferences: () -> Unit) {
                         colors = ButtonDefaults.buttonColors(containerColor = P9Blue),
                         shape = RoundedCornerShape(14.dp),
                     ) {
-                        Icon(Icons.Rounded.CameraAlt, null)
-                        Spacer(Modifier.width(8.dp))
+                        Icon(Icons.Rounded.CameraAlt, null); Spacer(Modifier.width(8.dp))
                         Text(if (p?.avatarPath.isNullOrBlank()) "PROFİL FOTOĞRAFI YÜKLE" else "PROFİL FOTOĞRAFINI DEĞİŞTİR", fontWeight = FontWeight.Black)
                     }
                     if (!p?.avatarPath.isNullOrBlank() && p?.avatarVisibility != "public") {
@@ -223,11 +231,7 @@ fun V9ProfilePhotoScreen(onOpenPreferences: () -> Unit) {
                             },
                             enabled = !busy,
                             modifier = Modifier.fillMaxWidth().height(50.dp),
-                        ) {
-                            Icon(Icons.Rounded.Visibility, null)
-                            Spacer(Modifier.width(8.dp))
-                            Text("FOTOĞRAFI TÜM OYUNDA GÖRÜNÜR YAP", fontWeight = FontWeight.Bold)
-                        }
+                        ) { Icon(Icons.Rounded.Visibility, null); Spacer(Modifier.width(8.dp)); Text("FOTOĞRAFI TÜM OYUNDA GÖRÜNÜR YAP", fontWeight = FontWeight.Bold) }
                     }
                     Text("Desteklenen: JPG, PNG, WEBP • En fazla 5 MB", color = P9Muted, fontSize = 11.sp, textAlign = TextAlign.Center)
                 }
@@ -235,16 +239,15 @@ fun V9ProfilePhotoScreen(onOpenPreferences: () -> Unit) {
         }
         if (notice.isNotBlank()) {
             item {
-                Surface(shape = RoundedCornerShape(14.dp), color = if (notice.contains("yüklenemedi") || notice.contains("güncellenemedi")) Color(0xFFFDECEC) else P9BlueLight) {
-                    Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = if (notice.contains("yüklenemedi") || notice.contains("güncellenemedi")) P9Coral else P9Text, textAlign = TextAlign.Center, fontSize = 12.sp)
+                val failed = notice.contains("yüklenemedi") || notice.contains("güncellenemedi") || notice.contains("alınamadı")
+                Surface(shape = RoundedCornerShape(14.dp), color = if (failed) Color(0xFFFDECEC) else P9BlueLight) {
+                    Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = if (failed) P9Coral else P9Text, textAlign = TextAlign.Center, fontSize = 12.sp)
                 }
             }
         }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                V9Metric("${p?.wins ?: 0}", "Galibiyet", Modifier.weight(1f))
-                V9Metric("${p?.losses ?: 0}", "Mağlubiyet", Modifier.weight(1f))
-                V9Metric("${p?.diamonds ?: 0}", "Elmas", Modifier.weight(1f))
+                V9Metric("${p?.wins ?: 0}", "Galibiyet", Modifier.weight(1f)); V9Metric("${p?.losses ?: 0}", "Mağlubiyet", Modifier.weight(1f)); V9Metric("${p?.diamonds ?: 0}", "Elmas", Modifier.weight(1f))
             }
         }
         item {
@@ -264,26 +267,15 @@ fun V9ProfilePhotoScreen(onOpenPreferences: () -> Unit) {
 private fun V9Avatar(url: String?, name: String, size: Int) {
     var failed by remember(url) { mutableStateOf(false) }
     if (!url.isNullOrBlank() && !failed) {
-        AsyncImage(
-            model = url,
-            contentDescription = "$name profil fotoğrafı",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.size(size.dp).clip(CircleShape).background(P9BlueLight),
-            onError = { failed = true },
-        )
+        AsyncImage(model = url, contentDescription = "$name profil fotoğrafı", contentScale = ContentScale.Crop, modifier = Modifier.size(size.dp).clip(CircleShape).background(P9BlueLight), onError = { failed = true })
     } else {
-        Box(Modifier.size(size.dp).clip(CircleShape).background(P9BlueLight), contentAlignment = Alignment.Center) {
-            Text(name.take(1).uppercase(), fontWeight = FontWeight.Black, fontSize = (size / 2.3).sp, color = P9Blue)
-        }
+        Box(Modifier.size(size.dp).clip(CircleShape).background(P9BlueLight), contentAlignment = Alignment.Center) { Text(name.take(1).uppercase(), fontWeight = FontWeight.Black, fontSize = (size / 2.3).sp, color = P9Blue) }
     }
 }
 
 @Composable
 private fun V9Metric(value: String, label: String, modifier: Modifier) {
     Surface(modifier, shape = RoundedCornerShape(16.dp), color = P9White, border = BorderStroke(1.dp, P9Border)) {
-        Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, fontWeight = FontWeight.Black, fontSize = 20.sp, color = P9Blue)
-            Text(label, fontSize = 11.sp, color = P9Muted)
-        }
+        Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) { Text(value, fontWeight = FontWeight.Black, fontSize = 20.sp, color = P9Blue); Text(label, fontSize = 11.sp, color = P9Muted) }
     }
 }
