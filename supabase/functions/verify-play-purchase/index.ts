@@ -3,7 +3,7 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 import { GoogleAuth } from "npm:google-auth-library@9";
 
 const jsonHeaders = { "Content-Type": "application/json" };
-const subscriptionProducts = new Set(["vip_monthly", "vip_yearly"]);
+const subscriptionProducts = new Set(["vip_monthly", "vip_yearly", "season_pass_monthly"]);
 const oneTimeProducts = new Set(["coins_500", "coins_1500", "theme_neon"]);
 const entitlementStates = new Set([
   "SUBSCRIPTION_STATE_ACTIVE",
@@ -30,11 +30,7 @@ Deno.serve(async (req: Request) => {
   if (!serviceAccountJson) return response(503, { error: "google_play_not_configured" });
 
   let input: { productId?: string; purchaseToken?: string };
-  try {
-    input = await req.json();
-  } catch {
-    return response(400, { error: "invalid_json" });
-  }
+  try { input = await req.json(); } catch { return response(400, { error: "invalid_json" }); }
 
   const productId = input.productId?.trim() || "";
   const purchaseToken = input.purchaseToken?.trim() || "";
@@ -47,16 +43,9 @@ Deno.serve(async (req: Request) => {
   if (userError || !userData.user) return response(401, { error: "invalid_session" });
 
   let credentials: Record<string, unknown>;
-  try {
-    credentials = JSON.parse(serviceAccountJson);
-  } catch {
-    return response(500, { error: "invalid_google_service_account_json" });
-  }
+  try { credentials = JSON.parse(serviceAccountJson); } catch { return response(500, { error: "invalid_google_service_account_json" }); }
 
-  const googleAuth = new GoogleAuth({
-    credentials,
-    scopes: ["https://www.googleapis.com/auth/androidpublisher"],
-  });
+  const googleAuth = new GoogleAuth({ credentials, scopes: ["https://www.googleapis.com/auth/androidpublisher"] });
   const authClient = await googleAuth.getClient();
   const access = await authClient.getAccessToken();
   const accessToken = access.token;
@@ -96,11 +85,7 @@ Deno.serve(async (req: Request) => {
 
   const admin = createClient(url, serviceRole, { auth: { autoRefreshToken: false, persistSession: false } });
   const { data: grantData, error: grantError } = await admin.rpc("apply_verified_play_purchase_v1", {
-    p_user_id: userData.user.id,
-    p_product_id: productId,
-    p_purchase_token: purchaseToken,
-    p_order_id: orderId,
-    p_expires_at: expiresAt,
+    p_user_id: userData.user.id, p_product_id: productId, p_purchase_token: purchaseToken, p_order_id: orderId, p_expires_at: expiresAt,
   });
   if (grantError) return response(500, { error: "entitlement_grant_failed" });
 
@@ -109,18 +94,9 @@ Deno.serve(async (req: Request) => {
     const ackUrl = isSubscription
       ? `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(packageName)}/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/${encodedToken}:acknowledge`
       : `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(packageName)}/purchases/products/${encodeURIComponent(productId)}/tokens/${encodedToken}:acknowledge`;
-    const ackResponse = await fetch(ackUrl, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
+    const ackResponse = await fetch(ackUrl, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({}) });
     acknowledged = ackResponse.ok;
   }
 
-  return response(200, {
-    verified: true,
-    productId,
-    acknowledged,
-    grant: grantData,
-  });
+  return response(200, { verified: true, productId, acknowledged, grant: grantData });
 });
