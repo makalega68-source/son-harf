@@ -69,3 +69,61 @@ replace_once(
 
 path.write_text(text)
 print('Owner admin console integrated into ClassicPremiumApp.kt')
+
+admin_path = Path('app/src/main/java/com/sonharf/game/AdminConsoleScreen.kt')
+admin = admin_path.read_text()
+section_marker = '            item { AdminSectionTitle("ÜCRETSİZ TEST PAKETLERİ", Icons.Rounded.CardGiftcard) }'
+if section_marker not in admin:
+    needle = '            item { Spacer(Modifier.height(24.dp)) }\n'
+    if needle not in admin:
+        raise SystemExit('Patch target not found: free test product section')
+    section = '''            item { AdminSectionTitle("ÜCRETSİZ TEST PAKETLERİ", Icons.Rounded.CardGiftcard) }
+            item {
+                AdminWideCard {
+                    Text("Bu paketler yalnızca yönetici hesabına test verisi verir; Google Play satın alımı ve gerçek gelir kaydı oluşturmaz.", color = AdminMuted, fontSize = 10.sp)
+                    listOf(
+                        "vip_monthly" to "VIP Aylık Test",
+                        "vip_yearly" to "VIP Yıllık Test",
+                        "coins_500" to "+500 Elmas Test",
+                        "coins_1500" to "+1500 Elmas Test",
+                        "theme_neon" to "Neon Tema Test",
+                    ).forEach { (productId, label) ->
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    busy = true
+                                    runCatching { backend.adminGrantTestProduct(productId) }
+                                        .onSuccess { notice = "$label ücretsiz olarak uygulandı." }
+                                        .onFailure { error = it.message ?: "Test ürünü uygulanamadı." }
+                                    reload(); busy = false
+                                }
+                            },
+                            enabled = !busy,
+                            modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, AdminGold.copy(alpha=.4f)),
+                        ) { Text(label, color = AdminText) }
+                    }
+                }
+            }
+
+'''
+    admin = admin.replace(needle, section + needle, 1)
+
+old_money = '''private fun parseMoneyMinor(raw: String): Long? {
+    val normalized = raw.trim().replace(".", "").replace(',', '.')
+    return normalized.toBigDecimalOrNull()?.movePointRight(2)?.toLong()
+}
+'''
+new_money = '''private fun parseMoneyMinor(raw: String): Long? {
+    val cleaned = raw.trim()
+    val normalized = if (cleaned.contains(',')) cleaned.replace(".", "").replace(',', '.') else cleaned
+    return normalized.toBigDecimalOrNull()?.movePointRight(2)?.toLong()
+}
+'''
+if new_money not in admin:
+    if old_money not in admin:
+        raise SystemExit('Patch target not found: money parser')
+    admin = admin.replace(old_money, new_money, 1)
+
+admin_path.write_text(admin)
+print('Owner free test grants integrated into AdminConsoleScreen.kt')
