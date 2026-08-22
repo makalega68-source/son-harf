@@ -4,6 +4,8 @@ import android.content.Context
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.opengl.Matrix
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -11,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 import java.nio.ByteBuffer
@@ -31,8 +34,21 @@ internal fun MiniMascot3D(
     modifier: Modifier = Modifier,
 ) {
     var renderer by remember { mutableStateOf<MiniRenderer?>(null) }
+    val orbit = remember { Animatable(0f) }
+    LaunchedEffect(mood) {
+        orbit.snapTo(0f)
+        if (mood == MiniMood.HAPPY || mood == MiniMood.STREAK) {
+            orbit.animateTo(1f, tween(if (mood == MiniMood.STREAK) 1900 else 1450))
+        }
+    }
+    val phase = orbit.value * (PI.toFloat() * 2f)
     AndroidView(
-        modifier = modifier,
+        modifier = modifier.graphicsLayer {
+            translationX = if (mood == MiniMood.HAPPY || mood == MiniMood.STREAK) sin(phase) * 72f else 0f
+            translationY = if (mood == MiniMood.HAPPY || mood == MiniMood.STREAK) cos(phase) * 30f - 30f else 0f
+            scaleX = if (mood == MiniMood.STREAK) 1.10f else 1f
+            scaleY = if (mood == MiniMood.STREAK) 1.10f else 1f
+        },
         factory = { context ->
             MascotSurface(context).also { view ->
                 renderer = view.renderer

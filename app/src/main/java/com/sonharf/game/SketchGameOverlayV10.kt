@@ -340,6 +340,14 @@ private fun ArenaV10(
         else -> 44.sp
     }
     var seconds by remember(room.turnDeadline) { mutableIntStateOf(45) }
+    val mascotMood = when {
+        triviaFeedback?.first == true -> MiniMood.COLLECT
+        feedback?.correct == true && myStreak >= 3 -> MiniMood.STREAK
+        feedback?.correct == true -> MiniMood.HAPPY
+        feedback != null -> MiniMood.SAD
+        seconds in 1..5 -> MiniMood.CUTE
+        else -> MiniMood.IDLE
+    }
     val timerScale by animateFloatAsState(
         targetValue = if (seconds in 1..10 && seconds % 2 == 0) 1.10f else 1f,
         animationSpec = tween(170),
@@ -402,6 +410,13 @@ private fun ArenaV10(
             border = BorderStroke(1.dp, if (SonHarfCosmetics.auroraTheme) SonHarfPurple.copy(alpha=.3f) else SonHarfMuted.copy(alpha=.16f)),
         ) {
             Box(Modifier.fillMaxSize()) {
+                MiniMascot3D(
+                    mood = mascotMood,
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .offset(x = 6.dp, y = 50.dp)
+                        .size(112.dp),
+                )
                 Column(Modifier.fillMaxSize().padding(13.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceBetween) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Text(if (room.status == "sudden_death") sh("ANİ ÖLÜM", "SUDDEN DEATH") else "ROUND ${room.roundNo}/3", modifier = Modifier.weight(1f), fontWeight = FontWeight.Black, fontSize = 16.sp)
