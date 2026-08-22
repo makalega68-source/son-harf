@@ -54,16 +54,7 @@ private data class ActionRoomV9(
 )
 
 private data class ComboV9(val title: String, val color: Color)
-private fun comboV9(n: Int): ComboV9? = when (n) {
-    3 -> ComboV9(sh("İSABET!", "NICE!"), SonHarfCyan)
-    4 -> ComboV9(sh("AFERİN!", "WELL DONE!"), SonHarfGreen)
-    5 -> ComboV9(sh("MÜKEMMEL!", "PERFECT!"), SonHarfGold)
-    6 -> ComboV9(sh("KELİME KATİLİ!", "STREAK MASTER!"), SonHarfPink)
-    7 -> ComboV9(sh("EFSANE!", "LEGENDARY!"), SonHarfPurple)
-    8 -> ComboV9(sh("HARİKASIN!", "AMAZING!"), SonHarfCyan)
-    9 -> ComboV9(sh("ŞOV ZAMANI!", "SHOWTIME!"), SonHarfGold)
-    else -> if (n >= 10) ComboV9(sh("EFSANELER LİGİ!", "LEAGUE OF LEGENDS!"), SonHarfPink) else null
-}
+private fun comboV9(n: Int): ComboV9? = null
 
 private data class ConfettiPiece(val x: Float, val delay: Float, val speed: Float, val size: Float, val angle: Float, val color: Color)
 
@@ -128,6 +119,7 @@ fun ComboOverlayV9() {
                 if (fin != null && finishedRoom?.id != fin.id) {
                     finishedRoom = fin
                     resultWords = runCatching { backend.getWords(fin.id) }.getOrDefault(emptyList())
+                    resultWords.take(40).forEach { w -> launch { runCatching { WordMeaningRuntime.meaning(w.word, fin.language) } } }
                     growth = runCatching { backend.getGrowthDashboard() }.getOrNull()
                     runCatching { backend.logEvent("match_finished_seen", fin.id) }
                 }
@@ -225,5 +217,5 @@ fun ComboOverlayV9() {
 }
 
 @Composable private fun SummaryMetric(icon:String,value:String,label:String,modifier:Modifier){
-    Surface(modifier=modifier,shape=RoundedCornerShape(15.dp),color=SonHarfSurface2,border=BorderStroke(1.dp,SonHarfCyan.copy(alpha=.24f))){Column(Modifier.padding(vertical=12.dp,horizontal=8.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(icon,fontSize=20.sp);Text(value,maxLines=1,fontWeight=FontWeight.Black,fontSize=15.sp,color=SonHarfText);Text(label,color=SonHarfMuted,fontSize=9.sp,fontWeight=FontWeight.Bold)}}
+    Surface(modifier=modifier,shape=RoundedCornerShape(15.dp),color=SonHarfSurface2,border=BorderStroke(1.dp,SonHarfCyan.copy(alpha=.24f))){Column(Modifier.padding(vertical=12.dp,horizontal=8.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(icon,fontSize=20.sp);Text(value,maxLines=2,fontWeight=FontWeight.Black,fontSize=12.sp,lineHeight=14.sp,textAlign=TextAlign.Center,color=SonHarfText);Text(label,color=SonHarfMuted,fontSize=9.sp,fontWeight=FontWeight.Bold)}}
 }

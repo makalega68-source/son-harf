@@ -80,7 +80,9 @@ fun TargetNeonGameScreen() {
         "not_in_dictionary" in raw -> "Bu kelime sözlükte bulunamadı."
         "invalid_word" in raw -> "Bu kelime geçerli değil."
         "turn_expired" in raw -> "Süren doldu."
-        "vip_required" in raw -> "Özel oda için VIP gerekli."
+        "vip_required" in raw -> "Özel oda oluşturmak için aktif VIP üyeliği gerekli."
+        "player_already_in_game" in raw -> "Devam eden bir maçın varken yeni oda oluşturamazsın."
+        "room_not_available" in raw -> "Oda bulunamadı veya artık müsait değil."
         else -> "Bağlantı sorunu. Yeniden deneniyor."
     }
 
@@ -155,7 +157,7 @@ fun TargetNeonGameScreen() {
                     }
                 },
                 onCancel = { scope.launch { matching = false; matchJob?.cancel(); runCatching { backend.cancelRandomMatchmaking() }; notice = "Eşleşme iptal edildi" } },
-                onCreate = { scope.launch { busy = true; runCatching { backend.createPrivateRoom(language) }.onSuccess { room = it; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
+                onCreate = { scope.launch { busy = true; runCatching { backend.createPrivateRoom(language) }.onSuccess { room = it; notice = "Özel oda oluşturuldu: ${it.code}"; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
                 onJoin = { scope.launch { busy = true; runCatching { backend.joinPrivateRoom(privateCode) }.onSuccess { room = it; language = it.language; SonHarfUiState.language = it.language; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
             )
         } else {

@@ -1,5 +1,7 @@
 package com.sonharf.game
 
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -13,6 +15,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.text.KeyboardActions
@@ -169,7 +172,6 @@ fun SketchGameOverlayV10() {
                                 val f = messageForEvent(result.lastEvent, submitted)
                                 if (result.lastEvent == "word_already_used" && duplicate != null) f.copy(duplicateWord = duplicate.word.uppercase()) else f
                             } else messageForEvent(null, submitted)
-                            if (rejected) SonHarfSoundFx.warning() else SonHarfSoundFx.wordAccepted()
                         }
                         .onFailure { e ->
                             input = ""
@@ -185,11 +187,9 @@ fun SketchGameOverlayV10() {
                                 if (reconciledRoom != null) room = reconciledRoom
                                 words = reconciledWords
                                 feedback = if (acceptedOnServer) messageForEvent(null, submitted) else null
-                                if (acceptedOnServer) SonHarfSoundFx.wordAccepted()
                             } else {
                                 val f = failureFeedback(e.message.orEmpty(), submitted)
                                 feedback = if (f.duplicateWord != null && duplicate != null) f.copy(duplicateWord = duplicate.word.uppercase()) else f
-                                SonHarfSoundFx.warning()
                             }
                         }
                     busy = false
@@ -205,10 +205,9 @@ fun SketchGameOverlayV10() {
                             val after = if (me == updated.hostId) updated.hostScore else updated.guestScore
                             val correct = after > before
                             triviaFeedback = if (correct) true to sh("DOĞRU! +${round.bonusPoints} PUAN", "CORRECT! +${round.bonusPoints} POINTS") else false to sh("YANLIŞ CEVAP", "WRONG ANSWER")
-                            if (correct) SonHarfSoundFx.bonus() else SonHarfSoundFx.warning()
                             refreshTrivia(updated)
                         }
-                        .onFailure { triviaFeedback = false to sh("Cevap gönderilemedi", "Answer could not be sent"); SonHarfSoundFx.warning() }
+                        .onFailure { triviaFeedback = false to sh("Cevap gönderilemedi", "Answer could not be sent") }
                 }
             },
             onForfeit = { scope.launch { runCatching { backend.forfeit(active.id) }.onSuccess { room = it } } },
@@ -301,13 +300,26 @@ private fun ArenaV10(
     val myTurn = room.currentPlayerId == me && room.status in listOf("playing", "final", "sudden_death")
     val lastWord = words.lastOrNull()?.normalizedWord?.uppercase()
     val required = lastWord?.lastOrNull()?.toString().orEmpty()
+    val lastWordFont = when {
+        lastWord == null -> 36.sp
+        lastWord.length >= 22 -> 21.sp
+        lastWord.length >= 18 -> 24.sp
+        lastWord.length >= 14 -> 29.sp
+        lastWord.length >= 10 -> 35.sp
+        else -> 44.sp
+    }
     var seconds by remember(room.turnDeadline) { mutableIntStateOf(45) }
+    val timerScale by animateFloatAsState(
+        targetValue = if (seconds in 1..10 && seconds % 2 == 0) 1.10f else 1f,
+        animationSpec = tween(170),
+        label = "finalTenHeartbeat",
+    )
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
         var lastTick = -1
         while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
             seconds = runCatching { (java.time.Instant.parse(room.turnDeadline).epochSecond - java.time.Instant.now().epochSecond).toInt().coerceAtLeast(0) }.getOrDefault(45)
-            if (seconds in 1..10 && seconds != lastTick) { lastTick = seconds; SonHarfSoundFx.countdown() }
+            if (seconds in 1..10 && seconds != lastTick) { lastTick = seconds; SonHarfSoundFx.heartbeat() }
             if (seconds <= 0) break
             delay(250)
         }
@@ -317,7 +329,6 @@ private fun ArenaV10(
         val won = room.winnerId == me || (room.isBot && room.winnerId == null && myScore > oppScore)
         val winnerName = if (won) myProfile?.displayName ?: sh("Sen", "You") else if (room.isBot) room.botName ?: "KelimeBot" else opponentProfile?.displayName ?: sh("Rakip", "Opponent")
         val winnerGender = if (won) myProfile?.gender else opponentProfile?.gender
-        LaunchedEffect(room.id, won) { if (won) SonHarfSoundFx.victory() else SonHarfSoundFx.defeat() }
         Box(Modifier.fillMaxSize().background(SonHarfBg).statusBarsPadding().navigationBarsPadding().padding(22.dp), contentAlignment = Alignment.Center) {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(26.dp), border = BorderStroke(1.dp, SonHarfGold.copy(alpha=.48f))) {
                 Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -344,13 +355,13 @@ private fun ArenaV10(
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(Modifier.fillMaxWidth().height(84.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-            PlayerV10(myProfile?.displayName ?: sh("SEN", "YOU"), myProfile?.gender, myScore, myRounds, myTurn, SonHarfCyan, Modifier.weight(1f))
-            Box(Modifier.size(64.dp).clip(CircleShape).background(if (seconds <= 10) SonHarfPink else SonHarfGold).padding(3.dp), contentAlignment = Alignment.Center) {
+            PlayerV10(myProfile?.displayName ?: sh("SEN", "YOU"), myProfile?.gender, myProfile?.avatarPath, myScore, myRounds, myTurn, SonHarfCyan, Modifier.weight(1f))
+            Box(Modifier.size(64.dp).scale(timerScale).clip(CircleShape).background(if (seconds <= 10) SonHarfPink else SonHarfGold).padding(3.dp), contentAlignment = Alignment.Center) {
                 Box(Modifier.fillMaxSize().clip(CircleShape).background(SonHarfSurface), contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("$seconds", fontSize = 24.sp, fontWeight = FontWeight.Black); Text(sh("sn", "sec"), fontSize = 12.sp, color = SonHarfMuted) }
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("$seconds", color = if (seconds <= 10) SonHarfPink else SonHarfText, fontSize = 24.sp, fontWeight = FontWeight.Black); Text(sh("sn", "sec"), fontSize = 12.sp, color = if (seconds <= 10) SonHarfPink else SonHarfMuted) }
                 }
             }
-            PlayerV10(if (room.isBot) "${room.botName ?: "KelimeBot"} BOT" else opponentProfile?.displayName ?: sh("RAKİP", "OPPONENT"), if (room.isBot) "other" else opponentProfile?.gender, oppScore, oppRounds, !myTurn, SonHarfPink, Modifier.weight(1f), room.isBot)
+            PlayerV10(if (room.isBot) "${room.botName ?: "KelimeBot"} BOT" else opponentProfile?.displayName ?: sh("RAKİP", "OPPONENT"), if (room.isBot) "other" else opponentProfile?.gender, if (room.isBot) null else opponentProfile?.avatarPath, oppScore, oppRounds, !myTurn, SonHarfPink, Modifier.weight(1f), room.isBot)
         }
 
         Card(
@@ -376,21 +387,32 @@ private fun ArenaV10(
                     } else {
                         Text(if (myTurn) sh("SIRA SENDE", "YOUR TURN") else if (room.isBot && room.botTurn) sh("BOT DÜŞÜNÜYOR", "BOT THINKING") else sh("RAKİBİN SIRASI", "OPPONENT'S TURN"), color = if (myTurn) SonHarfCyan else SonHarfMuted, fontWeight = FontWeight.Black, fontSize = 16.sp)
                         if (lastWord.isNullOrBlank()) Text(sh("İLK KELİME", "FIRST WORD"), fontSize = 36.sp, fontWeight = FontWeight.Black)
-                        else Text(buildAnnotatedString { append(lastWord.dropLast(1)); withStyle(SpanStyle(color = SonHarfPink)) { append(lastWord.takeLast(1)) } }, fontSize = 44.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                        else Text(buildAnnotatedString { append(lastWord.dropLast(1)); withStyle(SpanStyle(color = SonHarfPink)) { append(lastWord.takeLast(1)) } }, modifier = Modifier.fillMaxWidth(), fontSize = lastWordFont, lineHeight = (lastWordFont.value * 1.08f).sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, maxLines = 2)
                         Text(if (required.isBlank()) sh("İlk kelimeyi yaz", "Enter the first word") else sh("$required ile başlayan bir kelime yaz", "Enter a word starting with $required"), color = SonHarfMuted, fontSize = 15.sp)
                     }
                 }
 
                 feedback?.let { f ->
                     val tone = if (f.correct) SonHarfGreen else SonHarfPink
-                    Surface(Modifier.align(Alignment.Center).padding(16.dp), color = tone.copy(alpha = .96f), shape = RoundedCornerShape(22.dp), shadowElevation = 10.dp) {
-                        Column(Modifier.padding(horizontal = 24.dp, vertical = 18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(f.title, color = Color.White, fontWeight = FontWeight.Black, fontSize = 29.sp, textAlign = TextAlign.Center)
-                            Spacer(Modifier.height(5.dp))
-                            if (f.duplicateWord != null) {
-                                Text(f.duplicateWord, color = Color.White, fontWeight = FontWeight.Black, fontSize = 38.sp, textAlign = TextAlign.Center)
-                                Text(sh("DAHA ÖNCE ÇIKTI", "ALREADY USED"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                            } else Text(f.detail, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 18.sp, textAlign = TextAlign.Center)
+                    Surface(
+                        Modifier.align(Alignment.TopCenter).padding(top = 42.dp, start = 10.dp, end = 10.dp).fillMaxWidth(.94f),
+                        color = tone.copy(alpha = .96f),
+                        shape = RoundedCornerShape(14.dp),
+                        shadowElevation = 4.dp,
+                    ) {
+                        Row(Modifier.padding(horizontal = 13.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(f.title, color = Color.White, fontWeight = FontWeight.Black, fontSize = 14.sp, maxLines = 1)
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                if (f.duplicateWord != null) "${f.duplicateWord} • ${sh("daha önce çıktı", "already used")}" else f.detail,
+                                modifier = Modifier.weight(1f),
+                                color = Color.White,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp,
+                                lineHeight = 15.sp,
+                                textAlign = TextAlign.End,
+                                maxLines = 2,
+                            )
                         }
                     }
                 }
@@ -461,21 +483,24 @@ private fun KeyboardV10(language: String, enabled: Boolean, input: String, onInp
                 }
             }
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-            Button(onClick={ if(input.isNotEmpty()) onInput(input.dropLast(1)) }, enabled=enabled && input.isNotEmpty(), modifier=Modifier.weight(1f).height(44.dp), shape=RoundedCornerShape(9.dp)) { Text("⌫", fontSize=22.sp, fontWeight=FontWeight.Black) }
-            Button(onClick=onSubmit, enabled=enabled && input.length>=2, modifier=Modifier.weight(2.1f).height(44.dp), shape=RoundedCornerShape(9.dp), colors=ButtonDefaults.buttonColors(containerColor=if(neon) SonHarfCyan else SonHarfBlue, contentColor=Color.White)) { Text(sh("GÖNDER", "SEND"), fontWeight=FontWeight.Black, fontSize=14.sp) }
-        }
+        OutlinedButton(
+            onClick = { if (input.isNotEmpty()) onInput(input.dropLast(1)) },
+            enabled = enabled && input.isNotEmpty(),
+            modifier = Modifier.fillMaxWidth().height(40.dp),
+            shape = RoundedCornerShape(9.dp),
+            contentPadding = PaddingValues(0.dp),
+        ) { Text("⌫", fontSize = 21.sp, fontWeight = FontWeight.Black) }
     }
 }
 
 @Composable
-private fun PlayerV10(name: String, gender: String?, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier, isBot: Boolean = false) {
+private fun PlayerV10(name: String, gender: String?, avatarPath: String?, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier, isBot: Boolean = false) {
     Card(modifier=modifier.fillMaxHeight(), colors=CardDefaults.cardColors(containerColor=if(active) accent.copy(alpha=.10f) else SonHarfSurface), shape=RoundedCornerShape(17.dp), border=BorderStroke(1.dp, if(active) accent.copy(alpha=.55f) else SonHarfMuted.copy(alpha=.13f))) {
         Row(Modifier.fillMaxSize().padding(7.dp), verticalAlignment=Alignment.CenterVertically) {
             if (isBot) Box(Modifier.size(42.dp).clip(CircleShape).background(accent.copy(alpha=.15f)), contentAlignment=Alignment.Center) { Text("🤖", fontSize=24.sp) }
-            else SocialAvatar(gender, name, 42.dp, accent = accent)
-            Spacer(Modifier.width(7.dp))
-            Column { Text(name, maxLines=1, color=if(active) accent else SonHarfMuted, fontSize=11.sp, fontWeight=FontWeight.Bold); Text(score.toString(), fontWeight=FontWeight.Black, fontSize=22.sp); Text("$rounds round", color=SonHarfMuted, fontSize=10.sp) }
+            else ProfilePhotoAvatarWithGender(avatarPath = avatarPath, gender = gender, name = name, size = 42.dp, accent = accent)
+            Spacer(Modifier.width(5.dp))
+            Column(Modifier.weight(1f)) { Text(name, maxLines=1, color=if(active) accent else SonHarfMuted, fontSize=10.sp, fontWeight=FontWeight.Bold); Text(score.toString(), fontWeight=FontWeight.Black, fontSize=21.sp); Text("$rounds round", color=SonHarfMuted, fontSize=9.sp) }
         }
     }
 }

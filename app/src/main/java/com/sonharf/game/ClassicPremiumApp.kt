@@ -217,11 +217,6 @@ private fun ClassicHome(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item { ClassicHeader(profile, growth, onProfile, isAdmin, onAdmin) }
-        if (isAdmin) item {
-            Button(onClick = onAdmin, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = ClassicBlue, contentColor = Color.White), shape = RoundedCornerShape(15.dp)) {
-                Icon(Icons.Rounded.AdminPanelSettings, null); Spacer(Modifier.width(8.dp)); Text("YÖNETİCİ PANELİ", fontWeight = FontWeight.Black)
-            }
-        }
         item { ClassicHero(onQuickGame) }
         item { BilBakalimHomeCard(onBilBakalim) }
         item {

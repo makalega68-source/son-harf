@@ -107,3 +107,39 @@ internal fun ProfilePhotoAvatar(
         }
     }
 }
+
+
+private fun profileGenderSymbol(gender: String?): String = when (gender?.lowercase()) {
+    "kadın", "kadin", "female", "woman" -> "♀"
+    "erkek", "male", "man" -> "♂"
+    "diğer", "diger", "other" -> "⚧"
+    else -> "•"
+}
+
+@Composable
+internal fun ProfilePhotoAvatarWithGender(
+    avatarPath: String?,
+    gender: String?,
+    name: String,
+    size: Dp,
+    accent: Color = SonHarfCyan,
+) {
+    Box(Modifier.size(size + 6.dp), contentAlignment = Alignment.Center) {
+        ProfilePhotoAvatar(avatarPath = avatarPath, name = name, size = size, visible = true, accent = accent)
+        Box(
+            Modifier
+                .align(Alignment.BottomEnd)
+                .size((size.value * .34f).coerceAtLeast(15f).dp)
+                .clip(CircleShape)
+                .background(Color.White),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                profileGenderSymbol(gender),
+                color = accent,
+                fontWeight = FontWeight.Black,
+                fontSize = (size.value * .20f).coerceAtLeast(9f).sp,
+            )
+        }
+    }
+}

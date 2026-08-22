@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         SonHarfPreferences.syncSound(this)
         SonHarfPreferences.syncUi(this)
+        WordMeaningRuntime.init(this)
         if (SupabaseProvider.configured && !SonHarfPreferences.rememberLogin(this)) {
             runBlocking { runCatching { SupabaseProvider.client.auth.signOut() } }
         }
@@ -65,7 +66,7 @@ class MainActivity : ComponentActivity() {
             ) {
                 Box {
                     GamePortalApp()
-                    WinnerFireworkOverlay()
+                    PrivateRoomWaitingLayer()
                     FriendsQuickAccessOverlay()
                     GameInviteOverlay()
                     FriendRequestOverlay()
