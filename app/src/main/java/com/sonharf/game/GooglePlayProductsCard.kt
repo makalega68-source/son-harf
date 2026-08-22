@@ -55,8 +55,8 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                         runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
                             .onSuccess {
                                 notice = when (productId) {
-                                    ProductCatalog.COINS_500 -> sh("500 elmas hesabına eklendi.", "500 diamonds added to your account.")
-                                    ProductCatalog.COINS_1500 -> sh("1500 elmas hesabına eklendi.", "1500 diamonds added to your account.")
+                                    ProductCatalog.COINS_500 -> sh("500 Son Coin hesabına eklendi.", "500 Son Coins added to your account.")
+                                    ProductCatalog.COINS_1500 -> sh("1500 Son Coin hesabına eklendi.", "1500 Son Coins added to your account.")
                                     ProductCatalog.THEME_NEON -> sh("Neon Tema hesabına eklendi.", "Neon Theme added to your account.")
                                     else -> sh("Satın alma doğrulandı.", "Purchase verified.")
                                 }
@@ -104,25 +104,25 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(sh("GOOGLE PLAY PAKETLERİ", "GOOGLE PLAY PACKS"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 13.sp)
-            Text(sh("Ödeme Google Play üzerinden yapılır; elmas ve ürünler yalnızca sunucu doğrulamasından sonra verilir.", "Payment is handled by Google Play; diamonds and products are granted only after server verification."), color = SonHarfMuted, fontSize = 9.sp)
+            Text(sh("Ödeme Google Play üzerinden yapılır; Son Coin ve Style ürünleri yalnızca sunucu doğrulamasından sonra verilir.", "Payment is handled by Google Play; Son Coins and Style items are granted only after server verification."), color = SonHarfMuted, fontSize = 9.sp)
 
             PlayProductRow(
-                title = sh("500 Elmas", "500 Diamonds"),
-                subtitle = sh("Kozmetik mağazası için", "For the cosmetics shop"),
+                title = sh("500 Son Coin", "500 Son Coins"),
+                subtitle = sh("Style mağazası için", "For the Style shop"),
                 product = products[ProductCatalog.COINS_500],
                 busy = busy == ProductCatalog.COINS_500,
             ) { buy(ProductCatalog.COINS_500) }
 
             PlayProductRow(
-                title = sh("1500 Elmas", "1500 Diamonds"),
-                subtitle = sh("Daha büyük elmas paketi", "Larger diamond pack"),
+                title = sh("1500 Son Coin", "1500 Son Coins"),
+                subtitle = sh("Daha büyük Son Coin paketi", "Larger Son Coin pack"),
                 product = products[ProductCatalog.COINS_1500],
                 busy = busy == ProductCatalog.COINS_1500,
             ) { buy(ProductCatalog.COINS_1500) }
 
             PlayProductRow(
                 title = sh("Neon Tema", "Neon Theme"),
-                subtitle = sh("Kalıcı tema kilidi", "Permanent theme unlock"),
+                subtitle = sh("Kalıcı Style tema kilidi", "Permanent Style theme unlock"),
                 product = products[ProductCatalog.THEME_NEON],
                 busy = busy == ProductCatalog.THEME_NEON,
             ) { buy(ProductCatalog.THEME_NEON) }
