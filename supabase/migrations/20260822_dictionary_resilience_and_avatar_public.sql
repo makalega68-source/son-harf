@@ -22,6 +22,6 @@ values ('tr', 'ısı', 'ısı', true)
 on conflict(language, normalized_word) do update set word = excluded.word, active = true;
 
 -- Product contract: profile photos are visible throughout the application.
-update public.profiles set avatar_visibility = 'visible' where avatar_visibility is distinct from 'visible';
+update public.profiles set avatar_visibility = 'public' where avatar_visibility is distinct from 'public';
 
 select pg_notify('pgrst','reload schema');
