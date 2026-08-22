@@ -77,7 +77,9 @@ internal fun MiniMascotGlobalOverlay() {
                     when {
                         rejected -> react(MiniMood.SAD)
                         room.validWordCount > lastWordCount -> {
-                            val newest = runCatching { backend.getWords(room.id).lastOrNull() }.getOrNull()
+                            val newest = backend?.let { b ->
+                                runCatching { b.getWords(room.id).lastOrNull() }.getOrNull()
+                            }
                             if (newest?.playerId == uid) {
                                 myAccepted += 1
                                 react(if (myAccepted >= 3 && myAccepted % 3 == 0) MiniMood.STREAK else MiniMood.HAPPY)
