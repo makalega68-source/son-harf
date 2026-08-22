@@ -116,6 +116,37 @@ fun V10HomeScreen(
         }
 
         item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("HAFTANIN EN İYİ 3 OYUNCUSU", Modifier.weight(1f), fontWeight = FontWeight.Black, fontSize = 17.sp, color = H10Ink)
+                TextButton(onClick = onOpenLeaderboard) { Text("Tümü", color = H10TealDark, fontWeight = FontWeight.Bold) }
+            }
+            if (state.topPlayers.isEmpty()) {
+                Surface(shape = RoundedCornerShape(16.dp), color = H10Card, border = BorderStroke(1.dp, H10Border)) {
+                    Text("Haftalık sıralama hazırlanıyor…", Modifier.fillMaxWidth().padding(14.dp), color = H10Muted, textAlign = TextAlign.Center)
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.Bottom) {
+                    state.topPlayers.take(3).forEach { player ->
+                        val medal = when (player.rank) { 1 -> "🥇"; 2 -> "🥈"; else -> "🥉" }
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(16.dp),
+                            color = if (player.rank == 1) Color(0xFFFFF3C7) else H10Card,
+                            border = BorderStroke(if (player.rank == 1) 1.5.dp else 1.dp, if (player.rank == 1) H10Gold else H10Border),
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(medal, fontSize = 20.sp)
+                                V10HomeAvatar(player.photoUrl, player.name, if (player.rank == 1) 46 else 40)
+                                Text(player.name, maxLines = 1, fontSize = 10.sp, fontWeight = FontWeight.Black, color = H10Ink, textAlign = TextAlign.Center)
+                                Text("${player.score} galibiyet", fontSize = 9.sp, color = H10Muted, textAlign = TextAlign.Center)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Surface(onClick = onClaimDailyReward, enabled = state.isDailyRewardAvailable && !state.isActionBusy, modifier = Modifier.weight(1f), shape = RoundedCornerShape(16.dp), color = if (state.isDailyRewardAvailable) Color(0xFFFFF0B7) else H10Card, border = BorderStroke(1.dp,H10Border)) {
                     Column(Modifier.padding(12.dp)) { Text("🎁 Günlük Ödül", fontWeight = FontWeight.Black, color=H10Ink); Text(if(state.isDailyRewardAvailable) "+${state.dailyRewardDiamonds} elmas" else "Bugün alındı", color=H10Muted,fontSize=12.sp) }
