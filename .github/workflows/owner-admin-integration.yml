@@ -1,0 +1,47 @@
+name: Owner Admin Console Integration
+
+on:
+  push:
+    branches: [ feature/owner-admin-console ]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: owner-admin-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  integrate-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/owner-admin-console
+          fetch-depth: 0
+      - name: Integrate owner admin entry
+        run: python3 scripts/integrate_owner_admin.py
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+      - name: Build debug APK
+        run: gradle assembleDebug --stacktrace --warning-mode all
+      - name: Commit validated integration
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898242+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
+          if git diff --cached --quiet; then
+            echo "Already integrated"
+          else
+            git commit -m "Integrate owner admin console entry"
+            git push origin HEAD:feature/owner-admin-console
+          fi
