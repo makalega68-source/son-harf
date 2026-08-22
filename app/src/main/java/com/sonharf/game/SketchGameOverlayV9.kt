@@ -11,6 +11,7 @@ import kotlinx.coroutines.delay
  * Mount the mature V10 arena only while a match is actually active.
  * Finished games are intentionally left to ComboOverlayV9, which owns the single
  * persistent result/share/challenge summary and remembers dismissals across launches.
+ * Mini is mounted once at the application root so it can also greet login/home screens.
  */
 @Composable
 fun SketchGameOverlayV9() {
@@ -34,8 +35,5 @@ fun SketchGameOverlayV9() {
         }
     }
 
-    if (active) {
-        SketchGameOverlayV10()
-        MiniMascotMatchOverlay()
-    }
+    if (active) SketchGameOverlayV10()
 }
