@@ -80,4 +80,35 @@ patch(
     '''                onForfeit = {\n                    scope.launch {\n                        runCatching { backend.forfeit(active.id) }\n                            .onSuccess {\n                                room = it\n                                if (it.status == "finished") SonHarfUiState.homeRequest += 1\n                            }\n                            .onFailure { notice = friendly(it.message.orEmpty()) }\n                    }\n                },''',
 )
 
+# 8) Never resume a stale active room from the wrong language when a same-language room exists.
+patch(
+    "app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt",
+    '''        return SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()\n            .filter { (it.hostId == me || it.guestId == me) && it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused") }\n            .maxByOrNull { it.validWordCount }''',
+    '''        val candidates = SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()\n            .filter { (it.hostId == me || it.guestId == me) && it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused") }\n        val sameLanguage = candidates.filter { it.language == language }\n        return (sameLanguage.ifEmpty { candidates }).maxByOrNull { it.validWordCount }''',
+)
+
+# 9) Synchronize the global language whenever a room is resumed, matched or joined.
+patch(
+    "app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt",
+    '''            if (old != null) { room = old; language = old.language; observe(old) }''',
+    '''            if (old != null) { room = old; language = old.language; SonHarfUiState.language = old.language; observe(old) }''',
+)
+patch(
+    "app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt",
+    '''                                if (found != null) { room = found; language = found.language; observe(found); SonHarfSoundFx.softNotify(); break }''',
+    '''                                if (found != null) { room = found; language = found.language; SonHarfUiState.language = found.language; observe(found); SonHarfSoundFx.softNotify(); break }''',
+)
+patch(
+    "app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt",
+    '''                onJoin = { scope.launch { busy = true; runCatching { backend.joinPrivateRoom(privateCode) }.onSuccess { room = it; language = it.language; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },''',
+    '''                onJoin = { scope.launch { busy = true; runCatching { backend.joinPrivateRoom(privateCode) }.onSuccess { room = it; language = it.language; SonHarfUiState.language = it.language; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },''',
+)
+
+# 10) The keyboard/chat guard must follow the selected language and cannot attach to a stale other-language room.
+patch(
+    "app/src/main/java/com/sonharf/game/RegressionGuardOverlay.kt",
+    '''                val active = runCatching {\n                    SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()\n                        .filter {\n                            (it.hostId == me || it.guestId == me) &&\n                                it.status in listOf("playing", "final", "sudden_death")\n                        }\n                        .maxByOrNull { it.validWordCount }\n                }.getOrNull()''',
+    '''                val active = runCatching {\n                    val candidates = SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()\n                        .filter {\n                            (it.hostId == me || it.guestId == me) &&\n                                it.status in listOf("playing", "final", "sudden_death")\n                        }\n                    val sameLanguage = candidates.filter { it.language == SonHarfUiState.language }\n                    (sameLanguage.ifEmpty { candidates }).maxByOrNull { it.validWordCount }\n                }.getOrNull()''',
+)
+
 print("All regression-stabilization patches applied successfully.")
