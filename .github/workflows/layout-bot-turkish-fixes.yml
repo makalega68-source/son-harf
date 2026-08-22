@@ -1,0 +1,17 @@
+name: Layout Bot Turkish Fixes
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          grep -q 'height(84.dp)' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
+          grep -q 'java.util.Locale("tr", "TR")' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
+          grep -q 'repeat(3) { attempt' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
