@@ -33,7 +33,9 @@ internal enum class MiniMood { IDLE, HAPPY, SAD, CUTE, STREAK, COLLECT }
 internal fun MiniMascot3D(
     mood: MiniMood,
     modifier: Modifier = Modifier,
+    enabled: Boolean = false,
 ) {
+    if (!enabled) return
     var renderer by remember { mutableStateOf<MiniRenderer?>(null) }
     val orbit = remember { Animatable(0f) }
     LaunchedEffect(mood) {
@@ -150,23 +152,25 @@ private class MiniRenderer : GLSurfaceView.Renderer {
         val sad = mood == MiniMood.SAD
         val collect = mood == MiniMood.COLLECT
 
-        drawSphere(0f, -0.55f + bob, 0f, 0.78f, 0.92f, 0.62f, WHITE)
-        drawSphere(0f, 0.52f + bob, 0.03f, 1.02f, 0.88f, 0.86f, WHITE, rz = sway)
+        drawSphere(0f, -0.62f + bob, 0f, 0.68f, 0.82f, 0.58f, WHITE)
+        drawSphere(0f, 0.54f + bob, 0.03f, 1.16f, 0.98f, 0.92f, WHITE, rz = sway)
 
         drawCone(-0.58f, 1.23f + bob, 0f, 0.38f, 0.58f, 0.28f, WHITE, rz = -10f + sway)
         drawCone(0.58f, 1.23f + bob, 0f, 0.38f, 0.58f, 0.28f, WHITE, rz = 10f + sway)
         drawCone(-0.58f, 1.24f + bob, 0.10f, 0.21f, 0.38f, 0.15f, PINK, rz = -10f + sway)
         drawCone(0.58f, 1.24f + bob, 0.10f, 0.21f, 0.38f, 0.15f, PINK, rz = 10f + sway)
 
-        drawSphere(-0.18f, 0.28f + bob, 0.76f, 0.34f, 0.24f, 0.18f, MUZZLE)
-        drawSphere(0.18f, 0.28f + bob, 0.76f, 0.34f, 0.24f, 0.18f, MUZZLE)
-        drawSphere(0f, 0.38f + bob, 0.91f, 0.12f, 0.09f, 0.08f, NOSE)
+        drawSphere(-0.19f, 0.25f + bob, 0.80f, 0.38f, 0.27f, 0.18f, MUZZLE)
+        drawSphere(0.19f, 0.25f + bob, 0.80f, 0.38f, 0.27f, 0.18f, MUZZLE)
+        drawSphere(0f, 0.37f + bob, 0.96f, 0.13f, 0.10f, 0.08f, NOSE)
+        drawSphere(0f, 0.08f + bob, 0.91f, 0.24f, 0.16f, 0.07f, MOUTH)
+        if (!sad) drawSphere(0f, 0.03f + bob, 0.98f, 0.12f, 0.08f, 0.04f, TONGUE)
 
         val eyeY = if (sad) 0.64f else 0.72f
         val eyeScaleY = if (eyeSquint) 0.10f else 0.33f
         for (x in floatArrayOf(-0.37f, 0.37f)) {
-            drawSphere(x, eyeY + bob, 0.76f, 0.30f, eyeScaleY, 0.12f, EYE_BLUE)
-            drawSphere(x, eyeY + bob, 0.86f, 0.15f, eyeScaleY * 0.62f, 0.07f, PUPIL)
+            drawSphere(x, eyeY + bob, 0.80f, 0.36f, eyeScaleY * 1.12f, 0.14f, EYE_BLUE)
+            drawSphere(x, eyeY + bob, 0.92f, 0.19f, eyeScaleY * 0.68f, 0.08f, PUPIL)
             if (!eyeSquint) drawSphere(x - 0.05f, eyeY + 0.08f + bob, 0.93f, 0.055f, 0.055f, 0.03f, HIGHLIGHT)
         }
 
@@ -232,6 +236,8 @@ private class MiniRenderer : GLSurfaceView.Renderer {
         private val MUZZLE = floatArrayOf(1f, 0.96f, 0.94f, 1f)
         private val PINK = floatArrayOf(1f, 0.58f, 0.67f, 1f)
         private val NOSE = floatArrayOf(0.95f, 0.42f, 0.50f, 1f)
+        private val MOUTH = floatArrayOf(0.18f, 0.06f, 0.10f, 1f)
+        private val TONGUE = floatArrayOf(1f, 0.46f, 0.58f, 1f)
         private val EYE_BLUE = floatArrayOf(0.12f, 0.62f, 1f, 1f)
         private val PUPIL = floatArrayOf(0.025f, 0.08f, 0.13f, 1f)
         private val HIGHLIGHT = floatArrayOf(1f, 1f, 1f, 1f)
