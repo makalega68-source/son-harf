@@ -1,0 +1,68 @@
+name: Final UX Polish
+
+on:
+  push:
+    branches: [ feature/final-ux-polish-20260822 ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: final-ux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/final-ux-polish-20260822
+          fetch-depth: 0
+
+      - name: Apply final UX integration
+        run: |
+          python3 scripts/final_ux_polish.py
+          python3 scripts/final_ux_compile_fixes.py
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Build debug APK
+        run: gradle assembleDebug --stacktrace --warning-mode all
+
+      - name: Commit validated UX integration
+        if: success()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game app/src/main/java/com/sonharf/game/data
+          if git diff --cached --quiet; then
+            echo "Final UX sources already integrated"
+          else
+            git commit -m "Integrate final UX polish"
+            git push origin HEAD:feature/final-ux-polish-20260822
+          fi
+
+      - name: Stage APK
+        if: success()
+        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Final-UX.apk
+
+      - uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: son-harf-final-ux-apk
+          path: SonHarf-Final-UX.apk
+          if-no-files-found: error
