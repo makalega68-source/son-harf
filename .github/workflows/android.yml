@@ -23,16 +23,6 @@ jobs:
       HAS_RELEASE_CONFIG: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 != '' && secrets.SON_HARF_RELEASE_STORE_PASSWORD != '' && secrets.SON_HARF_RELEASE_KEY_ALIAS != '' && secrets.SON_HARF_RELEASE_KEY_PASSWORD != '' && secrets.SON_HARF_ADMOB_APP_ID != '' && secrets.SON_HARF_ADMOB_REWARDED_ID != '' }}
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
-          fetch-depth: 0
-
-      - name: Integrate Bil Bakalim feature branch
-        if: github.event_name == 'pull_request' && github.head_ref == 'feature/bil-bakalim-v1'
-        run: |
-          python3 scripts/integrate_bil_bakalim.py
-          python3 scripts/mount_bil_bonus.py
-
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -46,19 +36,6 @@ jobs:
 
       - name: Build debug APK
         run: gradle assembleDebug --stacktrace --warning-mode all
-
-      - name: Commit validated Bil Bakalim integration
-        if: success() && github.event_name == 'pull_request' && github.head_ref == 'feature/bil-bakalim-v1'
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt app/src/main/java/com/sonharf/game/BilBakalimFeature.kt app/src/main/java/com/sonharf/game/BilBakalimBonusOverlay.kt
-          if git diff --cached --quiet; then
-            echo "Integration already committed"
-          else
-            git commit -m "[bil-bakalim-ci] Integrate second game, synchronized bonus and VIP arena tools"
-            git push origin HEAD:feature/bil-bakalim-v1
-          fi
 
       - name: Prepare QA APK name
         if: success()
