@@ -133,6 +133,22 @@ fun SketchGameOverlayV10() {
     val active = room ?: return
     val me = backend.currentUserId()
     LaunchedEffect(active.currentPlayerId, active.validWordCount, active.roundNo) { input = "" }
+    LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount, active.roundNo, active.turnDeadline) {
+        if (!active.isBot || !active.botTurn || active.status !in listOf("playing", "final", "sudden_death")) return@LaunchedEffect
+        delay(900L)
+        repeat(3) { attempt ->
+            val latest = runCatching { backend.getRoom(active.id) }.getOrNull() ?: return@repeat
+            if (!latest.botTurn || latest.status !in listOf("playing", "final", "sudden_death")) { room = latest; return@LaunchedEffect }
+            val moved = runCatching { backend.botTakeTurn(active.id) }.getOrNull()
+            if (moved != null) { room = moved; words = runCatching { backend.getWords(active.id) }.getOrDefault(words); return@LaunchedEffect }
+            if (attempt < 2) delay(650L)
+        }
+        val latest = runCatching { backend.getRoom(active.id) }.getOrNull()
+        val expired = latest?.turnDeadline?.let { deadline -> runCatching { java.time.Instant.parse(deadline).isBefore(java.time.Instant.now()) }.getOrDefault(false) } == true
+        if (latest != null && latest.botTurn && expired) {
+            runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it }
+        }
+    }
 
     Surface(Modifier.fillMaxSize(), color = SonHarfBg) {
         ArenaV10(
@@ -298,7 +314,8 @@ private fun ArenaV10(
     val myRounds = if (host) room.hostRounds else room.guestRounds
     val oppRounds = if (host) room.guestRounds else room.hostRounds
     val myTurn = room.currentPlayerId == me && room.status in listOf("playing", "final", "sudden_death")
-    val lastWord = words.lastOrNull()?.normalizedWord?.uppercase()
+    val displayLocale = if (room.language == "tr") java.util.Locale("tr", "TR") else java.util.Locale.ENGLISH
+    val lastWord = words.lastOrNull()?.normalizedWord?.uppercase(displayLocale)
     val required = lastWord?.lastOrNull()?.toString().orEmpty()
     val lastWordFont = when {
         lastWord == null -> 36.sp
@@ -434,7 +451,7 @@ private fun ArenaV10(
                     items(words.takeLast(30)) { w ->
                         val duplicate = feedback?.duplicateWord?.equals(w.word, ignoreCase = true) == true
                         Surface(shape = RoundedCornerShape(12.dp), color = if (duplicate) SonHarfPink.copy(alpha=.22f) else SonHarfGold.copy(alpha=.12f), border = BorderStroke(if (duplicate) 2.dp else 1.dp, if (duplicate) SonHarfPink else SonHarfGold.copy(alpha=.5f))) {
-                            Text(w.word.uppercase(), Modifier.padding(horizontal=12.dp, vertical=8.dp), color = if (duplicate) SonHarfPink else SonHarfText, fontSize = if (duplicate) 17.sp else 14.sp, fontWeight = FontWeight.Black)
+                            Text(w.word.uppercase(displayLocale), Modifier.padding(horizontal=12.dp, vertical=8.dp), color = if (duplicate) SonHarfPink else SonHarfText, fontSize = if (duplicate) 17.sp else 14.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -448,7 +465,7 @@ private fun ArenaV10(
 
         Surface(Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(17.dp), color = SonHarfSurface, border = BorderStroke(1.6.dp, if (myTurn) SonHarfCyan.copy(alpha=.75f) else SonHarfMuted.copy(alpha=.25f))) {
             Row(Modifier.fillMaxSize().padding(horizontal=15.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(if (input.isBlank()) if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Rakibin sırası…", "Opponent's turn…") else input.uppercase(), Modifier.weight(1f), color = if (input.isBlank()) SonHarfMuted else SonHarfText, fontSize=19.sp)
+                Text(if (input.isBlank()) if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Rakibin sırası…", "Opponent's turn…") else input.uppercase(displayLocale), Modifier.weight(1f), color = if (input.isBlank()) SonHarfMuted else SonHarfText, fontSize=19.sp)
                 TextButton(onClick=onSubmit, enabled=myTurn && input.length>=2 && !busy) { Text("➤", fontSize=26.sp) }
             }
         }
@@ -498,7 +515,16 @@ private fun PlayerV10(name: String, gender: String?, avatarPath: String?, score:
     Card(modifier=modifier.fillMaxHeight(), colors=CardDefaults.cardColors(containerColor=if(active) accent.copy(alpha=.10f) else SonHarfSurface), shape=RoundedCornerShape(17.dp), border=BorderStroke(1.dp, if(active) accent.copy(alpha=.55f) else SonHarfMuted.copy(alpha=.13f))) {
         Row(Modifier.fillMaxSize().padding(7.dp), verticalAlignment=Alignment.CenterVertically) {
             if (isBot) Box(Modifier.size(42.dp).clip(CircleShape).background(accent.copy(alpha=.15f)), contentAlignment=Alignment.Center) { Text("🤖", fontSize=24.sp) }
-            else ProfilePhotoAvatarWithGender(avatarPath = avatarPath, gender = gender, name = name, size = 42.dp, accent = accent)
+            else Box(Modifier.size(44.dp)) {
+                ProfilePhotoAvatar(avatarPath, name, 42.dp, visible = true, accent = accent)
+                val female = gender?.lowercase() in setOf("kadın", "kadin", "female", "woman")
+                val male = gender?.lowercase() in setOf("erkek", "male", "man")
+                if (female || male) {
+                    Surface(modifier = Modifier.align(Alignment.BottomEnd).size(17.dp), shape = CircleShape, color = Color.White, border = BorderStroke(1.dp, if (female) Color(0xFFEF6FA7) else Color(0xFF3C9EEB))) {
+                        Box(contentAlignment = Alignment.Center) { Text(if (female) "♀" else "♂", color = if (female) Color(0xFFEF6FA7) else Color(0xFF3C9EEB), fontSize = 11.sp, fontWeight = FontWeight.Black) }
+                    }
+                }
+            }
             Spacer(Modifier.width(5.dp))
             Column(Modifier.weight(1f)) { Text(name, maxLines=1, color=if(active) accent else SonHarfMuted, fontSize=10.sp, fontWeight=FontWeight.Bold); Text(score.toString(), fontWeight=FontWeight.Black, fontSize=21.sp); Text("$rounds round", color=SonHarfMuted, fontSize=9.sp) }
         }
