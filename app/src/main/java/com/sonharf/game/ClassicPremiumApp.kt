@@ -456,15 +456,15 @@ private fun ClassicDailySeries(growth: GrowthDashboardDto?, message: String) {
                     val day = index + 1
                     val active = day == 3
                     Surface(
-                        Modifier.weight(1f).height(66.dp),
+                        Modifier.weight(1f).height(84.dp),
                         shape = RoundedCornerShape(10.dp),
                         color = if (active) Color(0xFF243242) else ClassicPanel2,
                         border = BorderStroke(1.dp, if (active) ClassicGold else ClassicBorder),
                     ) {
-                        Column(Modifier.padding(5.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                            Text("${sh("Gün", "Day")} $day", color = if (active) ClassicGoldSoft else ClassicMuted, fontSize = 8.sp)
-                            Icon(if (day <= 2) Icons.Rounded.CheckCircle else if (day == 7) Icons.Rounded.CardGiftcard else Icons.Rounded.Star, null, tint = if (day <= 2) ClassicGreen else ClassicGold, modifier = Modifier.size(19.dp))
-                            Text(reward, color = ClassicText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Column(Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceEvenly) {
+                            Text("${sh("Gün", "Day")} $day", color = if (active) ClassicGoldSoft else ClassicMuted, fontSize = 8.sp, maxLines = 1)
+                            Icon(if (day <= 2) Icons.Rounded.CheckCircle else if (day == 7) Icons.Rounded.CardGiftcard else Icons.Rounded.Star, null, tint = if (day <= 2) ClassicGreen else ClassicGold, modifier = Modifier.size(20.dp))
+                            Text(reward, color = if (active) Color.White else ClassicText, fontSize = 9.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
                     }
                 }

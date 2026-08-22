@@ -208,8 +208,8 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
             }
 
             Row(Modifier.fillMaxWidth().height(if (tiny) 68.dp else 78.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                ScoreBox("SEN", playerScore, Color(0xFF2CA9DC), Modifier.weight(1f))
-                ScoreBox("BOT", botScore, Color(0xFFEA7484), Modifier.weight(1f))
+                ScoreBox("SEN", playerScore, Color(0xFF2CA9DC), Modifier.weight(1f), profile = playerProfile)
+                ScoreBox("BOT", botScore, Color(0xFFEA7484), Modifier.weight(1f), isBot = true)
             }
 
             if (phase == BilPhase.MATCH_END) {
@@ -294,11 +294,19 @@ private fun NumericEstimatePad(value: String, onValue: (String) -> Unit, compact
 }
 
 @Composable
-private fun ScoreBox(label: String, score: Int, accent: Color, modifier: Modifier) {
-    Surface(modifier = modifier, color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, accent.copy(alpha = .65f))) {
-        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, color = Color(0xFF6C8293), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-            Text("$score", color = accent, fontSize = 30.sp, fontWeight = FontWeight.Black)
+private fun ScoreBox(label: String, score: Int, accent: Color, modifier: Modifier, profile: ProfileDto? = null, isBot: Boolean = false) {
+    Surface(modifier = modifier.fillMaxHeight(), color = Color.White, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, accent.copy(alpha = .65f))) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (isBot) {
+                Box(Modifier.size(40.dp).clip(CircleShape).background(accent.copy(alpha = .12f)), contentAlignment = Alignment.Center) { Text("🤖", fontSize = 23.sp) }
+            } else {
+                ProfilePhotoAvatar(profile?.avatarPath, profile?.displayName ?: label, 40.dp, visible = true, accent = accent)
+            }
+            Spacer(Modifier.width(7.dp))
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                Text(label, color = Color(0xFF6C8293), fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(score.toString(), color = accent, fontSize = 25.sp, lineHeight = 27.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            }
         }
     }
 }
@@ -306,14 +314,14 @@ private fun ScoreBox(label: String, score: Int, accent: Color, modifier: Modifie
 @Composable
 private fun AnswerLine(label: String, value: String, winner: Boolean) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = if (winner) Color(0xFF0F3B2C) else Color(0xFF091723),
+        modifier = Modifier.fillMaxWidth().heightIn(min = 78.dp),
+        color = if (winner) Color(0xFF0F3B2C) else Color(0xFF102230),
         shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, if (winner) Color(0xFF39D875) else Color(0xFF29445E)),
+        border = BorderStroke(1.dp, if (winner) Color(0xFF39D875) else Color(0xFF46627A)),
     ) {
-        Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(label, color = Color(0xFF6C8293), fontSize = 11.sp)
-            Text(value, color = if (winner) Color(0xFF39D875) else Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = if (winner) 31.sp else 26.sp, textAlign = TextAlign.Center)
+        Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(label, color = Color(0xFFB8C7D2), fontSize = 10.sp, maxLines = 1)
+            Text(value, color = if (winner) Color(0xFF39E884) else Color.White, fontWeight = FontWeight.Black, fontSize = 27.sp, lineHeight = 29.sp, textAlign = TextAlign.Center, maxLines = 1)
         }
     }
 }
