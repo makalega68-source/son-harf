@@ -14,9 +14,9 @@ import java.net.URLEncoder
 import java.util.Locale
 
 /**
- * Dictionary runtime with two-level cache. Meanings that are successfully resolved are
- * kept in RAM for the session and persisted on-device so a later lookup does not depend
- * on network availability. The match summary also preloads every used word.
+ * Dictionary runtime with two-level cache. Successfully resolved meanings are kept in
+ * memory and persisted on-device. Turkish definitions prefer TDK Guncel Turkce Sozluk;
+ * English definitions prefer DictionaryAPI. Wiktionary is a secondary fallback.
  */
 internal object WordMeaningRuntime {
     private val http = HttpClient(OkHttp)
@@ -24,22 +24,8 @@ internal object WordMeaningRuntime {
     private val memory = LinkedHashMap<String, String>()
     private var prefs: SharedPreferences? = null
 
-    private val verifiedOffline = mapOf(
-        "tr:telefon" to "Sesin uzak mesafelere elektriksel veya elektronik yollarla iletilmesini sağlayan haberleşme aracı.",
-        "tr:navigasyon" to "Bir yerden başka bir yere ulaşmak için konum ve rota belirleme işi; yol bulma.",
-        "tr:masa" to "Üzerinde çalışma, yemek yeme veya eşya koyma amacıyla kullanılan, ayaklı düz yüzeyli mobilya.",
-        "tr:araba" to "İnsan veya yük taşımaya yarayan tekerlekli taşıt.",
-        "tr:kalem" to "Yazı yazmak veya çizim yapmak için kullanılan araç.",
-        "tr:armut" to "Gülgillerden, tatlı ve sulu meyvesi bulunan ağaç ve bu ağacın meyvesi.",
-        "en:apple" to "A round fruit with firm flesh and a skin that is commonly red, green, or yellow.",
-        "en:table" to "A piece of furniture with a flat top supported by legs.",
-        "en:water" to "A clear liquid essential for life, chemically composed of hydrogen and oxygen.",
-        "en:rabbit" to "A small mammal with long ears and powerful hind legs."
-    )
-
     fun init(context: Context) {
-        prefs = context.applicationContext.getSharedPreferences("word_meaning_cache_v2", Context.MODE_PRIVATE)
-        verifiedOffline.forEach { (k, v) -> memory.putIfAbsent(k, v) }
+        prefs = context.applicationContext.getSharedPreferences("word_meaning_cache_v3", Context.MODE_PRIVATE)
     }
 
     private fun normalize(word: String, language: String): String {
@@ -51,7 +37,7 @@ internal object WordMeaningRuntime {
         if (value.isBlank()) return
         synchronized(memory) {
             memory[key] = value
-            while (memory.size > 600) memory.remove(memory.keys.first())
+            while (memory.size > 800) memory.remove(memory.keys.first())
         }
         prefs?.edit()?.putString(key, value)?.apply()
     }
@@ -64,10 +50,18 @@ internal object WordMeaningRuntime {
             synchronized(memory) { memory[key] = it }
             return it
         }
-        verifiedOffline[key]?.let { store(key, it); return it }
 
         val encoded = URLEncoder.encode(normalized, Charsets.UTF_8.name()).replace("+", "%20")
         val host = if (language == "en") "en.wiktionary.org" else "tr.wiktionary.org"
+
+        val tdkApi = if (language == "tr") runCatching {
+            val body = http.get("https://sozluk.gov.tr/gts?ara=$encoded").bodyAsText()
+            val firstEntry = json.parseToJsonElement(body).jsonArray.firstOrNull()?.jsonObject
+            val meanings = firstEntry?.get("anlamlarListe")?.jsonArray
+            meanings.orEmpty().asSequence().mapNotNull { item ->
+                item.jsonObject["anlam"]?.jsonPrimitive?.content?.trim()
+            }.firstOrNull { !it.isNullOrBlank() }.orEmpty()
+        }.getOrDefault("") else ""
 
         val dictionaryApi = if (language == "en") runCatching {
             val body = http.get("https://api.dictionaryapi.dev/api/v2/entries/en/$encoded").bodyAsText()
@@ -78,13 +72,14 @@ internal object WordMeaningRuntime {
             }.firstOrNull { !it.isNullOrBlank() }.orEmpty()
         }.getOrDefault("") else ""
 
-        val restSummary = if (dictionaryApi.isBlank()) runCatching {
+        val primary = if (language == "tr") tdkApi else dictionaryApi
+        val restSummary = if (primary.isBlank()) runCatching {
             val body = http.get("https://$host/api/rest_v1/page/summary/$encoded").bodyAsText()
             val root = json.parseToJsonElement(body).jsonObject
             root["extract"]?.jsonPrimitive?.content?.trim().orEmpty()
         }.getOrDefault("") else ""
 
-        val queryExtract = if (dictionaryApi.isBlank() && restSummary.isBlank()) runCatching {
+        val queryExtract = if (primary.isBlank() && restSummary.isBlank()) runCatching {
             val url = "https://$host/w/api.php?action=query&format=json&prop=extracts&explaintext=1&redirects=1&titles=$encoded"
             val root = json.parseToJsonElement(http.get(url).bodyAsText()).jsonObject
             val pages = root["query"]?.jsonObject?.get("pages")?.jsonObject
@@ -92,7 +87,7 @@ internal object WordMeaningRuntime {
                 ?.firstOrNull { it.isNotBlank() }.orEmpty()
         }.getOrDefault("") else ""
 
-        val raw = dictionaryApi.ifBlank { restSummary }.ifBlank { queryExtract }
+        val raw = primary.ifBlank { restSummary }.ifBlank { queryExtract }
         val concise = raw
             .replace(Regex("\\s+"), " ")
             .replace(Regex("^${Regex.escape(normalized)}\\s*", RegexOption.IGNORE_CASE), "")
@@ -105,8 +100,8 @@ internal object WordMeaningRuntime {
         }
 
         return if (language == "en")
-            "Bu kelime oyun sözlüğünde geçerli. Kısa İngilizce tanımı sözlük kaynağından alınamadı."
+            "Bu kelime oyun sözlüğünde geçerli; ancak kısa İngilizce tanımı kaynaklardan alınamadı."
         else
-            "Bu kelime oyun sözlüğünde geçerli. Kısa Türkçe tanımı sözlük kaynağından alınamadı."
+            "Bu kelime oyun sözlüğünde geçerli; ancak TDK kaynağında kısa tanımı bulunamadı."
     }
 }
