@@ -31,10 +31,11 @@ import com.sonharf.game.data.GrowthDashboardDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.getAdminDashboard
 import kotlinx.coroutines.launch
 
 private enum class ClassicScreen {
-    HOME, PLAY, GAME, BIL_BAKALIM, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL
+    HOME, PLAY, GAME, BIL_BAKALIM, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL
 }
 
 private val ClassicBg = Color(0xFF071525)
@@ -80,6 +81,11 @@ fun ClassicPremiumApp() {
             screen = ClassicScreen.GAME
         }
     }
+    LaunchedEffect(screen, gameKey) {
+        if (authenticated && screen == ClassicScreen.GAME) {
+            runCatching { backend?.logEvent("son_harf_open") }
+        }
+    }
 
     if (!authChecked) {
         Box(Modifier.fillMaxSize().background(ClassicBg), contentAlignment = Alignment.Center) {
@@ -115,6 +121,7 @@ fun ClassicPremiumApp() {
                         onPlay = { screen = ClassicScreen.PLAY },
                         onQuickGame = { gameKey += 1; screen = ClassicScreen.GAME },
                         onBilBakalim = { screen = ClassicScreen.BIL_BAKALIM },
+                        onAdmin = { screen = ClassicScreen.ADMIN },
                         onHub = { screen = ClassicScreen.HUB },
                         onLeague = { screen = ClassicScreen.LEAGUE },
                         onShop = { screen = ClassicScreen.SHOP },
@@ -139,6 +146,7 @@ fun ClassicPremiumApp() {
                     )
                     ClassicScreen.GAME -> key(gameKey) { TargetNeonGameScreen() }
                     ClassicScreen.BIL_BAKALIM -> TrackedBilBakalimStandaloneScreen { screen = ClassicScreen.HOME }
+                    ClassicScreen.ADMIN -> AdminConsoleScreen { screen = ClassicScreen.HOME }
                     ClassicScreen.HUB -> MetaHubScreen()
                     ClassicScreen.LEAGUE -> LeaderboardExperienceScreen { screen = ClassicScreen.HOME }
                     ClassicScreen.PROFILE_FULL -> ProfileExperienceScreen()
@@ -161,6 +169,7 @@ private fun ClassicHome(
     onPlay: () -> Unit,
     onQuickGame: () -> Unit,
     onBilBakalim: () -> Unit,
+    onAdmin: () -> Unit,
     onHub: () -> Unit,
     onLeague: () -> Unit,
     onShop: () -> Unit,
@@ -171,11 +180,13 @@ private fun ClassicHome(
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
     var mode by remember { mutableStateOf(SonHarfGameModeState.mode) }
     var dailyMessage by remember { mutableStateOf("") }
+    var isAdmin by remember { mutableStateOf(false) }
 
     suspend fun reload() {
         val id = backend?.currentUserId()
         if (id != null) profile = runCatching { backend.getProfile(id) }.getOrNull()
         growth = runCatching { backend?.getGrowthDashboard() }.getOrNull()
+        isAdmin = if (backend == null) false else runCatching { backend.getAdminDashboard(); true }.getOrDefault(false)
         runCatching { backend?.getPreferredGameMode() }.getOrNull()?.let {
             mode = it
             SonHarfGameModeState.mode = it
@@ -189,7 +200,7 @@ private fun ClassicHome(
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ClassicHeader(profile, growth, onProfile) }
+        item { ClassicHeader(profile, growth, onProfile, isAdmin, onAdmin) }
         item { ClassicHero(onQuickGame) }
         item { BilBakalimHomeCard(onBilBakalim) }
         item {
@@ -229,7 +240,7 @@ private fun ClassicHome(
 }
 
 @Composable
-private fun ClassicHeader(profile: ProfileDto?, growth: GrowthDashboardDto?, onProfile: () -> Unit) {
+private fun ClassicHeader(profile: ProfileDto?, growth: GrowthDashboardDto?, onProfile: () -> Unit, isAdmin: Boolean, onAdmin: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Surface(
             onClick = onProfile,
@@ -265,8 +276,10 @@ private fun ClassicHeader(profile: ProfileDto?, growth: GrowthDashboardDto?, onP
         Spacer(Modifier.width(5.dp))
         HeaderWallet(Icons.Rounded.Diamond, "${profile?.diamonds ?: 0}", ClassicBlue)
         Spacer(Modifier.width(5.dp))
-        Surface(shape = CircleShape, color = ClassicPanel, modifier = Modifier.size(38.dp)) {
-            Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Notifications, null, tint = ClassicCream, modifier = Modifier.size(20.dp)) }
+        Surface(onClick = if (isAdmin) onAdmin else ({}), shape = CircleShape, color = if (isAdmin) ClassicGold.copy(alpha=.18f) else ClassicPanel, modifier = Modifier.size(38.dp), border = if (isAdmin) BorderStroke(1.dp, ClassicGold) else null) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(if (isAdmin) Icons.Rounded.AdminPanelSettings else Icons.Rounded.Notifications, null, tint = if (isAdmin) ClassicGold else ClassicCream, modifier = Modifier.size(20.dp))
+            }
         }
     }
 }
