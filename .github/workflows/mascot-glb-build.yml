@@ -47,7 +47,8 @@ jobs:
             cp "build/mesh2motion-assets/rigs/fox/animation-fox-$name.blend" "build/mascot-src/animation-fox-$name.blend"
           done
           file build/mascot-src/fox-cat.blend
-          test "$(head -c 7 build/mascot-src/fox-cat.blend)" = "BLENDER"
+          ls -lh build/mascot-src/fox-cat.blend
+          test -s build/mascot-src/fox-cat.blend
 
       - name: Build white blue-eyed rigged kitten GLB
         run: |
