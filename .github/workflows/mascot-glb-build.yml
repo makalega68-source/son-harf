@@ -1,20 +1,24 @@
-name: Mascot GLB SceneView Build
+name: Hero Code Mascot APK Build
 
 on:
   push:
     branches: [ feat/mascot-glb-sceneview-20260822 ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: hero-code-mascot-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - uses: actions/setup-java@v5
         with:
@@ -29,64 +33,18 @@ jobs:
         with:
           gradle-version: '8.14.4'
 
-      - name: Install Blender 4.5 LTS, Git LFS and zstd
+      - name: Apply approved hero code mascot
+        run: python3 scripts/apply_hero_code_mascot.py
+
+      - name: Mascot contract checks
         run: |
           set -euxo pipefail
-          sudo apt-get update
-          sudo apt-get install -y git-lfs zstd xz-utils
-          git lfs install
-          curl -fL --retry 3 -o /tmp/blender.tar.xz \
-            https://download.blender.org/release/Blender4.5/blender-4.5.12-linux-x64.tar.xz
-          tar -xJf /tmp/blender.tar.xz -C /tmp
-          echo "/tmp/blender-4.5.12-linux-x64" >> "$GITHUB_PATH"
-          /tmp/blender-4.5.12-linux-x64/blender --version | head -n 2
-
-      - name: Fetch and normalize CC0 cat rig and animation sources
-        run: |
-          set -euxo pipefail
-          mkdir -p build/mascot-src app/src/main/assets/models
-          git clone --depth 1 https://github.com/Mesh2Motion/mesh2motion-assets.git build/mesh2motion-assets
-          git -C build/mesh2motion-assets lfs pull
-
-          normalize_blend() {
-            src="$1"
-            dst="$2"
-            cp "$src" "$dst"
-            if file "$dst" | grep -q 'Zstandard compressed data'; then
-              zstd -d -f "$dst" -o "${dst}.raw"
-              mv "${dst}.raw" "$dst"
-            fi
-            file "$dst"
-            test "$(head -c 7 "$dst")" = "BLENDER"
-          }
-
-          normalize_blend build/mesh2motion-assets/rig-variations/fox-cat.blend build/mascot-src/fox-cat.blend
-          for name in idle idle-alert walk run jump sit sneak fetch howl; do
-            normalize_blend \
-              "build/mesh2motion-assets/rigs/fox/animation-fox-$name.blend" \
-              "build/mascot-src/animation-fox-$name.blend"
-          done
-          ls -lh build/mascot-src/*.blend
-
-      - name: Build white blue-eyed rigged kitten GLB
-        run: |
-          set -euxo pipefail
-          blender --version | head -n 2
-          blender -b --python scripts/build_kitten_glb.py -- \
-            --base "$PWD/build/mascot-src/fox-cat.blend" \
-            --anim-dir "$PWD/build/mascot-src" \
-            --out "$PWD/app/src/main/assets/models/mascot_kitten.glb"
-          test -s app/src/main/assets/models/mascot_kitten.glb
-          ls -lh app/src/main/assets/models/mascot_kitten.glb
-
-      - name: Mascot integration contract checks
-        run: |
-          set -euxo pipefail
-          grep -q 'io.github.sceneview:sceneview:4.17.0' app/build.gradle.kts
-          grep -q 'isOpaque = false' app/src/main/java/com/sonharf/game/MiniMascotGlobalOverlay.kt
-          grep -q 'animationName = motion.animationName' app/src/main/java/com/sonharf/game/MiniMascotGlobalOverlay.kt
-          grep -q 'models/mascot_kitten.glb' app/src/main/java/com/sonharf/game/MiniMascotGlobalOverlay.kt
-          grep -q 'MiniMascotGlobalOverlay()' app/src/main/java/com/sonharf/game/MainActivity.kt
+          grep -q 'enabled: Boolean = false' app/src/main/java/com/sonharf/game/MiniMascot3D.kt
+          grep -q 'enabled = true' app/src/main/java/com/sonharf/game/MiniMascotGlobalOverlay.kt
+          grep -q 'MOUTH' app/src/main/java/com/sonharf/game/MiniMascot3D.kt
+          grep -q 'TONGUE' app/src/main/java/com/sonharf/game/MiniMascot3D.kt
+          ! grep -q 'io.github.sceneview:sceneview:4.17.0' app/build.gradle.kts
+          ! grep -q 'SceneView' app/src/main/java/com/sonharf/game/MiniMascotGlobalOverlay.kt
           grep -q 'backend.submitWord(active.id, submitted)' app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt
 
       - name: Unit tests
@@ -95,18 +53,22 @@ jobs:
       - name: Build debug APK
         run: gradle :app:assembleDebug --stacktrace --warning-mode all
 
-      - name: Verify kitten asset packaged in APK
+      - name: Commit tested code mascot source
         run: |
-          set -euxo pipefail
-          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -q 'assets/models/mascot_kitten.glb'
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/MiniMascot3D.kt app/build.gradle.kts
+          if ! git diff --cached --quiet; then
+            git commit -m "Apply approved hero code mascot"
+            git pull --rebase origin feat/mascot-glb-sceneview-20260822
+            git push origin HEAD:feat/mascot-glb-sceneview-20260822
+          fi
 
       - name: Stage APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Rigged-Kitten-Test.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Hero-Code-Cat-Test.apk
 
       - uses: actions/upload-artifact@v4
         with:
-          name: SonHarf-Rigged-Kitten-Test-APK
-          path: SonHarf-Rigged-Kitten-Test.apk
+          name: SonHarf-Hero-Code-Cat-Test-APK
+          path: SonHarf-Hero-Code-Cat-Test.apk
           if-no-files-found: error
-
-# build-trigger: sceneview-4.17-minimal-patch-20260822
