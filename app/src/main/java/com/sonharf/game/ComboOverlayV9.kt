@@ -130,8 +130,6 @@ fun ComboOverlayV9() {
                     resultWords = runCatching { backend.getWords(fin.id) }.getOrDefault(emptyList())
                     growth = runCatching { backend.getGrowthDashboard() }.getOrNull()
                     runCatching { backend.logEvent("match_finished_seen", fin.id) }
-                } else if (fin == null) {
-                    finishedRoom = null
                 }
             }
             delay(500)
@@ -209,8 +207,8 @@ fun ComboOverlayV9() {
                         }
                     }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)) {
-                        OutlinedButton(onClick={dismissSummary(fin.id); SonHarfUiState.homeRequest += 1},modifier=Modifier.weight(1f)){Text("← ${sh("GERİ","BACK")}",fontSize=10.sp,fontWeight=FontWeight.Bold)}
-                        Button(onClick={scope.launch { runCatching { if(fin.isBot) backend.restartBotMatch(fin.id) else backend.requestRematch(fin.id) }; dismissSummary(fin.id) }},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=SonHarfCyan)){Text(sh("AYNI OYUNCUYLA TEKRAR","REMATCH"),fontWeight=FontWeight.Black,fontSize=9.sp)}
+                        OutlinedButton(onClick={dismissSummary(fin.id); SonHarfUiState.homeRequest += 1},modifier=Modifier.weight(1f)){Text("← ${sh("GERİ","BACK")}",fontSize=12.sp,fontWeight=FontWeight.Black)}
+                        Button(onClick={scope.launch { runCatching { if(fin.isBot) backend.restartBotMatch(fin.id) else backend.requestRematch(fin.id) }; dismissSummary(fin.id) }},modifier=Modifier.weight(1f),colors=ButtonDefaults.buttonColors(containerColor=SonHarfCyan)){Text(sh("RÖVANŞ","REMATCH"),fontWeight=FontWeight.Black,fontSize=13.sp,color=Color.White)}
                     }
                 }
             }
@@ -219,7 +217,7 @@ fun ComboOverlayV9() {
     selectedWord?.let { word ->
         AlertDialog(
             onDismissRequest={selectedWord=null;selectedMeaning=null},
-            title={Text(word.uppercase(),fontWeight=FontWeight.Black)},
+            title={Text("${word.uppercase()} • ${sh("ANLAMI","MEANING")}",fontWeight=FontWeight.Black,color=SonHarfCyan)},
             text={if(selectedMeaning==null) CircularProgressIndicator() else Text(selectedMeaning!!)},
             confirmButton={TextButton(onClick={selectedWord=null;selectedMeaning=null}){Text(sh("KAPAT","CLOSE"))}}
         )

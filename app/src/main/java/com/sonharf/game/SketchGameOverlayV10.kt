@@ -173,9 +173,24 @@ fun SketchGameOverlayV10() {
                         }
                         .onFailure { e ->
                             input = ""
-                            val f = failureFeedback(e.message.orEmpty(), submitted)
-                            feedback = if (f.duplicateWord != null && duplicate != null) f.copy(duplicateWord = duplicate.word.uppercase()) else f
-                            SonHarfSoundFx.warning()
+                            val reconciledRoom = runCatching { backend.getRoom(active.id) }.getOrNull()
+                            val reconciledWords = runCatching { backend.getWords(active.id) }.getOrDefault(words)
+                            val acceptedOnServer = reconciledWords.any {
+                                it.playerId == me && (it.word.equals(submitted, ignoreCase = true) || it.normalizedWord.equals(submitted, ignoreCase = true))
+                            } && ((reconciledRoom?.validWordCount ?: active.validWordCount) >= active.validWordCount)
+                            val stateAdvanced = reconciledRoom != null && (
+                                reconciledRoom.validWordCount > active.validWordCount || reconciledRoom.currentPlayerId != active.currentPlayerId
+                            )
+                            if (acceptedOnServer || stateAdvanced) {
+                                if (reconciledRoom != null) room = reconciledRoom
+                                words = reconciledWords
+                                feedback = if (acceptedOnServer) messageForEvent(null, submitted) else null
+                                if (acceptedOnServer) SonHarfSoundFx.wordAccepted()
+                            } else {
+                                val f = failureFeedback(e.message.orEmpty(), submitted)
+                                feedback = if (f.duplicateWord != null && duplicate != null) f.copy(duplicateWord = duplicate.word.uppercase()) else f
+                                SonHarfSoundFx.warning()
+                            }
                         }
                     busy = false
                 }
