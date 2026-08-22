@@ -11,7 +11,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
-/** Resolves private profile-photos storage paths to short-lived signed URLs. */
+/** Resolves profile-photos storage paths to short-lived signed URLs. */
 object AvatarSignedUrl {
     private val http = HttpClient(OkHttp)
     private val json = Json { ignoreUnknownKeys = true }
@@ -33,6 +33,11 @@ object AvatarSignedUrl {
         val signed = root["signedURL"]?.jsonPrimitive?.content
             ?: root["signedUrl"]?.jsonPrimitive?.content
             ?: return null
-        return if (signed.startsWith("http")) signed else "${BuildConfig.SUPABASE_URL}$signed"
+        return when {
+            signed.startsWith("http://") || signed.startsWith("https://") -> signed
+            signed.startsWith("/storage/v1/") -> "${BuildConfig.SUPABASE_URL}$signed"
+            signed.startsWith("/object/") -> "${BuildConfig.SUPABASE_URL}/storage/v1$signed"
+            else -> "${BuildConfig.SUPABASE_URL}/storage/v1/$signed"
+        }
     }
 }
