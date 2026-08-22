@@ -100,6 +100,7 @@ fun AccessibleLightV3SonHarfApp() {
                     Box(Modifier.fillMaxSize()) {
                         V11BattleScreen(onLeaveBattle = { screen = LightV3Screen.HOME })
                         if (SonHarfGameModeState.mode == "expert") ExpertArenaOverlay()
+                        BilBakalimOverlay()
                     }
                 }
                 LightV3Screen.STORE -> V4StoreScreen()
