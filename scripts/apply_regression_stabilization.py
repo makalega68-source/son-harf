@@ -6,9 +6,12 @@ ROOT = Path(__file__).resolve().parents[1]
 def patch(path: str, old: str, new: str) -> None:
     p = ROOT / path
     text = p.read_text(encoding="utf-8")
+    if new in text:
+        print(f"already patched {path}")
+        return
     count = text.count(old)
     if count != 1:
-        raise SystemExit(f"Expected exactly one match in {path}, found {count}: {old[:80]!r}")
+        raise SystemExit(f"Expected exactly one old match in {path}, found {count}: {old[:80]!r}")
     p.write_text(text.replace(old, new, 1), encoding="utf-8")
     print(f"patched {path}")
 
