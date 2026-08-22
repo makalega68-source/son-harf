@@ -8,7 +8,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -17,13 +16,13 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun CompleteProfileScreen() {
     var tab by remember { mutableIntStateOf(0) }
-    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF040717), SonHarfBg, Color(0xFF060A18))))) {
-        ScrollableTabRow(selectedTabIndex = tab, edgePadding = 10.dp, containerColor = Color.Transparent, divider = {}) {
+    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg)))) {
+        ScrollableTabRow(selectedTabIndex = tab, edgePadding = 10.dp, containerColor = SonHarfBg, divider = {}) {
             listOf(sh("OYUNCU KARTI", "PLAYER CARD"), sh("GİZLİLİK & AYARLAR", "PRIVACY & SETTINGS"), sh("TERCİHLER", "PREFERENCES")).forEachIndexed { index, title ->
                 Tab(selected = tab == index, onClick = { tab = index }, text = { Text(title, color = if (tab == index) SonHarfCyan else SonHarfMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp) })
             }
         }
-        Surface(Modifier.fillMaxWidth().height(1.dp), color = SonHarfPurple.copy(alpha = .22f), shape = RoundedCornerShape(999.dp)) {}
+        Surface(Modifier.fillMaxWidth().height(1.dp), color = SonHarfCyan.copy(alpha = .30f), shape = RoundedCornerShape(999.dp)) {}
         Box(Modifier.weight(1f)) {
             when (tab) { 0 -> ProfileExperienceV2Screen(); 1 -> FinalProfileScreen(); else -> DetailedPreferencesSettings() }
         }
