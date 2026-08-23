@@ -3,7 +3,6 @@ package com.sonharf.game
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -26,185 +25,37 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
-import com.sonharf.game.data.SupabaseProvider
-import io.github.jan.supabase.postgrest.postgrest
-import kotlinx.serialization.SerialName
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.random.Random
 
 private enum class PortalGame { MENU, SON_HARF, BIL_BAKALIM }
-
-private val PortalBg = Color(0xFFF5FBFF)
-private val PortalCard = Color.White
-private val PortalText = Color(0xFF16324A)
-private val PortalMuted = Color(0xFF698296)
-private val PortalBlue = Color(0xFF43B6E8)
-private val PortalGold = Color(0xFFD8AC5C)
-private val PortalGreen = Color(0xFF39B978)
-private val PortalRed = Color(0xFFCE6470)
-
-
-@Serializable
-private data class WeeklyPlayerDto(
-    @SerialName("user_id") val userId: String,
-    @SerialName("display_name") val displayName: String,
-    val wins: Long = 0,
-    @SerialName("win_rate") val winRate: Int = 0,
-    val rating: Int = 0,
-)
-
-@Composable
-private fun WeeklyTopThreeCard() {
-    var players by remember { mutableStateOf<List<WeeklyPlayerDto>>(emptyList()) }
-    var loaded by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
-        players = if (!SupabaseProvider.configured) emptyList() else runCatching {
-            SupabaseProvider.client.postgrest.rpc(
-                "get_weekly_leaderboard",
-                buildJsonObject { put("p_limit", 3) },
-            ).decodeList<WeeklyPlayerDto>()
-        }.getOrDefault(emptyList())
-        loaded = true
-    }
-    Surface(shape = RoundedCornerShape(20.dp), color = PortalCard, border = BorderStroke(1.dp, Color(0xFFB9E5F8))) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.EmojiEvents, null, tint = PortalGold, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(7.dp))
-                Text("HAFTANIN EN İYİ 3 OYUNCUSU", color = PortalText, fontWeight = FontWeight.Black, fontSize = 13.sp)
-            }
-            if (!loaded) LinearProgressIndicator(Modifier.fillMaxWidth())
-            else if (players.isEmpty()) Text("Bu hafta henüz sıralama oluşmadı.", color = PortalMuted, fontSize = 11.sp)
-            else players.take(3).forEachIndexed { index, p ->
-                Surface(shape = RoundedCornerShape(12.dp), color = if (index == 0) PortalGold.copy(alpha = .10f) else PortalBg) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(listOf("🥇", "🥈", "🥉")[index], fontSize = 18.sp)
-                        Spacer(Modifier.width(8.dp))
-                        Text(p.displayName, modifier = Modifier.weight(1f), color = PortalText, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 1)
-                        Text("${p.wins} G • %${p.winRate}", color = PortalMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
-                    }
-                }
-            }
-        }
-    }
-}
+internal val PortalBg = Color(0xFFF5FBFF)
+internal val PortalCard = Color.White
+internal val PortalText = Color(0xFF16324A)
+internal val PortalMuted = Color(0xFF698296)
+internal val PortalBlue = Color(0xFF43B6E8)
+internal val PortalGold = Color(0xFFD8AC5C)
+internal val PortalGreen = Color(0xFF39B978)
+internal val PortalRed = Color(0xFFCE6470)
 
 @Composable
 fun GamePortalApp() {
     var game by remember { mutableStateOf(PortalGame.MENU) }
     BackHandler(enabled = game != PortalGame.MENU) { game = PortalGame.MENU }
-
     when (game) {
-        PortalGame.MENU -> GamePortalMenu(
-            onSonHarf = { game = PortalGame.SON_HARF },
-            onBilBakalim = { game = PortalGame.BIL_BAKALIM },
-        )
+        PortalGame.MENU -> Column(
+            Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, PortalBg, Color(0xFFE8F6FF))))
+                .statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp)
+        ) {
+            HomeLobby(
+                onQuickPlay = { game = PortalGame.SON_HARF },
+                onSonHarf = { game = PortalGame.SON_HARF },
+                onBilBakalim = { game = PortalGame.BIL_BAKALIM },
+            )
+        }
         PortalGame.SON_HARF -> ClassicPremiumApp()
         PortalGame.BIL_BAKALIM -> CompetitiveBilBakalimScreen { game = PortalGame.MENU }
-    }
-}
-
-@Composable
-private fun GamePortalMenu(onSonHarf: () -> Unit, onBilBakalim: () -> Unit) {
-    Column(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, PortalBg, Color(0xFFE8F6FF))))
-            .statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = RoundedCornerShape(18.dp), color = PortalBlue.copy(alpha = .12f)) {
-                Icon(Icons.Rounded.SportsEsports, null, tint = PortalBlue, modifier = Modifier.padding(12.dp).size(30.dp))
-            }
-            Spacer(Modifier.width(10.dp))
-            Column {
-                Text("OYUN ARENASI", color = PortalText, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                Text("İki oyun, tek rekabet profili", color = PortalMuted, fontSize = 12.sp)
-            }
-        }
-
-        Text("OYUNLAR", color = PortalMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp, letterSpacing = 1.4.sp)
-
-        GamePortalCard(
-            title = "SON HARF",
-            subtitle = "Canlı Kelime Düellosu",
-            description = "Rakibinin kelimesinin son harfiyle yeni kelime üret. Süreyi yönet, serini koru, rating kazan ve liglerde yüksel.",
-            icon = Icons.Rounded.Link,
-            accent = PortalBlue,
-            tags = listOf("Lig + Rating", "Galibiyet Serisi", "Rövanş", "Ezeli Rakip", "Turnuva"),
-            button = "SON HARF OYNA",
-            onClick = onSonHarf,
-        )
-
-        GamePortalCard(
-            title = "BİL BAKALIM",
-            subtitle = "Tahmin ve Bilgi Düellosu",
-            description = "Sayısal bilgi sorularında doğru cevaba rakibinden daha çok yaklaş. Hız bonusu, risk soruları, seri ve rating ile zirveye çık.",
-            icon = Icons.Rounded.AutoAwesome,
-            accent = PortalGold,
-            tags = listOf("1v1 Düello", "Hız Puanı", "Lig + Rating", "Seri", "Risk Sorusu", "Turnuva"),
-            button = "BİL BAKALIM OYNA",
-            onClick = onBilBakalim,
-        )
-
-        WeeklyTopThreeCard()
-
-        Surface(shape = RoundedCornerShape(18.dp), color = PortalCard, border = BorderStroke(1.dp, Color(0xFFB9E5F8))) {
-            Column(Modifier.padding(14.dp)) {
-                Text("ORTAK REKABET DÖNGÜSÜ", color = PortalText, fontWeight = FontWeight.Black, fontSize = 13.sp)
-                Spacer(Modifier.height(5.dp))
-                Text("Maç → Kazan → Ödül → İlerle → Rakip edin → Hedef gör → Tekrar maç", color = PortalMuted, fontSize = 11.sp, lineHeight = 16.sp)
-                Spacer(Modifier.height(8.dp))
-                Text("Pay-to-win yok. Ödüller prestij, Son Coin ve Style odaklıdır.", color = PortalGreen, fontWeight = FontWeight.SemiBold, fontSize = 10.sp)
-            }
-        }
-    }
-}
-
-@Composable
-private fun GamePortalCard(
-    title: String,
-    subtitle: String,
-    description: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    accent: Color,
-    tags: List<String>,
-    button: String,
-    onClick: () -> Unit,
-) {
-    Card(onClick = onClick, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = PortalCard), border = BorderStroke(1.dp, accent.copy(alpha = .45f))) {
-        Column(Modifier.padding(18.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(18.dp), color = accent.copy(alpha = .14f)) {
-                    Icon(icon, null, tint = accent, modifier = Modifier.padding(12.dp).size(30.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(title, color = PortalText, fontWeight = FontWeight.Black, fontSize = 21.sp)
-                    Text(subtitle, color = accent, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                }
-                Icon(Icons.Rounded.ArrowForward, null, tint = accent)
-            }
-            Spacer(Modifier.height(12.dp))
-            Text(description, color = PortalMuted, fontSize = 12.sp, lineHeight = 18.sp)
-            Spacer(Modifier.height(12.dp))
-            tags.chunked(2).forEach { rowTags ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    rowTags.forEach { tag ->
-                        Surface(modifier = Modifier.weight(1f), shape = RoundedCornerShape(10.dp), color = accent.copy(alpha = .10f)) {
-                            Text(tag, Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 5.dp), color = PortalText, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 2)
-                        }
-                    }
-                }
-                Spacer(Modifier.height(6.dp))
-            }
-            Button(onClick = onClick, modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(containerColor = accent, contentColor = if (accent == PortalGold) Color(0xFF2B1E0B) else Color.White)) {
-                Text(button, fontWeight = FontWeight.Black)
-            }
-        }
     }
 }
 
@@ -221,7 +72,6 @@ private fun CompetitiveBilBakalimScreen(onBack: () -> Unit) {
     var losses by remember { mutableIntStateOf(prefs.getInt("losses", 0)) }
     var rivalWins by remember { mutableIntStateOf(prefs.getInt("rival_wins", 0)) }
     var rivalLosses by remember { mutableIntStateOf(prefs.getInt("rival_losses", 0)) }
-
     var deck by remember { mutableStateOf(bilBakalimQuestions.shuffled().take(10)) }
     var questionIndex by remember { mutableIntStateOf(0) }
     var playerScore by remember { mutableIntStateOf(0) }
@@ -235,194 +85,72 @@ private fun CompetitiveBilBakalimScreen(onBack: () -> Unit) {
     var lastRoundWon by remember { mutableStateOf(false) }
     var correctAnswerText by remember { mutableStateOf("") }
     var finalApplied by remember { mutableStateOf(false) }
-
     val q = deck[questionIndex]
-    val league = when {
-        rating >= 1600 -> "BİLGE"
-        rating >= 1400 -> "ELMAS"
-        rating >= 1200 -> "ALTIN"
-        rating >= 1000 -> "GÜMÜŞ"
-        else -> "BRONZ"
-    }
+    val league = BilBakalimCompetitionEngine.league(rating)
 
     fun nextMatch() {
-        deck = bilBakalimQuestions.shuffled().take(10)
-        questionIndex = 0; playerScore = 0; rivalScore = 0; seconds = 20; input = ""
+        deck = bilBakalimQuestions.shuffled().take(10); questionIndex = 0; playerScore = 0; rivalScore = 0; seconds = 20; input = ""
         phase = CompetitiveBilPhase.ANSWER; resultText = ""; riskMode = false; lastSpeedBonus = 0; finalApplied = false
     }
-
     fun advance() {
-        if (questionIndex >= deck.lastIndex) phase = CompetitiveBilPhase.MATCH_END
-        else {
-            questionIndex += 1; seconds = 20; input = ""; phase = CompetitiveBilPhase.ANSWER
-            resultText = ""; riskMode = false; lastSpeedBonus = 0
+        if (questionIndex >= deck.lastIndex) phase = CompetitiveBilPhase.MATCH_END else {
+            questionIndex += 1; seconds = 20; input = ""; phase = CompetitiveBilPhase.ANSWER; resultText = ""; riskMode = false; lastSpeedBonus = 0
         }
     }
-
     fun submit(raw: String?) {
         if (phase != CompetitiveBilPhase.ANSWER) return
         val playerAnswer = raw?.replace(',', '.')?.toDoubleOrNull()
         val spread = max(1.0, abs(q.answer) * Random.nextDouble(.08, .35))
         val rivalAnswer = if (q.answer == 0.0) Random.nextDouble(0.0, 4.0) else max(0.0, q.answer + if (Random.nextBoolean()) spread else -spread)
-        val playerDiff = playerAnswer?.let { abs(it - q.answer) } ?: Double.POSITIVE_INFINITY
-        val rivalDiff = abs(rivalAnswer - q.answer)
-        lastRoundWon = playerDiff <= rivalDiff
-        val base = if (lastRoundWon) 10 else 0
-        lastSpeedBonus = if (lastRoundWon) (seconds / 4).coerceIn(0, 5) else 0
-        val multiplier = if (riskMode) 2 else 1
-        val gained = (base + lastSpeedBonus) * multiplier
-        if (lastRoundWon) playerScore += gained else rivalScore += if (riskMode) 20 else 10
+        val outcome = BilBakalimCompetitionEngine.resolve(playerAnswer, rivalAnswer, q.answer, BilRoundRules(questionIndex + 1, seconds, riskMode, winStreak))
+        lastRoundWon = outcome.won; lastSpeedBonus = outcome.speedBonus
+        if (outcome.won) playerScore += outcome.points else rivalScore += if (riskMode) 20 else 10
         correctAnswerText = q.displayAnswer
-        resultText = if (lastRoundWon) "Turu kazandın! +$gained" else "Rakip daha yakındı."
+        resultText = if (outcome.won) "Turu kazandın! +${outcome.points}" else "Rakip daha yakındı."
         phase = CompetitiveBilPhase.RESULT
     }
-
     LaunchedEffect(questionIndex, phase) {
         if (phase != CompetitiveBilPhase.ANSWER) return@LaunchedEffect
-        seconds = 20
-        while (seconds > 0 && phase == CompetitiveBilPhase.ANSWER) { delay(1000); seconds -= 1 }
+        seconds = 20; while (seconds > 0 && phase == CompetitiveBilPhase.ANSWER) { delay(1000); seconds -= 1 }
         if (seconds == 0 && phase == CompetitiveBilPhase.ANSWER) submit(null)
     }
-
     LaunchedEffect(phase, finalApplied) {
         if (phase != CompetitiveBilPhase.MATCH_END || finalApplied) return@LaunchedEffect
-        finalApplied = true
-        val won = playerScore >= rivalScore
-        if (won) {
-            wins += 1; rivalWins += 1; winStreak += 1; bestStreak = max(bestStreak, winStreak); rating += 18
-        } else {
-            losses += 1; rivalLosses += 1; winStreak = 0; rating = (rating - 12).coerceAtLeast(700)
-        }
-        prefs.edit().putInt("rating", rating).putInt("best_streak", bestStreak).putInt("win_streak", winStreak)
-            .putInt("wins", wins).putInt("losses", losses).putInt("rival_wins", rivalWins).putInt("rival_losses", rivalLosses).apply()
+        finalApplied = true; val won = playerScore >= rivalScore
+        if (won) { wins += 1; rivalWins += 1; winStreak += 1; bestStreak = max(bestStreak, winStreak); rating += 18 }
+        else { losses += 1; rivalLosses += 1; winStreak = 0; rating = (rating - 12).coerceAtLeast(700) }
+        prefs.edit().putInt("rating", rating).putInt("best_streak", bestStreak).putInt("win_streak", winStreak).putInt("wins", wins).putInt("losses", losses).putInt("rival_wins", rivalWins).putInt("rival_losses", rivalLosses).apply()
     }
-
     BackHandler { onBack() }
-
-    Column(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, PortalBg, Color(0xFFE8F6FF))))
-            .statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
+    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, PortalBg, Color(0xFFE8F6FF)))).statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, null, tint = PortalText) }
-            Column(Modifier.weight(1f)) {
-                Text("BİL BAKALIM", color = PortalText, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Text("Rekabet Arenası", color = PortalGold, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-            }
-            Surface(shape = RoundedCornerShape(12.dp), color = PortalGold.copy(alpha = .14f)) {
-                Text("$league  •  $rating", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = PortalText, fontWeight = FontWeight.Bold, fontSize = 10.sp)
-            }
+            Column(Modifier.weight(1f)) { Text("BİL BAKALIM", color = PortalText, fontSize = 22.sp, fontWeight = FontWeight.Black); Text("Rekabet Arenası", color = PortalGold, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+            Text("$league • $rating", color = PortalText, fontWeight = FontWeight.Bold, fontSize = 10.sp)
         }
-
-        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                MetaStat("🔥", "Seri", "$winStreak", Modifier.weight(1f))
-                MetaStat("🏆", "En İyi", "$bestStreak", Modifier.weight(1f))
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                MetaStat("⚔️", "Rakiplik", "$rivalWins-$rivalLosses", Modifier.weight(1f))
-                MetaStat("🎯", "Günlük", "10 Soru", Modifier.weight(1f))
-            }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            MetaStat("🔥", "Seri", "$winStreak", Modifier.weight(1f)); MetaStat("⚔️", "Rakiplik", "$rivalWins-$rivalLosses", Modifier.weight(1f))
         }
-
-        Surface(shape = RoundedCornerShape(16.dp), color = PortalCard, border = BorderStroke(1.dp, Color(0xFFE5D2A9))) {
-            Row(Modifier.fillMaxWidth().padding(11.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text("CANLI RATING HEDEFİ", color = PortalMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                    Text("Bir sonraki lige ${(nextLeagueTarget(rating) - rating).coerceAtLeast(0)} puan", color = PortalText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
-                Text("Turnuva • Günlük", color = PortalGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-
         when (phase) {
-            CompetitiveBilPhase.ANSWER -> {
-                Surface(shape = RoundedCornerShape(22.dp), color = PortalCard, border = BorderStroke(1.dp, PortalGold.copy(alpha = .55f))) {
-                    Column(Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("SORU ${questionIndex + 1}/10", color = PortalMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            Text("⏱ $seconds sn", color = if (seconds <= 5) PortalRed else PortalText, fontWeight = FontWeight.Black)
-                        }
-                        Spacer(Modifier.height(10.dp))
-                        Text(q.category.uppercase(), color = PortalGold, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.height(8.dp))
-                        Text(q.question, color = PortalText, fontSize = 19.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                        Spacer(Modifier.height(15.dp))
-                        OutlinedTextField(
-                            value = input,
-                            onValueChange = { input = it.filter { ch -> ch.isDigit() || ch == ',' || ch == '.' || ch == '-' } },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Tahminin") },
-                            singleLine = true,
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = { submit(input) }),
-                        )
-                        Spacer(Modifier.height(10.dp))
-                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                            FilterChip(selected = riskMode, onClick = { riskMode = !riskMode }, label = { Text(if (riskMode) "💣 RİSK x2 AÇIK" else "💣 RİSK SORUSU x2", fontSize = 11.sp) }, modifier = Modifier.fillMaxWidth())
-                            Button(onClick = { submit(input) }, enabled = input.isNotBlank(), modifier = Modifier.fillMaxWidth().height(48.dp), colors = ButtonDefaults.buttonColors(containerColor = PortalGold, contentColor = Color(0xFF2B1E0B))) {
-                                Text("TAHMİNİ KİLİTLE", fontWeight = FontWeight.Black)
-                            }
-                        }
-                        Text("Hızlı doğru tahmin ekstra puan verir.", color = PortalMuted, fontSize = 9.sp)
-                    }
+            CompetitiveBilPhase.ANSWER -> Surface(shape = RoundedCornerShape(22.dp), color = PortalCard, border = BorderStroke(1.dp, PortalGold.copy(alpha=.55f))) {
+                Column(Modifier.padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("SORU ${questionIndex+1}/10", color=PortalMuted); Text("⏱ $seconds sn", color=if(seconds<=5) PortalRed else PortalText, fontWeight=FontWeight.Black) }
+                    if (questionIndex == 4) Text("👑 BOSS SORUSU", color=PortalGold, fontWeight=FontWeight.Black)
+                    if (questionIndex == 9) Text("⚡ FİNAL • x2", color=PortalRed, fontWeight=FontWeight.Black)
+                    Text(q.category.uppercase(), color=PortalGold, fontSize=10.sp, fontWeight=FontWeight.Black)
+                    Spacer(Modifier.height(8.dp)); Text(q.question, color=PortalText, fontSize=19.sp, lineHeight=26.sp, fontWeight=FontWeight.Bold, textAlign=TextAlign.Center); Spacer(Modifier.height(15.dp))
+                    OutlinedTextField(value=input,onValueChange={input=it.filter{ch->ch.isDigit()||ch==','||ch=='.'||ch=='-'}},modifier=Modifier.fillMaxWidth(),label={Text("Tahminin")},singleLine=true,keyboardOptions=KeyboardOptions(keyboardType=KeyboardType.Decimal,imeAction=ImeAction.Done),keyboardActions=KeyboardActions(onDone={submit(input)}))
+                    FilterChip(selected=riskMode,onClick={riskMode=!riskMode},label={Text(if(riskMode) "💣 RİSK x2 AÇIK" else "💣 RİSK SORUSU x2")},modifier=Modifier.fillMaxWidth())
+                    Button(onClick={submit(input)},enabled=input.isNotBlank(),modifier=Modifier.fillMaxWidth().height(48.dp),colors=ButtonDefaults.buttonColors(containerColor=PortalGold,contentColor=Color(0xFF2B1E0B))){Text("TAHMİNİ KİLİTLE",fontWeight=FontWeight.Black)}
                 }
             }
-            CompetitiveBilPhase.RESULT -> {
-                Surface(shape = RoundedCornerShape(22.dp), color = PortalCard, border = BorderStroke(1.dp, if (lastRoundWon) PortalGreen else PortalRed)) {
-                    Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(if (lastRoundWon) Icons.Rounded.EmojiEvents else Icons.Rounded.Close, null, tint = if (lastRoundWon) PortalGreen else PortalRed, modifier = Modifier.size(48.dp))
-                        Text(resultText, color = PortalText, fontSize = 20.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-                        Text("Doğru cevap: $correctAnswerText", color = PortalMuted, fontSize = 12.sp)
-                        if (lastRoundWon && lastSpeedBonus > 0) Text("⚡ Hız bonusu +$lastSpeedBonus", color = PortalGold, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                        Spacer(Modifier.height(10.dp))
-                        Text("Sen $playerScore  •  $rivalScore Rakip", color = PortalText, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(12.dp))
-                        Button(onClick = { advance() }, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = PortalBlue)) {
-                            Text(if (questionIndex == deck.lastIndex) "MAÇ SONUCUNU GÖR" else "SONRAKİ SORU", fontWeight = FontWeight.Black)
-                        }
-                    }
-                }
+            CompetitiveBilPhase.RESULT -> Surface(shape=RoundedCornerShape(22.dp),color=PortalCard,border=BorderStroke(1.dp,if(lastRoundWon) PortalGreen else PortalRed)) {
+                Column(Modifier.fillMaxWidth().padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally){Icon(if(lastRoundWon) Icons.Rounded.EmojiEvents else Icons.Rounded.Close,null,tint=if(lastRoundWon) PortalGreen else PortalRed,modifier=Modifier.size(48.dp));Text(resultText,color=PortalText,fontSize=20.sp,fontWeight=FontWeight.Black,textAlign=TextAlign.Center);Text("Doğru cevap: $correctAnswerText",color=PortalMuted);if(lastSpeedBonus>0)Text("⚡ Hız bonusu +$lastSpeedBonus",color=PortalGold,fontWeight=FontWeight.Bold);Text("Sen $playerScore • $rivalScore Rakip",color=PortalText,fontWeight=FontWeight.Bold);Button(onClick={advance()},modifier=Modifier.fillMaxWidth(),colors=ButtonDefaults.buttonColors(containerColor=PortalBlue)){Text(if(questionIndex==deck.lastIndex)"MAÇ SONUCUNU GÖR" else "SONRAKİ SORU",fontWeight=FontWeight.Black)}}
             }
-            CompetitiveBilPhase.MATCH_END -> {
-                val won = playerScore >= rivalScore
-                Surface(shape = RoundedCornerShape(24.dp), color = PortalCard, border = BorderStroke(1.dp, if (won) PortalGreen else PortalRed)) {
-                    Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Rounded.EmojiEvents, null, tint = if (won) PortalGold else PortalMuted, modifier = Modifier.size(60.dp))
-                        Text(if (won) "MAÇI KAZANDIN!" else "BU KEZ RAKİP KAZANDI", color = PortalText, fontSize = 22.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-                        Text("$playerScore - $rivalScore", color = PortalGold, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.height(6.dp))
-                        Text(if (won) "+18 Rating • Seri $winStreak" else "-12 Rating • Rövanş zamanı", color = if (won) PortalGreen else PortalRed, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                        Spacer(Modifier.height(14.dp))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { nextMatch() }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = PortalGold, contentColor = Color(0xFF2B1E0B))) {
-                                Text("RÖVANŞ", fontWeight = FontWeight.Black)
-                            }
-                            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("OYUNLAR") }
-                        }
-                    }
-                }
-            }
+            CompetitiveBilPhase.MATCH_END -> { val won=playerScore>=rivalScore; Surface(shape=RoundedCornerShape(24.dp),color=PortalCard,border=BorderStroke(1.dp,if(won)PortalGreen else PortalRed)){Column(Modifier.fillMaxWidth().padding(20.dp),horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Rounded.EmojiEvents,null,tint=if(won)PortalGold else PortalMuted,modifier=Modifier.size(60.dp));Text(if(won)"MAÇI KAZANDIN!" else "BU KEZ RAKİP KAZANDI",color=PortalText,fontSize=22.sp,fontWeight=FontWeight.Black,textAlign=TextAlign.Center);Text("$playerScore - $rivalScore",color=PortalGold,fontSize=30.sp,fontWeight=FontWeight.Black);Text(BilBakalimCompetitionEngine.performanceText(playerScore,rivalScore),color=PortalMuted);Text("🎁 ${BilBakalimCompetitionEngine.surpriseReward(wins)}",color=PortalGreen,fontWeight=FontWeight.Bold);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick={nextMatch()},modifier=Modifier.weight(1f)){Text("RÖVANŞ")};OutlinedButton(onClick=onBack,modifier=Modifier.weight(1f)){Text("OYUNLAR")}}}} }
         }
     }
-}
-
-private fun nextLeagueTarget(rating: Int): Int = when {
-    rating < 1000 -> 1000
-    rating < 1200 -> 1200
-    rating < 1400 -> 1400
-    rating < 1600 -> 1600
-    else -> rating
 }
 
 @Composable
-private fun MetaStat(icon: String, label: String, value: String, modifier: Modifier = Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(14.dp), color = PortalCard, border = BorderStroke(1.dp, Color(0xFFD6EAF4))) {
-        Column(Modifier.padding(vertical = 9.dp, horizontal = 5.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(icon, fontSize = 16.sp)
-            Text(value, color = PortalText, fontWeight = FontWeight.Black, fontSize = 11.sp)
-            Text(label, color = PortalMuted, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 2)
-        }
-    }
-}
+private fun MetaStat(icon:String,label:String,value:String,modifier:Modifier=Modifier){Surface(modifier,shape=RoundedCornerShape(14.dp),color=PortalCard,border=BorderStroke(1.dp,Color(0xFFD6EAF4))){Column(Modifier.padding(9.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(icon);Text(value,color=PortalText,fontWeight=FontWeight.Black);Text(label,color=PortalMuted,fontSize=9.sp)}}}
