@@ -5,6 +5,20 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+val generatedSonHarfLogoResDir = layout.buildDirectory.dir("generated/sonHarfLogo/res")
+val generateSonHarfLogo = tasks.register("generateSonHarfLogo") {
+    val inputFile = layout.projectDirectory.file("src/main/assets/son_harf_brand_logo.b64")
+    val outputFile = generatedSonHarfLogoResDir.map { it.file("drawable/son_harf_brand_logo.png") }
+    inputs.file(inputFile)
+    outputs.file(outputFile)
+    doLast {
+        val target = outputFile.get().asFile
+        target.parentFile.mkdirs()
+        val encoded = inputFile.asFile.readText().filterNot { it.isWhitespace() }
+        target.writeBytes(java.util.Base64.getDecoder().decode(encoded))
+    }
+}
+
 android {
     namespace = "com.sonharf.game"
     compileSdk = 36
@@ -69,6 +83,8 @@ android {
         }
     }
 
+    sourceSets.getByName("main").res.srcDir(generatedSonHarfLogoResDir)
+
     buildFeatures {
         compose = true
         buildConfig = true
@@ -77,6 +93,10 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(generateSonHarfLogo)
 }
 
 dependencies {
