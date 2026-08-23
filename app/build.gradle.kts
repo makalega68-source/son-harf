@@ -1,3 +1,5 @@
+import java.util.Base64
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -15,7 +17,7 @@ val generateSonHarfLogo = tasks.register("generateSonHarfLogo") {
         val target = outputFile.get().asFile
         target.parentFile.mkdirs()
         val encoded = inputFile.asFile.readText().filterNot { it.isWhitespace() }
-        target.writeBytes(java.util.Base64.getDecoder().decode(encoded))
+        target.writeBytes(Base64.getDecoder().decode(encoded))
     }
 }
 
