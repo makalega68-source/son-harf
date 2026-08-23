@@ -1,6 +1,6 @@
 package com.sonharf.game
 
-/** Permanent product policy: mascot features are disabled and must not be reintroduced. */
+/** Approved product policy: the AI mascot is enabled inside a reserved UI rail. */
 internal object MascotPolicy {
-    const val ENABLED = false
+    const val ENABLED = true
 }
