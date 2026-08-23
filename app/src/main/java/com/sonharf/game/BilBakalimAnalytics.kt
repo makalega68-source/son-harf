@@ -25,7 +25,7 @@ private suspend fun logBilBakalimEvent(name: String, value: String? = null) {
 fun TrackedBilBakalimStandaloneScreen(onBack: () -> Unit) {
     val sessionKey = remember { System.currentTimeMillis().toString() }
     LaunchedEffect(sessionKey) {
-        logBilBakalimEvent("bil_bakalim_open", "standalone")
+        logBilBakalimEvent("bil_bakalim_open", "excitement_v2")
     }
-    BilBakalimStandaloneScreen(onBack = onBack)
+    BilBakalimExcitementScreen(onBack = onBack)
 }
