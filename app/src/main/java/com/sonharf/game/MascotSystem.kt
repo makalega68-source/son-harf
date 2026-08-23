@@ -1,7 +1,5 @@
 package com.sonharf.game
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
@@ -9,7 +7,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -21,21 +19,21 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.postgrest.from
-import java.net.URL
-import kotlinx.coroutines.Dispatchers
+import io.github.sceneview.SceneView
+import io.github.sceneview.math.Rotation
+import io.github.sceneview.node.ModelNode
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberModelInstance
+import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 internal enum class MascotMotion { IDLE, GREETING, THINKING, CRITICAL, VICTORY, DEFEAT }
 
@@ -91,39 +89,8 @@ internal object MascotRuntime {
     fun think(language: String = SonHarfUiState.language) = react(MascotMotion.THINKING, language)
 }
 
-private const val MASCOT_REFERENCE_IMAGE =
-    "https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_105103_a34c7b6a-3fef-4ac9-a9f2-d76040d05b0b.png"
-
+private const val MASCOT_3D_MODEL = "models/sonharf_pet_white_walk.glb"
 private data class MascotAnchor(val x: Dp, val y: Dp)
-
-private suspend fun loadTransparentMascot(): Bitmap? = withContext(Dispatchers.IO) {
-    runCatching {
-        val original = URL(MASCOT_REFERENCE_IMAGE).openStream().use(BitmapFactory::decodeStream)
-            ?: return@runCatching null
-        val bitmap = original.copy(Bitmap.Config.ARGB_8888, true)
-        val width = bitmap.width
-        val height = bitmap.height
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-
-        for (i in pixels.indices) {
-            val c = pixels[i]
-            val r = android.graphics.Color.red(c)
-            val g = android.graphics.Color.green(c)
-            val b = android.graphics.Color.blue(c)
-            val max = maxOf(r, g, b)
-            val min = minOf(r, g, b)
-            val spread = max - min
-            val grayStudioBackground = spread < 42 && max > 118
-            val veryLightNeutral = spread < 65 && max > 205
-            if (grayStudioBackground || veryLightNeutral) {
-                pixels[i] = c and 0x00FFFFFF
-            }
-        }
-        bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
-        bitmap
-    }.getOrNull()
-}
 
 @Composable
 internal fun MascotFloatingOverlay(modifier: Modifier = Modifier) {
@@ -131,9 +98,10 @@ internal fun MascotFloatingOverlay(modifier: Modifier = Modifier) {
     var lastReactionKey by remember { mutableStateOf("") }
     var roamingIndex by remember { mutableIntStateOf(0) }
     val motion = MascotRuntime.motion
-    val mascotBitmap by produceState<Bitmap?>(initialValue = null) {
-        value = loadTransparentMascot()
-    }
+
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val modelInstance = rememberModelInstance(modelLoader, MASCOT_3D_MODEL)
 
     LaunchedEffect(Unit) {
         MascotRuntime.react(MascotMotion.GREETING)
@@ -144,7 +112,7 @@ internal fun MascotFloatingOverlay(modifier: Modifier = Modifier) {
     LaunchedEffect(motion) {
         if (motion == MascotMotion.IDLE) {
             while (true) {
-                delay(3900)
+                delay(4200)
                 roamingIndex = (roamingIndex + 1) % 5
             }
         }
@@ -190,12 +158,13 @@ internal fun MascotFloatingOverlay(modifier: Modifier = Modifier) {
     }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val size = if (maxWidth < 390.dp) 92.dp else 108.dp
+        // Pet never enters the bottom navigation/touch-control band.
+        val size = if (maxWidth < 390.dp) 112.dp else 128.dp
         val side = 8.dp
         val leftX = side
         val centerX = ((maxWidth - size) / 2).coerceAtLeast(side)
         val rightX = (maxWidth - size - side).coerceAtLeast(side)
-        val walkingY = (maxHeight - size - 96.dp).coerceAtLeast(150.dp)
+        val walkingY = (maxHeight - size - 108.dp).coerceAtLeast(150.dp)
         val upperY = (maxHeight * 0.60f).coerceAtMost(walkingY)
 
         val anchors = listOf(
@@ -224,50 +193,59 @@ internal fun MascotFloatingOverlay(modifier: Modifier = Modifier) {
 
         val x by animateDpAsState(
             targetValue = target.x,
-            animationSpec = tween(durationMillis = 2300, easing = LinearEasing),
-            label = "mascot-walk-x",
+            animationSpec = tween(durationMillis = 2450, easing = LinearEasing),
+            label = "mascot-3d-walk-x",
         )
         val y by animateDpAsState(
             targetValue = target.y,
             animationSpec = tween(durationMillis = 900),
-            label = "mascot-walk-y",
+            label = "mascot-3d-walk-y",
         )
 
-        val step = rememberInfiniteTransition(label = "mascot-steps")
+        val step = rememberInfiniteTransition(label = "mascot-3d-steps")
         val bob by step.animateFloat(
             initialValue = 0f,
-            targetValue = -7f,
+            targetValue = -2.5f,
             animationSpec = infiniteRepeatable(
-                animation = tween(170, easing = LinearEasing),
+                animation = tween(250, easing = LinearEasing),
                 repeatMode = RepeatMode.Reverse,
             ),
-            label = "mascot-step-bob",
-        )
-        val lean by step.animateFloat(
-            initialValue = -1.5f,
-            targetValue = 1.5f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(340, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "mascot-step-lean",
+            label = "mascot-3d-bob",
         )
 
-        mascotBitmap?.let { bmp ->
-            Image(
-                bitmap = bmp.asImageBitmap(),
-                contentDescription = "Son Harf mascot",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .offset(x = x, y = y)
-                    .size(size)
-                    .graphicsLayer {
-                        scaleX = if (facingRight) 1f else -1f
-                        translationY = if (motion == MascotMotion.IDLE) bob else bob * 0.45f
-                        rotationZ = if (motion == MascotMotion.IDLE) lean else 0f
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.88f)
-                    },
-            )
+        val speed = when (motion) {
+            MascotMotion.CRITICAL -> 1.30f
+            MascotMotion.VICTORY -> 1.15f
+            MascotMotion.THINKING -> 0.45f
+            MascotMotion.DEFEAT -> 0.55f
+            else -> 0.90f
+        }
+
+        Box(
+            modifier = Modifier
+                .offset(x = x, y = y)
+                .size(size)
+                .graphicsLayer { translationY = bob },
+        ) {
+            SceneView(
+                modifier = Modifier.fillMaxSize(),
+                engine = engine,
+                modelLoader = modelLoader,
+                isOpaque = false,
+            ) {
+                modelInstance?.let { instance ->
+                    ModelNode(
+                        modelInstance = instance,
+                        scaleToUnits = 1.0f,
+                        autoAnimate = true,
+                        animationName = "walk",
+                        animationLoop = true,
+                        animationSpeed = speed,
+                        // Small Y turn communicates walking direction while the face stays toward the player.
+                        rotation = Rotation(y = if (facingRight) -18f else 18f),
+                    )
+                }
+            }
         }
     }
 }
