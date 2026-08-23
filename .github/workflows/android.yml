@@ -34,8 +34,8 @@ jobs:
         with:
           gradle-version: '8.14.4'
 
-      - name: Build debug APK
-        run: gradle assembleDebug --stacktrace --warning-mode all
+      - name: Test and build debug APK
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
       - name: Prepare QA APK name
         if: success()

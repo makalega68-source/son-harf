@@ -17,9 +17,9 @@ fun SonHarfBrandLogo(
     size: Dp = 52.dp,
 ) {
     Image(
-        painter = painterResource(R.drawable.son_harf_brand_logo),
+        painter = painterResource(R.drawable.ic_son_harf),
         contentDescription = "Son Harf",
-        contentScale = ContentScale.Crop,
+        contentScale = ContentScale.Fit,
         modifier = modifier
             .size(size)
             .clip(RoundedCornerShape(14.dp)),
