@@ -11,10 +11,20 @@ permissions:
   contents: write
 
 jobs:
-  repair-source:
+  repair-build-publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
       - name: Repair master home source
         run: |
           python3 - <<'PY'
@@ -30,7 +40,6 @@ jobs:
           top = '@Composable private fun MasterTopThree('
           if top in text and marker in text:
               before, after = text.split(marker, 1)
-              # MasterTopThree was authored one closing brace short.
               if not before.rstrip().endswith('}}}}}}}'):
                   before = before.rstrip() + '}\n'
               text = before + marker + after
@@ -41,10 +50,33 @@ jobs:
           c = c.replace('ClassicScreen.HOME -> ClassicHome(', 'ClassicScreen.HOME -> PremiumMasterHome(')
           classic.write_text(c, encoding='utf-8')
           PY
-      - name: Commit repaired source
+      - name: Test and build master home APK
+        shell: bash
         run: |
+          set -o pipefail
+          gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all 2>&1 | tee master-home-build.log
+      - name: Publish repaired source and APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/SonHarf-Master-Home.apk
+          printf 'commit=%s\nbuilt_at=%s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/MASTER_HOME_BUILD_OK.txt
+          rm -f dist/MASTER_HOME_BUILD_FAIL.txt dist/MASTER_HOME_BUILD_FAIL_LOG.txt
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/sonharf/game/PremiumMasterHome.kt app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
-          git diff --cached --quiet || git commit -m "Repair and activate premium master home [skip ci]"
+          git add app/src/main/java/com/sonharf/game/PremiumMasterHome.kt \
+                  app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt \
+                  dist/SonHarf-Master-Home.apk dist/MASTER_HOME_BUILD_OK.txt
+          git add -u dist/MASTER_HOME_BUILD_FAIL.txt dist/MASTER_HOME_BUILD_FAIL_LOG.txt 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "Publish premium master home APK [skip ci]"
+          git push
+      - name: Publish master-home failure log
+        if: failure()
+        run: |
+          mkdir -p dist
+          printf 'commit=%s\nfailed_at=%s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/MASTER_HOME_BUILD_FAIL.txt
+          if [ -f master-home-build.log ]; then tail -n 350 master-home-build.log > dist/MASTER_HOME_BUILD_FAIL_LOG.txt; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dist/MASTER_HOME_BUILD_FAIL.txt dist/MASTER_HOME_BUILD_FAIL_LOG.txt 2>/dev/null || true
+          git diff --cached --quiet || git commit -m "Record master home build failure [skip ci]"
           git push
