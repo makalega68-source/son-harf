@@ -1,6 +1,9 @@
 package com.sonharf.game
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
@@ -34,5 +37,10 @@ fun SketchGameOverlayV9() {
         }
     }
 
-    if (active) SketchGameOverlayV10()
+    if (active) {
+        Box(Modifier.fillMaxSize()) {
+            SketchGameOverlayV10()
+            SonHarfExcitementOverlay()
+        }
+    }
 }
