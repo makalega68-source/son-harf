@@ -3,21 +3,24 @@ package com.sonharf.game
 import android.content.Context
 import android.net.Uri
 import android.widget.VideoView
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -44,6 +47,7 @@ internal object MascotAnimationRegistry {
         MascotAnimationDef("victory", MascotMotion.VICTORY, 1),
         MascotAnimationDef("defeat", MascotMotion.DEFEAT, 1),
     )
+
     fun nextUnlockLevel(level: Int): Int = ((level.coerceAtLeast(1) / 10) + 1) * 10
 }
 
@@ -62,7 +66,7 @@ internal object MascotRuntime {
         this.motion = motion
         message = if (language == "en") when (motion) {
             MascotMotion.GREETING -> "I'm here. Let's play!"
-            MascotMotion.IDLE -> "Level $playerLevel • Next motion at ${MascotAnimationRegistry.nextUnlockLevel(playerLevel)}"
+            MascotMotion.IDLE -> "Level $playerLevel • New motion at ${MascotAnimationRegistry.nextUnlockLevel(playerLevel)}"
             MascotMotion.THINKING -> "I'm thinking about the best next move."
             MascotMotion.CRITICAL -> "Time is tight. Focus on the last letter!"
             MascotMotion.VICTORY -> "We won! Great game."
@@ -99,26 +103,40 @@ private object MascotMedia {
 }
 
 private fun mascotName(context: Context): String =
-    context.getSharedPreferences("son_harf_mascot", Context.MODE_PRIVATE).getString("name", "Dostum") ?: "Dostum"
+    context.getSharedPreferences("son_harf_mascot", Context.MODE_PRIVATE)
+        .getString("name", "Dostum") ?: "Dostum"
 
 private fun setMascotName(context: Context, value: String) {
-    context.getSharedPreferences("son_harf_mascot", Context.MODE_PRIVATE).edit().putString("name", value.take(18)).apply()
+    context.getSharedPreferences("son_harf_mascot", Context.MODE_PRIVATE)
+        .edit().putString("name", value.take(18)).apply()
 }
 
+private data class MascotAnchor(val x: Dp, val y: Dp)
+
 @Composable
-internal fun MascotReservedRail(modifier: Modifier = Modifier) {
+internal fun MascotFloatingOverlay(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var name by remember { mutableStateOf(mascotName(context)) }
     var renameOpen by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf(name) }
     var lastReactionKey by remember { mutableStateOf("") }
+    var roamingIndex by remember { mutableIntStateOf(0) }
     val motion = MascotRuntime.motion
 
     LaunchedEffect(Unit) {
         MascotRuntime.react(MascotMotion.GREETING)
         delay(5200)
         MascotRuntime.react(MascotMotion.IDLE)
+    }
+
+    LaunchedEffect(motion) {
+        if (motion == MascotMotion.IDLE) {
+            while (true) {
+                delay(7000)
+                roamingIndex = (roamingIndex + 1) % 4
+            }
+        }
     }
 
     LaunchedEffect(backend) {
@@ -130,8 +148,12 @@ internal fun MascotReservedRail(modifier: Modifier = Modifier) {
                 MascotRuntime.syncProgress(growth.xp, growth.level)
                 val rooms = SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
                 val active = rooms
-                    .filter { (it.hostId == me || it.guestId == me) && it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused", "finished") }
+                    .filter {
+                        (it.hostId == me || it.guestId == me) &&
+                            it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused", "finished")
+                    }
                     .maxByOrNull { it.validWordCount }
+
                 if (active == null) {
                     if (lastReactionKey != "idle-${growth.level}-${growth.xp}") {
                         lastReactionKey = "idle-${growth.level}-${growth.xp}"
@@ -139,6 +161,7 @@ internal fun MascotReservedRail(modifier: Modifier = Modifier) {
                     }
                     return@runCatching
                 }
+
                 val key = "${active.id}-${active.status}-${active.winnerId}-${active.finalMovesRemaining}-${active.validWordCount}"
                 if (key != lastReactionKey) {
                     lastReactionKey = key
@@ -155,69 +178,106 @@ internal fun MascotReservedRail(modifier: Modifier = Modifier) {
         }
     }
 
-    Surface(
-        modifier = modifier,
-        color = Color(0xFFF7FCFF),
-        border = BorderStroke(1.dp, Color(0xFFB9E8F8)),
-    ) {
+    BoxWithConstraints(modifier) {
+        val mascotWidth = if (maxWidth < 390.dp) 82.dp else 96.dp
+        val mascotHeight = mascotWidth + 30.dp
+        val side = 8.dp
+        val rightX = (maxWidth - mascotWidth - side).coerceAtLeast(side)
+        val leftX = side
+        val safeBottom = (maxHeight - mascotHeight - 104.dp).coerceAtLeast(110.dp)
+        val upperY = 86.dp
+        val midY = (maxHeight / 2 - mascotHeight / 2).coerceIn(130.dp, safeBottom)
+        val lowerY = (safeBottom - 56.dp).coerceAtLeast(midY)
+
+        val idleAnchors = listOf(
+            MascotAnchor(rightX, upperY),
+            MascotAnchor(rightX, midY),
+            MascotAnchor(leftX, midY),
+            MascotAnchor(rightX, lowerY),
+        )
+
+        val target = when (motion) {
+            MascotMotion.GREETING -> MascotAnchor(rightX, upperY)
+            MascotMotion.THINKING -> MascotAnchor(rightX, midY)
+            MascotMotion.CRITICAL -> MascotAnchor(leftX, midY)
+            MascotMotion.VICTORY -> MascotAnchor(rightX, lowerY)
+            MascotMotion.DEFEAT -> MascotAnchor(leftX, midY)
+            MascotMotion.IDLE -> idleAnchors[roamingIndex % idleAnchors.size]
+        }
+
+        val x by animateDpAsState(target.x, tween(1500), label = "mascot-x")
+        val y by animateDpAsState(target.y, tween(1500), label = "mascot-y")
+
         Column(
-            Modifier.fillMaxSize().padding(horizontal = 5.dp, vertical = 9.dp),
+            modifier = Modifier
+                .offset(x = x, y = y)
+                .width(mascotWidth),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.AutoAwesome, null, tint = SonHarfBlue, modifier = Modifier.size(13.dp))
-                Spacer(Modifier.width(2.dp))
-                Text("AI", color = SonHarfBlue, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            }
-            Spacer(Modifier.height(5.dp))
-            AndroidView(
-                modifier = Modifier.fillMaxWidth().aspectRatio(1f),
-                factory = { ctx ->
-                    VideoView(ctx).apply {
-                        setOnPreparedListener { mp -> mp.isLooping = true; start() }
-                        setVideoURI(Uri.parse(MascotMedia.url(motion)))
-                    }
-                },
-                update = { view ->
-                    val tag = motion.name
-                    if (view.tag != tag) {
-                        view.tag = tag
-                        view.setVideoURI(Uri.parse(MascotMedia.url(motion)))
-                        view.setOnPreparedListener { mp -> mp.isLooping = motion == MascotMotion.IDLE; view.start() }
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color.White.copy(alpha = 0.92f),
+                border = BorderStroke(1.dp, Color(0xFFB9E8F8)),
+                shadowElevation = 3.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { renameValue = name; renameOpen = true },
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    AndroidView(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                        factory = { ctx ->
+                            VideoView(ctx).apply {
+                                setOnPreparedListener { mp ->
+                                    mp.isLooping = true
+                                    start()
+                                }
+                                setVideoURI(Uri.parse(MascotMedia.url(motion)))
+                            }
+                        },
+                        update = { view ->
+                            val tag = motion.name
+                            if (view.tag != tag) {
+                                view.tag = tag
+                                view.setVideoURI(Uri.parse(MascotMedia.url(motion)))
+                                view.setOnPreparedListener { mp ->
+                                    mp.isLooping = motion == MascotMotion.IDLE
+                                    view.start()
+                                }
+                            }
+                        },
+                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(name, color = SonHarfText, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Spacer(Modifier.width(2.dp))
+                        Icon(Icons.Rounded.Edit, null, tint = SonHarfMuted, modifier = Modifier.size(9.dp))
                     }
                 }
-            )
-            Row(
-                Modifier.fillMaxWidth().clickable { renameValue = name; renameOpen = true },
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                Text(name, color = SonHarfText, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                Spacer(Modifier.width(2.dp))
-                Icon(Icons.Rounded.Edit, null, tint = SonHarfMuted, modifier = Modifier.size(10.dp))
             }
-            Text("Lv ${MascotRuntime.playerLevel}", color = SonHarfMuted, fontSize = 8.sp)
-            Spacer(Modifier.height(5.dp))
-            Surface(
-                shape = RoundedCornerShape(9.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, Color(0xFFD9F0F8)),
-            ) {
-                Text(
-                    MascotRuntime.message,
-                    modifier = Modifier.padding(5.dp),
-                    color = SonHarfText,
-                    fontSize = 8.sp,
-                    lineHeight = 10.sp,
-                    textAlign = TextAlign.Center,
-                )
+
+            if (motion != MascotMotion.IDLE) {
+                Spacer(Modifier.height(4.dp))
+                Surface(
+                    shape = RoundedCornerShape(11.dp),
+                    color = Color.White.copy(alpha = 0.96f),
+                    border = BorderStroke(1.dp, Color(0xFFD9F0F8)),
+                ) {
+                    Text(
+                        MascotRuntime.message,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
+                        color = SonHarfText,
+                        fontSize = 8.sp,
+                        lineHeight = 10.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
-            Spacer(Modifier.height(7.dp))
-            TextButton(onClick = { MascotRuntime.think() }, contentPadding = PaddingValues(2.dp)) {
-                Text(if (SonHarfUiState.language == "en") "THINK" else "DÜŞÜN", fontSize = 8.sp)
-            }
-            Spacer(Modifier.weight(1f))
-            Text("${MascotRuntime.playerXp} XP", color = SonHarfBlue, fontSize = 8.sp, fontWeight = FontWeight.Bold)
         }
     }
 
@@ -234,14 +294,20 @@ internal fun MascotReservedRail(modifier: Modifier = Modifier) {
             },
             confirmButton = {
                 TextButton(onClick = {
-                    val clean = renameValue.trim().ifBlank { if (SonHarfUiState.language == "en") "Buddy" else "Dostum" }
+                    val clean = renameValue.trim().ifBlank {
+                        if (SonHarfUiState.language == "en") "Buddy" else "Dostum"
+                    }
                     setMascotName(context, clean)
                     name = clean
                     renameOpen = false
-                }) { Text(if (SonHarfUiState.language == "en") "Save" else "Kaydet") }
+                }) {
+                    Text(if (SonHarfUiState.language == "en") "Save" else "Kaydet")
+                }
             },
             dismissButton = {
-                TextButton(onClick = { renameOpen = false }) { Text(if (SonHarfUiState.language == "en") "Cancel" else "Vazgeç") }
+                TextButton(onClick = { renameOpen = false }) {
+                    Text(if (SonHarfUiState.language == "en") "Cancel" else "Vazgeç")
+                }
             },
         )
     }
