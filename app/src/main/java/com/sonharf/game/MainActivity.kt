@@ -4,13 +4,20 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.runBlocking
@@ -64,12 +71,20 @@ class MainActivity : ComponentActivity() {
                 ),
                 typography = SonHarfNeonTypography,
             ) {
-                Box {
+                Box(Modifier.fillMaxSize()) {
                     GamePortalApp()
                     PrivateRoomWaitingLayer()
                     FriendsQuickAccessOverlay()
                     GameInviteOverlay()
                     FriendRequestOverlay()
+                    SonHarfBrandLogo(
+                        modifier = Modifier
+                            .align(Alignment.TopCenter)
+                            .statusBarsPadding()
+                            .padding(top = 4.dp)
+                            .zIndex(100f),
+                        size = 48.dp,
+                    )
                 }
             }
         }
