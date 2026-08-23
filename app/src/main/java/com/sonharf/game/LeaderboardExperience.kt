@@ -208,7 +208,7 @@ private fun NeonLeagueShield() {
                 lineTo(size.width * .16f, size.height * .28f)
                 close()
             }
-            drawPath(outer, brush = Brush.linearGradient(listOf(Color(0xFFB784FF), SonHarfPurple, Color(0xFF392071))))
+            drawPath(outer, brush = Brush.linearGradient(listOf(Color(0xFF8DE1FA), SonHarfBlue, Color(0xFF157FB0))))
             drawPath(outer, color = SonHarfCyan.copy(alpha = .65f), style = Stroke(width = 3f))
             val gem = Path().apply {
                 moveTo(cx, size.height*.31f)
@@ -217,7 +217,7 @@ private fun NeonLeagueShield() {
                 lineTo(size.width*.30f, size.height*.48f)
                 close()
             }
-            drawPath(gem, brush = Brush.linearGradient(listOf(Color(0xFFFF52E8), SonHarfPurple, SonHarfCyan)))
+            drawPath(gem, brush = Brush.linearGradient(listOf(Color(0xFF7FE2FA), SonHarfBlue, SonHarfCyan)))
             drawLine(SonHarfGold, Offset(size.width*.10f,size.height*.36f), Offset(size.width*.01f,size.height*.24f), strokeWidth=5f)
             drawLine(SonHarfGold, Offset(size.width*.90f,size.height*.36f), Offset(size.width*.99f,size.height*.24f), strokeWidth=5f)
         }

@@ -130,7 +130,7 @@ object FriendsQuickAccessState {
 fun FriendsQuickAccessOverlay() {
     if (!SupabaseProvider.configured || SupabaseProvider.client.auth.currentUserOrNull() == null) return
     if (!FriendsQuickAccessState.open) {
-        // Keep the historical quick-access feature, but make it visually part of the neon HUD.
+        // Keep quick access visually consistent with the premium cyan UI.
         Box(
             Modifier.fillMaxSize().statusBarsPadding().padding(top = 7.dp, end = 10.dp),
             contentAlignment = Alignment.TopEnd,
@@ -138,7 +138,7 @@ fun FriendsQuickAccessOverlay() {
             Surface(
                 modifier = Modifier.size(42.dp).clickable { FriendsQuickAccessState.open = true },
                 shape = RoundedCornerShape(14.dp),
-                color = Color(0xFF071027).copy(alpha = .96f),
+                color = SonHarfSurface.copy(alpha = .98f),
                 border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .48f)),
                 shadowElevation = 3.dp,
             ) {
@@ -185,7 +185,7 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
 
     AlertDialog(
         onDismissRequest = onClose,
-        containerColor = Color(0xFF071027),
+        containerColor = SonHarfSurface,
         shape = RoundedCornerShape(26.dp),
         title = {
             Text(
@@ -259,7 +259,7 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
                     if (friend.presenceStatus != "online") Text(sh("Düello daveti için arkadaşının çevrimiçi olması gerekir.", "Your friend must be online for a duel invitation."), color = SonHarfMuted, fontSize = 10.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     if (notice.isNotBlank()) Text(notice, color = SonHarfGold, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
 
-                    HorizontalDivider(color = Color.White.copy(alpha = .08f))
+                    HorizontalDivider(color = SonHarfMuted.copy(alpha = .14f))
                     LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         items(messages.takeLast(80), key = { it.id }) { msg ->
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = if (msg.senderId == me) Arrangement.End else Arrangement.Start) {

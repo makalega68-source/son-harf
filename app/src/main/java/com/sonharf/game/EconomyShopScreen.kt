@@ -31,7 +31,7 @@ fun EconomyShopScreen() {
     var tab by remember { mutableIntStateOf(0) }
     Column(
         Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFF040717), SonHarfBg, Color(0xFF070C1D)))
+            Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))
         )
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -217,7 +217,7 @@ private fun CosmeticPreview(item: ShopItemDto) {
                 }
                 "name_style" -> Text("Oyuncu-10DD", color = SonHarfCyan, fontSize = 25.sp, fontWeight = FontWeight.Black)
                 "game_theme" -> Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(SonHarfPurple.copy(alpha = .35f), SonHarfCyan.copy(alpha = .28f), SonHarfGold.copy(alpha = .20f))), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text("AURORA ARENA", fontWeight = FontWeight.Black, color = SonHarfText) }
-                "keyboard_theme" -> Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("S","O","N","H","A","R","F").forEach { k -> Surface(color = Color(0xFF122840), shape = RoundedCornerShape(7.dp), border = BorderStroke(1.5.dp, SonHarfCyan)) { Text(k, Modifier.padding(horizontal = 8.dp, vertical = 10.dp), color = SonHarfCyan, fontWeight = FontWeight.Black) } } }
+                "keyboard_theme" -> Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("S","O","N","H","A","R","F").forEach { k -> Surface(color = Color(0xFFEAF8FF), shape = RoundedCornerShape(7.dp), border = BorderStroke(1.5.dp, SonHarfCyan)) { Text(k, Modifier.padding(horizontal = 8.dp, vertical = 10.dp), color = SonHarfCyan, fontWeight = FontWeight.Black) } } }
                 "victory_effect" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text("✦", color = SonHarfCyan, fontSize = 30.sp); Text("♛", color = SonHarfGold, fontSize = 50.sp, fontWeight = FontWeight.Black, modifier = Modifier.scale(pulse)); Text("✦", color = SonHarfPink, fontSize = 30.sp) }
                 "emoji_pack" -> Text("👑  ⚡  😎  🔥  ◈", fontSize = 30.sp)
                 else -> Text("◇", fontSize = 44.sp, color = SonHarfCyan)

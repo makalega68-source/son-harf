@@ -35,25 +35,26 @@ import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.getAdminDashboard
+import com.sonharf.game.data.getLeaderboardV2
 import kotlinx.coroutines.launch
 
 private enum class ClassicScreen {
     HOME, PLAY, GAME, BIL_BAKALIM, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL
 }
 
-private val ClassicBg = Color(0xFFF7FBFF)
-private val ClassicBgDeep = Color(0xFFE8F6FF)
+private val ClassicBg = Color(0xFFF4FBFF)
+private val ClassicBgDeep = Color(0xFFEAF8FF)
 private val ClassicPanel = Color(0xFFFFFFFF)
-private val ClassicPanel2 = Color(0xFFEAF7FF)
-private val ClassicBorder = Color(0xFFB9E5F8)
-private val ClassicGold = Color(0xFF56BDE8)
-private val ClassicGoldSoft = Color(0xFF299FD3)
-private val ClassicCream = Color(0xFF16324A)
-private val ClassicText = Color(0xFF16324A)
-private val ClassicMuted = Color(0xFF698296)
-private val ClassicGreen = Color(0xFF77A878)
-private val ClassicBlue = Color(0xFF43B6E8)
-private val ClassicRed = Color(0xFFB66A68)
+private val ClassicPanel2 = Color(0xFFEAF8FF)
+private val ClassicBorder = Color(0xFFB9E8F8)
+private val ClassicGold = Color(0xFF24AEE4)
+private val ClassicGoldSoft = Color(0xFF1799D0)
+private val ClassicCream = Color(0xFF173B57)
+private val ClassicText = Color(0xFF173B57)
+private val ClassicMuted = Color(0xFF6D879A)
+private val ClassicGreen = Color(0xFF32C985)
+private val ClassicBlue = Color(0xFF38C7F4)
+private val ClassicRed = Color(0xFFFF7891)
 
 /**
  * Premium-casual Son Harf shell designed for a mature audience.
@@ -250,6 +251,7 @@ private fun ClassicHome(
                 ClassicLeagueCard(growth, Modifier.weight(1f).aspectRatio(1f), onLeague)
             }
         }
+        item { ClassicWeeklyTopThree(backend) }
         item { ClassicStats(growth) }
         item { Spacer(Modifier.height(12.dp)) }
     }
@@ -330,7 +332,7 @@ private fun ClassicHero(onPlay: () -> Unit) {
                 Spacer(Modifier.height(14.dp))
                 Button(
                     onClick = onPlay,
-                    colors = ButtonDefaults.buttonColors(containerColor = ClassicGold, contentColor = Color(0xFF2A1E0D)),
+                    colors = ButtonDefaults.buttonColors(containerColor = ClassicGold, contentColor = Color.White),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 11.dp),
                 ) {
@@ -758,5 +760,38 @@ private fun BottomItem(icon: ImageVector, label: String, selected: Boolean, modi
     ) {
         Icon(icon, null, tint = if (selected) ClassicGold else ClassicMuted, modifier = Modifier.size(23.dp))
         Text(label, color = if (selected) ClassicGoldSoft else ClassicMuted, fontSize = 8.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+    }
+}
+
+
+@Composable
+private fun ClassicWeeklyTopThree(backend: OnlineGameBackend?) {
+    var leaders by remember { mutableStateOf<List<com.sonharf.game.data.LeaderboardV2Row>>(emptyList()) }
+    LaunchedEffect(backend) {
+        leaders = runCatching { backend?.getLeaderboardV2(SonHarfUiState.language, "week", 3).orEmpty() }.getOrDefault(emptyList())
+    }
+    if (leaders.isEmpty()) return
+    Card(
+        colors = CardDefaults.cardColors(containerColor = ClassicPanel),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, ClassicBorder),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(sh("🏆 HAFTANIN EN İYİ 3 OYUNCUSU", "🏆 TOP 3 THIS WEEK"), color = ClassicText, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Text(sh("CANLI", "LIVE"), color = ClassicGreen, fontWeight = FontWeight.Black, fontSize = 9.sp)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                leaders.take(3).forEachIndexed { index, row ->
+                    Surface(Modifier.weight(1f), shape = RoundedCornerShape(14.dp), color = ClassicPanel2) {
+                        Column(Modifier.padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(listOf("🥇", "🥈", "🥉").getOrElse(index) { "#${index + 1}" }, fontSize = 20.sp)
+                            Text(row.displayName, color = ClassicText, fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
+                            Text("${row.wins}W • ${row.winRate.toInt()}%", color = ClassicMuted, fontSize = 8.sp)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

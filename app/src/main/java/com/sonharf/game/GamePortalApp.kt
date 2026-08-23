@@ -30,14 +30,14 @@ import kotlin.math.max
 import kotlin.random.Random
 
 private enum class PortalGame { MENU, SON_HARF, BIL_BAKALIM }
-internal val PortalBg = Color(0xFFF5FBFF)
+internal val PortalBg = Color(0xFFF4FBFF)
 internal val PortalCard = Color.White
-internal val PortalText = Color(0xFF16324A)
-internal val PortalMuted = Color(0xFF698296)
-internal val PortalBlue = Color(0xFF43B6E8)
-internal val PortalGold = Color(0xFFD8AC5C)
-internal val PortalGreen = Color(0xFF39B978)
-internal val PortalRed = Color(0xFFCE6470)
+internal val PortalText = Color(0xFF173B57)
+internal val PortalMuted = Color(0xFF6D879A)
+internal val PortalBlue = Color(0xFF24AEE4)
+internal val PortalGold = Color(0xFFFFC857)
+internal val PortalGreen = Color(0xFF32C985)
+internal val PortalRed = Color(0xFFFF7891)
 
 @Composable
 fun GamePortalApp() {

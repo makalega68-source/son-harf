@@ -151,7 +151,7 @@ fun RewardCenterScreen() {
                         },
                         enabled = (s?.chestKeys ?: 0) > 0 && busy == null,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF171000)),
+                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color.White),
                     ) { Text(sh("SANDIK AÇ", "OPEN CHEST"), fontWeight = FontWeight.Black) }
                 }
             }

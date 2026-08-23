@@ -35,17 +35,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
-private val TGbg = Color(0xFFF7FBFF)
+private val TGbg = Color(0xFFF4FBFF)
 private val TGpanel = Color(0xFFFFFFFF)
-private val TGpanel2 = Color(0xFFEAF7FF)
-private val TGcyan = Color(0xFF46BFEF)
-private val TGpurple = Color(0xFF6CC8ED)
-private val TGpink = Color(0xFFEA7484)
-private val TGgold = Color(0xFF52BCE8)
-private val TGblue = Color(0xFF2FA8DC)
+private val TGpanel2 = Color(0xFFEAF8FF)
+private val TGcyan = Color(0xFF38C7F4)
+private val TGpurple = Color(0xFF6ED6F7)
+private val TGpink = Color(0xFFFF7891)
+private val TGgold = Color(0xFF24AEE4)
+private val TGblue = Color(0xFF1799D0)
 private val TGgreen = Color(0xFF39D875)
-private val TGtext = Color(0xFF16324A)
-private val TGmuted = Color(0xFF6B8294)
+private val TGtext = Color(0xFF173B57)
+private val TGmuted = Color(0xFF6D879A)
 
 @Composable
 fun TargetNeonGameScreen() {
@@ -262,7 +262,7 @@ private fun TargetLobby(
                     Box(Modifier.fillMaxWidth().height(if (privateCompact) 138.dp else 205.dp).background(Brush.radialGradient(listOf(TGpurple.copy(alpha = .28f), TGpanel))), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("SON HARF", color = TGcyan, fontSize = if (privateCompact) 34.sp else 43.sp, fontWeight = FontWeight.Black)
-                            Text("NEON KELİME DÜELLOSU", color = TGtext, fontSize = 9.sp, letterSpacing = 1.1.sp)
+                            Text("CANLI KELİME DÜELLOSU", color = TGtext, fontSize = 9.sp, letterSpacing = 1.1.sp)
                         }
                     }
                 }
