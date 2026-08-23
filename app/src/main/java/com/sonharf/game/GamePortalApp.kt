@@ -1,10 +1,10 @@
 package com.sonharf.game
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
 
 // Kept for legacy HomeLobby.kt compile compatibility. The app no longer routes to that shell.
 internal val PortalBg = Color(0xFFF4FBFF)
@@ -17,20 +17,15 @@ internal val PortalGreen = Color(0xFF32C985)
 internal val PortalRed = Color(0xFFFF7891)
 
 /**
- * Single premium shell. The mascot owns a reserved rail instead of floating above controls,
- * so it cannot cover gameplay, buttons, word input, score or navigation.
+ * Single premium shell with a free-moving mascot overlay.
+ * The mascot moves only between predefined safe anchors and never owns a permanent rail.
  */
 @Composable
 fun GamePortalApp() {
-    if (!MascotPolicy.ENABLED) {
+    Box(Modifier.fillMaxSize()) {
         ClassicPremiumApp()
-        return
-    }
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val railWidth = if (maxWidth < 420.dp) 86.dp else 104.dp
-        Row(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f).fillMaxHeight()) { ClassicPremiumApp() }
-            MascotReservedRail(Modifier.width(railWidth).fillMaxHeight())
+        if (MascotPolicy.ENABLED) {
+            MascotFloatingOverlay(Modifier.fillMaxSize())
         }
     }
 }
