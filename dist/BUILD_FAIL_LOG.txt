@@ -10,16 +10,16 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
-> Task :app:parseDebugLocalResources
 > Task :app:mergeDebugResources
+> Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
-> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
 > Task :app:javaPreCompileDebugUnitTest
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
 > Task :app:mergeDebugShaders
-> Task :app:processDebugManifestForPackage
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
@@ -27,8 +27,8 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:compressDebugAssets
 > Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
-> Task :app:processDebugResources
 > Task :app:mergeDebugNativeLibs
+> Task :app:processDebugResources
 > Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
@@ -39,17 +39,10 @@ Unable to strip the following libraries, packaging them as they are: libandroidx
 > Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 > Task :app:compileDebugKotlin
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/PremiumMasterHome.kt:66:41 Unresolved reference 'rating'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/PremiumMasterHome.kt:108:17 Unresolved reference 'MasterShortcut'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/PremiumMasterHome.kt:109:17 Unresolved reference 'MasterShortcut'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/PremiumMasterHome.kt:114:17 Unresolved reference 'MasterShortcut'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/PremiumMasterHome.kt:115:17 Unresolved reference 'MasterShortcut'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/PremiumMasterHome.kt:116:17 Unresolved reference 'MasterShortcut'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/PremiumMasterHome.kt:254:13 Modifier 'private' is not applicable to 'local function'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/PremiumMasterHome.kt:254:858 Syntax error: Expecting '}'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/GamePortalApp.kt:8:43 Cannot access 'val RowColumnParentData?.weight: Float': it is internal in file.
 
 > Task :app:compileDebugKotlin FAILED
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1787487261626.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/__run_2-1787489234895.json
 
 [Incubating] Problems report is available at: file:///home/runner/work/son-harf/son-harf/build/reports/problems/problems-report.html
 
@@ -256,5 +249,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 53s
+BUILD FAILED in 54s
 30 actionable tasks: 30 executed
