@@ -6,6 +6,11 @@ on:
     branches: [ main ]
     paths:
       - '.github/workflows/current-apk-build.yml'
+      - 'app/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
+      - 'ci/build-trigger-gender-symbols.txt'
 
 permissions:
   contents: write
