@@ -1,19 +1,21 @@
 package com.sonharf.game
 
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
+import android.content.Context
+import android.net.Uri
 import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -21,21 +23,25 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.mascotdata2.MascotEmbeddedModel
 import io.github.jan.supabase.postgrest.from
-import java.net.URL
-import kotlinx.coroutines.Dispatchers
+import io.github.sceneview.SceneView
+import io.github.sceneview.SurfaceType
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Rotation
+import io.github.sceneview.node.ModelNode
+import io.github.sceneview.rememberCameraNode
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberModelInstance
+import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 internal enum class MascotMotion { IDLE, GREETING, THINKING, CRITICAL, VICTORY, DEFEAT }
 
@@ -53,6 +59,11 @@ internal object MascotAnimationRegistry {
         MascotAnimationDef("critical", MascotMotion.CRITICAL, 1),
         MascotAnimationDef("victory", MascotMotion.VICTORY, 1),
         MascotAnimationDef("defeat", MascotMotion.DEFEAT, 1),
+        MascotAnimationDef("level_10_motion", MascotMotion.GREETING, 10),
+        MascotAnimationDef("level_20_motion", MascotMotion.VICTORY, 20),
+        MascotAnimationDef("level_30_motion", MascotMotion.THINKING, 30),
+        MascotAnimationDef("level_40_motion", MascotMotion.IDLE, 40),
+        MascotAnimationDef("level_50_motion", MascotMotion.VICTORY, 50),
     )
 
     fun nextUnlockLevel(level: Int): Int = ((level.coerceAtLeast(1) / 10) + 1) * 10
@@ -91,62 +102,53 @@ internal object MascotRuntime {
     fun think(language: String = SonHarfUiState.language) = react(MascotMotion.THINKING, language)
 }
 
-private const val MASCOT_REFERENCE_IMAGE =
-    "https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_105103_a34c7b6a-3fef-4ac9-a9f2-d76040d05b0b.png"
-
 private data class MascotAnchor(val x: Dp, val y: Dp)
 
-private suspend fun loadTransparentMascot(): Bitmap? = withContext(Dispatchers.IO) {
-    runCatching {
-        val original = URL(MASCOT_REFERENCE_IMAGE).openStream().use(BitmapFactory::decodeStream)
-            ?: return@runCatching null
-        val bitmap = original.copy(Bitmap.Config.ARGB_8888, true)
-        val width = bitmap.width
-        val height = bitmap.height
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+private fun mascotName(context: Context): String =
+    context.getSharedPreferences("son_harf_mascot", Context.MODE_PRIVATE)
+        .getString("name", "Dostum") ?: "Dostum"
 
-        for (i in pixels.indices) {
-            val c = pixels[i]
-            val r = android.graphics.Color.red(c)
-            val g = android.graphics.Color.green(c)
-            val b = android.graphics.Color.blue(c)
-            val max = maxOf(r, g, b)
-            val min = minOf(r, g, b)
-            val spread = max - min
-            val grayStudioBackground = spread < 42 && max > 118
-            val veryLightNeutral = spread < 65 && max > 205
-            if (grayStudioBackground || veryLightNeutral) {
-                pixels[i] = c and 0x00FFFFFF
-            }
-        }
-        bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
-        bitmap
-    }.getOrNull()
+private fun setMascotName(context: Context, value: String) {
+    context.getSharedPreferences("son_harf_mascot", Context.MODE_PRIVATE)
+        .edit().putString("name", value.take(18)).apply()
 }
 
 @Composable
 internal fun MascotFloatingOverlay(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
+    val modelLocation = remember(context) {
+        Uri.fromFile(MascotEmbeddedModel.ensureFile(context)).toString()
+    }
+
     var lastReactionKey by remember { mutableStateOf("") }
     var roamingIndex by remember { mutableIntStateOf(0) }
+    var isWalking by remember { mutableStateOf(false) }
+    var walkingRight by remember { mutableStateOf(false) }
+    var renameOpen by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf(mascotName(context)) }
+    var renameValue by remember { mutableStateOf(name) }
     val motion = MascotRuntime.motion
-    val mascotBitmap by produceState<Bitmap?>(initialValue = null) {
-        value = loadTransparentMascot()
-    }
 
     LaunchedEffect(Unit) {
         MascotRuntime.react(MascotMotion.GREETING)
-        delay(2600)
+        delay(2200)
         MascotRuntime.react(MascotMotion.IDLE)
     }
 
     LaunchedEffect(motion) {
         if (motion == MascotMotion.IDLE) {
             while (true) {
-                delay(3900)
-                roamingIndex = (roamingIndex + 1) % 5
+                delay(3200)
+                val next = (roamingIndex + 1) % 4
+                walkingRight = next > roamingIndex || (roamingIndex == 3 && next == 0)
+                isWalking = true
+                roamingIndex = next
+                delay(2350)
+                isWalking = false
             }
+        } else {
+            isWalking = false
         }
     }
 
@@ -177,10 +179,14 @@ internal fun MascotFloatingOverlay(modifier: Modifier = Modifier) {
                 if (key != lastReactionKey) {
                     lastReactionKey = key
                     when {
-                        active.status == "finished" && active.winnerId == me -> MascotRuntime.react(MascotMotion.VICTORY, active.language)
-                        active.status == "finished" && active.winnerId != null && active.winnerId != me -> MascotRuntime.react(MascotMotion.DEFEAT, active.language)
-                        active.status in listOf("final", "sudden_death") || active.finalMovesRemaining in 1..2 -> MascotRuntime.react(MascotMotion.CRITICAL, active.language)
-                        active.currentPlayerId == me && active.status in listOf("playing", "final", "sudden_death") -> MascotRuntime.react(MascotMotion.THINKING, active.language)
+                        active.status == "finished" && active.winnerId == me ->
+                            MascotRuntime.react(MascotMotion.VICTORY, active.language)
+                        active.status == "finished" && active.winnerId != null && active.winnerId != me ->
+                            MascotRuntime.react(MascotMotion.DEFEAT, active.language)
+                        active.status in listOf("final", "sudden_death") || active.finalMovesRemaining in 1..2 ->
+                            MascotRuntime.react(MascotMotion.CRITICAL, active.language)
+                        active.currentPlayerId == me && active.status in listOf("playing", "final", "sudden_death") ->
+                            MascotRuntime.react(MascotMotion.THINKING, active.language)
                         else -> MascotRuntime.react(MascotMotion.IDLE, active.language)
                     }
                 }
@@ -190,83 +196,148 @@ internal fun MascotFloatingOverlay(modifier: Modifier = Modifier) {
     }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val size = if (maxWidth < 390.dp) 92.dp else 108.dp
+        val mascotSize = if (maxWidth < 390.dp) 112.dp else 128.dp
         val side = 8.dp
         val leftX = side
-        val centerX = ((maxWidth - size) / 2).coerceAtLeast(side)
-        val rightX = (maxWidth - size - side).coerceAtLeast(side)
-        val walkingY = (maxHeight - size - 96.dp).coerceAtLeast(150.dp)
-        val upperY = (maxHeight * 0.60f).coerceAtMost(walkingY)
+        val midLeftX = ((maxWidth - mascotSize) * 0.34f).coerceAtLeast(side)
+        val midRightX = ((maxWidth - mascotSize) * 0.66f).coerceAtLeast(side)
+        val rightX = (maxWidth - mascotSize - side).coerceAtLeast(side)
+        val maxFloor = (maxHeight - mascotSize - 92.dp).coerceAtLeast(190.dp)
+        val floorY = (maxHeight * 0.76f).coerceAtMost(maxFloor)
 
         val anchors = listOf(
-            MascotAnchor(leftX, walkingY),
-            MascotAnchor(centerX, walkingY),
-            MascotAnchor(rightX, walkingY),
-            MascotAnchor(centerX, upperY),
-            MascotAnchor(leftX, walkingY),
+            MascotAnchor(leftX, floorY),
+            MascotAnchor(midLeftX, floorY),
+            MascotAnchor(midRightX, floorY),
+            MascotAnchor(rightX, floorY),
         )
 
         val target = when (motion) {
-            MascotMotion.GREETING -> MascotAnchor(rightX, walkingY)
-            MascotMotion.THINKING -> MascotAnchor(rightX, upperY)
-            MascotMotion.CRITICAL -> MascotAnchor(leftX, upperY)
-            MascotMotion.VICTORY -> MascotAnchor(centerX, walkingY)
-            MascotMotion.DEFEAT -> MascotAnchor(leftX, walkingY)
+            MascotMotion.GREETING -> MascotAnchor(rightX, floorY)
+            MascotMotion.THINKING -> MascotAnchor(rightX, floorY)
+            MascotMotion.CRITICAL -> MascotAnchor(leftX, floorY)
+            MascotMotion.VICTORY -> MascotAnchor(midRightX, floorY)
+            MascotMotion.DEFEAT -> MascotAnchor(midLeftX, floorY)
             MascotMotion.IDLE -> anchors[roamingIndex % anchors.size]
-        }
-
-        val previousIndex = (roamingIndex - 1 + anchors.size) % anchors.size
-        val facingRight = if (motion == MascotMotion.IDLE) {
-            target.x >= anchors[previousIndex].x
-        } else {
-            target.x >= centerX
         }
 
         val x by animateDpAsState(
             targetValue = target.x,
-            animationSpec = tween(durationMillis = 2300, easing = LinearEasing),
-            label = "mascot-walk-x",
+            animationSpec = tween(durationMillis = if (isWalking) 2250 else 650, easing = LinearEasing),
+            label = "mascot-3d-walk-x",
         )
         val y by animateDpAsState(
             targetValue = target.y,
-            animationSpec = tween(durationMillis = 900),
-            label = "mascot-walk-y",
+            animationSpec = tween(durationMillis = 500),
+            label = "mascot-3d-floor-y",
         )
 
-        val step = rememberInfiniteTransition(label = "mascot-steps")
-        val bob by step.animateFloat(
-            initialValue = 0f,
-            targetValue = -7f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(170, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "mascot-step-bob",
-        )
-        val lean by step.animateFloat(
-            initialValue = -1.5f,
-            targetValue = 1.5f,
-            animationSpec = infiniteRepeatable(
-                animation = tween(340, easing = LinearEasing),
-                repeatMode = RepeatMode.Reverse,
-            ),
-            label = "mascot-step-lean",
+        val targetYaw = when {
+            motion != MascotMotion.IDLE -> 0f
+            isWalking && walkingRight -> 90f
+            isWalking && !walkingRight -> -90f
+            else -> 0f
+        }
+        val yaw by animateFloatAsState(
+            targetValue = targetYaw,
+            animationSpec = tween(durationMillis = 320),
+            label = "mascot-3d-yaw",
         )
 
-        mascotBitmap?.let { bmp ->
-            Image(
-                bitmap = bmp.asImageBitmap(),
-                contentDescription = "Son Harf mascot",
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .offset(x = x, y = y)
-                    .size(size)
-                    .graphicsLayer {
-                        scaleX = if (facingRight) 1f else -1f
-                        translationY = if (motion == MascotMotion.IDLE) bob else bob * 0.45f
-                        rotationZ = if (motion == MascotMotion.IDLE) lean else 0f
-                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.88f)
-                    },
+        Box(
+            modifier = Modifier
+                .offset(x = x, y = y)
+                .size(mascotSize)
+                .clickable {
+                    renameValue = name
+                    renameOpen = true
+                },
+        ) {
+            RealMascotScene(
+                modelLocation = modelLocation,
+                motion = motion,
+                isWalking = isWalking,
+                yaw = yaw,
+            )
+        }
+    }
+
+    if (renameOpen) {
+        AlertDialog(
+            onDismissRequest = { renameOpen = false },
+            title = { Text(if (SonHarfUiState.language == "en") "Mascot name" else "Maskotunun adı") },
+            text = {
+                OutlinedTextField(
+                    value = renameValue,
+                    onValueChange = { renameValue = it.take(18) },
+                    singleLine = true,
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    val clean = renameValue.trim().ifBlank {
+                        if (SonHarfUiState.language == "en") "Buddy" else "Dostum"
+                    }
+                    setMascotName(context, clean)
+                    name = clean
+                    renameOpen = false
+                }) {
+                    Text(if (SonHarfUiState.language == "en") "Save" else "Kaydet")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { renameOpen = false }) {
+                    Text(if (SonHarfUiState.language == "en") "Cancel" else "Vazgeç")
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun RealMascotScene(
+    modelLocation: String,
+    motion: MascotMotion,
+    isWalking: Boolean,
+    yaw: Float,
+) {
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val cameraNode = rememberCameraNode(engine) {
+        position = Position(x = 0f, y = 0.25f, z = 3.2f)
+    }
+    val modelInstance = rememberModelInstance(
+        modelLoader = modelLoader,
+        fileLocation = modelLocation,
+    )
+    val animationName = when {
+        motion == MascotMotion.VICTORY -> "Victory"
+        isWalking -> "Walk"
+        else -> "Idle"
+    }
+
+    SceneView(
+        modifier = Modifier.fillMaxSize(),
+        surfaceType = SurfaceType.TextureSurface,
+        engine = engine,
+        modelLoader = modelLoader,
+        isOpaque = false,
+        autoCenterContent = true,
+        autoFitContent = false,
+        cameraNode = cameraNode,
+        cameraManipulator = null,
+    ) {
+        modelInstance?.let { instance ->
+            ModelNode(
+                modelInstance = instance,
+                autoAnimate = false,
+                animationName = animationName,
+                animationLoop = true,
+                animationSpeed = if (isWalking) 1.15f else 1f,
+                scaleToUnits = 1.15f,
+                centerOrigin = Position(x = 0f, y = -1f, z = 0f),
+                rotation = Rotation(x = 0f, y = yaw, z = 0f),
+                isEditable = false,
             )
         }
     }
