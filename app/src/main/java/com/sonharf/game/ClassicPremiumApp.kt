@@ -133,7 +133,7 @@ fun ClassicPremiumApp() {
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding)) {
                 when (screen) {
-                    ClassicScreen.HOME -> ClassicHome(
+                    ClassicScreen.HOME -> PremiumMasterHome(
                         backend = backend,
                         onPlay = { screen = ClassicScreen.PLAY },
                         onQuickGame = { gameKey += 1; screen = ClassicScreen.GAME },
