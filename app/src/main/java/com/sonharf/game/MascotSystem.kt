@@ -21,6 +21,11 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.sonharf.game.data.GameRoomDto
+import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.getGrowthDashboard
+import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 
 internal enum class MascotMotion { IDLE, GREETING, THINKING, CRITICAL, VICTORY, DEFEAT }
@@ -54,15 +59,26 @@ internal object MascotRuntime {
         playerLevel = level.coerceAtLeast(1)
     }
 
-    fun think(language: String = SonHarfUiState.language) {
-        motion = MascotMotion.THINKING
-        message = if (language == "en") "I'm thinking about the best next move." else "En iyi sonraki hamleyi düşünüyorum."
+    fun react(motion: MascotMotion, language: String = SonHarfUiState.language) {
+        this.motion = motion
+        message = if (language == "en") when (motion) {
+            MascotMotion.GREETING -> "I'm here. Let's play!"
+            MascotMotion.IDLE -> "Level $playerLevel • Next motion at ${MascotAnimationRegistry.nextUnlockLevel(playerLevel)}"
+            MascotMotion.THINKING -> "I'm thinking about the best next move."
+            MascotMotion.CRITICAL -> "Time is tight. Focus on the last letter!"
+            MascotMotion.VICTORY -> "We won! Great game."
+            MascotMotion.DEFEAT -> "That was close. We'll be stronger next match."
+        } else when (motion) {
+            MascotMotion.GREETING -> "Buradayım. Hadi oynayalım!"
+            MascotMotion.IDLE -> "Seviye $playerLevel • Yeni hareket: ${MascotAnimationRegistry.nextUnlockLevel(playerLevel)}"
+            MascotMotion.THINKING -> "En iyi sonraki hamleyi düşünüyorum."
+            MascotMotion.CRITICAL -> "Süre daralıyor. Son harfe odaklan!"
+            MascotMotion.VICTORY -> "Kazandık! Harika oynadın."
+            MascotMotion.DEFEAT -> "Çok yakındı. Sonraki maçta daha güçlüyüz."
+        }
     }
 
-    fun encourage(language: String = SonHarfUiState.language) {
-        motion = MascotMotion.IDLE
-        message = if (language == "en") "Focus on the last letter. You've got this." else "Son harfe odaklan. Bunu yapabilirsin."
-    }
+    fun think(language: String = SonHarfUiState.language) = react(MascotMotion.THINKING, language)
 }
 
 private object MascotMedia {
@@ -93,17 +109,51 @@ private fun setMascotName(context: Context, value: String) {
 @Composable
 internal fun MascotReservedRail(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var name by remember { mutableStateOf(mascotName(context)) }
     var renameOpen by remember { mutableStateOf(false) }
     var renameValue by remember { mutableStateOf(name) }
+    var lastReactionKey by remember { mutableStateOf("") }
     val motion = MascotRuntime.motion
 
     LaunchedEffect(Unit) {
-        MascotRuntime.motion = MascotMotion.GREETING
-        MascotRuntime.message = if (SonHarfUiState.language == "en") "I'm here. Let's play!" else "Buradayım. Hadi oynayalım!"
+        MascotRuntime.react(MascotMotion.GREETING)
         delay(5200)
-        MascotRuntime.motion = MascotMotion.IDLE
-        MascotRuntime.message = if (SonHarfUiState.language == "en") "Level ${MascotRuntime.playerLevel} • Next motion at ${MascotAnimationRegistry.nextUnlockLevel(MascotRuntime.playerLevel)}" else "Seviye ${MascotRuntime.playerLevel} • Yeni hareket: ${MascotAnimationRegistry.nextUnlockLevel(MascotRuntime.playerLevel)}"
+        MascotRuntime.react(MascotMotion.IDLE)
+    }
+
+    LaunchedEffect(backend) {
+        while (true) {
+            runCatching {
+                val b = backend ?: return@runCatching
+                val me = b.currentUserId() ?: return@runCatching
+                val growth = b.getGrowthDashboard()
+                MascotRuntime.syncProgress(growth.xp, growth.level)
+                val rooms = SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
+                val active = rooms
+                    .filter { (it.hostId == me || it.guestId == me) && it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused", "finished") }
+                    .maxByOrNull { it.validWordCount }
+                if (active == null) {
+                    if (lastReactionKey != "idle-${growth.level}-${growth.xp}") {
+                        lastReactionKey = "idle-${growth.level}-${growth.xp}"
+                        MascotRuntime.react(MascotMotion.IDLE)
+                    }
+                    return@runCatching
+                }
+                val key = "${active.id}-${active.status}-${active.winnerId}-${active.finalMovesRemaining}-${active.validWordCount}"
+                if (key != lastReactionKey) {
+                    lastReactionKey = key
+                    when {
+                        active.status == "finished" && active.winnerId == me -> MascotRuntime.react(MascotMotion.VICTORY, active.language)
+                        active.status == "finished" && active.winnerId != null && active.winnerId != me -> MascotRuntime.react(MascotMotion.DEFEAT, active.language)
+                        active.status in listOf("final", "sudden_death") || active.finalMovesRemaining in 1..2 -> MascotRuntime.react(MascotMotion.CRITICAL, active.language)
+                        active.currentPlayerId == me && active.status in listOf("playing", "final", "sudden_death") -> MascotRuntime.react(MascotMotion.THINKING, active.language)
+                        else -> MascotRuntime.react(MascotMotion.IDLE, active.language)
+                    }
+                }
+            }
+            delay(1200)
+        }
     }
 
     Surface(
