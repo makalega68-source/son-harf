@@ -1,9 +1,17 @@
 package com.sonharf.game
 
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.sonharf.game.data.GameRoomDto
+import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.SupabaseProvider
+import io.github.jan.supabase.postgrest.from
+import kotlinx.coroutines.delay
 
 internal enum class MascotMotion {
     IDLE,
@@ -45,8 +53,7 @@ internal object MascotAnimationRegistry {
         MascotAnimationDef("run", MascotMotion.RUN, "Run", 20, true),
     )
 
-    fun definition(motion: MascotMotion): MascotAnimationDef =
-        all.first { it.motion == motion }
+    fun definition(motion: MascotMotion): MascotAnimationDef = all.first { it.motion == motion }
 
     fun unlocked(level: Int): List<MascotAnimationDef> =
         all.filter { level.coerceAtLeast(1) >= it.unlockLevel }
@@ -69,6 +76,8 @@ internal object MascotRuntime {
         private set
     var playerXp by mutableIntStateOf(0)
         private set
+    var inActiveMatch by mutableStateOf(false)
+        private set
 
     fun rename(value: String) {
         val clean = value.trim().take(18)
@@ -78,6 +87,10 @@ internal object MascotRuntime {
     fun syncProgress(xp: Int, level: Int) {
         playerXp = xp.coerceAtLeast(0)
         playerLevel = level.coerceAtLeast(1)
+    }
+
+    fun setMatchActive(active: Boolean) {
+        inActiveMatch = active
     }
 
     fun react(next: MascotMotion, language: String = SonHarfUiState.language) {
@@ -101,6 +114,78 @@ internal object MascotRuntime {
             MascotMotion.WALK,
             MascotMotion.TURN_LEFT,
             MascotMotion.TURN_RIGHT -> ""
+        }
+    }
+}
+
+/**
+ * Read-only game-state bridge for the mascot. It restores the useful behavior logic from the old
+ * overlay without restoring any bitmap/video rendering. Failures are deliberately non-fatal so
+ * the mascot can never break gameplay or networking.
+ */
+@Composable
+internal fun MascotBehaviorBridge() {
+    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
+    var lastReactionKey by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        MascotRuntime.react(MascotMotion.GREETING)
+        delay(2200)
+        MascotRuntime.react(MascotMotion.IDLE)
+    }
+
+    LaunchedEffect(backend) {
+        while (true) {
+            runCatching {
+                val b = backend ?: run {
+                    MascotRuntime.setMatchActive(false)
+                    return@runCatching
+                }
+                val me = b.currentUserId() ?: run {
+                    MascotRuntime.setMatchActive(false)
+                    return@runCatching
+                }
+
+                val growth = b.getGrowthDashboard()
+                MascotRuntime.syncProgress(growth.xp, growth.level)
+
+                val active = SupabaseProvider.client
+                    .from("game_rooms")
+                    .select()
+                    .decodeList<GameRoomDto>()
+                    .filter {
+                        (it.hostId == me || it.guestId == me) &&
+                            it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused", "finished")
+                    }
+                    .maxByOrNull { it.validWordCount }
+
+                if (active == null) {
+                    MascotRuntime.setMatchActive(false)
+                    if (lastReactionKey != "idle-${growth.level}-${growth.xp}") {
+                        lastReactionKey = "idle-${growth.level}-${growth.xp}"
+                        MascotRuntime.react(MascotMotion.IDLE)
+                    }
+                    return@runCatching
+                }
+
+                MascotRuntime.setMatchActive(active.status != "finished")
+                val key = "${active.id}-${active.status}-${active.currentPlayerId}-${active.winnerId}-${active.finalMovesRemaining}-${active.validWordCount}"
+                if (key == lastReactionKey) return@runCatching
+                lastReactionKey = key
+
+                when {
+                    active.status == "finished" && active.winnerId == me ->
+                        MascotRuntime.react(MascotMotion.VICTORY, active.language)
+                    active.status == "finished" && active.winnerId != null && active.winnerId != me ->
+                        MascotRuntime.react(MascotMotion.DEFEAT, active.language)
+                    active.status in listOf("final", "sudden_death") || active.finalMovesRemaining in 1..2 ->
+                        MascotRuntime.react(MascotMotion.CRITICAL, active.language)
+                    active.currentPlayerId == me && active.status in listOf("playing", "final", "sudden_death") ->
+                        MascotRuntime.react(MascotMotion.THINKING, active.language)
+                    else -> MascotRuntime.react(MascotMotion.IDLE, active.language)
+                }
+            }
+            delay(1200)
         }
     }
 }
