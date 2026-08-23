@@ -1,34 +1,41 @@
 package com.sonharf.game
 
-import android.content.Context
-import android.net.Uri
-import android.widget.VideoView
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Edit
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.compose.ui.viewinterop.AndroidView
 import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.postgrest.from
+import java.net.URL
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 internal enum class MascotMotion { IDLE, GREETING, THINKING, CRITICAL, VICTORY, DEFEAT }
 
@@ -66,75 +73,79 @@ internal object MascotRuntime {
         this.motion = motion
         message = if (language == "en") when (motion) {
             MascotMotion.GREETING -> "I'm here. Let's play!"
-            MascotMotion.IDLE -> "Level $playerLevel • New motion at ${MascotAnimationRegistry.nextUnlockLevel(playerLevel)}"
+            MascotMotion.IDLE -> "Level $playerLevel"
             MascotMotion.THINKING -> "I'm thinking about the best next move."
-            MascotMotion.CRITICAL -> "Time is tight. Focus on the last letter!"
+            MascotMotion.CRITICAL -> "Time is tight. Focus!"
             MascotMotion.VICTORY -> "We won! Great game."
-            MascotMotion.DEFEAT -> "That was close. We'll be stronger next match."
+            MascotMotion.DEFEAT -> "That was close."
         } else when (motion) {
             MascotMotion.GREETING -> "Buradayım. Hadi oynayalım!"
-            MascotMotion.IDLE -> "Seviye $playerLevel • Yeni hareket: ${MascotAnimationRegistry.nextUnlockLevel(playerLevel)}"
-            MascotMotion.THINKING -> "En iyi sonraki hamleyi düşünüyorum."
-            MascotMotion.CRITICAL -> "Süre daralıyor. Son harfe odaklan!"
+            MascotMotion.IDLE -> "Seviye $playerLevel"
+            MascotMotion.THINKING -> "En iyi hamleyi düşünüyorum."
+            MascotMotion.CRITICAL -> "Süre daralıyor. Odaklan!"
             MascotMotion.VICTORY -> "Kazandık! Harika oynadın."
-            MascotMotion.DEFEAT -> "Çok yakındı. Sonraki maçta daha güçlüyüz."
+            MascotMotion.DEFEAT -> "Çok yakındı."
         }
     }
 
     fun think(language: String = SonHarfUiState.language) = react(MascotMotion.THINKING, language)
 }
 
-private object MascotMedia {
-    const val IDLE = "https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_110304_5d02ea3d-c6bf-42c4-a7bc-d153681c3c1e.mp4"
-    const val GREETING = "https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_121438_5b656a22-4f11-4d63-96e8-2f1fdb0c7cdb.mp4"
-    const val THINKING = "https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_112222_ed8b10cc-89d9-4ae2-89e6-cfb58a4206dd.mp4"
-    const val CRITICAL = "https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_112222_bf55bdfc-6d34-4db2-8cae-bdcfb8b2f418.mp4"
-    const val VICTORY = "https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_112222_ed6b58fe-16bb-4156-b2a7-b6fefe66308a.mp4"
-    const val DEFEAT = "https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_121438_cc6225c9-8c5e-4477-b7ff-47a9b74defbb.mp4"
-
-    fun url(motion: MascotMotion) = when (motion) {
-        MascotMotion.IDLE -> IDLE
-        MascotMotion.GREETING -> GREETING
-        MascotMotion.THINKING -> THINKING
-        MascotMotion.CRITICAL -> CRITICAL
-        MascotMotion.VICTORY -> VICTORY
-        MascotMotion.DEFEAT -> DEFEAT
-    }
-}
-
-private fun mascotName(context: Context): String =
-    context.getSharedPreferences("son_harf_mascot", Context.MODE_PRIVATE)
-        .getString("name", "Dostum") ?: "Dostum"
-
-private fun setMascotName(context: Context, value: String) {
-    context.getSharedPreferences("son_harf_mascot", Context.MODE_PRIVATE)
-        .edit().putString("name", value.take(18)).apply()
-}
+private const val MASCOT_REFERENCE_IMAGE =
+    "https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_105103_a34c7b6a-3fef-4ac9-a9f2-d76040d05b0b.png"
 
 private data class MascotAnchor(val x: Dp, val y: Dp)
 
+private suspend fun loadTransparentMascot(): Bitmap? = withContext(Dispatchers.IO) {
+    runCatching {
+        val original = URL(MASCOT_REFERENCE_IMAGE).openStream().use(BitmapFactory::decodeStream)
+            ?: return@runCatching null
+        val bitmap = original.copy(Bitmap.Config.ARGB_8888, true)
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        for (i in pixels.indices) {
+            val c = pixels[i]
+            val r = android.graphics.Color.red(c)
+            val g = android.graphics.Color.green(c)
+            val b = android.graphics.Color.blue(c)
+            val max = maxOf(r, g, b)
+            val min = minOf(r, g, b)
+            val spread = max - min
+            val grayStudioBackground = spread < 42 && max > 118
+            val veryLightNeutral = spread < 65 && max > 205
+            if (grayStudioBackground || veryLightNeutral) {
+                pixels[i] = c and 0x00FFFFFF
+            }
+        }
+        bitmap.setPixels(pixels, 0, width, 0, 0, width, height)
+        bitmap
+    }.getOrNull()
+}
+
 @Composable
 internal fun MascotFloatingOverlay(modifier: Modifier = Modifier) {
-    val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
-    var name by remember { mutableStateOf(mascotName(context)) }
-    var renameOpen by remember { mutableStateOf(false) }
-    var renameValue by remember { mutableStateOf(name) }
     var lastReactionKey by remember { mutableStateOf("") }
     var roamingIndex by remember { mutableIntStateOf(0) }
     val motion = MascotRuntime.motion
+    val mascotBitmap by produceState<Bitmap?>(initialValue = null) {
+        value = loadTransparentMascot()
+    }
 
     LaunchedEffect(Unit) {
         MascotRuntime.react(MascotMotion.GREETING)
-        delay(5200)
+        delay(2600)
         MascotRuntime.react(MascotMotion.IDLE)
     }
 
     LaunchedEffect(motion) {
         if (motion == MascotMotion.IDLE) {
             while (true) {
-                delay(7000)
-                roamingIndex = (roamingIndex + 1) % 4
+                delay(3900)
+                roamingIndex = (roamingIndex + 1) % 5
             }
         }
     }
@@ -178,137 +189,85 @@ internal fun MascotFloatingOverlay(modifier: Modifier = Modifier) {
         }
     }
 
-    BoxWithConstraints(modifier) {
-        val mascotWidth = if (maxWidth < 390.dp) 82.dp else 96.dp
-        val mascotHeight = mascotWidth + 30.dp
+    BoxWithConstraints(modifier.fillMaxSize()) {
+        val size = if (maxWidth < 390.dp) 92.dp else 108.dp
         val side = 8.dp
-        val rightX = (maxWidth - mascotWidth - side).coerceAtLeast(side)
         val leftX = side
-        val safeBottom = (maxHeight - mascotHeight - 104.dp).coerceAtLeast(110.dp)
-        val upperY = 86.dp
-        val midY = (maxHeight / 2 - mascotHeight / 2).coerceIn(130.dp, safeBottom)
-        val lowerY = (safeBottom - 56.dp).coerceAtLeast(midY)
+        val centerX = ((maxWidth - size) / 2).coerceAtLeast(side)
+        val rightX = (maxWidth - size - side).coerceAtLeast(side)
+        val walkingY = (maxHeight - size - 96.dp).coerceAtLeast(150.dp)
+        val upperY = (maxHeight * 0.60f).coerceAtMost(walkingY)
 
-        val idleAnchors = listOf(
-            MascotAnchor(rightX, upperY),
-            MascotAnchor(rightX, midY),
-            MascotAnchor(leftX, midY),
-            MascotAnchor(rightX, lowerY),
+        val anchors = listOf(
+            MascotAnchor(leftX, walkingY),
+            MascotAnchor(centerX, walkingY),
+            MascotAnchor(rightX, walkingY),
+            MascotAnchor(centerX, upperY),
+            MascotAnchor(leftX, walkingY),
         )
 
         val target = when (motion) {
-            MascotMotion.GREETING -> MascotAnchor(rightX, upperY)
-            MascotMotion.THINKING -> MascotAnchor(rightX, midY)
-            MascotMotion.CRITICAL -> MascotAnchor(leftX, midY)
-            MascotMotion.VICTORY -> MascotAnchor(rightX, lowerY)
-            MascotMotion.DEFEAT -> MascotAnchor(leftX, midY)
-            MascotMotion.IDLE -> idleAnchors[roamingIndex % idleAnchors.size]
+            MascotMotion.GREETING -> MascotAnchor(rightX, walkingY)
+            MascotMotion.THINKING -> MascotAnchor(rightX, upperY)
+            MascotMotion.CRITICAL -> MascotAnchor(leftX, upperY)
+            MascotMotion.VICTORY -> MascotAnchor(centerX, walkingY)
+            MascotMotion.DEFEAT -> MascotAnchor(leftX, walkingY)
+            MascotMotion.IDLE -> anchors[roamingIndex % anchors.size]
         }
 
-        val x by animateDpAsState(target.x, tween(1500), label = "mascot-x")
-        val y by animateDpAsState(target.y, tween(1500), label = "mascot-y")
-
-        Column(
-            modifier = Modifier
-                .offset(x = x, y = y)
-                .width(mascotWidth),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Surface(
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White.copy(alpha = 0.92f),
-                border = BorderStroke(1.dp, Color(0xFFB9E8F8)),
-                shadowElevation = 3.dp,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { renameValue = name; renameOpen = true },
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    AndroidView(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                        factory = { ctx ->
-                            VideoView(ctx).apply {
-                                setOnPreparedListener { mp ->
-                                    mp.isLooping = true
-                                    start()
-                                }
-                                setVideoURI(Uri.parse(MascotMedia.url(motion)))
-                            }
-                        },
-                        update = { view ->
-                            val tag = motion.name
-                            if (view.tag != tag) {
-                                view.tag = tag
-                                view.setVideoURI(Uri.parse(MascotMedia.url(motion)))
-                                view.setOnPreparedListener { mp ->
-                                    mp.isLooping = motion == MascotMotion.IDLE
-                                    view.start()
-                                }
-                            }
-                        },
-                    )
-                    Row(
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(name, color = SonHarfText, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                        Spacer(Modifier.width(2.dp))
-                        Icon(Icons.Rounded.Edit, null, tint = SonHarfMuted, modifier = Modifier.size(9.dp))
-                    }
-                }
-            }
-
-            if (motion != MascotMotion.IDLE) {
-                Spacer(Modifier.height(4.dp))
-                Surface(
-                    shape = RoundedCornerShape(11.dp),
-                    color = Color.White.copy(alpha = 0.96f),
-                    border = BorderStroke(1.dp, Color(0xFFD9F0F8)),
-                ) {
-                    Text(
-                        MascotRuntime.message,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                        color = SonHarfText,
-                        fontSize = 8.sp,
-                        lineHeight = 10.sp,
-                        textAlign = TextAlign.Center,
-                    )
-                }
-            }
+        val previousIndex = (roamingIndex - 1 + anchors.size) % anchors.size
+        val facingRight = if (motion == MascotMotion.IDLE) {
+            target.x >= anchors[previousIndex].x
+        } else {
+            target.x >= centerX
         }
-    }
 
-    if (renameOpen) {
-        AlertDialog(
-            onDismissRequest = { renameOpen = false },
-            title = { Text(if (SonHarfUiState.language == "en") "Mascot name" else "Maskotunun adı") },
-            text = {
-                OutlinedTextField(
-                    value = renameValue,
-                    onValueChange = { renameValue = it.take(18) },
-                    singleLine = true,
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    val clean = renameValue.trim().ifBlank {
-                        if (SonHarfUiState.language == "en") "Buddy" else "Dostum"
-                    }
-                    setMascotName(context, clean)
-                    name = clean
-                    renameOpen = false
-                }) {
-                    Text(if (SonHarfUiState.language == "en") "Save" else "Kaydet")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { renameOpen = false }) {
-                    Text(if (SonHarfUiState.language == "en") "Cancel" else "Vazgeç")
-                }
-            },
+        val x by animateDpAsState(
+            targetValue = target.x,
+            animationSpec = tween(durationMillis = 2300, easing = LinearEasing),
+            label = "mascot-walk-x",
         )
+        val y by animateDpAsState(
+            targetValue = target.y,
+            animationSpec = tween(durationMillis = 900),
+            label = "mascot-walk-y",
+        )
+
+        val step = rememberInfiniteTransition(label = "mascot-steps")
+        val bob by step.animateFloat(
+            initialValue = 0f,
+            targetValue = -7f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(170, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "mascot-step-bob",
+        )
+        val lean by step.animateFloat(
+            initialValue = -1.5f,
+            targetValue = 1.5f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(340, easing = LinearEasing),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "mascot-step-lean",
+        )
+
+        mascotBitmap?.let { bmp ->
+            Image(
+                bitmap = bmp.asImageBitmap(),
+                contentDescription = "Son Harf mascot",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier
+                    .offset(x = x, y = y)
+                    .size(size)
+                    .graphicsLayer {
+                        scaleX = if (facingRight) 1f else -1f
+                        translationY = if (motion == MascotMotion.IDLE) bob else bob * 0.45f
+                        rotationZ = if (motion == MascotMotion.IDLE) lean else 0f
+                        transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0.5f, 0.88f)
+                    },
+            )
+        }
     }
 }
