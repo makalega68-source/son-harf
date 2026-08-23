@@ -3,6 +3,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 replacements = {
+    "app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt": {
+        "private val ClassicBg = Color(0xFFF7FBFF)": "private val ClassicBg = Color(0xFFF4FBFF)",
+        "private val ClassicBgDeep = Color(0xFFE8F6FF)": "private val ClassicBgDeep = Color(0xFFEAF8FF)",
+        "private val ClassicPanel2 = Color(0xFFEAF7FF)": "private val ClassicPanel2 = Color(0xFFEAF8FF)",
+        "private val ClassicBorder = Color(0xFFB9E5F8)": "private val ClassicBorder = Color(0xFFB9E8F8)",
+        "private val ClassicGold = Color(0xFF56BDE8)": "private val ClassicGold = Color(0xFF24AEE4)",
+        "private val ClassicGoldSoft = Color(0xFF299FD3)": "private val ClassicGoldSoft = Color(0xFF1799D0)",
+        "private val ClassicCream = Color(0xFF16324A)": "private val ClassicCream = Color(0xFF173B57)",
+        "private val ClassicText = Color(0xFF16324A)": "private val ClassicText = Color(0xFF173B57)",
+        "private val ClassicMuted = Color(0xFF698296)": "private val ClassicMuted = Color(0xFF6D879A)",
+        "private val ClassicGreen = Color(0xFF77A878)": "private val ClassicGreen = Color(0xFF32C985)",
+        "private val ClassicBlue = Color(0xFF43B6E8)": "private val ClassicBlue = Color(0xFF38C7F4)",
+        "private val ClassicRed = Color(0xFFB66A68)": "private val ClassicRed = Color(0xFFFF7891)",
+        "contentColor = Color(0xFF2A1E0D)": "contentColor = Color.White",
+    },
     "app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt": {
         "private val TGbg = Color(0xFFF7FBFF)": "private val TGbg = Color(0xFFF4FBFF)",
         "private val TGpanel2 = Color(0xFFEAF7FF)": "private val TGpanel2 = Color(0xFFEAF8FF)",
@@ -33,6 +48,9 @@ replacements = {
     "app/src/main/java/com/sonharf/game/EconomyShopScreen.kt": {
         "Brush.verticalGradient(listOf(Color(0xFF040717), SonHarfBg, Color(0xFF070C1D)))": "Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))",
         "color = Color(0xFF122840)": "color = Color(0xFFEAF8FF)",
+    },
+    "app/src/main/java/com/sonharf/game/RewardCenterScreen.kt": {
+        "contentColor = Color(0xFF171000)": "contentColor = Color.White",
     },
     "app/src/main/java/com/sonharf/game/LeaderboardExperience.kt": {
         "Brush.linearGradient(listOf(Color(0xFFB784FF), SonHarfPurple, Color(0xFF392071)))": "Brush.linearGradient(listOf(Color(0xFF8DE1FA), SonHarfBlue, Color(0xFF157FB0)))",
