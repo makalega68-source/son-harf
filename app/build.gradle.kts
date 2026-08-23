@@ -17,7 +17,7 @@ val generateSonHarfLogo = tasks.register("generateSonHarfLogo") {
         val target = outputFile.get().asFile
         target.parentFile.mkdirs()
         val encoded = inputFile.asFile.readText().filterNot { it.isWhitespace() }
-        target.writeBytes(Base64.getDecoder().decode(encoded))
+        target.writeBytes(Base64.getMimeDecoder().decode(encoded))
     }
 }
 
