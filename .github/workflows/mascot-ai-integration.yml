@@ -1,0 +1,72 @@
+name: Mascot AI Integration
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/mascot-ai-integration.yml'
+      - 'ci/mascot-ai-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download approved mascot animation assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p app/src/main/res/raw
+          curl -fL 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_110304_5d02ea3d-c6bf-42c4-a7bc-d153681c3c1e.mp4' -o app/src/main/res/raw/mascot_idle.mp4
+          curl -fL 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_121438_5b656a22-4f11-4d63-96e8-2f1fdb0c7cdb.mp4' -o app/src/main/res/raw/mascot_greeting.mp4
+          curl -fL 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_112222_ed8b10cc-89d9-4ae2-89e6-cfb58a4206dd.mp4' -o app/src/main/res/raw/mascot_thinking.mp4
+          curl -fL 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_112222_bf55bdfc-6d34-4db2-8cae-bdcfb8b2f418.mp4' -o app/src/main/res/raw/mascot_critical.mp4
+          curl -fL 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_112222_ed6b58fe-16bb-4156-b2a7-b6fefe66308a.mp4' -o app/src/main/res/raw/mascot_victory.mp4
+          curl -fL 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260823_121438_cc6225c9-8c5e-4477-b7ff-47a9b74defbb.mp4' -o app/src/main/res/raw/mascot_defeat.mp4
+
+      - name: Apply isolated mascot integration
+        run: python3 scripts/apply_mascot_ai_integration.py
+
+      - name: Commit integration checkpoint
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/res/raw app/src/main/java/com/sonharf/game/MascotSystem.kt app/src/main/java/com/sonharf/game/MascotPolicy.kt app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt app/build.gradle.kts
+          git diff --cached --quiet || git commit -m 'Integrate reserved-rail AI mascot v0.8.7'
+          git push
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Test and build debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Publish mascot AI APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/SonHarf-Mascot-AI-v0.8.7.apk
+          printf 'commit=%s\nbuilt_at=%s\nvariant=debug\nmascot_ai=enabled\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/MASCOT_AI_BUILD_OK.txt
+          git add dist/SonHarf-Mascot-AI-v0.8.7.apk dist/MASCOT_AI_BUILD_OK.txt
+          git diff --cached --quiet || git commit -m 'Publish Son Harf Mascot AI APK [skip ci]'
+          git push
