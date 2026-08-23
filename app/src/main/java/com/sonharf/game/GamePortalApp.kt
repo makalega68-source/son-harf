@@ -1,7 +1,16 @@
 package com.sonharf.game
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.weight
+import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
 // Kept for legacy HomeLobby.kt compile compatibility. The app no longer routes to that shell.
 internal val PortalBg = Color(0xFFF4FBFF)
@@ -14,11 +23,20 @@ internal val PortalGreen = Color(0xFF32C985)
 internal val PortalRed = Color(0xFFFF7891)
 
 /**
- * Single premium shell. ClassicPremiumApp owns the real authenticated profile,
- * league, rewards, social, shop and gameplay navigation; keeping a second static
- * HomeLobby caused the placeholder dashboard seen in production.
+ * Single premium shell. The mascot owns a reserved rail instead of floating above controls,
+ * so it cannot cover gameplay, buttons, word input, score or navigation.
  */
 @Composable
 fun GamePortalApp() {
-    ClassicPremiumApp()
+    if (!MascotPolicy.ENABLED) {
+        ClassicPremiumApp()
+        return
+    }
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val railWidth = if (maxWidth < 420.dp) 86.dp else 104.dp
+        Row(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxHeight()) { ClassicPremiumApp() }
+            MascotReservedRail(Modifier.width(railWidth).fillMaxHeight())
+        }
+    }
 }
