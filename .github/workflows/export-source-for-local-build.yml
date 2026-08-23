@@ -1,0 +1,25 @@
+name: Export Source For Local Build
+
+on:
+  push:
+    branches:
+      - mascot-real-3d-localbuild-20260823
+
+permissions:
+  contents: read
+
+jobs:
+  export-source:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pack source
+        run: |
+          mkdir -p export
+          tar --exclude=.git --exclude=export -czf export/son-harf-source.tgz .
+      - name: Upload source
+        uses: actions/upload-artifact@v4
+        with:
+          name: son-harf-source
+          path: export/son-harf-source.tgz
+          retention-days: 1
