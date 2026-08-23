@@ -24,7 +24,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
-import com.sonharf.game.data.getGrowthDashboard
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 
