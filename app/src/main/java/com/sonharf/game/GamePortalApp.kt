@@ -17,15 +17,16 @@ internal val PortalGreen = Color(0xFF32C985)
 internal val PortalRed = Color(0xFFFF7891)
 
 /**
- * Single premium shell with a free-moving mascot overlay.
- * The mascot moves only between predefined safe anchors and never owns a permanent rail.
+ * Single premium shell.
+ * The old bitmap/video mascot path is removed from production rendering.
+ * The 3D layer becomes visible only after a verified rigged skeletal GLB is bundled.
  */
 @Composable
 fun GamePortalApp() {
     Box(Modifier.fillMaxSize()) {
         ClassicPremiumApp()
-        if (MascotPolicy.ENABLED) {
-            MascotFloatingOverlay(Modifier.fillMaxSize())
+        if (MascotPolicy.ENABLED && MascotPolicy.SKELETAL_ASSET_READY) {
+            Mascot3DLayer(Modifier.fillMaxSize())
         }
     }
 }
