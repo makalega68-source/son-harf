@@ -1,5 +1,9 @@
 package com.sonharf.game
 
+import java.io.File
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.security.MessageDigest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -13,6 +17,33 @@ class MascotPolicyTest {
         assertTrue(MascotPolicy.MODEL_ASSET.endsWith(".glb"))
         assertEquals(781840, MascotPolicy.MODEL_SIZE_BYTES)
         assertEquals(64, MascotPolicy.MODEL_SHA256.length)
+    }
+
+    @Test fun bundledGlbIsExactSkinnedAssetWithExpectedClips() {
+        val candidates = listOf(
+            File("src/main/assets/${MascotPolicy.MODEL_ASSET}"),
+            File("app/src/main/assets/${MascotPolicy.MODEL_ASSET}"),
+        )
+        val file = candidates.firstOrNull { it.isFile }
+        assertTrue("Bundled mascot GLB is missing", file != null)
+        val bytes = requireNotNull(file).readBytes()
+        assertEquals(MascotPolicy.MODEL_SIZE_BYTES, bytes.size)
+        assertEquals("glTF", bytes.copyOfRange(0, 4).toString(Charsets.US_ASCII))
+
+        val sha = MessageDigest.getInstance("SHA-256")
+            .digest(bytes)
+            .joinToString("") { "%02x".format(it) }
+        assertEquals(MascotPolicy.MODEL_SHA256, sha)
+
+        val jsonLength = ByteBuffer.wrap(bytes, 12, 4).order(ByteOrder.LITTLE_ENDIAN).int
+        val json = bytes.copyOfRange(20, 20 + jsonLength).toString(Charsets.UTF_8)
+        assertTrue(json.contains("\"skins\":["))
+        assertTrue(json.contains("\"joints\":["))
+        assertTrue(json.contains("\"JOINTS_0\""))
+        assertTrue(json.contains("\"WEIGHTS_0\""))
+        MascotAnimationRegistry.all.forEach { definition ->
+            assertTrue("Missing GLB clip ${definition.clipName}", json.contains("\"name\":\"${definition.clipName}\""))
+        }
     }
 
     @Test fun requiredStateMachineMotionsExist() {
