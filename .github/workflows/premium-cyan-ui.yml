@@ -36,7 +36,8 @@ jobs:
           cp app/build/outputs/apk/debug/app-debug.apk dist/SonHarf-Premium-Cyan.apk
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt \
+          git add app/src/main/java/com/sonharf/game/PremiumMasterHome.kt \
+                  app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt \
                   app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt \
                   app/src/main/java/com/sonharf/game/GamePortalApp.kt \
                   app/src/main/java/com/sonharf/game/SocialExperience.kt \
@@ -45,5 +46,5 @@ jobs:
                   app/src/main/java/com/sonharf/game/LeaderboardExperience.kt \
                   app/src/main/java/com/sonharf/game/BilBakalimExcitementScreen.kt \
                   dist/SonHarf-Premium-Cyan.apk
-          git diff --cached --quiet || git commit -m "Apply premium cyan UI across game surfaces [skip ci]"
+          git diff --cached --quiet || git commit -m "Apply premium master home UI [skip ci]"
           git push
