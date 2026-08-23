@@ -76,4 +76,51 @@ for rel, mapping in replacements.items():
         path.write_text(text, encoding="utf-8")
         changed.append(rel)
 
+classic_path = ROOT / "app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt"
+classic = classic_path.read_text(encoding="utf-8")
+classic_original = classic
+if "import com.sonharf.game.data.getLeaderboardV2" not in classic:
+    classic = classic.replace("import com.sonharf.game.data.getAdminDashboard\n", "import com.sonharf.game.data.getAdminDashboard\nimport com.sonharf.game.data.getLeaderboardV2\n")
+if "item { ClassicWeeklyTopThree(backend) }" not in classic:
+    classic = classic.replace("        item { ClassicStats(growth) }", "        item { ClassicWeeklyTopThree(backend) }\n        item { ClassicStats(growth) }")
+if "private fun ClassicWeeklyTopThree" not in classic:
+    classic += r'''
+
+@Composable
+private fun ClassicWeeklyTopThree(backend: OnlineGameBackend?) {
+    var leaders by remember { mutableStateOf<List<com.sonharf.game.data.LeaderboardV2Row>>(emptyList()) }
+    LaunchedEffect(backend) {
+        leaders = runCatching { backend?.getLeaderboardV2(SonHarfUiState.language, "week", 3).orEmpty() }.getOrDefault(emptyList())
+    }
+    if (leaders.isEmpty()) return
+    Card(
+        colors = CardDefaults.cardColors(containerColor = ClassicPanel),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, ClassicBorder),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(sh("🏆 HAFTANIN EN İYİ 3 OYUNCUSU", "🏆 TOP 3 THIS WEEK"), color = ClassicText, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Text(sh("CANLI", "LIVE"), color = ClassicGreen, fontWeight = FontWeight.Black, fontSize = 9.sp)
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                leaders.take(3).forEachIndexed { index, row ->
+                    Surface(Modifier.weight(1f), shape = RoundedCornerShape(14.dp), color = ClassicPanel2) {
+                        Column(Modifier.padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(listOf("🥇", "🥈", "🥉").getOrElse(index) { "#${index + 1}" }, fontSize = 20.sp)
+                            Text(row.displayName, color = ClassicText, fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
+                            Text("${row.wins}W • ${row.winRate.toInt()}%", color = ClassicMuted, fontSize = 8.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+'''
+if classic != classic_original:
+    classic_path.write_text(classic, encoding="utf-8")
+    if "app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt" not in changed:
+        changed.append("app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt")
+
 print("premium cyan ui updated:", ", ".join(changed) if changed else "no changes")
