@@ -1,10 +1,10 @@
 package com.sonharf.game
 
-import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MascotPolicyTest {
-    @Test fun mascotIsPermanentlyDisabled() {
-        assertFalse(MascotPolicy.ENABLED)
+    @Test fun approvedMascotIsEnabled() {
+        assertTrue(MascotPolicy.ENABLED)
     }
 }
