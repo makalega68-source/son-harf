@@ -6,11 +6,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MascotPolicyTest {
-    @Test fun mascotFeatureIsEnabledButFakeFallbackIsForbidden() {
+    @Test fun verifiedMascotIsEnabledAndFakeFallbackIsForbidden() {
         assertTrue(MascotPolicy.ENABLED)
         assertFalse(MascotPolicy.ALLOW_2D_OR_VIDEO_FALLBACK)
-        assertFalse(MascotPolicy.SKELETAL_ASSET_READY)
+        assertTrue(MascotPolicy.SKELETAL_ASSET_READY)
         assertTrue(MascotPolicy.MODEL_ASSET.endsWith(".glb"))
+        assertEquals(781840, MascotPolicy.MODEL_SIZE_BYTES)
+        assertEquals(64, MascotPolicy.MODEL_SHA256.length)
     }
 
     @Test fun requiredStateMachineMotionsExist() {
@@ -29,6 +31,13 @@ class MascotPolicyTest {
             MascotMotion.RUN,
         )
         assertEquals(expected, MascotAnimationRegistry.all.map { it.motion }.toSet())
+    }
+
+    @Test fun clipNamesMatchVerifiedGlbContract() {
+        assertEquals(
+            setOf("Idle", "Walk", "Turn_Left", "Turn_Right", "Look_At_Player", "Greeting", "Thinking", "Critical", "Victory", "Defeat", "Sit", "Run"),
+            MascotAnimationRegistry.all.map { it.clipName }.toSet(),
+        )
     }
 
     @Test fun advancedAnimationsUnlockOnTenLevelSteps() {
