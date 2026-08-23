@@ -19,6 +19,9 @@ replacements = {
         "contentColor = Color(0xFF2A1E0D)": "contentColor = Color.White",
         "ClassicScreen.HOME -> ClassicHome(": "ClassicScreen.HOME -> PremiumMasterHome(",
     },
+    "app/src/main/java/com/sonharf/game/PremiumMasterHome.kt": {
+        "val rating = runCatching { profile?.rating ?: 1000 }.getOrDefault(1000)": "val rating = 1000 + (profile?.wins ?: 0) * 18",
+    },
     "app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt": {
         "private val TGbg = Color(0xFFF7FBFF)": "private val TGbg = Color(0xFFF4FBFF)",
         "private val TGpanel2 = Color(0xFFEAF7FF)": "private val TGpanel2 = Color(0xFFEAF8FF)",
