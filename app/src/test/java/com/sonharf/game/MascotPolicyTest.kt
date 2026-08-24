@@ -41,6 +41,8 @@ class MascotPolicyTest {
         assertTrue(json.contains("\"joints\":["))
         assertTrue(json.contains("\"JOINTS_0\""))
         assertTrue(json.contains("\"WEIGHTS_0\""))
+        assertFalse("Dark base-color texture must not return", json.contains("\"baseColorTexture\""))
+        assertTrue("White body material is missing", json.contains("\"baseColorFactor\":[0.97,0.985,1.0,1.0]"))
         MascotAnimationRegistry.all.forEach { definition ->
             assertTrue("Missing GLB clip ${definition.clipName}", json.contains("\"name\":\"${definition.clipName}\""))
         }
