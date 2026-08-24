@@ -123,8 +123,14 @@ internal fun PremiumMasterHome(
 @Composable
 private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto?, isAdmin: Boolean, onProfile: () -> Unit, onAdmin: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Surface(modifier = Modifier.size(58.dp).clickable(onClick = onProfile), shape = CircleShape, color = MasterSky, border = BorderStroke(3.dp, MasterBlue2)) {
-            Box(contentAlignment = Alignment.Center) { Text(profile?.displayName?.take(1)?.uppercase() ?: "S", color = MasterInk, fontWeight = FontWeight.Black, fontSize = 25.sp) }
+        Box(Modifier.clickable(onClick = onProfile)) {
+            ProfilePhotoAvatarWithGender(
+                avatarPath = profile?.avatarPath,
+                gender = profile?.gender,
+                name = profile?.displayName ?: sh("Oyuncu", "Player"),
+                size = 58.dp,
+                accent = MasterBlue2,
+            )
         }
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
