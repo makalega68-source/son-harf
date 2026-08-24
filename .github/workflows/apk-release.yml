@@ -1,0 +1,42 @@
+name: Stable APK Release
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/apk-release.yml'
+      - 'ci/apk-release-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+      - name: Build APK
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
+      - name: Stage APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Guncel.apk
+      - name: Create or update stable release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="mobile-latest"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" SonHarf-Guncel.apk --clobber
+          else
+            gh release create "$TAG" SonHarf-Guncel.apk --title "Son Harf Güncel APK" --notes "Son Harf için güncel test APK'sı. Bu asset aynı sabit bağlantı üzerinden yenilenir."
+          fi
