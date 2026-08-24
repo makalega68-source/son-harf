@@ -15,7 +15,7 @@ class MascotPolicyTest {
         assertFalse(MascotPolicy.ALLOW_2D_OR_VIDEO_FALLBACK)
         assertTrue(MascotPolicy.SKELETAL_ASSET_READY)
         assertTrue(MascotPolicy.MODEL_ASSET.endsWith(".glb"))
-        assertEquals(781840, MascotPolicy.MODEL_SIZE_BYTES)
+        assertEquals(781848, MascotPolicy.MODEL_SIZE_BYTES)
         assertEquals(64, MascotPolicy.MODEL_SHA256.length)
     }
 
