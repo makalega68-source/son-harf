@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "primaryColor": "#24AEE4",
+  "secondaryColor": "#38C7F4",
+  "backgroundColor": "#F4FBFF",
+  "surfaceColor": "#FFFFFF",
+  "surfaceVariantColor": "#EAF8FF",
+  "textColor": "#173B57",
+  "mutedColor": "#6D879A",
+  "homeWordArenaBadgeTr": "CANLI KELİME ARENASI",
+  "homeWordArenaBadgeEn": "LIVE WORD ARENA",
+  "homeWordArenaSubtitleTr": "Kelimenin son harfiyle zafer senin!",
+  "homeWordArenaSubtitleEn": "Victory with the last letter!",
+  "tournamentMinutes": 18,
+  "brandLogoBase64Url": "https://raw.githubusercontent.com/makalega68-source/son-harf/main/app/src/main/assets/son_harf_brand_logo.b64"
+}
