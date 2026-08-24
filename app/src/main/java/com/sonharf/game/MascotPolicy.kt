@@ -11,6 +11,6 @@ internal object MascotPolicy {
     const val ALLOW_2D_OR_VIDEO_FALLBACK = false
     const val SKELETAL_ASSET_READY = true
     const val MODEL_ASSET = "models/son_harf_white_pet_rigged.glb"
-    const val MODEL_SHA256 = "9efdcd52345746282af36cd4b9c05759662e2f058ceab0f1d4af343b1751b7a1"
-    const val MODEL_SIZE_BYTES = 781840
+    const val MODEL_SHA256 = "27779dcb3a201013c47dc4a5099540a17984f805c998984f45ff84cf34426a41"
+    const val MODEL_SIZE_BYTES = 781848
 }

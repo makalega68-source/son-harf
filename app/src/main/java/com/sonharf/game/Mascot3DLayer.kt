@@ -40,8 +40,8 @@ import kotlin.random.Random
 /**
  * Real-time mascot renderer. GLB/glTF + skin/skeleton animation only.
  *
- * The SceneView is intentionally limited to a small moving viewport instead of a full-screen touch
- * surface. Navigation, score, timer, word input and primary buttons remain outside its hit area.
+ * Menu behavior is intentionally calm: the pet spends most of its time idle or watching the
+ * player and only occasionally makes a short move. Match behavior is driven by MascotRuntime.
  */
 @Composable
 internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
@@ -65,33 +65,34 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
         MascotRuntime.rename(preferences.getString("name", "Dostum") ?: "Dostum")
     }
 
-    /*
-     * Ambient menu behavior deliberately avoids a fixed choreography. The pet sometimes stays put,
-     * sometimes looks at the player, sometimes rests, and only occasionally crosses the whole safe
-     * rail. This is still deterministic game logic (no AI key/network inference), but it behaves
-     * like an animal choosing between context-safe actions instead of replaying 0 -> 1 -> 2 forever.
-     */
     LaunchedEffect(requestedMotion, inActiveMatch, level) {
         locomotionMotion = MascotMotion.IDLE
         if (requestedMotion != MascotMotion.IDLE || inActiveMatch) return@LaunchedEffect
 
         while (true) {
-            delay(Random.nextLong(2600L, 6501L))
+            // A real pet should not patrol continuously. Long calm pauses are the default.
+            delay(Random.nextLong(6500L, 15001L))
 
             when (Random.nextInt(100)) {
-                in 0..17 -> {
+                in 0..39 -> {
                     locomotionMotion = MascotMotion.LOOK_AT_PLAYER
-                    delay(Random.nextLong(850L, 1701L))
+                    delay(Random.nextLong(1200L, 2601L))
                     locomotionMotion = MascotMotion.IDLE
                 }
 
-                in 18..29 -> {
+                in 40..59 -> {
+                    // Do nothing visible for another short interval. This prevents clockwork motion.
+                    locomotionMotion = MascotMotion.IDLE
+                    delay(Random.nextLong(3000L, 7501L))
+                }
+
+                in 60..69 -> {
                     if (level >= 10) {
                         locomotionMotion = MascotMotion.SIT
-                        delay(Random.nextLong(1700L, 3301L))
+                        delay(Random.nextLong(2600L, 5201L))
                     } else {
                         locomotionMotion = MascotMotion.LOOK_AT_PLAYER
-                        delay(Random.nextLong(700L, 1301L))
+                        delay(Random.nextLong(1000L, 2201L))
                     }
                     locomotionMotion = MascotMotion.IDLE
                 }
@@ -103,31 +104,21 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
                     val distance = abs(next - roamingIndex)
 
                     locomotionMotion = if (movingRight) MascotMotion.TURN_RIGHT else MascotMotion.TURN_LEFT
-                    delay(Random.nextLong(360L, 651L))
+                    delay(Random.nextLong(550L, 951L))
                     facingRight = movingRight
 
-                    // Running is intentionally rare and only makes sense for a long crossing.
-                    val useRun = level >= 20 && distance > 1 && Random.nextInt(100) < 8
+                    // Running is a rare high-level flourish, never the normal roaming behavior.
+                    val useRun = level >= 20 && distance > 1 && Random.nextInt(100) < 5
                     locomotionMotion = if (useRun) MascotMotion.RUN else MascotMotion.WALK
                     roamingIndex = next
                     delay(
-                        if (useRun) {
-                            Random.nextLong(900L, 1351L)
-                        } else {
-                            Random.nextLong(1650L, 2601L) + (distance - 1) * 350L
-                        },
+                        if (useRun) Random.nextLong(1100L, 1501L)
+                        else Random.nextLong(2100L, 3301L) + (distance - 1) * 500L,
                     )
 
-                    when (Random.nextInt(100)) {
-                        in 0..21 -> {
-                            locomotionMotion = MascotMotion.LOOK_AT_PLAYER
-                            delay(Random.nextLong(700L, 1451L))
-                        }
-
-                        in 22..31 -> if (level >= 10) {
-                            locomotionMotion = MascotMotion.SIT
-                            delay(Random.nextLong(1200L, 2401L))
-                        }
+                    if (Random.nextInt(100) < 35) {
+                        locomotionMotion = MascotMotion.LOOK_AT_PLAYER
+                        delay(Random.nextLong(1000L, 2301L))
                     }
                     locomotionMotion = MascotMotion.IDLE
                 }
@@ -143,18 +134,19 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
     val animation = MascotAnimationRegistry.definition(effectiveMotion)
 
     BoxWithConstraints(modifier.fillMaxSize()) {
+        // The previous 112-132 dp viewport made the animal read like a tiny insect on real phones.
         val viewport = when {
-            inActiveMatch && maxWidth < 390.dp -> 92.dp
-            inActiveMatch -> 106.dp
-            maxWidth < 390.dp -> 112.dp
-            else -> 132.dp
+            inActiveMatch && maxWidth < 390.dp -> 118.dp
+            inActiveMatch -> 132.dp
+            maxWidth < 390.dp -> 178.dp
+            else -> 198.dp
         }
-        val side = 10.dp
+        val side = 8.dp
         val left = side
         val middle = ((maxWidth - viewport) / 2).coerceAtLeast(side)
         val right = (maxWidth - viewport - side).coerceAtLeast(side)
-        val bottomExclusion = if (inActiveMatch) 170.dp else 126.dp
-        val floor = (maxHeight - viewport - bottomExclusion).coerceAtLeast(180.dp)
+        val bottomExclusion = if (inActiveMatch) 178.dp else 132.dp
+        val floor = (maxHeight - viewport - bottomExclusion).coerceAtLeast(150.dp)
         val targetX = if (inActiveMatch) {
             right
         } else {
@@ -166,11 +158,11 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
         }
         val targetY = when (requestedMotion) {
             MascotMotion.THINKING,
-            MascotMotion.CRITICAL -> (floor - 62.dp).coerceAtLeast(150.dp)
+            MascotMotion.CRITICAL -> (floor - 54.dp).coerceAtLeast(130.dp)
             else -> floor
         }
 
-        val moveDuration = if (effectiveMotion == MascotMotion.RUN) 1150 else 2100
+        val moveDuration = if (effectiveMotion == MascotMotion.RUN) 1250 else 2700
         val x by animateDpAsState(
             targetValue = targetX,
             animationSpec = tween(durationMillis = moveDuration, easing = LinearEasing),
@@ -186,6 +178,17 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
         val modelLoader = rememberModelLoader(engine)
         val modelInstance = rememberModelInstance(modelLoader, MascotPolicy.MODEL_ASSET)
 
+        val rotationY = when (effectiveMotion) {
+            MascotMotion.LOOK_AT_PLAYER,
+            MascotMotion.GREETING,
+            MascotMotion.THINKING,
+            MascotMotion.CRITICAL,
+            MascotMotion.VICTORY,
+            MascotMotion.DEFEAT,
+            MascotMotion.SIT -> 0f
+            else -> if (facingRight) 80f else -80f
+        }
+
         SceneView(
             modifier = Modifier.offset(x = x, y = y).size(viewport),
             surfaceType = SurfaceType.TextureSurface,
@@ -197,13 +200,13 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
             modelInstance?.let { instance ->
                 ModelNode(
                     modelInstance = instance,
-                    scaleToUnits = 0.82f,
-                    centerOrigin = Position(0f, -1f, 0f),
+                    scaleToUnits = if (inActiveMatch) 0.98f else 1.22f,
+                    centerOrigin = Position(0f, -0.82f, 0f),
                     autoAnimate = false,
                     animationName = animation.clipName,
                     animationLoop = animation.loop,
-                    position = Position(0f, -0.35f, 0f),
-                    rotation = Rotation(y = if (facingRight) 90f else -90f),
+                    position = Position(0f, -0.18f, 0f),
+                    rotation = Rotation(y = rotationY),
                 )
             }
         }
@@ -214,14 +217,14 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
                 renameOpen = true
                 MascotRuntime.react(MascotMotion.LOOK_AT_PLAYER)
             },
-            modifier = Modifier.offset(x = x, y = (y - 22.dp).coerceAtLeast(0.dp)),
+            modifier = Modifier.offset(x = x, y = (y - 24.dp).coerceAtLeast(0.dp)),
             tonalElevation = 2.dp,
             shadowElevation = 2.dp,
         ) {
             Text(
                 text = "${MascotRuntime.petName}  •  Lv $level",
-                modifier = Modifier.offset(x = 6.dp).size(width = viewport - 12.dp, height = 20.dp),
-                fontSize = 9.sp,
+                modifier = Modifier.offset(x = 8.dp).size(width = viewport - 16.dp, height = 22.dp),
+                fontSize = 10.sp,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
             )
@@ -230,14 +233,14 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
         val message = MascotRuntime.message
         if (message.isNotBlank() && requestedMotion != MascotMotion.IDLE) {
             Surface(
-                modifier = Modifier.offset(x = x, y = (y - 48.dp).coerceAtLeast(0.dp)),
+                modifier = Modifier.offset(x = x, y = (y - 52.dp).coerceAtLeast(0.dp)),
                 tonalElevation = 2.dp,
                 shadowElevation = 2.dp,
             ) {
                 Text(
                     text = message,
-                    modifier = Modifier.size(width = viewport, height = 38.dp),
-                    fontSize = 8.sp,
+                    modifier = Modifier.size(width = viewport, height = 40.dp),
+                    fontSize = 9.sp,
                     maxLines = 2,
                 )
             }
