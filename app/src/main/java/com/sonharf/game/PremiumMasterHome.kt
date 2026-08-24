@@ -199,9 +199,10 @@ private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF12A8EE), Color(0xFF0870C9), Color(0xFF064D9B)))).padding(13.dp)) {
             MasterLetterBackdrop()
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("👑", fontSize = 33.sp)
-                Text("SON", color = MasterGold, fontSize = 36.sp, fontWeight = FontWeight.Black, lineHeight = 32.sp)
-                Text("HARF", color = Color.White, fontSize = 46.sp, fontWeight = FontWeight.Black, lineHeight = 42.sp)
+                SonHarfBrandLogo(
+                    modifier = Modifier.padding(top = 2.dp, bottom = 3.dp),
+                    size = 146.dp,
+                )
                 Surface(shape = RoundedCornerShape(18.dp), color = Color(0xFF0E4E96), border = BorderStroke(1.dp, Color.White.copy(.55f))) { Text(sh("CANLI KELİME ARENASI", "LIVE WORD ARENA"), Modifier.padding(horizontal = 12.dp, vertical = 5.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black) }
                 Spacer(Modifier.height(8.dp))
                 Text(sh("Kelimenin son harfiyle zafer senin!", "Victory with the last letter!"), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
