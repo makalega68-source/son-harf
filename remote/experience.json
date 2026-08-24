@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "primaryColor": "#24AEE4",
   "secondaryColor": "#38C7F4",
   "backgroundColor": "#F4FBFF",
@@ -12,5 +12,5 @@
   "homeWordArenaSubtitleTr": "Kelimenin son harfiyle zafer senin!",
   "homeWordArenaSubtitleEn": "Victory with the last letter!",
   "tournamentMinutes": 18,
-  "brandLogoBase64Url": "https://raw.githubusercontent.com/makalega68-source/son-harf/main/app/src/main/assets/son_harf_brand_logo.b64"
+  "brandLogoBase64Url": "https://raw.githubusercontent.com/makalega68-source/son-harf/main/app/src/main/assets/son_harf_brand_logo.b64?v=2"
 }
