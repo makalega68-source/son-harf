@@ -34,6 +34,8 @@ import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
+import kotlin.math.abs
+import kotlin.random.Random
 
 /**
  * Real-time mascot renderer. GLB/glTF + skin/skeleton animation only.
@@ -51,8 +53,7 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
     }
     var renameOpen by remember { mutableStateOf(false) }
     var renameDraft by remember { mutableStateOf("") }
-    var roamingIndex by remember { mutableIntStateOf(0) }
-    var roamCycle by remember { mutableIntStateOf(0) }
+    var roamingIndex by remember { mutableIntStateOf(1) }
     var locomotionMotion by remember { mutableStateOf(MascotMotion.IDLE) }
     var facingRight by remember { mutableStateOf(true) }
 
@@ -64,31 +65,73 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
         MascotRuntime.rename(preferences.getString("name", "Dostum") ?: "Dostum")
     }
 
+    /*
+     * Ambient menu behavior deliberately avoids a fixed choreography. The pet sometimes stays put,
+     * sometimes looks at the player, sometimes rests, and only occasionally crosses the whole safe
+     * rail. This is still deterministic game logic (no AI key/network inference), but it behaves
+     * like an animal choosing between context-safe actions instead of replaying 0 -> 1 -> 2 forever.
+     */
     LaunchedEffect(requestedMotion, inActiveMatch, level) {
         locomotionMotion = MascotMotion.IDLE
         if (requestedMotion != MascotMotion.IDLE || inActiveMatch) return@LaunchedEffect
 
         while (true) {
-            delay(3000)
-            val next = (roamingIndex + 1) % 3
-            val movingRight = next > roamingIndex
-            locomotionMotion = if (movingRight) MascotMotion.TURN_RIGHT else MascotMotion.TURN_LEFT
-            delay(450)
-            facingRight = movingRight
+            delay(Random.nextLong(2600L, 6501L))
 
-            val useRun = level >= 20 && roamCycle % 5 == 4
-            locomotionMotion = if (useRun) MascotMotion.RUN else MascotMotion.WALK
-            roamingIndex = next
-            delay(if (useRun) 1250 else 2200)
+            when (Random.nextInt(100)) {
+                in 0..17 -> {
+                    locomotionMotion = MascotMotion.LOOK_AT_PLAYER
+                    delay(Random.nextLong(850L, 1701L))
+                    locomotionMotion = MascotMotion.IDLE
+                }
 
-            locomotionMotion = MascotMotion.LOOK_AT_PLAYER
-            delay(850)
-            if (level >= 10 && roamCycle % 4 == 3) {
-                locomotionMotion = MascotMotion.SIT
-                delay(1500)
+                in 18..29 -> {
+                    if (level >= 10) {
+                        locomotionMotion = MascotMotion.SIT
+                        delay(Random.nextLong(1700L, 3301L))
+                    } else {
+                        locomotionMotion = MascotMotion.LOOK_AT_PLAYER
+                        delay(Random.nextLong(700L, 1301L))
+                    }
+                    locomotionMotion = MascotMotion.IDLE
+                }
+
+                else -> {
+                    val candidates = (0..2).filter { it != roamingIndex }
+                    val next = candidates.random()
+                    val movingRight = next > roamingIndex
+                    val distance = abs(next - roamingIndex)
+
+                    locomotionMotion = if (movingRight) MascotMotion.TURN_RIGHT else MascotMotion.TURN_LEFT
+                    delay(Random.nextLong(360L, 651L))
+                    facingRight = movingRight
+
+                    // Running is intentionally rare and only makes sense for a long crossing.
+                    val useRun = level >= 20 && distance > 1 && Random.nextInt(100) < 8
+                    locomotionMotion = if (useRun) MascotMotion.RUN else MascotMotion.WALK
+                    roamingIndex = next
+                    delay(
+                        if (useRun) {
+                            Random.nextLong(900L, 1351L)
+                        } else {
+                            Random.nextLong(1650L, 2601L) + (distance - 1) * 350L
+                        },
+                    )
+
+                    when (Random.nextInt(100)) {
+                        in 0..21 -> {
+                            locomotionMotion = MascotMotion.LOOK_AT_PLAYER
+                            delay(Random.nextLong(700L, 1451L))
+                        }
+
+                        in 22..31 -> if (level >= 10) {
+                            locomotionMotion = MascotMotion.SIT
+                            delay(Random.nextLong(1200L, 2401L))
+                        }
+                    }
+                    locomotionMotion = MascotMotion.IDLE
+                }
             }
-            locomotionMotion = MascotMotion.IDLE
-            roamCycle += 1
         }
     }
 
