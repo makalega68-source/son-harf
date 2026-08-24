@@ -41,6 +41,9 @@ private val SonHarfTypography = Typography(
     titleSmall = TextStyle(fontSize = 17.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold),
 )
 
+private fun parseRemoteColor(value: String, fallback: Color): Color =
+    runCatching { Color(android.graphics.Color.parseColor(value)) }.getOrDefault(fallback)
+
 enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
 
 class MainActivity : ComponentActivity() {
@@ -49,21 +52,30 @@ class MainActivity : ComponentActivity() {
         SonHarfPreferences.syncSound(this)
         SonHarfPreferences.syncUi(this)
         WordMeaningRuntime.init(this)
+        RemoteExperience.loadCached(this)
         if (SupabaseProvider.configured && !SonHarfPreferences.rememberLogin(this)) {
             runBlocking { runCatching { SupabaseProvider.client.auth.signOut() } }
         }
         setContent {
+            val remote = RemoteExperience.config
+            val primary = parseRemoteColor(remote.primaryColor, SonHarfBlue)
+            val secondary = parseRemoteColor(remote.secondaryColor, SonHarfCyan)
+            val background = parseRemoteColor(remote.backgroundColor, SonHarfBg)
+            val surface = parseRemoteColor(remote.surfaceColor, SonHarfSurface)
+            val surfaceVariant = parseRemoteColor(remote.surfaceVariantColor, SonHarfSurface2)
+            val text = parseRemoteColor(remote.textColor, SonHarfText)
+
             MaterialTheme(
                 colorScheme = lightColorScheme(
-                    primary = SonHarfBlue,
-                    secondary = SonHarfCyan,
+                    primary = primary,
+                    secondary = secondary,
                     tertiary = SonHarfGreen,
-                    background = SonHarfBg,
-                    surface = SonHarfSurface,
-                    surfaceVariant = SonHarfSurface2,
+                    background = background,
+                    surface = surface,
+                    surfaceVariant = surfaceVariant,
                     onPrimary = Color.White,
-                    onBackground = SonHarfText,
-                    onSurface = SonHarfText,
+                    onBackground = text,
+                    onSurface = text,
                 ),
                 typography = SonHarfTypography,
             ) {
