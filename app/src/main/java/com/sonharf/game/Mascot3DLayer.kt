@@ -186,7 +186,7 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
             MascotMotion.VICTORY,
             MascotMotion.DEFEAT,
             MascotMotion.SIT -> 0f
-            else -> if (facingRight) 42f else -42f
+            else -> if (facingRight) 80f else -80f
         }
 
         SceneView(
