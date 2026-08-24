@@ -117,7 +117,7 @@ object SonHarfPreferences {
     }
 
     fun syncSound(context: Context) = SonHarfSoundFx.setEnabled(soundEnabled(context))
-    fun syncUi(context: Context) { SonHarfUiState.darkMode = darkModeEnabled(context); SonHarfUiState.language = language(context) }
+    fun syncUi(context: Context) { SonHarfUiState.darkMode = darkModeEnabled(context); SonHarfUiState.language = "tr" }
 
     fun hapticTap(context: Context) {
         if (!vibrationEnabled(context)) return

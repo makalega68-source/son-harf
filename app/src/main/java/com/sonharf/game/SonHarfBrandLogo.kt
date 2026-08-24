@@ -21,15 +21,16 @@ fun SonHarfBrandLogo(
     val context = LocalContext.current
     val remoteBytes = RemoteExperience.brandLogoBytes
     val logo = remember(remoteBytes) {
-        runCatching {
-            val bytes = remoteBytes ?: run {
-                val encoded = context.assets.open("son_harf_brand_logo.b64")
-                    .bufferedReader()
-                    .use { it.readText() }
-                    .trim()
-                Base64.decode(encoded, Base64.DEFAULT)
-            }
-            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        fun decode(bytes: ByteArray?): androidx.compose.ui.graphics.ImageBitmap? {
+            if (bytes == null || bytes.isEmpty()) return null
+            return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }
+        decode(remoteBytes) ?: runCatching {
+            val encoded = context.assets.open("son_harf_brand_logo.b64")
+                .bufferedReader()
+                .use { it.readText() }
+                .trim()
+            decode(Base64.decode(encoded, Base64.DEFAULT))
         }.getOrNull()
     }
 

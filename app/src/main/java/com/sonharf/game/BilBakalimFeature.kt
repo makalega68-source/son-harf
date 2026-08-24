@@ -99,6 +99,45 @@ internal val bilBakalimQuestions = listOf(
     BilBakalimQuestion("Türkiye’de kaç il vardır?", 81.0, "81", "Türkiye"),
 )
 
+internal val bilBakalimQuestionsEn = listOf(
+    BilBakalimQuestion("How tall is the Burj Khalifa in metres?", 828.0, "828 metres", "Architecture"),
+    BilBakalimQuestion("About how many months is an elephant pregnant?", 22.0, "22 months", "Animals"),
+    BilBakalimQuestion("In what year did humans first land on the Moon?", 1969.0, "1969", "Space"),
+    BilBakalimQuestion("How many bones are in a typical adult human body?", 206.0, "206", "Human Body"),
+    BilBakalimQuestion("How many teeth does a typical adult human have?", 32.0, "32", "Human Body"),
+    BilBakalimQuestion("How many chambers does the human heart have?", 4.0, "4", "Human Body"),
+    BilBakalimQuestion("How many planets are in the Solar System?", 8.0, "8", "Space"),
+    BilBakalimQuestion("How many days are in a leap year?", 366.0, "366 days", "General"),
+    BilBakalimQuestion("How many squares are on a standard chessboard?", 64.0, "64", "Games"),
+    BilBakalimQuestion("How many rings are in the Olympic symbol?", 5.0, "5", "Sports"),
+    BilBakalimQuestion("What is the official marathon distance in kilometres?", 42.195, "42.195 km", "Sports"),
+    BilBakalimQuestion("How many teams play in the 2026 FIFA World Cup finals?", 48.0, "48 teams", "Sports"),
+    BilBakalimQuestion("How many confirmed chemical elements are in the periodic table?", 118.0, "118", "Science"),
+    BilBakalimQuestion("About how fast does light travel in vacuum in kilometres per second?", 299792.0, "299,792 km/s", "Science"),
+    BilBakalimQuestion("About how long is Earth's equatorial circumference in kilometres?", 40075.0, "40,075 km", "Earth"),
+    BilBakalimQuestion("About how old is Earth in billions of years?", 4.54, "4.54 billion years", "Earth"),
+    BilBakalimQuestion("About how high is Mount Everest above sea level in metres?", 8849.0, "8,849 metres", "Earth"),
+    BilBakalimQuestion("About how deep is the deepest point of the Mariana Trench in metres?", 10984.0, "10,984 metres", "Earth"),
+    BilBakalimQuestion("About how tall is the Eiffel Tower including its antenna in metres?", 330.0, "330 metres", "Architecture"),
+    BilBakalimQuestion("In what year did World War I begin?", 1914.0, "1914", "History"),
+    BilBakalimQuestion("In what year did World War II end?", 1945.0, "1945", "History"),
+    BilBakalimQuestion("In what year did the Titanic sink?", 1912.0, "1912", "History"),
+    BilBakalimQuestion("In what year were the first modern Olympic Games held?", 1896.0, "1896", "Sports"),
+    BilBakalimQuestion("In what year did the first iPhone go on sale?", 2007.0, "2007", "Technology"),
+    BilBakalimQuestion("How many astronauts walked on the Moon during Apollo 11?", 2.0, "2", "Space"),
+    BilBakalimQuestion("About how many minutes does the International Space Station take to orbit Earth?", 90.0, "90 minutes", "Space"),
+    BilBakalimQuestion("About how many days does Earth take to orbit the Sun?", 365.25, "365.25 days", "Space"),
+    BilBakalimQuestion("About how fast does sound travel through air in metres per second?", 343.0, "343 m/s", "Science"),
+    BilBakalimQuestion("At sea level, at what Celsius temperature does water boil?", 100.0, "100 °C", "Science"),
+    BilBakalimQuestion("How many chromosomes are normally found in a human cell?", 46.0, "46", "Human Body"),
+    BilBakalimQuestion("How many hearts does an octopus have?", 3.0, "3", "Animals"),
+    BilBakalimQuestion("How many legs does a spider have?", 8.0, "8", "Animals"),
+    BilBakalimQuestion("How many legs does a bee have?", 6.0, "6", "Animals"),
+    BilBakalimQuestion("About how many kilograms can a blue whale's heart weigh?", 180.0, "about 180 kg", "Animals"),
+    BilBakalimQuestion("About how fast can a tiger run over a short distance in km/h?", 65.0, "about 65 km/h", "Animals"),
+    BilBakalimQuestion("About how many litres of water can an adult elephant drink in a day?", 160.0, "about 160 litres", "Animals"),
+)
+
 @Composable
 internal fun BilBakalimHomeCard(onClick: () -> Unit) {
     Card(
@@ -139,7 +178,10 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
         val id = b.currentUserId() ?: return@LaunchedEffect
         playerProfile = runCatching { b.getProfile(id) }.getOrNull()
     }
-    var deck by remember { mutableStateOf(bilBakalimQuestions.shuffled().take(15)) }
+    var bilLanguage by remember { mutableStateOf("tr") }
+    fun bil(tr: String, en: String): String = if (bilLanguage == "en") en else tr
+    fun questionPool(): List<BilBakalimQuestion> = if (bilLanguage == "en") bilBakalimQuestionsEn else bilBakalimQuestions
+    var deck by remember(bilLanguage) { mutableStateOf(questionPool().shuffled().take(15)) }
     var questionIndex by remember { mutableIntStateOf(0) }
     var playerScore by remember { mutableIntStateOf(0) }
     var botScore by remember { mutableIntStateOf(0) }
@@ -152,12 +194,24 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
     val q = deck[questionIndex]
     val questionNo = questionIndex + 1
 
+    LaunchedEffect(bilLanguage) {
+        questionIndex = 0
+        playerScore = 0
+        botScore = 0
+        input = ""
+        seconds = 20
+        phase = BilPhase.ANSWER
+        playerAnswer = null
+        botAnswer = null
+        playerWon = null
+    }
+
     fun resetQuestion() {
         input = ""; seconds = 20; phase = BilPhase.ANSWER
         playerAnswer = null; botAnswer = null; playerWon = null
     }
     fun resetMatch() {
-        deck = bilBakalimQuestions.shuffled().take(15)
+        deck = questionPool().shuffled().take(15)
         questionIndex = 0; playerScore = 0; botScore = 0; resetQuestion()
     }
     fun advance() {
@@ -207,24 +261,37 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
                 Spacer(Modifier.width(42.dp))
             }
 
+            SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = bilLanguage == "tr",
+                    onClick = { bilLanguage = "tr" },
+                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
+                ) { Text("TÜRKÇE", fontWeight = FontWeight.Black, fontSize = if (tiny) 10.sp else 12.sp) }
+                SegmentedButton(
+                    selected = bilLanguage == "en",
+                    onClick = { bilLanguage = "en" },
+                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
+                ) { Text("ENGLISH", fontWeight = FontWeight.Black, fontSize = if (tiny) 10.sp else 12.sp) }
+            }
+
             Row(Modifier.fillMaxWidth().height(if (tiny) 68.dp else 78.dp), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                ScoreBox("SEN", playerScore, Color(0xFF2CA9DC), Modifier.weight(1f), profile = playerProfile)
+                ScoreBox(bil("SEN", "YOU"), playerScore, Color(0xFF2CA9DC), Modifier.weight(1f), profile = playerProfile)
                 ScoreBox("BOT", botScore, Color(0xFFEA7484), Modifier.weight(1f), isBot = true)
             }
 
             if (phase == BilPhase.MATCH_END) {
                 val playerIsWinner = playerScore >= botScore
-                val winnerName = if (playerIsWinner) playerProfile?.displayName ?: "Sen" else "KelimeBot BOT"
+                val winnerName = if (playerIsWinner) playerProfile?.displayName ?: bil("Sen", "You") else "KelimeBot BOT"
                 Card(modifier = Modifier.fillMaxWidth().weight(1f), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(2.dp, Color(0xFF69C9EF)), shape = RoundedCornerShape(24.dp)) {
                     Column(Modifier.fillMaxSize().padding(if (tiny) 14.dp else 20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceEvenly) {
                         Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFF45B8E5), modifier = Modifier.size(if (tiny) 36.dp else 44.dp))
-                        Text(if (playerIsWinner) "KAZANDIN!" else "MAÇ BİTTİ", color = Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = if (tiny) 25.sp else 30.sp)
+                        Text(if (playerIsWinner) bil("KAZANDIN!", "YOU WON!") else bil("MAÇ BİTTİ", "MATCH OVER"), color = Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = if (tiny) 25.sp else 30.sp)
                         if (playerIsWinner) ProfilePhotoAvatar(playerProfile?.avatarPath, winnerName, if (tiny) 62.dp else 76.dp, visible = true, accent = Color(0xFF2CA9DC))
                         else Surface(modifier = Modifier.size(if (tiny) 62.dp else 76.dp), shape = CircleShape, color = Color(0xFFFFEEF2), border = BorderStroke(2.dp, Color(0xFFEA7484))) { Box(contentAlignment = Alignment.Center) { Text("🤖", fontSize = if (tiny) 34.sp else 40.sp) } }
                         Text(winnerName, color = if (playerIsWinner) Color(0xFF2CA9DC) else Color(0xFFEA7484), fontSize = 17.sp, fontWeight = FontWeight.Black, maxLines = 1)
                         Text("$playerScore  -  $botScore", color = Color(0xFF2CA9DC), fontSize = if (tiny) 34.sp else 40.sp, fontWeight = FontWeight.Black)
-                        Button(onClick = ::resetMatch, modifier = Modifier.fillMaxWidth().height(if (tiny) 46.dp else 52.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8)), shape = RoundedCornerShape(16.dp)) { Text("BİR OYUN DAHA", fontWeight = FontWeight.Black) }
-                        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth().height(if (tiny) 44.dp else 48.dp), shape = RoundedCornerShape(16.dp)) { Text("ANA MENÜ") }
+                        Button(onClick = ::resetMatch, modifier = Modifier.fillMaxWidth().height(if (tiny) 46.dp else 52.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8)), shape = RoundedCornerShape(16.dp)) { Text(bil("BİR OYUN DAHA", "PLAY AGAIN"), fontWeight = FontWeight.Black) }
+                        OutlinedButton(onClick = onBack, modifier = Modifier.fillMaxWidth().height(if (tiny) 44.dp else 48.dp), shape = RoundedCornerShape(16.dp)) { Text(bil("ANA MENÜ", "MAIN MENU")) }
                     }
                 }
                 return@Column
@@ -236,17 +303,17 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
 
             Card(modifier = Modifier.fillMaxWidth().weight(1f), shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, Color(0xFFB9E5F8))) {
                 Column(Modifier.fillMaxSize().padding(if (tiny) 11.dp else 14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceEvenly) {
-                    Text("${q.category.uppercase()} • SORU $questionNo/15", color = Color(0xFF2CA9DC), fontWeight = FontWeight.Bold, fontSize = if (tiny) 9.sp else 10.sp, maxLines = 1)
+                    Text("${q.category.uppercase()} • ${bil("SORU", "QUESTION")} $questionNo/15", color = Color(0xFF2CA9DC), fontWeight = FontWeight.Bold, fontSize = if (tiny) 9.sp else 10.sp, maxLines = 1)
                     Text(q.question, color = Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = if (tiny) 17.sp else if (compact) 19.sp else 21.sp, lineHeight = if (tiny) 21.sp else 25.sp, textAlign = TextAlign.Center, maxLines = 3)
                     if (phase == BilPhase.ANSWER) {
                         Surface(Modifier.fillMaxWidth(), color = Color(0xFFF0F9FE), shape = RoundedCornerShape(14.dp), border = BorderStroke(2.dp, Color(0xFF69C9EF))) {
-                            Text(input.ifBlank { "Tahminin" }, Modifier.fillMaxWidth().padding(vertical = if (tiny) 7.dp else 9.dp, horizontal = 10.dp), textAlign = TextAlign.Center, color = if (input.isBlank()) Color(0xFF8EA2B1) else Color(0xFF17344A), fontSize = if (tiny) 23.sp else 27.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                            Text(input.ifBlank { bil("Tahminin", "Your guess") }, Modifier.fillMaxWidth().padding(vertical = if (tiny) 7.dp else 9.dp, horizontal = 10.dp), textAlign = TextAlign.Center, color = if (input.isBlank()) Color(0xFF8EA2B1) else Color(0xFF17344A), fontSize = if (tiny) 23.sp else 27.sp, fontWeight = FontWeight.Black, maxLines = 1)
                         }
                         NumericEstimatePad(input, { input = it }, compact = compact || tiny)
-                        Button(onClick = { finishRound(input.replace(',', '.').toDoubleOrNull()) }, enabled = input.replace(',', '.').toDoubleOrNull() != null, modifier = Modifier.fillMaxWidth().height(if (tiny) 42.dp else 47.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8)), shape = RoundedCornerShape(14.dp)) { Text("CEVABI KİLİTLE", fontWeight = FontWeight.Black, fontSize = if (tiny) 12.sp else 14.sp) }
+                        Button(onClick = { finishRound(input.replace(',', '.').toDoubleOrNull()) }, enabled = input.replace(',', '.').toDoubleOrNull() != null, modifier = Modifier.fillMaxWidth().height(if (tiny) 42.dp else 47.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8)), shape = RoundedCornerShape(14.dp)) { Text(bil("CEVABI KİLİTLE", "LOCK ANSWER"), fontWeight = FontWeight.Black, fontSize = if (tiny) 12.sp else 14.sp) }
                     } else {
-                        AnswerLine("Senin cevabın", playerAnswer?.let(::prettyNumber) ?: "Cevap yok", phase == BilPhase.RESULT && playerWon == true)
-                        AnswerLine("Bot cevabı", botAnswer?.let(::prettyNumber) ?: "Cevap bekleniyor…", phase == BilPhase.RESULT && playerWon == false)
+                        AnswerLine(bil("Senin cevabın", "Your answer"), playerAnswer?.let(::prettyNumber) ?: bil("Cevap yok", "No answer"), phase == BilPhase.RESULT && playerWon == true)
+                        AnswerLine(bil("Bot cevabı", "Bot answer"), botAnswer?.let(::prettyNumber) ?: bil("Cevap bekleniyor…", "Waiting for answer…"), phase == BilPhase.RESULT && playerWon == false)
                         if (phase == BilPhase.LOCKED) CircularProgressIndicator(color = Color(0xFF42B7E5), modifier = Modifier.size(28.dp), strokeWidth = 3.dp)
                     }
                 }
@@ -255,10 +322,10 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
             if (phase == BilPhase.RESULT) {
                 Card(modifier = Modifier.fillMaxWidth().height(if (tiny) 130.dp else 150.dp), colors = CardDefaults.cardColors(containerColor = Color(0xFFF1FFF7)), border = BorderStroke(1.dp, Color(0xFF39D875)), shape = RoundedCornerShape(19.dp)) {
                     Column(Modifier.fillMaxSize().padding(if (tiny) 9.dp else 11.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.SpaceEvenly) {
-                        Text("DOĞRU CEVAP", color = Color(0xFF6C8293), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(bil("DOĞRU CEVAP", "CORRECT ANSWER"), color = Color(0xFF6C8293), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         Text(q.displayAnswer, color = Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = if (tiny) 22.sp else 27.sp, textAlign = TextAlign.Center, maxLines = 2)
-                        Text(if (playerWon == true) "KAZANDIN! • +10 PUAN" else "YANLIŞ CEVAP", color = if (playerWon == true) Color(0xFF18B864) else Color(0xFFDD5968), fontWeight = FontWeight.Black, fontSize = if (tiny) 14.sp else 17.sp, maxLines = 1)
-                        Button(onClick = ::advance, modifier = Modifier.fillMaxWidth().height(if (tiny) 38.dp else 43.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8)), shape = RoundedCornerShape(14.dp)) { Text(if (questionNo == 15) "MAÇI BİTİR" else "SONRAKİ SORU", fontWeight = FontWeight.Black, fontSize = if (tiny) 12.sp else 14.sp) }
+                        Text(if (playerWon == true) bil("KAZANDIN! • +10 PUAN", "YOU WON! • +10 POINTS") else bil("YANLIŞ CEVAP", "WRONG ANSWER"), color = if (playerWon == true) Color(0xFF18B864) else Color(0xFFDD5968), fontWeight = FontWeight.Black, fontSize = if (tiny) 14.sp else 17.sp, maxLines = 1)
+                        Button(onClick = ::advance, modifier = Modifier.fillMaxWidth().height(if (tiny) 38.dp else 43.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8)), shape = RoundedCornerShape(14.dp)) { Text(if (questionNo == 15) bil("MAÇI BİTİR", "FINISH MATCH") else bil("SONRAKİ SORU", "NEXT QUESTION"), fontWeight = FontWeight.Black, fontSize = if (tiny) 12.sp else 14.sp) }
                     }
                 }
             }
