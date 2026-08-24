@@ -1,0 +1,46 @@
+name: Apply Approved Son Harf Logo
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'ci/apply-approved-logo.py'
+      - '.github/workflows/apply-approved-logo.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  integrate-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply approved logo to real premium home
+        run: python3 ci/apply-approved-logo.py
+      - name: Commit safe UI integration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/PremiumMasterHome.kt
+          git diff --cached --quiet || git commit -m "Integrate approved Son Harf MASKOT logo [skip ci]"
+          git push
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+      - name: Test and build logo-integrated APK
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+      - name: Publish verified APK
+        run: |
+          mkdir -p dist
+          cp app/build/outputs/apk/debug/app-debug.apk dist/SonHarf-Approved-Logo.apk
+          printf 'commit=%s\nbuilt_at=%s\nlogo=SON_HARF_MASKOT_APPROVED\n' "$(git rev-parse HEAD)" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/APPROVED_LOGO_BUILD_OK.txt
+          git add dist/SonHarf-Approved-Logo.apk dist/APPROVED_LOGO_BUILD_OK.txt
+          git diff --cached --quiet || git commit -m "Publish approved-logo APK [skip ci]"
+          git push
