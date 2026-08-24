@@ -205,17 +205,17 @@ private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto
 }
 
 @Composable private fun MasterSonHarfCard(modifier: Modifier, playerName:String, playerAvatarPath:String?, playerGender:String?, rivalName:String, streak:Int, onPlay:()->Unit) {
-    Card(onClick = onPlay, modifier = modifier.height(360.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), border = BorderStroke(1.5.dp, MasterBlue2)) {
+    Card(onClick = onPlay, modifier = modifier.height(300.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), border = BorderStroke(1.5.dp, MasterBlue2)) {
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF12A8EE), Color(0xFF0870C9), Color(0xFF064D9B)))).padding(13.dp)) {
             MasterLetterBackdrop()
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                 SonHarfBrandLogo(
                     modifier = Modifier.padding(top = 2.dp, bottom = 3.dp),
-                    size = 146.dp,
+                    size = 82.dp,
                 )
-                Surface(shape = RoundedCornerShape(18.dp), color = Color(0xFF0E4E96), border = BorderStroke(1.dp, Color.White.copy(.55f))) { Text(sh("CANLI KELİME ARENASI", "LIVE WORD ARENA"), Modifier.padding(horizontal = 12.dp, vertical = 5.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                Surface(shape = RoundedCornerShape(18.dp), color = Color(0xFF0E4E96), border = BorderStroke(1.dp, Color.White.copy(.55f))) { Text("CANLI KELİME ARENASI", Modifier.padding(horizontal = 12.dp, vertical = 5.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black) }
                 Spacer(Modifier.height(8.dp))
-                Text(sh("Kelimenin son harfiyle zafer senin!", "Victory with the last letter!"), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                Text("Kelimenin son harfiyle zafer senin!", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                 Spacer(Modifier.height(10.dp))
                 Text("KALEM → MASA → ARABA", color = Color(0xFF583D26), fontWeight = FontWeight.Black, fontSize = 12.sp, modifier = Modifier.background(Color(0xFFFFE4B3), RoundedCornerShape(9.dp)).padding(horizontal = 8.dp, vertical = 7.dp))
                 Spacer(Modifier.weight(1f))
@@ -224,9 +224,9 @@ private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto
                 }
                 Spacer(Modifier.height(9.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Surface(Modifier.weight(.9f).height(54.dp), shape=RoundedCornerShape(16.dp), color=Color(0xFF0B5AA6)) { Column(Modifier.fillMaxSize().padding(horizontal=6.dp), horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Text("🔥 $streak",fontSize=15.sp);Text(sh("GALİBİYET", "WINS"),color=Color.White,fontWeight=FontWeight.Black,fontSize=7.sp,maxLines=1,softWrap=false)} }
-                    Button(onClick=onPlay, modifier=Modifier.weight(1.8f).height(54.dp), shape=RoundedCornerShape(19.dp), colors=ButtonDefaults.buttonColors(containerColor=MasterBlue2),contentPadding=PaddingValues(horizontal=12.dp)) { Icon(Icons.Rounded.PlayArrow,null); Spacer(Modifier.width(5.dp)); Text(sh("OYNA", "PLAY"),fontWeight=FontWeight.Black,fontSize=16.sp,maxLines=1,softWrap=false) }
-                    Surface(Modifier.weight(.65f), shape=RoundedCornerShape(16.dp), color=Color(0xFF0B5AA6)) { Column(Modifier.padding(8.dp), horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Rounded.GridView,null,tint=Color.White);Text(sh("MOD", "MODE"),color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Black)} }
+                    Surface(Modifier.weight(.9f).height(54.dp), shape=RoundedCornerShape(16.dp), color=Color(0xFF0B5AA6)) { Column(Modifier.fillMaxSize().padding(horizontal=6.dp), horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Text("🔥 $streak",fontSize=15.sp);Text("GALİBİYET",color=Color.White,fontWeight=FontWeight.Black,fontSize=7.sp,maxLines=1,softWrap=false)} }
+                    Button(onClick=onPlay, modifier=Modifier.weight(1.8f).height(54.dp), shape=RoundedCornerShape(19.dp), colors=ButtonDefaults.buttonColors(containerColor=MasterBlue2),contentPadding=PaddingValues(horizontal=12.dp)) { Icon(Icons.Rounded.PlayArrow,null); Spacer(Modifier.width(5.dp)); Text("OYNA",fontWeight=FontWeight.Black,fontSize=16.sp,maxLines=1,softWrap=false) }
+                    Surface(Modifier.weight(.65f), shape=RoundedCornerShape(16.dp), color=Color(0xFF0B5AA6)) { Column(Modifier.padding(8.dp), horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Rounded.GridView,null,tint=Color.White);Text("MOD",color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Black)} }
                 }
             }
         }
@@ -237,15 +237,28 @@ private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto
 @Composable private fun PlayerVsCell(name:String,rating:String,modifier:Modifier,avatarPath:String?=null,gender:String?=null){ Column(modifier,horizontalAlignment=Alignment.CenterHorizontally){ if(!avatarPath.isNullOrBlank()) ProfilePhotoAvatarWithGender(avatarPath=avatarPath,gender=gender,name=name,size=40.dp,accent=Color.White) else Surface(shape=CircleShape,color=Color.White.copy(.20f),border=BorderStroke(2.dp,Color.White)){Box(Modifier.size(36.dp),contentAlignment=Alignment.Center){Text(name.take(1).uppercase(),color=Color.White,fontWeight=FontWeight.Black)}};Text(name,color=Color.White,fontWeight=FontWeight.Black,fontSize=9.sp,maxLines=1);Text("🏆 $rating",color=MasterGold,fontSize=8.sp)} }
 
 @Composable private fun MasterBilBakalimCard(modifier:Modifier,onPlay:()->Unit){
-    Card(onClick=onPlay,modifier=modifier.height(360.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent),border=BorderStroke(1.5.dp,MasterBlue2)){
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4FDFF),Color(0xFFDDF6FF),Color.White))).padding(13.dp)){
-            Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally){
-                Text("💡",fontSize=35.sp); Text("BİL",color=MasterInk,fontSize=30.sp,fontWeight=FontWeight.Black,lineHeight=31.sp,maxLines=1,softWrap=false);Text("BAKALIM",color=MasterInk,fontSize=28.sp,fontWeight=FontWeight.Black,lineHeight=30.sp,maxLines=1,softWrap=false)
-                Text(sh("Doğru cevaba en yakın tahmin kazanır!", "Closest estimate wins!"),modifier=Modifier.fillMaxWidth().padding(horizontal=8.dp),color=MasterInk,fontSize=11.sp,lineHeight=15.sp,textAlign=TextAlign.Center,maxLines=2)
-                Spacer(Modifier.height(7.dp)); Text("?",color=MasterGold,fontSize=74.sp,fontWeight=FontWeight.Black,lineHeight=74.sp)
-                Spacer(Modifier.weight(1f)); Surface(shape=RoundedCornerShape(16.dp),color=MasterBlue){Text(sh("BUGÜNKÜ MEYDAN OKUMA", "TODAY'S CHALLENGE"),Modifier.padding(horizontal=9.dp,vertical=5.dp),color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Black)}
-                Spacer(Modifier.height(5.dp)); Text(sh("En hızlı cevap", "Fastest answer"),color=MasterMuted,fontSize=8.sp);Text("6,4 sn",color=MasterInk,fontSize=18.sp,fontWeight=FontWeight.Black)
-                Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(52.dp),shape=RoundedCornerShape(18.dp),colors=ButtonDefaults.buttonColors(containerColor=MasterBlue),contentPadding=PaddingValues(horizontal=12.dp)){Icon(Icons.Rounded.PlayArrow,null);Spacer(Modifier.width(5.dp));Text(sh("HEMEN OYNA", "PLAY NOW"),fontWeight=FontWeight.Black,fontSize=13.sp,maxLines=1,softWrap=false)}
+    Card(onClick=onPlay,modifier=modifier.height(250.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent),border=BorderStroke(1.5.dp,MasterBlue2)){
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4FDFF),Color(0xFFDDF6FF),Color.White))).padding(horizontal=12.dp,vertical=10.dp)){
+            Row(Modifier.fillMaxSize(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
+                MascotCardPreview(Modifier.width(112.dp).fillMaxHeight())
+                Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
+                    Text("💡",fontSize=26.sp)
+                    Text("BİL BAKALIM",color=MasterInk,fontSize=25.sp,fontWeight=FontWeight.Black,lineHeight=27.sp,maxLines=1,softWrap=false)
+                    Spacer(Modifier.height(3.dp))
+                    Text("Doğru cevaba en yakın tahmin kazanır!",modifier=Modifier.fillMaxWidth(),color=MasterInk,fontSize=10.sp,lineHeight=13.sp,textAlign=TextAlign.Center,maxLines=2)
+                    Spacer(Modifier.height(7.dp))
+                    Surface(shape=RoundedCornerShape(14.dp),color=MasterSky,border=BorderStroke(1.dp,MasterLine)){
+                        Text("TÜRKÇE  •  ENGLISH",Modifier.padding(horizontal=10.dp,vertical=5.dp),color=MasterBlue,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1)
+                    }
+                    Spacer(Modifier.height(7.dp))
+                    Surface(shape=RoundedCornerShape(16.dp),color=MasterBlue){
+                        Text("BUGÜNÜN MEYDAN OKUMASI",Modifier.padding(horizontal=10.dp,vertical=6.dp),color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1,softWrap=false)
+                    }
+                    Spacer(Modifier.height(7.dp))
+                    Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(43.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MasterBlue),contentPadding=PaddingValues(horizontal=10.dp)){
+                        Icon(Icons.Rounded.PlayArrow,null,modifier=Modifier.size(20.dp));Spacer(Modifier.width(5.dp));Text("HEMEN OYNA",fontWeight=FontWeight.Black,fontSize=12.sp,maxLines=1,softWrap=false)
+                    }
+                }
             }
         }
     }
