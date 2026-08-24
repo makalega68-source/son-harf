@@ -54,21 +54,30 @@ object RemoteExperience {
         }
     }
 
-    suspend fun refresh(context: Context) = withContext(Dispatchers.IO) {
+    suspend fun refresh(context: Context) {
+        val fetched = withContext(Dispatchers.IO) {
+            val stamp = System.currentTimeMillis()
+            val configText = runCatching { URL("$CONFIG_URL?ts=$stamp").readText() }.getOrNull()
+                ?: return@withContext null
+            val remote = runCatching { json.decodeFromString<RemoteExperienceConfig>(configText) }.getOrNull()
+                ?: return@withContext null
+            val logoEncoded = if (remote.brandLogoBase64Url.isNotBlank()) {
+                val separator = if (remote.brandLogoBase64Url.contains('?')) '&' else '?'
+                runCatching { URL("${remote.brandLogoBase64Url}${separator}ts=$stamp").readText().trim() }.getOrNull()
+            } else null
+            Triple(configText, remote, logoEncoded)
+        } ?: return
+
+        val (configText, remote, logoEncoded) = fetched
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val configText = runCatching { URL(CONFIG_URL).readText() }.getOrNull() ?: return@withContext
-        val remote = runCatching { json.decodeFromString<RemoteExperienceConfig>(configText) }.getOrNull() ?: return@withContext
         config = remote
         prefs.edit().putString(KEY_CONFIG, configText).apply()
 
-        if (remote.brandLogoBase64Url.isNotBlank()) {
-            val encoded = runCatching { URL(remote.brandLogoBase64Url).readText().trim() }.getOrNull()
-            if (!encoded.isNullOrBlank()) {
-                val bytes = runCatching { Base64.decode(encoded, Base64.DEFAULT) }.getOrNull()
-                if (bytes != null && bytes.isNotEmpty()) {
-                    brandLogoBytes = bytes
-                    prefs.edit().putString(KEY_LOGO, encoded).apply()
-                }
+        if (!logoEncoded.isNullOrBlank()) {
+            val bytes = runCatching { Base64.decode(logoEncoded, Base64.DEFAULT) }.getOrNull()
+            if (bytes != null && bytes.isNotEmpty()) {
+                brandLogoBytes = bytes
+                prefs.edit().putString(KEY_LOGO, logoEncoded).apply()
             }
         }
     }
