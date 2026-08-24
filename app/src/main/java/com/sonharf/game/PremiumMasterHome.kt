@@ -77,15 +77,19 @@ internal fun PremiumMasterHome(
         item { MasterLeagueBanner(rating, leagueProgress, onLeague) }
         item { MasterLiveStrip(leaders.firstOrNull()?.displayName, streak) }
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MasterSonHarfCard(
-                    modifier = Modifier.weight(1.18f),
-                    playerName = profile?.displayName ?: sh("Sen", "You"),
-                    rivalName = leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"),
-                    streak = streak.coerceAtLeast(4),
-                    onPlay = onQuickGame,
-                )
-                MasterBilBakalimCard(Modifier.weight(.82f), onBilBakalim)
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val compact = maxWidth < 600.dp
+                if (compact) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        MasterSonHarfCard(Modifier.fillMaxWidth(), profile?.displayName ?: sh("Sen", "You"), profile?.avatarPath, profile?.gender, leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"), streak.coerceAtLeast(4), onQuickGame)
+                        MasterBilBakalimCard(Modifier.fillMaxWidth(), onBilBakalim)
+                    }
+                } else {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        MasterSonHarfCard(Modifier.weight(1.18f), profile?.displayName ?: sh("Sen", "You"), profile?.avatarPath, profile?.gender, leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"), streak.coerceAtLeast(4), onQuickGame)
+                        MasterBilBakalimCard(Modifier.weight(.82f), onBilBakalim)
+                    }
+                }
             }
         }
         item {
@@ -200,7 +204,7 @@ private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto
     }
 }
 
-@Composable private fun MasterSonHarfCard(modifier: Modifier, playerName:String, rivalName:String, streak:Int, onPlay:()->Unit) {
+@Composable private fun MasterSonHarfCard(modifier: Modifier, playerName:String, playerAvatarPath:String?, playerGender:String?, rivalName:String, streak:Int, onPlay:()->Unit) {
     Card(onClick = onPlay, modifier = modifier.height(360.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), border = BorderStroke(1.5.dp, MasterBlue2)) {
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF12A8EE), Color(0xFF0870C9), Color(0xFF064D9B)))).padding(13.dp)) {
             MasterLetterBackdrop()
@@ -216,12 +220,12 @@ private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto
                 Text("KALEM → MASA → ARABA", color = Color(0xFF583D26), fontWeight = FontWeight.Black, fontSize = 12.sp, modifier = Modifier.background(Color(0xFFFFE4B3), RoundedCornerShape(9.dp)).padding(horizontal = 8.dp, vertical = 7.dp))
                 Spacer(Modifier.weight(1f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    PlayerVsCell(playerName, "2150", Modifier.weight(1f)); Text("VS", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black); PlayerVsCell(rivalName, "2186", Modifier.weight(1f))
+                    PlayerVsCell(playerName, "2150", Modifier.weight(1f), playerAvatarPath, playerGender); Text("VS", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black); PlayerVsCell(rivalName, "2186", Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(9.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Surface(Modifier.weight(.75f), shape=RoundedCornerShape(16.dp), color=Color(0xFF0B5AA6)) { Column(Modifier.padding(8.dp), horizontalAlignment=Alignment.CenterHorizontally){Text("🔥",fontSize=19.sp);Text("$streak ${sh("GALİBİYET", "WINS")}",color=Color.White,fontWeight=FontWeight.Black,fontSize=7.sp)} }
-                    Button(onClick=onPlay, modifier=Modifier.weight(1.65f).height(54.dp), shape=RoundedCornerShape(19.dp), colors=ButtonDefaults.buttonColors(containerColor=MasterBlue2)) { Icon(Icons.Rounded.PlayArrow,null); Spacer(Modifier.width(4.dp)); Text(sh("OYNA", "PLAY"),fontWeight=FontWeight.Black,fontSize=17.sp) }
+                    Surface(Modifier.weight(.9f).height(54.dp), shape=RoundedCornerShape(16.dp), color=Color(0xFF0B5AA6)) { Column(Modifier.fillMaxSize().padding(horizontal=6.dp), horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Text("🔥 $streak",fontSize=15.sp);Text(sh("GALİBİYET", "WINS"),color=Color.White,fontWeight=FontWeight.Black,fontSize=7.sp,maxLines=1,softWrap=false)} }
+                    Button(onClick=onPlay, modifier=Modifier.weight(1.8f).height(54.dp), shape=RoundedCornerShape(19.dp), colors=ButtonDefaults.buttonColors(containerColor=MasterBlue2),contentPadding=PaddingValues(horizontal=12.dp)) { Icon(Icons.Rounded.PlayArrow,null); Spacer(Modifier.width(5.dp)); Text(sh("OYNA", "PLAY"),fontWeight=FontWeight.Black,fontSize=16.sp,maxLines=1,softWrap=false) }
                     Surface(Modifier.weight(.65f), shape=RoundedCornerShape(16.dp), color=Color(0xFF0B5AA6)) { Column(Modifier.padding(8.dp), horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Rounded.GridView,null,tint=Color.White);Text(sh("MOD", "MODE"),color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Black)} }
                 }
             }
@@ -230,18 +234,18 @@ private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto
 }
 
 @Composable private fun MasterLetterBackdrop() { Canvas(Modifier.fillMaxSize()) { val c=Color.White.copy(.13f); listOf(.12f,.28f,.76f,.88f).forEachIndexed{i,x->drawCircle(c, radius=22f, center=Offset(size.width*x,size.height*(.18f+i*.13f))) } } }
-@Composable private fun PlayerVsCell(name:String,rating:String,modifier:Modifier){ Column(modifier,horizontalAlignment=Alignment.CenterHorizontally){Surface(shape=CircleShape,color=Color.White.copy(.20f),border=BorderStroke(2.dp,Color.White)){Box(Modifier.size(36.dp),contentAlignment=Alignment.Center){Text(name.take(1).uppercase(),color=Color.White,fontWeight=FontWeight.Black)}};Text(name,color=Color.White,fontWeight=FontWeight.Black,fontSize=9.sp,maxLines=1);Text("🏆 $rating",color=MasterGold,fontSize=8.sp)} }
+@Composable private fun PlayerVsCell(name:String,rating:String,modifier:Modifier,avatarPath:String?=null,gender:String?=null){ Column(modifier,horizontalAlignment=Alignment.CenterHorizontally){ if(!avatarPath.isNullOrBlank()) ProfilePhotoAvatarWithGender(avatarPath=avatarPath,gender=gender,name=name,size=40.dp,accent=Color.White) else Surface(shape=CircleShape,color=Color.White.copy(.20f),border=BorderStroke(2.dp,Color.White)){Box(Modifier.size(36.dp),contentAlignment=Alignment.Center){Text(name.take(1).uppercase(),color=Color.White,fontWeight=FontWeight.Black)}};Text(name,color=Color.White,fontWeight=FontWeight.Black,fontSize=9.sp,maxLines=1);Text("🏆 $rating",color=MasterGold,fontSize=8.sp)} }
 
 @Composable private fun MasterBilBakalimCard(modifier:Modifier,onPlay:()->Unit){
     Card(onClick=onPlay,modifier=modifier.height(360.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent),border=BorderStroke(1.5.dp,MasterBlue2)){
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4FDFF),Color(0xFFDDF6FF),Color.White))).padding(13.dp)){
             Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally){
-                Text("💡",fontSize=37.sp); Text("BİL",color=MasterInk,fontSize=31.sp,fontWeight=FontWeight.Black,lineHeight=28.sp);Text("BAKALIM",color=MasterInk,fontSize=31.sp,fontWeight=FontWeight.Black,lineHeight=30.sp)
-                Text(sh("Doğru cevaba en yakın tahmin kazanır!", "Closest estimate wins!"),color=MasterInk,fontSize=8.sp,textAlign=TextAlign.Center)
+                Text("💡",fontSize=35.sp); Text("BİL",color=MasterInk,fontSize=30.sp,fontWeight=FontWeight.Black,lineHeight=31.sp,maxLines=1,softWrap=false);Text("BAKALIM",color=MasterInk,fontSize=28.sp,fontWeight=FontWeight.Black,lineHeight=30.sp,maxLines=1,softWrap=false)
+                Text(sh("Doğru cevaba en yakın tahmin kazanır!", "Closest estimate wins!"),modifier=Modifier.fillMaxWidth().padding(horizontal=8.dp),color=MasterInk,fontSize=11.sp,lineHeight=15.sp,textAlign=TextAlign.Center,maxLines=2)
                 Spacer(Modifier.height(7.dp)); Text("?",color=MasterGold,fontSize=74.sp,fontWeight=FontWeight.Black,lineHeight=74.sp)
                 Spacer(Modifier.weight(1f)); Surface(shape=RoundedCornerShape(16.dp),color=MasterBlue){Text(sh("BUGÜNKÜ MEYDAN OKUMA", "TODAY'S CHALLENGE"),Modifier.padding(horizontal=9.dp,vertical=5.dp),color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Black)}
                 Spacer(Modifier.height(5.dp)); Text(sh("En hızlı cevap", "Fastest answer"),color=MasterMuted,fontSize=8.sp);Text("6,4 sn",color=MasterInk,fontSize=18.sp,fontWeight=FontWeight.Black)
-                Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(52.dp),shape=RoundedCornerShape(18.dp),colors=ButtonDefaults.buttonColors(containerColor=MasterBlue)){Icon(Icons.Rounded.PlayArrow,null);Text(sh(" HEMEN OYNA", " PLAY NOW"),fontWeight=FontWeight.Black,fontSize=13.sp)}
+                Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(52.dp),shape=RoundedCornerShape(18.dp),colors=ButtonDefaults.buttonColors(containerColor=MasterBlue),contentPadding=PaddingValues(horizontal=12.dp)){Icon(Icons.Rounded.PlayArrow,null);Spacer(Modifier.width(5.dp));Text(sh("HEMEN OYNA", "PLAY NOW"),fontWeight=FontWeight.Black,fontSize=13.sp,maxLines=1,softWrap=false)}
             }
         }
     }
