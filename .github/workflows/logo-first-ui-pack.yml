@@ -30,6 +30,7 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
+          import base64, re
 
           def replace(path, old, new, count=None):
               p = Path(path)
@@ -39,28 +40,24 @@ jobs:
               s2 = s.replace(old, new, count if count is not None else -1)
               p.write_text(s2)
 
-          # 1) Launcher icon uses the exact packaged brand logo generated below.
           replace(
               "app/src/main/AndroidManifest.xml",
               'android:icon="@drawable/ic_son_harf"\n        android:roundIcon="@drawable/ic_son_harf"',
               'android:icon="@drawable/son_harf_brand_logo"\n        android:roundIcon="@drawable/son_harf_brand_logo"',
           )
 
-          # 2) Auth/register screen: remove hardcoded S↻H mark, use the shared logo component.
           replace(
               "app/src/main/java/com/sonharf/game/RequiredAuthGate.kt",
               '''                Box(\n                    Modifier.size(88.dp).scale(pulse).background(Brush.radialGradient(listOf(SonHarfCyan, SonHarfPurple)), CircleShape),\n                    contentAlignment = Alignment.Center,\n                ) { Text("S↻H", color = Color.White, fontWeight = FontWeight.Black, fontSize = 30.sp) }''',
               '''                SonHarfBrandLogo(\n                    modifier = Modifier.scale(pulse),\n                    size = 118.dp,\n                )''',
           )
 
-          # 3) Mascot is explicitly deferred to the next phase; keep assets/code, remove global overlay now.
           replace(
               "app/src/main/java/com/sonharf/game/GamePortalApp.kt",
               '''        ClassicPremiumApp()\n        if (MascotPolicy.ENABLED && MascotPolicy.SKELETAL_ASSET_READY) {\n            MascotBehaviorBridge()\n            Mascot3DLayer(Modifier.fillMaxSize())\n        }''',
               '''        ClassicPremiumApp()\n        // Mascot integration is intentionally deferred to the dedicated next phase.''',
           )
 
-          # 4) App shell is Turkish; Bil Bakalim keeps its independent TR/EN selector.
           replace(
               "app/src/main/java/com/sonharf/game/SonHarfPreferences.kt",
               'fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"',
@@ -72,7 +69,6 @@ jobs:
               '''    fun setLanguage(context: Context, value: String) {\n        prefs(context).edit().putString(LANGUAGE, "tr").apply()\n        SonHarfUiState.language = "tr"\n    }''',
           )
 
-          # 5) Shorter stacked cards: preserve width, reduce vertical footprint.
           replace(
               "app/src/main/java/com/sonharf/game/PremiumMasterHome.kt",
               'modifier = modifier.height(300.dp)',
@@ -86,18 +82,23 @@ jobs:
           new_fn = '''@Composable private fun MasterBilBakalimCard(modifier:Modifier,onPlay:()->Unit){\n    Card(onClick=onPlay,modifier=modifier.height(205.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent),border=BorderStroke(1.5.dp,MasterBlue2)){\n        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4FDFF),Color(0xFFDDF6FF),Color.White))).padding(horizontal=14.dp,vertical=10.dp)){\n            Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceEvenly){\n                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){\n                    Text("💡",fontSize=25.sp)\n                    Text("BİL BAKALIM",color=MasterInk,fontSize=24.sp,fontWeight=FontWeight.Black,lineHeight=26.sp,maxLines=1,softWrap=false)\n                }\n                Text("Doğru cevaba en yakın tahmin kazanır!",modifier=Modifier.fillMaxWidth(),color=MasterInk,fontSize=10.sp,lineHeight=13.sp,textAlign=TextAlign.Center,maxLines=1)\n                Surface(shape=RoundedCornerShape(14.dp),color=MasterSky,border=BorderStroke(1.dp,MasterLine)){\n                    Text("TÜRKÇE  •  ENGLISH",Modifier.padding(horizontal=12.dp,vertical=5.dp),color=MasterBlue,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1)\n                }\n                Surface(shape=RoundedCornerShape(16.dp),color=MasterBlue){\n                    Text("BUGÜNÜN MEYDAN OKUMASI",Modifier.padding(horizontal=11.dp,vertical=6.dp),color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1,softWrap=false)\n                }\n                Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(42.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MasterBlue),contentPadding=PaddingValues(horizontal=10.dp)){\n                    Icon(Icons.Rounded.PlayArrow,null,modifier=Modifier.size(20.dp));Spacer(Modifier.width(5.dp));Text("HEMEN OYNA",fontWeight=FontWeight.Black,fontSize=12.sp,maxLines=1,softWrap=false)\n                }\n            }\n        }\n    }\n}\n\n'''
           p.write_text(s[:start] + new_fn + s[end:])
 
-          # 6) Shared logo source prefers packaged verified asset; remote cannot silently replace branding.
           replace(
               "app/src/main/java/com/sonharf/game/SonHarfBrandLogo.kt",
               '''    val remoteBytes = RemoteExperience.brandLogoBytes\n    val logo = remember(remoteBytes) {\n        fun decode(bytes: ByteArray?): androidx.compose.ui.graphics.ImageBitmap? {\n            if (bytes == null || bytes.isEmpty()) return null\n            return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()\n        }\n        decode(remoteBytes) ?: runCatching {\n            val encoded = context.assets.open("son_harf_brand_logo.b64")\n                .bufferedReader()\n                .use { it.readText() }\n                .trim()\n            decode(Base64.decode(encoded, Base64.DEFAULT))\n        }.getOrNull()\n    }''',
               '''    val logo = remember {\n        fun decode(bytes: ByteArray?): androidx.compose.ui.graphics.ImageBitmap? {\n            if (bytes == null || bytes.isEmpty()) return null\n            return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()\n        }\n        runCatching {\n            val encoded = context.assets.open("son_harf_brand_logo.b64")\n                .bufferedReader()\n                .use { it.readText() }\n                .trim()\n            decode(Base64.decode(encoded, Base64.DEFAULT))\n        }.getOrNull()\n    }''',
           )
+
+          raw = Path("app/src/main/assets/son_harf_brand_logo.b64").read_text(errors="ignore")
+          cleaned = re.sub(r'[^A-Za-z0-9+/=]', '', raw)
+          cleaned += '=' * ((4 - len(cleaned) % 4) % 4)
+          data = base64.b64decode(cleaned, validate=False)
+          if not data.startswith(b'\x89PNG\r\n\x1a\n'):
+              raise SystemExit("packaged brand logo did not decode to PNG")
+          out = Path("app/src/main/res/drawable-nodpi/son_harf_brand_logo.png")
+          out.parent.mkdir(parents=True, exist_ok=True)
+          out.write_bytes(data)
           PY
 
-          mkdir -p app/src/main/res/drawable-nodpi
-          base64 -d app/src/main/assets/son_harf_brand_logo.b64 > app/src/main/res/drawable-nodpi/son_harf_brand_logo.png
-
-          # Do not keep this one-shot workflow in product history after it applies the fix.
           rm -f .github/workflows/logo-first-ui-pack.yml
 
       - name: Contract checks
