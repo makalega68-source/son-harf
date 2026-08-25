@@ -70,7 +70,11 @@ fun GamePortalApp() {
                 onOpen = { eveOpen = true },
             )
         }
-        if (eveOpen) EveMascotScreen(onClose = { eveOpen = false })
+        if (eveOpen) {
+            Box(Modifier.fillMaxSize().navigationBarsPadding()) {
+                EveMascotScreen(onClose = { eveOpen = false })
+            }
+        }
     }
 }
 
