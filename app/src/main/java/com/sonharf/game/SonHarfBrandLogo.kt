@@ -4,8 +4,8 @@ import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,11 +24,12 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun SonHarfBrandLogo(modifier: Modifier = Modifier, size: Dp = 52.dp) {
-    val remoteBytes = RemoteExperience.brandLogoBytes
-    val remoteLogo = remember(remoteBytes) {
+    val bytes = RemoteExperience.brandLogoBytes
+    val remoteLogo = remember(bytes) {
         runCatching {
-            if (remoteBytes.isNullOrEmpty()) null
-            else BitmapFactory.decodeByteArray(remoteBytes, 0, remoteBytes.size)?.asImageBitmap()
+            bytes?.takeIf { it.isNotEmpty() }?.let { data ->
+                BitmapFactory.decodeByteArray(data, 0, data.size)?.asImageBitmap()
+            }
         }.getOrNull()
     }
 
