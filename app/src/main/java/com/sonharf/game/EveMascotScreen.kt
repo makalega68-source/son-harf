@@ -125,8 +125,15 @@ internal fun EveMascotScreen(onClose: () -> Unit) {
                 EveMascotRuntime.apply(response)
             }.onFailure { error ->
                 EveMascotRuntime.calm()
-                EveMascotRuntime.setBubble("Şu an bağlantımda küçük bir sorun var.")
-                errorMessage = error.message ?: "Eve şu anda cevap veremiyor."
+                val message = error.message ?: "Eve şu anda cevap veremiyor."
+                EveMascotRuntime.setBubble(
+                    if (message.contains("ücretsiz Eve sohbet hakkı")) {
+                        "Bugünkü ücretsiz Eve sohbet hakkı doldu 🤍 Yarın yeniden konuşabiliriz."
+                    } else {
+                        "Şu an bağlantımda küçük bir sorun var."
+                    },
+                )
+                errorMessage = message
             }
             sending = false
         }
@@ -211,7 +218,7 @@ internal fun EveMascotScreen(onClose: () -> Unit) {
         ) {
             OutlinedTextField(
                 value = input,
-                onValueChange = { input = it.take(1200) },
+                onValueChange = { input = it.take(1000) },
                 modifier = Modifier.weight(1f),
                 placeholder = { Text(sh("Eve'ye bir şey sor…", "Ask Eve anything…")) },
                 singleLine = false,
