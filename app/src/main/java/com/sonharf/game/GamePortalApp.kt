@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,14 +57,14 @@ fun GamePortalApp() {
     LaunchedEffect(Unit) { RemoteExperience.refresh(context.applicationContext) }
 
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().navigationBarsPadding()) {
             Box(Modifier.weight(1f).fillMaxWidth()) { ClassicPremiumApp() }
             EveSafeDock(
                 name = store.name,
                 giftReady = store.giftAvailable(),
                 parkedRight = parkedRight,
                 onMascotTap = {
-                    EveMascotRuntime.play(EveAnimationCue.RUN, "Hop! Oyun alanını sana bırakıyorum. 🌿")
+                    EveMascotRuntime.play(EveAnimationCue.IDLE_BREATHE, "Buradayım. 🌿")
                     parkedRight = !parkedRight
                 },
                 onOpen = { eveOpen = true },
@@ -98,9 +99,12 @@ private fun EveSafeDock(
             ) {
                 if (parkedRight) DockText(name, giftReady)
                 Box(
-                    Modifier.size(58.dp).background(Color.White, RoundedCornerShape(22.dp)).clickable(onClick = onMascotTap),
+                    Modifier.size(58.dp).background(Color.White, RoundedCornerShape(22.dp)),
                     contentAlignment = Alignment.Center,
-                ) { EveMark(Modifier.size(47.dp)) }
+                ) {
+                    Eve3DStage(Modifier.fillMaxSize(), compact = true)
+                    Box(Modifier.fillMaxSize().clickable(onClick = onMascotTap))
+                }
                 if (!parkedRight) DockText(name, giftReady)
                 Button(
                     onClick = onOpen,
