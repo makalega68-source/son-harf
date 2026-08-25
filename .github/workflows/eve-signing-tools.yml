@@ -17,10 +17,11 @@ jobs:
         run: sdkmanager "build-tools;36.0.0"
       - name: Package signing tools
         run: |
-          mkdir -p eve-tools/lib
+          mkdir -p eve-tools/lib eve-tools/lib64
           cp "$ANDROID_HOME/build-tools/36.0.0/apksigner" eve-tools/
           cp "$ANDROID_HOME/build-tools/36.0.0/zipalign" eve-tools/
           cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" eve-tools/lib/
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib64/libc++.so" eve-tools/lib64/
       - uses: actions/upload-artifact@v4
         with:
           name: eve-apk-signing-tools
