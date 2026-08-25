@@ -33,15 +33,11 @@ internal object EveAssetPolicy {
 }
 
 /**
- * The purchased Eve model contains root-motion in several clips. SceneView plays those
- * transforms literally, which can move the whole mascot through the fixed companion camera.
- * Until root-motion is stripped from the source asset, the companion UI only allows the two
- * in-place clips that are safe for a fixed mobile viewport.
+ * The purchased Eve GLB contains root translation in most clips. On the fixed SceneView
+ * companion camera those transforms move the whole character through/out of frame. Keep the
+ * runtime on the verified in-place IdleBreathe clip until root motion is removed from the GLB.
  */
-private fun EveAnimationCue.safeForCompanionStage(): EveAnimationCue = when (this) {
-    EveAnimationCue.IDLE_GRAZE -> EveAnimationCue.IDLE_GRAZE
-    else -> EveAnimationCue.IDLE_BREATHE
-}
+private fun EveAnimationCue.safeForCompanionStage(): EveAnimationCue = EveAnimationCue.IDLE_BREATHE
 
 internal object EveMascotRuntime {
     var mood by mutableStateOf(EveMood.CALM)
