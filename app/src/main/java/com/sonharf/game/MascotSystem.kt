@@ -50,10 +50,7 @@ internal object MascotAnimationRegistry {
     )
 
     fun definition(motion: MascotMotion): MascotAnimationDef = all.first { it.motion == motion }
-
-    fun unlocked(level: Int): List<MascotAnimationDef> =
-        all.filter { level.coerceAtLeast(1) >= it.unlockLevel }
-
+    fun unlocked(level: Int): List<MascotAnimationDef> = all.filter { level.coerceAtLeast(1) >= it.unlockLevel }
     fun nextUnlockLevel(level: Int): Int = ((level.coerceAtLeast(1) / 10) + 1) * 10
 }
 
@@ -72,8 +69,7 @@ internal object MascotRuntime {
         private set
 
     fun rename(value: String) {
-        // Eve is a named character, not a renameable generic pet. Kept as a no-op compatibility hook.
-        petName = "Eve"
+        petName = value.trim().take(18).ifBlank { "Eve" }
     }
 
     fun syncProgress(xp: Int, level: Int) {
@@ -81,9 +77,7 @@ internal object MascotRuntime {
         playerLevel = level.coerceAtLeast(1)
     }
 
-    fun setMatchActive(active: Boolean) {
-        inActiveMatch = active
-    }
+    fun setMatchActive(active: Boolean) { inActiveMatch = active }
 
     fun react(next: MascotMotion, language: String = SonHarfUiState.language) {
         motion = next
@@ -102,26 +96,17 @@ internal object MascotRuntime {
             MascotMotion.LOOK_AT_PLAYER -> if (en) "I'm listening." else "Seni dinliyorum."
             MascotMotion.SIT -> if (en) "A tiny rest." else "Biraz dinleniyorum."
             MascotMotion.RUN -> if (en) "Let's go!" else "Hadi!"
-            MascotMotion.IDLE,
-            MascotMotion.WALK,
-            MascotMotion.TURN_LEFT,
-            MascotMotion.TURN_RIGHT -> ""
+            MascotMotion.IDLE, MascotMotion.WALK, MascotMotion.TURN_LEFT, MascotMotion.TURN_RIGHT -> ""
         }
     }
 }
 
 private fun MascotMotion.toEveCue(): EveAnimationCue = when (this) {
     MascotMotion.IDLE -> EveAnimationCue.IDLE_BREATHE
-    MascotMotion.WALK -> EveAnimationCue.WALK
-    MascotMotion.TURN_LEFT -> EveAnimationCue.WALK
-    MascotMotion.TURN_RIGHT -> EveAnimationCue.WALK
-    MascotMotion.LOOK_AT_PLAYER,
-    MascotMotion.GREETING,
-    MascotMotion.THINKING -> EveAnimationCue.IDLE_LOOK_AROUND
-    MascotMotion.CRITICAL,
-    MascotMotion.VICTORY -> EveAnimationCue.IDLE_BREATHE
-    MascotMotion.DEFEAT,
-    MascotMotion.SIT -> EveAnimationCue.REST
+    MascotMotion.WALK, MascotMotion.TURN_LEFT, MascotMotion.TURN_RIGHT -> EveAnimationCue.WALK
+    MascotMotion.LOOK_AT_PLAYER, MascotMotion.GREETING, MascotMotion.THINKING -> EveAnimationCue.IDLE_LOOK_AROUND
+    MascotMotion.CRITICAL, MascotMotion.VICTORY -> EveAnimationCue.IDLE_BREATHE
+    MascotMotion.DEFEAT, MascotMotion.SIT -> EveAnimationCue.REST
     MascotMotion.RUN -> EveAnimationCue.RUN
 }
 
