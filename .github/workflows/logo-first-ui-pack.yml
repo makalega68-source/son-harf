@@ -24,109 +24,46 @@ jobs:
         run: yes | sdkmanager "platforms;android-36" "build-tools;36.0.0" >/dev/null
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Apply guarded logo and UI fixes
+      - name: Apply guarded product fixes
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import base64, re, zlib
 
           def replace(path, old, new, count=None):
-              p = Path(path)
-              s = p.read_text()
-              if old not in s:
-                  raise SystemExit(f"guard failed: expected text missing in {path}")
-              p.write_text(s.replace(old, new, count if count is not None else -1))
+              p=Path(path); s=p.read_text()
+              if old not in s: raise SystemExit(f"guard failed: {path}")
+              p.write_text(s.replace(old,new,count if count is not None else -1))
 
-          replace(
-              "app/src/main/AndroidManifest.xml",
-              'android:icon="@drawable/ic_son_harf"\n        android:roundIcon="@drawable/ic_son_harf"',
-              'android:icon="@drawable/son_harf_brand_logo"\n        android:roundIcon="@drawable/son_harf_brand_logo"',
-          )
-          replace(
-              "app/src/main/java/com/sonharf/game/RequiredAuthGate.kt",
-              '''                Box(\n                    Modifier.size(88.dp).scale(pulse).background(Brush.radialGradient(listOf(SonHarfCyan, SonHarfPurple)), CircleShape),\n                    contentAlignment = Alignment.Center,\n                ) { Text("S↻H", color = Color.White, fontWeight = FontWeight.Black, fontSize = 30.sp) }''',
-              '''                SonHarfBrandLogo(\n                    modifier = Modifier.scale(pulse),\n                    size = 118.dp,\n                )''',
-          )
-          replace(
-              "app/src/main/java/com/sonharf/game/GamePortalApp.kt",
-              '''        ClassicPremiumApp()\n        if (MascotPolicy.ENABLED && MascotPolicy.SKELETAL_ASSET_READY) {\n            MascotBehaviorBridge()\n            Mascot3DLayer(Modifier.fillMaxSize())\n        }''',
-              '''        ClassicPremiumApp()\n        // Mascot integration is intentionally deferred to the dedicated next phase.''',
-          )
-          replace(
-              "app/src/main/java/com/sonharf/game/SonHarfPreferences.kt",
-              'fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"',
-              'fun language(context: Context): String = "tr"',
-          )
-          replace(
-              "app/src/main/java/com/sonharf/game/SonHarfPreferences.kt",
-              '''    fun setLanguage(context: Context, value: String) {\n        val normalized = if (value.lowercase() == "en") "en" else "tr"\n        prefs(context).edit().putString(LANGUAGE, normalized).apply(); SonHarfUiState.language = normalized\n    }''',
-              '''    fun setLanguage(context: Context, value: String) {\n        prefs(context).edit().putString(LANGUAGE, "tr").apply()\n        SonHarfUiState.language = "tr"\n    }''',
-          )
-          replace(
-              "app/src/main/java/com/sonharf/game/PremiumMasterHome.kt",
-              'modifier = modifier.height(300.dp)',
-              'modifier = modifier.height(250.dp)',
-              1,
-          )
-          p = Path("app/src/main/java/com/sonharf/game/PremiumMasterHome.kt")
-          s = p.read_text()
-          start = s.index('@Composable private fun MasterBilBakalimCard')
-          end = s.index('@Composable private fun MasterDailySeries', start)
-          new_fn = '''@Composable private fun MasterBilBakalimCard(modifier:Modifier,onPlay:()->Unit){\n    Card(onClick=onPlay,modifier=modifier.height(205.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent),border=BorderStroke(1.5.dp,MasterBlue2)){\n        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4FDFF),Color(0xFFDDF6FF),Color.White))).padding(horizontal=14.dp,vertical=10.dp)){\n            Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceEvenly){\n                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){\n                    Text("💡",fontSize=25.sp)\n                    Text("BİL BAKALIM",color=MasterInk,fontSize=24.sp,fontWeight=FontWeight.Black,lineHeight=26.sp,maxLines=1,softWrap=false)\n                }\n                Text("Doğru cevaba en yakın tahmin kazanır!",modifier=Modifier.fillMaxWidth(),color=MasterInk,fontSize=10.sp,lineHeight=13.sp,textAlign=TextAlign.Center,maxLines=1)\n                Surface(shape=RoundedCornerShape(14.dp),color=MasterSky,border=BorderStroke(1.dp,MasterLine)){\n                    Text("TÜRKÇE  •  ENGLISH",Modifier.padding(horizontal=12.dp,vertical=5.dp),color=MasterBlue,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1)\n                }\n                Surface(shape=RoundedCornerShape(16.dp),color=MasterBlue){\n                    Text("BUGÜNÜN MEYDAN OKUMASI",Modifier.padding(horizontal=11.dp,vertical=6.dp),color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1,softWrap=false)\n                }\n                Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(42.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MasterBlue),contentPadding=PaddingValues(horizontal=10.dp)){\n                    Icon(Icons.Rounded.PlayArrow,null,modifier=Modifier.size(20.dp));Spacer(Modifier.width(5.dp));Text("HEMEN OYNA",fontWeight=FontWeight.Black,fontSize=12.sp,maxLines=1,softWrap=false)\n                }\n            }\n        }\n    }\n}\n\n'''
-          p.write_text(s[:start] + new_fn + s[end:])
+          auth='app/src/main/java/com/sonharf/game/RequiredAuthGate.kt'
+          replace(auth,
+          '''                Box(\n                    Modifier.size(88.dp).scale(pulse).background(Brush.radialGradient(listOf(SonHarfCyan, SonHarfPurple)), CircleShape),\n                    contentAlignment = Alignment.Center,\n                ) { Text("S↻H", color = Color.White, fontWeight = FontWeight.Black, fontSize = 30.sp) }''',
+          '''                SonHarfBrandLogo(modifier = Modifier.scale(pulse), size = 118.dp)''')
 
-          replace(
-              "app/src/main/java/com/sonharf/game/SonHarfBrandLogo.kt",
-              '''    val remoteBytes = RemoteExperience.brandLogoBytes\n    val logo = remember(remoteBytes) {\n        fun decode(bytes: ByteArray?): androidx.compose.ui.graphics.ImageBitmap? {\n            if (bytes == null || bytes.isEmpty()) return null\n            return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()\n        }\n        decode(remoteBytes) ?: runCatching {\n            val encoded = context.assets.open("son_harf_brand_logo.b64")\n                .bufferedReader()\n                .use { it.readText() }\n                .trim()\n            decode(Base64.decode(encoded, Base64.DEFAULT))\n        }.getOrNull()\n    }''',
-              '''    val logo = remember {\n        fun decode(bytes: ByteArray?): androidx.compose.ui.graphics.ImageBitmap? {\n            if (bytes == null || bytes.isEmpty()) return null\n            return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()\n        }\n        runCatching {\n            val encoded = context.assets.open("son_harf_brand_logo.b64")\n                .bufferedReader()\n                .use { it.readText() }\n                .trim()\n            decode(Base64.decode(encoded, Base64.DEFAULT))\n        }.getOrNull()\n    }''',
-          )
+          portal='app/src/main/java/com/sonharf/game/GamePortalApp.kt'
+          replace(portal,
+          '''        ClassicPremiumApp()\n        if (MascotPolicy.ENABLED && MascotPolicy.SKELETAL_ASSET_READY) {\n            MascotBehaviorBridge()\n            Mascot3DLayer(Modifier.fillMaxSize())\n        }''',
+          '''        ClassicPremiumApp()\n        // Maskot entegrasyonu bir sonraki özel aşamaya ertelendi.''')
 
-          def valid_png(data: bytes) -> bool:
-              if not data.startswith(b'\x89PNG\r\n\x1a\n'):
-                  return False
-              pos = 8
-              saw_iend = False
-              try:
-                  while pos + 12 <= len(data):
-                      n = int.from_bytes(data[pos:pos+4], 'big')
-                      typ = data[pos+4:pos+8]
-                      end = pos + 12 + n
-                      if end > len(data): return False
-                      chunk = data[pos+8:pos+8+n]
-                      crc = int.from_bytes(data[pos+8+n:pos+12+n], 'big')
-                      if (zlib.crc32(typ + chunk) & 0xffffffff) != crc: return False
-                      pos = end
-                      if typ == b'IEND':
-                          saw_iend = True
-                          break
-                  return saw_iend and pos == len(data)
-              except Exception:
-                  return False
+          prefs='app/src/main/java/com/sonharf/game/SonHarfPreferences.kt'
+          replace(prefs,
+          'fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"',
+          'fun language(context: Context): String = "tr"')
+          replace(prefs,
+          '''    fun setLanguage(context: Context, value: String) {\n        val normalized = if (value.lowercase() == "en") "en" else "tr"\n        prefs(context).edit().putString(LANGUAGE, normalized).apply(); SonHarfUiState.language = normalized\n    }''',
+          '''    fun setLanguage(context: Context, value: String) {\n        prefs(context).edit().putString(LANGUAGE, "tr").apply()\n        SonHarfUiState.language = "tr"\n    }''')
 
-          raw = Path("app/src/main/assets/son_harf_brand_logo.b64").read_text(errors="ignore")
-          cleaned = re.sub(r'[^A-Za-z0-9+/=]', '', raw)
-          candidates = [cleaned]
-          if len(cleaned) % 4 == 1:
-              candidates = (cleaned[:i] + cleaned[i+1:] for i in range(len(cleaned)))
-          recovered = None
-          for candidate in candidates:
-              try:
-                  padded = candidate + '=' * ((4 - len(candidate) % 4) % 4)
-                  data = base64.b64decode(padded, validate=False)
-              except Exception:
-                  continue
-              if valid_png(data):
-                  recovered = data
-                  break
-          if recovered is None:
-              raise SystemExit("packaged brand logo could not be recovered as CRC-valid PNG")
-          out = Path("app/src/main/res/drawable-nodpi/son_harf_brand_logo.png")
-          out.parent.mkdir(parents=True, exist_ok=True)
-          out.write_bytes(recovered)
+          home='app/src/main/java/com/sonharf/game/PremiumMasterHome.kt'
+          replace(home,'modifier = modifier.height(300.dp)','modifier = modifier.height(250.dp)',1)
+          p=Path(home); s=p.read_text()
+          start=s.index('@Composable private fun MasterBilBakalimCard')
+          end=s.index('@Composable private fun MasterDailySeries',start)
+          new='''@Composable private fun MasterBilBakalimCard(modifier:Modifier,onPlay:()->Unit){\n    Card(onClick=onPlay,modifier=modifier.height(205.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent),border=BorderStroke(1.5.dp,MasterBlue2)){\n        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4FDFF),Color(0xFFDDF6FF),Color.White))).padding(horizontal=14.dp,vertical=10.dp)){\n            Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceEvenly){\n                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){ Text("💡",fontSize=25.sp); Text("BİL BAKALIM",color=MasterInk,fontSize=24.sp,fontWeight=FontWeight.Black,maxLines=1,softWrap=false) }\n                Text("Doğru cevaba en yakın tahmin kazanır!",modifier=Modifier.fillMaxWidth(),color=MasterInk,fontSize=10.sp,textAlign=TextAlign.Center,maxLines=1)\n                Surface(shape=RoundedCornerShape(14.dp),color=MasterSky,border=BorderStroke(1.dp,MasterLine)){ Text("TÜRKÇE  •  ENGLISH",Modifier.padding(horizontal=12.dp,vertical=5.dp),color=MasterBlue,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1) }\n                Surface(shape=RoundedCornerShape(16.dp),color=MasterBlue){ Text("BUGÜNÜN MEYDAN OKUMASI",Modifier.padding(horizontal=11.dp,vertical=6.dp),color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1,softWrap=false) }\n                Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(42.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MasterBlue),contentPadding=PaddingValues(horizontal=10.dp)){ Icon(Icons.Rounded.PlayArrow,null,modifier=Modifier.size(20.dp)); Spacer(Modifier.width(5.dp)); Text("HEMEN OYNA",fontWeight=FontWeight.Black,fontSize=12.sp,maxLines=1,softWrap=false) }\n            }\n        }\n    }\n}\n\n'''
+          p.write_text(s[:start]+new+s[end:])
+
+          Path('app/src/main/java/com/sonharf/game/SonHarfBrandLogo.kt').write_text('''package com.sonharf.game\n\nimport androidx.compose.foundation.Image\nimport androidx.compose.runtime.Composable\nimport androidx.compose.ui.Modifier\nimport androidx.compose.ui.layout.ContentScale\nimport androidx.compose.ui.res.painterResource\nimport androidx.compose.ui.unit.Dp\nimport androidx.compose.ui.unit.dp\n\n@Composable\nfun SonHarfBrandLogo(modifier: Modifier = Modifier, size: Dp = 52.dp) {\n    Image(\n        painter = painterResource(R.drawable.son_harf_brand_logo),\n        contentDescription = "Son Harf Maskot",\n        contentScale = ContentScale.Fit,\n        modifier = modifier.size(size),\n    )\n}\n''')
           PY
-
           rm -f .github/workflows/logo-first-ui-pack.yml
 
       - name: Contract checks
@@ -134,11 +71,13 @@ jobs:
         run: |
           set -euo pipefail
           grep -q '@drawable/son_harf_brand_logo' app/src/main/AndroidManifest.xml
-          test -s app/src/main/res/drawable-nodpi/son_harf_brand_logo.png
+          test -s app/src/main/res/drawable-nodpi/son_harf_brand_logo.webp
+          grep -q 'R.drawable.son_harf_brand_logo' app/src/main/java/com/sonharf/game/SonHarfBrandLogo.kt
           grep -q 'SonHarfBrandLogo' app/src/main/java/com/sonharf/game/RequiredAuthGate.kt
           ! grep -q 'S↻H' app/src/main/java/com/sonharf/game/RequiredAuthGate.kt
           ! grep -q 'Mascot3DLayer(Modifier.fillMaxSize())' app/src/main/java/com/sonharf/game/GamePortalApp.kt
           ! grep -q 'MascotCardPreview' app/src/main/java/com/sonharf/game/PremiumMasterHome.kt
+          grep -q 'modifier.height(250.dp)' app/src/main/java/com/sonharf/game/PremiumMasterHome.kt
           grep -q 'modifier.height(205.dp)' app/src/main/java/com/sonharf/game/PremiumMasterHome.kt
           grep -q 'bilBakalimQuestionsEn' app/src/main/java/com/sonharf/game/BilBakalimFeature.kt
           grep -q 'TÜRKÇE' app/src/main/java/com/sonharf/game/BilBakalimFeature.kt
@@ -155,7 +94,7 @@ jobs:
           git config user.email "son-harf-ci@users.noreply.github.com"
           git add -A
           git diff --cached --quiet && exit 0
-          git commit -m "fix: unify branding and compact Turkish home UI"
+          git commit -m "fix: unify approved logo and compact Turkish home UI"
           git push origin HEAD:${{ github.head_ref }}
 
       - name: Stage APK
