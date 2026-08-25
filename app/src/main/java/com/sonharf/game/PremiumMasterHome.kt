@@ -205,7 +205,7 @@ private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto
 }
 
 @Composable private fun MasterSonHarfCard(modifier: Modifier, playerName:String, playerAvatarPath:String?, playerGender:String?, rivalName:String, streak:Int, onPlay:()->Unit) {
-    Card(onClick = onPlay, modifier = modifier.height(300.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), border = BorderStroke(1.5.dp, MasterBlue2)) {
+    Card(onClick = onPlay, modifier = modifier.height(250.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), border = BorderStroke(1.5.dp, MasterBlue2)) {
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF12A8EE), Color(0xFF0870C9), Color(0xFF064D9B)))).padding(13.dp)) {
             MasterLetterBackdrop()
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -237,28 +237,14 @@ private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto
 @Composable private fun PlayerVsCell(name:String,rating:String,modifier:Modifier,avatarPath:String?=null,gender:String?=null){ Column(modifier,horizontalAlignment=Alignment.CenterHorizontally){ if(!avatarPath.isNullOrBlank()) ProfilePhotoAvatarWithGender(avatarPath=avatarPath,gender=gender,name=name,size=40.dp,accent=Color.White) else Surface(shape=CircleShape,color=Color.White.copy(.20f),border=BorderStroke(2.dp,Color.White)){Box(Modifier.size(36.dp),contentAlignment=Alignment.Center){Text(name.take(1).uppercase(),color=Color.White,fontWeight=FontWeight.Black)}};Text(name,color=Color.White,fontWeight=FontWeight.Black,fontSize=9.sp,maxLines=1);Text("🏆 $rating",color=MasterGold,fontSize=8.sp)} }
 
 @Composable private fun MasterBilBakalimCard(modifier:Modifier,onPlay:()->Unit){
-    Card(onClick=onPlay,modifier=modifier.height(250.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent),border=BorderStroke(1.5.dp,MasterBlue2)){
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4FDFF),Color(0xFFDDF6FF),Color.White))).padding(horizontal=12.dp,vertical=10.dp)){
-            Row(Modifier.fillMaxSize(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){
-                MascotCardPreview(Modifier.width(112.dp).fillMaxHeight())
-                Column(Modifier.weight(1f),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){
-                    Text("💡",fontSize=26.sp)
-                    Text("BİL BAKALIM",color=MasterInk,fontSize=25.sp,fontWeight=FontWeight.Black,lineHeight=27.sp,maxLines=1,softWrap=false)
-                    Spacer(Modifier.height(3.dp))
-                    Text("Doğru cevaba en yakın tahmin kazanır!",modifier=Modifier.fillMaxWidth(),color=MasterInk,fontSize=10.sp,lineHeight=13.sp,textAlign=TextAlign.Center,maxLines=2)
-                    Spacer(Modifier.height(7.dp))
-                    Surface(shape=RoundedCornerShape(14.dp),color=MasterSky,border=BorderStroke(1.dp,MasterLine)){
-                        Text("TÜRKÇE  •  ENGLISH",Modifier.padding(horizontal=10.dp,vertical=5.dp),color=MasterBlue,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1)
-                    }
-                    Spacer(Modifier.height(7.dp))
-                    Surface(shape=RoundedCornerShape(16.dp),color=MasterBlue){
-                        Text("BUGÜNÜN MEYDAN OKUMASI",Modifier.padding(horizontal=10.dp,vertical=6.dp),color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1,softWrap=false)
-                    }
-                    Spacer(Modifier.height(7.dp))
-                    Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(43.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MasterBlue),contentPadding=PaddingValues(horizontal=10.dp)){
-                        Icon(Icons.Rounded.PlayArrow,null,modifier=Modifier.size(20.dp));Spacer(Modifier.width(5.dp));Text("HEMEN OYNA",fontWeight=FontWeight.Black,fontSize=12.sp,maxLines=1,softWrap=false)
-                    }
-                }
+    Card(onClick=onPlay,modifier=modifier.height(205.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent),border=BorderStroke(1.5.dp,MasterBlue2)){
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4FDFF),Color(0xFFDDF6FF),Color.White))).padding(horizontal=14.dp,vertical=10.dp)){
+            Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceEvenly){
+                Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){ Text("💡",fontSize=25.sp); Text("BİL BAKALIM",color=MasterInk,fontSize=24.sp,fontWeight=FontWeight.Black,maxLines=1,softWrap=false) }
+                Text("Doğru cevaba en yakın tahmin kazanır!",modifier=Modifier.fillMaxWidth(),color=MasterInk,fontSize=10.sp,textAlign=TextAlign.Center,maxLines=1)
+                Surface(shape=RoundedCornerShape(14.dp),color=MasterSky,border=BorderStroke(1.dp,MasterLine)){ Text("TÜRKÇE  •  ENGLISH",Modifier.padding(horizontal=12.dp,vertical=5.dp),color=MasterBlue,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1) }
+                Surface(shape=RoundedCornerShape(16.dp),color=MasterBlue){ Text("BUGÜNÜN MEYDAN OKUMASI",Modifier.padding(horizontal=11.dp,vertical=6.dp),color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1,softWrap=false) }
+                Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(42.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MasterBlue),contentPadding=PaddingValues(horizontal=10.dp)){ Icon(Icons.Rounded.PlayArrow,null,modifier=Modifier.size(20.dp)); Spacer(Modifier.width(5.dp)); Text("HEMEN OYNA",fontWeight=FontWeight.Black,fontSize=12.sp,maxLines=1,softWrap=false) }
             }
         }
     }
