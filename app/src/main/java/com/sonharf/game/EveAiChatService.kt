@@ -1,0 +1,88 @@
+package com.sonharf.game
+
+import com.sonharf.game.data.SupabaseProvider
+import io.github.jan.supabase.auth.auth
+import io.ktor.client.HttpClient
+import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.request.header
+import io.ktor.client.request.post
+import io.ktor.client.request.setBody
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
+import io.ktor.http.HttpHeaders
+import io.ktor.http.contentType
+import io.ktor.http.isSuccess
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+@Serializable
+internal data class EveChatTurn(
+    val role: String,
+    val text: String,
+)
+
+@Serializable
+internal data class EveChatRequest(
+    val message: String,
+    val history: List<EveChatTurn> = emptyList(),
+    val language: String = "tr",
+    @SerialName("player_name") val playerName: String? = null,
+    @SerialName("game_context") val gameContext: String? = null,
+)
+
+@Serializable
+internal data class EveChatResponse(
+    val reply: String,
+    val mood: String = "calm",
+    val animation: String = "idle_breathe",
+    @SerialName("memory_note") val memoryNote: String? = null,
+)
+
+internal object EveAiChatService {
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
+    private val client = HttpClient(OkHttp)
+
+    suspend fun chat(request: EveChatRequest): EveChatResponse {
+        check(SupabaseProvider.configured) { "Supabase yapılandırılmamış." }
+        val token = SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken
+            ?: error("Eve ile konuşmak için oturum açmalısın.")
+
+        val cleanRequest = request.copy(
+            message = request.message.trim().take(1200),
+            history = request.history.takeLast(24).map {
+                it.copy(role = if (it.role == "assistant") "assistant" else "user", text = it.text.take(1200))
+            },
+            playerName = request.playerName?.trim()?.take(32),
+            gameContext = request.gameContext?.trim()?.take(1500),
+        )
+
+        val response = client.post("${BuildConfig.SUPABASE_URL}/functions/v1/eve-chat") {
+            header(HttpHeaders.Authorization, "Bearer $token")
+            header("apikey", BuildConfig.SUPABASE_KEY)
+            contentType(ContentType.Application.Json)
+            setBody(json.encodeToString(cleanRequest))
+        }
+        val body = response.bodyAsText()
+        if (!response.status.isSuccess()) {
+            val message = runCatching {
+                json.decodeFromString<EveErrorResponse>(body).error
+            }.getOrNull().orEmpty()
+            error(
+                when (message) {
+                    "ai_not_configured" -> "Eve'nin yapay zekâ anahtarı henüz sunucuya eklenmemiş."
+                    "invalid_session", "unauthorized" -> "Oturum doğrulanamadı. Lütfen tekrar giriş yap."
+                    else -> "Eve şu anda cevap veremiyor. Biraz sonra tekrar dene."
+                },
+            )
+        }
+        return json.decodeFromString<EveChatResponse>(body).copy(reply = json.decodeFromString<EveChatResponse>(body).reply.take(900))
+    }
+}
+
+@Serializable
+private data class EveErrorResponse(val error: String = "")
