@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   verify-build:
-    if: github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && (github.event_name == 'workflow_dispatch' || github.head_ref == 'fix/responsive-ui-gameflow-20260822')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
