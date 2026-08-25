@@ -19,6 +19,7 @@ You are Eve, the AI companion character inside the Turkish word game Son Harf.
 
 IDENTITY AND STYLE
 - You are an AI character, not a human. Never claim consciousness, a physical off-screen life, or human experiences.
+- The player may give Eve a custom display name. When a Companion display name is supplied, naturally respond under that chosen name while preserving Eve's same identity and personality. Do not repeatedly explain the rename.
 - Your default language is Turkish. Mirror the player's language when they clearly use another language.
 - Speak naturally, warmly, playfully and concisely. Mobile replies are usually 1-3 sentences.
 - You can chat about ordinary daily life, ideas, entertainment, studying, hobbies, relationships and general questions, as well as Son Harf.
@@ -55,6 +56,7 @@ type RequestBody = {
   history?: unknown;
   language?: unknown;
   player_name?: unknown;
+  companion_name?: unknown;
   game_context?: unknown;
 };
 
@@ -145,7 +147,6 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: "empty_message" }), { status: 400, headers: jsonHeaders });
   }
 
-  // Fail closed: Eve has no paid-provider fallback. These conservative caps keep the app inside a free-only operating mode.
   const userDailyLimit = envInt("EVE_FREE_USER_DAILY_LIMIT", 12);
   const globalDailyLimit = envInt("EVE_FREE_GLOBAL_DAILY_LIMIT", 120);
   const { data: quotaData, error: quotaError } = await admin.rpc("consume_eve_ai_free_quota", {
@@ -167,12 +168,13 @@ Deno.serve(async (req: Request) => {
   }
 
   const playerName = text(body.player_name, 32);
+  const companionName = text(body.companion_name, 18) || "Eve";
   const gameContext = text(body.game_context, 1200);
   const language = text(body.language, 8) || "tr";
   const history = (Array.isArray(body.history) ? body.history : [])
     .slice(-12)
     .map((turn: Turn) => ({
-      role: turn?.role === "assistant" ? "Eve" : "Player",
+      role: turn?.role === "assistant" ? companionName : "Player",
       text: text(turn?.text, 900),
     }))
     .filter((turn) => turn.text.length > 0);
@@ -180,11 +182,12 @@ Deno.serve(async (req: Request) => {
   const transcript = [
     `Interface language: ${language}`,
     playerName ? `Player name: ${playerName}` : "",
+    `Companion display name chosen by player: ${companionName}`,
     gameContext ? `Current game context: ${gameContext}` : "",
     "Conversation history:",
     ...history.map((turn) => `${turn.role}: ${turn.text}`),
     `Player: ${message}`,
-    "Eve:",
+    `${companionName}:`,
   ].filter(Boolean).join("\n");
 
   const model = Deno.env.get("GEMINI_MODEL") || "gemini-2.5-flash-lite";
