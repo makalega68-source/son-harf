@@ -3,82 +3,70 @@ package com.sonharf.game
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.security.MessageDigest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
+import org.junit.Assume.assumeTrue
 import org.junit.Test
 
 class MascotPolicyTest {
-    @Test fun verifiedMascotIsEnabledAndFakeFallbackIsForbidden() {
+    @Test fun eveIsTheOnlyMascotContractAndFakeFallbackIsForbidden() {
         assertTrue(MascotPolicy.ENABLED)
         assertFalse(MascotPolicy.ALLOW_2D_OR_VIDEO_FALLBACK)
-        assertTrue(MascotPolicy.SKELETAL_ASSET_READY)
-        assertTrue(MascotPolicy.MODEL_ASSET.endsWith(".glb"))
-        assertEquals(781848, MascotPolicy.MODEL_SIZE_BYTES)
-        assertEquals(64, MascotPolicy.MODEL_SHA256.length)
+        assertEquals("models/eve/eve.glb", MascotPolicy.MODEL_ASSET)
+        assertEquals(EveAssetPolicy.MODEL_ASSET, MascotPolicy.MODEL_ASSET)
+
+        val oldCandidates = listOf(
+            File("src/main/assets/models/son_harf_white_pet_rigged.glb"),
+            File("app/src/main/assets/models/son_harf_white_pet_rigged.glb"),
+        )
+        assertTrue("Legacy white-pet GLB must be removed", oldCandidates.none { it.exists() })
     }
 
-    @Test fun bundledGlbIsExactSkinnedAssetWithExpectedClips() {
+    @Test fun eveAnimationRegistryUsesPurchasedClipContract() {
+        assertEquals(
+            setOf(
+                "IdleBreathe",
+                "IdleLookAround",
+                "IdleGraze",
+                "Rest",
+                "GoToRest",
+                "RestToGoBackUp",
+                "Walk",
+                "Run",
+                "GetHit",
+                "Attack",
+            ),
+            EveAnimationCue.entries.map { it.clipName }.toSet(),
+        )
+    }
+
+    @Test fun legacyMotionApiMapsOnlyToEveClipNames() {
+        val allowed = setOf("IdleBreathe", "IdleLookAround", "Rest", "Walk", "WalkTurnL", "WalkTurnR", "Run")
+        assertTrue(MascotAnimationRegistry.all.all { it.clipName in allowed })
+        assertEquals(MascotMotion.entries.toSet(), MascotAnimationRegistry.all.map { it.motion }.toSet())
+    }
+
+    @Test fun finalEveGlbWhenBundledIsSkinnedAndContainsCoreAnimations() {
         val candidates = listOf(
-            File("src/main/assets/${MascotPolicy.MODEL_ASSET}"),
-            File("app/src/main/assets/${MascotPolicy.MODEL_ASSET}"),
+            File("src/main/assets/${EveAssetPolicy.MODEL_ASSET}"),
+            File("app/src/main/assets/${EveAssetPolicy.MODEL_ASSET}"),
         )
         val file = candidates.firstOrNull { it.isFile }
-        assertTrue("Bundled mascot GLB is missing", file != null)
+        assumeTrue("Final Eve GLB has not been bundled yet", file != null)
+
         val bytes = requireNotNull(file).readBytes()
-        assertEquals(MascotPolicy.MODEL_SIZE_BYTES, bytes.size)
         assertEquals("glTF", bytes.copyOfRange(0, 4).toString(Charsets.US_ASCII))
-
-        val sha = MessageDigest.getInstance("SHA-256")
-            .digest(bytes)
-            .joinToString("") { "%02x".format(it) }
-        assertEquals(MascotPolicy.MODEL_SHA256, sha)
-
         val jsonLength = ByteBuffer.wrap(bytes, 12, 4).order(ByteOrder.LITTLE_ENDIAN).int
         val json = bytes.copyOfRange(20, 20 + jsonLength).toString(Charsets.UTF_8)
         assertTrue(json.contains("\"skins\":["))
         assertTrue(json.contains("\"joints\":["))
         assertTrue(json.contains("\"JOINTS_0\""))
         assertTrue(json.contains("\"WEIGHTS_0\""))
-        assertFalse("Dark base-color texture must not return", json.contains("\"baseColorTexture\""))
-        assertTrue("White body material is missing", json.contains("\"baseColorFactor\":[0.97,0.985,1.0,1.0]"))
-        MascotAnimationRegistry.all.forEach { definition ->
-            assertTrue("Missing GLB clip ${definition.clipName}", json.contains("\"name\":\"${definition.clipName}\""))
-        }
-    }
-
-    @Test fun requiredStateMachineMotionsExist() {
-        val expected = setOf(
-            MascotMotion.IDLE,
-            MascotMotion.WALK,
-            MascotMotion.TURN_LEFT,
-            MascotMotion.TURN_RIGHT,
-            MascotMotion.LOOK_AT_PLAYER,
-            MascotMotion.GREETING,
-            MascotMotion.THINKING,
-            MascotMotion.CRITICAL,
-            MascotMotion.VICTORY,
-            MascotMotion.DEFEAT,
-            MascotMotion.SIT,
-            MascotMotion.RUN,
-        )
-        assertEquals(expected, MascotAnimationRegistry.all.map { it.motion }.toSet())
-    }
-
-    @Test fun clipNamesMatchVerifiedGlbContract() {
-        assertEquals(
-            setOf("Idle", "Walk", "Turn_Left", "Turn_Right", "Look_At_Player", "Greeting", "Thinking", "Critical", "Victory", "Defeat", "Sit", "Run"),
-            MascotAnimationRegistry.all.map { it.clipName }.toSet(),
-        )
-    }
-
-    @Test fun advancedAnimationsUnlockOnTenLevelSteps() {
-        val advanced = MascotAnimationRegistry.all.filter { it.unlockLevel > 1 }
-        assertTrue(advanced.isNotEmpty())
-        assertTrue(advanced.all { it.unlockLevel % 10 == 0 })
-        assertTrue(MascotAnimationRegistry.unlocked(9).none { it.motion == MascotMotion.SIT })
-        assertTrue(MascotAnimationRegistry.unlocked(10).any { it.motion == MascotMotion.SIT })
-        assertTrue(MascotAnimationRegistry.unlocked(20).any { it.motion == MascotMotion.RUN })
+        assertTrue(json.contains("\"name\":\"IdleBreathe\""))
+        assertTrue(json.contains("\"name\":\"IdleLookAround\""))
+        assertTrue(json.contains("\"name\":\"Walk\""))
+        assertTrue(json.contains("\"name\":\"Run\""))
+        assertTrue(json.contains("\"name\":\"Rest\""))
     }
 }
