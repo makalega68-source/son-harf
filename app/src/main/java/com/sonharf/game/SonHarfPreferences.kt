@@ -34,7 +34,7 @@ object SonHarfPreferences {
     fun soundEnabled(context: Context): Boolean = prefs(context).getBoolean(SOUND, true)
     fun vibrationEnabled(context: Context): Boolean = prefs(context).getBoolean(VIBRATION, true)
     fun darkModeEnabled(context: Context): Boolean = prefs(context).getBoolean(DARK_MODE, false)
-    fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"
+    fun language(context: Context): String = "tr"
     fun botDifficulty(context: Context): String = prefs(context).getString(BOT_DIFFICULTY, "normal")?.takeIf { it in setOf("easy","normal","hard") } ?: "normal"
     fun rememberLogin(context: Context): Boolean = prefs(context).getBoolean(REMEMBER_LOGIN, true)
     fun rememberedEmail(context: Context): String = prefs(context).getString(REMEMBERED_EMAIL, "").orEmpty()
@@ -68,8 +68,8 @@ object SonHarfPreferences {
     }
 
     fun setLanguage(context: Context, value: String) {
-        val normalized = if (value.lowercase() == "en") "en" else "tr"
-        prefs(context).edit().putString(LANGUAGE, normalized).apply(); SonHarfUiState.language = normalized
+        prefs(context).edit().putString(LANGUAGE, "tr").apply()
+        SonHarfUiState.language = "tr"
     }
 
     fun setNotificationsEnabled(context: Context, value: Boolean) {

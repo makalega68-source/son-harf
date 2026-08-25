@@ -1,0 +1,14 @@
+[
+    {
+        "merged": "com.sonharf.game.app-debug-52:/drawable-nodpi_son_harf_brand_logo.webp.flat",
+        "source": "com.sonharf.game.app-main-54:/drawable-nodpi/son_harf_brand_logo.webp"
+    },
+    {
+        "merged": "com.sonharf.game.app-debug-52:/drawable_ic_son_harf.xml.flat",
+        "source": "com.sonharf.game.app-main-54:/drawable/ic_son_harf.xml"
+    },
+    {
+        "merged": "com.sonharf.game.app-debug-52:/drawable_ic_son_harf_neon.xml.flat",
+        "source": "com.sonharf.game.app-main-54:/drawable/ic_son_harf_neon.xml"
+    }
+]

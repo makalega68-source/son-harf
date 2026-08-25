@@ -118,10 +118,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(14.dp),
             ) {
-                Box(
-                    Modifier.size(88.dp).scale(pulse).background(Brush.radialGradient(listOf(SonHarfCyan, SonHarfPurple)), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) { Text("S↻H", color = Color.White, fontWeight = FontWeight.Black, fontSize = 30.sp) }
+                SonHarfBrandLogo(modifier = Modifier.scale(pulse), size = 118.dp)
                 Text("SON HARF", color = Color(0xFF111522), fontWeight = FontWeight.Black, fontSize = 36.sp, letterSpacing = 2.sp)
                 Text("Kelime düellosuna girmek için doğrulanmış üyelik gerekiyor.", color = Color(0xFF697086), textAlign = TextAlign.Center, fontSize = 15.sp)
 

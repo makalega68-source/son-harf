@@ -28,9 +28,6 @@ fun GamePortalApp() {
 
     Box(Modifier.fillMaxSize()) {
         ClassicPremiumApp()
-        if (MascotPolicy.ENABLED && MascotPolicy.SKELETAL_ASSET_READY) {
-            MascotBehaviorBridge()
-            Mascot3DLayer(Modifier.fillMaxSize())
-        }
+        // Maskot entegrasyonu bir sonraki özel aşamaya ertelendi.
     }
 }

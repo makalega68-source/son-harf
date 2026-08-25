@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sonharf.game.BilBakalimMetaTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-08-25T08:33:01.296Z" hostname="runnervm76f27" time="0.055">
+  <properties/>
+  <testcase name="masteryIsPercentBased" classname="com.sonharf.game.BilBakalimMetaTest" time="0.0"/>
+  <testcase name="dailyChallengeAlwaysFitsDeck" classname="com.sonharf.game.BilBakalimMetaTest" time="0.054"/>
+  <testcase name="jokerIsHintOnly" classname="com.sonharf.game.BilBakalimMetaTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

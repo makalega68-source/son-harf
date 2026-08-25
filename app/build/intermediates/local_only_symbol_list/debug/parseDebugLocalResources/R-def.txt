@@ -1,0 +1,6 @@
+R_DEF: Internal format may change without notice
+local
+drawable ic_son_harf
+drawable ic_son_harf_neon
+drawable son_harf_brand_logo
+style Theme.SonHarf

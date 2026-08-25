@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.sonharf.game.MascotPolicyTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-08-25T08:33:01.392Z" hostname="runnervm76f27" time="0.12">
+  <properties/>
+  <testcase name="verifiedMascotIsEnabledAndFakeFallbackIsForbidden" classname="com.sonharf.game.MascotPolicyTest" time="0.0"/>
+  <testcase name="clipNamesMatchVerifiedGlbContract" classname="com.sonharf.game.MascotPolicyTest" time="0.025"/>
+  <testcase name="advancedAnimationsUnlockOnTenLevelSteps" classname="com.sonharf.game.MascotPolicyTest" time="0.001"/>
+  <testcase name="bundledGlbIsExactSkinnedAssetWithExpectedClips" classname="com.sonharf.game.MascotPolicyTest" time="0.09"/>
+  <testcase name="requiredStateMachineMotionsExist" classname="com.sonharf.game.MascotPolicyTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
