@@ -32,6 +32,17 @@ internal object EveAssetPolicy {
     const val MODEL_ASSET = "models/eve/eve.glb"
 }
 
+/**
+ * The purchased Eve model contains root-motion in several clips. SceneView plays those
+ * transforms literally, which can move the whole mascot through the fixed companion camera.
+ * Until root-motion is stripped from the source asset, the companion UI only allows the two
+ * in-place clips that are safe for a fixed mobile viewport.
+ */
+private fun EveAnimationCue.safeForCompanionStage(): EveAnimationCue = when (this) {
+    EveAnimationCue.IDLE_GRAZE -> EveAnimationCue.IDLE_GRAZE
+    else -> EveAnimationCue.IDLE_BREATHE
+}
+
 internal object EveMascotRuntime {
     var mood by mutableStateOf(EveMood.CALM)
         private set
@@ -45,14 +56,14 @@ internal object EveMascotRuntime {
     fun thinking() {
         isThinking = true
         mood = EveMood.THINKING
-        animation = EveAnimationCue.IDLE_LOOK_AROUND
+        animation = EveAnimationCue.IDLE_BREATHE
         bubbleText = "…"
     }
 
     fun apply(response: EveChatResponse) {
         isThinking = false
         mood = response.mood.toEveMood()
-        animation = response.animation.toEveAnimation()
+        animation = response.animation.toEveAnimation().safeForCompanionStage()
         bubbleText = response.reply.trim().take(900)
     }
 
@@ -63,7 +74,7 @@ internal object EveMascotRuntime {
     }
 
     fun play(cue: EveAnimationCue, bubble: String? = null) {
-        animation = cue
+        animation = cue.safeForCompanionStage()
         bubble?.let(::setBubble)
     }
 
