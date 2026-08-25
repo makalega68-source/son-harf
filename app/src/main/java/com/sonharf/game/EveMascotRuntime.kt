@@ -62,6 +62,11 @@ internal object EveMascotRuntime {
         animation = EveAnimationCue.IDLE_BREATHE
     }
 
+    fun play(cue: EveAnimationCue, bubble: String? = null) {
+        animation = cue
+        bubble?.let(::setBubble)
+    }
+
     fun setBubble(text: String) {
         bubbleText = text.trim().take(900)
     }
