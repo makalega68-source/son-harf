@@ -18,10 +18,7 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Serializable
-internal data class EveChatTurn(
-    val role: String,
-    val text: String,
-)
+internal data class EveChatTurn(val role: String, val text: String)
 
 @Serializable
 internal data class EveChatRequest(
@@ -29,6 +26,7 @@ internal data class EveChatRequest(
     val history: List<EveChatTurn> = emptyList(),
     val language: String = "tr",
     @SerialName("player_name") val playerName: String? = null,
+    @SerialName("companion_name") val companionName: String? = null,
     @SerialName("game_context") val gameContext: String? = null,
 )
 
@@ -41,26 +39,22 @@ internal data class EveChatResponse(
 )
 
 internal object EveAiChatService {
-    private val json = Json {
-        ignoreUnknownKeys = true
-        encodeDefaults = true
-    }
+    private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val client = HttpClient(OkHttp)
 
     suspend fun chat(request: EveChatRequest): EveChatResponse {
         check(SupabaseProvider.configured) { "Supabase yapılandırılmamış." }
         val token = SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken
-            ?: error("Eve ile konuşmak için oturum açmalısın.")
-
+            ?: error("Maskotla konuşmak için oturum açmalısın.")
         val cleanRequest = request.copy(
             message = request.message.trim().take(1000),
             history = request.history.takeLast(12).map {
                 it.copy(role = if (it.role == "assistant") "assistant" else "user", text = it.text.take(900))
             },
             playerName = request.playerName?.trim()?.take(32),
+            companionName = request.companionName?.trim()?.take(18),
             gameContext = request.gameContext?.trim()?.take(1200),
         )
-
         val response = client.post("${BuildConfig.SUPABASE_URL}/functions/v1/eve-chat") {
             header(HttpHeaders.Authorization, "Bearer $token")
             header("apikey", BuildConfig.SUPABASE_KEY)
@@ -69,20 +63,14 @@ internal object EveAiChatService {
         }
         val body = response.bodyAsText()
         if (!response.status.isSuccess()) {
-            val message = runCatching {
-                json.decodeFromString<EveErrorResponse>(body).error
-            }.getOrNull().orEmpty()
-            error(
-                when (message) {
-                    "ai_not_configured" -> "Eve'nin Gemini anahtarı henüz sunucuya eklenmemiş."
-                    "invalid_session", "unauthorized" -> "Oturum doğrulanamadı. Lütfen tekrar giriş yap."
-                    "free_quota_reached", "free_provider_quota_reached" ->
-                        "Bugünkü ücretsiz Eve sohbet hakkı doldu. Yarın yeniden açılacak."
-                    "quota_check_failed", "server_not_configured" ->
-                        "Eve'nin ücretsiz sohbet sistemi şu anda hazırlanıyor. Biraz sonra tekrar dene."
-                    else -> "Eve şu anda cevap veremiyor. Biraz sonra tekrar dene."
-                },
-            )
+            val code = runCatching { json.decodeFromString<EveErrorResponse>(body).error }.getOrNull().orEmpty()
+            error(when (code) {
+                "ai_not_configured" -> "Gemini anahtarı sunucuda doğrulanamadı."
+                "invalid_session", "unauthorized" -> "Oturum doğrulanamadı. Lütfen tekrar giriş yap."
+                "free_quota_reached", "free_provider_quota_reached" -> "Bugünkü ücretsiz maskot sohbet hakkı doldu. Yarın yeniden açılacak."
+                "quota_check_failed", "server_not_configured" -> "Ücretsiz sohbet sistemi şu anda hazırlanıyor. Biraz sonra tekrar dene."
+                else -> "Maskot şu anda cevap veremiyor. Biraz sonra tekrar dene."
+            })
         }
         val decoded = json.decodeFromString<EveChatResponse>(body)
         return decoded.copy(reply = decoded.reply.take(700))
