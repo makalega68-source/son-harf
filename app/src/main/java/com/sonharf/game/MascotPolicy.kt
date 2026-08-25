@@ -1,16 +1,16 @@
 package com.sonharf.game
 
 /**
- * Production mascot gate.
- *
- * A mascot may render only when a real GLB contains a quadruped skin/skeleton and animation clips.
- * PNG, bitmap, VideoView and MP4 fallbacks are intentionally forbidden.
+ * Compatibility facade for the old mascot policy.
+ * The former white-pet GLB is retired; Eve is the only mascot asset contract.
  */
 internal object MascotPolicy {
     const val ENABLED = true
     const val ALLOW_2D_OR_VIDEO_FALLBACK = false
     const val SKELETAL_ASSET_READY = true
-    const val MODEL_ASSET = "models/son_harf_white_pet_rigged.glb"
-    const val MODEL_SHA256 = "27779dcb3a201013c47dc4a5099540a17984f805c998984f45ff84cf34426a41"
-    const val MODEL_SIZE_BYTES = 781848
+    const val MODEL_ASSET = EveAssetPolicy.MODEL_ASSET
+
+    // Filled only after the final Eve GLB is produced and accepted.
+    const val MODEL_SHA256 = ""
+    const val MODEL_SIZE_BYTES = 0
 }
