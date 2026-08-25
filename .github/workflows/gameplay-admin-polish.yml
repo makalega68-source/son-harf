@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   polish-test-build:
-    if: github.actor != 'github-actions[bot]'
+    if: github.actor != 'github-actions[bot]' && (github.event_name == 'workflow_dispatch' || github.head_ref == 'fix/gameplay-admin-polish-20260822')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
