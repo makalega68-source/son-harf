@@ -1,0 +1,28 @@
+name: Eve APK Signing Tools
+
+on:
+  push:
+    branches: [feature/eve-ai-mascot-v2]
+
+jobs:
+  tools:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install build tools
+        run: sdkmanager "build-tools;36.0.0"
+      - name: Package signing tools
+        run: |
+          mkdir -p eve-tools/lib
+          cp "$ANDROID_HOME/build-tools/36.0.0/apksigner" eve-tools/
+          cp "$ANDROID_HOME/build-tools/36.0.0/zipalign" eve-tools/
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" eve-tools/lib/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: eve-apk-signing-tools
+          path: eve-tools/
+          retention-days: 1
