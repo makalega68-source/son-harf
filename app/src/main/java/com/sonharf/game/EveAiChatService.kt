@@ -53,12 +53,12 @@ internal object EveAiChatService {
             ?: error("Eve ile konuşmak için oturum açmalısın.")
 
         val cleanRequest = request.copy(
-            message = request.message.trim().take(1200),
-            history = request.history.takeLast(24).map {
-                it.copy(role = if (it.role == "assistant") "assistant" else "user", text = it.text.take(1200))
+            message = request.message.trim().take(1000),
+            history = request.history.takeLast(12).map {
+                it.copy(role = if (it.role == "assistant") "assistant" else "user", text = it.text.take(900))
             },
             playerName = request.playerName?.trim()?.take(32),
-            gameContext = request.gameContext?.trim()?.take(1500),
+            gameContext = request.gameContext?.trim()?.take(1200),
         )
 
         val response = client.post("${BuildConfig.SUPABASE_URL}/functions/v1/eve-chat") {
@@ -74,13 +74,18 @@ internal object EveAiChatService {
             }.getOrNull().orEmpty()
             error(
                 when (message) {
-                    "ai_not_configured" -> "Eve'nin yapay zekâ anahtarı henüz sunucuya eklenmemiş."
+                    "ai_not_configured" -> "Eve'nin Gemini anahtarı henüz sunucuya eklenmemiş."
                     "invalid_session", "unauthorized" -> "Oturum doğrulanamadı. Lütfen tekrar giriş yap."
+                    "free_quota_reached", "free_provider_quota_reached" ->
+                        "Bugünkü ücretsiz Eve sohbet hakkı doldu. Yarın yeniden açılacak."
+                    "quota_check_failed", "server_not_configured" ->
+                        "Eve'nin ücretsiz sohbet sistemi şu anda hazırlanıyor. Biraz sonra tekrar dene."
                     else -> "Eve şu anda cevap veremiyor. Biraz sonra tekrar dene."
                 },
             )
         }
-        return json.decodeFromString<EveChatResponse>(body).copy(reply = json.decodeFromString<EveChatResponse>(body).reply.take(900))
+        val decoded = json.decodeFromString<EveChatResponse>(body)
+        return decoded.copy(reply = decoded.reply.take(700))
     }
 }
 
