@@ -30,34 +30,30 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           from pathlib import Path
-          import base64, re
+          import base64, re, zlib
 
           def replace(path, old, new, count=None):
               p = Path(path)
               s = p.read_text()
               if old not in s:
                   raise SystemExit(f"guard failed: expected text missing in {path}")
-              s2 = s.replace(old, new, count if count is not None else -1)
-              p.write_text(s2)
+              p.write_text(s.replace(old, new, count if count is not None else -1))
 
           replace(
               "app/src/main/AndroidManifest.xml",
               'android:icon="@drawable/ic_son_harf"\n        android:roundIcon="@drawable/ic_son_harf"',
               'android:icon="@drawable/son_harf_brand_logo"\n        android:roundIcon="@drawable/son_harf_brand_logo"',
           )
-
           replace(
               "app/src/main/java/com/sonharf/game/RequiredAuthGate.kt",
               '''                Box(\n                    Modifier.size(88.dp).scale(pulse).background(Brush.radialGradient(listOf(SonHarfCyan, SonHarfPurple)), CircleShape),\n                    contentAlignment = Alignment.Center,\n                ) { Text("S↻H", color = Color.White, fontWeight = FontWeight.Black, fontSize = 30.sp) }''',
               '''                SonHarfBrandLogo(\n                    modifier = Modifier.scale(pulse),\n                    size = 118.dp,\n                )''',
           )
-
           replace(
               "app/src/main/java/com/sonharf/game/GamePortalApp.kt",
               '''        ClassicPremiumApp()\n        if (MascotPolicy.ENABLED && MascotPolicy.SKELETAL_ASSET_READY) {\n            MascotBehaviorBridge()\n            Mascot3DLayer(Modifier.fillMaxSize())\n        }''',
               '''        ClassicPremiumApp()\n        // Mascot integration is intentionally deferred to the dedicated next phase.''',
           )
-
           replace(
               "app/src/main/java/com/sonharf/game/SonHarfPreferences.kt",
               'fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"',
@@ -68,7 +64,6 @@ jobs:
               '''    fun setLanguage(context: Context, value: String) {\n        val normalized = if (value.lowercase() == "en") "en" else "tr"\n        prefs(context).edit().putString(LANGUAGE, normalized).apply(); SonHarfUiState.language = normalized\n    }''',
               '''    fun setLanguage(context: Context, value: String) {\n        prefs(context).edit().putString(LANGUAGE, "tr").apply()\n        SonHarfUiState.language = "tr"\n    }''',
           )
-
           replace(
               "app/src/main/java/com/sonharf/game/PremiumMasterHome.kt",
               'modifier = modifier.height(300.dp)',
@@ -88,15 +83,48 @@ jobs:
               '''    val logo = remember {\n        fun decode(bytes: ByteArray?): androidx.compose.ui.graphics.ImageBitmap? {\n            if (bytes == null || bytes.isEmpty()) return null\n            return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()\n        }\n        runCatching {\n            val encoded = context.assets.open("son_harf_brand_logo.b64")\n                .bufferedReader()\n                .use { it.readText() }\n                .trim()\n            decode(Base64.decode(encoded, Base64.DEFAULT))\n        }.getOrNull()\n    }''',
           )
 
+          def valid_png(data: bytes) -> bool:
+              if not data.startswith(b'\x89PNG\r\n\x1a\n'):
+                  return False
+              pos = 8
+              saw_iend = False
+              try:
+                  while pos + 12 <= len(data):
+                      n = int.from_bytes(data[pos:pos+4], 'big')
+                      typ = data[pos+4:pos+8]
+                      end = pos + 12 + n
+                      if end > len(data): return False
+                      chunk = data[pos+8:pos+8+n]
+                      crc = int.from_bytes(data[pos+8+n:pos+12+n], 'big')
+                      if (zlib.crc32(typ + chunk) & 0xffffffff) != crc: return False
+                      pos = end
+                      if typ == b'IEND':
+                          saw_iend = True
+                          break
+                  return saw_iend and pos == len(data)
+              except Exception:
+                  return False
+
           raw = Path("app/src/main/assets/son_harf_brand_logo.b64").read_text(errors="ignore")
           cleaned = re.sub(r'[^A-Za-z0-9+/=]', '', raw)
-          cleaned += '=' * ((4 - len(cleaned) % 4) % 4)
-          data = base64.b64decode(cleaned, validate=False)
-          if not data.startswith(b'\x89PNG\r\n\x1a\n'):
-              raise SystemExit("packaged brand logo did not decode to PNG")
+          candidates = [cleaned]
+          if len(cleaned) % 4 == 1:
+              candidates = (cleaned[:i] + cleaned[i+1:] for i in range(len(cleaned)))
+          recovered = None
+          for candidate in candidates:
+              try:
+                  padded = candidate + '=' * ((4 - len(candidate) % 4) % 4)
+                  data = base64.b64decode(padded, validate=False)
+              except Exception:
+                  continue
+              if valid_png(data):
+                  recovered = data
+                  break
+          if recovered is None:
+              raise SystemExit("packaged brand logo could not be recovered as CRC-valid PNG")
           out = Path("app/src/main/res/drawable-nodpi/son_harf_brand_logo.png")
           out.parent.mkdir(parents=True, exist_ok=True)
-          out.write_bytes(data)
+          out.write_bytes(recovered)
           PY
 
           rm -f .github/workflows/logo-first-ui-pack.yml
