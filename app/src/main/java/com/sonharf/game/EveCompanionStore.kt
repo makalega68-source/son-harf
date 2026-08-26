@@ -135,6 +135,75 @@ internal class EveCompanionStore(context: Context) {
             prefs.edit().putInt("energy", value.coerceIn(0, 100)).apply()
         }
 
+    private val needStepMs = 45L * 60L * 1000L
+
+    /**
+     * Gentle offline need progression. Hunger changes over time, while happiness changes much more
+     * slowly. Energy is not blindly drained while the app is closed because Eve may be resting.
+     */
+    private fun refreshNeeds(nowMs: Long = System.currentTimeMillis()) {
+        val saved = prefs.getLong("needs_updated_at_ms", 0L)
+        if (saved <= 0L || nowMs <= saved) {
+            prefs.edit().putLong("needs_updated_at_ms", nowMs).apply()
+            return
+        }
+
+        val elapsed = (nowMs - saved).coerceAtMost(48L * 60L * 60L * 1000L)
+        val steps = (elapsed / needStepMs).toInt()
+        if (steps <= 0) return
+
+        val currentFullness = prefs.getInt("fullness", 68).coerceIn(0, 100)
+        val currentHappiness = prefs.getInt("happiness", 82).coerceIn(0, 100)
+        prefs.edit()
+            .putInt("fullness", (currentFullness - steps).coerceIn(0, 100))
+            .putInt("happiness", (currentHappiness - (steps / 4)).coerceIn(20, 100))
+            .putLong("needs_updated_at_ms", saved + steps * needStepMs)
+            .apply()
+    }
+
+    fun markInteraction(nowMs: Long = System.currentTimeMillis()) {
+        prefs.edit().putLong("last_interaction_at_ms", nowMs).apply()
+    }
+
+    fun minutesSinceInteraction(nowMs: Long = System.currentTimeMillis()): Long {
+        val saved = prefs.getLong("last_interaction_at_ms", 0L)
+        if (saved <= 0L || nowMs <= saved) {
+            markInteraction(nowMs)
+            return 0L
+        }
+        return (nowMs - saved) / 60_000L
+    }
+
+    fun recordConversationMood(mood: EveMood, nowMs: Long = System.currentTimeMillis()) {
+        prefs.edit()
+            .putString("last_conversation_mood", mood.name)
+            .putLong("last_conversation_at_ms", nowMs)
+            .apply()
+        markInteraction(nowMs)
+    }
+
+    private fun recentConversationMood(nowMs: Long): Pair<EveMood?, Long?> {
+        val at = prefs.getLong("last_conversation_at_ms", 0L)
+        if (at <= 0L || nowMs <= at) return null to null
+        val ageMinutes = (nowMs - at) / 60_000L
+        val mood = prefs.getString("last_conversation_mood", null)
+            ?.let { runCatching { EveMood.valueOf(it) }.getOrNull() }
+        return mood to ageMinutes
+    }
+
+    fun behaviorContext(nowMs: Long = System.currentTimeMillis()): EveBehaviorContext {
+        refreshNeeds(nowMs)
+        val (conversationMood, conversationAgeMinutes) = recentConversationMood(nowMs)
+        return EveBehaviorContext(
+            fullness = fullness,
+            happiness = happiness,
+            energy = energy,
+            minutesSinceInteraction = minutesSinceInteraction(nowMs),
+            recentConversationMood = conversationMood,
+            conversationAgeMinutes = conversationAgeMinutes,
+        )
+    }
+
     var selectedStyle: String
         get() = prefs.getString("selected_style", "default_white")
             ?.takeIf(EveCompanionRules.styleIds::contains) ?: "default_white"
@@ -177,7 +246,10 @@ internal class EveCompanionStore(context: Context) {
 
     fun inventory(foodId: String): Int = prefs.getInt("food_$foodId", 0)
 
-    fun vitals(): EveVitalSnapshot = EveVitalSnapshot(happiness, fullness, energy)
+    fun vitals(): EveVitalSnapshot {
+        refreshNeeds()
+        return EveVitalSnapshot(happiness, fullness, energy)
+    }
 
     fun progress(): EveProgressSnapshot = EveProgressSnapshot(
         level = friendshipLevel,
@@ -218,11 +290,13 @@ internal class EveCompanionStore(context: Context) {
         prefs.edit().putInt("daily_pet_count", dailyPetCount + 1).apply()
         happiness = happiness + 7
         energy = energy + 1
+        markInteraction()
         return addFriendship(EveCompanionRules.PET_XP)
     }
 
     fun chatBond(): Int {
         happiness = happiness + 3
+        markInteraction()
         return addFriendship(2)
     }
 
@@ -250,6 +324,7 @@ internal class EveCompanionStore(context: Context) {
         }
         happiness = happiness + 4
         energy = energy + 2
+        markInteraction()
         addFriendship(EveCompanionRules.FEED_XP)
         return true
     }
@@ -265,6 +340,7 @@ internal class EveCompanionStore(context: Context) {
     /** XP hook for companion mini-games or other non-ranked mascot activities. */
     fun playGame(score: Int): Int {
         val earnedXp = maxOf(20, (score * 1.5).toInt())
+        markInteraction()
         addFriendship(earnedXp)
         return earnedXp
     }
@@ -331,6 +407,7 @@ internal class EveCompanionStore(context: Context) {
             .putInt("food_${bonus.id}", inventory(bonus.id) + 1)
             .apply()
         happiness = happiness + 5
+        markInteraction()
         addFriendship(4)
         return true
     }
