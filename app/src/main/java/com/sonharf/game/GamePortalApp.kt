@@ -18,8 +18,9 @@ internal val PortalGreen = Color(0xFF32C985)
 internal val PortalRed = Color(0xFFFF7891)
 
 /**
- * Root shell. Eve no longer reserves a fixed bottom dock. The HOME screen owns a full-screen
- * floating companion overlay, while gameplay and the other product surfaces stay unobstructed.
+ * Root shell. HOME owns a fixed transparent Eve slot beside the Son Harf card; Eve does not
+ * roam over the interface. The center bottom-navigation action opens the full Eve room overlay,
+ * while gameplay and the other product surfaces remain unobstructed.
  */
 @Composable
 fun GamePortalApp() {
