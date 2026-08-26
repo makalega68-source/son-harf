@@ -159,6 +159,7 @@ internal fun EveLivingRoomScreen(onClose: () -> Unit) {
                 )
             }.onSuccess { response ->
                 EveMascotRuntime.apply(response)
+                store.recordConversationMood(response.mood.toEveMood())
                 store.chatBond()
                 chatReply = response.reply
                 friendshipFeedback = "+2 ${sh("Dostluk", "Friendship")}"
@@ -201,6 +202,7 @@ internal fun EveLivingRoomScreen(onClose: () -> Unit) {
                         reactionNonce = reactionNonce,
                         onTap = {
                             val points = store.pet()
+                            EveMascotRuntime.petReaction()
                             react(sh("Bunu sevdim! Biraz daha sev beni. 💚", "I loved that! Pet me again. 💚"), points)
                         },
                     )
@@ -244,16 +246,25 @@ internal fun EveLivingRoomScreen(onClose: () -> Unit) {
             ) {
                 LivingActionButton("🤍", sh("Sev", "Pet"), LivingPink, Modifier.weight(1f)) {
                     val points = store.pet()
+                    EveMascotRuntime.petReaction()
                     react(sh("Mırır! Çok güzel. 🤍", "Purr! That feels great. 🤍"), points)
                 }
                 LivingActionButton("🍎", sh("Besle", "Feed"), Color(0xFF72C94E), Modifier.weight(1f)) {
                     val points = store.quickFeed()
-                    if (points > 0) react(sh("Mmm! Tam kararında. 🍎", "Mmm! Just right. 🍎"), points)
-                    else react(sh("Mama için biraz daha yaprak toplamamız gerek. 🍃", "We need a few more leaves for food. 🍃"))
+                    if (points > 0) {
+                        EveMascotRuntime.feedReaction()
+                        react(sh("Mmm! Tam kararında. 🍎", "Mmm! Just right. 🍎"), points)
+                    } else {
+                        react(sh("Mama için biraz daha yaprak toplamamız gerek. 🍃", "We need a few more leaves for food. 🍃"))
+                    }
                 }
                 LivingActionButton("🎁", sh("Hediye", "Gift"), LivingGold, Modifier.weight(1f)) {
-                    if (store.claimDailyGift()) react(sh("Bunu senin için buldum! 🎁✨", "I found this for you! 🎁✨"), 4)
-                    else react(sh("Bugünkü hediyemizi aldık. Yarın yenisi var! 🎁", "We claimed today's gift. A new one comes tomorrow! 🎁"))
+                    if (store.claimDailyGift()) {
+                        EveMascotRuntime.giftReaction()
+                        react(sh("Bunu senin için buldum! 🎁✨", "I found this for you! 🎁✨"), 4)
+                    } else {
+                        react(sh("Bugünkü hediyemizi aldık. Yarın yenisi var! 🎁", "We claimed today's gift. A new one comes tomorrow! 🎁"))
+                    }
                 }
                 LivingActionButton("💬", sh("Sohbet", "Chat"), LivingBlue, Modifier.weight(1f)) {
                     panel = LivingPanel.CHAT

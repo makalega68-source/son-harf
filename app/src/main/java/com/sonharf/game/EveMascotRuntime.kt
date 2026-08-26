@@ -102,7 +102,10 @@ internal object EveMascotRuntime {
 
     private var resetJob: Job? = null
     private var motionResetJob: Job? = null
+    private var homeIntentResetJob: Job? = null
     private var autonomousIdleJob: Job? = null
+    private var lastContextIntent: EveHomeIntent = EveHomeIntent.NORMAL
+    private var lastContextIntentAtMs: Long = 0L
 
     var mood by mutableStateOf(EveMood.CALM)
         private set
@@ -125,6 +128,14 @@ internal object EveMascotRuntime {
 
     var bubbleText by mutableStateOf("")
         private set
+
+    var homeIntent by mutableStateOf(EveHomeIntent.NORMAL)
+        private set
+    var homeIntentVersion by mutableIntStateOf(0)
+        private set
+    var homePromptText by mutableStateOf("")
+        private set
+
     var isThinking by mutableStateOf(false)
         private set
 
@@ -177,12 +188,50 @@ internal object EveMascotRuntime {
 
     fun apply(response: EveChatResponse) {
         isThinking = false
-        mood = response.mood.toEveMood()
+        val responseMood = response.mood.toEveMood()
+        mood = responseMood
         bubbleText = response.reply.trim().take(900)
-        play(
-            cue = response.animation.toEveAnimation(),
-            returnToIdleAfterMs = 2_800,
-        )
+
+        // The server keeps its animation field conservative. Locally map the returned emotional
+        // tone onto camera-safe clips that are known to exist in the accepted rigged GLB.
+        when (responseMood) {
+            EveMood.CELEBRATING -> react(
+                cue = EveAnimationCue.IDLE_LOOK_AROUND,
+                nextMood = responseMood,
+                effect = EveMotionEffect.BOUNCE,
+                effectDurationMs = 1_000L,
+                returnToIdleAfterMs = 3_200L,
+            )
+            EveMood.HAPPY -> react(
+                cue = EveAnimationCue.IDLE_LOOK_AROUND,
+                nextMood = responseMood,
+                effect = EveMotionEffect.BOUNCE,
+                effectDurationMs = 820L,
+                returnToIdleAfterMs = 2_900L,
+            )
+            EveMood.CURIOUS, EveMood.THINKING -> react(
+                cue = EveAnimationCue.IDLE_LOOK_AROUND,
+                nextMood = responseMood,
+                effect = EveMotionEffect.WIGGLE,
+                effectDurationMs = 1_050L,
+                returnToIdleAfterMs = 3_000L,
+            )
+            EveMood.SUPPORTIVE, EveMood.ENCOURAGING -> react(
+                cue = EveAnimationCue.IDLE_LOOK_AROUND,
+                nextMood = responseMood,
+                effect = EveMotionEffect.NONE,
+                effectDurationMs = 0L,
+                returnToIdleAfterMs = 3_400L,
+            )
+            EveMood.TIRED -> react(
+                cue = EveAnimationCue.REST,
+                nextMood = responseMood,
+                effect = EveMotionEffect.SAD_SETTLE,
+                effectDurationMs = 3_200L,
+                returnToIdleAfterMs = 3_200L,
+            )
+            EveMood.CALM -> play(EveAnimationCue.IDLE_BREATHE, returnToIdleAfterMs = 3_000L)
+        }
     }
 
     fun calm() {
@@ -190,8 +239,98 @@ internal object EveMascotRuntime {
         isThinking = false
         mood = EveMood.CALM
         behaviorState = EveBehaviorState.IDLE_BASE
+        publishHomeIntent(EveHomeIntent.NORMAL)
         publishMotion(EveMotionEffect.NONE)
         publishAnimation(EveAnimationCue.IDLE_BREATHE)
+    }
+
+    /**
+     * Evaluates hunger, boredom, energy and recent conversation tone. Repeated unmet needs are
+     * rate-limited so Eve communicates naturally instead of nagging the player.
+     */
+    fun updateContext(
+        context: EveBehaviorContext,
+        nowMs: Long = System.currentTimeMillis(),
+    ) {
+        if (isThinking || behaviorState == EveBehaviorState.INTERACTING) return
+
+        val intent = EveBehaviorDirector.decide(context)
+        if (intent == EveHomeIntent.NORMAL) return
+
+        val repeatedTooSoon = intent == lastContextIntent &&
+            nowMs - lastContextIntentAtMs < 75_000L
+        if (repeatedTooSoon) return
+
+        lastContextIntent = intent
+        lastContextIntentAtMs = nowMs
+        performHomeIntent(intent)
+    }
+
+    private fun performHomeIntent(intent: EveHomeIntent) {
+        resetJob?.cancel()
+        homeIntentResetJob?.cancel()
+        isThinking = false
+
+        when (intent) {
+            EveHomeIntent.NORMAL -> {
+                publishHomeIntent(EveHomeIntent.NORMAL)
+                return
+            }
+
+            EveHomeIntent.APPROACH_LOOK -> {
+                mood = EveMood.CURIOUS
+                behaviorState = EveBehaviorState.INTERACTING
+                publishHomeIntent(intent, "👀")
+                publishAnimation(EveAnimationCue.IDLE_LOOK_AROUND)
+                publishMotion(EveMotionEffect.WIGGLE, 900L)
+                scheduleReturnToBaseIdle(5_200L)
+            }
+
+            EveHomeIntent.ASK_PET -> {
+                mood = EveMood.CURIOUS
+                behaviorState = EveBehaviorState.INTERACTING
+                publishHomeIntent(intent, "Biraz sevgi? 🐾")
+                publishAnimation(EveAnimationCue.IDLE_LOOK_AROUND)
+                publishMotion(EveMotionEffect.WIGGLE, 1_100L)
+                scheduleReturnToBaseIdle(6_500L)
+            }
+
+            EveHomeIntent.ASK_FOOD -> {
+                mood = EveMood.CURIOUS
+                behaviorState = EveBehaviorState.INTERACTING
+                publishHomeIntent(intent, "Bir şeyler atıştırsak? 🍎")
+                publishAnimation(EveAnimationCue.IDLE_GRAZE)
+                publishMotion(EveMotionEffect.NONE)
+                scheduleReturnToBaseIdle(6_500L)
+            }
+
+            EveHomeIntent.SLEEP -> {
+                mood = EveMood.TIRED
+                behaviorState = EveBehaviorState.RESTING
+                publishHomeIntent(intent)
+                publishAnimation(EveAnimationCue.REST)
+                publishMotion(EveMotionEffect.SAD_SETTLE, 8_000L)
+                scheduleReturnToBaseIdle(8_000L)
+            }
+
+            EveHomeIntent.COMFORT -> {
+                mood = EveMood.SUPPORTIVE
+                behaviorState = EveBehaviorState.INTERACTING
+                publishHomeIntent(intent, "Yanındayım. 🌿")
+                publishAnimation(EveAnimationCue.IDLE_LOOK_AROUND)
+                publishMotion(EveMotionEffect.NONE)
+                scheduleReturnToBaseIdle(5_600L)
+            }
+
+            EveHomeIntent.CELEBRATE -> {
+                mood = EveMood.CELEBRATING
+                behaviorState = EveBehaviorState.INTERACTING
+                publishHomeIntent(intent, "Harika! ✨")
+                publishAnimation(EveAnimationCue.IDLE_LOOK_AROUND)
+                publishMotion(EveMotionEffect.BOUNCE, 1_050L)
+                scheduleReturnToBaseIdle(4_800L)
+            }
+        }
     }
 
     fun play(
@@ -300,6 +439,8 @@ internal object EveMascotRuntime {
         returnToIdleAfterMs: Long,
     ) {
         resetJob?.cancel()
+        homeIntentResetJob?.cancel()
+        publishHomeIntent(EveHomeIntent.NORMAL)
         isThinking = false
         mood = nextMood
         behaviorState = if (cue == EveAnimationCue.REST) EveBehaviorState.RESTING else EveBehaviorState.INTERACTING
@@ -345,10 +486,20 @@ internal object EveMascotRuntime {
             if (animationVersion == versionAtStart) {
                 behaviorState = EveBehaviorState.IDLE_BASE
                 mood = EveMood.CALM
+                publishHomeIntent(EveHomeIntent.NORMAL)
                 publishMotion(EveMotionEffect.NONE)
                 publishAnimation(EveAnimationCue.IDLE_BREATHE)
             }
         }
+    }
+
+    private fun publishHomeIntent(
+        intent: EveHomeIntent,
+        prompt: String = "",
+    ) {
+        homeIntent = intent
+        homePromptText = prompt
+        homeIntentVersion++
     }
 
     private fun publishAnimation(cue: EveAnimationCue) {
