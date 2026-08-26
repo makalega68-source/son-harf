@@ -45,7 +45,14 @@ fun SonHarfIntegratedApp() {
     val lobbyRequest = SonHarfGameNavigation.lobbyRequest
 
     LaunchedEffect(Unit) {
-        authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
+        // Development/test APKs bypass the membership gate so repeated device testing
+        // does not require entering e-mail/password. Release builds still require
+        // the existing verified Supabase membership session.
+        authenticated = if (BuildConfig.DEBUG) {
+            true
+        } else {
+            SupabaseProvider.configured && hasVerifiedMembershipSession()
+        }
         authChecked = true
     }
     LaunchedEffect(authenticated) {
