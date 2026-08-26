@@ -100,11 +100,15 @@ jobs:
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.Eve3DSmokeActivity
             sleep 15
-            adb shell dumpsys activity activities | grep -q "Eve3DSmokeActivity" || (echo "::error::Eve3DSmokeActivity is not the active runtime surface"; exit 1)
+            adb shell dumpsys activity activities > artifacts/eve-smoke/activities.txt || true
+            adb shell dumpsys activity top > artifacts/eve-smoke/activity-top.txt || true
+            adb shell dumpsys window windows > artifacts/eve-smoke/windows.txt || true
+            adb shell pidof com.sonharf.game > artifacts/eve-smoke/pid.txt || true
+            adb logcat -d > artifacts/eve-smoke/logcat.txt || true
             adb shell uiautomator dump /sdcard/eve-smoke.xml || true
             adb pull /sdcard/eve-smoke.xml artifacts/eve-smoke/eve-smoke.xml || true
-            adb exec-out screencap -p > artifacts/eve-smoke/eve-3d-smoke.png
-            adb logcat -d > artifacts/eve-smoke/logcat.txt
+            adb exec-out screencap -p > artifacts/eve-smoke/eve-3d-smoke.png || true
+            grep -q "Eve3DSmokeActivity" artifacts/eve-smoke/activities.txt || (echo "::error::Eve3DSmokeActivity is not the active runtime surface; evidence captured"; exit 1)
             test "$(stat -c%s artifacts/eve-smoke/eve-3d-smoke.png)" -gt 20000 || (echo "::error::Runtime screenshot is unexpectedly empty"; exit 1)
             test ! -f artifacts/eve-smoke/eve-smoke.xml || ! grep -Eq "3D EVE (ASSET|YÜKLEME) HATASI" artifacts/eve-smoke/eve-smoke.xml || (echo "::error::Production Eve3DStage rendered its explicit 3D failure state"; exit 1)
             echo ">> [PASS] Eve3DSmokeActivity launched and produced a non-empty runtime screenshot"
