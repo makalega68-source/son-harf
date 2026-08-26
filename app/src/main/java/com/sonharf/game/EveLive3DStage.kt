@@ -1,0 +1,187 @@
+package com.sonharf.game
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import io.github.sceneview.SceneView
+import io.github.sceneview.SurfaceType
+import io.github.sceneview.math.Direction
+import io.github.sceneview.math.Position
+import io.github.sceneview.math.Rotation
+import io.github.sceneview.math.Size
+import io.github.sceneview.node.ContactShadowContext
+import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberMaterialLoader
+import io.github.sceneview.rememberModelInstance
+import io.github.sceneview.rememberModelLoader
+import kotlinx.coroutines.delay
+
+/**
+ * Production live companion stage used by the active room and home dock.
+ *
+ * Guarantees:
+ * - real Eve GLB only; no 2D fallback,
+ * - SurfaceView-backed Vulkan path retained for IME stability,
+ * - animationVersion restarts the same named clip deterministically,
+ * - a procedural SceneView contact shadow grounds Eve against the floor.
+ */
+@Composable
+internal fun EveLive3DStage(
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
+    val context = LocalContext.current
+    val assetAvailable = remember {
+        runCatching { context.assets.open(EveAssetPolicy.MODEL_ASSET).use { } }.isSuccess
+    }
+
+    if (!assetAvailable) {
+        val message = "FATAL: ${EveAssetPolicy.MODEL_ASSET} is missing from the APK"
+        if (!BuildConfig.DEBUG) error(message)
+        Surface(
+            modifier = modifier.padding(12.dp),
+            color = Color(0xFF7F1D1D),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, Color(0xFFFFB4AB)),
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "3D EVE ASSET HATASI\n${EveAssetPolicy.MODEL_ASSET}",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    fontSize = 11.sp,
+                )
+            }
+        }
+        return
+    }
+
+    val engine = rememberEngine(
+        engineCreator = { eglContext ->
+            runCatching {
+                com.google.android.filament.Engine.create(
+                    com.google.android.filament.Engine.Backend.VULKAN,
+                )
+            }.getOrElse {
+                com.google.android.filament.Engine.create(eglContext)
+            }
+        },
+    )
+    val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
+    val modelInstance = rememberModelInstance(modelLoader, EveAssetPolicy.MODEL_ASSET)
+    val cue = EveMascotRuntime.animation
+    val cueVersion = EveMascotRuntime.animationVersion
+
+    var loadTimedOut by remember { mutableStateOf(false) }
+    var liveModelNode by remember(modelInstance) {
+        mutableStateOf<io.github.sceneview.node.ModelNode?>(null)
+    }
+
+    LaunchedEffect(modelInstance) {
+        if (modelInstance == null) {
+            delay(8_000)
+            loadTimedOut = true
+        } else {
+            loadTimedOut = false
+        }
+    }
+
+    if (loadTimedOut && modelInstance == null) {
+        val message = "FATAL: Eve GLB exists but SceneView could not create a model instance"
+        if (!BuildConfig.DEBUG) error(message)
+        Surface(
+            modifier = modifier.padding(12.dp),
+            color = Color(0xFF7F1D1D),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "3D EVE YÜKLEME HATASI\nGLB APK içinde fakat ModelNode oluşturulamadı.",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    fontSize = 11.sp,
+                )
+            }
+        }
+        return
+    }
+
+    Box(modifier, contentAlignment = Alignment.Center) {
+        if (modelInstance == null) {
+            CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
+        } else {
+            SceneView(
+                modifier = Modifier.fillMaxSize(),
+                surfaceType = SurfaceType.Surface,
+                isOpaque = false,
+                engine = engine,
+                modelLoader = modelLoader,
+                materialLoader = materialLoader,
+                cameraManipulator = null,
+            ) {
+                ContactShadow(
+                    size = if (compact) {
+                        Size(x = 0.66f, y = 0f, z = 0.38f)
+                    } else {
+                        Size(x = 0.82f, y = 0f, z = 0.48f)
+                    },
+                    context = ContactShadowContext.Floor,
+                    normal = Direction(y = 1f),
+                    intensity = if (compact) 0.30f else 0.42f,
+                    position = Position(
+                        x = 0f,
+                        y = if (compact) -0.46f else -0.43f,
+                        z = 0f,
+                    ),
+                )
+
+                ModelNode(
+                    modelInstance = modelInstance,
+                    scaleToUnits = if (compact) 1.0f else 0.90f,
+                    centerOrigin = Position(0f, -0.60f, 0f),
+                    autoAnimate = false,
+                    animationName = null,
+                    animationLoop = cue.loop,
+                    position = Position(0f, if (compact) -.08f else -.10f, 0f),
+                    rotation = Rotation(y = 0f),
+                    apply = {
+                        liveModelNode = this
+                    },
+                )
+            }
+        }
+    }
+
+    LaunchedEffect(liveModelNode, cue.clipName, cue.loop, cueVersion) {
+        val node = liveModelNode ?: return@LaunchedEffect
+        node.playingAnimations.keys.toList().forEach { index ->
+            node.stopAnimation(index)
+        }
+        node.playAnimation(
+            animationName = cue.clipName,
+            loop = cue.loop,
+        )
+    }
+}
