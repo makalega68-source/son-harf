@@ -75,6 +75,15 @@ jobs:
           }
           echo ">> [PASS] Exact accepted Eve GLB is inside the APK"
 
+      - name: Enable KVM access for emulator
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            ls -l /dev/kvm
+          else
+            echo "::warning::/dev/kvm is not available; emulator may use slow software acceleration"
+          fi
+
       - name: Render real Eve on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -84,7 +93,7 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
-            set -euo pipefail
+            set -eu
             APK="app/build/outputs/apk/debug/app-debug.apk"
             mkdir -p artifacts/eve-smoke
             adb install -r "$APK"
