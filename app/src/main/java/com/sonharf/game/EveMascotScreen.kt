@@ -340,7 +340,17 @@ internal fun Eve3DStage(modifier: Modifier = Modifier, compact: Boolean = false)
         return
     }
 
-    val engine = rememberEngine()
+    val engine = rememberEngine(
+        engineCreator = { eglContext ->
+            runCatching {
+                com.google.android.filament.Engine.create(
+                    com.google.android.filament.Engine.Backend.VULKAN,
+                )
+            }.getOrElse {
+                com.google.android.filament.Engine.create(eglContext)
+            }
+        },
+    )
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, EveAssetPolicy.MODEL_ASSET)
     val cue = EveMascotRuntime.animation
