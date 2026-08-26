@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -27,6 +28,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -76,6 +78,7 @@ internal fun EveHomeFloatingCompanion(
     modifier: Modifier = Modifier,
     onOpen: () -> Unit = { EveLivingRoomRuntime.show() },
     routineTiming: EveHomeRoutineTiming = EveHomeRoutineTiming(),
+    playerNameOverride: String? = null,
 ) {
     val context = LocalContext.current
     val store = remember { EveCompanionStore(context) }
@@ -84,8 +87,13 @@ internal fun EveHomeFloatingCompanion(
     var renameOpen by remember { mutableStateOf(false) }
     var draftName by remember { mutableStateOf(companionName) }
     var routineGeneration by remember { mutableIntStateOf(0) }
+    var routineResumeDelayMs by remember { mutableLongStateOf(0L) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(playerNameOverride) {
+        playerNameOverride?.trim()?.takeIf { it.isNotBlank() }?.let {
+            playerName = it.take(32)
+            return@LaunchedEffect
+        }
         if (SupabaseProvider.configured) {
             runCatching {
                 val backend = OnlineGameBackend()
@@ -107,9 +115,11 @@ internal fun EveHomeFloatingCompanion(
     }
 
     LaunchedEffect(routineGeneration, routineTiming) {
-        if (routineGeneration > 0) {
-            delay(routineTiming.happyReactionMs)
+        val resumeDelay = routineResumeDelayMs
+        if (resumeDelay > 0L) {
+            delay(resumeDelay)
         }
+        routineResumeDelayMs = 0L
 
         if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=DIGGING")
         EveMascotRuntime.homeDigging()
@@ -127,7 +137,14 @@ internal fun EveHomeFloatingCompanion(
     // low-frequency: Eve can express a need, but never nags or steals focus continuously.
     LaunchedEffect(store) {
         while (currentCoroutineContext().isActive) {
-            EveMascotRuntime.updateContext(store.behaviorContext())
+            val firedIntent = EveMascotRuntime.updateContext(store.behaviorContext())
+            if (firedIntent != null) {
+                // Context owns the character for its complete reaction window. Restarting the
+                // baseline timer cancels a pending DIG/SIT/SLEEP transition so it cannot overwrite
+                // hunger, boredom or conversation-mood behavior halfway through.
+                routineResumeDelayMs = firedIntent.homeHoldMs()
+                routineGeneration++
+            }
             delay(5_500L)
         }
     }
@@ -360,43 +377,7 @@ internal fun EveHomeFloatingCompanion(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Box(
-                modifier = Modifier
-                    .size(mascotSize)
-                    .clickable {
-                        store.markInteraction()
-                        // Cancels the current dig/sit/sleep timer via LaunchedEffect key change.
-                        // Eve reacts happily first, then the 60s -> 60s -> sleep routine restarts.
-                        routineGeneration++
-                        EveMascotRuntime.homeTouchHappy(playerName)
-                    }
-                    .pointerInput(widthPx, heightPx) {
-                        detectDragGesturesAfterLongPress(
-                            onDragStart = {
-                                dragging = true
-                                scope.launch {
-                                    x.stop()
-                                    y.stop()
-                                }
-                            },
-                            onDragEnd = {
-                                anchorX = x.value.coerceIn(minX, maxX)
-                                anchorY = y.value.coerceIn(minY, maxY)
-                                dragging = false
-                            },
-                            onDragCancel = {
-                                anchorX = x.value.coerceIn(minX, maxX)
-                                anchorY = y.value.coerceIn(minY, maxY)
-                                dragging = false
-                            },
-                        ) { _, dragAmount ->
-                            val nextX = (x.value + dragAmount.x).coerceIn(minX, maxX)
-                            val nextY = (y.value + dragAmount.y).coerceIn(minY, maxY)
-                            scope.launch {
-                                x.snapTo(nextX)
-                                y.snapTo(nextY)
-                            }
-                        }
-                    },
+                modifier = Modifier.size(mascotSize),
                 contentAlignment = Alignment.Center,
             ) {
                 // Keep HOME's TextureSurface completely out of composition while the rename dialog
@@ -406,6 +387,48 @@ internal fun EveHomeFloatingCompanion(
                     EveLive3DStage(
                         modifier = Modifier.fillMaxSize(),
                         compact = true,
+                    )
+
+                    // TextureSurface is an Android-backed rendering child. A dedicated Compose
+                    // hit-target above it guarantees taps/long-press drag are received by HOME
+                    // instead of relying on parent event propagation through the 3D surface.
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable {
+                                store.markInteraction()
+                                routineResumeDelayMs = routineTiming.happyReactionMs
+                                routineGeneration++
+                                EveMascotRuntime.homeTouchHappy(playerName)
+                            }
+                            .pointerInput(widthPx, heightPx) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragStart = {
+                                        dragging = true
+                                        scope.launch {
+                                            x.stop()
+                                            y.stop()
+                                        }
+                                    },
+                                    onDragEnd = {
+                                        anchorX = x.value.coerceIn(minX, maxX)
+                                        anchorY = y.value.coerceIn(minY, maxY)
+                                        dragging = false
+                                    },
+                                    onDragCancel = {
+                                        anchorX = x.value.coerceIn(minX, maxX)
+                                        anchorY = y.value.coerceIn(minY, maxY)
+                                        dragging = false
+                                    },
+                                ) { _, dragAmount ->
+                                    val nextX = (x.value + dragAmount.x).coerceIn(minX, maxX)
+                                    val nextY = (y.value + dragAmount.y).coerceIn(minY, maxY)
+                                    scope.launch {
+                                        x.snapTo(nextX)
+                                        y.snapTo(nextY)
+                                    }
+                                }
+                            },
                     )
 
                     if (homePromptText.isNotBlank()) {

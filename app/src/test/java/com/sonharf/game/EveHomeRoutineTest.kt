@@ -30,4 +30,14 @@ class EveHomeRoutineTest {
         assertEquals(60_000L, timing.digMs)
         assertEquals(60_000L, timing.sitMs)
     }
+
+    @Test
+    fun contextualReactionsOwnHomeUntilTheirAnimationWindowEnds() {
+        assertEquals(6_500L, EveHomeIntent.ASK_PET.homeHoldMs())
+        assertEquals(6_500L, EveHomeIntent.ASK_FOOD.homeHoldMs())
+        assertEquals(5_200L, EveHomeIntent.APPROACH_LOOK.homeHoldMs())
+        assertEquals(5_600L, EveHomeIntent.COMFORT.homeHoldMs())
+        assertEquals(4_800L, EveHomeIntent.CELEBRATE.homeHoldMs())
+        assertEquals(8_000L, EveHomeIntent.SLEEP.homeHoldMs())
+    }
 }

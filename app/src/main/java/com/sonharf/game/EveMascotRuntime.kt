@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -231,6 +232,7 @@ internal object EveMascotRuntime {
 
     fun homeTouchHappy(playerName: String) {
         val prompt = eveHomeXpPrompt(playerName)
+        if (BuildConfig.DEBUG) Log.i("EVE_HOME_REACTION", "touch=HAPPY prompt=$prompt")
         react(
             cue = EveAnimationCue.IDLE_LOOK_AROUND,
             nextMood = EveMood.HAPPY,
@@ -318,19 +320,21 @@ internal object EveMascotRuntime {
     fun updateContext(
         context: EveBehaviorContext,
         nowMs: Long = System.currentTimeMillis(),
-    ) {
-        if (isThinking || behaviorState == EveBehaviorState.INTERACTING) return
+    ): EveHomeIntent? {
+        if (isThinking || behaviorState == EveBehaviorState.INTERACTING) return null
 
         val intent = EveBehaviorDirector.decide(context)
-        if (intent == EveHomeIntent.NORMAL) return
+        if (intent == EveHomeIntent.NORMAL) return null
 
         val repeatedTooSoon = intent == lastContextIntent &&
             nowMs - lastContextIntentAtMs < 75_000L
-        if (repeatedTooSoon) return
+        if (repeatedTooSoon) return null
 
         lastContextIntent = intent
         lastContextIntentAtMs = nowMs
+        if (BuildConfig.DEBUG) Log.i("EVE_HOME_REACTION", "context=$intent")
         performHomeIntent(intent)
+        return intent
     }
 
     private fun performHomeIntent(intent: EveHomeIntent) {

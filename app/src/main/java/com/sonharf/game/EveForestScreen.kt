@@ -158,6 +158,7 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
                 )
             }.onSuccess { response ->
                 EveMascotRuntime.apply(response)
+                store.recordConversationMood(response.mood.toEveMood())
                 val xp = store.chatBond()
                 val suffix = levelSuffix(before)
                 speechBubbleText = if (suffix.isBlank()) response.reply else "${response.reply}\n$suffix"

@@ -132,6 +132,15 @@ jobs:
             adb exec-out screencap -p > artifacts/eve-home/home-frame-sit.png
             sleep 5
             adb exec-out screencap -p > artifacts/eve-home/home-frame-sleep.png
+
+            # Tap the actual HOME mascot hit area while asleep. The dedicated Compose overlay must
+            # intercept this above TextureSurface, wake Eve, and emit the personalized XP prompt.
+            adb shell input tap 125 800
+            sleep 1
+            adb exec-out screencap -p > artifacts/eve-home/home-frame-touch.png
+            sleep 6
+            adb exec-out screencap -p > artifacts/eve-home/home-frame-context.png
+
             adb shell pidof com.sonharf.game | tr -d '\r' > artifacts/eve-home/current-pid.txt || true
             cmp -s artifacts/eve-home/base-pid.txt artifacts/eve-home/current-pid.txt || (echo "::error::Floating HOME process changed during DIG/SIT/SLEEP"; exit 1)
             adb shell dumpsys activity activities > artifacts/eve-home/activities.txt || true
@@ -141,10 +150,14 @@ jobs:
             grep -q "EVE_HOME_ROUTINE: phase=DIGGING" artifacts/eve-home/logcat.txt || (echo "::error::HOME DIGGING phase not observed"; exit 1)
             grep -q "EVE_HOME_ROUTINE: phase=SITTING" artifacts/eve-home/logcat.txt || (echo "::error::HOME SITTING phase not observed"; exit 1)
             grep -q "EVE_HOME_ROUTINE: phase=SLEEPING" artifacts/eve-home/logcat.txt || (echo "::error::HOME SLEEPING phase not observed"; exit 1)
+            grep -q "EVE_HOME_REACTION: touch=HAPPY prompt=Hadi TestOyuncu bana xp topla" artifacts/eve-home/logcat.txt || (echo "::error::HOME tap did not trigger personalized happy XP reaction"; exit 1)
+            grep -q "EVE_HOME_REACTION: context=ASK_PET" artifacts/eve-home/logcat.txt || (echo "::error::HOME boredom context did not trigger ASK_PET"; exit 1)
             test "$(stat -c%s artifacts/eve-home/home-frame-dig.png)" -gt 20000 || (echo "::error::Floating HOME DIG frame is unexpectedly empty"; exit 1)
             test "$(stat -c%s artifacts/eve-home/home-frame-sit.png)" -gt 20000 || (echo "::error::Floating HOME SIT frame is unexpectedly empty"; exit 1)
             test "$(stat -c%s artifacts/eve-home/home-frame-sleep.png)" -gt 20000 || (echo "::error::Floating HOME SLEEP frame is unexpectedly empty"; exit 1)
-            python3 -c 'import hashlib, pathlib; p=[pathlib.Path("artifacts/eve-home/home-frame-dig.png"),pathlib.Path("artifacts/eve-home/home-frame-sit.png"),pathlib.Path("artifacts/eve-home/home-frame-sleep.png")]; h=[hashlib.sha256(x.read_bytes()).hexdigest() for x in p]; pathlib.Path("artifacts/eve-home/frame-sha256.txt").write_text("\n".join(h)+"\n"); assert len(set(h)) == 3, "DIG/SIT/SLEEP acceptance frames are not visually distinct"'
+            test "$(stat -c%s artifacts/eve-home/home-frame-touch.png)" -gt 20000 || (echo "::error::Floating HOME TOUCH frame is unexpectedly empty"; exit 1)
+            test "$(stat -c%s artifacts/eve-home/home-frame-context.png)" -gt 20000 || (echo "::error::Floating HOME CONTEXT frame is unexpectedly empty"; exit 1)
+            python3 -c 'import hashlib, pathlib; p=[pathlib.Path("artifacts/eve-home/home-frame-dig.png"),pathlib.Path("artifacts/eve-home/home-frame-sit.png"),pathlib.Path("artifacts/eve-home/home-frame-sleep.png"),pathlib.Path("artifacts/eve-home/home-frame-touch.png"),pathlib.Path("artifacts/eve-home/home-frame-context.png")]; h=[hashlib.sha256(x.read_bytes()).hexdigest() for x in p]; pathlib.Path("artifacts/eve-home/frame-sha256.txt").write_text("\n".join(h)+"\n"); assert len(set(h)) >= 4, "HOME routine/touch/context frames did not visibly diverge enough"'
             ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal|FATAL EXCEPTION|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|Input dispatching timed out" artifacts/eve-home/logcat.txt || (echo "::error::Native/Surface/ANR signature found during floating HOME routine"; exit 1)
             echo ">> [PASS] Floating HOME DIG -> SIT -> SLEEP stayed on Vulkan TextureSurface with stable PID"
 

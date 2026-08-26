@@ -72,7 +72,23 @@ class EveHomeFloatingSmokeActivity : ComponentActivity() {
                             sitMs = 5_000L,
                             happyReactionMs = 2_500L,
                         ),
+                        playerNameOverride = "TestOyuncu",
                     )
+
+                    androidx.compose.runtime.LaunchedEffect(Unit) {
+                        // After CI taps Eve and verifies the happy reaction, force the same boredom
+                        // context used in production so ASK_PET and routine arbitration are covered.
+                        kotlinx.coroutines.delay(21_000L)
+                        EveMascotRuntime.updateContext(
+                            EveBehaviorContext(
+                                fullness = 80,
+                                happiness = 80,
+                                energy = 80,
+                                minutesSinceInteraction = 90,
+                            ),
+                            nowMs = System.currentTimeMillis() + 90_000L,
+                        )
+                    }
 
                     Text(
                         text = "🐾  EVE EVİ",

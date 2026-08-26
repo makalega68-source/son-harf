@@ -55,3 +55,14 @@ internal object EveBehaviorDirector {
         return EveHomeIntent.NORMAL
     }
 }
+
+
+internal fun EveHomeIntent.homeHoldMs(): Long = when (this) {
+    EveHomeIntent.NORMAL -> 0L
+    EveHomeIntent.APPROACH_LOOK -> 5_200L
+    EveHomeIntent.ASK_PET -> 6_500L
+    EveHomeIntent.ASK_FOOD -> 6_500L
+    EveHomeIntent.SLEEP -> 8_000L
+    EveHomeIntent.COMFORT -> 5_600L
+    EveHomeIntent.CELEBRATE -> 4_800L
+}
