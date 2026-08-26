@@ -7,7 +7,6 @@ on:
       - fix/eve-real-glb-integration-20260826
       - feat/eve-progression-interactions-20260826
       - fix/eve-gles-ime-surface-20260826
-      - fix/test-no-auth-realm-bg-20260827
     paths:
       - '.github/workflows/eve-living-companion-apk.yml'
       - 'app/**'
