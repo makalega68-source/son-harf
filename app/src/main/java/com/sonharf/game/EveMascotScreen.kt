@@ -92,6 +92,14 @@ internal fun EveMascotScreen(onClose: () -> Unit) {
     revision
 
     LaunchedEffect(Unit) {
+        if (history.lastOrNull()?.role == "user") {
+            val recovery = sh(
+                "Önceki mesajının cevabı tamamlanmamış. Tekrar gönderebilirsin. 🌿",
+                "The previous reply did not finish. You can send it again. 🌿",
+            )
+            history += EveChatTurn("assistant", recovery)
+            saveEveHistory(context, history)
+        }
         EveMascotRuntime.setBubble(
             history.lastOrNull { it.role == "assistant" }?.text
                 ?: "Ormanımıza hoş geldin. Bugün birlikte ne yapalım? ✨",
@@ -136,8 +144,24 @@ internal fun EveMascotScreen(onClose: () -> Unit) {
             }.onFailure { error ->
                 EveMascotRuntime.calm()
                 val messageText = error.message ?: "Maskot şu anda cevap veremiyor."
-                EveMascotRuntime.setBubble(if (messageText.contains("ücretsiz")) "Bugünkü ücretsiz sohbet hakkımız doldu 🤍 Yarın devam ederiz." else "Şu an bağlantımda küçük bir sorun var.")
-                errorMessage = messageText
+                val visibleFailure = when {
+                    messageText.contains("ücretsiz", ignoreCase = true) -> sh(
+                        "Bugünkü ücretsiz sohbet hakkımız doldu. Yarın yeniden konuşabiliriz. 🤍",
+                        "Today's free chat limit is full. We can talk again tomorrow. 🤍",
+                    )
+                    messageText.contains("oturum", ignoreCase = true) -> sh(
+                        "Sohbet bağlantım için yeniden giriş yapman gerekiyor.",
+                        "Please sign in again so I can reconnect to chat.",
+                    )
+                    else -> sh(
+                        "Şu an cevabımı tamamlayamadım. Mesajını tekrar gönderebilir misin? 🌿",
+                        "I couldn't finish my reply. Could you send your message again? 🌿",
+                    )
+                }
+                history += EveChatTurn("assistant", visibleFailure)
+                saveEveHistory(context, history)
+                EveMascotRuntime.setBubble(visibleFailure)
+                errorMessage = null
             }
             sending = false
         }
@@ -294,7 +318,7 @@ internal fun Eve3DStage(modifier: Modifier = Modifier, compact: Boolean = false)
     }
     val engine = rememberEngine(); val modelLoader = rememberModelLoader(engine); val modelInstance = rememberModelInstance(modelLoader, EveAssetPolicy.MODEL_ASSET); val cue = EveMascotRuntime.animation
     SceneView(modifier = modifier, surfaceType = SurfaceType.TextureSurface, isOpaque = false, engine = engine, modelLoader = modelLoader, cameraManipulator = null) {
-        modelInstance?.let { instance -> ModelNode(modelInstance = instance, scaleToUnits = if (compact) 1.0f else 1.5f, centerOrigin = Position(0f, -0.60f, 0f), autoAnimate = false, animationName = cue.clipName, animationLoop = cue.loop, position = Position(0f, if (compact) -.08f else -.16f, 0f), rotation = Rotation(y = 0f)) }
+        modelInstance?.let { instance -> ModelNode(modelInstance = instance, scaleToUnits = if (compact) 1.0f else 0.90f, centerOrigin = Position(0f, -0.60f, 0f), autoAnimate = false, animationName = cue.clipName, animationLoop = cue.loop, position = Position(0f, if (compact) -.08f else -.10f, 0f), rotation = Rotation(y = 0f)) }
     }
 }
 
