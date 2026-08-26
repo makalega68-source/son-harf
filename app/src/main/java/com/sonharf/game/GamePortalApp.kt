@@ -57,7 +57,7 @@ fun GamePortalApp() {
     LaunchedEffect(Unit) { RemoteExperience.refresh(context.applicationContext) }
 
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().navigationBarsPadding()) {
+        Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth()) { ClassicPremiumApp() }
             EveSafeDock(
                 name = store.name,
@@ -87,12 +87,12 @@ private fun EveSafeDock(
     onOpen: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth().height(76.dp),
+        modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
         color = Color(0xFFF6FFF9),
         border = BorderStroke(1.dp, Color(0xFFC6E9D7)),
     ) {
         Box(
-            Modifier.fillMaxSize().background(
+            Modifier.fillMaxWidth().height(76.dp).background(
                 Brush.horizontalGradient(listOf(Color(0xFFE7F8EF), Color.White, Color(0xFFEAF8FF))),
             ).padding(horizontal = 10.dp, vertical = 6.dp),
         ) {
