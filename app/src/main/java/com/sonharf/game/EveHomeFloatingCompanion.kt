@@ -14,8 +14,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -71,13 +73,12 @@ internal fun EveHomeFloatingCompanion(
         onDispose { EveMascotRuntime.stopLivingBehavior() }
     }
 
-    // A low-energy/low-happiness companion may briefly look tired on entry. This is visual only:
-    // no punishment, guilt message or competitive advantage is attached to the state.
-    LaunchedEffect(Unit) {
-        val vitals = store.vitals()
-        if (vitals.energy < 25 || vitals.happiness < 25) {
-            delay(900L)
-            EveMascotRuntime.sadReaction()
+    // Re-evaluate needs and recent conversation tone while HOME is visible. This is intentionally
+    // low-frequency: Eve can express a need, but never nags or steals focus continuously.
+    LaunchedEffect(store) {
+        while (currentCoroutineContext().isActive) {
+            EveMascotRuntime.updateContext(store.behaviorContext())
+            delay(5_500L)
         }
     }
 
@@ -86,9 +87,17 @@ internal fun EveHomeFloatingCompanion(
         val scope = rememberCoroutineScope()
         val motionEffect = EveMascotRuntime.motionEffect
         val motionVersion = EveMascotRuntime.motionVersion
+        val homeIntent = EveMascotRuntime.homeIntent
+        val homeIntentVersion = EveMascotRuntime.homeIntentVersion
+        val homePromptText = EveMascotRuntime.homePromptText
+
         val reactionY = remember { Animatable(0f) }
         val reactionRotation = remember { Animatable(0f) }
         val reactionScale = remember { Animatable(1f) }
+        val presenceX = remember { Animatable(0f) }
+        val presenceY = remember { Animatable(0f) }
+        val presenceRotation = remember { Animatable(0f) }
+        val presenceScale = remember { Animatable(1f) }
 
         val mascotSize = 148.dp
         val labelHeight = 24.dp
@@ -103,6 +112,7 @@ internal fun EveHomeFloatingCompanion(
         val driftPx = with(density) { 9.dp.toPx() }
         val jumpPx = with(density) { 22.dp.toPx() }
         val sleepySettlePx = with(density) { 7.dp.toPx() }
+        val approachLiftPx = with(density) { 6.dp.toPx() }
 
         val widthPx = constraints.maxWidth.toFloat()
         val heightPx = constraints.maxHeight.toFloat()
@@ -113,6 +123,84 @@ internal fun EveHomeFloatingCompanion(
 
         val x = remember { Animatable(0f) }
         val y = remember { Animatable(0f) }
+
+        /**
+         * "Approach the player" is a controlled HOME compositor move: Eve travels toward the
+         * screen center and grows in apparent size, then holds a camera-facing safe GLB clip.
+         *
+         * We intentionally do NOT play the accepted GLB's root-translating Walk clip here. Until
+         * Blender exports an in-place walk, doing so would cause foot/root drift out of the fixed
+         * viewport. This gives a stable near-camera approach without corrupting the rig transform.
+         */
+        LaunchedEffect(
+            homeIntent,
+            homeIntentVersion,
+            widthPx,
+            heightPx,
+            mascotPx,
+            containerHeightPx,
+        ) {
+            presenceX.stop()
+            presenceY.stop()
+            presenceRotation.stop()
+            presenceScale.stop()
+
+            val focusX = ((widthPx - mascotPx) * 0.5f).coerceIn(minX, maxX)
+            val focusY = (heightPx * 0.25f).coerceIn(minY, maxY)
+            val targetX = focusX - x.value
+            val targetY = focusY - y.value
+
+            when (homeIntent) {
+                EveHomeIntent.NORMAL -> coroutineScope {
+                    launch { presenceX.animateTo(0f, tween(520, easing = FastOutSlowInEasing)) }
+                    launch { presenceY.animateTo(0f, tween(520, easing = FastOutSlowInEasing)) }
+                    launch { presenceRotation.animateTo(0f, tween(360, easing = FastOutSlowInEasing)) }
+                    launch { presenceScale.animateTo(1f, tween(520, easing = FastOutSlowInEasing)) }
+                }
+
+                EveHomeIntent.SLEEP -> coroutineScope {
+                    launch { presenceX.animateTo(0f, tween(420, easing = FastOutSlowInEasing)) }
+                    launch { presenceY.animateTo(0f, tween(420, easing = FastOutSlowInEasing)) }
+                    launch { presenceRotation.animateTo(0f, tween(360, easing = FastOutSlowInEasing)) }
+                    launch { presenceScale.animateTo(0.96f, tween(460, easing = FastOutSlowInEasing)) }
+                }
+
+                EveHomeIntent.CELEBRATE -> coroutineScope {
+                    launch { presenceX.animateTo(0f, tween(420, easing = FastOutSlowInEasing)) }
+                    launch { presenceY.animateTo(-approachLiftPx, tween(360, easing = FastOutSlowInEasing)) }
+                    launch { presenceRotation.animateTo(0f, tween(260)) }
+                    launch { presenceScale.animateTo(1.09f, tween(420, easing = FastOutSlowInEasing)) }
+                }
+
+                EveHomeIntent.APPROACH_LOOK,
+                EveHomeIntent.ASK_PET,
+                EveHomeIntent.ASK_FOOD,
+                EveHomeIntent.COMFORT -> {
+                    val targetScale = when (homeIntent) {
+                        EveHomeIntent.ASK_PET -> 1.30f
+                        EveHomeIntent.ASK_FOOD -> 1.23f
+                        EveHomeIntent.COMFORT -> 1.27f
+                        else -> 1.28f
+                    }
+                    val targetRotation = when (homeIntent) {
+                        EveHomeIntent.ASK_PET -> 5.5f
+                        EveHomeIntent.ASK_FOOD -> -2.5f
+                        EveHomeIntent.COMFORT -> 2.0f
+                        else -> 0f
+                    }
+
+                    coroutineScope {
+                        launch { presenceX.animateTo(targetX, tween(900, easing = FastOutSlowInEasing)) }
+                        launch {
+                            presenceY.animateTo(targetY - approachLiftPx, tween(620, easing = FastOutSlowInEasing))
+                            presenceY.animateTo(targetY, tween(280, easing = FastOutSlowInEasing))
+                        }
+                        launch { presenceRotation.animateTo(targetRotation, tween(760, easing = FastOutSlowInEasing)) }
+                        launch { presenceScale.animateTo(targetScale, tween(900, easing = FastOutSlowInEasing)) }
+                    }
+                }
+            }
+        }
 
         // Reaction motion transforms the transparent TextureSurface as one composited layer. It
         // never rewrites ModelNode position/rotation/scale, which keeps SceneView's normalized GLB
@@ -175,7 +263,7 @@ internal fun EveHomeFloatingCompanion(
             }
 
             while (currentCoroutineContext().isActive) {
-                if (!dragging && !renameOpen) {
+                if (!dragging && !renameOpen && homeIntent == EveHomeIntent.NORMAL) {
                     // Tiny organic drift around the current anchor. Large autonomous screen travel
                     // would look like foot sliding because the accepted GLB walk clip has root
                     // translation and is intentionally not used until an in-place Blender export.
@@ -212,10 +300,11 @@ internal fun EveHomeFloatingCompanion(
                 .width(containerWidth)
                 .height(containerHeight)
                 .graphicsLayer {
-                    translationY = reactionY.value
-                    rotationZ = reactionRotation.value
-                    scaleX = reactionScale.value
-                    scaleY = reactionScale.value
+                    translationX = presenceX.value
+                    translationY = presenceY.value + reactionY.value
+                    rotationZ = presenceRotation.value + reactionRotation.value
+                    scaleX = presenceScale.value * reactionScale.value
+                    scaleY = presenceScale.value * reactionScale.value
                 }
                 .zIndex(50f),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -224,7 +313,17 @@ internal fun EveHomeFloatingCompanion(
                 modifier = Modifier
                     .size(mascotSize)
                     .clickable {
-                        EveMascotRuntime.touchReaction()
+                        store.markInteraction()
+                        if (homeIntent == EveHomeIntent.ASK_PET) {
+                            val points = store.pet()
+                            EveMascotRuntime.petReaction(
+                                if (points > 0) sh("Tam orası! 💚", "Right there! 💚") else null,
+                            )
+                        } else {
+                            // Touch wakes Eve from rest and acknowledges hunger/attention without
+                            // auto-spending currency or feeding on the player's behalf.
+                            EveMascotRuntime.touchReaction()
+                        }
                     }
                     .pointerInput(widthPx, heightPx) {
                         detectDragGesturesAfterLongPress(
@@ -264,6 +363,26 @@ internal fun EveHomeFloatingCompanion(
                         modifier = Modifier.fillMaxSize(),
                         compact = true,
                     )
+
+                    if (homePromptText.isNotBlank()) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.TopCenter)
+                                .offset(y = (-2).dp),
+                            color = Color.White.copy(alpha = 0.94f),
+                            shape = RoundedCornerShape(12.dp),
+                            shadowElevation = 3.dp,
+                        ) {
+                            Text(
+                                text = homePromptText.take(32),
+                                modifier = Modifier.offset(y = (-1).dp),
+                                color = Color(0xFF163B58),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 9.sp,
+                                maxLines = 1,
+                            )
+                        }
+                    }
                 }
             }
 
