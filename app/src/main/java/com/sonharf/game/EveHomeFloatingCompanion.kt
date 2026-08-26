@@ -12,7 +12,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -394,7 +393,7 @@ internal fun EveHomeFloatingCompanion(
                     // instead of relying on parent event propagation through the 3D surface.
                     Box(
                         modifier = Modifier
-                            .matchParentSize()
+                            .fillMaxSize()
                             .clickable {
                                 store.markInteraction()
                                 routineResumeDelayMs = routineTiming.happyReactionMs
