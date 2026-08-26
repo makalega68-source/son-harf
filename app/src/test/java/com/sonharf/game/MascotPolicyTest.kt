@@ -29,6 +29,7 @@ class MascotPolicyTest {
                 "IdleBreathe",
                 "IdleLookAround",
                 "IdleGraze",
+                "GrazeOnce",
                 "Rest",
                 "GoToRest",
                 "RestToGoBackUp",
@@ -65,6 +66,8 @@ class MascotPolicyTest {
         assertTrue(json.contains("\"WEIGHTS_0\""))
         assertTrue(json.contains("\"name\":\"IdleBreathe\""))
         assertTrue(json.contains("\"name\":\"IdleLookAround\""))
+        assertTrue(json.contains("\"name\":\"IdleGraze\""))
+        assertTrue(json.contains("\"name\":\"GrazeOnce\""))
         assertTrue(json.contains("\"name\":\"Walk\""))
         assertTrue(json.contains("\"name\":\"Run\""))
         assertTrue(json.contains("\"name\":\"Rest\""))
