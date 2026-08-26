@@ -93,6 +93,7 @@ jobs:
           api-level: 34
           arch: x86_64
           profile: pixel_6
+          cores: 4
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
@@ -101,6 +102,12 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb shell settings put secure show_ime_with_hard_keyboard 1
             adb shell ime list -s > artifacts/eve-ime/imes.txt || true
+
+            # Software Vulkan at the Pixel 6's native 1080x2400 saturates CI CPU and can create a
+            # renderer-throughput ANR unrelated to the Surface/IME lifecycle under test. Keep a
+            # phone-shaped viewport while reducing raster cost; production rendering code is unchanged.
+            adb shell wm size 720x1600
+            adb shell wm density 280
 
             # One Activity, one production Eve3DStage, one Filament/Vulkan Surface for the whole gate.
             adb logcat -c
@@ -122,20 +129,18 @@ jobs:
             test "$(stat -c%s artifacts/eve-smoke/eve-frame-b.png)" -gt 20000 || (echo "::error::Second runtime screenshot is unexpectedly empty"; exit 1)
             test "$(stat -c%s artifacts/eve-smoke/eve-frame-c.png)" -gt 20000 || (echo "::error::Third runtime screenshot is unexpectedly empty"; exit 1)
             python3 -c 'import hashlib, pathlib; p=[pathlib.Path("artifacts/eve-smoke/eve-frame-a.png"),pathlib.Path("artifacts/eve-smoke/eve-frame-b.png"),pathlib.Path("artifacts/eve-smoke/eve-frame-c.png")]; h=[hashlib.sha256(x.read_bytes()).hexdigest() for x in p]; pathlib.Path("artifacts/eve-smoke/frame-sha256.txt").write_text("\n".join(h)+"\n"); assert len(set(h)) >= 2, "EVE GLB runtime frames are all byte-identical"'
-            ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal|FATAL EXCEPTION|SIGABRT|SIGSEGV" artifacts/eve-smoke/logcat.txt || (echo "::error::Native/Surface crash signature found before IME stress"; exit 1)
+            ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal|FATAL EXCEPTION|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|Input dispatching timed out" artifacts/eve-smoke/logcat.txt || (echo "::error::Native/Surface/ANR signature found before IME stress"; exit 1)
             echo ">> [PASS] Real Eve GLB rendered and changed pose on the same Surface used for IME stress"
 
-            # UIAutomator is unreliable on the headless Vulkan/Compose window. The debug surface has
-            # one full-width TextField near the bottom, so derive a safe tap from the actual display.
             adb shell wm size > artifacts/eve-ime/wm-size.txt
-            python3 -c 'import re; s=open("artifacts/eve-ime/wm-size.txt").read(); m=re.findall(r"(\d+)x(\d+)",s); assert m,"wm size unavailable"; w,h=map(int,m[-1]); open("artifacts/eve-ime/tap.txt","w").write(f"{w//2} {h-200}\n")'
+            python3 -c 'import re; s=open("artifacts/eve-ime/wm-size.txt").read(); m=re.findall(r"(\d+)x(\d+)",s); assert m,"wm size unavailable"; w,h=map(int,m[-1]); open("artifacts/eve-ime/tap.txt","w").write(f"{w//2} {h-135}\n")'
             cat artifacts/eve-ime/tap.txt
+            sleep 3
 
             # The Activity reports IME visibility from WindowInsetsCompat. Each cycle waits for the
-            # app-side true/false transition instead of parsing Android's private ImeTracker format.
-            # Keep the whole loop on one shell line because android-emulator-runner executes script lines
-            # in separate /bin/sh processes.
-            read X Y < artifacts/eve-ime/tap.txt; : > artifacts/eve-ime/full-logcat.txt; for ROUND in 1 2 3 4 5; do adb logcat -c; adb shell input tap "$X" "$Y"; SHOWN=0; for TRY in $(seq 1 20); do sleep 1; if adb logcat -d | grep -q 'EVE_IME_VISIBLE=true'; then SHOWN=1; break; fi; done; adb logcat -d >> artifacts/eve-ime/full-logcat.txt; if [ "$SHOWN" != 1 ]; then adb exec-out screencap -p > "artifacts/eve-ime/open-$ROUND-failed.png"; adb logcat -d > "artifacts/eve-ime/round-$ROUND-failure-logcat.txt"; cat "artifacts/eve-ime/round-$ROUND-failure-logcat.txt" >> artifacts/eve-ime/full-logcat.txt; echo "::error::WindowInsetsCompat never reported IME visible in cycle $ROUND"; exit 1; fi; adb shell dumpsys input_method > "artifacts/eve-ime/open-$ROUND.txt"; adb exec-out screencap -p > "artifacts/eve-ime/open-$ROUND.png"; adb shell pidof com.sonharf.game | tr -d '\r' > "artifacts/eve-ime/pid-$ROUND.txt" || true; if ! cmp -s artifacts/eve-ime/base-pid.txt "artifacts/eve-ime/pid-$ROUND.txt"; then adb logcat -d > "artifacts/eve-ime/round-$ROUND-failure-logcat.txt"; cat "artifacts/eve-ime/round-$ROUND-failure-logcat.txt" >> artifacts/eve-ime/full-logcat.txt; echo "::error::App process changed in IME cycle $ROUND"; exit 1; fi; adb logcat -c; adb shell input keyevent 4; HIDDEN=0; for TRY in $(seq 1 20); do sleep 1; if adb logcat -d | grep -q 'EVE_IME_VISIBLE=false'; then HIDDEN=1; break; fi; done; adb logcat -d >> artifacts/eve-ime/full-logcat.txt; if [ "$HIDDEN" != 1 ]; then adb logcat -d > "artifacts/eve-ime/round-$ROUND-failure-logcat.txt"; cat "artifacts/eve-ime/round-$ROUND-failure-logcat.txt" >> artifacts/eve-ime/full-logcat.txt; echo "::error::WindowInsetsCompat never reported IME hidden in cycle $ROUND"; exit 1; fi; adb shell dumpsys input_method > "artifacts/eve-ime/close-$ROUND.txt"; echo ">> [PASS] IME cycle $ROUND reached WindowInsets visible -> hidden with stable PID"; done
+            # app-side true/false transition. Successful cycles avoid expensive full-screen screencaps;
+            # screenshots are captured only on failure and once after all five cycles.
+            read X Y < artifacts/eve-ime/tap.txt; : > artifacts/eve-ime/full-logcat.txt; for ROUND in 1 2 3 4 5; do adb logcat -c; adb shell input tap "$X" "$Y"; SHOWN=0; for TRY in $(seq 1 20); do sleep 1; if adb logcat -d | grep -q 'EVE_IME_VISIBLE=true'; then SHOWN=1; break; fi; done; adb logcat -d >> artifacts/eve-ime/full-logcat.txt; if [ "$SHOWN" != 1 ]; then adb exec-out screencap -p > "artifacts/eve-ime/open-$ROUND-failed.png"; adb shell dumpsys activity lastanr > "artifacts/eve-ime/lastanr-$ROUND.txt" || true; adb logcat -d > "artifacts/eve-ime/round-$ROUND-failure-logcat.txt"; cat "artifacts/eve-ime/round-$ROUND-failure-logcat.txt" >> artifacts/eve-ime/full-logcat.txt; echo "::error::WindowInsetsCompat never reported IME visible in cycle $ROUND"; exit 1; fi; adb shell dumpsys input_method > "artifacts/eve-ime/open-$ROUND.txt"; adb shell pidof com.sonharf.game | tr -d '\r' > "artifacts/eve-ime/pid-$ROUND.txt" || true; if ! cmp -s artifacts/eve-ime/base-pid.txt "artifacts/eve-ime/pid-$ROUND.txt"; then adb shell dumpsys activity lastanr > "artifacts/eve-ime/lastanr-$ROUND.txt" || true; adb logcat -d > "artifacts/eve-ime/round-$ROUND-failure-logcat.txt"; cat "artifacts/eve-ime/round-$ROUND-failure-logcat.txt" >> artifacts/eve-ime/full-logcat.txt; echo "::error::App process changed in IME cycle $ROUND"; exit 1; fi; adb logcat -c; adb shell input keyevent 4; HIDDEN=0; for TRY in $(seq 1 20); do sleep 1; if adb logcat -d | grep -q 'EVE_IME_VISIBLE=false'; then HIDDEN=1; break; fi; done; adb logcat -d >> artifacts/eve-ime/full-logcat.txt; if [ "$HIDDEN" != 1 ]; then adb shell dumpsys activity lastanr > "artifacts/eve-ime/lastanr-$ROUND.txt" || true; adb logcat -d > "artifacts/eve-ime/round-$ROUND-failure-logcat.txt"; cat "artifacts/eve-ime/round-$ROUND-failure-logcat.txt" >> artifacts/eve-ime/full-logcat.txt; echo "::error::WindowInsetsCompat never reported IME hidden in cycle $ROUND"; exit 1; fi; adb shell dumpsys input_method > "artifacts/eve-ime/close-$ROUND.txt"; echo ">> [PASS] IME cycle $ROUND reached WindowInsets visible -> hidden with stable PID"; done
 
             adb shell pidof com.sonharf.game | tr -d '\r' > artifacts/eve-ime/current-pid.txt || true
             cmp -s artifacts/eve-ime/base-pid.txt artifacts/eve-ime/current-pid.txt || (echo "::error::App process changed/restarted during IME stress"; exit 1)
@@ -144,9 +149,9 @@ jobs:
             adb shell dumpsys window windows > artifacts/eve-ime/windows.txt || true
             adb exec-out screencap -p > artifacts/eve-ime/after-ime.png
             grep -q "EveImeSmokeActivity" artifacts/eve-ime/activities.txt || (echo "::error::EveImeSmokeActivity is no longer active after IME stress"; exit 1)
-            ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal|FATAL EXCEPTION|SIGABRT|SIGSEGV|GL_OUT_OF_MEMORY" artifacts/eve-ime/full-logcat.txt || (echo "::error::Native/Surface crash signature found during Eve IME stress"; exit 1)
+            ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal|FATAL EXCEPTION|SIGABRT|SIGSEGV|GL_OUT_OF_MEMORY|ANR in com\.sonharf\.game|Input dispatching timed out" artifacts/eve-ime/full-logcat.txt || (echo "::error::Native/Surface/ANR signature found during Eve IME stress"; exit 1)
             echo "EVE_IME_PASS_5"
-            echo ">> [PASS] Eve survived 5 real WindowInsets IME cycles on one Surface with stable PID and no Vulkan panic"
+            echo ">> [PASS] Eve survived 5 real WindowInsets IME cycles on one Surface with stable PID and no Vulkan panic or ANR"
 
       - name: Upload Eve runtime smoke evidence
         if: always()
