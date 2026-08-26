@@ -40,7 +40,9 @@ import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
+import kotlin.math.PI
 import kotlin.math.min
+import kotlin.math.sin
 
 /**
  * Small Filament-native skeletal mixer for Eve.
@@ -131,6 +133,48 @@ private class EveAnimationMixer(
     }
 }
 
+private const val EVE_COMPACT_BASE_Y = -0.28f
+
+/**
+ * Applies a tiny root transform only to the compact HOME character. The room never enters this
+ * path, so its Vulkan Surface + IME lifecycle remains untouched. Head movement itself continues to
+ * come from the real IdleLookAround skeletal clip.
+ */
+private fun applyCompactCompanionMotion(
+    node: io.github.sceneview.node.ModelNode,
+    effect: EveMotionEffect,
+    elapsedSeconds: Double,
+) {
+    when (effect) {
+        EveMotionEffect.NONE -> {
+            node.position = Position(0f, EVE_COMPACT_BASE_Y, 0f)
+            node.rotation = Rotation(y = 0f)
+        }
+
+        EveMotionEffect.BOUNCE -> {
+            val phase = (elapsedSeconds / 0.90).coerceIn(0.0, 1.0)
+            val lift = sin(phase * PI).coerceAtLeast(0.0).toFloat() * 0.16f
+            val turn = (sin(phase * PI * 2.0) * 3.5).toFloat()
+            node.position = Position(0f, EVE_COMPACT_BASE_Y + lift, 0f)
+            node.rotation = Rotation(y = turn)
+        }
+
+        EveMotionEffect.WIGGLE -> {
+            val phase = (elapsedSeconds / 1.15).coerceIn(0.0, 1.0)
+            val decay = (1.0 - phase)
+            val turn = (sin(phase * PI * 6.0) * 11.0 * decay).toFloat()
+            node.position = Position(0f, EVE_COMPACT_BASE_Y, 0f)
+            node.rotation = Rotation(y = turn)
+        }
+
+        EveMotionEffect.SAD_SETTLE -> {
+            val settle = (elapsedSeconds / 0.65).coerceIn(0.0, 1.0).toFloat()
+            node.position = Position(0f, EVE_COMPACT_BASE_Y - 0.055f * settle, 0f)
+            node.rotation = Rotation(y = 0f)
+        }
+    }
+}
+
 /**
  * Production live companion stage used by the active room and home overlay.
  *
@@ -203,6 +247,8 @@ internal fun EveLive3DStage(
     }
     val cue = EveMascotRuntime.animation
     val cueVersion = EveMascotRuntime.animationVersion
+    val motionEffect = EveMascotRuntime.motionEffect
+    val motionVersion = EveMascotRuntime.motionVersion
     val animationMixer = remember(modelInstance, compact) {
         EveAnimationMixer(
             blendDurationNanos = if (compact) 260_000_000L else 300_000_000L,
@@ -210,8 +256,13 @@ internal fun EveLive3DStage(
     }
 
     var loadTimedOut by remember { mutableStateOf(false) }
+    var motionStartedAtNanos by remember { mutableStateOf(System.nanoTime()) }
     var liveModelNode by remember(modelInstance) {
         mutableStateOf<io.github.sceneview.node.ModelNode?>(null)
+    }
+
+    LaunchedEffect(motionEffect, motionVersion) {
+        motionStartedAtNanos = System.nanoTime()
     }
 
     LaunchedEffect(modelInstance) {
@@ -260,6 +311,10 @@ internal fun EveLive3DStage(
                 onFrame = { frameTimeNanos ->
                     liveModelNode?.let { node ->
                         animationMixer.apply(node.animator, frameTimeNanos)
+                        if (compact) {
+                            val elapsedSeconds = ((frameTimeNanos - motionStartedAtNanos).coerceAtLeast(0L) / 1_000_000_000.0)
+                            applyCompactCompanionMotion(node, motionEffect, elapsedSeconds)
+                        }
                     }
                 },
             ) {
