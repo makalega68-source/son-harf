@@ -84,8 +84,8 @@ fun GamePortalApp() {
         }
 
         if (EveLivingRoomRuntime.open) {
-            Box(Modifier.fillMaxSize().navigationBarsPadding()) {
-                EveLivingRoomScreen(onClose = { EveLivingRoomRuntime.hide() })
+            Box(Modifier.fillMaxSize()) {
+                EveForestScreen(onNavigateBack = { EveLivingRoomRuntime.hide() })
             }
         }
     }
@@ -93,6 +93,7 @@ fun GamePortalApp() {
 
 @Composable
 private fun EveTravelDock(store: EveCompanionStore, onOpen: () -> Unit) {
+    val target = store.xpToNextLevel.coerceAtLeast(1)
     Surface(
         modifier = Modifier.fillMaxWidth().navigationBarsPadding(),
         color = Color(0xFFF8FFFA),
@@ -107,10 +108,10 @@ private fun EveTravelDock(store: EveCompanionStore, onOpen: () -> Unit) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("${store.name} ${sh("seninle geziyor", "travels with you")} 🐾", color = PortalText, fontWeight = FontWeight.Black, fontSize = 11.sp)
-                    Text("${sh("Dostluk Sv.", "Friendship Lv.")} ${store.friendshipLevel}  •  ${store.affection}/100  •  ${EveTravelRuntime.currentArea}", color = PortalMuted, fontSize = 8.5.sp)
+                    Text("${sh("Dostluk Sv.", "Friendship Lv.")} ${store.friendshipLevel}  •  ${store.affection}/$target XP  •  ${EveTravelRuntime.currentArea}", color = PortalMuted, fontSize = 8.5.sp)
                     Spacer(Modifier.height(3.dp))
                     LinearProgressIndicator(
-                        progress = { store.affection / 100f },
+                        progress = { (store.affection / target.toFloat()).coerceIn(0f, 1f) },
                         modifier = Modifier.fillMaxWidth(.78f).height(4.dp).clip(CircleShape),
                         color = PortalGreen,
                         trackColor = Color(0xFFD9F1E2),
