@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -83,6 +84,11 @@ internal fun EveHomeFloatingCompanion(
     BoxWithConstraints(modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val scope = rememberCoroutineScope()
+        val motionEffect = EveMascotRuntime.motionEffect
+        val motionVersion = EveMascotRuntime.motionVersion
+        val reactionY = remember { Animatable(0f) }
+        val reactionRotation = remember { Animatable(0f) }
+        val reactionScale = remember { Animatable(1f) }
 
         val mascotSize = 148.dp
         val labelHeight = 24.dp
@@ -95,6 +101,8 @@ internal fun EveHomeFloatingCompanion(
         val topInsetPx = with(density) { 86.dp.toPx() }
         val bottomInsetPx = with(density) { 4.dp.toPx() }
         val driftPx = with(density) { 9.dp.toPx() }
+        val jumpPx = with(density) { 22.dp.toPx() }
+        val sleepySettlePx = with(density) { 7.dp.toPx() }
 
         val widthPx = constraints.maxWidth.toFloat()
         val heightPx = constraints.maxHeight.toFloat()
@@ -105,6 +113,46 @@ internal fun EveHomeFloatingCompanion(
 
         val x = remember { Animatable(0f) }
         val y = remember { Animatable(0f) }
+
+        // Reaction motion transforms the transparent TextureSurface as one composited layer. It
+        // never rewrites ModelNode position/rotation/scale, which keeps SceneView's normalized GLB
+        // transform intact. The underlying skeletal pose still comes from the real GLB clips.
+        LaunchedEffect(motionEffect, motionVersion, jumpPx, sleepySettlePx) {
+            reactionY.stop()
+            reactionRotation.stop()
+            reactionScale.stop()
+
+            when (motionEffect) {
+                EveMotionEffect.NONE -> coroutineScope {
+                    launch { reactionY.animateTo(0f, tween(180, easing = FastOutSlowInEasing)) }
+                    launch { reactionRotation.animateTo(0f, tween(160, easing = FastOutSlowInEasing)) }
+                    launch { reactionScale.animateTo(1f, tween(180, easing = FastOutSlowInEasing)) }
+                }
+
+                EveMotionEffect.BOUNCE -> coroutineScope {
+                    launch {
+                        reactionY.animateTo(-jumpPx, tween(170, easing = FastOutSlowInEasing))
+                        reactionY.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
+                    }
+                    launch {
+                        reactionScale.animateTo(1.045f, tween(160, easing = FastOutSlowInEasing))
+                        reactionScale.animateTo(1f, tween(330, easing = FastOutSlowInEasing))
+                    }
+                }
+
+                EveMotionEffect.WIGGLE -> {
+                    reactionRotation.snapTo(0f)
+                    for (target in listOf(7f, -7f, 5f, -5f, 2.5f, 0f)) {
+                        reactionRotation.animateTo(target, tween(95))
+                    }
+                }
+
+                EveMotionEffect.SAD_SETTLE -> coroutineScope {
+                    launch { reactionY.animateTo(sleepySettlePx, tween(460, easing = FastOutSlowInEasing)) }
+                    launch { reactionScale.animateTo(0.97f, tween(460, easing = FastOutSlowInEasing)) }
+                }
+            }
+        }
         var anchorX by remember { mutableStateOf(0f) }
         var anchorY by remember { mutableStateOf(0f) }
         var initialized by remember { mutableStateOf(false) }
@@ -163,6 +211,12 @@ internal fun EveHomeFloatingCompanion(
                 .offset { IntOffset(x.value.roundToInt(), y.value.roundToInt()) }
                 .width(containerWidth)
                 .height(containerHeight)
+                .graphicsLayer {
+                    translationY = reactionY.value
+                    rotationZ = reactionRotation.value
+                    scaleX = reactionScale.value
+                    scaleY = reactionScale.value
+                }
                 .zIndex(50f),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
