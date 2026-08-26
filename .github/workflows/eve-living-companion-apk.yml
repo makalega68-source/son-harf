@@ -112,16 +112,13 @@ jobs:
             adb logcat -d > artifacts/eve-smoke/logcat.txt || true
             adb shell uiautomator dump /sdcard/eve-smoke.xml || true
             adb pull /sdcard/eve-smoke.xml artifacts/eve-smoke/eve-smoke.xml || true
-
             grep -q "Eve3DSmokeActivity" artifacts/eve-smoke/activities.txt || (echo "::error::Eve3DSmokeActivity is not the active runtime surface; evidence captured"; exit 1)
             test "$(stat -c%s artifacts/eve-smoke/eve-frame-a.png)" -gt 20000 || (echo "::error::First runtime screenshot is unexpectedly empty"; exit 1)
             test "$(stat -c%s artifacts/eve-smoke/eve-frame-b.png)" -gt 20000 || (echo "::error::Second runtime screenshot is unexpectedly empty"; exit 1)
             test ! -f artifacts/eve-smoke/eve-smoke.xml || ! grep -Eq "3D EVE (ASSET|YÜKLEME) HATASI" artifacts/eve-smoke/eve-smoke.xml || (echo "::error::Production Eve3DStage rendered its explicit 3D failure state"; exit 1)
-            if cmp -s artifacts/eve-smoke/eve-frame-a.png artifacts/eve-smoke/eve-frame-b.png; then
-              echo "::error::EVE runtime frames are byte-identical; mascot movement is not observable"
-              exit 1
-            fi
-            echo ">> [PASS] Interactive Eve screen rendered and runtime frames changed over time"
+            ! cmp -s artifacts/eve-smoke/eve-frame-a.png artifacts/eve-smoke/eve-frame-b.png || (echo "::error::EVE GLB runtime frames are byte-identical; real 3D motion is not observable"; exit 1)
+            sha256sum artifacts/eve-smoke/eve-frame-a.png artifacts/eve-smoke/eve-frame-b.png > artifacts/eve-smoke/frame-sha256.txt
+            echo ">> [PASS] Real Eve GLB viewport rendered and changed over time"
 
       - name: Upload Eve runtime smoke evidence
         if: always()
