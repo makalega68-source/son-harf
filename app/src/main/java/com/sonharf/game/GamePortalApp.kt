@@ -3,17 +3,7 @@ package com.sonharf.game
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -58,7 +48,10 @@ fun GamePortalApp() {
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f).fillMaxWidth()) { ClassicPremiumApp() }
+            Box(
+                Modifier.weight(1f).fillMaxWidth()
+                    .consumeWindowInsets(WindowInsets.navigationBars),
+            ) { ClassicPremiumApp() }
             EveSafeDock(
                 name = store.name,
                 giftReady = store.giftAvailable(),
@@ -112,7 +105,7 @@ private fun EveSafeDock(
                 if (!parkedRight) DockText(name, giftReady)
                 Button(
                     onClick = onOpen,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PortalBlue),
                     shape = RoundedCornerShape(16.dp),
                 ) { Text(sh("Yanına git", "Visit"), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
