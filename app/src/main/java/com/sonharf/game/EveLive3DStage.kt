@@ -30,9 +30,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
+import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
 import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberFillLightNode
+import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
@@ -48,7 +51,9 @@ import kotlinx.coroutines.delay
  *   contact shadow and a later primitive grounding experiment hit Filament's
  *   "Normalized format does not exist" abort on the software Vulkan validation backend,
  * - the non-compact room gets a Compose-only grounding pool. SurfaceType.Surface renders behind
- *   Compose layers, so this adds depth without touching Filament resources or the Vulkan scene.
+ *   Compose layers, so this adds depth without touching Filament resources or the Vulkan scene,
+ * - lighting only tunes SceneView's existing directional key/fill nodes. No custom material or
+ *   renderer resource is introduced for the lighting pass.
  */
 @Composable
 internal fun EveLive3DStage(
@@ -95,6 +100,17 @@ internal fun EveLive3DStage(
     )
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, EveAssetPolicy.MODEL_ASSET)
+    val mainLightNode = rememberMainLightNode(engine) {
+        // Soft front-left key: preserves the bright companion look while giving the face, ears
+        // and feather layers enough directional contrast to read as a 3D volume.
+        intensity = 8_500f
+        lightDirection = Direction(-0.45f, -0.75f, -0.48f)
+    }
+    val fillLightNode = rememberFillLightNode(engine) {
+        // Opposite high fill keeps the shadow side readable without flattening the key light.
+        intensity = 2_500f
+        lightDirection = Direction(0.68f, -0.47f, 0.56f)
+    }
     val cue = EveMascotRuntime.animation
     val cueVersion = EveMascotRuntime.animationVersion
 
@@ -143,6 +159,8 @@ internal fun EveLive3DStage(
                 isOpaque = false,
                 engine = engine,
                 modelLoader = modelLoader,
+                mainLightNode = mainLightNode,
+                fillLightNode = fillLightNode,
                 cameraManipulator = null,
             ) {
                 ModelNode(
