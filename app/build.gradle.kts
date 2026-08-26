@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -77,6 +79,66 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+
+    // Keep the GLB as a directly readable APK asset for Filament/SceneView.
+    androidResources {
+        noCompress += "glb"
+    }
+}
+
+val eveAssetPath = "src/main/assets/models/eve/eve.glb"
+val eveAssetExpectedSize = 4_870_220L
+val eveAssetExpectedSha256 = "0c68ac4c4f5475332fac77ccb9bda4bb08bd202a5d596114552e37ab27d6c39e"
+
+val verifyEveAsset by tasks.registering {
+    group = "verification"
+    description = "Fail-fast verification for the accepted rigged Eve GLB."
+    val assetFile = layout.projectDirectory.file(eveAssetPath).asFile
+
+    doLast {
+        if (!assetFile.isFile) {
+            throw GradleException("FATAL: $eveAssetPath is missing. Refusing to build a fake/fallback mascot APK.")
+        }
+        if (assetFile.length() != eveAssetExpectedSize) {
+            throw GradleException(
+                "FATAL: Eve GLB size mismatch. Expected $eveAssetExpectedSize bytes, found ${assetFile.length()} bytes.",
+            )
+        }
+
+        val header = assetFile.inputStream().use { input -> ByteArray(12).also { bytes ->
+            if (input.read(bytes) != bytes.size) throw GradleException("FATAL: Eve GLB header is truncated.")
+        } }
+        val magicOk = header[0] == 'g'.code.toByte() && header[1] == 'l'.code.toByte() &&
+            header[2] == 'T'.code.toByte() && header[3] == 'F'.code.toByte()
+        val version = (header[4].toInt() and 0xff) or
+            ((header[5].toInt() and 0xff) shl 8) or
+            ((header[6].toInt() and 0xff) shl 16) or
+            ((header[7].toInt() and 0xff) shl 24)
+        if (!magicOk || version != 2) {
+            throw GradleException("FATAL: Eve asset is not a valid GLB 2.0 file.")
+        }
+
+        val digest = MessageDigest.getInstance("SHA-256")
+        val actualSha = assetFile.inputStream().use { input ->
+            val buffer = ByteArray(64 * 1024)
+            while (true) {
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }
+        }
+        if (!actualSha.equals(eveAssetExpectedSha256, ignoreCase = true)) {
+            throw GradleException(
+                "FATAL: Eve GLB SHA-256 mismatch. Expected $eveAssetExpectedSha256, found $actualSha.",
+            )
+        }
+        logger.lifecycle(">> [PASS] Eve GLB verified: ${assetFile.length()} bytes, SHA-256 $actualSha")
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn(verifyEveAsset)
 }
 
 dependencies {
