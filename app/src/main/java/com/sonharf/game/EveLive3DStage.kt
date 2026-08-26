@@ -90,15 +90,18 @@ private class EveAnimationMixer(
         )
 
         previous?.let { old ->
-            val alpha = if (blendDurationNanos <= 0L) {
+            val linearAlpha = if (blendDurationNanos <= 0L) {
                 1f
             } else {
                 ((frameTimeNanos - blendStartedAtNanos).toDouble() / blendDurationNanos.toDouble())
                     .toFloat()
                     .coerceIn(0f, 1f)
             }
+            // Smoothstep keeps pose velocity continuous at both ends of the skeletal blend. The
+            // blend still follows Filament's native applyAnimation -> applyCrossFade ordering.
+            val alpha = linearAlpha * linearAlpha * (3f - 2f * linearAlpha)
 
-            if (alpha < 1f) {
+            if (linearAlpha < 1f) {
                 animator.applyCrossFade(
                     old.index,
                     animationTime(animator, old, frameTimeNanos),
@@ -202,7 +205,7 @@ internal fun EveLive3DStage(
     val cueVersion = EveMascotRuntime.animationVersion
     val animationMixer = remember(modelInstance, compact) {
         EveAnimationMixer(
-            blendDurationNanos = if (compact) 180_000_000L else 240_000_000L,
+            blendDurationNanos = if (compact) 260_000_000L else 300_000_000L,
         )
     }
 
