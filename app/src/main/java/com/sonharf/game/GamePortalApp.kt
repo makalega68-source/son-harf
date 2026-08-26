@@ -120,7 +120,7 @@ private fun EveTravelDock(store: EveCompanionStore, onOpen: () -> Unit) {
                 shadowElevation = 4.dp,
             ) {
                 Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp))) {
-                    Eve3DStage(
+                    EveLive3DStage(
                         modifier = Modifier.fillMaxSize(),
                         compact = true,
                     )
@@ -152,7 +152,7 @@ private fun EveTravelDock(store: EveCompanionStore, onOpen: () -> Unit) {
                 Text(
                     sh("Canlı • seni izliyor", "Live • watching with you"),
                     color = PortalGreen,
-                    fontSize = 8.dp.value.sp,
+                    fontSize = 8.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
