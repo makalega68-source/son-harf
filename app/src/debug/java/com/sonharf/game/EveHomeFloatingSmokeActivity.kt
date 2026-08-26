@@ -7,33 +7,33 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.DisposableEffect
+import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 
 /**
  * Debug-only HOME compositor smoke.
  *
- * Hosts the exact production floating companion over opaque Compose cards. The compact stage uses
- * TextureSurface so Eve must render inline above these cards while its fixed-size native surface is
- * moved around the screen. CI starts this Activity in a fresh process, captures separated frames,
- * checks process stability/native crash signatures, then force-stops it before the room IME smoke.
+ * Hosts the exact production fixed companion in the sketch-inspired HOME position: Eve on the
+ * left, Son Harf on the right and Bil Bakalım below. An opaque card deliberately extends behind
+ * part of Eve's viewport so CI catches regressions where compact rendering falls behind Compose.
+ * EveHomeFixedCompanion starts the real GLB living-behavior loop itself; separated screenshots
+ * therefore verify visible skeletal motion as well as TextureSurface compositor stability.
  */
 class EveHomeFloatingSmokeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
-                DisposableEffect(Unit) {
-                    EveMascotRuntime.startLivingBehavior()
-                    onDispose { EveMascotRuntime.stopLivingBehavior() }
-                }
-
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -41,28 +41,52 @@ class EveHomeFloatingSmokeActivity : ComponentActivity() {
                 ) {
                     Box(
                         modifier = Modifier
-                            .align(Alignment.TopCenter)
-                            .offset(y = 150.dp)
-                            .size(width = 330.dp, height = 180.dp)
+                            .align(Alignment.TopEnd)
+                            .offset(x = (-18).dp, y = 126.dp)
+                            .size(width = 278.dp, height = 224.dp)
                             .background(Color(0xFF0E7490), RoundedCornerShape(30.dp)),
-                    )
+                    ) {
+                        Text(
+                            text = "SON HARF",
+                            modifier = Modifier.align(Alignment.Center).padding(start = 24.dp),
+                            color = Color.White,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 25.sp,
+                        )
+                    }
+
                     Box(
                         modifier = Modifier
-                            .align(Alignment.Center)
-                            .size(width = 330.dp, height = 220.dp)
+                            .align(Alignment.TopCenter)
+                            .offset(y = 372.dp)
+                            .size(width = 330.dp, height = 190.dp)
                             .background(Color(0xFF4D7C0F), RoundedCornerShape(30.dp)),
-                    )
-                    Box(
+                    ) {
+                        Text(
+                            text = "BİL BAKALIM",
+                            modifier = Modifier.align(Alignment.Center),
+                            color = Color.White,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 23.sp,
+                        )
+                    }
+
+                    EveHomeFixedCompanion(
                         modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .offset(y = (-130).dp)
-                            .size(width = 330.dp, height = 180.dp)
-                            .background(Color(0xFF7C3AED), RoundedCornerShape(30.dp)),
+                            .align(Alignment.TopStart)
+                            .offset(x = 18.dp, y = 116.dp)
+                            .size(width = 120.dp, height = 244.dp)
+                            .zIndex(20f),
                     )
 
-                    EveHomeFloatingCompanion(
-                        modifier = Modifier.fillMaxSize(),
-                        onOpen = {},
+                    Text(
+                        text = "🐾  EVE EVİ",
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .offset(y = (-36).dp),
+                        color = Color(0xFF163B58),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 15.sp,
                     )
                 }
             }
