@@ -3,7 +3,9 @@ name: Eve Real 3D Integration Test APK
 on:
   workflow_dispatch:
   push:
-    branches: [ fix/eve-real-glb-integration-20260826 ]
+    branches:
+      - fix/eve-real-glb-integration-20260826
+      - feat/eve-progression-interactions-20260826
     paths:
       - '.github/workflows/eve-living-companion-apk.yml'
       - 'app/**'
@@ -84,13 +86,13 @@ jobs:
             echo "::warning::/dev/kvm is not available; emulator may use slow software acceleration"
           fi
 
-      - name: Render real Eve on Android emulator
+      - name: Render and verify moving Eve on Android emulator
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 34
           arch: x86_64
           profile: pixel_6
-          disable-animations: true
+          disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
             mkdir -p artifacts/eve-smoke
@@ -99,7 +101,10 @@ jobs:
             adb logcat -c
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.Eve3DSmokeActivity
-            sleep 15
+            sleep 12
+            adb exec-out screencap -p > artifacts/eve-smoke/eve-frame-a.png
+            sleep 2
+            adb exec-out screencap -p > artifacts/eve-smoke/eve-frame-b.png
             adb shell dumpsys activity activities > artifacts/eve-smoke/activities.txt || true
             adb shell dumpsys activity top > artifacts/eve-smoke/activity-top.txt || true
             adb shell dumpsys window windows > artifacts/eve-smoke/windows.txt || true
@@ -107,11 +112,16 @@ jobs:
             adb logcat -d > artifacts/eve-smoke/logcat.txt || true
             adb shell uiautomator dump /sdcard/eve-smoke.xml || true
             adb pull /sdcard/eve-smoke.xml artifacts/eve-smoke/eve-smoke.xml || true
-            adb exec-out screencap -p > artifacts/eve-smoke/eve-3d-smoke.png || true
+
             grep -q "Eve3DSmokeActivity" artifacts/eve-smoke/activities.txt || (echo "::error::Eve3DSmokeActivity is not the active runtime surface; evidence captured"; exit 1)
-            test "$(stat -c%s artifacts/eve-smoke/eve-3d-smoke.png)" -gt 20000 || (echo "::error::Runtime screenshot is unexpectedly empty"; exit 1)
+            test "$(stat -c%s artifacts/eve-smoke/eve-frame-a.png)" -gt 20000 || (echo "::error::First runtime screenshot is unexpectedly empty"; exit 1)
+            test "$(stat -c%s artifacts/eve-smoke/eve-frame-b.png)" -gt 20000 || (echo "::error::Second runtime screenshot is unexpectedly empty"; exit 1)
             test ! -f artifacts/eve-smoke/eve-smoke.xml || ! grep -Eq "3D EVE (ASSET|YÜKLEME) HATASI" artifacts/eve-smoke/eve-smoke.xml || (echo "::error::Production Eve3DStage rendered its explicit 3D failure state"; exit 1)
-            echo ">> [PASS] Eve3DSmokeActivity launched and produced a non-empty runtime screenshot"
+            if cmp -s artifacts/eve-smoke/eve-frame-a.png artifacts/eve-smoke/eve-frame-b.png; then
+              echo "::error::EVE runtime frames are byte-identical; mascot movement is not observable"
+              exit 1
+            fi
+            echo ">> [PASS] Interactive Eve screen rendered and runtime frames changed over time"
 
       - name: Upload Eve runtime smoke evidence
         if: always()
