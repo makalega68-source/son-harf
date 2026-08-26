@@ -165,15 +165,19 @@ internal fun EveHomeFloatingCompanion(
         val presenceRotation = remember { Animatable(0f) }
         val presenceScale = remember { Animatable(1f) }
 
-        val mascotSize = 148.dp
+        // The 3D viewport itself now follows the approved mockup proportions: ~43% screen width
+        // with a tall portrait viewport so ears/head can reach upward while paws overlap the cards.
+        val mascotWidth = (maxWidth * 0.43f).coerceIn(150.dp, 188.dp)
+        val mascotHeight = mascotWidth * 1.55f
+        val promptHeight = 46.dp
         val labelHeight = 24.dp
-        val containerWidth = 154.dp
-        val containerHeight = mascotSize + labelHeight
+        val containerWidth = mascotWidth
+        val containerHeight = promptHeight + mascotHeight + labelHeight
 
         val mascotPx = with(density) { containerWidth.toPx() }
         val containerHeightPx = with(density) { containerHeight.toPx() }
         val sideInsetPx = with(density) { 4.dp.toPx() }
-        val topInsetPx = with(density) { 86.dp.toPx() }
+        val topInsetPx = with(density) { 38.dp.toPx() }
         val bottomInsetPx = with(density) { 4.dp.toPx() }
         val driftPx = with(density) { 9.dp.toPx() }
         val jumpPx = with(density) { 22.dp.toPx() }
@@ -375,8 +379,38 @@ internal fun EveHomeFloatingCompanion(
                 .zIndex(50f),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            // Speech is laid out physically above TextureSurface instead of inside its Android
+            // rendering bounds. This guarantees the bubble remains visible on real devices.
             Box(
-                modifier = Modifier.size(mascotSize),
+                modifier = Modifier
+                    .width(containerWidth)
+                    .height(promptHeight),
+                contentAlignment = Alignment.BottomCenter,
+            ) {
+                if (homePromptText.isNotBlank()) {
+                    Surface(
+                        color = Color.White.copy(alpha = 0.96f),
+                        shape = RoundedCornerShape(14.dp),
+                        shadowElevation = 5.dp,
+                    ) {
+                        Text(
+                            text = homePromptText.take(64),
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                            color = Color(0xFF163B58),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 10.sp,
+                            lineHeight = 12.sp,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                        )
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .width(mascotWidth)
+                    .height(mascotHeight),
                 contentAlignment = Alignment.Center,
             ) {
                 // Keep HOME's TextureSurface completely out of composition while the rename dialog
@@ -430,27 +464,6 @@ internal fun EveHomeFloatingCompanion(
                             },
                     )
 
-                    if (homePromptText.isNotBlank()) {
-                        Surface(
-                            modifier = Modifier
-                                .align(Alignment.TopCenter)
-                                .offset(y = (-2).dp),
-                            color = Color.White.copy(alpha = 0.94f),
-                            shape = RoundedCornerShape(12.dp),
-                            shadowElevation = 3.dp,
-                        ) {
-                            Text(
-                                text = homePromptText.take(64),
-                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                                color = Color(0xFF163B58),
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 9.sp,
-                                lineHeight = 11.sp,
-                                textAlign = TextAlign.Center,
-                                maxLines = 2,
-                            )
-                        }
-                    }
                 }
             }
 
