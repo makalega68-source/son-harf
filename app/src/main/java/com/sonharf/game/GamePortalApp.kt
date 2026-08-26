@@ -54,7 +54,8 @@ internal val PortalRed = Color(0xFFFF7891)
 
 /**
  * Root shell. Eve's travel dock stays outside gameplay, so it never covers the word field,
- * timer or match actions. The companion itself moves across menu stops inside this safe dock.
+ * timer or match actions. The mini companion is the same real GLB/SceneView stage used by the
+ * room; there is no EveMark/2D fallback in this dock.
  */
 @Composable
 fun GamePortalApp() {
@@ -77,10 +78,12 @@ fun GamePortalApp() {
             ) {
                 ClassicPremiumApp()
             }
-            EveTravelDock(
-                store = store,
-                onOpen = { EveLivingRoomRuntime.show() },
-            )
+            if (!EveLivingRoomRuntime.open) {
+                EveTravelDock(
+                    store = store,
+                    onOpen = { EveLivingRoomRuntime.show() },
+                )
+            }
         }
 
         if (EveLivingRoomRuntime.open) {
@@ -101,7 +104,7 @@ private fun EveTravelDock(store: EveCompanionStore, onOpen: () -> Unit) {
         shadowElevation = 8.dp,
     ) {
         Column(
-            Modifier.fillMaxWidth().height(100.dp).background(
+            Modifier.fillMaxWidth().height(108.dp).background(
                 Brush.horizontalGradient(listOf(Color(0xFFEAF9F0), Color.White, Color(0xFFEAF8FF))),
             ).padding(horizontal = 9.dp, vertical = 6.dp),
         ) {
@@ -134,10 +137,11 @@ private fun EveTravelDock(store: EveCompanionStore, onOpen: () -> Unit) {
 
 @Composable
 private fun EveMenuTravelTrack(onOpen: () -> Unit) {
-    BoxWithConstraints(Modifier.fillMaxWidth().height(43.dp)) {
+    BoxWithConstraints(Modifier.fillMaxWidth().height(51.dp)) {
+        val markerSize = 48.dp
         val slot = maxWidth / EveTravelRuntime.areas.size
         val markerX by animateDpAsState(
-            targetValue = slot * EveTravelRuntime.areaIndex + (slot - 32.dp) / 2,
+            targetValue = slot * EveTravelRuntime.areaIndex + (slot - markerSize) / 2,
             animationSpec = tween(850),
             label = "eve_menu_travel",
         )
@@ -165,13 +169,21 @@ private fun EveMenuTravelTrack(onOpen: () -> Unit) {
         }
 
         Surface(
-            modifier = Modifier.offset(x = markerX, y = (-7).dp).size(32.dp).clickable(onClick = onOpen),
+            modifier = Modifier
+                .offset(x = markerX, y = (-13).dp)
+                .size(markerSize)
+                .clickable(onClick = onOpen),
             shape = CircleShape,
-            color = Color.White,
+            color = Color(0xFFE4F7EA),
             border = BorderStroke(2.dp, PortalGreen),
             shadowElevation = 4.dp,
         ) {
-            EveMark(Modifier.padding(3.dp))
+            Box(Modifier.fillMaxSize().clip(CircleShape)) {
+                Eve3DStage(
+                    modifier = Modifier.fillMaxSize(),
+                    compact = true,
+                )
+            }
         }
     }
 }
