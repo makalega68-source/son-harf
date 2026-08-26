@@ -26,7 +26,9 @@ import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
+import io.github.sceneview.math.Scale
 import io.github.sceneview.rememberEngine
+import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
@@ -39,7 +41,8 @@ import kotlinx.coroutines.delay
  * - SurfaceView-backed Vulkan path retained for IME stability,
  * - animationVersion restarts the same named clip deterministically,
  * - no procedural Filament contact-shadow material: SceneView 4.31.0's contact-shadow material
- *   aborts on the Vulkan/SwiftShader path with "Normalized format does not exist".
+ *   aborts on the Vulkan/SwiftShader path with "Normalized format does not exist",
+ * - grounding uses only SceneView's standard transparent-colour material and primitive geometry.
  */
 @Composable
 internal fun EveLive3DStage(
@@ -85,9 +88,39 @@ internal fun EveLive3DStage(
         },
     )
     val modelLoader = rememberModelLoader(engine)
+    val materialLoader = rememberMaterialLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, EveAssetPolicy.MODEL_ASSET)
     val cue = EveMascotRuntime.animation
     val cueVersion = EveMascotRuntime.animationVersion
+
+    // The previous contact-shadow material crashes the software Vulkan CI backend. These three
+    // concentric, nearly-flat primitives use SceneView's ordinary transparent colour material,
+    // which follows the same Filament material path used by other production geometry. The layers
+    // form a soft ambient-occlusion-like pool without adding a custom shader/material asset.
+    val groundOuter = remember(materialLoader) {
+        materialLoader.createColorInstance(
+            color = Color.Black.copy(alpha = 0.035f),
+            metallic = 0f,
+            roughness = 1f,
+            reflectance = 0f,
+        )
+    }
+    val groundMiddle = remember(materialLoader) {
+        materialLoader.createColorInstance(
+            color = Color.Black.copy(alpha = 0.050f),
+            metallic = 0f,
+            roughness = 1f,
+            reflectance = 0f,
+        )
+    }
+    val groundInner = remember(materialLoader) {
+        materialLoader.createColorInstance(
+            color = Color.Black.copy(alpha = 0.070f),
+            metallic = 0f,
+            roughness = 1f,
+            reflectance = 0f,
+        )
+    }
 
     var loadTimedOut by remember { mutableStateOf(false) }
     var liveModelNode by remember(modelInstance) {
@@ -134,16 +167,65 @@ internal fun EveLive3DStage(
                 isOpaque = false,
                 engine = engine,
                 modelLoader = modelLoader,
+                materialLoader = materialLoader,
                 cameraManipulator = null,
             ) {
+                if (!compact) {
+                    CylinderNode(
+                        radius = 0.36f,
+                        height = 0.003f,
+                        sideCount = 64,
+                        materialInstance = groundOuter,
+                        position = Position(0f, -0.288f, 0.015f),
+                        scale = Scale(x = 1.0f, y = 1.0f, z = 0.62f),
+                        apply = {
+                            isShadowCaster = false
+                            isShadowReceiver = false
+                            isTouchable = false
+                            setCulling(false)
+                        },
+                    )
+                    CylinderNode(
+                        radius = 0.285f,
+                        height = 0.003f,
+                        sideCount = 64,
+                        materialInstance = groundMiddle,
+                        position = Position(0f, -0.286f, 0.015f),
+                        scale = Scale(x = 1.0f, y = 1.0f, z = 0.62f),
+                        apply = {
+                            isShadowCaster = false
+                            isShadowReceiver = false
+                            isTouchable = false
+                            setCulling(false)
+                        },
+                    )
+                    CylinderNode(
+                        radius = 0.205f,
+                        height = 0.003f,
+                        sideCount = 64,
+                        materialInstance = groundInner,
+                        position = Position(0f, -0.284f, 0.015f),
+                        scale = Scale(x = 1.0f, y = 1.0f, z = 0.62f),
+                        apply = {
+                            isShadowCaster = false
+                            isShadowReceiver = false
+                            isTouchable = false
+                            setCulling(false)
+                        },
+                    )
+                }
+
                 ModelNode(
                     modelInstance = modelInstance,
                     scaleToUnits = if (compact) 1.0f else 0.90f,
-                    centerOrigin = Position(0f, -0.60f, 0f),
+                    // Bottom-align the accepted GLB's AABB to a stable world-space ground plane.
+                    // -0.28 m preserves the previous on-screen framing while giving the feet a
+                    // deterministic floor reference for every idle/reaction clip.
+                    centerOrigin = Position(0f, -1.0f, 0f),
                     autoAnimate = false,
                     animationName = null,
                     animationLoop = cue.loop,
-                    position = Position(0f, if (compact) -.08f else -.10f, 0f),
+                    position = Position(0f, -0.28f, 0f),
                     rotation = Rotation(y = 0f),
                     apply = {
                         liveModelNode = this
