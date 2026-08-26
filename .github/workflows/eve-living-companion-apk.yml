@@ -120,28 +120,27 @@ jobs:
             ! cmp -s artifacts/eve-smoke/eve-frame-a.png artifacts/eve-smoke/eve-frame-b.png || (echo "::error::EVE GLB runtime frames are byte-identical"; exit 1)
             echo ">> [PASS] Real Eve GLB rendered and animated on the same Surface used for IME stress"
 
-            # UIAutomator can return a null accessibility root on a headless Vulkan/Compose window.
-            # The debug surface intentionally contains one full-width TextField 12dp above the nav bar,
-            # so derive a safe tap from the actual device resolution instead of accessibility metadata.
+            # UIAutomator is unreliable on the headless Vulkan/Compose window. The debug surface has
+            # one full-width TextField near the bottom, so derive a safe tap from the actual display.
             adb shell wm size > artifacts/eve-ime/wm-size.txt
             python3 -c 'import re; s=open("artifacts/eve-ime/wm-size.txt").read(); m=re.findall(r"(\d+)x(\d+)",s); assert m,"wm size unavailable"; w,h=map(int,m[-1]); open("artifacts/eve-ime/tap.txt","w").write(f"{w//2} {h-200}\n")'
             cat artifacts/eve-ime/tap.txt
 
-            # Real user-like cycle on the same 3D Surface: tap, require IME shown, keep PID stable,
-            # press Back, require IME hidden. Repeat five times.
-            adb logcat -c
-            read X Y < artifacts/eve-ime/tap.txt; for ROUND in 1 2 3 4 5; do adb shell input tap "$X" "$Y"; sleep 2; adb shell dumpsys input_method > "artifacts/eve-ime/open-$ROUND.txt"; grep -q "mInputShown=true" "artifacts/eve-ime/open-$ROUND.txt" || { adb exec-out screencap -p > "artifacts/eve-ime/open-$ROUND-failed.png"; adb logcat -d > artifacts/eve-ime/failure-logcat.txt; echo "::error::IME did not become visible in cycle $ROUND"; exit 1; }; adb exec-out screencap -p > "artifacts/eve-ime/open-$ROUND.png"; adb shell pidof com.sonharf.game | tr -d '\r' > "artifacts/eve-ime/pid-$ROUND.txt" || true; cmp -s artifacts/eve-ime/base-pid.txt "artifacts/eve-ime/pid-$ROUND.txt" || { adb logcat -d > artifacts/eve-ime/failure-logcat.txt; echo "::error::App process changed in IME cycle $ROUND"; exit 1; }; adb shell input keyevent 4; sleep 2; adb shell dumpsys input_method > "artifacts/eve-ime/close-$ROUND.txt"; grep -q "mInputShown=false" "artifacts/eve-ime/close-$ROUND.txt" || { adb logcat -d > artifacts/eve-ime/failure-logcat.txt; echo "::error::IME did not hide in cycle $ROUND"; exit 1; }; done
+            # SwiftShader can take several seconds between showSoftInput() and the IME actually reaching
+            # ImeTracker.onShown. Never send Back on a fixed timer: wait for real onShown/onHidden events.
+            # Keep the whole loop on one shell line because android-emulator-runner executes script lines
+            # in separate /bin/sh processes.
+            read X Y < artifacts/eve-ime/tap.txt; : > artifacts/eve-ime/full-logcat.txt; for ROUND in 1 2 3 4 5; do adb logcat -c; adb shell input tap "$X" "$Y"; SHOWN=0; for TRY in $(seq 1 15); do sleep 1; if adb logcat -d | grep -qE 'ImeTracker: com\.sonharf\.game:.*: onShown'; then SHOWN=1; break; fi; done; if [ "$SHOWN" != 1 ]; then adb exec-out screencap -p > "artifacts/eve-ime/open-$ROUND-failed.png"; adb logcat -d > "artifacts/eve-ime/round-$ROUND-failure-logcat.txt"; cat "artifacts/eve-ime/round-$ROUND-failure-logcat.txt" >> artifacts/eve-ime/full-logcat.txt; echo "::error::IME never reached ImeTracker.onShown in cycle $ROUND"; exit 1; fi; adb shell dumpsys input_method > "artifacts/eve-ime/open-$ROUND.txt"; adb exec-out screencap -p > "artifacts/eve-ime/open-$ROUND.png"; adb shell pidof com.sonharf.game | tr -d '\r' > "artifacts/eve-ime/pid-$ROUND.txt" || true; if ! cmp -s artifacts/eve-ime/base-pid.txt "artifacts/eve-ime/pid-$ROUND.txt"; then adb logcat -d > "artifacts/eve-ime/round-$ROUND-failure-logcat.txt"; cat "artifacts/eve-ime/round-$ROUND-failure-logcat.txt" >> artifacts/eve-ime/full-logcat.txt; echo "::error::App process changed in IME cycle $ROUND"; exit 1; fi; adb shell input keyevent 4; HIDDEN=0; for TRY in $(seq 1 15); do sleep 1; if adb logcat -d | grep -qE 'ImeTracker: com\.sonharf\.game:.*: onHidden'; then HIDDEN=1; break; fi; done; if [ "$HIDDEN" != 1 ]; then adb logcat -d > "artifacts/eve-ime/round-$ROUND-failure-logcat.txt"; cat "artifacts/eve-ime/round-$ROUND-failure-logcat.txt" >> artifacts/eve-ime/full-logcat.txt; echo "::error::IME never reached ImeTracker.onHidden in cycle $ROUND"; exit 1; fi; adb shell dumpsys input_method > "artifacts/eve-ime/close-$ROUND.txt"; adb logcat -d > "artifacts/eve-ime/round-$ROUND-logcat.txt"; cat "artifacts/eve-ime/round-$ROUND-logcat.txt" >> artifacts/eve-ime/full-logcat.txt; echo ">> [PASS] IME cycle $ROUND reached onShown -> onHidden with stable PID"; done
 
             adb shell pidof com.sonharf.game | tr -d '\r' > artifacts/eve-ime/current-pid.txt || true
-            cmp -s artifacts/eve-ime/base-pid.txt artifacts/eve-ime/current-pid.txt || (adb logcat -d > artifacts/eve-ime/pid-change-logcat.txt; echo "::error::App process changed/restarted during IME stress"; exit 1)
+            cmp -s artifacts/eve-ime/base-pid.txt artifacts/eve-ime/current-pid.txt || (echo "::error::App process changed/restarted during IME stress"; exit 1)
             adb shell dumpsys activity activities > artifacts/eve-ime/activities.txt || true
             adb shell dumpsys input_method > artifacts/eve-ime/input-method-final.txt || true
             adb shell dumpsys window windows > artifacts/eve-ime/windows.txt || true
-            adb logcat -d > artifacts/eve-ime/full-logcat.txt || true
             adb exec-out screencap -p > artifacts/eve-ime/after-ime.png
             grep -q "EveImeSmokeActivity" artifacts/eve-ime/activities.txt || (echo "::error::EveImeSmokeActivity is no longer active after IME stress"; exit 1)
             ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal 6|FATAL EXCEPTION|SIGABRT" artifacts/eve-ime/full-logcat.txt || (echo "::error::Native/Surface crash signature found during Eve IME stress"; exit 1)
-            echo ">> [PASS] Eve survived 5 confirmed IME open/close cycles on one Surface with stable PID and no Vulkan panic"
+            echo ">> [PASS] Eve survived 5 real IME onShown/onHidden cycles on one Surface with stable PID and no Vulkan panic"
 
       - name: Upload Eve runtime smoke evidence
         if: always()
