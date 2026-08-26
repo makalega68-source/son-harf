@@ -96,7 +96,6 @@ jobs:
           disable-animations: false
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
-            set -e
             mkdir -p artifacts/eve-smoke artifacts/eve-ime
             test -f app/build/outputs/apk/debug/app-debug.apk || (echo "::error::Debug APK missing before emulator install"; exit 1)
             adb install -r app/build/outputs/apk/debug/app-debug.apk
@@ -118,32 +117,33 @@ jobs:
             ! cmp -s artifacts/eve-smoke/eve-frame-a.png artifacts/eve-smoke/eve-frame-b.png || (echo "::error::EVE GLB runtime frames are byte-identical"; exit 1)
             echo ">> [PASS] Real Eve Vulkan/GLB viewport rendered and changed over time"
 
-            # Gate 2: production Eve3DStage stays alive while the debug surface itself opens/closes
-            # the real software IME five times. The test reports PASS only after five Android IME
-            # visible transitions; CI does not inject competing taps/key events.
+            # Gate 2: the same production Eve3DStage remains alive while the debug surface itself
+            # opens/closes the real software IME five times. PID state is persisted in files because
+            # android-emulator-runner executes script lines in separate /bin/sh processes.
             adb logcat -c
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.EveImeSmokeActivity
             sleep 4
-            BASE_PID="$(adb shell pidof com.sonharf.game | tr -d '\r')"
-            test -n "$BASE_PID" || (echo "::error::Eve IME smoke process did not start"; exit 1)
+            adb shell pidof com.sonharf.game | tr -d '\r' > artifacts/eve-ime/base-pid.txt || true
+            test -s artifacts/eve-ime/base-pid.txt || (adb logcat -d > artifacts/eve-ime/start-failure-logcat.txt; echo "::error::Eve IME smoke process did not remain alive after start"; exit 1)
             adb exec-out screencap -p > artifacts/eve-ime/before-ime.png
 
             # Activity sequence: 6s settle + 5 x (1.8s open + 1.8s close) + 1s final marker.
             sleep 23
 
-            CURRENT_PID="$(adb shell pidof com.sonharf.game | tr -d '\r')"
-            test "$CURRENT_PID" = "$BASE_PID" || (echo "::error::App process changed/crashed during IME stress"; exit 1)
+            adb shell pidof com.sonharf.game | tr -d '\r' > artifacts/eve-ime/current-pid.txt || true
+            test -s artifacts/eve-ime/current-pid.txt || (adb logcat -d > artifacts/eve-ime/crash-logcat.txt; echo "::error::App process died during IME stress"; exit 1)
+            cmp -s artifacts/eve-ime/base-pid.txt artifacts/eve-ime/current-pid.txt || (adb logcat -d > artifacts/eve-ime/pid-change-logcat.txt; echo "::error::App process changed/restarted during IME stress"; exit 1)
             adb shell dumpsys activity activities > artifacts/eve-ime/activities.txt || true
             adb shell dumpsys input_method > artifacts/eve-ime/input-method-final.txt || true
             adb shell dumpsys window windows > artifacts/eve-ime/windows.txt || true
-            adb logcat -d --pid="$BASE_PID" > artifacts/eve-ime/app-logcat.txt || true
-            adb logcat -d -s EveImeSmoke:I '*:S' > artifacts/eve-ime/ime-marker-log.txt || true
+            adb logcat -d > artifacts/eve-ime/full-logcat.txt || true
+            grep "EveImeSmoke" artifacts/eve-ime/full-logcat.txt > artifacts/eve-ime/ime-marker-log.txt || true
             adb exec-out screencap -p > artifacts/eve-ime/after-ime.png
 
             grep -q "EveImeSmokeActivity" artifacts/eve-ime/activities.txt || (echo "::error::EveImeSmokeActivity is no longer active after IME stress"; exit 1)
             grep -q "EVE_IME_PASS_5" artifacts/eve-ime/ime-marker-log.txt || (echo "::error::Five real IME-visible transitions were not completed"; cat artifacts/eve-ime/ime-marker-log.txt; exit 1)
-            ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal 6|FATAL EXCEPTION|SIGABRT" artifacts/eve-ime/app-logcat.txt || (echo "::error::Native/Surface crash signature found during Eve IME stress"; exit 1)
+            ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal 6|FATAL EXCEPTION|SIGABRT" artifacts/eve-ime/full-logcat.txt || (echo "::error::Native/Surface crash signature found during Eve IME stress"; exit 1)
             echo ">> [PASS] Eve survived 5 real IME open/close cycles with stable PID and no Vulkan Surface panic"
 
       - name: Upload Eve runtime smoke evidence
