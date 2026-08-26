@@ -73,7 +73,8 @@ fun ClassicPremiumApp() {
     var lastHomeBack by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) {
-        authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
+        authenticated = BuildConfig.DEBUG ||
+            (SupabaseProvider.configured && hasVerifiedMembershipSession())
         authChecked = true
     }
     LaunchedEffect(authenticated) {
