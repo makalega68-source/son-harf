@@ -122,7 +122,7 @@ internal object EveMascotRuntime {
         isThinking = true
         mood = EveMood.THINKING
         behaviorState = EveBehaviorState.INTERACTING
-        setAnimation(EveAnimationCue.IDLE_BREATHE)
+        publishAnimation(EveAnimationCue.IDLE_BREATHE)
         bubbleText = "…"
     }
 
@@ -141,7 +141,7 @@ internal object EveMascotRuntime {
         isThinking = false
         mood = EveMood.CALM
         behaviorState = EveBehaviorState.IDLE_BASE
-        setAnimation(EveAnimationCue.IDLE_BREATHE)
+        publishAnimation(EveAnimationCue.IDLE_BREATHE)
     }
 
     fun play(
@@ -157,7 +157,7 @@ internal object EveMascotRuntime {
         } else {
             EveBehaviorState.INTERACTING
         }
-        setAnimation(safeCue)
+        publishAnimation(safeCue)
         bubble?.let(::setBubble)
 
         if (returnToIdleAfterMs > 0) {
@@ -189,7 +189,7 @@ internal object EveMascotRuntime {
         } else {
             EveBehaviorState.IDLE_FLAVOR
         }
-        setAnimation(safeCue)
+        publishAnimation(safeCue)
         rememberIdle(safeCue)
         if (safeCue != EveAnimationCue.IDLE_BREATHE) {
             scheduleReturnToBaseIdle(2_600L)
@@ -203,12 +203,12 @@ internal object EveMascotRuntime {
             if (animationVersion == versionAtStart) {
                 behaviorState = EveBehaviorState.IDLE_BASE
                 mood = if (mood == EveMood.THINKING) EveMood.CALM else mood
-                setAnimation(EveAnimationCue.IDLE_BREATHE)
+                publishAnimation(EveAnimationCue.IDLE_BREATHE)
             }
         }
     }
 
-    private fun setAnimation(cue: EveAnimationCue) {
+    private fun publishAnimation(cue: EveAnimationCue) {
         animation = cue
         animationVersion++
     }
