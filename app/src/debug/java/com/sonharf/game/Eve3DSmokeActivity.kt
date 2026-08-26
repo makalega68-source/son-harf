@@ -29,7 +29,7 @@ class Eve3DSmokeActivity : ComponentActivity() {
                     delay(5_000)
                     EveMascotRuntime.play(
                         cue = EveAnimationCue.IDLE_LOOK_AROUND,
-                        returnToIdleAfterMs = 8_000,
+                        returnToIdleAfterMs = 0,
                     )
                 }
                 Box(
