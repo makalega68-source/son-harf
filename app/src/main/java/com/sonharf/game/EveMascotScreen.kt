@@ -340,12 +340,18 @@ internal fun Eve3DStage(modifier: Modifier = Modifier, compact: Boolean = false)
         return
     }
 
-    // Force Filament's EGL/OpenGL backend on Android. The Vulkan Engine can be created successfully
-    // and still abort later in vkCreateAndroidSurfaceKHR with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR,
-    // which cannot be caught by Kotlin runCatching because the process terminates in native code.
+    // Eve's rig is too large for the minimum GLES vertex-uniform budget on some renderers.
+    // Keep Vulkan for the 3D model, but use SurfaceView instead of TextureView below so IME/window
+    // relayouts do not recycle a TextureView NativeWindow underneath Filament's Vulkan swap chain.
     val engine = rememberEngine(
         engineCreator = { eglContext ->
-            com.google.android.filament.Engine.create(eglContext)
+            runCatching {
+                com.google.android.filament.Engine.create(
+                    com.google.android.filament.Engine.Backend.VULKAN,
+                )
+            }.getOrElse {
+                com.google.android.filament.Engine.create(eglContext)
+            }
         },
     )
     val modelLoader = rememberModelLoader(engine)
@@ -389,7 +395,7 @@ internal fun Eve3DStage(modifier: Modifier = Modifier, compact: Boolean = false)
         } else {
             SceneView(
                 modifier = Modifier.fillMaxSize(),
-                surfaceType = SurfaceType.TextureSurface,
+                surfaceType = SurfaceType.Surface,
                 isOpaque = false,
                 engine = engine,
                 modelLoader = modelLoader,
