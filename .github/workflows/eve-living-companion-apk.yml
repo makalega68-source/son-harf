@@ -119,28 +119,34 @@ jobs:
             adb shell wm density 280
 
             # HOME gate: cold process, exact production floating companion, compact TextureSurface.
-            # The native surface stays 112dp while Compose changes only its position. Opaque Compose
-            # cards behind it make z-order failures visible in the captured evidence.
+            # Debug timing accelerates the production 60s DIG -> 60s SIT -> SLEEP routine so CI can
+            # prove all three real-GLB states while keeping the release timing unchanged.
             adb logcat -c
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.EveHomeFloatingSmokeActivity
-            sleep 8
+            sleep 6
             adb shell pidof com.sonharf.game | tr -d '\r' > artifacts/eve-home/base-pid.txt || true
             test -s artifacts/eve-home/base-pid.txt || (adb logcat -d > artifacts/eve-home/start-failure-logcat.txt; echo "::error::Floating HOME process did not remain alive"; exit 1)
-            adb exec-out screencap -p > artifacts/eve-home/home-frame-a.png
+            adb exec-out screencap -p > artifacts/eve-home/home-frame-dig.png
+            sleep 4
+            adb exec-out screencap -p > artifacts/eve-home/home-frame-sit.png
             sleep 5
-            adb exec-out screencap -p > artifacts/eve-home/home-frame-b.png
+            adb exec-out screencap -p > artifacts/eve-home/home-frame-sleep.png
             adb shell pidof com.sonharf.game | tr -d '\r' > artifacts/eve-home/current-pid.txt || true
-            cmp -s artifacts/eve-home/base-pid.txt artifacts/eve-home/current-pid.txt || (echo "::error::Floating HOME process changed while Eve roamed"; exit 1)
+            cmp -s artifacts/eve-home/base-pid.txt artifacts/eve-home/current-pid.txt || (echo "::error::Floating HOME process changed during DIG/SIT/SLEEP"; exit 1)
             adb shell dumpsys activity activities > artifacts/eve-home/activities.txt || true
             adb logcat -d > artifacts/eve-home/logcat.txt || true
             grep -q "EveHomeFloatingSmokeActivity" artifacts/eve-home/activities.txt || (echo "::error::Floating HOME smoke Activity is not active"; exit 1)
             grep -q "FEngine resolved backend: Vulkan" artifacts/eve-home/logcat.txt || (echo "::error::Floating HOME did not report Vulkan backend"; exit 1)
-            test "$(stat -c%s artifacts/eve-home/home-frame-a.png)" -gt 20000 || (echo "::error::Floating HOME frame A is unexpectedly empty"; exit 1)
-            test "$(stat -c%s artifacts/eve-home/home-frame-b.png)" -gt 20000 || (echo "::error::Floating HOME frame B is unexpectedly empty"; exit 1)
-            python3 -c 'import hashlib, pathlib; p=[pathlib.Path("artifacts/eve-home/home-frame-a.png"),pathlib.Path("artifacts/eve-home/home-frame-b.png")]; h=[hashlib.sha256(x.read_bytes()).hexdigest() for x in p]; pathlib.Path("artifacts/eve-home/frame-sha256.txt").write_text("\n".join(h)+"\n"); assert len(set(h)) == 2, "Floating HOME frames are byte-identical; roam/animation did not visibly progress"'
-            ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal|FATAL EXCEPTION|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|Input dispatching timed out" artifacts/eve-home/logcat.txt || (echo "::error::Native/Surface/ANR signature found during floating HOME roam"; exit 1)
-            echo ">> [PASS] Floating HOME TextureSurface roamed with stable PID and no Vulkan panic"
+            grep -q "EVE_HOME_ROUTINE: phase=DIGGING" artifacts/eve-home/logcat.txt || (echo "::error::HOME DIGGING phase not observed"; exit 1)
+            grep -q "EVE_HOME_ROUTINE: phase=SITTING" artifacts/eve-home/logcat.txt || (echo "::error::HOME SITTING phase not observed"; exit 1)
+            grep -q "EVE_HOME_ROUTINE: phase=SLEEPING" artifacts/eve-home/logcat.txt || (echo "::error::HOME SLEEPING phase not observed"; exit 1)
+            test "$(stat -c%s artifacts/eve-home/home-frame-dig.png)" -gt 20000 || (echo "::error::Floating HOME DIG frame is unexpectedly empty"; exit 1)
+            test "$(stat -c%s artifacts/eve-home/home-frame-sit.png)" -gt 20000 || (echo "::error::Floating HOME SIT frame is unexpectedly empty"; exit 1)
+            test "$(stat -c%s artifacts/eve-home/home-frame-sleep.png)" -gt 20000 || (echo "::error::Floating HOME SLEEP frame is unexpectedly empty"; exit 1)
+            python3 -c 'import hashlib, pathlib; p=[pathlib.Path("artifacts/eve-home/home-frame-dig.png"),pathlib.Path("artifacts/eve-home/home-frame-sit.png"),pathlib.Path("artifacts/eve-home/home-frame-sleep.png")]; h=[hashlib.sha256(x.read_bytes()).hexdigest() for x in p]; pathlib.Path("artifacts/eve-home/frame-sha256.txt").write_text("\n".join(h)+"\n"); assert len(set(h)) == 3, "DIG/SIT/SLEEP acceptance frames are not visually distinct"'
+            ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal|FATAL EXCEPTION|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|Input dispatching timed out" artifacts/eve-home/logcat.txt || (echo "::error::Native/Surface/ANR signature found during floating HOME routine"; exit 1)
+            echo ">> [PASS] Floating HOME DIG -> SIT -> SLEEP stayed on Vulkan TextureSurface with stable PID"
 
             # Hard process boundary: HOME TextureSurface and room Surface never teardown/recreate in
             # one process during this test. This mirrors navigation ownership and avoids conflating

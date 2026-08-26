@@ -11,21 +11,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 
 /**
  * Debug-only HOME compositor smoke.
  *
- * Hosts the exact production EveHomeFloatingCompanion. After six seconds it injects a deterministic
- * "bored" context through the same behavior director used in production, so acceptance screenshots
- * exercise the near-camera ASK_PET approach and the subsequent return to the normal anchor.
+ * Uses the exact production floating companion but accelerates the requested 60s DIG -> 60s SIT
+ * -> SLEEP routine so CI can visually and log-wise prove all three states without a two-minute wait.
  */
 class EveHomeFloatingSmokeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -70,6 +67,11 @@ class EveHomeFloatingSmokeActivity : ComponentActivity() {
 
                     EveHomeFloatingCompanion(
                         modifier = Modifier.fillMaxSize(),
+                        routineTiming = EveHomeRoutineTiming(
+                            digMs = 8_000L,
+                            sitMs = 5_000L,
+                            happyReactionMs = 2_500L,
+                        ),
                     )
 
                     Text(
@@ -81,19 +83,6 @@ class EveHomeFloatingSmokeActivity : ComponentActivity() {
                         fontWeight = FontWeight.Black,
                         fontSize = 15.sp,
                     )
-
-                    LaunchedEffect(Unit) {
-                        delay(6_000L)
-                        EveMascotRuntime.updateContext(
-                            EveBehaviorContext(
-                                fullness = 80,
-                                happiness = 80,
-                                energy = 80,
-                                minutesSinceInteraction = 90,
-                            ),
-                            nowMs = System.currentTimeMillis() + 90_000L,
-                        )
-                    }
                 }
             }
         }

@@ -25,11 +25,22 @@ internal enum class EveMood {
     CELEBRATING,
 }
 
-internal enum class EveAnimationCue(val clipName: String, val loop: Boolean) {
+internal enum class EveAnimationCue(
+    val clipName: String,
+    val loop: Boolean,
+    val playbackSpeed: Float = 1f,
+    val holdAtSeconds: Float? = null,
+) {
     IDLE_BREATHE("IdleBreathe", true),
     IDLE_LOOK_AROUND("IdleLookAround", true),
     IDLE_GRAZE("IdleGraze", true),
     GRAZE_ONCE("GrazeOnce", false),
+
+    // HOME behavior aliases. These are NOT invented GLB clip names: they deliberately reuse the
+    // real accepted clips Attack and GoToRest with safer timing for a domestic-animal behavior.
+    HOME_DIG_RIGHT_PAW("Attack", true, playbackSpeed = 0.45f),
+    HOME_SIT_HOLD("GoToRest", false, holdAtSeconds = 0.72f),
+
     REST("Rest", true),
     GO_TO_REST("GoToRest", false),
     REST_TO_STAND("RestToGoBackUp", false),
@@ -74,6 +85,8 @@ private fun EveAnimationCue.safeForCompanionStage(): EveAnimationCue = when (thi
     EveAnimationCue.IDLE_LOOK_AROUND,
     EveAnimationCue.IDLE_GRAZE,
     EveAnimationCue.GRAZE_ONCE,
+    EveAnimationCue.HOME_DIG_RIGHT_PAW,
+    EveAnimationCue.HOME_SIT_HOLD,
     EveAnimationCue.REST -> this
 
     EveAnimationCue.GO_TO_REST,
@@ -174,6 +187,60 @@ internal object EveMascotRuntime {
     fun stopLivingBehavior() {
         autonomousIdleJob?.cancel()
         autonomousIdleJob = null
+    }
+
+    /**
+     * Deterministic HOME baseline requested for Eve:
+     * scratch the floor gently -> sit -> sleep.
+     *
+     * IDLE_FLAVOR intentionally blocks the autonomous random-idle loop without marking Eve as a
+     * user interaction, so contextual hunger/conversation reactions can still interrupt if needed.
+     */
+    fun homeDigging() {
+        resetJob?.cancel()
+        homeIntentResetJob?.cancel()
+        isThinking = false
+        mood = EveMood.CALM
+        behaviorState = EveBehaviorState.IDLE_FLAVOR
+        publishHomeIntent(EveHomeIntent.NORMAL)
+        publishMotion(EveMotionEffect.NONE)
+        publishAnimation(EveAnimationCue.HOME_DIG_RIGHT_PAW)
+    }
+
+    fun homeSitting() {
+        resetJob?.cancel()
+        homeIntentResetJob?.cancel()
+        isThinking = false
+        mood = EveMood.CALM
+        behaviorState = EveBehaviorState.IDLE_FLAVOR
+        publishHomeIntent(EveHomeIntent.NORMAL)
+        publishMotion(EveMotionEffect.SAD_SETTLE, 800L)
+        publishAnimation(EveAnimationCue.HOME_SIT_HOLD)
+    }
+
+    fun homeSleeping() {
+        resetJob?.cancel()
+        homeIntentResetJob?.cancel()
+        isThinking = false
+        mood = EveMood.TIRED
+        behaviorState = EveBehaviorState.RESTING
+        publishHomeIntent(EveHomeIntent.NORMAL)
+        publishMotion(EveMotionEffect.SAD_SETTLE, 2_400L)
+        publishAnimation(EveAnimationCue.REST)
+    }
+
+    fun homeTouchHappy(playerName: String) {
+        val prompt = eveHomeXpPrompt(playerName)
+        react(
+            cue = EveAnimationCue.IDLE_LOOK_AROUND,
+            nextMood = EveMood.HAPPY,
+            effect = EveMotionEffect.BOUNCE,
+            effectDurationMs = 1_050L,
+            bubble = prompt,
+            returnToIdleAfterMs = 3_200L,
+        )
+        // HOME displays its compact prompt channel rather than the room's long chat bubble.
+        publishHomeIntent(EveHomeIntent.NORMAL, prompt)
     }
 
     fun thinking() {
@@ -570,4 +637,10 @@ internal fun String.toEveAnimation(): EveAnimationCue = when (lowercase()) {
     "get_hit" -> EveAnimationCue.GET_HIT
     "attack" -> EveAnimationCue.ATTACK
     else -> EveAnimationCue.IDLE_BREATHE
+}
+
+
+internal fun eveHomeXpPrompt(playerName: String): String {
+    val cleanName = playerName.trim().take(32).ifBlank { "Oyuncu" }
+    return "Hadi $cleanName bana xp topla"
 }

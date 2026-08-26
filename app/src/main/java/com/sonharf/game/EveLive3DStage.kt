@@ -57,6 +57,8 @@ private class EveAnimationMixer(
         val index: Int,
         val startedAtNanos: Long,
         val loop: Boolean,
+        val playbackSpeed: Float,
+        val holdAtSeconds: Float?,
     )
 
     private var current: Track? = null
@@ -67,6 +69,8 @@ private class EveAnimationMixer(
         animator: Animator,
         animationName: String,
         loop: Boolean,
+        playbackSpeed: Float = 1f,
+        holdAtSeconds: Float? = null,
         nowNanos: Long = System.nanoTime(),
     ) {
         val index = (0 until animator.animationCount)
@@ -78,6 +82,8 @@ private class EveAnimationMixer(
             index = index,
             startedAtNanos = nowNanos,
             loop = loop,
+            playbackSpeed = playbackSpeed.coerceAtLeast(0.05f),
+            holdAtSeconds = holdAtSeconds,
         )
         blendStartedAtNanos = nowNanos
     }
@@ -122,11 +128,12 @@ private class EveAnimationMixer(
     ): Float {
         val duration = animator.getAnimationDuration(track.index).coerceAtLeast(0.0001f)
         val elapsedSeconds = ((frameTimeNanos - track.startedAtNanos).coerceAtLeast(0L) / 1_000_000_000.0)
-            .toFloat()
+            .toFloat() * track.playbackSpeed
+        val clampedEnd = track.holdAtSeconds?.coerceIn(0f, duration) ?: duration
         return if (track.loop) {
             elapsedSeconds % duration
         } else {
-            min(elapsedSeconds, duration)
+            min(elapsedSeconds, clampedEnd)
         }
     }
 }
@@ -305,6 +312,8 @@ internal fun EveLive3DStage(
             animator = node.animator,
             animationName = cue.clipName,
             loop = cue.loop,
+            playbackSpeed = cue.playbackSpeed,
+            holdAtSeconds = cue.holdAtSeconds,
         )
     }
 }

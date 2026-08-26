@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -24,6 +25,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -36,10 +38,13 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.SupabaseProvider
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -47,6 +52,14 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import kotlin.random.Random
+
+internal data class EveHomeRoutineTiming(
+    val digMs: Long = 60_000L,
+    val sitMs: Long = 60_000L,
+    val happyReactionMs: Long = 3_200L,
+)
+
+private const val EVE_HOME_ROUTINE_LOG = "EVE_HOME_ROUTINE"
 
 /**
  * Home-only living companion layer.
@@ -61,16 +74,52 @@ import kotlin.random.Random
 internal fun EveHomeFloatingCompanion(
     modifier: Modifier = Modifier,
     onOpen: () -> Unit = { EveLivingRoomRuntime.show() },
+    routineTiming: EveHomeRoutineTiming = EveHomeRoutineTiming(),
 ) {
     val context = LocalContext.current
     val store = remember { EveCompanionStore(context) }
     var companionName by remember { mutableStateOf(store.name) }
+    var playerName by remember { mutableStateOf(sh("Oyuncu", "Player")) }
     var renameOpen by remember { mutableStateOf(false) }
     var draftName by remember { mutableStateOf(companionName) }
+    var routineGeneration by remember { mutableIntStateOf(0) }
+
+    LaunchedEffect(Unit) {
+        if (SupabaseProvider.configured) {
+            runCatching {
+                val backend = OnlineGameBackend()
+                val userId = backend.currentUserId()
+                userId?.let { backend.getProfile(it)?.displayName }
+            }.getOrNull()
+                ?.trim()
+                ?.takeIf { it.isNotBlank() }
+                ?.let { playerName = it.take(32) }
+        }
+    }
 
     DisposableEffect(Unit) {
-        EveMascotRuntime.startLivingBehavior()
-        onDispose { EveMascotRuntime.stopLivingBehavior() }
+        // HOME owns a deterministic routine; suspend random idle selection while this overlay lives.
+        EveMascotRuntime.stopLivingBehavior()
+        onDispose {
+            EveMascotRuntime.startLivingBehavior()
+        }
+    }
+
+    LaunchedEffect(routineGeneration, routineTiming) {
+        if (routineGeneration > 0) {
+            delay(routineTiming.happyReactionMs)
+        }
+
+        if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=DIGGING")
+        EveMascotRuntime.homeDigging()
+        delay(routineTiming.digMs)
+
+        if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=SITTING")
+        EveMascotRuntime.homeSitting()
+        delay(routineTiming.sitMs)
+
+        if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=SLEEPING")
+        EveMascotRuntime.homeSleeping()
     }
 
     // Re-evaluate needs and recent conversation tone while HOME is visible. This is intentionally
@@ -314,16 +363,10 @@ internal fun EveHomeFloatingCompanion(
                     .size(mascotSize)
                     .clickable {
                         store.markInteraction()
-                        if (homeIntent == EveHomeIntent.ASK_PET) {
-                            val points = store.pet()
-                            EveMascotRuntime.petReaction(
-                                if (points > 0) sh("Tam orası! 💚", "Right there! 💚") else null,
-                            )
-                        } else {
-                            // Touch wakes Eve from rest and acknowledges hunger/attention without
-                            // auto-spending currency or feeding on the player's behalf.
-                            EveMascotRuntime.touchReaction()
-                        }
+                        // Cancels the current dig/sit/sleep timer via LaunchedEffect key change.
+                        // Eve reacts happily first, then the 60s -> 60s -> sleep routine restarts.
+                        routineGeneration++
+                        EveMascotRuntime.homeTouchHappy(playerName)
                     }
                     .pointerInput(widthPx, heightPx) {
                         detectDragGesturesAfterLongPress(
@@ -374,12 +417,14 @@ internal fun EveHomeFloatingCompanion(
                             shadowElevation = 3.dp,
                         ) {
                             Text(
-                                text = homePromptText.take(32),
-                                modifier = Modifier.offset(y = (-1).dp),
+                                text = homePromptText.take(64),
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
                                 color = Color(0xFF163B58),
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 9.sp,
-                                maxLines = 1,
+                                lineHeight = 11.sp,
+                                textAlign = TextAlign.Center,
+                                maxLines = 2,
                             )
                         }
                     }
