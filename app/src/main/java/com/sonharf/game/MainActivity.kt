@@ -53,7 +53,9 @@ class MainActivity : ComponentActivity() {
         SonHarfPreferences.syncUi(this)
         WordMeaningRuntime.init(this)
         RemoteExperience.loadCached(this)
-        if (SupabaseProvider.configured && !SonHarfPreferences.rememberLogin(this)) {
+        // Test/debug APKs must not force a fresh login on every launch.
+        // Release/Google Play builds keep the existing authentication behavior.
+        if (!BuildConfig.DEBUG && SupabaseProvider.configured && !SonHarfPreferences.rememberLogin(this)) {
             runBlocking { runCatching { SupabaseProvider.client.auth.signOut() } }
         }
         setContent {
