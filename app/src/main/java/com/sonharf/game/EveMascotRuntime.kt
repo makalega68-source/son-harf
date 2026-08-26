@@ -4,6 +4,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import java.util.ArrayDeque
+import kotlin.random.Random
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -36,14 +38,21 @@ internal enum class EveAnimationCue(val clipName: String, val loop: Boolean) {
     ATTACK("Attack", false),
 }
 
+internal enum class EveBehaviorState {
+    IDLE_BASE,
+    IDLE_FLAVOR,
+    INTERACTING,
+    RESTING,
+}
+
 internal object EveAssetPolicy {
     const val MODEL_ASSET = "models/eve/eve.glb"
 }
 
 /**
- * The accepted Eve GLB has large root translation in locomotion/combat clips. Only the clips
- * verified to stay inside the fixed companion viewport are allowed in the room. Unsafe requests
- * are mapped to a visible in-place reaction instead of moving Eve out of frame.
+ * The accepted Eve GLB has large root translation in locomotion/combat clips. Only clips already
+ * verified to remain inside the fixed companion viewport are allowed here. Locomotion/combat
+ * clips stay disabled until in-place variants are exported from Blender.
  */
 private fun EveAnimationCue.safeForCompanionStage(): EveAnimationCue = when (this) {
     EveAnimationCue.IDLE_BREATHE,
@@ -61,13 +70,29 @@ private fun EveAnimationCue.safeForCompanionStage(): EveAnimationCue = when (thi
 }
 
 internal object EveMascotRuntime {
+    private data class WeightedIdle(val cue: EveAnimationCue, val weight: Int)
+
     private val animationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private val recentIdleClips = ArrayDeque<EveAnimationCue>(2)
+    private val idlePool = listOf(
+        WeightedIdle(EveAnimationCue.IDLE_BREATHE, 60),
+        WeightedIdle(EveAnimationCue.IDLE_LOOK_AROUND, 25),
+        WeightedIdle(EveAnimationCue.IDLE_GRAZE, 15),
+    )
+
     private var resetJob: Job? = null
+    private var autonomousIdleJob: Job? = null
 
     var mood by mutableStateOf(EveMood.CALM)
         private set
+    var behaviorState by mutableStateOf(EveBehaviorState.IDLE_BASE)
+        private set
     var animation by mutableStateOf(EveAnimationCue.IDLE_BREATHE)
         private set
+    /**
+     * Monotonic replay token. The renderer observes this in addition to [animation], so requesting
+     * the same clip twice still restarts it from frame zero.
+     */
     var animationVersion by mutableIntStateOf(0)
         private set
     var bubbleText by mutableStateOf("")
@@ -75,12 +100,29 @@ internal object EveMascotRuntime {
     var isThinking by mutableStateOf(false)
         private set
 
+    fun startLivingBehavior() {
+        if (autonomousIdleJob?.isActive == true) return
+        autonomousIdleJob = animationScope.launch {
+            while (true) {
+                delay(Random.nextLong(6_000L, 12_001L))
+                if (!isThinking && behaviorState == EveBehaviorState.IDLE_BASE) {
+                    playAutonomousIdle(selectNextIdle())
+                }
+            }
+        }
+    }
+
+    fun stopLivingBehavior() {
+        autonomousIdleJob?.cancel()
+        autonomousIdleJob = null
+    }
+
     fun thinking() {
         resetJob?.cancel()
         isThinking = true
         mood = EveMood.THINKING
-        animation = EveAnimationCue.IDLE_BREATHE
-        animationVersion++
+        behaviorState = EveBehaviorState.INTERACTING
+        setAnimation(EveAnimationCue.IDLE_BREATHE)
         bubbleText = "…"
     }
 
@@ -98,8 +140,8 @@ internal object EveMascotRuntime {
         resetJob?.cancel()
         isThinking = false
         mood = EveMood.CALM
-        animation = EveAnimationCue.IDLE_BREATHE
-        animationVersion++
+        behaviorState = EveBehaviorState.IDLE_BASE
+        setAnimation(EveAnimationCue.IDLE_BREATHE)
     }
 
     fun play(
@@ -108,19 +150,18 @@ internal object EveMascotRuntime {
         returnToIdleAfterMs: Long = 2_400,
     ) {
         resetJob?.cancel()
-        animation = cue.safeForCompanionStage()
-        animationVersion++
+        val safeCue = cue.safeForCompanionStage()
+        isThinking = false
+        behaviorState = if (safeCue == EveAnimationCue.REST) {
+            EveBehaviorState.RESTING
+        } else {
+            EveBehaviorState.INTERACTING
+        }
+        setAnimation(safeCue)
         bubble?.let(::setBubble)
 
-        if (animation != EveAnimationCue.IDLE_BREATHE && returnToIdleAfterMs > 0) {
-            val versionAtStart = animationVersion
-            resetJob = animationScope.launch {
-                delay(returnToIdleAfterMs)
-                if (animationVersion == versionAtStart) {
-                    animation = EveAnimationCue.IDLE_BREATHE
-                    animationVersion++
-                }
-            }
+        if (returnToIdleAfterMs > 0) {
+            scheduleReturnToBaseIdle(returnToIdleAfterMs)
         }
     }
 
@@ -138,6 +179,55 @@ internal object EveMascotRuntime {
 
     fun setBubble(text: String) {
         bubbleText = text.trim().take(900)
+    }
+
+    private fun playAutonomousIdle(cue: EveAnimationCue) {
+        resetJob?.cancel()
+        val safeCue = cue.safeForCompanionStage()
+        behaviorState = if (safeCue == EveAnimationCue.IDLE_BREATHE) {
+            EveBehaviorState.IDLE_BASE
+        } else {
+            EveBehaviorState.IDLE_FLAVOR
+        }
+        setAnimation(safeCue)
+        rememberIdle(safeCue)
+        if (safeCue != EveAnimationCue.IDLE_BREATHE) {
+            scheduleReturnToBaseIdle(2_600L)
+        }
+    }
+
+    private fun scheduleReturnToBaseIdle(delayMs: Long) {
+        val versionAtStart = animationVersion
+        resetJob = animationScope.launch {
+            delay(delayMs)
+            if (animationVersion == versionAtStart) {
+                behaviorState = EveBehaviorState.IDLE_BASE
+                mood = if (mood == EveMood.THINKING) EveMood.CALM else mood
+                setAnimation(EveAnimationCue.IDLE_BREATHE)
+            }
+        }
+    }
+
+    private fun setAnimation(cue: EveAnimationCue) {
+        animation = cue
+        animationVersion++
+    }
+
+    private fun selectNextIdle(): EveAnimationCue {
+        val available = idlePool.filterNot { recentIdleClips.contains(it.cue) }
+            .ifEmpty { idlePool }
+        val totalWeight = available.sumOf { it.weight }
+        var roll = Random.nextInt(totalWeight.coerceAtLeast(1))
+        for (candidate in available) {
+            if (roll < candidate.weight) return candidate.cue
+            roll -= candidate.weight
+        }
+        return EveAnimationCue.IDLE_BREATHE
+    }
+
+    private fun rememberIdle(cue: EveAnimationCue) {
+        if (recentIdleClips.size >= 2) recentIdleClips.removeFirst()
+        recentIdleClips.addLast(cue)
     }
 }
 
