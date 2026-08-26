@@ -31,10 +31,8 @@ import androidx.core.view.WindowInsetsCompat
 /**
  * Debug-only native Surface/IME regression surface.
  *
- * The production Eve3DStage keeps a stable full-screen viewport. Only the TextField overlay consumes
- * IME insets. GitHub Actions taps the field like a real user. IME visibility is reported from this
- * Activity's own WindowInsetsCompat state so the test does not depend on brittle system ImeTracker
- * log formatting.
+ * Uses the exact production live Eve stage. Only the TextField overlay consumes IME insets, so CI
+ * stresses Vulkan/Surface lifecycle without resizing the 3D viewport itself.
  */
 class EveImeSmokeActivity : ComponentActivity() {
     private var lastImeVisible: Boolean? = null
@@ -76,7 +74,7 @@ private fun EveImeStressSurface() {
             .fillMaxSize()
             .background(Color(0xFF0B4639)),
     ) {
-        Eve3DStage(
+        EveLive3DStage(
             modifier = Modifier.fillMaxSize(),
             compact = false,
         )
