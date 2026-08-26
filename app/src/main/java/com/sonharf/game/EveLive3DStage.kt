@@ -24,13 +24,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
-import io.github.sceneview.math.Direction
 import io.github.sceneview.math.Position
 import io.github.sceneview.math.Rotation
-import io.github.sceneview.math.Size
-import io.github.sceneview.node.ContactShadowContext
 import io.github.sceneview.rememberEngine
-import io.github.sceneview.rememberMaterialLoader
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
@@ -42,7 +38,8 @@ import kotlinx.coroutines.delay
  * - real Eve GLB only; no 2D fallback,
  * - SurfaceView-backed Vulkan path retained for IME stability,
  * - animationVersion restarts the same named clip deterministically,
- * - a procedural SceneView contact shadow grounds Eve against the floor.
+ * - no procedural Filament contact-shadow material: SceneView 4.31.0's contact-shadow material
+ *   aborts on the Vulkan/SwiftShader path with "Normalized format does not exist".
  */
 @Composable
 internal fun EveLive3DStage(
@@ -88,7 +85,6 @@ internal fun EveLive3DStage(
         },
     )
     val modelLoader = rememberModelLoader(engine)
-    val materialLoader = rememberMaterialLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, EveAssetPolicy.MODEL_ASSET)
     val cue = EveMascotRuntime.animation
     val cueVersion = EveMascotRuntime.animationVersion
@@ -138,25 +134,8 @@ internal fun EveLive3DStage(
                 isOpaque = false,
                 engine = engine,
                 modelLoader = modelLoader,
-                materialLoader = materialLoader,
                 cameraManipulator = null,
             ) {
-                ContactShadow(
-                    size = if (compact) {
-                        Size(x = 0.66f, y = 0f, z = 0.38f)
-                    } else {
-                        Size(x = 0.82f, y = 0f, z = 0.48f)
-                    },
-                    context = ContactShadowContext.Floor,
-                    normal = Direction(y = 1f),
-                    intensity = if (compact) 0.30f else 0.42f,
-                    position = Position(
-                        x = 0f,
-                        y = if (compact) -0.46f else -0.43f,
-                        z = 0f,
-                    ),
-                )
-
                 ModelNode(
                     modelInstance = modelInstance,
                     scaleToUnits = if (compact) 1.0f else 0.90f,
