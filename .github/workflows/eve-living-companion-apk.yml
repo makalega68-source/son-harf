@@ -103,8 +103,6 @@ jobs:
             adb shell ime list -s > artifacts/eve-ime/imes.txt || true
 
             # One Activity, one production Eve3DStage, one Filament/Vulkan Surface for the whole gate.
-            # This matches the phone flow and avoids a false failure from tearing down one SceneView
-            # Activity and constructing a second Engine/Surface immediately afterwards.
             adb logcat -c
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.EveImeSmokeActivity
@@ -122,14 +120,15 @@ jobs:
             ! cmp -s artifacts/eve-smoke/eve-frame-a.png artifacts/eve-smoke/eve-frame-b.png || (echo "::error::EVE GLB runtime frames are byte-identical"; exit 1)
             echo ">> [PASS] Real Eve GLB rendered and animated on the same Surface used for IME stress"
 
-            # Discover the real Compose EditText bounds instead of using a hard-coded screen coordinate.
-            adb shell uiautomator dump /sdcard/eve-window.xml >/dev/null
-            adb pull /sdcard/eve-window.xml artifacts/eve-ime/window.xml >/dev/null
-            python3 -c 'import re,xml.etree.ElementTree as ET; root=ET.parse("artifacts/eve-ime/window.xml").getroot(); nodes=[n for n in root.iter("node") if n.attrib.get("class")=="android.widget.EditText"]; assert nodes,"Compose EditText not found in UI tree"; b=list(map(int,re.findall(r"\d+",nodes[0].attrib["bounds"]))); open("artifacts/eve-ime/tap.txt","w").write(f"{(b[0]+b[2])//2} {(b[1]+b[3])//2}\n")'
+            # UIAutomator can return a null accessibility root on a headless Vulkan/Compose window.
+            # The debug surface intentionally contains one full-width TextField 12dp above the nav bar,
+            # so derive a safe tap from the actual device resolution instead of accessibility metadata.
+            adb shell wm size > artifacts/eve-ime/wm-size.txt
+            python3 -c 'import re; s=open("artifacts/eve-ime/wm-size.txt").read(); m=re.findall(r"(\d+)x(\d+)",s); assert m,"wm size unavailable"; w,h=map(int,m[-1]); open("artifacts/eve-ime/tap.txt","w").write(f"{w//2} {h-200}\n")'
             cat artifacts/eve-ime/tap.txt
 
-            # Real user-like cycle: tap the actual TextField, require Android to report the IME shown,
-            # confirm the app PID is unchanged, press Back, and require the IME hidden. Repeat five times.
+            # Real user-like cycle on the same 3D Surface: tap, require IME shown, keep PID stable,
+            # press Back, require IME hidden. Repeat five times.
             adb logcat -c
             read X Y < artifacts/eve-ime/tap.txt; for ROUND in 1 2 3 4 5; do adb shell input tap "$X" "$Y"; sleep 2; adb shell dumpsys input_method > "artifacts/eve-ime/open-$ROUND.txt"; grep -q "mInputShown=true" "artifacts/eve-ime/open-$ROUND.txt" || { adb exec-out screencap -p > "artifacts/eve-ime/open-$ROUND-failed.png"; adb logcat -d > artifacts/eve-ime/failure-logcat.txt; echo "::error::IME did not become visible in cycle $ROUND"; exit 1; }; adb exec-out screencap -p > "artifacts/eve-ime/open-$ROUND.png"; adb shell pidof com.sonharf.game | tr -d '\r' > "artifacts/eve-ime/pid-$ROUND.txt" || true; cmp -s artifacts/eve-ime/base-pid.txt "artifacts/eve-ime/pid-$ROUND.txt" || { adb logcat -d > artifacts/eve-ime/failure-logcat.txt; echo "::error::App process changed in IME cycle $ROUND"; exit 1; }; adb shell input keyevent 4; sleep 2; adb shell dumpsys input_method > "artifacts/eve-ime/close-$ROUND.txt"; grep -q "mInputShown=false" "artifacts/eve-ime/close-$ROUND.txt" || { adb logcat -d > artifacts/eve-ime/failure-logcat.txt; echo "::error::IME did not hide in cycle $ROUND"; exit 1; }; done
 
