@@ -343,8 +343,10 @@ internal fun Eve3DStage(modifier: Modifier = Modifier, compact: Boolean = false)
     val engine = rememberEngine(
         engineCreator = { eglContext ->
             runCatching {
+                // Xiaomi/HyperOS keyboard transitions can invalidate Vulkan Android surfaces.
+                // Keep Eve on the GLES backend; the EGL-context fallback is GLES as well.
                 com.google.android.filament.Engine.create(
-                    com.google.android.filament.Engine.Backend.VULKAN,
+                    com.google.android.filament.Engine.Backend.OPENGL,
                 )
             }.getOrElse {
                 com.google.android.filament.Engine.create(eglContext)
