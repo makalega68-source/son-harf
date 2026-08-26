@@ -58,6 +58,7 @@ import io.github.sceneview.node.ModelNode
 import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
@@ -306,19 +307,99 @@ private fun GiftPanel(store: EveCompanionStore, revision: Int, changed: () -> Un
     }
 }
 
+/**
+ * Real 3D EVE only. A missing asset or a model that never materializes must never be hidden by
+ * a 2D substitute; debug builds surface the failure and release builds fail fast.
+ */
 @Composable
 internal fun Eve3DStage(modifier: Modifier = Modifier, compact: Boolean = false) {
     val context = LocalContext.current
-    val assetAvailable = remember { runCatching { context.assets.open(EveAssetPolicy.MODEL_ASSET).use { }; true }.getOrDefault(false) }
+    val assetAvailable = remember {
+        runCatching { context.assets.open(EveAssetPolicy.MODEL_ASSET).use { } }.isSuccess
+    }
+
     if (!assetAvailable) {
-        Box(modifier.background(Color.Transparent), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) { EveMark(Modifier.size(if (compact) 52.dp else 90.dp)); Text(sh("3D Eve hazırlanıyor", "3D Eve is preparing"), color = Color.White.copy(alpha = .8f), fontSize = 10.sp) }
+        val message = "FATAL: ${EveAssetPolicy.MODEL_ASSET} is missing from the APK"
+        if (!BuildConfig.DEBUG) error(message)
+        Surface(
+            modifier = modifier.padding(12.dp),
+            color = Color(0xFF7F1D1D),
+            shape = RoundedCornerShape(16.dp),
+            border = BorderStroke(1.dp, Color(0xFFFFB4AB)),
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "3D EVE ASSET HATASI\n${EveAssetPolicy.MODEL_ASSET}\n2D fallback devre dışı.",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    fontSize = 11.sp,
+                )
+            }
         }
         return
     }
-    val engine = rememberEngine(); val modelLoader = rememberModelLoader(engine); val modelInstance = rememberModelInstance(modelLoader, EveAssetPolicy.MODEL_ASSET); val cue = EveMascotRuntime.animation
-    SceneView(modifier = modifier, surfaceType = SurfaceType.TextureSurface, isOpaque = false, engine = engine, modelLoader = modelLoader, cameraManipulator = null) {
-        modelInstance?.let { instance -> ModelNode(modelInstance = instance, scaleToUnits = if (compact) 1.0f else 0.90f, centerOrigin = Position(0f, -0.60f, 0f), autoAnimate = false, animationName = cue.clipName, animationLoop = cue.loop, position = Position(0f, if (compact) -.08f else -.10f, 0f), rotation = Rotation(y = 0f)) }
+
+    val engine = rememberEngine()
+    val modelLoader = rememberModelLoader(engine)
+    val modelInstance = rememberModelInstance(modelLoader, EveAssetPolicy.MODEL_ASSET)
+    val cue = EveMascotRuntime.animation
+    var loadTimedOut by remember { mutableStateOf(false) }
+
+    LaunchedEffect(modelInstance) {
+        if (modelInstance == null) {
+            delay(8_000)
+            loadTimedOut = true
+        } else {
+            loadTimedOut = false
+        }
+    }
+
+    if (loadTimedOut && modelInstance == null) {
+        val message = "FATAL: Eve GLB exists but SceneView could not create a model instance"
+        if (!BuildConfig.DEBUG) error(message)
+        Surface(
+            modifier = modifier.padding(12.dp),
+            color = Color(0xFF7F1D1D),
+            shape = RoundedCornerShape(16.dp),
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    "3D EVE YÜKLEME HATASI\nGLB APK içinde fakat ModelNode oluşturulamadı.",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                    fontSize = 11.sp,
+                )
+            }
+        }
+        return
+    }
+
+    Box(modifier, contentAlignment = Alignment.Center) {
+        if (modelInstance == null) {
+            CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
+        } else {
+            SceneView(
+                modifier = Modifier.fillMaxSize(),
+                surfaceType = SurfaceType.TextureSurface,
+                isOpaque = false,
+                engine = engine,
+                modelLoader = modelLoader,
+                cameraManipulator = null,
+            ) {
+                ModelNode(
+                    modelInstance = modelInstance,
+                    scaleToUnits = if (compact) 1.0f else 0.90f,
+                    centerOrigin = Position(0f, -0.60f, 0f),
+                    autoAnimate = false,
+                    animationName = cue.clipName,
+                    animationLoop = cue.loop,
+                    position = Position(0f, if (compact) -.08f else -.10f, 0f),
+                    rotation = Rotation(y = 0f),
+                )
+            }
+        }
     }
 }
 
