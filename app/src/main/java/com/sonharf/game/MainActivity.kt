@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
                 Box(Modifier.fillMaxSize()) {
                     GamePortalApp()
                     PrivateRoomWaitingLayer()
-                    FriendsQuickAccessOverlay()
+                    if (FriendsQuickAccessState.open) FriendsQuickAccessOverlay()
                     GameInviteOverlay()
                     FriendRequestOverlay()
                 }
