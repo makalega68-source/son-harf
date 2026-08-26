@@ -1,9 +1,6 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -79,11 +76,9 @@ private val ForestScreenDeep = Color(0xFF073B32)
 private val ForestScreenMid = Color(0xFF176B52)
 private val ForestScreenMint = Color(0xFFEAF8EF)
 private val ForestScreenInk = Color(0xFF173B35)
-private val ForestScreenMuted = Color(0xFF6D8178)
 private val ForestScreenBlue = Color(0xFF24AEE4)
 private val ForestScreenGreen = Color(0xFF55BC75)
 private val ForestScreenGold = Color(0xFFFFC857)
-private val ForestScreenPink = Color(0xFFFF787D)
 
 private data class ForestChoice(val id: String, val icon: String, val label: String)
 
@@ -285,13 +280,9 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
                 EveForestFurniture(store.selectedRoom)
                 EveStyleOverlay(store.selectedStyle)
 
-                AnimatedVisibility(
-                    visible = speechBubbleText.isNotBlank(),
-                    enter = fadeIn(),
-                    exit = fadeOut(),
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp, start = 44.dp, end = 44.dp),
-                ) {
+                if (speechBubbleText.isNotBlank()) {
                     Surface(
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp, start = 44.dp, end = 44.dp),
                         color = Color(0xFFF8FFF9).copy(alpha = .96f),
                         shape = RoundedCornerShape(18.dp),
                         shadowElevation = 8.dp,
