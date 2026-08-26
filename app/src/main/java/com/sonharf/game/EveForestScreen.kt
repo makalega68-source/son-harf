@@ -1,13 +1,6 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
@@ -60,7 +53,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
@@ -69,7 +61,6 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val ForestScreenDeep = Color(0xFF073B32)
@@ -484,42 +475,14 @@ private fun EveAnimatedStage(
     reactionNonce: Int,
     onTap: () -> Unit,
 ) {
-    val idle = rememberInfiniteTransition(label = "eve_forest_idle")
-    val y by idle.animateFloat(
-        initialValue = -5f,
-        targetValue = 6f,
-        animationSpec = infiniteRepeatable(tween(1_850), RepeatMode.Reverse),
-        label = "eve_forest_idle_y",
-    )
-    val sway by idle.animateFloat(
-        initialValue = -1.6f,
-        targetValue = 1.6f,
-        animationSpec = infiniteRepeatable(tween(2_500), RepeatMode.Reverse),
-        label = "eve_forest_idle_sway",
-    )
-    var reacting by remember { mutableStateOf(false) }
-    LaunchedEffect(reactionNonce) {
-        if (reactionNonce == 0) return@LaunchedEffect
-        reacting = true
-        delay(420)
-        reacting = false
-    }
-    val reactionScale by animateFloatAsState(
-        targetValue = if (reacting) 1.10f else 1f,
-        animationSpec = spring(dampingRatio = .48f, stiffness = 390f),
-        label = "eve_forest_reaction_scale",
-    )
-
+    // Keep reactionNonce in the signature for compatibility with the surrounding care UI, but
+    // never animate the entire 3D viewport. Visible reactions now come from GLB clips only.
+    reactionNonce
     Box(
-        modifier = modifier.graphicsLayer {
-            translationY = y
-            rotationZ = sway
-            scaleX = reactionScale
-            scaleY = reactionScale
-        },
+        modifier = modifier,
         contentAlignment = Alignment.Center,
     ) {
-        Eve3DStage(Modifier.fillMaxSize())
+        EveLive3DStage(Modifier.fillMaxSize())
         Box(
             modifier = Modifier
                 .fillMaxSize()
