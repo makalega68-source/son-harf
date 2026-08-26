@@ -13,6 +13,15 @@ on:
       - 'build.gradle.kts'
       - 'settings.gradle.kts'
       - 'gradle.properties'
+  pull_request:
+    branches:
+      - fix/eve-gles-ime-surface-20260826
+    paths:
+      - '.github/workflows/eve-living-companion-apk.yml'
+      - 'app/**'
+      - 'build.gradle.kts'
+      - 'settings.gradle.kts'
+      - 'gradle.properties'
 
 permissions:
   contents: read
