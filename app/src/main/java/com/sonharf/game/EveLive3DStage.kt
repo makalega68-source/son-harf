@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.android.filament.gltfio.Animator
 import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.math.Direction
@@ -39,14 +40,102 @@ import io.github.sceneview.rememberMainLightNode
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 import kotlinx.coroutines.delay
+import kotlin.math.min
 
 /**
- * Production live companion stage used by the active room and home dock.
+ * Small Filament-native skeletal mixer for Eve.
+ *
+ * SceneView's ModelNode playAnimation API switches clips immediately. Eve instead owns the
+ * animator timeline and uses Filament Animator.applyCrossFade in the documented order:
+ * applyAnimation(current) -> applyCrossFade(previous) -> updateBoneMatrices(). This blends bone
+ * poses rather than fading two rendered images, so reactions remain a single real GLB character.
+ */
+private class EveAnimationMixer(
+    private val blendDurationNanos: Long,
+) {
+    private data class Track(
+        val index: Int,
+        val startedAtNanos: Long,
+        val loop: Boolean,
+    )
+
+    private var current: Track? = null
+    private var previous: Track? = null
+    private var blendStartedAtNanos: Long = 0L
+
+    fun transition(
+        animator: Animator,
+        animationName: String,
+        loop: Boolean,
+        nowNanos: Long = System.nanoTime(),
+    ) {
+        val index = (0 until animator.animationCount)
+            .firstOrNull { animator.getAnimationName(it) == animationName }
+            ?: return
+
+        previous = current
+        current = Track(
+            index = index,
+            startedAtNanos = nowNanos,
+            loop = loop,
+        )
+        blendStartedAtNanos = nowNanos
+    }
+
+    fun apply(animator: Animator, frameTimeNanos: Long) {
+        val active = current ?: return
+        animator.applyAnimation(
+            active.index,
+            animationTime(animator, active, frameTimeNanos),
+        )
+
+        previous?.let { old ->
+            val alpha = if (blendDurationNanos <= 0L) {
+                1f
+            } else {
+                ((frameTimeNanos - blendStartedAtNanos).toDouble() / blendDurationNanos.toDouble())
+                    .toFloat()
+                    .coerceIn(0f, 1f)
+            }
+
+            if (alpha < 1f) {
+                animator.applyCrossFade(
+                    old.index,
+                    animationTime(animator, old, frameTimeNanos),
+                    alpha,
+                )
+            } else {
+                previous = null
+            }
+        }
+
+        animator.updateBoneMatrices()
+    }
+
+    private fun animationTime(
+        animator: Animator,
+        track: Track,
+        frameTimeNanos: Long,
+    ): Float {
+        val duration = animator.getAnimationDuration(track.index).coerceAtLeast(0.0001f)
+        val elapsedSeconds = ((frameTimeNanos - track.startedAtNanos).coerceAtLeast(0L) / 1_000_000_000.0)
+            .toFloat()
+        return if (track.loop) {
+            elapsedSeconds % duration
+        } else {
+            min(elapsedSeconds, duration)
+        }
+    }
+}
+
+/**
+ * Production live companion stage used by the active room and home overlay.
  *
  * Guarantees:
  * - real Eve GLB only; no 2D fallback,
  * - SurfaceView-backed Vulkan path retained for IME stability,
  * - animationVersion restarts the same named clip deterministically,
+ * - clip changes use Filament skeletal cross-fade rather than image/viewport swapping,
  * - no extra SceneView geometry/material is injected into the Vulkan scene. Both the procedural
  *   contact shadow and a later primitive grounding experiment hit Filament's
  *   "Normalized format does not exist" abort on the software Vulkan validation backend,
@@ -101,18 +190,20 @@ internal fun EveLive3DStage(
     val modelLoader = rememberModelLoader(engine)
     val modelInstance = rememberModelInstance(modelLoader, EveAssetPolicy.MODEL_ASSET)
     val mainLightNode = rememberMainLightNode(engine) {
-        // Soft front-left key: preserves the bright companion look while giving the face, ears
-        // and feather layers enough directional contrast to read as a 3D volume.
         intensity = 8_500f
         lightDirection = Direction(-0.45f, -0.75f, -0.48f)
     }
     val fillLightNode = rememberFillLightNode(engine) {
-        // Opposite high fill keeps the shadow side readable without flattening the key light.
         intensity = 2_500f
         lightDirection = Direction(0.68f, -0.47f, 0.56f)
     }
     val cue = EveMascotRuntime.animation
     val cueVersion = EveMascotRuntime.animationVersion
+    val animationMixer = remember(modelInstance, compact) {
+        EveAnimationMixer(
+            blendDurationNanos = if (compact) 180_000_000L else 240_000_000L,
+        )
+    }
 
     var loadTimedOut by remember { mutableStateOf(false) }
     var liveModelNode by remember(modelInstance) {
@@ -162,13 +253,15 @@ internal fun EveLive3DStage(
                 mainLightNode = mainLightNode,
                 fillLightNode = fillLightNode,
                 cameraManipulator = null,
+                onFrame = { frameTimeNanos ->
+                    liveModelNode?.let { node ->
+                        animationMixer.apply(node.animator, frameTimeNanos)
+                    }
+                },
             ) {
                 ModelNode(
                     modelInstance = modelInstance,
                     scaleToUnits = if (compact) 1.0f else 0.90f,
-                    // Bottom-align the accepted GLB's AABB. The previous framing placed the feet
-                    // at roughly -0.28 m for both sizes; making that relationship explicit keeps
-                    // the model position stable across clips and future camera tuning.
                     centerOrigin = Position(0f, -1.0f, 0f),
                     autoAnimate = false,
                     animationName = null,
@@ -182,9 +275,6 @@ internal fun EveLive3DStage(
             }
 
             if (!compact) {
-                // Pure Compose visual grounding. Keep it just below the feet so it does not paint
-                // over Eve despite SurfaceView living behind Compose layers. The two ellipses give
-                // a soft-edged contact pool without RenderEffect/blur or any Filament material.
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
@@ -207,10 +297,8 @@ internal fun EveLive3DStage(
 
     LaunchedEffect(liveModelNode, cue.clipName, cue.loop, cueVersion) {
         val node = liveModelNode ?: return@LaunchedEffect
-        node.playingAnimations.keys.toList().forEach { index ->
-            node.stopAnimation(index)
-        }
-        node.playAnimation(
+        animationMixer.transition(
+            animator = node.animator,
             animationName = cue.clipName,
             loop = cue.loop,
         )
