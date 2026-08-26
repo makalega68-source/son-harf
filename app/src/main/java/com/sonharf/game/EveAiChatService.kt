@@ -4,6 +4,7 @@ import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
+import io.ktor.client.plugins.HttpTimeout
 import io.ktor.client.request.header
 import io.ktor.client.request.post
 import io.ktor.client.request.setBody
@@ -40,7 +41,13 @@ internal data class EveChatResponse(
 
 internal object EveAiChatService {
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
-    private val client = HttpClient(OkHttp)
+    private val client = HttpClient(OkHttp) {
+        install(HttpTimeout) {
+            connectTimeoutMillis = 10_000
+            requestTimeoutMillis = 30_000
+            socketTimeoutMillis = 30_000
+        }
+    }
 
     suspend fun chat(request: EveChatRequest): EveChatResponse {
         check(SupabaseProvider.configured) { "Supabase yapılandırılmamış." }
