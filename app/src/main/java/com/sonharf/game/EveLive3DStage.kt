@@ -133,14 +133,15 @@ private class EveAnimationMixer(
  *
  * Guarantees:
  * - real Eve GLB only; no 2D fallback,
- * - SurfaceView-backed Vulkan path retained for IME stability,
+ * - the full room keeps SurfaceView-backed Vulkan for IME/window-relayout stability,
+ * - compact home Eve uses TextureSurface because SceneView's Surface type is always Z-ordered
+ *   behind Compose and therefore cannot be a true floating overlay over home cards,
  * - animationVersion restarts the same named clip deterministically,
  * - clip changes use Filament skeletal cross-fade rather than image/viewport swapping,
  * - no extra SceneView geometry/material is injected into the Vulkan scene. Both the procedural
  *   contact shadow and a later primitive grounding experiment hit Filament's
  *   "Normalized format does not exist" abort on the software Vulkan validation backend,
- * - the non-compact room gets a Compose-only grounding pool. SurfaceType.Surface renders behind
- *   Compose layers, so this adds depth without touching Filament resources or the Vulkan scene,
+ * - the non-compact room gets a Compose-only grounding pool,
  * - lighting only tunes SceneView's existing directional key/fill nodes. No custom material or
  *   renderer resource is introduced for the lighting pass.
  */
@@ -246,7 +247,7 @@ internal fun EveLive3DStage(
         } else {
             SceneView(
                 modifier = Modifier.fillMaxSize(),
-                surfaceType = SurfaceType.Surface,
+                surfaceType = if (compact) SurfaceType.TextureSurface else SurfaceType.Surface,
                 isOpaque = false,
                 engine = engine,
                 modelLoader = modelLoader,
