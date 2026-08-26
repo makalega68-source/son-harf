@@ -70,14 +70,19 @@ private fun EveAnimationCue.safeForCompanionStage(): EveAnimationCue = when (thi
 }
 
 internal object EveMascotRuntime {
-    private data class WeightedIdle(val cue: EveAnimationCue, val weight: Int)
+    private data class WeightedIdle(
+        val cue: EveAnimationCue,
+        val weight: Int,
+        val minHoldMs: Long,
+        val maxHoldMs: Long,
+    )
 
     private val animationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val recentIdleClips = ArrayDeque<EveAnimationCue>(2)
+    private val recentIdleClips = ArrayDeque<EveAnimationCue>(1)
     private val idlePool = listOf(
-        WeightedIdle(EveAnimationCue.IDLE_BREATHE, 60),
-        WeightedIdle(EveAnimationCue.IDLE_LOOK_AROUND, 25),
-        WeightedIdle(EveAnimationCue.IDLE_GRAZE, 15),
+        WeightedIdle(EveAnimationCue.IDLE_LOOK_AROUND, 52, 4_000L, 5_800L),
+        WeightedIdle(EveAnimationCue.IDLE_GRAZE, 28, 4_600L, 6_800L),
+        WeightedIdle(EveAnimationCue.GRAZE_ONCE, 20, 2_800L, 3_400L),
     )
 
     private var resetJob: Job? = null
@@ -104,7 +109,7 @@ internal object EveMascotRuntime {
         if (autonomousIdleJob?.isActive == true) return
         autonomousIdleJob = animationScope.launch {
             while (true) {
-                delay(Random.nextLong(6_000L, 12_001L))
+                delay(nextNaturalIdlePauseMs())
                 if (!isThinking && behaviorState == EveBehaviorState.IDLE_BASE) {
                     playAutonomousIdle(selectNextIdle())
                 }
@@ -184,16 +189,10 @@ internal object EveMascotRuntime {
     private fun playAutonomousIdle(cue: EveAnimationCue) {
         resetJob?.cancel()
         val safeCue = cue.safeForCompanionStage()
-        behaviorState = if (safeCue == EveAnimationCue.IDLE_BREATHE) {
-            EveBehaviorState.IDLE_BASE
-        } else {
-            EveBehaviorState.IDLE_FLAVOR
-        }
+        behaviorState = EveBehaviorState.IDLE_FLAVOR
         publishAnimation(safeCue)
         rememberIdle(safeCue)
-        if (safeCue != EveAnimationCue.IDLE_BREATHE) {
-            scheduleReturnToBaseIdle(2_600L)
-        }
+        scheduleReturnToBaseIdle(holdDurationFor(safeCue))
     }
 
     private fun scheduleReturnToBaseIdle(delayMs: Long) {
@@ -222,11 +221,23 @@ internal object EveMascotRuntime {
             if (roll < candidate.weight) return candidate.cue
             roll -= candidate.weight
         }
-        return EveAnimationCue.IDLE_BREATHE
+        return EveAnimationCue.IDLE_LOOK_AROUND
     }
 
+    private fun holdDurationFor(cue: EveAnimationCue): Long {
+        val profile = idlePool.firstOrNull { it.cue == cue } ?: return 3_000L
+        return Random.nextLong(profile.minHoldMs, profile.maxHoldMs + 1L)
+    }
+
+    private fun nextNaturalIdlePauseMs(): Long =
+        if (Random.nextInt(100) < 20) {
+            Random.nextLong(14_000L, 22_001L)
+        } else {
+            Random.nextLong(7_000L, 13_501L)
+        }
+
     private fun rememberIdle(cue: EveAnimationCue) {
-        if (recentIdleClips.size >= 2) recentIdleClips.removeFirst()
+        if (recentIdleClips.size >= 1) recentIdleClips.removeFirst()
         recentIdleClips.addLast(cue)
     }
 }
