@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
@@ -50,9 +49,5 @@ fun SonHarfBrandLogo(modifier: Modifier = Modifier, size: Dp = 52.dp) {
                 }
             }
         }
-        Box(
-            modifier = Modifier.align(Alignment.BottomEnd).size(size * .43f).background(Color.White, CircleShape),
-            contentAlignment = Alignment.Center,
-        ) { EveMark(Modifier.size(size * .36f)) }
     }
 }
