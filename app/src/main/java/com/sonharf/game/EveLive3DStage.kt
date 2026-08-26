@@ -1,9 +1,15 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Surface
@@ -40,7 +46,9 @@ import kotlinx.coroutines.delay
  * - animationVersion restarts the same named clip deterministically,
  * - no extra SceneView geometry/material is injected into the Vulkan scene. Both the procedural
  *   contact shadow and a later primitive grounding experiment hit Filament's
- *   "Normalized format does not exist" abort on the software Vulkan validation backend.
+ *   "Normalized format does not exist" abort on the software Vulkan validation backend,
+ * - the non-compact room gets a Compose-only grounding pool. SurfaceType.Surface renders behind
+ *   Compose layers, so this adds depth without touching Filament resources or the Vulkan scene.
  */
 @Composable
 internal fun EveLive3DStage(
@@ -125,7 +133,7 @@ internal fun EveLive3DStage(
         return
     }
 
-    Box(modifier, contentAlignment = Alignment.Center) {
+    BoxWithConstraints(modifier, contentAlignment = Alignment.Center) {
         if (modelInstance == null) {
             CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp)
         } else {
@@ -152,6 +160,28 @@ internal fun EveLive3DStage(
                     apply = {
                         liveModelNode = this
                     },
+                )
+            }
+
+            if (!compact) {
+                // Pure Compose visual grounding. Keep it just below the feet so it does not paint
+                // over Eve despite SurfaceView living behind Compose layers. The two ellipses give
+                // a soft-edged contact pool without RenderEffect/blur or any Filament material.
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .offset(y = maxHeight * 0.218f)
+                        .width(maxWidth * 0.30f)
+                        .height(maxHeight * 0.018f)
+                        .background(Color.Black.copy(alpha = 0.055f), CircleShape),
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .offset(y = maxHeight * 0.216f)
+                        .width(maxWidth * 0.21f)
+                        .height(maxHeight * 0.011f)
+                        .background(Color.Black.copy(alpha = 0.080f), CircleShape),
                 )
             }
         }
