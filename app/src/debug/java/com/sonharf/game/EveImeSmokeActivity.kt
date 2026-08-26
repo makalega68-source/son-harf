@@ -79,7 +79,7 @@ private fun EveImeStressSurface() {
 
     LaunchedEffect(Unit) {
         EveMascotRuntime.calm()
-        delay(6_000) // Let Filament, the GLB and the first swapchain settle before IME stress.
+        delay(6_000)
         repeat(5) { round ->
             focusRequester.requestFocus()
             keyboardController?.show()
@@ -102,7 +102,6 @@ private fun EveImeStressSurface() {
             .fillMaxSize()
             .background(Color(0xFF0B4639)),
     ) {
-        // Production SceneView/Filament/GLB component. Its bounds never consume IME insets.
         Eve3DStage(
             modifier = Modifier.fillMaxSize(),
             compact = false,
@@ -122,7 +121,7 @@ private fun EveImeStressSurface() {
                     text = when {
                         completed && imeOpenCount >= 5 -> "EVE_IME_PASS_5"
                         completed -> "EVE_IME_INCOMPLETE_$imeOpenCount"
-                        else -> "IME stress: $imeOpenCount/5",
+                        else -> "IME stress: $imeOpenCount/5"
                     },
                     color = Color.White,
                 )
