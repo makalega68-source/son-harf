@@ -274,7 +274,7 @@ internal fun EveLive3DStage(
                     modelInstance = modelInstance,
                     // HOME has a tall ~43%-screen-width viewport. Scale the normalized rigged GLB
                     // to fill that viewport visually; the room keeps its validated 0.90f framing.
-                    scaleToUnits = if (compact) 2.40f else 0.90f,
+                    scaleToUnits = if (compact) 2.05f else 0.90f,
                     centerOrigin = Position(0f, -1.0f, 0f),
                     autoAnimate = false,
                     animationName = null,

@@ -78,7 +78,7 @@ class EveHomeFloatingSmokeActivity : ComponentActivity() {
                     androidx.compose.runtime.LaunchedEffect(Unit) {
                         // After CI taps Eve and verifies the happy reaction, force the same boredom
                         // context used in production so ASK_PET and routine arbitration are covered.
-                        kotlinx.coroutines.delay(21_000L)
+                        kotlinx.coroutines.delay(25_000L)
                         EveMascotRuntime.updateContext(
                             EveBehaviorContext(
                                 fullness = 80,

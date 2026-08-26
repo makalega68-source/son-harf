@@ -39,8 +39,8 @@ internal enum class EveAnimationCue(
 
     // HOME behavior aliases. These are NOT invented GLB clip names: they deliberately reuse the
     // real accepted clips Attack and GoToRest with safer timing for a domestic-animal behavior.
-    HOME_DIG_RIGHT_PAW("Attack", true, playbackSpeed = 0.45f),
-    HOME_SIT_HOLD("GoToRest", false, holdAtSeconds = 0.72f),
+    HOME_DIG_RIGHT_PAW("Attack", true, playbackSpeed = 0.32f),
+    HOME_SIT_HOLD("GoToRest", false, holdAtSeconds = 0.98f),
 
     REST("Rest", true),
     GO_TO_REST("GoToRest", false),

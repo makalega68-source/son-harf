@@ -138,7 +138,7 @@ jobs:
             adb shell input tap 125 800
             sleep 1
             adb exec-out screencap -p > artifacts/eve-home/home-frame-touch.png
-            sleep 6
+            sleep 10
             adb exec-out screencap -p > artifacts/eve-home/home-frame-context.png
 
             adb shell pidof com.sonharf.game | tr -d '\r' > artifacts/eve-home/current-pid.txt || true

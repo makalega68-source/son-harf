@@ -20,8 +20,8 @@ class EveHomeRoutineTest {
 
         assertTrue(EveAnimationCue.HOME_DIG_RIGHT_PAW.loop)
         assertFalse(EveAnimationCue.HOME_SIT_HOLD.loop)
-        assertEquals(0.45f, EveAnimationCue.HOME_DIG_RIGHT_PAW.playbackSpeed, 0.001f)
-        assertEquals(0.72f, EveAnimationCue.HOME_SIT_HOLD.holdAtSeconds ?: -1f, 0.001f)
+        assertEquals(0.32f, EveAnimationCue.HOME_DIG_RIGHT_PAW.playbackSpeed, 0.001f)
+        assertEquals(0.98f, EveAnimationCue.HOME_SIT_HOLD.holdAtSeconds ?: -1f, 0.001f)
     }
 
     @Test

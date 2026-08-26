@@ -389,6 +389,7 @@ internal fun EveHomeFloatingCompanion(
             ) {
                 if (homePromptText.isNotBlank()) {
                     Surface(
+                        modifier = Modifier.width(138.dp),
                         color = Color.White.copy(alpha = 0.96f),
                         shape = RoundedCornerShape(14.dp),
                         shadowElevation = 5.dp,
@@ -404,6 +405,15 @@ internal fun EveHomeFloatingCompanion(
                             maxLines = 2,
                         )
                     }
+                } else if (
+                    EveMascotRuntime.behaviorState == EveBehaviorState.RESTING &&
+                    EveMascotRuntime.animation == EveAnimationCue.REST
+                ) {
+                    Text(
+                        text = "💤",
+                        fontSize = 22.sp,
+                        modifier = Modifier.padding(bottom = 3.dp),
+                    )
                 }
             }
 
