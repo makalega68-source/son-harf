@@ -68,59 +68,68 @@ internal fun PremiumMasterHome(
     val leagueProgress = (rating / nextLeague.toFloat()).coerceIn(0f, 1f)
     val streak = growth?.bestStreak ?: 0
 
-    androidx.compose.foundation.lazy.LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, Color(0xFFF5FCFF), MasterSky))),
-        contentPadding = PaddingValues(horizontal = 13.dp, vertical = 10.dp),
-        verticalArrangement = Arrangement.spacedBy(11.dp),
-    ) {
-        item { MasterProfileHeader(profile, growth, isAdmin, onProfile, onAdmin) }
-        item { MasterLeagueBanner(rating, leagueProgress, onLeague) }
-        item { MasterLiveStrip(leaders.firstOrNull()?.displayName, streak) }
-        item {
-            BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val compact = maxWidth < 600.dp
-                if (compact) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        MasterSonHarfCard(Modifier.fillMaxWidth(), profile?.displayName ?: sh("Sen", "You"), profile?.avatarPath, profile?.gender, leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"), streak.coerceAtLeast(4), onQuickGame)
-                        MasterBilBakalimCard(Modifier.fillMaxWidth(), onBilBakalim)
-                    }
-                } else {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        MasterSonHarfCard(Modifier.weight(1.18f), profile?.displayName ?: sh("Sen", "You"), profile?.avatarPath, profile?.gender, leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"), streak.coerceAtLeast(4), onQuickGame)
-                        MasterBilBakalimCard(Modifier.weight(.82f), onBilBakalim)
+    Box(Modifier.fillMaxSize()) {
+        androidx.compose.foundation.lazy.LazyColumn(
+            modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, Color(0xFFF5FCFF), MasterSky))),
+            contentPadding = PaddingValues(horizontal = 13.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(11.dp),
+        ) {
+            item { MasterProfileHeader(profile, growth, isAdmin, onProfile, onAdmin) }
+            item { MasterLeagueBanner(rating, leagueProgress, onLeague) }
+            item { MasterLiveStrip(leaders.firstOrNull()?.displayName, streak) }
+            item {
+                BoxWithConstraints(Modifier.fillMaxWidth()) {
+                    val compact = maxWidth < 600.dp
+                    if (compact) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            MasterSonHarfCard(Modifier.fillMaxWidth(), profile?.displayName ?: sh("Sen", "You"), profile?.avatarPath, profile?.gender, leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"), streak.coerceAtLeast(4), onQuickGame)
+                            MasterBilBakalimCard(Modifier.fillMaxWidth(), onBilBakalim)
+                        }
+                    } else {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            MasterSonHarfCard(Modifier.weight(1.18f), profile?.displayName ?: sh("Sen", "You"), profile?.avatarPath, profile?.gender, leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"), streak.coerceAtLeast(4), onQuickGame)
+                            MasterBilBakalimCard(Modifier.weight(.82f), onBilBakalim)
+                        }
                     }
                 }
             }
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MasterDailySeries(Modifier.weight(1.35f), growth, dailyMessage) {
-                    val d = growth
-                    if (d == null || d.dailyClaimed) return@MasterDailySeries
-                    scope.launch {
-                        val reward = runCatching { backend?.claimDailyCheckin() ?: 0 }.getOrDefault(0)
-                        dailyMessage = if (reward > 0) "+$reward" else sh("Alındı", "Claimed")
-                        reload()
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    MasterDailySeries(Modifier.weight(1.35f), growth, dailyMessage) {
+                        val d = growth
+                        if (d == null || d.dailyClaimed) return@MasterDailySeries
+                        scope.launch {
+                            val reward = runCatching { backend?.claimDailyCheckin() ?: 0 }.getOrDefault(0)
+                            dailyMessage = if (reward > 0) "+$reward" else sh("Alındı", "Claimed")
+                            reload()
+                        }
                     }
+                    MasterSeasonCard(Modifier.weight(.65f), onHub)
                 }
-                MasterSeasonCard(Modifier.weight(.65f), onHub)
             }
-        }
-        if (leaders.isNotEmpty()) item { MasterTopThree(leaders, onLeague) }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                MasterShortcut(Icons.Rounded.TrackChanges, sh("GÖREVLER", "GOALS"), 2, Modifier.weight(1f), onHub)
-                MasterShortcut(Icons.Rounded.CardGiftcard, sh("GÜNLÜK ÖDÜL", "DAILY"), if (growth?.dailyClaimed == true) 0 else 1, Modifier.weight(1f)) {
-                    val d = growth
-                    if (d == null || d.dailyClaimed) return@MasterShortcut
-                    scope.launch { runCatching { backend?.claimDailyCheckin() }; reload() }
+            if (leaders.isNotEmpty()) item { MasterTopThree(leaders, onLeague) }
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    MasterShortcut(Icons.Rounded.TrackChanges, sh("GÖREVLER", "GOALS"), 2, Modifier.weight(1f), onHub)
+                    MasterShortcut(Icons.Rounded.CardGiftcard, sh("GÜNLÜK ÖDÜL", "DAILY"), if (growth?.dailyClaimed == true) 0 else 1, Modifier.weight(1f)) {
+                        val d = growth
+                        if (d == null || d.dailyClaimed) return@MasterShortcut
+                        scope.launch { runCatching { backend?.claimDailyCheckin() }; reload() }
+                    }
+                    MasterShortcut(Icons.Rounded.EmojiEvents, sh("LİGLER", "LEAGUES"), 0, Modifier.weight(1f), onLeague)
+                    MasterShortcut(Icons.Rounded.ShoppingCart, sh("MAĞAZA", "SHOP"), 0, Modifier.weight(1f), onShop)
+                    MasterShortcut(Icons.Rounded.Checkroom, sh("DOLABIM", "WARDROBE"), 0, Modifier.weight(1f), onProfile)
                 }
-                MasterShortcut(Icons.Rounded.EmojiEvents, sh("LİGLER", "LEAGUES"), 0, Modifier.weight(1f), onLeague)
-                MasterShortcut(Icons.Rounded.ShoppingCart, sh("MAĞAZA", "SHOP"), 0, Modifier.weight(1f), onShop)
-                MasterShortcut(Icons.Rounded.Checkroom, sh("DOLABIM", "WARDROBE"), 0, Modifier.weight(1f), onProfile)
             }
+            item { Spacer(Modifier.height(8.dp)) }
         }
-        item { Spacer(Modifier.height(8.dp)) }
+
+        if (!EveLivingRoomRuntime.open) {
+            EveHomeFloatingCompanion(
+                modifier = Modifier.fillMaxSize(),
+                onOpen = { EveLivingRoomRuntime.show() },
+            )
+        }
     }
 }
 
