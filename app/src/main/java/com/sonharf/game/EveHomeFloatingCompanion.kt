@@ -18,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.consume
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
@@ -126,8 +125,7 @@ internal fun EveHomeFloatingCompanion(
                         },
                         onDragEnd = { dragging = false },
                         onDragCancel = { dragging = false },
-                    ) { change, dragAmount ->
-                        change.consume()
+                    ) { _, dragAmount ->
                         val nextX = (x.value + dragAmount.x).coerceIn(minX, maxX)
                         val nextY = (y.value + dragAmount.y).coerceIn(minY, maxY)
                         scope.launch {
