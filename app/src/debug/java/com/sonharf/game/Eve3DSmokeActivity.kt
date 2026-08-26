@@ -15,9 +15,8 @@ import kotlinx.coroutines.delay
 /**
  * Debug-only smoke surface for CI.
  *
- * Deliberately renders only the production SceneView/GLB stage on a static background. There is no
- * Compose sway, PNG, EveMark or other moving UI here, so two different screenshots are evidence
- * that the actual GLB viewport is producing motion.
+ * Renders the exact production live SceneView/GLB stage used by the active room and home dock.
+ * There is no Compose sway, PNG or EveMark here, so visible motion must come from the real GLB.
  */
 class Eve3DSmokeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -31,13 +30,19 @@ class Eve3DSmokeActivity : ComponentActivity() {
                         cue = EveAnimationCue.IDLE_LOOK_AROUND,
                         returnToIdleAfterMs = 0,
                     )
+                    delay(2_000)
+                    // Request the same clip again. animationVersion must force a true replay.
+                    EveMascotRuntime.play(
+                        cue = EveAnimationCue.IDLE_LOOK_AROUND,
+                        returnToIdleAfterMs = 0,
+                    )
                 }
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
                         .background(Color(0xFF123D35)),
                 ) {
-                    Eve3DStage(Modifier.fillMaxSize())
+                    EveLive3DStage(Modifier.fillMaxSize())
                 }
             }
         }
