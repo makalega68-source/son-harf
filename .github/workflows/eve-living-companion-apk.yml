@@ -1,9 +1,9 @@
-name: Eve Living Companion Test APK
+name: Eve Real 3D Integration Test APK
 
 on:
   workflow_dispatch:
   push:
-    branches: [ feat/eve-living-companion-20260826 ]
+    branches: [ fix/eve-real-glb-integration-20260826 ]
     paths:
       - '.github/workflows/eve-living-companion-apk.yml'
       - 'app/**'
@@ -20,22 +20,65 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
+
       - uses: android-actions/setup-android@v3
+
       - name: Install Android SDK 36
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.4'
+
+      - name: Verify accepted Eve GLB before build
+        run: gradle :app:verifyEveAsset --stacktrace
+
       - name: Unit tests and debug APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Verify Eve GLB is really packaged in APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          ENTRY="assets/models/eve/eve.glb"
+          EXPECTED_SHA="0c68ac4c4f5475332fac77ccb9bda4bb08bd202a5d596114552e37ab27d6c39e"
+          EXPECTED_SIZE="4870220"
+
+          test -f "$APK" || { echo "::error::Debug APK missing"; exit 1; }
+          unzip -l "$APK" "$ENTRY" | grep -F "$ENTRY" >/dev/null || {
+            echo "::error::FATAL: $ENTRY is not packaged in the APK"
+            exit 1
+          }
+
+          mkdir -p "$RUNNER_TEMP/eve-apk-check"
+          unzip -p "$APK" "$ENTRY" > "$RUNNER_TEMP/eve-apk-check/eve.glb"
+          ACTUAL_SIZE="$(stat -c%s "$RUNNER_TEMP/eve-apk-check/eve.glb")"
+          ACTUAL_SHA="$(sha256sum "$RUNNER_TEMP/eve-apk-check/eve.glb" | awk '{print $1}')"
+
+          test "$ACTUAL_SIZE" = "$EXPECTED_SIZE" || {
+            echo "::error::FATAL: APK Eve size mismatch. Expected $EXPECTED_SIZE, got $ACTUAL_SIZE"
+            exit 1
+          }
+          test "$ACTUAL_SHA" = "$EXPECTED_SHA" || {
+            echo "::error::FATAL: APK Eve SHA mismatch. Expected $EXPECTED_SHA, got $ACTUAL_SHA"
+            exit 1
+          }
+          printf 'glTF' | cmp -n 4 - "$RUNNER_TEMP/eve-apk-check/eve.glb" || {
+            echo "::error::FATAL: Packaged Eve does not have GLB magic"
+            exit 1
+          }
+          echo ">> [PASS] Exact accepted Eve GLB is inside the APK"
+
       - name: Upload test APK
         uses: actions/upload-artifact@v4
         with:
-          name: SonHarf-Eve-Living-Companion-Test-APK
+          name: SonHarf-Eve-Real-3D-Test-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
