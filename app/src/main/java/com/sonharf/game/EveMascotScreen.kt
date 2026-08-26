@@ -2,8 +2,7 @@ package com.sonharf.game
 
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,10 +38,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -229,18 +228,12 @@ internal fun EveMascotScreen(onClose: () -> Unit) {
 
 @Composable
 private fun FantasyForestBackground(modifier: Modifier) {
-    Canvas(modifier.background(Brush.verticalGradient(listOf(ForestDeep, ForestMid, Color(0xFF123D35))))) {
-        val w = size.width; val h = size.height
-        repeat(9) { i ->
-            val x = w * (i + .3f) / 9f
-            drawCircle(ForestGlow.copy(alpha = .12f + (i % 3) * .03f), w * (.11f + (i % 2) * .025f), Offset(x, h * (.18f + (i % 4) * .10f)))
-        }
-        repeat(22) { i ->
-            val x = w * ((i * 37) % 100) / 100f
-            val y = h * (.08f + ((i * 61) % 75) / 100f)
-            drawCircle(if (i % 3 == 0) EveGold.copy(alpha = .65f) else Color.White.copy(alpha = .45f), if (i % 4 == 0) 3.2f else 1.8f, Offset(x, y))
-        }
-    }
+    Image(
+        painter = painterResource(R.drawable.mascot_realm_bg),
+        contentDescription = null,
+        modifier = modifier,
+        contentScale = ContentScale.Crop,
+    )
 }
 
 @Composable
