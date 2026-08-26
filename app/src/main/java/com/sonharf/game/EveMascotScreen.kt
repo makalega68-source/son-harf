@@ -340,15 +340,12 @@ internal fun Eve3DStage(modifier: Modifier = Modifier, compact: Boolean = false)
         return
     }
 
+    // Force Filament's EGL/OpenGL backend on Android. The Vulkan Engine can be created successfully
+    // and still abort later in vkCreateAndroidSurfaceKHR with VK_ERROR_NATIVE_WINDOW_IN_USE_KHR,
+    // which cannot be caught by Kotlin runCatching because the process terminates in native code.
     val engine = rememberEngine(
         engineCreator = { eglContext ->
-            runCatching {
-                com.google.android.filament.Engine.create(
-                    com.google.android.filament.Engine.Backend.VULKAN,
-                )
-            }.getOrElse {
-                com.google.android.filament.Engine.create(eglContext)
-            }
+            com.google.android.filament.Engine.create(eglContext)
         },
     )
     val modelLoader = rememberModelLoader(engine)
