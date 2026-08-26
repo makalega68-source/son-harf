@@ -22,6 +22,7 @@ import androidx.compose.ui.zIndex
 
 /**
  * Debug-only HOME compositor smoke.
+ * Current-head acceptance is intentionally triggered through this debug-only source.
  *
  * Hosts the exact production fixed companion in the sketch-inspired HOME position: Eve on the
  * left, Son Harf on the right and Bil Bakalım below. An opaque card deliberately extends behind
