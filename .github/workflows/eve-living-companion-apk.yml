@@ -93,30 +93,20 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           script: |
-            set -eu
-            APK="app/build/outputs/apk/debug/app-debug.apk"
             mkdir -p artifacts/eve-smoke
-            adb install -r "$APK"
+            test -f app/build/outputs/apk/debug/app-debug.apk || (echo "::error::Debug APK missing before emulator install"; exit 1)
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb logcat -c
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.Eve3DSmokeActivity
             sleep 15
-            adb shell dumpsys activity activities | grep -q "Eve3DSmokeActivity" || {
-              echo "::error::Eve3DSmokeActivity is not the active runtime surface"
-              exit 1
-            }
+            adb shell dumpsys activity activities | grep -q "Eve3DSmokeActivity" || (echo "::error::Eve3DSmokeActivity is not the active runtime surface"; exit 1)
             adb shell uiautomator dump /sdcard/eve-smoke.xml || true
             adb pull /sdcard/eve-smoke.xml artifacts/eve-smoke/eve-smoke.xml || true
             adb exec-out screencap -p > artifacts/eve-smoke/eve-3d-smoke.png
             adb logcat -d > artifacts/eve-smoke/logcat.txt
-            test "$(stat -c%s artifacts/eve-smoke/eve-3d-smoke.png)" -gt 20000 || {
-              echo "::error::Runtime screenshot is unexpectedly empty"
-              exit 1
-            }
-            if test -f artifacts/eve-smoke/eve-smoke.xml && grep -Eq "3D EVE (ASSET|YÜKLEME) HATASI" artifacts/eve-smoke/eve-smoke.xml; then
-              echo "::error::Production Eve3DStage rendered its explicit 3D failure state"
-              exit 1
-            fi
+            test "$(stat -c%s artifacts/eve-smoke/eve-3d-smoke.png)" -gt 20000 || (echo "::error::Runtime screenshot is unexpectedly empty"; exit 1)
+            test ! -f artifacts/eve-smoke/eve-smoke.xml || ! grep -Eq "3D EVE (ASSET|YÜKLEME) HATASI" artifacts/eve-smoke/eve-smoke.xml || (echo "::error::Production Eve3DStage rendered its explicit 3D failure state"; exit 1)
             echo ">> [PASS] Eve3DSmokeActivity launched and produced a non-empty runtime screenshot"
 
       - name: Upload Eve runtime smoke evidence
