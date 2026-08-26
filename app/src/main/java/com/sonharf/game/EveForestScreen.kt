@@ -212,8 +212,7 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .imePadding(),
+                .statusBarsPadding(),
         ) {
             EveForestHeader(
                 store = store,
@@ -547,6 +546,7 @@ private fun EveForestChatBar(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
+            .imePadding()
             .navigationBarsPadding()
             .bringIntoViewRequester(bringIntoViewRequester)
             .padding(horizontal = 12.dp, vertical = 8.dp),
