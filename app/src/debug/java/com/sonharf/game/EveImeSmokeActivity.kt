@@ -5,7 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -71,19 +70,15 @@ private fun EveImeStressSurface() {
             color = Color(0xEE10261D),
             shape = RoundedCornerShape(24.dp),
         ) {
-            Column(Modifier.padding(12.dp)) {
-                Text(
-                    text = "EVE IME / Vulkan Surface smoke",
-                    color = Color.White,
-                )
-                TextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("EVE ile konuş...") },
-                    singleLine = true,
-                )
-            }
+            TextField(
+                value = text,
+                onValueChange = { text = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                placeholder = { Text("EVE ile konuş...") },
+                singleLine = true,
+            )
         }
     }
 }
