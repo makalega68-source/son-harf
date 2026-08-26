@@ -1,2 +1,0 @@
-EVE_RENDERER_BACKEND=OPENGL_EGL
-Reason: avoid Filament Vulkan vkCreateAndroidSurfaceKHR VK_ERROR_NATIVE_WINDOW_IN_USE_KHR abort on affected Android devices.
