@@ -172,6 +172,15 @@ fun ClassicPremiumApp() {
             }
         }
 
+        // HOME companion is deliberately outside Scaffold content padding. It therefore renders
+        // above both the main cards and the bottom navigation, matching the floating-companion
+        // behavior while keeping only one compact TextureSurface alive.
+        if (screen == ClassicScreen.HOME && !EveLivingRoomRuntime.open) {
+            EveHomeFloatingCompanion(
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+
         if (screen == ClassicScreen.GAME) {
             if (SonHarfGameModeState.mode == "expert") ExpertArenaOverlay() else SketchGameOverlayV9()
             ComboOverlayV9()

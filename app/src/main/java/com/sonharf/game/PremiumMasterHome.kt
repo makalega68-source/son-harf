@@ -87,13 +87,10 @@ internal fun PremiumMasterHome(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                if (!EveLivingRoomRuntime.open) {
-                                    EveHomeFixedCompanion(
-                                        modifier = Modifier.width(92.dp).fillMaxHeight(),
-                                    )
-                                } else {
-                                    Spacer(Modifier.width(92.dp))
-                                }
+                                // Eve itself is rendered once as the full-screen floating overlay.
+                                // Keep this measured gap so the blue card retains the approved layout
+                                // while the larger 3D companion can overlap its left edge.
+                                Spacer(Modifier.width(104.dp).fillMaxHeight())
                                 MasterSonHarfCard(
                                     Modifier.weight(1f).fillMaxHeight(),
                                     profile?.displayName ?: sh("Sen", "You"),
@@ -112,13 +109,8 @@ internal fun PremiumMasterHome(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            if (!EveLivingRoomRuntime.open) {
-                                EveHomeFixedCompanion(
-                                    modifier = Modifier.width(120.dp).height(250.dp),
-                                )
-                            } else {
-                                Spacer(Modifier.width(120.dp))
-                            }
+                            // Single floating Eve is mounted above the app shell.
+                            Spacer(Modifier.width(132.dp).height(250.dp))
                             MasterSonHarfCard(
                                 Modifier.weight(1.18f),
                                 profile?.displayName ?: sh("Sen", "You"),
