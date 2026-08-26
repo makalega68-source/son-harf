@@ -82,12 +82,52 @@ internal fun PremiumMasterHome(
                     val compact = maxWidth < 600.dp
                     if (compact) {
                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            MasterSonHarfCard(Modifier.fillMaxWidth(), profile?.displayName ?: sh("Sen", "You"), profile?.avatarPath, profile?.gender, leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"), streak.coerceAtLeast(4), onQuickGame)
+                            Row(
+                                modifier = Modifier.fillMaxWidth().height(250.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                if (!EveLivingRoomRuntime.open) {
+                                    EveHomeFixedCompanion(
+                                        modifier = Modifier.width(92.dp).fillMaxHeight(),
+                                    )
+                                } else {
+                                    Spacer(Modifier.width(92.dp))
+                                }
+                                MasterSonHarfCard(
+                                    Modifier.weight(1f).fillMaxHeight(),
+                                    profile?.displayName ?: sh("Sen", "You"),
+                                    profile?.avatarPath,
+                                    profile?.gender,
+                                    leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"),
+                                    streak.coerceAtLeast(4),
+                                    onQuickGame,
+                                )
+                            }
                             MasterBilBakalimCard(Modifier.fillMaxWidth(), onBilBakalim)
                         }
                     } else {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            MasterSonHarfCard(Modifier.weight(1.18f), profile?.displayName ?: sh("Sen", "You"), profile?.avatarPath, profile?.gender, leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"), streak.coerceAtLeast(4), onQuickGame)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (!EveLivingRoomRuntime.open) {
+                                EveHomeFixedCompanion(
+                                    modifier = Modifier.width(120.dp).height(250.dp),
+                                )
+                            } else {
+                                Spacer(Modifier.width(120.dp))
+                            }
+                            MasterSonHarfCard(
+                                Modifier.weight(1.18f),
+                                profile?.displayName ?: sh("Sen", "You"),
+                                profile?.avatarPath,
+                                profile?.gender,
+                                leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"),
+                                streak.coerceAtLeast(4),
+                                onQuickGame,
+                            )
                             MasterBilBakalimCard(Modifier.weight(.82f), onBilBakalim)
                         }
                     }
@@ -122,13 +162,6 @@ internal fun PremiumMasterHome(
                 }
             }
             item { Spacer(Modifier.height(8.dp)) }
-        }
-
-        if (!EveLivingRoomRuntime.open) {
-            EveHomeFloatingCompanion(
-                modifier = Modifier.fillMaxSize(),
-                onOpen = { EveLivingRoomRuntime.show() },
-            )
         }
     }
 }
