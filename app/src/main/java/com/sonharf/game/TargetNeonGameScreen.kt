@@ -48,7 +48,7 @@ private val TGtext = Color(0xFF173B57)
 private val TGmuted = Color(0xFF6D879A)
 
 @Composable
-fun TargetNeonGameScreen() {
+fun TargetNeonGameScreen(autoStartMatchmaking: Boolean = false) {
     if (!SupabaseProvider.configured) {
         Box(Modifier.fillMaxSize().background(TGbg), contentAlignment = Alignment.Center) { Text("Sunucu bağlantısı yok", color = TGtext) }
         return
@@ -72,6 +72,7 @@ fun TargetNeonGameScreen() {
     var wordsJob by remember { mutableStateOf<Job?>(null) }
     var chatJob by remember { mutableStateOf<Job?>(null) }
     var matchJob by remember { mutableStateOf<Job?>(null) }
+    var autoStartConsumed by remember(autoStartMatchmaking) { mutableStateOf(false) }
 
     fun friendly(raw: String) = when {
         "not_your_turn" in raw -> "Sıra rakibinde."
@@ -115,6 +116,46 @@ fun TargetNeonGameScreen() {
         chatJob = scope.launch { backend.observeChat(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { chatMessages = it } }
     }
 
+    fun startRandomSearch() {
+        if (busy || matching || room != null) return
+        scope.launch {
+            busy = true
+            runCatching {
+                ensureProfile()
+                backend.startRandomMatchmaking(language)
+            }.onSuccess {
+                matching = true
+                notice = sh("Rakip aranıyor…", "Searching for an opponent…")
+            }.onFailure {
+                val old = runCatching { activeRoom() }.getOrNull()
+                if (old != null) {
+                    room = old
+                    observe(old)
+                } else {
+                    notice = friendly(it.message.orEmpty())
+                }
+            }
+            busy = false
+            if (matching && room == null) {
+                matchJob?.cancel()
+                matchJob = scope.launch {
+                    while (matching && room == null) {
+                        val found = runCatching { backend.pollRandomMatchmakingRoom() }.getOrNull()
+                        if (found != null) {
+                            room = found
+                            language = found.language
+                            SonHarfUiState.language = found.language
+                            observe(found)
+                            SonHarfSoundFx.softNotify()
+                            break
+                        }
+                        delay(800)
+                    }
+                }
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         busy = true
         runCatching { ensureProfile() }.onSuccess {
@@ -122,6 +163,13 @@ fun TargetNeonGameScreen() {
             if (old != null) { room = old; language = old.language; SonHarfUiState.language = old.language; observe(old) }
         }.onFailure { notice = friendly(it.message.orEmpty()) }
         busy = false
+    }
+
+    LaunchedEffect(autoStartMatchmaking, profile?.id, room?.id, busy) {
+        if (autoStartMatchmaking && !autoStartConsumed && profile != null && room == null && !busy) {
+            autoStartConsumed = true
+            startRandomSearch()
+        }
     }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, TGbg, Color(0xFFE7F6FF))))) {
@@ -138,25 +186,7 @@ fun TargetNeonGameScreen() {
                 onLanguage = { next -> language = next; SonHarfUiState.language = next },
                 onPrivateCode = { privateCode = it.filter(Char::isLetterOrDigit).uppercase().take(6) },
                 onPrivateToggle = { showPrivate = !showPrivate },
-                onRandom = {
-                    scope.launch {
-                        busy = true
-                        runCatching { ensureProfile(); backend.startRandomMatchmaking(language) }
-                            .onSuccess { matching = true; notice = "Rakip aranıyor…" }
-                            .onFailure {
-                                val old = runCatching { activeRoom() }.getOrNull()
-                                if (old != null) { room = old; observe(old) } else notice = friendly(it.message.orEmpty())
-                            }
-                        busy = false
-                        if (matching) matchJob = launch {
-                            while (matching && room == null) {
-                                val found = runCatching { backend.pollRandomMatchmakingRoom() }.getOrNull()
-                                if (found != null) { room = found; language = found.language; SonHarfUiState.language = found.language; observe(found); SonHarfSoundFx.softNotify(); break }
-                                delay(800)
-                            }
-                        }
-                    }
-                },
+                onRandom = { startRandomSearch() },
                 onCancel = { scope.launch { matching = false; matchJob?.cancel(); runCatching { backend.cancelRandomMatchmaking() }; notice = "Eşleşme iptal edildi" } },
                 onCreate = { scope.launch { busy = true; runCatching { backend.createPrivateRoom(language) }.onSuccess { room = it; notice = "Özel oda oluşturuldu: ${it.code}"; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
                 onJoin = { scope.launch { busy = true; runCatching { backend.joinPrivateRoom(privateCode) }.onSuccess { room = it; language = it.language; SonHarfUiState.language = it.language; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
