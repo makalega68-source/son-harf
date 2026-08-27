@@ -93,6 +93,7 @@ internal fun PremiumMasterHome(
                                     modifier = Modifier
                                         .width(132.dp)
                                         .fillMaxHeight(),
+                                    playerName = profile?.displayName,
                                 )
                                 MasterSonHarfCard(
                                     Modifier.weight(1f).fillMaxHeight(),
@@ -116,6 +117,7 @@ internal fun PremiumMasterHome(
                                 modifier = Modifier
                                     .width(148.dp)
                                     .height(250.dp),
+                                playerName = profile?.displayName,
                             )
                             MasterSonHarfCard(
                                 Modifier.weight(1.18f),
