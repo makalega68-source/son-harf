@@ -38,6 +38,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -61,6 +62,9 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 private val ForestScreenDeep = Color(0xFF073B32)
@@ -138,6 +142,8 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
         if (message.isBlank() || chatSending) return
         chatInput = ""
         chatSending = true
+        // Sending a message is an explicit wake interaction immediately, before network latency.
+        store.markInteraction()
         focusManager.clearFocus()
         keyboardController?.hide()
         speechBubbleText = sh("Düşünüyorum…", "Thinking…")
@@ -185,9 +191,34 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
         onNavigateBack()
     }
 
-    LaunchedEffect(Unit) {
-        EveMascotRuntime.calm()
-        EveMascotRuntime.setBubble(speechBubbleText)
+    DisposableEffect(Unit) {
+        EveMascotRuntime.startLivingBehavior()
+        onDispose {
+            EveMascotRuntime.stopLivingBehavior()
+        }
+    }
+
+    LaunchedEffect(store) {
+        if (store.shouldSleepForInactivity()) {
+            speechBubbleText = ""
+            feedback = ""
+            EveMascotRuntime.sleepForInactivity()
+        } else {
+            EveMascotRuntime.calm()
+            EveMascotRuntime.setBubble(speechBubbleText)
+        }
+
+        while (currentCoroutineContext().isActive) {
+            if (store.shouldSleepForInactivity()) {
+                if (!EveMascotRuntime.sleepingByInactivity) {
+                    speechBubbleText = ""
+                    feedback = ""
+                    reactionNonce++
+                }
+                EveMascotRuntime.sleepForInactivity()
+            }
+            delay(1_000L)
+        }
     }
 
     val roomGradient = when (store.selectedRoom) {
@@ -250,6 +281,8 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
                     onTap = {
                         focusManager.clearFocus()
                         keyboardController?.hide()
+                        // Directly touching Eve always wakes her, even when daily pet XP is capped.
+                        store.markInteraction()
                         val before = store.friendshipLevel
                         val xp = store.pet()
                         if (xp > 0) {
@@ -261,8 +294,8 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
                             )
                         } else {
                             react(
-                                message = sh("Biraz dinleneyim; bugünkü sevgi limitimizi doldurduk. 🤍", "Let me rest; today's petting limit is full. 🤍"),
-                                animation = { EveMascotRuntime.play(EveAnimationCue.REST, returnToIdleAfterMs = 1_800) },
+                                message = sh("Uyandım! Yanındayım. 🤍", "I'm awake! I'm right here. 🤍"),
+                                animation = { EveMascotRuntime.wakeFromTouch() },
                             )
                         }
                     },
@@ -271,7 +304,13 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
                 EveForestFurniture(store.selectedRoom)
                 EveStyleOverlay(store.selectedStyle)
 
-                if (speechBubbleText.isNotBlank()) {
+                if (EveMascotRuntime.sleepingByInactivity) {
+                    Text(
+                        text = "💤",
+                        modifier = Modifier.align(Alignment.TopCenter).padding(top = 18.dp),
+                        fontSize = 28.sp,
+                    )
+                } else if (speechBubbleText.isNotBlank()) {
                     Surface(
                         modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp, start = 44.dp, end = 44.dp),
                         color = Color(0xFFF8FFF9).copy(alpha = .96f),
@@ -361,6 +400,8 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
                         "🤍 ${sh("Sev", "Pet")} ${progress.dailyPetCount}/${progress.maxDailyPet}",
                         modifier = Modifier
                             .clickable {
+                                // "Sev" is a direct pet/touch interaction and therefore a wake source.
+                                store.markInteraction()
                                 val before = store.friendshipLevel
                                 val xp = store.pet()
                                 if (xp > 0) {
@@ -372,8 +413,8 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
                                     )
                                 } else {
                                     react(
-                                        message = sh("Bugünkü sevgi limitimizi doldurduk. 🤍", "Today's petting limit is full. 🤍"),
-                                        animation = { EveMascotRuntime.play(EveAnimationCue.REST, returnToIdleAfterMs = 1_800) },
+                                        message = sh("Uyandım! Biraz yanımda kal. 🤍", "I'm awake! Stay with me a little. 🤍"),
+                                        animation = { EveMascotRuntime.wakeFromTouch() },
                                     )
                                 }
                             }
