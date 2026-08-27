@@ -11,7 +11,7 @@ import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import java.util.UUID
 
-/** Optional-only rewarded ads. No interstitial, banner or forced ad format is used. */
+/** Optional rewarded ads. The thin non-game banner is handled separately by the app shell. */
 class RewardedAdController(private val context: Context) {
     private var rewardedAd: RewardedAd? = null
     private var loading = false
