@@ -23,15 +23,15 @@ internal object MascotCatalog {
     val all = listOf(
         MascotCatalogItem(
             id = DEFAULT_ID,
-            nameTr = "Beyaz Dost",
-            nameEn = "White Buddy",
+            nameTr = "Lyra — Beyaz Mühür",
+            nameEn = "Lyra — White Seal",
             standard = true,
             licensedForCommercialGame = true,
         ),
         MascotCatalogItem(
             id = CHIBI_WIZARD_ID,
-            nameTr = "Chibi Büyücü",
-            nameEn = "Chibi Wizard",
+            nameTr = "Neris — Gölge Bilgesi",
+            nameEn = "Neris — Shadow Sage",
             standard = false,
             licensedForCommercialGame = true,
         ),
