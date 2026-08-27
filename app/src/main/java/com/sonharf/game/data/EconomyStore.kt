@@ -36,6 +36,7 @@ data class EquippedCosmeticsDto(
     @SerialName("keyboard_theme_id") val keyboardThemeId: String? = null,
     @SerialName("victory_effect_id") val victoryEffectId: String? = null,
     @SerialName("emoji_pack_id") val emojiPackId: String? = null,
+    @SerialName("mascot_id") val mascotId: String? = null,
 )
 
 suspend fun OnlineGameBackend.getShopItems(): List<ShopItemDto> =
