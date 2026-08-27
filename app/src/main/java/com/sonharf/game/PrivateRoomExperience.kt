@@ -1,11 +1,14 @@
 package com.sonharf.game
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -72,6 +75,28 @@ fun PrivateRoomWaitingLayer() {
 
     val activeRoom = room ?: return
 
+    fun closeRoom() {
+        if (closing) return
+        scope.launch {
+            closing = true
+            runCatching {
+                SupabaseProvider.client.postgrest.rpc(
+                    "cancel_private_room",
+                    buildJsonObject { put("p_room_id", activeRoom.id) },
+                )
+            }.onSuccess {
+                room = null
+                friends = emptyList()
+                notice = null
+            }.onFailure {
+                notice = sh("Oda kapatılamadı. Tekrar dene.", "Room could not be closed. Try again.")
+            }
+            closing = false
+        }
+    }
+
+    BackHandler(enabled = !closing) { closeRoom() }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = SonHarfBg,
@@ -82,17 +107,27 @@ fun PrivateRoomWaitingLayer() {
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             item {
-                Text(
-                    sh("ÖZEL ODA", "PRIVATE ROOM"),
-                    color = SonHarfCyan,
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Black,
-                )
-                Text(
-                    sh("Rakibini bekliyorsun", "Waiting for your opponent"),
-                    color = SonHarfMuted,
-                    fontSize = 12.sp,
-                )
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = { closeRoom() }, enabled = !closing) {
+                        Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
+                    }
+                    Column {
+                        Text(
+                            sh("ÖZEL ODA", "PRIVATE ROOM"),
+                            color = SonHarfCyan,
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Text(
+                            sh("Rakibini bekliyorsun", "Waiting for your opponent"),
+                            color = SonHarfMuted,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
             }
 
             item {
@@ -206,23 +241,7 @@ fun PrivateRoomWaitingLayer() {
             item {
                 Spacer(Modifier.height(4.dp))
                 OutlinedButton(
-                    onClick = {
-                        scope.launch {
-                            closing = true
-                            runCatching {
-                                SupabaseProvider.client.postgrest.rpc(
-                                    "cancel_private_room",
-                                    buildJsonObject { put("p_room_id", activeRoom.id) },
-                                )
-                            }.onSuccess {
-                                room = null
-                                friends = emptyList()
-                            }.onFailure {
-                                notice = sh("Oda kapatılamadı.", "Room could not be closed.")
-                            }
-                            closing = false
-                        }
-                    },
+                    onClick = { closeRoom() },
                     enabled = !closing,
                     modifier = Modifier.fillMaxWidth().height(48.dp),
                     border = BorderStroke(1.dp, SonHarfPink.copy(alpha = .55f)),
