@@ -72,6 +72,14 @@ internal fun MascotCompanionScreen(
 
     LaunchedEffect(mascotId) { reload() }
 
+    LaunchedEffect(progress?.fullness, progress?.energy) {
+        val p = progress ?: return@LaunchedEffect
+        when {
+            p.energy <= 30 -> MascotRuntime.react(MascotMotion.SIT)
+            p.fullness <= 30 -> MascotRuntime.react(MascotMotion.LOOK_AT_PLAYER)
+        }
+    }
+
     Box(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(listOf(LetharaPalette.Night, LetharaPalette.Night2, Color(0xFF211344)))
