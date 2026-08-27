@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - integration/final-unified-20260827
+      - main
   workflow_dispatch:
 
 permissions:
