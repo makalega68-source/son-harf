@@ -30,7 +30,7 @@ fun MetaHubScreen(
 ) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 6)) }
-    val labels = listOf(sh("Kariyer","Career"), sh("Sezon","Season"), sh("Görevler","Goals"), sh("Lig","League"), sh("Oyunlarım","Games"), sh("Rehber","Guide"), sh("Ayarlar","Settings"))
+    val labels = listOf(sh("Yolculuk","Journey"), sh("Sezon","Season"), sh("Görevler","Goals"), sh("Mühür Ligi","Seal League"), sh("Oyunlarım","Games"), sh("Rehber","Guide"), sh("Ayarlar","Settings"))
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
@@ -42,7 +42,7 @@ fun MetaHubScreen(
                 }
             }
             Text(
-                sh("OYUNCU MERKEZİ","PLAYER HUB"),
+                sh("HATIRLATICI MERKEZİ","REMEMBRANCER HUB"),
                 Modifier.padding(horizontal=8.dp,vertical=6.dp),
                 fontSize=24.sp,
                 fontWeight=FontWeight.Black,
