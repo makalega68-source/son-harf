@@ -746,7 +746,7 @@ private fun ClassicBottomBar(current: ClassicScreen, onHome: () -> Unit, onPlay:
         Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 6.dp, vertical = 7.dp), horizontalArrangement = Arrangement.SpaceAround) {
             BottomItem(Icons.Rounded.Home, sh("Ana Sayfa", "Home"), current == ClassicScreen.HOME, Modifier.weight(1f), onHome)
             BottomItem(Icons.Rounded.PlayArrow, sh("Oyna", "Play"), current == ClassicScreen.PLAY, Modifier.weight(1f), onPlay)
-            BottomItem(Icons.Rounded.Pets, sh("EVE Evi", "EVE Home"), EveLivingRoomRuntime.open, Modifier.weight(1f)) { EveLivingRoomRuntime.show() }
+            BottomItem(Icons.Rounded.EmojiEvents, sh("Lig", "League"), current == ClassicScreen.LEAGUE, Modifier.weight(1f), onLeague)
             BottomItem(Icons.Rounded.Group, sh("Sosyal", "Social"), false, Modifier.weight(1f), onSocial)
             BottomItem(Icons.Rounded.Person, sh("Profil", "Profile"), current == ClassicScreen.PROFILE, Modifier.weight(1f), onProfile)
         }
