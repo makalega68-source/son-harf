@@ -57,6 +57,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -67,6 +68,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
 
 private val ForestScreenDeep = Color(0xFF073B32)
@@ -210,14 +212,21 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
         Image(
             painter = painterResource(R.drawable.mascot_realm_bg),
             contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    scaleX = 1.08f
+                    scaleY = 1.08f
+                    translationY = 32.dp.toPx()
+                },
             contentScale = ContentScale.Crop,
         )
 
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .statusBarsPadding(),
+                .statusBarsPadding()
+                .zIndex(20f),
         ) {
             EveForestHeader(
                 store = store,
@@ -258,7 +267,8 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
                 .statusBarsPadding()
                 .offset(y = 82.dp)
                 .padding(horizontal = 8.dp, vertical = 2.dp)
-                .requiredHeight((maxWidth - 16.dp) * 1.70f),
+                .requiredHeight((maxWidth - 16.dp) * 1.74f)
+                .zIndex(5f),
             ) {
                 EveAnimatedStage(
                     modifier = Modifier
@@ -406,7 +416,8 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .fillMaxWidth(),
+                .fillMaxWidth()
+                .zIndex(30f),
         ) {
                 EveForestChatBar(
                     input = chatInput,
