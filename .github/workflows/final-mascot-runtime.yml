@@ -1,0 +1,111 @@
+name: Final Mascot Runtime
+
+on:
+  push:
+    branches:
+      - integration/final-unified-20260827
+    paths:
+      - '.github/workflows/final-mascot-runtime.yml'
+      - 'app/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  emulator-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Build tested debug APK
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace
+
+      - name: Runtime render white and animated Chibi
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          cores: 4
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            set -euo pipefail
+            mkdir -p artifacts/mascot
+            APK="app/build/outputs/apk/debug/app-debug.apk"
+            test -f "$APK"
+            adb install -r "$APK"
+            adb shell wm size 720x1600
+            adb shell wm density 280
+
+            adb logcat -c
+            adb shell am force-stop com.sonharf.game
+            adb shell am start -W -n com.sonharf.game/.MascotRuntimeSmokeActivity --es mascot_id mascot_white
+            sleep 7
+            adb exec-out screencap -p > artifacts/mascot/white-idle.png
+            adb logcat -d > artifacts/mascot/white-logcat.txt
+            grep -q 'MASCOT_ASSET_READY id=mascot_white ready=true' artifacts/mascot/white-logcat.txt
+            grep -q 'MASCOT_RENDER_READY id=mascot_white clip=Idle' artifacts/mascot/white-logcat.txt
+            test "$(stat -c%s artifacts/mascot/white-idle.png)" -gt 20000
+            ! grep -Eqi 'FATAL EXCEPTION|Fatal signal|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic' artifacts/mascot/white-logcat.txt
+
+            adb logcat -c
+            adb shell am force-stop com.sonharf.game
+            adb shell am start -W -n com.sonharf.game/.MascotRuntimeSmokeActivity --es mascot_id mascot_chibi_wizard
+            sleep 2
+            adb exec-out screencap -p > artifacts/mascot/chibi-idle.png
+            sleep 3.4
+            adb exec-out screencap -p > artifacts/mascot/chibi-run.png
+            sleep 3.4
+            adb exec-out screencap -p > artifacts/mascot/chibi-victory.png
+            adb logcat -d > artifacts/mascot/chibi-logcat.txt
+
+            grep -q 'MASCOT_ASSET_READY id=mascot_chibi_wizard ready=true' artifacts/mascot/chibi-logcat.txt
+            grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Idle' artifacts/mascot/chibi-logcat.txt
+            grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Run' artifacts/mascot/chibi-logcat.txt
+            grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Special_Attack' artifacts/mascot/chibi-logcat.txt
+            ! grep -Eqi 'FATAL EXCEPTION|Fatal signal|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic' artifacts/mascot/chibi-logcat.txt
+
+            python3 - <<'PY'
+            import hashlib, pathlib
+            paths=[pathlib.Path('artifacts/mascot/chibi-idle.png'),pathlib.Path('artifacts/mascot/chibi-run.png'),pathlib.Path('artifacts/mascot/chibi-victory.png')]
+            for p in paths:
+                assert p.stat().st_size > 20000, f'empty screenshot: {p}'
+            hashes=[hashlib.sha256(p.read_bytes()).hexdigest() for p in paths]
+            pathlib.Path('artifacts/mascot/chibi-frame-sha256.txt').write_text('\n'.join(hashes)+'\n')
+            assert len(set(hashes)) >= 2, 'Chibi runtime frames are byte-identical'
+            PY
+            echo "MASCOT_RUNTIME_PASS"
+
+      - name: Upload runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-Final-Mascot-Runtime-Evidence
+          path: artifacts/mascot/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload runtime-tested APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-Final-Unified-Runtime-Tested-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
