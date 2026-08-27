@@ -65,8 +65,8 @@ as $$
 declare
   v_tr text[] := array[
     'KALEM','BULUT','GÜNEŞ','MASAL','BAHAR','YOLCU','ÇORAP','KUMRU','TABAK','KÖPEK',
-    'ÇANTA','KAVUN','SARAY','KİRAZ','DENİZ','TOPRA','KARGA','ARMUT','KABAK','SABAH',
-    'YAPRA','KÜREK','YEMEK','KAPAK','KUMSA','BALIK','ÇUBUK','KAZAN','KÖMÜR','UZMAN'
+    'ÇANTA','KAVUN','SARAY','KİRAZ','DENİZ','KARGA','ARMUT','KABAK','SABAH','ÇINAR',
+    'KÜREK','YEMEK','KAPAK','FENER','KANAT','BALIK','ÇUBUK','KAZAN','KÖMÜR','UZMAN'
   ];
   v_en text[] := array[
     'APPLE','BRAIN','CLOUD','DREAM','EARTH','FLAME','GRAPE','HOUSE','LIGHT','MUSIC',
