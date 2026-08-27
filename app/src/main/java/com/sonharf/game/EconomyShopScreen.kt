@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -27,13 +29,27 @@ import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
 
 @Composable
-fun EconomyShopScreen() {
-    var tab by remember { mutableIntStateOf(0) }
+fun EconomyShopScreen(
+    initialTab: Int = 0,
+    onBack: (() -> Unit)? = null,
+) {
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 1)) }
     Column(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))
         )
     ) {
+        if (onBack != null) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
+                }
+                Text(sh("MAĞAZA", "SHOP"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+            }
+        }
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("STYLE", "STYLE")) }, modifier = Modifier.weight(1f))
             FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("ÜCRETSİZ ÖDÜLLER", "FREE REWARDS")) }, modifier = Modifier.weight(1f))
