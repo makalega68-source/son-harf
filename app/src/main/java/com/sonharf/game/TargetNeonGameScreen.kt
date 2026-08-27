@@ -442,7 +442,7 @@ private fun TargetArena(
         BackHandler { onExit() }
         Box(Modifier.fillMaxSize().background(TGbg), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(sh("MAÇ TAMAMLANDI", "MATCH FINISHED"), color = TGtext, fontWeight = FontWeight.Black, fontSize = 24.sp)
+                Text(sh("DÜELLO TAMAMLANDI", "DUEL COMPLETE"), color = TGtext, fontWeight = FontWeight.Black, fontSize = 24.sp)
                 MascotLive3DStage(
                     modifier = Modifier.size(width = 110.dp, height = 130.dp),
                     motion = MascotRuntime.motion,
@@ -470,7 +470,7 @@ private fun TargetArena(
         Spacer(Modifier.height(14.dp))
         Box(Modifier.fillMaxWidth().height(64.dp)) {
             Text(
-                "TUR ${room.roundNo}/3",
+                "MÜHÜR TURU ${room.roundNo}/3",
                 color = TGtext,
                 fontWeight = FontWeight.Black,
                 fontSize = 13.sp,
@@ -488,7 +488,7 @@ private fun TargetArena(
                 if (words.isEmpty()) {
                     Box(Modifier.fillMaxWidth().height(190.dp), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(if (myTurn) "SIRA SENDE" else "RAKİBİN SIRASI", color = if (myTurn) TGcyan else TGpink, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                            Text(if (myTurn) sh("SÖZ DOKUSU SENDE", "THE WORD WEAVE IS YOURS") else sh("SÖZ DOKUSU RAKİPTE", "THE WORD WEAVE IS WITH YOUR RIVAL"), color = if (myTurn) TGcyan else TGpink, fontWeight = FontWeight.Black, fontSize = 14.sp)
                             Spacer(Modifier.height(24.dp))
                             Text("İLK KELİME", color = TGtext, fontWeight = FontWeight.Black, fontSize = 40.sp)
                             Text("İlk kelimeyi yaz", color = TGmuted, fontSize = 12.sp)
