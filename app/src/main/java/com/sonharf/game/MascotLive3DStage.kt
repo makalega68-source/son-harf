@@ -80,7 +80,7 @@ internal fun MascotLive3DStage(
         if (modelInstance == null) {
             CircularProgressIndicator(color = SonHarfCyan, strokeWidth = 2.dp)
         } else {
-            key(resolvedId, clip) {
+            key(resolvedId, clip, modelLocation) {
                 SceneView(
                     modifier = Modifier.fillMaxSize(),
                     surfaceType = SurfaceType.TextureSurface,
