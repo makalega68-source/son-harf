@@ -27,7 +27,7 @@ fun SonHarfBrandLogo(modifier: Modifier = Modifier, size: Dp = 52.dp) {
     val remoteBytes = RemoteExperience.brandLogoBytes
     val remoteLogo = remember(remoteBytes) {
         runCatching {
-            if (remoteBytes.isNullOrEmpty()) null
+            if (remoteBytes == null || remoteBytes.isEmpty()) null
             else BitmapFactory.decodeByteArray(remoteBytes, 0, remoteBytes.size)?.asImageBitmap()
         }.getOrNull()
     }
