@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import android.content.Context
+import android.speech.tts.TextToSpeech
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,8 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AutoStories
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material.icons.rounded.ShoppingBag
+import androidx.compose.material.icons.rounded.VolumeOff
+import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -32,6 +35,7 @@ import kotlinx.coroutines.launch
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import java.util.Locale
 
 private enum class MascotCompanionTab { CHAT, CARE, MEMORY }
 
@@ -270,6 +274,23 @@ private fun MascotChatPanel(
     val json = remember { Json { ignoreUnknownKeys = true } }
     val prefs = remember(mascotId) { context.getSharedPreferences("lethara_chat_" + mascotId, Context.MODE_PRIVATE) }
     val serializer = remember { ListSerializer(MascotChatTurn.serializer()) }
+    var voiceEnabled by remember(mascotId) { mutableStateOf(prefs.getBoolean("voice_enabled", false)) }
+    var ttsReady by remember { mutableStateOf(false) }
+    var tts by remember { mutableStateOf<TextToSpeech?>(null) }
+
+    DisposableEffect(context, SonHarfUiState.language) {
+        WordMeaningRuntime.init(context)
+        val engine = TextToSpeech(context) { status ->
+            ttsReady = status == TextToSpeech.SUCCESS
+        }
+        engine.language = if (SonHarfUiState.isEnglish) Locale.ENGLISH else Locale("tr", "TR")
+        tts = engine
+        onDispose {
+            engine.stop()
+            engine.shutdown()
+            if (tts === engine) tts = null
+        }
+    }
     val history = remember(mascotId) {
         mutableStateListOf<MascotChatTurn>().apply {
             val raw = prefs.getString("history", null)
@@ -308,7 +329,23 @@ private fun MascotChatPanel(
         prefs.edit()
             .putString("history", json.encodeToString(serializer, history.takeLast(30)))
             .putString("memory_notes", memoryNotes.takeLast(12).joinToString("\n"))
+            .putBoolean("voice_enabled", voiceEnabled)
             .apply()
+    }
+
+    fun requestedDefinitionWord(message: String): String? {
+        val clean = message.trim().replace(Regex("[?!.,;:]"), "")
+        val tr = Regex("^(.{1,32}?)\\s+(ne demek|ne anlama gelir|anlamı nedir|anlamı)$", RegexOption.IGNORE_CASE).find(clean)
+            ?.groupValues?.getOrNull(1)?.trim()?.split(Regex("\\s+"))?.lastOrNull()
+        if (!tr.isNullOrBlank()) return tr
+        val en = Regex("^what does\\s+([A-Za-z'-]{1,32})\\s+mean$", RegexOption.IGNORE_CASE).find(clean)
+            ?.groupValues?.getOrNull(1)?.trim()
+        return en?.takeIf { it.isNotBlank() }
+    }
+
+    fun speak(text: String) {
+        if (!voiceEnabled || !ttsReady || text.isBlank()) return
+        tts?.speak(text.take(420), TextToSpeech.QUEUE_FLUSH, null, "lethara_mascot_reply")
     }
 
     fun send() {
@@ -321,7 +358,22 @@ private fun MascotChatPanel(
         sending = true
         MascotRuntime.react(MascotMotion.THINKING)
         scope.launch {
-            val response = MascotAiChatService.chat(
+            val requestedWord = requestedDefinitionWord(message)
+            val response = if (requestedWord != null) {
+                val meaning = runCatching { WordMeaningRuntime.meaning(requestedWord, SonHarfUiState.language) }
+                    .getOrElse { sh("Bu kelimenin kısa anlamını şu an bulamadım.", "I could not recover a short meaning for that word just now.") }
+                MascotChatResponse(
+                    reply = if (SonHarfUiState.isEnglish) {
+                        "The Word Weave remembers “" + requestedWord + "”: " + meaning
+                    } else {
+                        "Söz Dokusu “" + requestedWord + "” için şunu hatırlıyor: " + meaning
+                    },
+                    mood = "curious",
+                    animation = "idle_breathe",
+                    memoryNote = "",
+                    usedFallback = true,
+                )
+            } else MascotAiChatService.chat(
                 MascotChatRequest(
                     message = message,
                     history = previous,
@@ -347,6 +399,7 @@ private fun MascotChatPanel(
                 }
             }
             persist()
+            speak(response.reply)
             MascotRuntime.react(
                 when (response.mood) {
                     "celebrating", "happy" -> MascotMotion.VICTORY
@@ -365,15 +418,34 @@ private fun MascotChatPanel(
     }
 
     Column(Modifier.fillMaxSize()) {
-        Text(
-            sh(
-                "Bu yoldaş insan gibi konuşmaz; Lethara'nın diliyle kısa ve karakterli yanıtlar verir.",
-                "This companion does not speak like a human; replies stay short and in Lethara's character.",
-            ),
-            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-            color = LetharaPalette.Muted,
-            fontSize = 9.sp,
-        )
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                sh(
+                    "Bu yoldaş insan gibi konuşmaz; Lethara'nın diliyle kısa ve karakterli yanıtlar verir.",
+                    "This companion does not speak like a human; replies stay short and in Lethara's character.",
+                ),
+                modifier = Modifier.weight(1f),
+                color = LetharaPalette.Muted,
+                fontSize = 9.sp,
+            )
+            IconButton(
+                onClick = {
+                    voiceEnabled = !voiceEnabled
+                    persist()
+                    if (!voiceEnabled) tts?.stop()
+                },
+                enabled = ttsReady,
+            ) {
+                Icon(
+                    if (voiceEnabled) Icons.Rounded.VolumeUp else Icons.Rounded.VolumeOff,
+                    sh("Maskot sesi", "Mascot voice"),
+                    tint = if (voiceEnabled) character.color else LetharaPalette.Muted,
+                )
+            }
+        }
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
             shape = RoundedCornerShape(14.dp),
