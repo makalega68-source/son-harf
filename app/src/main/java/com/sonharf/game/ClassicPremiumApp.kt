@@ -68,13 +68,25 @@ fun ClassicPremiumApp() {
     var gameKey by remember { mutableIntStateOf(0) }
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
+    var hubTab by remember { mutableIntStateOf(0) }
+    var hubReturnScreen by remember { mutableStateOf(ClassicScreen.HOME) }
+    var profileFullTab by remember { mutableIntStateOf(0) }
+    var profileFullReturnScreen by remember { mutableStateOf(ClassicScreen.PROFILE) }
+    var shopFullTab by remember { mutableIntStateOf(0) }
+    var shopFullReturnScreen by remember { mutableStateOf(ClassicScreen.SHOP) }
     val lobbyRequest = SonHarfGameNavigation.lobbyRequest
     val context = LocalContext.current
     var lastHomeBack by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) {
-        authenticated = BuildConfig.DEBUG ||
-            (SupabaseProvider.configured && hasVerifiedMembershipSession())
+        authenticated = if (BuildConfig.DEBUG) {
+            if (backend != null && backend.currentUserId() == null) {
+                runCatching { backend.ensurePlayer(sh("Oyuncu", "Player")) }
+            }
+            true
+        } else {
+            SupabaseProvider.configured && hasVerifiedMembershipSession()
+        }
         authChecked = true
     }
     LaunchedEffect(authenticated) {
@@ -97,11 +109,15 @@ fun ClassicPremiumApp() {
         if (SonHarfUiState.homeRequest > 0) screen = ClassicScreen.HOME
     }
     BackHandler(enabled = authenticated) {
-        if (screen != ClassicScreen.HOME) {
-            screen = ClassicScreen.HOME
-        } else {
-            val now = System.currentTimeMillis()
-            if (now - lastHomeBack < 1800L) (context as? Activity)?.finish() else lastHomeBack = now
+        when (screen) {
+            ClassicScreen.PROFILE_FULL -> screen = profileFullReturnScreen
+            ClassicScreen.SHOP_FULL -> screen = shopFullReturnScreen
+            ClassicScreen.HUB -> screen = hubReturnScreen
+            ClassicScreen.HOME -> {
+                val now = System.currentTimeMillis()
+                if (now - lastHomeBack < 1800L) (context as? Activity)?.finish() else lastHomeBack = now
+            }
+            else -> screen = ClassicScreen.HOME
         }
     }
 
@@ -140,10 +156,14 @@ fun ClassicPremiumApp() {
                         onQuickGame = { gameKey += 1; screen = ClassicScreen.GAME },
                         onBilBakalim = { screen = ClassicScreen.BIL_BAKALIM },
                         onAdmin = { screen = ClassicScreen.ADMIN },
-                        onHub = { screen = ClassicScreen.HUB },
+                        onHub = { hubTab = 0; hubReturnScreen = ClassicScreen.HOME; screen = ClassicScreen.HUB },
                         onLeague = { screen = ClassicScreen.LEAGUE },
                         onShop = { screen = ClassicScreen.SHOP },
                         onProfile = { screen = ClassicScreen.PROFILE },
+                        onGoals = { hubTab = 2; hubReturnScreen = ClassicScreen.HOME; screen = ClassicScreen.HUB },
+                        onSeason = { hubTab = 1; hubReturnScreen = ClassicScreen.HOME; screen = ClassicScreen.HUB },
+                        onWardrobe = { shopFullTab = 0; shopFullReturnScreen = ClassicScreen.HOME; screen = ClassicScreen.SHOP_FULL },
+                        onNotifications = { profileFullTab = 2; profileFullReturnScreen = ClassicScreen.HOME; screen = ClassicScreen.PROFILE_FULL },
                     )
                     ClassicScreen.PLAY -> ClassicPlayScreen(
                         backend = backend,
@@ -154,21 +174,33 @@ fun ClassicPremiumApp() {
                     ClassicScreen.PROFILE -> ClassicProfileScreen(
                         backend = backend,
                         onBack = { screen = ClassicScreen.HOME },
-                        onDetails = { screen = ClassicScreen.PROFILE_FULL },
-                        onHub = { screen = ClassicScreen.HUB },
+                        onDetails = { profileFullTab = 1; profileFullReturnScreen = ClassicScreen.PROFILE; screen = ClassicScreen.PROFILE_FULL },
+                        onCosmetics = { shopFullTab = 0; shopFullReturnScreen = ClassicScreen.PROFILE; screen = ClassicScreen.SHOP_FULL },
+                        onAchievements = { hubTab = 0; hubReturnScreen = ClassicScreen.PROFILE; screen = ClassicScreen.HUB },
+                        onHistory = { hubTab = 4; hubReturnScreen = ClassicScreen.PROFILE; screen = ClassicScreen.HUB },
                     )
                     ClassicScreen.SHOP -> ClassicStoreScreen(
                         backend = backend,
                         onBack = { screen = ClassicScreen.HOME },
-                        onFullShop = { screen = ClassicScreen.SHOP_FULL },
+                        onFullShop = { shopFullTab = 0; shopFullReturnScreen = ClassicScreen.SHOP; screen = ClassicScreen.SHOP_FULL },
                     )
                     ClassicScreen.GAME -> key(gameKey) { TargetNeonGameScreen() }
                     ClassicScreen.BIL_BAKALIM -> TrackedBilBakalimStandaloneScreen { screen = ClassicScreen.HOME }
                     ClassicScreen.ADMIN -> AdminConsoleScreen { screen = ClassicScreen.HOME }
-                    ClassicScreen.HUB -> MetaHubScreen()
+                    ClassicScreen.HUB -> MetaHubScreen(
+                        initialTab = hubTab,
+                        onBack = { screen = hubReturnScreen },
+                        onPlay = { screen = ClassicScreen.PLAY },
+                    )
                     ClassicScreen.LEAGUE -> LeaderboardExperienceScreen { screen = ClassicScreen.HOME }
-                    ClassicScreen.PROFILE_FULL -> ProfileExperienceScreen()
-                    ClassicScreen.SHOP_FULL -> EconomyShopScreen()
+                    ClassicScreen.PROFILE_FULL -> ProfileExperienceScreen(
+                        initialTab = profileFullTab,
+                        onBack = { screen = profileFullReturnScreen },
+                    )
+                    ClassicScreen.SHOP_FULL -> EconomyShopScreen(
+                        initialTab = shopFullTab,
+                        onBack = { screen = shopFullReturnScreen },
+                    )
                 }
             }
         }
@@ -598,7 +630,14 @@ private fun PlayOption(icon: ImageVector, title: String, subtitle: String, butto
 }
 
 @Composable
-private fun ClassicProfileScreen(backend: OnlineGameBackend?, onBack: () -> Unit, onDetails: () -> Unit, onHub: () -> Unit) {
+private fun ClassicProfileScreen(
+    backend: OnlineGameBackend?,
+    onBack: () -> Unit,
+    onDetails: () -> Unit,
+    onCosmetics: () -> Unit,
+    onAchievements: () -> Unit,
+    onHistory: () -> Unit,
+) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
     LaunchedEffect(Unit) {
@@ -638,9 +677,9 @@ private fun ClassicProfileScreen(backend: OnlineGameBackend?, onBack: () -> Unit
                 Text("${growth?.xp ?: 0} XP", color = ClassicMuted, fontSize = 9.sp)
             }
         }
-        ProfileMenuRow(Icons.Rounded.Checkroom, sh("Kozmetikler", "Cosmetics"), onDetails)
-        ProfileMenuRow(Icons.Rounded.EmojiEvents, sh("Başarımlar", "Achievements"), onHub)
-        ProfileMenuRow(Icons.Rounded.History, sh("Maç Geçmişi", "Match History"), onHub)
+        ProfileMenuRow(Icons.Rounded.Checkroom, sh("Kozmetikler", "Cosmetics"), onCosmetics)
+        ProfileMenuRow(Icons.Rounded.EmojiEvents, sh("Başarımlar", "Achievements"), onAchievements)
+        ProfileMenuRow(Icons.Rounded.History, sh("Maç Geçmişi", "Match History"), onHistory)
         OutlinedButton(onClick = onDetails, modifier = Modifier.fillMaxWidth(), border = BorderStroke(1.dp, ClassicGold), colors = ButtonDefaults.outlinedButtonColors(contentColor = ClassicGoldSoft)) {
             Text(sh("PROFİL AYARLARI VE GİZLİLİK", "PROFILE SETTINGS & PRIVACY"))
         }
@@ -681,7 +720,18 @@ private fun ClassicStoreScreen(backend: OnlineGameBackend?, onBack: () -> Unit, 
     ClassicPageScaffold(sh("MAĞAZA", "SHOP"), onBack) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf(sh("Öne Çıkan", "Featured"), sh("Kozmetikler", "Cosmetics"), sh("Elmas", "Diamonds"), sh("Özel", "Special")).forEachIndexed { index, label ->
-                FilterChip(selected = tab == index, onClick = { tab = index }, label = { Text(label, fontSize = 9.sp) }, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ClassicGold.copy(alpha = .22f), selectedLabelColor = ClassicGoldSoft, containerColor = ClassicPanel, labelColor = ClassicMuted), border = FilterChipDefaults.filterChipBorder(enabled = true, selected = tab == index, borderColor = ClassicBorder, selectedBorderColor = ClassicGold))
+                FilterChip(
+                    selected = tab == index,
+                    onClick = {
+                        if (index == 0) tab = 0 else {
+                            tab = index
+                            onFullShop()
+                        }
+                    },
+                    label = { Text(label, fontSize = 9.sp) },
+                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = ClassicGold.copy(alpha = .22f), selectedLabelColor = ClassicGoldSoft, containerColor = ClassicPanel, labelColor = ClassicMuted),
+                    border = FilterChipDefaults.filterChipBorder(enabled = true, selected = tab == index, borderColor = ClassicBorder, selectedBorderColor = ClassicGold),
+                )
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
