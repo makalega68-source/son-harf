@@ -168,7 +168,13 @@ declare
   v_new_reward integer := 0;
 begin
   if v_uid is null then raise exception 'not_authenticated'; end if;
-  if v_guess !~ '^[a-z]{5}  values(v_uid,current_date,v_lang)
+  if v_guess !~ '^[a-z]{5}$' then raise exception 'invalid_five_letter_word'; end if;
+  if not public.sonharf_word_allowed(v_lang, public.normalize_game_word(v_lang,p_guess)) then
+    raise exception 'cipher_word_not_in_dictionary';
+  end if;
+
+  insert into public.daily_cipher_sessions(user_id,challenge_date,language)
+  values(v_uid,current_date,v_lang)
   on conflict on constraint daily_cipher_sessions_pkey do nothing;
 
   select s.attempts,s.guesses,s.feedbacks,s.won,s.finished,s.reward_coins
