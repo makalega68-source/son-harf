@@ -85,6 +85,8 @@ internal fun EveHomeFloatingCompanion(
     var renameOpen by remember { mutableStateOf(false) }
     var draftName by remember { mutableStateOf(companionName) }
     var routineJob by remember { mutableStateOf<Job?>(null) }
+    var tapPrompt by remember { mutableStateOf("") }
+    var tapPromptClearJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(playerNameOverride) {
         playerNameOverride?.trim()?.takeIf { it.isNotBlank() }?.let {
@@ -134,6 +136,8 @@ internal fun EveHomeFloatingCompanion(
         onDispose {
             routineJob?.cancel()
             routineJob = null
+            tapPromptClearJob?.cancel()
+            tapPromptClearJob = null
             EveMascotRuntime.startLivingBehavior()
         }
     }
@@ -164,6 +168,7 @@ internal fun EveHomeFloatingCompanion(
         val homeIntent = EveMascotRuntime.homeIntent
         val homeIntentVersion = EveMascotRuntime.homeIntentVersion
         val homePromptText = EveMascotRuntime.homePromptText
+        val visiblePrompt = tapPrompt.ifBlank { homePromptText }
 
         val reactionX = remember { Animatable(0f) }
         val reactionY = remember { Animatable(0f) }
@@ -218,12 +223,10 @@ internal fun EveHomeFloatingCompanion(
             presenceX.stop()
             presenceY.stop()
 
-            // Keep contextual approach in Eve's left-side territory so the primary cards remain
-            // readable while she comes closer to the player.
-            val focusX = ((widthPx - mascotPx) * 0.28f).coerceIn(minX, maxX)
-            val focusY = (heightPx * 0.25f).coerceIn(minY, maxY)
-            val targetX = focusX - x.value
-            val targetY = focusY - y.value
+            // Context reactions stay in Eve's left-side territory. A small right/up translation
+            // reads as "coming closer" without covering SON HARF / BİL BAKALIM labels.
+            val targetX = with(density) { 18.dp.toPx() }
+            val targetY = -with(density) { 30.dp.toPx() }
 
             when (homeIntent) {
                 EveHomeIntent.NORMAL -> coroutineScope {
@@ -361,7 +364,7 @@ internal fun EveHomeFloatingCompanion(
                     .height(promptHeight),
                 contentAlignment = Alignment.BottomCenter,
             ) {
-                if (homePromptText.isNotBlank()) {
+                if (visiblePrompt.isNotBlank()) {
                     Surface(
                         modifier = Modifier.width(138.dp),
                         color = Color.White.copy(alpha = 0.96f),
@@ -369,7 +372,7 @@ internal fun EveHomeFloatingCompanion(
                         shadowElevation = 5.dp,
                     ) {
                         Text(
-                            text = homePromptText.take(64),
+                            text = visiblePrompt.take(64),
                             modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
                             color = Color(0xFF163B58),
                             fontWeight = FontWeight.Bold,
@@ -414,6 +417,13 @@ internal fun EveHomeFloatingCompanion(
                             .fillMaxSize()
                             .clickable {
                                 store.markInteraction()
+                                val prompt = eveHomeXpPrompt(playerName)
+                                tapPrompt = prompt
+                                tapPromptClearJob?.cancel()
+                                tapPromptClearJob = scope.launch {
+                                    delay(routineTiming.happyReactionMs)
+                                    tapPrompt = ""
+                                }
                                 EveMascotRuntime.homeTouchHappy(playerName)
                                 restartHomeRoutine(
                                     afterMs = routineTiming.happyReactionMs,
