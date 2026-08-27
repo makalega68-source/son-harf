@@ -163,8 +163,6 @@ internal fun EveHomeFloatingCompanion(
     BoxWithConstraints(modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val scope = rememberCoroutineScope()
-        val motionEffect = EveMascotRuntime.motionEffect
-        val motionVersion = EveMascotRuntime.motionVersion
         val homeIntent = EveMascotRuntime.homeIntent
         val homeIntentVersion = EveMascotRuntime.homeIntentVersion
         val homePromptText = EveMascotRuntime.homePromptText
@@ -176,8 +174,6 @@ internal fun EveHomeFloatingCompanion(
             }
         }
 
-        val reactionX = remember { Animatable(0f) }
-        val reactionY = remember { Animatable(0f) }
         val presenceX = remember { Animatable(0f) }
         val presenceY = remember { Animatable(0f) }
 
@@ -196,8 +192,6 @@ internal fun EveHomeFloatingCompanion(
         val topInsetPx = with(density) { 38.dp.toPx() }
         val bottomInsetPx = with(density) { 4.dp.toPx() }
         val driftPx = with(density) { 9.dp.toPx() }
-        val jumpPx = with(density) { 22.dp.toPx() }
-        val sleepySettlePx = with(density) { 7.dp.toPx() }
         val approachLiftPx = with(density) { 6.dp.toPx() }
 
         val widthPx = constraints.maxWidth.toFloat()
@@ -265,37 +259,10 @@ internal fun EveHomeFloatingCompanion(
             }
         }
 
-        // TextureSurface must remain a genuinely transparent Android layer. Scale/rotation via
-        // Compose graphics layers can expose its rectangular backing, so reactions use only layout
-        // translation here; all articulation remains in the accepted rigged GLB clips.
-        LaunchedEffect(motionEffect, motionVersion, jumpPx, sleepySettlePx) {
-            reactionX.stop()
-            reactionY.stop()
-
-            when (motionEffect) {
-                EveMotionEffect.NONE -> coroutineScope {
-                    launch { reactionX.animateTo(0f, tween(180, easing = FastOutSlowInEasing)) }
-                    launch { reactionY.animateTo(0f, tween(180, easing = FastOutSlowInEasing)) }
-                }
-
-                EveMotionEffect.BOUNCE -> {
-                    reactionY.animateTo(-jumpPx, tween(170, easing = FastOutSlowInEasing))
-                    reactionY.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
-                }
-
-                EveMotionEffect.WIGGLE -> {
-                    reactionX.snapTo(0f)
-                    val wigglePx = driftPx * 0.72f
-                    for (target in listOf(wigglePx, -wigglePx, wigglePx * 0.65f, -wigglePx * 0.65f, 0f)) {
-                        reactionX.animateTo(target, tween(95))
-                    }
-                }
-
-                EveMotionEffect.SAD_SETTLE -> {
-                    reactionY.animateTo(sleepySettlePx, tween(460, easing = FastOutSlowInEasing))
-                }
-            }
-        }
+        // Do not animate the TextureSurface itself for tap reactions. Rapid movement of Android's
+        // TextureView exposes its rectangular backing for a frame on some devices/emulators.
+        // Happiness/curiosity/sadness remain real skeletal GLB clips; only slow contextual approach
+        // and user drag move the surface.
         var anchorX by remember { mutableStateOf(0f) }
         var anchorY by remember { mutableStateOf(0f) }
         var initialized by remember { mutableStateOf(false) }
@@ -353,8 +320,8 @@ internal fun EveHomeFloatingCompanion(
             modifier = Modifier
                 .offset {
                     IntOffset(
-                        (x.value + presenceX.value + reactionX.value).roundToInt(),
-                        (y.value + presenceY.value + reactionY.value).roundToInt(),
+                        (x.value + presenceX.value).roundToInt(),
+                        (y.value + presenceY.value).roundToInt(),
                     )
                 }
                 .width(containerWidth)
