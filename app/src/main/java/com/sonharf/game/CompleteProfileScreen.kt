@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -14,9 +16,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 @Composable
-fun CompleteProfileScreen() {
-    var tab by remember { mutableIntStateOf(0) }
+fun CompleteProfileScreen(
+    initialTab: Int = 0,
+    onBack: (() -> Unit)? = null,
+) {
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
     Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg)))) {
+        if (onBack != null) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+                verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
+                }
+                Text(sh("PROFİL", "PROFILE"), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 21.sp)
+            }
+        }
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 10.dp, containerColor = SonHarfBg, divider = {}) {
             listOf(sh("OYUNCU KARTI", "PLAYER CARD"), sh("GİZLİLİK & AYARLAR", "PRIVACY & SETTINGS"), sh("TERCİHLER", "PREFERENCES")).forEachIndexed { index, title ->
                 Tab(selected = tab == index, onClick = { tab = index }, text = { Text(title, color = if (tab == index) SonHarfCyan else SonHarfMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp) })
