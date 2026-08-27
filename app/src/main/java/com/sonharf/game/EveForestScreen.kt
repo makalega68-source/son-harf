@@ -3,11 +3,13 @@ package com.sonharf.game
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -17,7 +19,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.requiredHeight
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -53,9 +57,11 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -196,14 +202,21 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
         else -> listOf(ForestScreenDeep, ForestScreenMid, Color(0xFF0A4A3C))
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = Modifier
             .fillMaxSize()
             .background(Brush.verticalGradient(roomGradient)),
     ) {
+        Image(
+            painter = painterResource(R.drawable.mascot_realm_bg),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
                 .statusBarsPadding(),
         ) {
             EveForestHeader(
@@ -236,16 +249,21 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f)
-                    .padding(horizontal = 12.dp, vertical = 7.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(Color.White.copy(alpha = .09f)),
+        }
+
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .offset(y = 82.dp)
+                .padding(horizontal = 8.dp, vertical = 2.dp)
+                .requiredHeight((maxWidth - 16.dp) * 1.70f),
             ) {
                 EveAnimatedStage(
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .offset(y = (-96).dp),
                     reactionNonce = reactionNonce,
                     onTap = {
                         focusManager.clearFocus()
@@ -385,14 +403,20 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
                 }
             }
 
-            EveForestChatBar(
-                input = chatInput,
-                onInput = { chatInput = it.take(600) },
-                sending = chatSending,
-                onSend = ::sendChat,
-                focusRequester = focusRequester,
-                bringIntoViewRequester = bringIntoViewRequester,
-            )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .fillMaxWidth(),
+        ) {
+                EveForestChatBar(
+                    input = chatInput,
+                    onInput = { chatInput = it.take(600) },
+                    sending = chatSending,
+                    onSend = ::sendChat,
+                    focusRequester = focusRequester,
+                    bringIntoViewRequester = bringIntoViewRequester,
+                )
+    
         }
     }
 
