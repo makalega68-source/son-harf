@@ -2,6 +2,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <activity
+            android:name=".MascotRuntimeSmokeActivity"
+            android:exported="true"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".Eve3DSmokeActivity"
             android:exported="true"
             android:screenOrientation="portrait" />
