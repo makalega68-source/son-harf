@@ -82,7 +82,9 @@ fun ClassicPremiumApp() {
         runCatching { backend?.getPreferredGameMode() }.getOrNull()?.let { SonHarfGameModeState.mode = it }
         val equipped = runCatching { backend?.getEquippedCosmetics() }.getOrNull()
         SonHarfCosmetics.apply(equipped)
-        val previewMascot = if (BuildConfig.DEBUG) MascotCatalog.CHIBI_WIZARD_ID else (equipped?.mascotId ?: MascotCatalog.DEFAULT_ID)\n        MascotSelectionRuntime.select(context, previewMascot)
+        val previewMascot = if (BuildConfig.DEBUG) MascotCatalog.CHIBI_WIZARD_ID
+            else (equipped?.mascotId ?: MascotCatalog.DEFAULT_ID)
+        MascotSelectionRuntime.select(context, previewMascot)
     }
     LaunchedEffect(lobbyRequest) {
         if (authenticated && lobbyRequest > 0) {
