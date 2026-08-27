@@ -70,7 +70,7 @@ class MascotPolicyTest {
     fun onlyCommerciallyApprovedCatalogEntriesCanBeActivated() {
         assertTrue(MascotCatalog.all.all { it.licensedForCommercialGame })
         assertTrue(MascotPolicy.CHIBI_WIZARD_LICENSE_APPROVED)
-        assertFalse(MascotPolicy.CHIBI_WIZARD_ASSET_READY)
+        assertTrue(MascotPolicy.CHIBI_WIZARD_ASSET_READY)
     }
 
     @Test
