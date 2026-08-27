@@ -296,3 +296,18 @@ update public.shop_items set
   description_tr='Altı Mühür’den Neris. Lisanslı 3D maskot; görünüm, hikâye ve yoldaşlık içindir, maç gücü vermez.',
   description_en='Neris of the Six Seals. Licensed 3D mascot for story and companionship; grants no match power.'
 where id='mascot_chibi_wizard' and kind='mascot';
+
+-- Future canonical Seals are staged with planned Son Coin pricing but remain inactive until
+-- a distinct licensed 3D asset passes the same production runtime gate as Lyra/Neris.
+insert into public.shop_items(
+  id,kind,name_tr,name_en,description_tr,description_en,diamond_price,vip_only,active,sort_order
+) values
+('mascot_kael','mascot','Kael — Koruyucu','Kael — Guardian','Sadakat ve mühür kalkanlarının koruyucusu. 3D form runtime onayı bekliyor.','Guardian of loyalty and seal shields. Awaiting 3D runtime approval.',850,false,false,405),
+('mascot_ryvan','mascot','Ryvan — Fırtına Ustası','Ryvan — Storm Master','Fırtına ve yıldırım ritminin ustası. 3D form runtime onayı bekliyor.','Master of storm and lightning rhythm. Awaiting 3D runtime approval.',900,false,false,410),
+('mascot_mivo','mascot','Mivo — Neşe Büyücüsü','Mivo — Joy Mage','Mizah ve yaratıcı büyünün yaramaz ustası. 3D form runtime onayı bekliyor.','Mischievous master of humor and creative magic. Awaiting 3D runtime approval.',800,false,false,415),
+('mascot_selen','mascot','Selen — Sessiz Kâhin','Selen — Silent Seer','Söylenmemiş kelimelerin sessiz kâhini. 3D form runtime onayı bekliyor.','Silent seer of unspoken words. Awaiting 3D runtime approval.',950,false,false,420)
+on conflict(id) do update set
+  name_tr=excluded.name_tr,name_en=excluded.name_en,
+  description_tr=excluded.description_tr,description_en=excluded.description_en,
+  diamond_price=excluded.diamond_price,vip_only=excluded.vip_only,
+  active=false,sort_order=excluded.sort_order;
