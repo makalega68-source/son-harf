@@ -178,6 +178,32 @@ internal fun MascotCompanionScreen(
                                 }
                             }
                         },
+                        onCare = { action ->
+                            val b = backend
+                            if (b != null) {
+                                scope.launch {
+                                    loading = true
+                                    runCatching { b.careForMascot(mascotId, action) }
+                                        .onSuccess {
+                                            notice = when (action) {
+                                                "love" -> sh("Yoldaşının mührü sıcak bir ışıkla parladı.", "Your companion's seal glowed with warm light.")
+                                                "play" -> sh("Kısa bir büyü oyunu yaptınız.", "You shared a short spell game.")
+                                                else -> sh("Mührün tozu temizlendi; yoldaşın rahatladı.", "The seal dust cleared; your companion relaxed.")
+                                            }
+                                            MascotRuntime.react(
+                                                when (action) {
+                                                    "play" -> MascotMotion.RUN
+                                                    "love" -> MascotMotion.LOOK_AT_PLAYER
+                                                    else -> MascotMotion.GREETING
+                                                }
+                                            )
+                                            reload()
+                                        }
+                                        .onFailure { notice = sh("Bakım etkileşimi tamamlanamadı.", "Care interaction could not be completed.") }
+                                    loading = false
+                                }
+                            }
+                        },
                         onFeed = { fruit ->
                             val b = backend
                             if (b != null) {
@@ -389,6 +415,7 @@ private fun MascotCarePanel(
     notice: String?,
     loading: Boolean,
     onRename: (String) -> Unit,
+    onCare: (String) -> Unit,
     onFeed: (MascotFruitDto) -> Unit,
     onOpenShop: () -> Unit,
 ) {
@@ -453,6 +480,41 @@ private fun MascotCarePanel(
                     }
                 }
             }
+        }
+
+        item {
+            Text(sh("YOLDAŞ ETKİLEŞİMLERİ", "COMPANION INTERACTIONS"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            Spacer(Modifier.height(6.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                OutlinedButton(
+                    onClick = { onCare("love") },
+                    modifier = Modifier.weight(1f),
+                    enabled = !loading,
+                    border = BorderStroke(1.dp, Color(0xFFFF8BCB).copy(alpha=.65f)),
+                ) {
+                    Text("❤ " + sh("SEV", "LOVE"), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+                OutlinedButton(
+                    onClick = { onCare("play") },
+                    modifier = Modifier.weight(1f),
+                    enabled = !loading,
+                    border = BorderStroke(1.dp, LetharaPalette.Cyan.copy(alpha=.65f)),
+                ) {
+                    Text("✦ " + sh("OYNA", "PLAY"), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+                OutlinedButton(
+                    onClick = { onCare("groom") },
+                    modifier = Modifier.weight(1f),
+                    enabled = !loading,
+                    border = BorderStroke(1.dp, LetharaPalette.Gold.copy(alpha=.65f)),
+                ) {
+                    Text("✨ " + sh("BAKIM", "GROOM"), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+
+        item {
+            Text(sh("LETHARA MEYVELERİ", "LETHARA FRUIT"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 12.sp)
         }
 
         items(fruits, key = { it.id }) { fruit ->
