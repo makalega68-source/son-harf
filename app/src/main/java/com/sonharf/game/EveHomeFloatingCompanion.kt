@@ -33,7 +33,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -166,13 +165,10 @@ internal fun EveHomeFloatingCompanion(
         val homeIntentVersion = EveMascotRuntime.homeIntentVersion
         val homePromptText = EveMascotRuntime.homePromptText
 
+        val reactionX = remember { Animatable(0f) }
         val reactionY = remember { Animatable(0f) }
-        val reactionRotation = remember { Animatable(0f) }
-        val reactionScale = remember { Animatable(1f) }
         val presenceX = remember { Animatable(0f) }
         val presenceY = remember { Animatable(0f) }
-        val presenceRotation = remember { Animatable(0f) }
-        val presenceScale = remember { Animatable(1f) }
 
         // The 3D viewport itself now follows the approved mockup proportions: ~43% screen width
         // with a tall portrait viewport so ears/head can reach upward while paws overlap the cards.
@@ -221,10 +217,10 @@ internal fun EveHomeFloatingCompanion(
         ) {
             presenceX.stop()
             presenceY.stop()
-            presenceRotation.stop()
-            presenceScale.stop()
 
-            val focusX = ((widthPx - mascotPx) * 0.5f).coerceIn(minX, maxX)
+            // Keep contextual approach in Eve's left-side territory so the primary cards remain
+            // readable while she comes closer to the player.
+            val focusX = ((widthPx - mascotPx) * 0.28f).coerceIn(minX, maxX)
             val focusY = (heightPx * 0.25f).coerceIn(minY, maxY)
             val targetX = focusX - x.value
             val targetY = focusY - y.value
@@ -233,90 +229,61 @@ internal fun EveHomeFloatingCompanion(
                 EveHomeIntent.NORMAL -> coroutineScope {
                     launch { presenceX.animateTo(0f, tween(520, easing = FastOutSlowInEasing)) }
                     launch { presenceY.animateTo(0f, tween(520, easing = FastOutSlowInEasing)) }
-                    launch { presenceRotation.animateTo(0f, tween(360, easing = FastOutSlowInEasing)) }
-                    launch { presenceScale.animateTo(1f, tween(520, easing = FastOutSlowInEasing)) }
                 }
 
                 EveHomeIntent.SLEEP -> coroutineScope {
                     launch { presenceX.animateTo(0f, tween(420, easing = FastOutSlowInEasing)) }
                     launch { presenceY.animateTo(0f, tween(420, easing = FastOutSlowInEasing)) }
-                    launch { presenceRotation.animateTo(0f, tween(360, easing = FastOutSlowInEasing)) }
-                    launch { presenceScale.animateTo(0.96f, tween(460, easing = FastOutSlowInEasing)) }
                 }
 
                 EveHomeIntent.CELEBRATE -> coroutineScope {
                     launch { presenceX.animateTo(0f, tween(420, easing = FastOutSlowInEasing)) }
                     launch { presenceY.animateTo(-approachLiftPx, tween(360, easing = FastOutSlowInEasing)) }
-                    launch { presenceRotation.animateTo(0f, tween(260)) }
-                    launch { presenceScale.animateTo(1.09f, tween(420, easing = FastOutSlowInEasing)) }
                 }
 
                 EveHomeIntent.APPROACH_LOOK,
                 EveHomeIntent.ASK_PET,
                 EveHomeIntent.ASK_FOOD,
                 EveHomeIntent.COMFORT -> {
-                    val targetScale = when (homeIntent) {
-                        EveHomeIntent.ASK_PET -> 1.30f
-                        EveHomeIntent.ASK_FOOD -> 1.23f
-                        EveHomeIntent.COMFORT -> 1.27f
-                        else -> 1.28f
-                    }
-                    val targetRotation = when (homeIntent) {
-                        EveHomeIntent.ASK_PET -> 5.5f
-                        EveHomeIntent.ASK_FOOD -> -2.5f
-                        EveHomeIntent.COMFORT -> 2.0f
-                        else -> 0f
-                    }
-
                     coroutineScope {
                         launch { presenceX.animateTo(targetX, tween(900, easing = FastOutSlowInEasing)) }
                         launch {
                             presenceY.animateTo(targetY - approachLiftPx, tween(620, easing = FastOutSlowInEasing))
                             presenceY.animateTo(targetY, tween(280, easing = FastOutSlowInEasing))
                         }
-                        launch { presenceRotation.animateTo(targetRotation, tween(760, easing = FastOutSlowInEasing)) }
-                        launch { presenceScale.animateTo(targetScale, tween(900, easing = FastOutSlowInEasing)) }
                     }
                 }
             }
         }
 
-        // Reaction motion transforms the transparent TextureSurface as one composited layer. It
-        // never rewrites ModelNode position/rotation/scale, which keeps SceneView's normalized GLB
-        // transform intact. The underlying skeletal pose still comes from the real GLB clips.
+        // TextureSurface must remain a genuinely transparent Android layer. Scale/rotation via
+        // Compose graphics layers can expose its rectangular backing, so reactions use only layout
+        // translation here; all articulation remains in the accepted rigged GLB clips.
         LaunchedEffect(motionEffect, motionVersion, jumpPx, sleepySettlePx) {
+            reactionX.stop()
             reactionY.stop()
-            reactionRotation.stop()
-            reactionScale.stop()
 
             when (motionEffect) {
                 EveMotionEffect.NONE -> coroutineScope {
+                    launch { reactionX.animateTo(0f, tween(180, easing = FastOutSlowInEasing)) }
                     launch { reactionY.animateTo(0f, tween(180, easing = FastOutSlowInEasing)) }
-                    launch { reactionRotation.animateTo(0f, tween(160, easing = FastOutSlowInEasing)) }
-                    launch { reactionScale.animateTo(1f, tween(180, easing = FastOutSlowInEasing)) }
                 }
 
-                EveMotionEffect.BOUNCE -> coroutineScope {
-                    launch {
-                        reactionY.animateTo(-jumpPx, tween(170, easing = FastOutSlowInEasing))
-                        reactionY.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
-                    }
-                    launch {
-                        reactionScale.animateTo(1.045f, tween(160, easing = FastOutSlowInEasing))
-                        reactionScale.animateTo(1f, tween(330, easing = FastOutSlowInEasing))
-                    }
+                EveMotionEffect.BOUNCE -> {
+                    reactionY.animateTo(-jumpPx, tween(170, easing = FastOutSlowInEasing))
+                    reactionY.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
                 }
 
                 EveMotionEffect.WIGGLE -> {
-                    reactionRotation.snapTo(0f)
-                    for (target in listOf(7f, -7f, 5f, -5f, 2.5f, 0f)) {
-                        reactionRotation.animateTo(target, tween(95))
+                    reactionX.snapTo(0f)
+                    val wigglePx = driftPx * 0.72f
+                    for (target in listOf(wigglePx, -wigglePx, wigglePx * 0.65f, -wigglePx * 0.65f, 0f)) {
+                        reactionX.animateTo(target, tween(95))
                     }
                 }
 
-                EveMotionEffect.SAD_SETTLE -> coroutineScope {
-                    launch { reactionY.animateTo(sleepySettlePx, tween(460, easing = FastOutSlowInEasing)) }
-                    launch { reactionScale.animateTo(0.97f, tween(460, easing = FastOutSlowInEasing)) }
+                EveMotionEffect.SAD_SETTLE -> {
+                    reactionY.animateTo(sleepySettlePx, tween(460, easing = FastOutSlowInEasing))
                 }
             }
         }
@@ -375,16 +342,14 @@ internal fun EveHomeFloatingCompanion(
 
         Column(
             modifier = Modifier
-                .offset { IntOffset(x.value.roundToInt(), y.value.roundToInt()) }
+                .offset {
+                    IntOffset(
+                        (x.value + presenceX.value + reactionX.value).roundToInt(),
+                        (y.value + presenceY.value + reactionY.value).roundToInt(),
+                    )
+                }
                 .width(containerWidth)
                 .height(containerHeight)
-                .graphicsLayer {
-                    translationX = presenceX.value
-                    translationY = presenceY.value + reactionY.value
-                    rotationZ = presenceRotation.value + reactionRotation.value
-                    scaleX = presenceScale.value * reactionScale.value
-                    scaleY = presenceScale.value * reactionScale.value
-                }
                 .zIndex(50f),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
