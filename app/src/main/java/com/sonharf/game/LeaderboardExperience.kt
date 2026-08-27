@@ -84,7 +84,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     shape = CircleShape,
                     border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f)),
                 ) { Text("‹", fontSize = 28.sp, color = SonHarfCyan) }
-                Text(sh("LİG", "LEAGUE"), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 24.sp)
+                Text(sh("MÜHÜR LİGLERİ", "SEAL LEAGUES"), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 22.sp)
                 Spacer(Modifier.size(42.dp))
             }
         }
