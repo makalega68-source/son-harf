@@ -60,6 +60,15 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
     val requestedMotion = MascotRuntime.motion
     val inActiveMatch = MascotRuntime.inActiveMatch
     val level = MascotRuntime.playerLevel
+    val reactionNonce = MascotRuntime.reactionNonce
+    val reactionDurationMs = MascotRuntime.reactionDurationMs
+
+    LaunchedEffect(reactionNonce) {
+        if (reactionNonce <= 0 || reactionDurationMs <= 0L) return@LaunchedEffect
+        SonHarfPreferences.hapticTap(context)
+        delay(reactionDurationMs)
+        MascotRuntime.clearTransientReaction(reactionNonce)
+    }
 
     LaunchedEffect(Unit) {
         MascotRuntime.rename(preferences.getString("name", "Dostum") ?: "Dostum")
@@ -211,23 +220,25 @@ internal fun Mascot3DLayer(modifier: Modifier = Modifier) {
             }
         }
 
-        Surface(
-            onClick = {
-                renameDraft = MascotRuntime.petName
-                renameOpen = true
-                MascotRuntime.react(MascotMotion.LOOK_AT_PLAYER)
-            },
-            modifier = Modifier.offset(x = x, y = (y - 24.dp).coerceAtLeast(0.dp)),
-            tonalElevation = 2.dp,
-            shadowElevation = 2.dp,
-        ) {
-            Text(
-                text = "${MascotRuntime.petName}  •  Lv $level",
-                modifier = Modifier.offset(x = 8.dp).size(width = viewport - 16.dp, height = 22.dp),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-            )
+        if (!inActiveMatch) {
+            Surface(
+                onClick = {
+                    renameDraft = MascotRuntime.petName
+                    renameOpen = true
+                    MascotRuntime.react(MascotMotion.LOOK_AT_PLAYER)
+                },
+                modifier = Modifier.offset(x = x, y = (y - 24.dp).coerceAtLeast(0.dp)),
+                tonalElevation = 2.dp,
+                shadowElevation = 2.dp,
+            ) {
+                Text(
+                    text = "${MascotRuntime.petName}  •  Lv $level",
+                    modifier = Modifier.offset(x = 8.dp).size(width = viewport - 16.dp, height = 22.dp),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
+            }
         }
 
         val message = MascotRuntime.message

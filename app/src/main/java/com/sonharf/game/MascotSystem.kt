@@ -11,6 +11,7 @@ import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.postgrest.from
+import java.time.Instant
 import kotlinx.coroutines.delay
 
 internal enum class MascotMotion {
@@ -26,6 +27,48 @@ internal enum class MascotMotion {
     DEFEAT,
     SIT,
     RUN,
+}
+internal enum class MascotMatchEvent {
+    WORD_CORRECT,
+    STRONG_WORD,
+    STREAK_3,
+    TIME_LOW,
+    OPPONENT_MISTAKE,
+    MATCH_WIN,
+    MATCH_LOSE,
+}
+
+internal data class MascotMatchReaction(
+    val motion: MascotMotion,
+    val trMessage: String,
+    val enMessage: String,
+    val durationMs: Long,
+)
+
+internal object MascotMatchReactionRegistry {
+    fun definition(event: MascotMatchEvent): MascotMatchReaction = when (event) {
+        MascotMatchEvent.WORD_CORRECT -> MascotMatchReaction(
+            MascotMotion.LOOK_AT_PLAYER, "Güzel!", "Nice!", 1100L,
+        )
+        MascotMatchEvent.STRONG_WORD -> MascotMatchReaction(
+            MascotMotion.GREETING, "Harika kelime!", "Great word!", 1400L,
+        )
+        MascotMatchEvent.STREAK_3 -> MascotMatchReaction(
+            MascotMotion.VICTORY, "3'lü seri! Devam!", "3-word streak! Keep going!", 1650L,
+        )
+        MascotMatchEvent.TIME_LOW -> MascotMatchReaction(
+            MascotMotion.CRITICAL, "Hızlan! Süre azalıyor.", "Hurry! Time is running out.", 1800L,
+        )
+        MascotMatchEvent.OPPONENT_MISTAKE -> MascotMatchReaction(
+            MascotMotion.LOOK_AT_PLAYER, "Fırsat!", "Chance!", 1050L,
+        )
+        MascotMatchEvent.MATCH_WIN -> MascotMatchReaction(
+            MascotMotion.VICTORY, "Kazandık! Harikasın!", "We won! Great job!", 2600L,
+        )
+        MascotMatchEvent.MATCH_LOSE -> MascotMatchReaction(
+            MascotMotion.DEFEAT, "Tekrar deneriz.", "We'll try again.", 2300L,
+        )
+    }
 }
 
 internal data class MascotAnimationDef(
@@ -78,6 +121,10 @@ internal object MascotRuntime {
         private set
     var inActiveMatch by mutableStateOf(false)
         private set
+    var reactionNonce by mutableIntStateOf(0)
+        private set
+    var reactionDurationMs by mutableStateOf(0L)
+        private set
 
     fun rename(value: String) {
         val clean = value.trim().take(18)
@@ -97,6 +144,22 @@ internal object MascotRuntime {
         val allowed = MascotAnimationRegistry.definition(next).unlockLevel <= playerLevel
         motion = if (allowed) next else MascotMotion.IDLE
         message = localizedMessage(motion, language)
+    }
+    fun reactMatch(event: MascotMatchEvent, language: String = SonHarfUiState.language) {
+        val reaction = MascotMatchReactionRegistry.definition(event)
+        val allowed = MascotAnimationRegistry.definition(reaction.motion).unlockLevel <= playerLevel
+        motion = if (allowed) reaction.motion else MascotMotion.IDLE
+        val en = language == "en"
+        message = if (en) reaction.enMessage else reaction.trMessage
+        reactionDurationMs = reaction.durationMs
+        reactionNonce += 1
+    }
+
+    fun clearTransientReaction(expectedNonce: Int) {
+        if (expectedNonce != reactionNonce) return
+        reactionDurationMs = 0L
+        motion = MascotMotion.IDLE
+        message = ""
     }
 
     private fun localizedMessage(motion: MascotMotion, language: String): String {
@@ -128,62 +191,148 @@ internal fun MascotBehaviorBridge() {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var lastReactionKey by remember { mutableStateOf("") }
 
-    LaunchedEffect(Unit) {
-        MascotRuntime.react(MascotMotion.GREETING)
-        delay(2200)
-        MascotRuntime.react(MascotMotion.IDLE)
-    }
-
     LaunchedEffect(backend) {
+        var previousRoom: GameRoomDto? = null
         while (true) {
             runCatching {
                 val b = backend ?: run {
                     MascotRuntime.setMatchActive(false)
+                    previousRoom = null
                     return@runCatching
                 }
                 val me = b.currentUserId() ?: run {
                     MascotRuntime.setMatchActive(false)
+                    previousRoom = null
                     return@runCatching
                 }
 
                 val growth = b.getGrowthDashboard()
                 MascotRuntime.syncProgress(growth.xp, growth.level)
 
-                val active = SupabaseProvider.client
+                val rooms = SupabaseProvider.client
                     .from("game_rooms")
                     .select()
                     .decodeList<GameRoomDto>()
-                    .filter {
-                        (it.hostId == me || it.guestId == me) &&
-                            it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused", "finished")
-                    }
+                    .filter { it.hostId == me || it.guestId == me }
+
+                // Never let an old finished match shadow a new live match.
+                // A finished room is observed only when it is the room we were already tracking,
+                // which gives EVE one safe result reaction without replaying historical results.
+                val liveRoom = rooms
+                    .filter { it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused") }
                     .maxByOrNull { it.validWordCount }
+                val active = liveRoom ?: previousRoom?.let { previous ->
+                    rooms.firstOrNull { it.id == previous.id && it.status == "finished" }
+                }
 
                 if (active == null) {
                     MascotRuntime.setMatchActive(false)
-                    if (lastReactionKey != "idle-${growth.level}-${growth.xp}") {
-                        lastReactionKey = "idle-${growth.level}-${growth.xp}"
+                    previousRoom = null
+                    val idleKey = "idle-${growth.level}-${growth.xp}"
+                    if (lastReactionKey != idleKey) {
+                        lastReactionKey = idleKey
                         MascotRuntime.react(MascotMotion.IDLE)
                     }
                     return@runCatching
                 }
 
                 MascotRuntime.setMatchActive(active.status != "finished")
-                val key = "${active.id}-${active.status}-${active.currentPlayerId}-${active.winnerId}-${active.finalMovesRemaining}-${active.validWordCount}"
-                if (key == lastReactionKey) return@runCatching
-                lastReactionKey = key
+
+                val host = active.hostId == me
+                val myScore = if (host) active.hostScore else active.guestScore
+                val myStreak = if (host) active.hostStreak else active.guestStreak
+                val previousSameRoom = previousRoom?.takeIf { it.id == active.id }
+                val previousMyScore = previousSameRoom?.let { if (host) it.hostScore else it.guestScore } ?: myScore
+                val previousMyStreak = previousSameRoom?.let { if (host) it.hostStreak else it.guestStreak } ?: myStreak
+                val secondsLeft = active.turnDeadline?.let { deadline ->
+                    runCatching {
+                        (Instant.parse(deadline).epochSecond - Instant.now().epochSecond)
+                            .toInt()
+                            .coerceAtLeast(0)
+                    }.getOrNull()
+                }
+
+                val failedEvents = setOf(
+                    "word_already_used",
+                    "wrong_start_letter",
+                    "not_in_dictionary",
+                    "invalid_word",
+                    "turn_expired",
+                )
+
+                val wordAdvanced = previousSameRoom != null &&
+                    active.validWordCount > previousSameRoom.validWordCount
+                val myAcceptedWord = wordAdvanced &&
+                    (active.lastEvent == null || active.lastEvent !in failedEvents) &&
+                    (active.lastEventPlayerId == me || myScore > previousMyScore)
+                val opponentFailed = previousSameRoom != null &&
+                    active.lastEventPlayerId != null &&
+                    active.lastEventPlayerId != me &&
+                    active.lastEvent in failedEvents &&
+                    (
+                        active.lastEvent != previousSameRoom.lastEvent ||
+                            active.lastEventPlayerId != previousSameRoom.lastEventPlayerId ||
+                            active.currentPlayerId != previousSameRoom.currentPlayerId
+                    )
+
+                val reactionKey: String
+                val reaction: () -> Unit
 
                 when {
-                    active.status == "finished" && active.winnerId == me ->
-                        MascotRuntime.react(MascotMotion.VICTORY, active.language)
-                    active.status == "finished" && active.winnerId != null && active.winnerId != me ->
-                        MascotRuntime.react(MascotMotion.DEFEAT, active.language)
-                    active.status in listOf("final", "sudden_death") || active.finalMovesRemaining in 1..2 ->
-                        MascotRuntime.react(MascotMotion.CRITICAL, active.language)
-                    active.currentPlayerId == me && active.status in listOf("playing", "final", "sudden_death") ->
-                        MascotRuntime.react(MascotMotion.THINKING, active.language)
-                    else -> MascotRuntime.react(MascotMotion.IDLE, active.language)
+                    active.status == "finished" && active.winnerId == me -> {
+                        reactionKey = "result-${active.id}-win-${active.winnerId}"
+                        reaction = { MascotRuntime.reactMatch(MascotMatchEvent.MATCH_WIN, active.language) }
+                    }
+                    active.status == "finished" && active.winnerId != null && active.winnerId != me -> {
+                        reactionKey = "result-${active.id}-lose-${active.winnerId}"
+                        reaction = { MascotRuntime.reactMatch(MascotMatchEvent.MATCH_LOSE, active.language) }
+                    }
+                    active.currentPlayerId == me &&
+                        active.status in listOf("playing", "final", "sudden_death") &&
+                        secondsLeft != null &&
+                        secondsLeft in 1..10 -> {
+                        reactionKey = "time-low-${active.id}-${active.turnDeadline}"
+                        reaction = { MascotRuntime.reactMatch(MascotMatchEvent.TIME_LOW, active.language) }
+                    }
+                    myAcceptedWord && myStreak == 3 && previousMyStreak < 3 -> {
+                        reactionKey = "streak3-${active.id}-${active.validWordCount}"
+                        reaction = { MascotRuntime.reactMatch(MascotMatchEvent.STREAK_3, active.language) }
+                    }
+                    myAcceptedWord && (
+                        active.lastEvent == "streak_bonus" ||
+                            myScore - previousMyScore >= 6
+                        ) -> {
+                        reactionKey = "strong-${active.id}-${active.validWordCount}"
+                        reaction = { MascotRuntime.reactMatch(MascotMatchEvent.STRONG_WORD, active.language) }
+                    }
+                    myAcceptedWord -> {
+                        reactionKey = "word-${active.id}-${active.validWordCount}"
+                        reaction = { MascotRuntime.reactMatch(MascotMatchEvent.WORD_CORRECT, active.language) }
+                    }
+                    opponentFailed -> {
+                        reactionKey = "opponent-fail-${active.id}-${active.lastEvent}-${active.currentPlayerId}"
+                        reaction = { MascotRuntime.reactMatch(MascotMatchEvent.OPPONENT_MISTAKE, active.language) }
+                    }
+                    active.status in listOf("final", "sudden_death") || active.finalMovesRemaining in 1..2 -> {
+                        reactionKey = "critical-${active.id}-${active.status}-${active.finalMovesRemaining}"
+                        reaction = { MascotRuntime.react(MascotMotion.CRITICAL, active.language) }
+                    }
+                    active.currentPlayerId == me &&
+                        active.status in listOf("playing", "final", "sudden_death") -> {
+                        reactionKey = "thinking-${active.id}-${active.currentPlayerId}-${active.turnDeadline}"
+                        reaction = { MascotRuntime.react(MascotMotion.THINKING, active.language) }
+                    }
+                    else -> {
+                        reactionKey = "idle-${active.id}-${active.status}-${active.currentPlayerId}"
+                        reaction = { MascotRuntime.react(MascotMotion.IDLE, active.language) }
+                    }
                 }
+
+                if (reactionKey != lastReactionKey) {
+                    lastReactionKey = reactionKey
+                    reaction()
+                }
+                previousRoom = active
             }
             delay(1200)
         }
