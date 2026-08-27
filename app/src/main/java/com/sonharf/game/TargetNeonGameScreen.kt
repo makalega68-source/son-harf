@@ -131,6 +131,7 @@ fun TargetNeonGameScreen() {
                 playerName = profile?.displayName ?: "Oyuncu",
                 language = language,
                 matching = matching,
+                busy = busy,
                 notice = notice,
                 privateCode = privateCode,
                 showPrivate = showPrivate,
@@ -163,7 +164,18 @@ fun TargetNeonGameScreen() {
         } else {
             val me = backend.currentUserId()
             LaunchedEffect(active.currentPlayerId, active.validWordCount, active.roundNo) { wordInput = "" }
-            LaunchedEffect(active.id) { while (true) { if (!active.isBot && active.status != "waiting") runCatching { backend.heartbeatRoom(active.id) }.onSuccess { room = it }; delay(5000) } }
+            LaunchedEffect(active.id, active.status, active.isBot) {
+                while (room?.id == active.id) {
+                    val current = room ?: break
+                    if (current.status == "finished" || current.status == "cancelled") break
+                    if (!current.isBot && current.status != "waiting") {
+                        runCatching { backend.heartbeatRoom(current.id) }
+                            .onSuccess { room = it }
+                            .onFailure { notice = friendly(it.message.orEmpty()) }
+                    }
+                    delay(5000)
+                }
+            }
             LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount) {
                 if (active.isBot && active.botTurn && active.status in listOf("playing", "final", "sudden_death")) {
                     delay(1500L + (active.validWordCount % 4) * 300L)
@@ -216,8 +228,26 @@ fun TargetNeonGameScreen() {
                     }
                 },
                 onSendChat = { text -> scope.launch { runCatching { backend.sendChat(active.id, text) }.onFailure { notice = friendly(it.message.orEmpty()) } } },
-                onExit = { roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); room = null; words = emptyList(); chatMessages = emptyList(); notice = "Yeni düelloya hazırsın" },
-                onRematch = { scope.launch { runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }.onSuccess { room = it; words = emptyList(); if (it.id != active.id) observe(it) } } },
+                onExit = {
+                    matching = false
+                    matchJob?.cancel()
+                    roomJob?.cancel()
+                    wordsJob?.cancel()
+                    chatJob?.cancel()
+                    room = null
+                    words = emptyList()
+                    chatMessages = emptyList()
+                    notice = sh("Yeni düelloya hazırsın", "Ready for a new duel")
+                },
+                onRematch = {
+                    scope.launch {
+                        busy = true
+                        runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }
+                            .onSuccess { room = it; words = emptyList(); if (it.id != active.id) observe(it) }
+                            .onFailure { notice = friendly(it.message.orEmpty()) }
+                        busy = false
+                    }
+                },
             )
         }
     }
@@ -228,6 +258,7 @@ private fun TargetLobby(
     playerName: String,
     language: String,
     matching: Boolean,
+    busy: Boolean,
     notice: String,
     privateCode: String,
     showPrivate: Boolean,
@@ -271,15 +302,15 @@ private fun TargetLobby(
                     FilterChip(selected = language == "en", onClick = { onLanguage("en") }, label = { Text("🇬🇧 ENGLISH", maxLines = 1) }, modifier = Modifier.weight(1f))
                 }
                 if (!showPrivate) {
-                    Button(onClick = onRandom, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(17.dp)) { Text("HEMEN OYNA", fontSize = 17.sp, fontWeight = FontWeight.Black) }
+                    Button(onClick = onRandom, enabled = !busy, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(17.dp)) { Text(if (busy) "…" else "HEMEN OYNA", fontSize = 17.sp, fontWeight = FontWeight.Black) }
                 }
-                Button(onClick = onPrivateToggle, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = TGblue), shape = RoundedCornerShape(17.dp)) { Text(if (showPrivate) "ÖZEL ODAYI KAPAT" else "ODA KUR / ODAYA KATIL", fontWeight = FontWeight.Black, maxLines = 1) }
+                Button(onClick = onPrivateToggle, enabled = !busy, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = TGblue), shape = RoundedCornerShape(17.dp)) { Text(if (showPrivate) "ÖZEL ODAYI KAPAT" else "ODA KUR / ODAYA KATIL", fontWeight = FontWeight.Black, maxLines = 1) }
             }
             if (showPrivate) {
                 Card(modifier = Modifier.fillMaxWidth().weight(1f, fill = false), colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .45f))) {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("ÖZEL ODA", color = TGtext, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
-                        Button(onClick = onCreate, modifier = Modifier.fillMaxWidth().height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = TGpurple)) { Text("VIP ODA OLUŞTUR", fontWeight = FontWeight.Black, maxLines = 1) }
+                        Button(onClick = onCreate, enabled = !busy, modifier = Modifier.fillMaxWidth().height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = TGpurple)) { Text(if (busy) "…" else "VIP ODA OLUŞTUR", fontWeight = FontWeight.Black, maxLines = 1) }
                         OutlinedTextField(
                             privateCode,
                             onPrivateCode,
@@ -289,7 +320,7 @@ private fun TargetLobby(
                             placeholder = { Text("6 haneli kod") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done),
                         )
-                        OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6, modifier = Modifier.fillMaxWidth().height(46.dp)) { Text("KATIL / ONAYLA", fontWeight = FontWeight.Black) }
+                        OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6 && !busy, modifier = Modifier.fillMaxWidth().height(46.dp)) { Text(if (busy) "…" else "KATIL / ONAYLA", fontWeight = FontWeight.Black) }
                     }
                 }
             }
@@ -349,7 +380,7 @@ private fun TargetArena(
     var chatInput by remember { mutableStateOf("") }
     var confirmForfeit by remember { mutableStateOf(false) }
     DisposableEffect(room.id) { SonHarfUiState.inMatch = true; onDispose { SonHarfUiState.inMatch = false } }
-    BackHandler { confirmForfeit = true }
+    BackHandler(enabled = room.status != "finished") { confirmForfeit = true }
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
         while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
@@ -360,6 +391,7 @@ private fun TargetArena(
     }
 
     if (room.status == "finished") {
+        BackHandler { onExit() }
         Box(Modifier.fillMaxSize().background(TGbg), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(sh("MAÇ TAMAMLANDI", "MATCH FINISHED"), color = TGtext, fontWeight = FontWeight.Black, fontSize = 24.sp)
@@ -419,12 +451,7 @@ private fun TargetArena(
             }
         }
 
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            TargetPower("💡", "JOKER", "3", TGgold, Modifier.weight(1f))
-            TargetPower("⤨", "KARIŞTIR", "2", TGcyan, Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             VipLockedAction("💬 SOHBET", isVip, { showChat = true }, { showVipNotice = true }, Modifier.weight(1f))
             VipLockedAction("⛓ KELİME ZİNCİRİ", isVip, { showChain = true }, { showVipNotice = true }, Modifier.weight(1f))
