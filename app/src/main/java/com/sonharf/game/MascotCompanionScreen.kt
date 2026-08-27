@@ -278,11 +278,37 @@ private fun MascotChatPanel(
             }
         }
     }
+    val memoryNotes = remember(mascotId) {
+        mutableStateListOf<String>().apply {
+            addAll(
+                prefs.getString("memory_notes", "")
+                    .orEmpty()
+                    .lineSequence()
+                    .map { it.trim() }
+                    .filter { it.isNotBlank() }
+                    .take(12)
+                    .toList()
+            )
+        }
+    }
     var input by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
 
+    val daySeed = remember { java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR) }
+    val dailyQuest = remember(character.key, daySeed, playerName) {
+        val seed = kotlin.math.abs(character.key.hashCode() + daySeed)
+        when (seed % 3) {
+            0 -> sh("Bugün 1 düello kazan; bir hafıza kıvılcımını uyandır.", "Win 1 duel today and awaken a memory spark.")
+            1 -> sh("Bugün 3 düelloyu tamamla; Söz Dokusu’nun ritmini koru.", "Complete 3 duels today and keep the rhythm of the Word Weave.")
+            else -> sh("Bugün 2 düello kazan; mühür yankısını güçlendir.", "Win 2 duels today and strengthen the seal echo.")
+        }
+    }
+
     fun persist() {
-        prefs.edit().putString("history", json.encodeToString(serializer, history.takeLast(30))).apply()
+        prefs.edit()
+            .putString("history", json.encodeToString(serializer, history.takeLast(30)))
+            .putString("memory_notes", memoryNotes.takeLast(12).joinToString("\n"))
+            .apply()
     }
 
     fun send() {
@@ -304,7 +330,8 @@ private fun MascotChatPanel(
                     companionName = companionName,
                     gameContext = progress?.let {
                         val record = profile?.let { p -> " Player record: " + p.wins + " wins, " + p.losses + " losses." }.orEmpty()
-                        "Mascot level " + it.level + "; XP " + it.totalXp + "; memory fragments " + it.memoryFragments + "/120; fullness " + it.fullness + "; happiness " + it.happiness + "." + record
+                        val memories = if (memoryNotes.isEmpty()) "" else " Stable remembered notes: " + memoryNotes.joinToString(" | ")
+                        "Mascot level " + it.level + "; XP " + it.totalXp + "; memory fragments " + it.memoryFragments + "/120; fullness " + it.fullness + "; happiness " + it.happiness + "." + record + memories
                     },
                     mascotId = mascotId,
                     mascotTitle = if (SonHarfUiState.isEnglish) character.titleEn else character.titleTr,
@@ -313,6 +340,12 @@ private fun MascotChatPanel(
                 )
             )
             history += MascotChatTurn("assistant", response.reply)
+            response.memoryNote?.trim()?.takeIf { it.length in 3..180 }?.let { note ->
+                if (note !in memoryNotes) {
+                    memoryNotes += note
+                    while (memoryNotes.size > 12) memoryNotes.removeAt(0)
+                }
+            }
             persist()
             MascotRuntime.react(
                 when (response.mood) {
@@ -341,6 +374,17 @@ private fun MascotChatPanel(
             color = LetharaPalette.Muted,
             fontSize = 9.sp,
         )
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = LetharaPalette.Gold.copy(alpha = .09f),
+            border = BorderStroke(1.dp, LetharaPalette.Gold.copy(alpha = .25f)),
+        ) {
+            Column(Modifier.padding(horizontal = 11.dp, vertical = 8.dp)) {
+                Text(sh("BUGÜNÜN MÜHÜR GÖREVİ", "TODAY'S SEAL QUEST"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                Text(dailyQuest, color = LetharaPalette.Text, fontSize = 10.sp, lineHeight = 14.sp)
+            }
+        }
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 10.dp),
