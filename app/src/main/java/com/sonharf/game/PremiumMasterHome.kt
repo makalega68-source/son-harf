@@ -45,6 +45,10 @@ internal fun PremiumMasterHome(
     onLeague: () -> Unit,
     onShop: () -> Unit,
     onProfile: () -> Unit,
+    onGoals: () -> Unit = onHub,
+    onSeason: () -> Unit = onHub,
+    onWardrobe: () -> Unit = onProfile,
+    onNotifications: () -> Unit = onProfile,
 ) {
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -74,7 +78,7 @@ internal fun PremiumMasterHome(
             contentPadding = PaddingValues(horizontal = 13.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(11.dp),
         ) {
-            item { MasterProfileHeader(profile, growth, isAdmin, onProfile, onAdmin) }
+            item { MasterProfileHeader(profile, growth, isAdmin, onProfile, onAdmin, onNotifications) }
             item { MasterLeagueBanner(rating, leagueProgress, onLeague) }
             item { MasterLiveStrip(leaders.firstOrNull()?.displayName, streak) }
             item {
@@ -142,13 +146,13 @@ internal fun PremiumMasterHome(
                             reload()
                         }
                     }
-                    MasterSeasonCard(Modifier.weight(.65f), onHub)
+                    MasterSeasonCard(Modifier.weight(.65f), onSeason)
                 }
             }
             if (leaders.isNotEmpty()) item { MasterTopThree(leaders, onLeague) }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    MasterShortcut(Icons.Rounded.TrackChanges, sh("GÖREVLER", "GOALS"), 2, Modifier.weight(1f), onHub)
+                    MasterShortcut(Icons.Rounded.TrackChanges, sh("GÖREVLER", "GOALS"), 2, Modifier.weight(1f), onGoals)
                     MasterShortcut(Icons.Rounded.CardGiftcard, sh("GÜNLÜK ÖDÜL", "DAILY"), if (growth?.dailyClaimed == true) 0 else 1, Modifier.weight(1f)) {
                         val d = growth
                         if (d == null || d.dailyClaimed) return@MasterShortcut
@@ -156,7 +160,7 @@ internal fun PremiumMasterHome(
                     }
                     MasterShortcut(Icons.Rounded.EmojiEvents, sh("LİGLER", "LEAGUES"), 0, Modifier.weight(1f), onLeague)
                     MasterShortcut(Icons.Rounded.ShoppingCart, sh("MAĞAZA", "SHOP"), 0, Modifier.weight(1f), onShop)
-                    MasterShortcut(Icons.Rounded.Checkroom, sh("DOLABIM", "WARDROBE"), 0, Modifier.weight(1f), onProfile)
+                    MasterShortcut(Icons.Rounded.Checkroom, sh("DOLABIM", "WARDROBE"), 0, Modifier.weight(1f), onWardrobe)
                 }
             }
             item { Spacer(Modifier.height(8.dp)) }
@@ -165,7 +169,14 @@ internal fun PremiumMasterHome(
 }
 
 @Composable
-private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto?, isAdmin: Boolean, onProfile: () -> Unit, onAdmin: () -> Unit) {
+private fun MasterProfileHeader(
+    profile: ProfileDto?,
+    growth: GrowthDashboardDto?,
+    isAdmin: Boolean,
+    onProfile: () -> Unit,
+    onAdmin: () -> Unit,
+    onNotifications: () -> Unit,
+) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.clickable(onClick = onProfile)) {
             ProfilePhotoAvatarWithGender(
@@ -193,7 +204,7 @@ private fun MasterProfileHeader(profile: ProfileDto?, growth: GrowthDashboardDto
         Spacer(Modifier.width(5.dp))
         MasterWallet(Icons.Rounded.Diamond, "${profile?.diamonds ?: 0}", MasterBlue)
         Spacer(Modifier.width(5.dp))
-        Surface(onClick = if (isAdmin) onAdmin else ({}), shape = CircleShape, color = Color.White, border = BorderStroke(1.dp, MasterLine), modifier = Modifier.size(40.dp)) {
+        Surface(onClick = if (isAdmin) onAdmin else onNotifications, shape = CircleShape, color = Color.White, border = BorderStroke(1.dp, MasterLine), modifier = Modifier.size(40.dp)) {
             Box(contentAlignment = Alignment.Center) { Icon(if (isAdmin) Icons.Rounded.AdminPanelSettings else Icons.Rounded.Notifications, null, tint = MasterInk, modifier = Modifier.size(20.dp)) }
         }
     }
