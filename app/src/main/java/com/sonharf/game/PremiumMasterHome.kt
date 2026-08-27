@@ -87,10 +87,13 @@ internal fun PremiumMasterHome(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                // Eve itself is rendered once as the full-screen floating overlay.
-                                // Keep this measured gap so the blue card retains the approved layout
-                                // while the larger 3D companion can overlap its left edge.
-                                Spacer(Modifier.width(104.dp).fillMaxHeight())
+                                // Keep Eve inside the same LazyColumn item as the main game card.
+                                // She now scrolls with this content instead of floating over menus.
+                                EveHomeFixedCompanion(
+                                    modifier = Modifier
+                                        .width(104.dp)
+                                        .fillMaxHeight(),
+                                )
                                 MasterSonHarfCard(
                                     Modifier.weight(1f).fillMaxHeight(),
                                     profile?.displayName ?: sh("Sen", "You"),
@@ -109,8 +112,11 @@ internal fun PremiumMasterHome(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            // Single floating Eve is mounted above the app shell.
-                            Spacer(Modifier.width(132.dp).height(250.dp))
+                            EveHomeFixedCompanion(
+                                modifier = Modifier
+                                    .width(132.dp)
+                                    .height(250.dp),
+                            )
                             MasterSonHarfCard(
                                 Modifier.weight(1.18f),
                                 profile?.displayName ?: sh("Sen", "You"),
