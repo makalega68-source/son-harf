@@ -81,7 +81,18 @@ private fun RetentionGoalsPanel(backend: OnlineGameBackend?) {
                     LinearProgressIndicator(progress={g.progress.toFloat()/g.target.coerceAtLeast(1)},modifier=Modifier.fillMaxWidth())
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
                         Text("${g.progress.coerceAtMost(g.target)}/${g.target}",fontWeight=FontWeight.Bold)
-                        Button(onClick={scope.launch{busy=g.id;runCatching{backend?.claimGoal(g.id)}.onSuccess{notice=sh("Ödül alındı.","Reward claimed.");reload()}.onFailure{notice=sh("Ödül henüz hazır değil.","Reward is not ready yet.")};busy=null}},enabled=done&&!g.claimed&&busy==null){Text(if(g.claimed)sh("ALINDI","CLAIMED") else sh("TOPLA","CLAIM"))}
+                        Button(onClick={scope.launch{
+                            busy=g.id
+                            val b=backend
+                            if(b==null){
+                                notice=sh("Sunucu bağlantısı yok.","Server connection is unavailable.")
+                            }else{
+                                runCatching{b.claimGoal(g.id)}
+                                    .onSuccess{notice=sh("Ödül alındı.","Reward claimed.");reload()}
+                                    .onFailure{notice=sh("Ödül henüz hazır değil.","Reward is not ready yet.")}
+                            }
+                            busy=null
+                        }},enabled=done&&!g.claimed&&busy==null){Text(if(g.claimed)sh("ALINDI","CLAIMED") else sh("TOPLA","CLAIM"))}
                     }
                 }
             }
@@ -132,7 +143,7 @@ private fun RetentionGuidePanel(backend: OnlineGameBackend?) {
 
 @Composable
 private fun RetentionSettingsPanel(backend: OnlineGameBackend?) {
-    val context=LocalContext.current; val scope=rememberCoroutineScope(); var sound by remember{mutableStateOf(SonHarfPreferences.soundEnabled(context))};var vibration by remember{mutableStateOf(SonHarfPreferences.vibrationEnabled(context))};var dark by remember{mutableStateOf(SonHarfPreferences.darkModeEnabled(context))};var mode by remember{mutableStateOf(SonHarfGameModeState.mode)};var bot by remember{mutableStateOf(SonHarfPreferences.botDifficulty(context))}
+    val context=LocalContext.current; val scope=rememberCoroutineScope(); var sound by remember{mutableStateOf(SonHarfPreferences.soundEnabled(context))};var vibration by remember{mutableStateOf(SonHarfPreferences.vibrationEnabled(context))};var mode by remember{mutableStateOf(SonHarfGameModeState.mode)};var bot by remember{mutableStateOf(SonHarfPreferences.botDifficulty(context))}
     LaunchedEffect(Unit){runCatching{backend?.getPreferredGameMode()}.getOrNull()?.let{mode=it;SonHarfGameModeState.mode=it}}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         item{HubBanner("⚙",sh("OYUN AYARLARI","GAME SETTINGS"),sh("Her ayar anında uygulanır ve cihazında saklanır.","Every setting applies immediately and is saved on your device."),SonHarfCyan)}
@@ -140,7 +151,7 @@ private fun RetentionSettingsPanel(backend: OnlineGameBackend?) {
         item{SettingsCard(sh("Bot zorluğu","Bot difficulty")){Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("easy" to sh("KOLAY","EASY"),"normal" to sh("NORMAL","NORMAL"),"hard" to sh("ZOR","HARD")).forEach{(v,t)->FilterChip(selected=bot==v,onClick={bot=v;SonHarfPreferences.setBotDifficulty(context,v)},label={Text(t,fontSize=9.sp)})}};Text(sh("Kolay bot daha yavaş, zor bot daha hızlı cevap verir.","Easy bot replies slower; hard bot replies faster."),color=SonHarfMuted,fontSize=8.sp)}}
         item{ToggleSetting(sh("Ses efektleri","Sound effects"),sound){sound=it;SonHarfPreferences.setSoundEnabled(context,it)}}
         item{ToggleSetting(sh("Titreşim","Vibration"),vibration){vibration=it;SonHarfPreferences.setVibrationEnabled(context,it)}}
-        item{ToggleSetting(sh("Karanlık mod","Dark mode"),dark){dark=it;SonHarfPreferences.setDarkModeEnabled(context,it)}}
+        item{HubInfo("☀",sh("GÖRÜNÜM","APPEARANCE"),sh("Bu sürüm açık tema kullanıyor. Karanlık tema hazır olmadan yanıltıcı bir anahtar gösterilmiyor.","This build uses the light theme. A misleading dark-mode switch is hidden until the theme is implemented."))}
     }
 }
 
