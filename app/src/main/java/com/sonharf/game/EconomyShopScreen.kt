@@ -73,13 +73,29 @@ private fun EconomyCatalogScreen() {
     var showVip by remember { mutableStateOf(false) }
 
     suspend fun reload() {
-        val b = backend ?: return
-        val id = b.currentUserId() ?: return
-        profile = runCatching { b.getProfile(id) }.getOrNull()
-        items = runCatching { b.getShopItems() }.getOrDefault(emptyList())
-        owned = runCatching { b.getInventory() }.getOrDefault(emptySet())
-        equipped = runCatching { b.getEquippedCosmetics() }.getOrNull()
-        SonHarfCosmetics.apply(equipped)
+        val b = backend
+        if (b == null) {
+            notice = sh("Mağaza sunucu bağlantısı olmadan kullanılamaz.", "The shop requires a server connection.")
+            return
+        }
+        val id = b.currentUserId()
+        if (id == null) {
+            notice = sh("Oyuncu oturumu hazırlanamadı.", "Player session is not ready.")
+            return
+        }
+        runCatching {
+            val nextProfile = b.getProfile(id)
+            val nextItems = b.getShopItems()
+            val nextOwned = b.getInventory()
+            val nextEquipped = b.getEquippedCosmetics()
+            profile = nextProfile
+            items = nextItems
+            owned = nextOwned
+            equipped = nextEquipped
+            SonHarfCosmetics.apply(nextEquipped)
+        }.onFailure {
+            notice = sh("Mağaza verileri yüklenemedi.", "Shop data could not be loaded.")
+        }
     }
 
     LaunchedEffect(Unit) { loading = true; reload(); loading = false }
@@ -157,14 +173,19 @@ private fun EconomyCatalogScreen() {
                         Text(if (mine) sh("✓ SAHİPSİN", "✓ OWNED") else "◈ ${item.diamondPrice} SC", color = if (mine) SonHarfGreen else SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 15.sp)
                         Button(
                             onClick = {
+                                val b = backend
+                                if (b == null) {
+                                    notice = sh("Mağaza şu anda çevrimdışı.", "The shop is currently offline.")
+                                    return@Button
+                                }
                                 scope.launch {
                                     busy = item.id
                                     if (mine) {
-                                        runCatching { backend?.equipShopItem(item.id) }
+                                        runCatching { b.equipShopItem(item.id) }
                                             .onSuccess { notice = sh("${name} etkinleştirildi.", "$name equipped."); reload() }
                                             .onFailure { notice = sh("Style öğesi etkinleştirilemedi.", "Style item could not be equipped.") }
                                     } else {
-                                        runCatching { backend?.purchaseShopItem(item.id) }
+                                        runCatching { b.purchaseShopItem(item.id) }
                                             .onSuccess { notice = sh("Satın alma tamamlandı. Şimdi kullanabilirsin.", "Purchase complete. You can equip it now."); reload() }
                                             .onFailure {
                                                 val raw = it.message.orEmpty()
