@@ -1,0 +1,169 @@
+name: Final Mascot Runtime
+
+on:
+  push:
+    branches:
+      - integration/final-unified-20260827
+      - main
+    paths:
+      - '.github/workflows/final-mascot-runtime.yml'
+      - 'app/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  white-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Build tested debug APK
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace
+
+      - name: Enable KVM access for emulator
+        shell: bash
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            ls -l /dev/kvm
+          else
+            echo "::warning::/dev/kvm is unavailable; emulator may be slow"
+          fi
+
+      - name: Runtime render verified white mascot
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          cores: 4
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            mkdir -p artifacts/mascot-white
+            test -f app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell wm size 720x1600
+            adb shell wm density 280
+            adb logcat -c
+            adb shell am start -W -n com.sonharf.game/.MascotRuntimeSmokeActivity --es mascot_id mascot_white
+            timeout 20 sh -c "until adb logcat -d | grep -q 'MASCOT_RENDER_READY id=mascot_white clip=Idle'; do sleep 1; done"
+            sleep 2
+            adb exec-out screencap -p > artifacts/mascot-white/white-idle.png
+            adb logcat -d > artifacts/mascot-white/white-logcat.txt
+            grep -q 'MASCOT_ASSET_READY id=mascot_white ready=true' artifacts/mascot-white/white-logcat.txt
+            grep -q 'MASCOT_RENDER_READY id=mascot_white clip=Idle' artifacts/mascot-white/white-logcat.txt
+            test "$(stat -c%s artifacts/mascot-white/white-idle.png)" -gt 20000
+            ! grep -Eqi 'FATAL EXCEPTION|Fatal signal|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic' artifacts/mascot-white/white-logcat.txt
+            echo "WHITE_MASCOT_RUNTIME_PASS"
+
+      - name: Upload white runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-White-Mascot-Runtime-Evidence
+          path: artifacts/mascot-white/
+          if-no-files-found: warn
+          retention-days: 14
+
+  chibi-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Build tested debug APK
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace
+
+      - name: Enable KVM access for emulator
+        shell: bash
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            ls -l /dev/kvm
+          else
+            echo "::warning::/dev/kvm is unavailable; emulator may be slow"
+          fi
+
+      - name: Runtime render animated Chibi
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          cores: 4
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            mkdir -p artifacts/mascot-chibi
+            test -f app/build/outputs/apk/debug/app-debug.apk
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell wm size 720x1600
+            adb shell wm density 280
+            adb logcat -c
+            adb shell am start -W -n com.sonharf.game/.MascotRuntimeSmokeActivity --es mascot_id mascot_chibi_wizard
+            timeout 20 sh -c "until adb logcat -d | grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Idle'; do sleep 1; done"
+            sleep 2
+            adb exec-out screencap -p > artifacts/mascot-chibi/chibi-idle.png
+            timeout 20 sh -c "until adb logcat -d | grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Run'; do sleep 1; done"
+            sleep 1
+            adb exec-out screencap -p > artifacts/mascot-chibi/chibi-run.png
+            timeout 20 sh -c "until adb logcat -d | grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Special_Attack'; do sleep 1; done"
+            sleep 1
+            adb exec-out screencap -p > artifacts/mascot-chibi/chibi-victory.png
+            adb logcat -d > artifacts/mascot-chibi/chibi-logcat.txt
+            grep -q 'MASCOT_ASSET_READY id=mascot_chibi_wizard ready=true' artifacts/mascot-chibi/chibi-logcat.txt
+            grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Idle' artifacts/mascot-chibi/chibi-logcat.txt
+            grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Run' artifacts/mascot-chibi/chibi-logcat.txt
+            grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Special_Attack' artifacts/mascot-chibi/chibi-logcat.txt
+            ! grep -Eqi 'FATAL EXCEPTION|Fatal signal|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic' artifacts/mascot-chibi/chibi-logcat.txt
+            python3 -c "import hashlib,pathlib; p=[pathlib.Path('artifacts/mascot-chibi/chibi-idle.png'),pathlib.Path('artifacts/mascot-chibi/chibi-run.png'),pathlib.Path('artifacts/mascot-chibi/chibi-victory.png')]; assert all(x.stat().st_size>20000 for x in p), 'empty Chibi screenshot'; h=[hashlib.sha256(x.read_bytes()).hexdigest() for x in p]; pathlib.Path('artifacts/mascot-chibi/chibi-frame-sha256.txt').write_text('\\n'.join(h)+'\\n'); assert len(set(h))>=2, 'Chibi runtime frames are byte-identical'"
+            echo "CHIBI_MASCOT_RUNTIME_PASS"
+
+      - name: Upload Chibi runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-Chibi-Mascot-Runtime-Evidence
+          path: artifacts/mascot-chibi/
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload runtime-tested APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-Final-Unified-Runtime-Tested-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14

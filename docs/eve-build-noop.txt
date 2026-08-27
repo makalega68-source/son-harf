@@ -1,0 +1,1 @@
+CI gate should validate the real GLB.

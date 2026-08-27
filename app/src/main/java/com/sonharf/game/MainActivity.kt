@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
         SonHarfPreferences.syncUi(this)
         WordMeaningRuntime.init(this)
         RemoteExperience.loadCached(this)
-        if (SupabaseProvider.configured && !SonHarfPreferences.rememberLogin(this)) {
+        if (!BuildConfig.DEBUG && SupabaseProvider.configured && !SonHarfPreferences.rememberLogin(this)) {
             runBlocking { runCatching { SupabaseProvider.client.auth.signOut() } }
         }
         setContent {
@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
                 Box(Modifier.fillMaxSize()) {
                     GamePortalApp()
                     PrivateRoomWaitingLayer()
-                    FriendsQuickAccessOverlay()
+                    if (FriendsQuickAccessState.open) FriendsQuickAccessOverlay()
                     GameInviteOverlay()
                     FriendRequestOverlay()
                 }

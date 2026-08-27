@@ -3,12 +3,10 @@ package com.sonharf.game
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-// Kept for legacy HomeLobby.kt compile compatibility. The app no longer routes to that shell.
 internal val PortalBg = Color(0xFFF4FBFF)
 internal val PortalCard = Color.White
 internal val PortalText = Color(0xFF173B57)
@@ -18,23 +16,19 @@ internal val PortalGold = Color(0xFFFFC857)
 internal val PortalGreen = Color(0xFF32C985)
 internal val PortalRed = Color(0xFFFF7891)
 
-/** Single premium shell with a verified real-time skeletal 3D mascot layer. */
+/**
+ * Root shell for the active Son Harf product.
+ * Eve remains archived and is not started, rendered, or exposed by active navigation.
+ */
 @Composable
 fun GamePortalApp() {
     val context = LocalContext.current
-    LaunchedEffect(Unit) {
+
+    androidx.compose.runtime.LaunchedEffect(Unit) {
         RemoteExperience.refresh(context.applicationContext)
     }
 
     Box(Modifier.fillMaxSize()) {
         ClassicPremiumApp()
-        MascotBehaviorBridge()
-        if (
-            MascotRuntime.inActiveMatch ||
-            MascotRuntime.motion == MascotMotion.VICTORY ||
-            MascotRuntime.motion == MascotMotion.DEFEAT
-        ) {
-            Mascot3DLayer()
-        }
     }
 }

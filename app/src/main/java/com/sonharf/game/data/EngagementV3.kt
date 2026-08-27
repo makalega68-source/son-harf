@@ -1,0 +1,92 @@
+package com.sonharf.game.data
+
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
+
+@Serializable
+data class DailyCipherStatusDto(
+    @SerialName("challenge_date") val challengeDate: String,
+    val language: String,
+    val attempts: Int = 0,
+    @SerialName("max_attempts") val maxAttempts: Int = 6,
+    val guesses: List<String> = emptyList(),
+    val feedbacks: List<String> = emptyList(),
+    val won: Boolean = false,
+    val finished: Boolean = false,
+    val answer: String? = null,
+    @SerialName("reward_coins") val rewardCoins: Int = 0,
+)
+
+@Serializable
+data class MasteryMilestoneDto(
+    val id: String,
+    @SerialName("title_tr") val titleTr: String,
+    @SerialName("title_en") val titleEn: String,
+    @SerialName("description_tr") val descriptionTr: String,
+    @SerialName("description_en") val descriptionEn: String,
+    val progress: Int = 0,
+    val target: Int = 1,
+    @SerialName("reward_coins") val rewardCoins: Int = 0,
+    val unlocked: Boolean = false,
+    val claimed: Boolean = false,
+)
+
+@Serializable
+data class ArchRivalDto(
+    @SerialName("opponent_id") val opponentId: String,
+    @SerialName("display_name") val displayName: String,
+    val matches: Int = 0,
+    val wins: Int = 0,
+    val losses: Int = 0,
+    @SerialName("my_points") val myPoints: Int = 0,
+    @SerialName("their_points") val theirPoints: Int = 0,
+    @SerialName("last_played_at") val lastPlayedAt: String? = null,
+)
+
+@Serializable
+data class WeeklyPodRowDto(
+    @SerialName("global_rank") val globalRank: Int,
+    @SerialName("pod_rank") val podRank: Int,
+    @SerialName("user_id") val userId: String,
+    @SerialName("display_name") val displayName: String,
+    val wins: Int = 0,
+    val losses: Int = 0,
+    val rating: Int = 1000,
+    @SerialName("is_me") val isMe: Boolean = false,
+)
+
+suspend fun OnlineGameBackend.getDailyCipherStatus(language: String): DailyCipherStatusDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "get_daily_cipher_status_v1",
+        buildJsonObject { put("p_language", if (language.lowercase() == "en") "en" else "tr") },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.submitDailyCipherGuess(language: String, guess: String): DailyCipherStatusDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "submit_daily_cipher_guess_v1",
+        buildJsonObject {
+            put("p_language", if (language.lowercase() == "en") "en" else "tr")
+            put("p_guess", guess.trim())
+        },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.getMasteryPath(): List<MasteryMilestoneDto> =
+    SupabaseProvider.client.postgrest.rpc("get_mastery_path_v1").decodeList()
+
+suspend fun OnlineGameBackend.claimMasteryReward(milestoneId: String): Int =
+    SupabaseProvider.client.postgrest.rpc(
+        "claim_mastery_reward_v1",
+        buildJsonObject { put("p_milestone_id", milestoneId) },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.getArchRival(): ArchRivalDto? =
+    SupabaseProvider.client.postgrest.rpc("get_arch_rival_v1").decodeList<ArchRivalDto>().firstOrNull()
+
+suspend fun OnlineGameBackend.getWeeklyPod(language: String): List<WeeklyPodRowDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "get_weekly_pod_v1",
+        buildJsonObject { put("p_language", if (language.lowercase() == "en") "en" else "tr") },
+    ).decodeList()

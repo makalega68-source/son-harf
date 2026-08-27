@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,18 +23,37 @@ import kotlinx.coroutines.launch
 object SonHarfGameModeState { var mode by mutableStateOf("normal") }
 
 @Composable
-fun MetaHubScreen() {
+fun MetaHubScreen(
+    initialTab: Int = 0,
+    onBack: (() -> Unit)? = null,
+    onPlay: (() -> Unit)? = null,
+) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
-    var tab by remember { mutableIntStateOf(0) }
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 6)) }
     val labels = listOf(sh("Kariyer","Career"), sh("Sezon","Season"), sh("Görevler","Goals"), sh("Lig","League"), sh("Oyunlarım","Games"), sh("Rehber","Guide"), sh("Ayarlar","Settings"))
     Column(Modifier.fillMaxSize()) {
-        Text(sh("OYUNCU MERKEZİ","PLAYER HUB"),Modifier.padding(horizontal=16.dp,vertical=12.dp),fontSize=24.sp,fontWeight=FontWeight.Black)
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
+                }
+            }
+            Text(
+                sh("OYUNCU MERKEZİ","PLAYER HUB"),
+                Modifier.padding(horizontal=8.dp,vertical=6.dp),
+                fontSize=24.sp,
+                fontWeight=FontWeight.Black,
+            )
+        }
         ScrollableTabRow(selectedTabIndex=tab,edgePadding=8.dp,containerColor=SonHarfSurface) {
             labels.forEachIndexed { i,s -> Tab(selected=tab==i,onClick={tab=i},text={Text(s,fontSize=10.sp)}) }
         }
         Box(Modifier.weight(1f)) {
             when(tab){
-                0 -> GrowthCenterScreen()
+                0 -> GrowthCenterScreen(onPlay = onPlay)
                 1 -> MetaProgressV2Screen()
                 2 -> RetentionGoalsPanel(backend)
                 3 -> RetentionLeaguePanel(backend)
@@ -60,7 +81,18 @@ private fun RetentionGoalsPanel(backend: OnlineGameBackend?) {
                     LinearProgressIndicator(progress={g.progress.toFloat()/g.target.coerceAtLeast(1)},modifier=Modifier.fillMaxWidth())
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
                         Text("${g.progress.coerceAtMost(g.target)}/${g.target}",fontWeight=FontWeight.Bold)
-                        Button(onClick={scope.launch{busy=g.id;runCatching{backend?.claimGoal(g.id)}.onSuccess{notice=sh("Ödül alındı.","Reward claimed.");reload()}.onFailure{notice=sh("Ödül henüz hazır değil.","Reward is not ready yet.")};busy=null}},enabled=done&&!g.claimed&&busy==null){Text(if(g.claimed)sh("ALINDI","CLAIMED") else sh("TOPLA","CLAIM"))}
+                        Button(onClick={scope.launch{
+                            busy=g.id
+                            val b=backend
+                            if(b==null){
+                                notice=sh("Sunucu bağlantısı yok.","Server connection is unavailable.")
+                            }else{
+                                runCatching{b.claimGoal(g.id)}
+                                    .onSuccess{notice=sh("Ödül alındı.","Reward claimed.");reload()}
+                                    .onFailure{notice=sh("Ödül henüz hazır değil.","Reward is not ready yet.")}
+                            }
+                            busy=null
+                        }},enabled=done&&!g.claimed&&busy==null){Text(if(g.claimed)sh("ALINDI","CLAIMED") else sh("TOPLA","CLAIM"))}
                     }
                 }
             }
@@ -111,7 +143,7 @@ private fun RetentionGuidePanel(backend: OnlineGameBackend?) {
 
 @Composable
 private fun RetentionSettingsPanel(backend: OnlineGameBackend?) {
-    val context=LocalContext.current; val scope=rememberCoroutineScope(); var sound by remember{mutableStateOf(SonHarfPreferences.soundEnabled(context))};var vibration by remember{mutableStateOf(SonHarfPreferences.vibrationEnabled(context))};var dark by remember{mutableStateOf(SonHarfPreferences.darkModeEnabled(context))};var mode by remember{mutableStateOf(SonHarfGameModeState.mode)};var bot by remember{mutableStateOf(SonHarfPreferences.botDifficulty(context))}
+    val context=LocalContext.current; val scope=rememberCoroutineScope(); var sound by remember{mutableStateOf(SonHarfPreferences.soundEnabled(context))};var vibration by remember{mutableStateOf(SonHarfPreferences.vibrationEnabled(context))};var mode by remember{mutableStateOf(SonHarfGameModeState.mode)};var bot by remember{mutableStateOf(SonHarfPreferences.botDifficulty(context))}
     LaunchedEffect(Unit){runCatching{backend?.getPreferredGameMode()}.getOrNull()?.let{mode=it;SonHarfGameModeState.mode=it}}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(14.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
         item{HubBanner("⚙",sh("OYUN AYARLARI","GAME SETTINGS"),sh("Her ayar anında uygulanır ve cihazında saklanır.","Every setting applies immediately and is saved on your device."),SonHarfCyan)}
@@ -119,7 +151,7 @@ private fun RetentionSettingsPanel(backend: OnlineGameBackend?) {
         item{SettingsCard(sh("Bot zorluğu","Bot difficulty")){Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("easy" to sh("KOLAY","EASY"),"normal" to sh("NORMAL","NORMAL"),"hard" to sh("ZOR","HARD")).forEach{(v,t)->FilterChip(selected=bot==v,onClick={bot=v;SonHarfPreferences.setBotDifficulty(context,v)},label={Text(t,fontSize=9.sp)})}};Text(sh("Kolay bot daha yavaş, zor bot daha hızlı cevap verir.","Easy bot replies slower; hard bot replies faster."),color=SonHarfMuted,fontSize=8.sp)}}
         item{ToggleSetting(sh("Ses efektleri","Sound effects"),sound){sound=it;SonHarfPreferences.setSoundEnabled(context,it)}}
         item{ToggleSetting(sh("Titreşim","Vibration"),vibration){vibration=it;SonHarfPreferences.setVibrationEnabled(context,it)}}
-        item{ToggleSetting(sh("Karanlık mod","Dark mode"),dark){dark=it;SonHarfPreferences.setDarkModeEnabled(context,it)}}
+        item{HubInfo("☀",sh("GÖRÜNÜM","APPEARANCE"),sh("Bu sürüm açık tema kullanıyor. Karanlık tema hazır olmadan yanıltıcı bir anahtar gösterilmiyor.","This build uses the light theme. A misleading dark-mode switch is hidden until the theme is implemented."))}
     }
 }
 

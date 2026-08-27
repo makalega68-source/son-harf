@@ -161,11 +161,17 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var notice by remember { mutableStateOf("") }
     var inviteBusy by remember { mutableStateOf(false) }
+    var messageBusy by remember { mutableStateOf(false) }
     val me = backend.currentUserId()
 
     suspend fun reloadFriends() {
         loading = true
-        friends = runCatching { backend.getAcceptedFriendProfiles() }.getOrDefault(emptyList())
+        runCatching { backend.getAcceptedFriendProfiles() }
+            .onSuccess { friends = it }
+            .onFailure {
+                friends = emptyList()
+                notice = sh("Arkadaş listesi yüklenemedi.", "Friend list could not be loaded.")
+            }
         loading = false
     }
 
@@ -282,13 +288,25 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
                         )
                         Button(
                             onClick = {
-                                if (input.isBlank()) return@Button
-                                val outgoing = input
+                                val outgoing = input.trim()
+                                if (outgoing.isBlank() || messageBusy) return@Button
                                 input = ""
-                                scope.launch { runCatching { backend.sendDirectMessage(friend.id, outgoing) }; reloadMessages() }
+                                scope.launch {
+                                    messageBusy = true
+                                    runCatching { backend.sendDirectMessage(friend.id, outgoing) }
+                                        .onSuccess {
+                                            notice = ""
+                                            reloadMessages()
+                                        }
+                                        .onFailure {
+                                            input = outgoing
+                                            notice = sh("Mesaj gönderilemedi. Tekrar dene.", "Message could not be sent. Try again.")
+                                        }
+                                    messageBusy = false
+                                }
                             },
-                            enabled = input.isNotBlank(),
-                        ) { Text("➤") }
+                            enabled = input.isNotBlank() && !messageBusy,
+                        ) { Text(if (messageBusy) "…" else "➤") }
                     }
                 }
             }

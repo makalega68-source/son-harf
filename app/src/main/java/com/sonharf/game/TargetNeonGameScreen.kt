@@ -48,7 +48,7 @@ private val TGtext = Color(0xFF173B57)
 private val TGmuted = Color(0xFF6D879A)
 
 @Composable
-fun TargetNeonGameScreen() {
+fun TargetNeonGameScreen(autoStartMatchmaking: Boolean = false) {
     if (!SupabaseProvider.configured) {
         Box(Modifier.fillMaxSize().background(TGbg), contentAlignment = Alignment.Center) { Text("Sunucu bağlantısı yok", color = TGtext) }
         return
@@ -72,6 +72,7 @@ fun TargetNeonGameScreen() {
     var wordsJob by remember { mutableStateOf<Job?>(null) }
     var chatJob by remember { mutableStateOf<Job?>(null) }
     var matchJob by remember { mutableStateOf<Job?>(null) }
+    var autoStartConsumed by remember(autoStartMatchmaking) { mutableStateOf(false) }
 
     fun friendly(raw: String) = when {
         "not_your_turn" in raw -> "Sıra rakibinde."
@@ -115,6 +116,46 @@ fun TargetNeonGameScreen() {
         chatJob = scope.launch { backend.observeChat(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { chatMessages = it } }
     }
 
+    fun startRandomSearch() {
+        if (busy || matching || room != null) return
+        scope.launch {
+            busy = true
+            runCatching {
+                ensureProfile()
+                backend.startRandomMatchmaking(language)
+            }.onSuccess {
+                matching = true
+                notice = sh("Rakip aranıyor…", "Searching for an opponent…")
+            }.onFailure {
+                val old = runCatching { activeRoom() }.getOrNull()
+                if (old != null) {
+                    room = old
+                    observe(old)
+                } else {
+                    notice = friendly(it.message.orEmpty())
+                }
+            }
+            busy = false
+            if (matching && room == null) {
+                matchJob?.cancel()
+                matchJob = scope.launch {
+                    while (matching && room == null) {
+                        val found = runCatching { backend.pollRandomMatchmakingRoom() }.getOrNull()
+                        if (found != null) {
+                            room = found
+                            language = found.language
+                            SonHarfUiState.language = found.language
+                            observe(found)
+                            SonHarfSoundFx.softNotify()
+                            break
+                        }
+                        delay(800)
+                    }
+                }
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         busy = true
         runCatching { ensureProfile() }.onSuccess {
@@ -124,6 +165,13 @@ fun TargetNeonGameScreen() {
         busy = false
     }
 
+    LaunchedEffect(autoStartMatchmaking, profile?.id, room?.id, busy) {
+        if (autoStartMatchmaking && !autoStartConsumed && profile != null && room == null && !busy) {
+            autoStartConsumed = true
+            startRandomSearch()
+        }
+    }
+
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, TGbg, Color(0xFFE7F6FF))))) {
         val active = room
         if (active == null) {
@@ -131,31 +179,14 @@ fun TargetNeonGameScreen() {
                 playerName = profile?.displayName ?: "Oyuncu",
                 language = language,
                 matching = matching,
+                busy = busy,
                 notice = notice,
                 privateCode = privateCode,
                 showPrivate = showPrivate,
                 onLanguage = { next -> language = next; SonHarfUiState.language = next },
                 onPrivateCode = { privateCode = it.filter(Char::isLetterOrDigit).uppercase().take(6) },
                 onPrivateToggle = { showPrivate = !showPrivate },
-                onRandom = {
-                    scope.launch {
-                        busy = true
-                        runCatching { ensureProfile(); backend.startRandomMatchmaking(language) }
-                            .onSuccess { matching = true; notice = "Rakip aranıyor…" }
-                            .onFailure {
-                                val old = runCatching { activeRoom() }.getOrNull()
-                                if (old != null) { room = old; observe(old) } else notice = friendly(it.message.orEmpty())
-                            }
-                        busy = false
-                        if (matching) matchJob = launch {
-                            while (matching && room == null) {
-                                val found = runCatching { backend.pollRandomMatchmakingRoom() }.getOrNull()
-                                if (found != null) { room = found; language = found.language; SonHarfUiState.language = found.language; observe(found); SonHarfSoundFx.softNotify(); break }
-                                delay(800)
-                            }
-                        }
-                    }
-                },
+                onRandom = { startRandomSearch() },
                 onCancel = { scope.launch { matching = false; matchJob?.cancel(); runCatching { backend.cancelRandomMatchmaking() }; notice = "Eşleşme iptal edildi" } },
                 onCreate = { scope.launch { busy = true; runCatching { backend.createPrivateRoom(language) }.onSuccess { room = it; notice = "Özel oda oluşturuldu: ${it.code}"; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
                 onJoin = { scope.launch { busy = true; runCatching { backend.joinPrivateRoom(privateCode) }.onSuccess { room = it; language = it.language; SonHarfUiState.language = it.language; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
@@ -163,7 +194,18 @@ fun TargetNeonGameScreen() {
         } else {
             val me = backend.currentUserId()
             LaunchedEffect(active.currentPlayerId, active.validWordCount, active.roundNo) { wordInput = "" }
-            LaunchedEffect(active.id) { while (true) { if (!active.isBot && active.status != "waiting") runCatching { backend.heartbeatRoom(active.id) }.onSuccess { room = it }; delay(5000) } }
+            LaunchedEffect(active.id, active.status, active.isBot) {
+                while (room?.id == active.id) {
+                    val current = room ?: break
+                    if (current.status == "finished" || current.status == "cancelled") break
+                    if (!current.isBot && current.status != "waiting") {
+                        runCatching { backend.heartbeatRoom(current.id) }
+                            .onSuccess { room = it }
+                            .onFailure { notice = friendly(it.message.orEmpty()) }
+                    }
+                    delay(5000)
+                }
+            }
             LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount) {
                 if (active.isBot && active.botTurn && active.status in listOf("playing", "final", "sudden_death")) {
                     delay(1500L + (active.validWordCount % 4) * 300L)
@@ -199,6 +241,7 @@ fun TargetNeonGameScreen() {
                                     "word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "turn_expired"
                                 )
                                 notice = if (rejected) friendly(updated.lastEvent.orEmpty()) else "${submitted.uppercase()} kabul edildi"
+                                MascotRuntime.react(if (rejected) MascotMotion.DEFEAT else MascotMotion.VICTORY)
                             }
                             .onFailure { notice = friendly(it.message.orEmpty()) }
                         busy = false
@@ -216,8 +259,26 @@ fun TargetNeonGameScreen() {
                     }
                 },
                 onSendChat = { text -> scope.launch { runCatching { backend.sendChat(active.id, text) }.onFailure { notice = friendly(it.message.orEmpty()) } } },
-                onExit = { roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); room = null; words = emptyList(); chatMessages = emptyList(); notice = "Yeni düelloya hazırsın" },
-                onRematch = { scope.launch { runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }.onSuccess { room = it; words = emptyList(); if (it.id != active.id) observe(it) } } },
+                onExit = {
+                    matching = false
+                    matchJob?.cancel()
+                    roomJob?.cancel()
+                    wordsJob?.cancel()
+                    chatJob?.cancel()
+                    room = null
+                    words = emptyList()
+                    chatMessages = emptyList()
+                    notice = sh("Yeni düelloya hazırsın", "Ready for a new duel")
+                },
+                onRematch = {
+                    scope.launch {
+                        busy = true
+                        runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }
+                            .onSuccess { room = it; words = emptyList(); if (it.id != active.id) observe(it) }
+                            .onFailure { notice = friendly(it.message.orEmpty()) }
+                        busy = false
+                    }
+                },
             )
         }
     }
@@ -228,6 +289,7 @@ private fun TargetLobby(
     playerName: String,
     language: String,
     matching: Boolean,
+    busy: Boolean,
     notice: String,
     privateCode: String,
     showPrivate: Boolean,
@@ -271,15 +333,15 @@ private fun TargetLobby(
                     FilterChip(selected = language == "en", onClick = { onLanguage("en") }, label = { Text("🇬🇧 ENGLISH", maxLines = 1) }, modifier = Modifier.weight(1f))
                 }
                 if (!showPrivate) {
-                    Button(onClick = onRandom, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(17.dp)) { Text("HEMEN OYNA", fontSize = 17.sp, fontWeight = FontWeight.Black) }
+                    Button(onClick = onRandom, enabled = !busy, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(17.dp)) { Text(if (busy) "…" else "HEMEN OYNA", fontSize = 17.sp, fontWeight = FontWeight.Black) }
                 }
-                Button(onClick = onPrivateToggle, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = TGblue), shape = RoundedCornerShape(17.dp)) { Text(if (showPrivate) "ÖZEL ODAYI KAPAT" else "ODA KUR / ODAYA KATIL", fontWeight = FontWeight.Black, maxLines = 1) }
+                Button(onClick = onPrivateToggle, enabled = !busy, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = TGblue), shape = RoundedCornerShape(17.dp)) { Text(if (showPrivate) "ÖZEL ODAYI KAPAT" else "ODA KUR / ODAYA KATIL", fontWeight = FontWeight.Black, maxLines = 1) }
             }
             if (showPrivate) {
                 Card(modifier = Modifier.fillMaxWidth().weight(1f, fill = false), colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .45f))) {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text("ÖZEL ODA", color = TGtext, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
-                        Button(onClick = onCreate, modifier = Modifier.fillMaxWidth().height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = TGpurple)) { Text("VIP ODA OLUŞTUR", fontWeight = FontWeight.Black, maxLines = 1) }
+                        Button(onClick = onCreate, enabled = !busy, modifier = Modifier.fillMaxWidth().height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = TGpurple)) { Text(if (busy) "…" else "VIP ODA OLUŞTUR", fontWeight = FontWeight.Black, maxLines = 1) }
                         OutlinedTextField(
                             privateCode,
                             onPrivateCode,
@@ -289,7 +351,7 @@ private fun TargetLobby(
                             placeholder = { Text("6 haneli kod") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done),
                         )
-                        OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6, modifier = Modifier.fillMaxWidth().height(46.dp)) { Text("KATIL / ONAYLA", fontWeight = FontWeight.Black) }
+                        OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6 && !busy, modifier = Modifier.fillMaxWidth().height(46.dp)) { Text(if (busy) "…" else "KATIL / ONAYLA", fontWeight = FontWeight.Black) }
                     }
                 }
             }
@@ -348,21 +410,43 @@ private fun TargetArena(
     var showVipNotice by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
     var confirmForfeit by remember { mutableStateOf(false) }
-    DisposableEffect(room.id) { SonHarfUiState.inMatch = true; onDispose { SonHarfUiState.inMatch = false } }
-    BackHandler { confirmForfeit = true }
+    DisposableEffect(room.id) {
+        SonHarfUiState.inMatch = true
+        MascotRuntime.setMatchActive(true)
+        MascotRuntime.react(MascotMotion.IDLE)
+        onDispose {
+            SonHarfUiState.inMatch = false
+            MascotRuntime.setMatchActive(false)
+            MascotRuntime.react(MascotMotion.IDLE)
+        }
+    }
+    BackHandler(enabled = room.status != "finished") { confirmForfeit = true }
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
+        if (room.status in listOf("playing", "final", "sudden_death")) MascotRuntime.react(MascotMotion.IDLE)
         while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
             seconds = runCatching { (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0) }.getOrDefault(45)
+            if (myTurn && seconds in 1..5) MascotRuntime.react(MascotMotion.CRITICAL)
             if (seconds <= 0) { onTimeout(); break }
             delay(1000)
         }
     }
 
+    LaunchedEffect(room.status, room.winnerId) {
+        if (room.status == "finished") {
+            MascotRuntime.react(if (room.winnerId == me) MascotMotion.VICTORY else MascotMotion.DEFEAT)
+        }
+    }
+
     if (room.status == "finished") {
+        BackHandler { onExit() }
         Box(Modifier.fillMaxSize().background(TGbg), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(sh("MAÇ TAMAMLANDI", "MATCH FINISHED"), color = TGtext, fontWeight = FontWeight.Black, fontSize = 24.sp)
+                MascotLive3DStage(
+                    modifier = Modifier.size(width = 110.dp, height = 130.dp),
+                    motion = MascotRuntime.motion,
+                )
                 Text(sh("Sonuç özeti açılmazsa ana menüye güvenle dönebilirsin.", "If the result summary does not open, you can safely return home."), color = TGmuted, fontSize = 12.sp, textAlign = TextAlign.Center)
                 Button(onClick = onExit, colors = ButtonDefaults.buttonColors(containerColor = TGcyan)) {
                     Text(sh("ANA MENÜ", "HOME"), color = Color.White, fontWeight = FontWeight.Black)
@@ -384,8 +468,20 @@ private fun TargetArena(
         }
 
         Spacer(Modifier.height(14.dp))
-        Text("TUR ${room.roundNo}/3", color = TGtext, fontWeight = FontWeight.Black, fontSize = 13.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
-        Spacer(Modifier.height(12.dp))
+        Box(Modifier.fillMaxWidth().height(64.dp)) {
+            Text(
+                "TUR ${room.roundNo}/3",
+                color = TGtext,
+                fontWeight = FontWeight.Black,
+                fontSize = 13.sp,
+                modifier = Modifier.align(Alignment.Center),
+            )
+            MascotLive3DStage(
+                modifier = Modifier.align(Alignment.CenterEnd).size(width = 58.dp, height = 64.dp),
+                motion = MascotRuntime.motion,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
 
         Card(colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .35f))) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -419,12 +515,7 @@ private fun TargetArena(
             }
         }
 
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            TargetPower("💡", "JOKER", "3", TGgold, Modifier.weight(1f))
-            TargetPower("⤨", "KARIŞTIR", "2", TGcyan, Modifier.weight(1f))
-        }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             VipLockedAction("💬 SOHBET", isVip, { showChat = true }, { showVipNotice = true }, Modifier.weight(1f))
             VipLockedAction("⛓ KELİME ZİNCİRİ", isVip, { showChain = true }, { showVipNotice = true }, Modifier.weight(1f))

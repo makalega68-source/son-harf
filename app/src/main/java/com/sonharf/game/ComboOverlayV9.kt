@@ -54,7 +54,13 @@ private data class ActionRoomV9(
 )
 
 private data class ComboV9(val title: String, val color: Color)
-private fun comboV9(n: Int): ComboV9? = null
+private fun comboV9(n: Int): ComboV9? = when {
+    n >= 12 -> ComboV9("EFSANE SERİ!", SonHarfGold)
+    n >= 8 -> ComboV9("MÜTHİŞ SERİ!", SonHarfPink)
+    n >= 5 -> ComboV9("HARİKA SERİ!", SonHarfCyan)
+    n >= 3 -> ComboV9("SERİ!", SonHarfGreen)
+    else -> null
+}
 
 private data class ConfettiPiece(val x: Float, val delay: Float, val speed: Float, val size: Float, val angle: Float, val color: Color)
 

@@ -12,6 +12,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -27,13 +30,27 @@ import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
 
 @Composable
-fun EconomyShopScreen() {
-    var tab by remember { mutableIntStateOf(0) }
+fun EconomyShopScreen(
+    initialTab: Int = 0,
+    onBack: (() -> Unit)? = null,
+) {
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 1)) }
     Column(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))
         )
     ) {
+        if (onBack != null) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
+                }
+                Text(sh("MAĞAZA", "SHOP"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+            }
+        }
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("STYLE", "STYLE")) }, modifier = Modifier.weight(1f))
             FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("ÜCRETSİZ ÖDÜLLER", "FREE REWARDS")) }, modifier = Modifier.weight(1f))
@@ -44,6 +61,7 @@ fun EconomyShopScreen() {
 
 @Composable
 private fun EconomyCatalogScreen() {
+    val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -57,13 +75,30 @@ private fun EconomyCatalogScreen() {
     var showVip by remember { mutableStateOf(false) }
 
     suspend fun reload() {
-        val b = backend ?: return
-        val id = b.currentUserId() ?: return
-        profile = runCatching { b.getProfile(id) }.getOrNull()
-        items = runCatching { b.getShopItems() }.getOrDefault(emptyList())
-        owned = runCatching { b.getInventory() }.getOrDefault(emptySet())
-        equipped = runCatching { b.getEquippedCosmetics() }.getOrNull()
-        SonHarfCosmetics.apply(equipped)
+        val b = backend
+        if (b == null) {
+            notice = sh("Mağaza sunucu bağlantısı olmadan kullanılamaz.", "The shop requires a server connection.")
+            return
+        }
+        val id = b.currentUserId()
+        if (id == null) {
+            notice = sh("Oyuncu oturumu hazırlanamadı.", "Player session is not ready.")
+            return
+        }
+        runCatching {
+            val nextProfile = b.getProfile(id)
+            val nextItems = b.getShopItems()
+            val nextOwned = b.getInventory()
+            val nextEquipped = b.getEquippedCosmetics()
+            profile = nextProfile
+            items = nextItems
+            owned = nextOwned
+            equipped = nextEquipped
+            SonHarfCosmetics.apply(nextEquipped)
+            MascotSelectionRuntime.select(context, nextEquipped?.mascotId ?: MascotCatalog.DEFAULT_ID)
+        }.onFailure {
+            notice = sh("Mağaza verileri yüklenemedi.", "Shop data could not be loaded.")
+        }
     }
 
     LaunchedEffect(Unit) { loading = true; reload(); loading = false }
@@ -75,6 +110,7 @@ private fun EconomyCatalogScreen() {
         "keyboard_theme" -> equipped?.keyboardThemeId == item.id
         "victory_effect" -> equipped?.victoryEffectId == item.id
         "emoji_pack" -> equipped?.emojiPackId == item.id
+        "mascot" -> (equipped?.mascotId ?: MascotCatalog.DEFAULT_ID) == item.id
         else -> false
     }
 
@@ -83,6 +119,7 @@ private fun EconomyCatalogScreen() {
             1 -> item.kind in setOf("profile_frame", "name_style")
             2 -> item.kind in setOf("game_theme", "keyboard_theme")
             3 -> item.kind in setOf("victory_effect", "emoji_pack")
+            4 -> item.kind == "mascot"
             else -> true
         }
     }
@@ -105,7 +142,7 @@ private fun EconomyCatalogScreen() {
 
         item {
             ScrollableTabRow(selectedTabIndex = category, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
-                listOf(sh("TÜMÜ", "ALL"), sh("PROFİL", "PROFILE"), sh("TEMA", "THEME"), sh("EFEKT", "EFFECTS")).forEachIndexed { index, label ->
+                listOf(sh("TÜMÜ", "ALL"), sh("PROFİL", "PROFILE"), sh("TEMA", "THEME"), sh("EFEKT", "EFFECTS"), sh("MASKOT", "MASCOT")).forEachIndexed { index, label ->
                     Tab(selected = category == index, onClick = { category = index }, text = { Text(label, color = if (category == index) SonHarfCyan else SonHarfMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold) })
                 }
             }
@@ -121,7 +158,7 @@ private fun EconomyCatalogScreen() {
         items(filtered, key = { it.id }) { item ->
             val name = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
             val description = if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr
-            val mine = item.id in owned
+            val mine = item.id in owned || item.id == MascotCatalog.DEFAULT_ID
             val active = isEquipped(item)
             Card(
                 colors = CardDefaults.cardColors(containerColor = SonHarfSurface.copy(alpha = .96f)),
@@ -141,14 +178,23 @@ private fun EconomyCatalogScreen() {
                         Text(if (mine) sh("✓ SAHİPSİN", "✓ OWNED") else "◈ ${item.diamondPrice} SC", color = if (mine) SonHarfGreen else SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 15.sp)
                         Button(
                             onClick = {
+                                val b = backend
+                                if (b == null) {
+                                    notice = sh("Mağaza şu anda çevrimdışı.", "The shop is currently offline.")
+                                    return@Button
+                                }
                                 scope.launch {
                                     busy = item.id
                                     if (mine) {
-                                        runCatching { backend?.equipShopItem(item.id) }
-                                            .onSuccess { notice = sh("${name} etkinleştirildi.", "$name equipped."); reload() }
+                                        runCatching { b.equipShopItem(item.id) }
+                                            .onSuccess {
+                                                if (item.kind == "mascot") MascotSelectionRuntime.select(context, item.id)
+                                                notice = sh("${name} etkinleştirildi.", "$name equipped.")
+                                                reload()
+                                            }
                                             .onFailure { notice = sh("Style öğesi etkinleştirilemedi.", "Style item could not be equipped.") }
                                     } else {
-                                        runCatching { backend?.purchaseShopItem(item.id) }
+                                        runCatching { b.purchaseShopItem(item.id) }
                                             .onSuccess { notice = sh("Satın alma tamamlandı. Şimdi kullanabilirsin.", "Purchase complete. You can equip it now."); reload() }
                                             .onFailure {
                                                 val raw = it.message.orEmpty()
@@ -220,6 +266,11 @@ private fun CosmeticPreview(item: ShopItemDto) {
                 "keyboard_theme" -> Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("S","O","N","H","A","R","F").forEach { k -> Surface(color = Color(0xFFEAF8FF), shape = RoundedCornerShape(7.dp), border = BorderStroke(1.5.dp, SonHarfCyan)) { Text(k, Modifier.padding(horizontal = 8.dp, vertical = 10.dp), color = SonHarfCyan, fontWeight = FontWeight.Black) } } }
                 "victory_effect" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text("✦", color = SonHarfCyan, fontSize = 30.sp); Text("♛", color = SonHarfGold, fontSize = 50.sp, fontWeight = FontWeight.Black, modifier = Modifier.scale(pulse)); Text("✦", color = SonHarfPink, fontSize = 30.sp) }
                 "emoji_pack" -> Text("👑  ⚡  😎  🔥  ◈", fontSize = 30.sp)
+                "mascot" -> MascotLive3DStage(
+                    modifier = Modifier.fillMaxSize(),
+                    mascotId = item.id,
+                    motion = MascotMotion.IDLE,
+                )
                 else -> Text("◇", fontSize = 44.sp, color = SonHarfCyan)
             }
         }

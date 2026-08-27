@@ -28,9 +28,13 @@ android {
         val rewardedAdUnitId = providers.gradleProperty("SON_HARF_ADMOB_REWARDED_ID")
             .orElse("ca-app-pub-3940256099942544/5224354917")
             .get()
+        val bannerAdUnitId = providers.gradleProperty("SON_HARF_ADMOB_BANNER_ID")
+            .orElse("")
+            .get()
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
         buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", "\"$rewardedAdUnitId\"")
+        buildConfigField("String", "ADMOB_BANNER_AD_UNIT_ID", "\"$bannerAdUnitId\"")
         manifestPlaceholders["ADMOB_APP_ID"] = admobAppId
     }
 
@@ -76,6 +80,11 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+    }
+
+    // Keep the GLB as a directly readable APK asset for Filament/SceneView.
+    androidResources {
+        noCompress += "glb"
     }
 }
 

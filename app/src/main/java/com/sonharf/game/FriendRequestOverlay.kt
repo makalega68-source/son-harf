@@ -31,6 +31,7 @@ fun FriendRequestOverlay() {
     val scope = rememberCoroutineScope()
     var request by remember { mutableStateOf<Pair<FriendshipDto, ProfileDto>?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var notice by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -64,7 +65,12 @@ fun FriendRequestOverlay() {
                 }
             }
         },
-        text = { Text(sh("Seni arkadaş listesine eklemek istiyor.", "wants to add you as a friend."), color = SonHarfMuted, fontSize = 14.sp) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(sh("Seni arkadaş listesine eklemek istiyor.", "wants to add you as a friend."), color = SonHarfMuted, fontSize = 14.sp)
+                if (notice.isNotBlank()) Text(notice, color = SonHarfPink, fontSize = 11.sp)
+            }
+        },
         confirmButton = {
             Button(
                 enabled = !busy,
@@ -72,7 +78,13 @@ fun FriendRequestOverlay() {
                     scope.launch {
                         busy = true
                         runCatching { backend.respondFriendRequest(friendId, true) }
-                        request = null
+                            .onSuccess {
+                                notice = ""
+                                request = null
+                            }
+                            .onFailure {
+                                notice = sh("Arkadaşlık isteği kabul edilemedi. Tekrar dene.", "Friend request could not be accepted. Try again.")
+                            }
                         busy = false
                     }
                 },
@@ -86,7 +98,13 @@ fun FriendRequestOverlay() {
                     scope.launch {
                         busy = true
                         runCatching { backend.respondFriendRequest(friendId, false) }
-                        request = null
+                            .onSuccess {
+                                notice = ""
+                                request = null
+                            }
+                            .onFailure {
+                                notice = sh("Arkadaşlık isteği reddedilemedi. Tekrar dene.", "Friend request could not be declined. Try again.")
+                            }
                         busy = false
                     }
                 },

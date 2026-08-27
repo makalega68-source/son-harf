@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import com.sonharf.game.mascotdata3.ChibiEmbeddedModel
 import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -10,75 +11,89 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MascotPolicyTest {
-    @Test fun verifiedMascotIsEnabledAndFakeFallbackIsForbidden() {
+    @Test
+    fun whiteMascotIsDefaultAndEveIsParked() {
         assertTrue(MascotPolicy.ENABLED)
         assertFalse(MascotPolicy.ALLOW_2D_OR_VIDEO_FALLBACK)
-        assertTrue(MascotPolicy.SKELETAL_ASSET_READY)
-        assertTrue(MascotPolicy.MODEL_ASSET.endsWith(".glb"))
-        assertEquals(781848, MascotPolicy.MODEL_SIZE_BYTES)
-        assertEquals(64, MascotPolicy.MODEL_SHA256.length)
+        assertFalse(MascotPolicy.EVE_ACTIVE)
+        assertEquals(MascotCatalog.DEFAULT_ID, MascotPolicy.DEFAULT_MASCOT_ID)
+        assertTrue(MascotCatalog.item(MascotCatalog.DEFAULT_ID).standard)
+        assertTrue(MascotCatalog.item(MascotCatalog.DEFAULT_ID).licensedForCommercialGame)
     }
 
-    @Test fun bundledGlbIsExactSkinnedAssetWithExpectedClips() {
+    @Test
+    fun verifiedWhiteMascotIsExactSkinnedAnimatedAsset() {
         val candidates = listOf(
-            File("src/main/assets/${MascotPolicy.MODEL_ASSET}"),
-            File("app/src/main/assets/${MascotPolicy.MODEL_ASSET}"),
+            File("src/main/assets/${MascotPolicy.WHITE_MASCOT_ASSET}"),
+            File("app/src/main/assets/${MascotPolicy.WHITE_MASCOT_ASSET}"),
         )
         val file = candidates.firstOrNull { it.isFile }
-        assertTrue("Bundled mascot GLB is missing", file != null)
+        assertTrue("Bundled white mascot GLB is missing", file != null)
         val bytes = requireNotNull(file).readBytes()
-        assertEquals(MascotPolicy.MODEL_SIZE_BYTES, bytes.size)
-        assertEquals("glTF", bytes.copyOfRange(0, 4).toString(Charsets.US_ASCII))
+        assertEquals(MascotPolicy.WHITE_MASCOT_SIZE_BYTES, bytes.size)
+        assertEquals(MascotPolicy.WHITE_MASCOT_SHA256, sha256(bytes))
+        assertGlb2(bytes)
 
-        val sha = MessageDigest.getInstance("SHA-256")
-            .digest(bytes)
-            .joinToString("") { "%02x".format(it) }
-        assertEquals(MascotPolicy.MODEL_SHA256, sha)
-
-        val jsonLength = ByteBuffer.wrap(bytes, 12, 4).order(ByteOrder.LITTLE_ENDIAN).int
-        val json = bytes.copyOfRange(20, 20 + jsonLength).toString(Charsets.UTF_8)
+        val json = glbJson(bytes)
         assertTrue(json.contains("\"skins\":["))
         assertTrue(json.contains("\"joints\":["))
         assertTrue(json.contains("\"JOINTS_0\""))
         assertTrue(json.contains("\"WEIGHTS_0\""))
         assertFalse("Dark base-color texture must not return", json.contains("\"baseColorTexture\""))
         assertTrue("White body material is missing", json.contains("\"baseColorFactor\":[0.97,0.985,1.0,1.0]"))
-        MascotAnimationRegistry.all.forEach { definition ->
-            assertTrue("Missing GLB clip ${definition.clipName}", json.contains("\"name\":\"${definition.clipName}\""))
+
+        val clips = setOf(
+            "Idle", "Walk", "Turn_Left", "Turn_Right", "Look_At_Player", "Greeting",
+            "Thinking", "Critical", "Victory", "Defeat", "Sit", "Run",
+        )
+        clips.forEach { name ->
+            assertTrue("Missing white mascot animation: $name", json.contains("\"name\":\"$name\""))
         }
     }
 
-    @Test fun requiredStateMachineMotionsExist() {
-        val expected = setOf(
-            MascotMotion.IDLE,
-            MascotMotion.WALK,
-            MascotMotion.TURN_LEFT,
-            MascotMotion.TURN_RIGHT,
-            MascotMotion.LOOK_AT_PLAYER,
-            MascotMotion.GREETING,
-            MascotMotion.THINKING,
-            MascotMotion.CRITICAL,
-            MascotMotion.VICTORY,
-            MascotMotion.DEFEAT,
-            MascotMotion.SIT,
-            MascotMotion.RUN,
-        )
-        assertEquals(expected, MascotAnimationRegistry.all.map { it.motion }.toSet())
+    @Test
+    fun animatedChibiDecodesWithExactIntegrityAndNineRuntimeAnimations() {
+        val bytes = ChibiEmbeddedModel.decodeGlb()
+        assertEquals(ChibiEmbeddedModel.EXPECTED_BYTES, bytes.size.toLong())
+        assertEquals(ChibiEmbeddedModel.EXPECTED_SHA256, sha256(bytes))
+        assertGlb2(bytes)
+
+        val json = glbJson(bytes)
+        ChibiEmbeddedModel.ANIMATION_NAMES.forEach { name ->
+            assertTrue("Missing Chibi animation: $name", json.contains("\"name\":\"$name\""))
+        }
+        assertTrue(json.contains("\"skins\""))
+        assertTrue(json.contains("\"animations\""))
     }
 
-    @Test fun clipNamesMatchVerifiedGlbContract() {
-        assertEquals(
-            setOf("Idle", "Walk", "Turn_Left", "Turn_Right", "Look_At_Player", "Greeting", "Thinking", "Critical", "Victory", "Defeat", "Sit", "Run"),
-            MascotAnimationRegistry.all.map { it.clipName }.toSet(),
-        )
+    @Test
+    fun onlyCommerciallyApprovedCatalogEntriesCanBeActivated() {
+        assertTrue(MascotCatalog.all.all { it.licensedForCommercialGame })
+        assertTrue(MascotPolicy.CHIBI_WIZARD_LICENSE_APPROVED)
+        assertTrue(MascotPolicy.CHIBI_WIZARD_ASSET_READY)
     }
 
-    @Test fun advancedAnimationsUnlockOnTenLevelSteps() {
-        val advanced = MascotAnimationRegistry.all.filter { it.unlockLevel > 1 }
-        assertTrue(advanced.isNotEmpty())
-        assertTrue(advanced.all { it.unlockLevel % 10 == 0 })
-        assertTrue(MascotAnimationRegistry.unlocked(9).none { it.motion == MascotMotion.SIT })
-        assertTrue(MascotAnimationRegistry.unlocked(10).any { it.motion == MascotMotion.SIT })
-        assertTrue(MascotAnimationRegistry.unlocked(20).any { it.motion == MascotMotion.RUN })
+    @Test
+    fun genericMotionRegistryCoversEveryMotion() {
+        assertEquals(MascotMotion.entries.toSet(), MascotAnimationRegistry.all.map { it.motion }.toSet())
     }
+
+    private fun assertGlb2(bytes: ByteArray) {
+        assertTrue(bytes.size >= 20)
+        assertEquals("glTF", bytes.copyOfRange(0, 4).toString(Charsets.US_ASCII))
+        val bb = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+        assertEquals(2, bb.getInt(4))
+        assertEquals(bytes.size, bb.getInt(8))
+    }
+
+    private fun glbJson(bytes: ByteArray): String {
+        val bb = ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN)
+        val jsonLength = bb.getInt(12)
+        val jsonType = bb.getInt(16)
+        assertEquals(0x4E4F534A, jsonType)
+        return bytes.copyOfRange(20, 20 + jsonLength).toString(Charsets.UTF_8).trimEnd(' ', '\u0000')
+    }
+
+    private fun sha256(bytes: ByteArray): String =
+        MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it) }
 }

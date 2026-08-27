@@ -1,0 +1,72 @@
+name: Final Unified Validation
+
+on:
+  push:
+    branches:
+      - integration/final-unified-20260827
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Source policy checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          test ! -f app/src/main/assets/models/eve/eve.glb
+          test -f archive/eve/eve.glb
+          if git ls-files '*.fbx' '*.unitypackage' | grep -q .; then
+            echo "::error::Purchased source mascot assets must not be committed"
+            git ls-files '*.fbx' '*.unitypackage'
+            exit 1
+          fi
+          grep -q 'DAILY_CIPHER' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
+          grep -q 'MASTERY' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
+          grep -q 'SonHarfTopAdBanner' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
+          grep -q 'MascotHomeCompanion' app/src/main/java/com/sonharf/game/PremiumMasterHome.kt
+          ! grep -q 'EveHomeFixedCompanion' app/src/main/java/com/sonharf/game/PremiumMasterHome.kt
+          grep -q 'MASKOT' app/src/main/java/com/sonharf/game/EconomyShopScreen.kt
+
+      - name: Unit tests and debug APK
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: APK policy checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -f "$APK"
+          if unzip -l "$APK" | grep -q 'assets/models/eve/eve.glb'; then
+            echo "::error::Parked Eve leaked into active APK assets"
+            exit 1
+          fi
+          echo ">> [PASS] Eve is parked and final debug APK is built"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-Final-Unified-PreRuntime-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
