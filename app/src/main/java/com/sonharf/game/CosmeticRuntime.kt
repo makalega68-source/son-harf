@@ -13,6 +13,7 @@ object SonHarfCosmetics {
     var keyboardThemeId by mutableStateOf<String?>(null)
     var victoryEffectId by mutableStateOf<String?>(null)
     var emojiPackId by mutableStateOf<String?>(null)
+    var mascotId by mutableStateOf(MascotCatalog.DEFAULT_ID)
 
     fun apply(e: EquippedCosmeticsDto?) {
         profileFrameId = e?.profileFrameId
@@ -21,6 +22,7 @@ object SonHarfCosmetics {
         keyboardThemeId = e?.keyboardThemeId
         victoryEffectId = e?.victoryEffectId
         emojiPackId = e?.emojiPackId
+        mascotId = e?.mascotId ?: MascotCatalog.DEFAULT_ID
     }
 
     val profileAccent: Color
