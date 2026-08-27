@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.sonharf.game.mascotdata2.MascotEmbeddedModel
 import com.sonharf.game.mascotdata3.ChibiEmbeddedModel
 
 internal data class MascotCatalogItem(
@@ -19,6 +18,7 @@ internal data class MascotCatalogItem(
 internal object MascotCatalog {
     const val DEFAULT_ID = "mascot_white"
     const val CHIBI_WIZARD_ID = "mascot_chibi_wizard"
+    const val WHITE_ASSET = "models/son_harf_white_pet_rigged.glb"
 
     val all = listOf(
         MascotCatalogItem(
@@ -41,13 +41,13 @@ internal object MascotCatalog {
         all.firstOrNull { it.id == id } ?: all.first { it.id == DEFAULT_ID }
 
     fun isAssetReady(context: Context, id: String): Boolean = when (id) {
-        DEFAULT_ID -> runCatching { MascotEmbeddedModel.ensureFile(context).isFile }.getOrDefault(false)
+        DEFAULT_ID -> runCatching { context.assets.open(WHITE_ASSET).use { } }.isSuccess
         CHIBI_WIZARD_ID -> runCatching { ChibiEmbeddedModel.ensureFile(context).isFile }.getOrDefault(false)
         else -> false
     }
 
     fun modelLocation(context: Context, id: String): String? = when (id) {
-        DEFAULT_ID -> runCatching { Uri.fromFile(MascotEmbeddedModel.ensureFile(context)).toString() }.getOrNull()
+        DEFAULT_ID -> WHITE_ASSET.takeIf { isAssetReady(context, id) }
         CHIBI_WIZARD_ID -> runCatching { Uri.fromFile(ChibiEmbeddedModel.ensureFile(context)).toString() }.getOrNull()
         else -> null
     }
@@ -68,9 +68,18 @@ internal object MascotCatalog {
             MascotMotion.SIT -> "Idle"
         }
         else -> when (motion) {
-            MascotMotion.WALK, MascotMotion.RUN, MascotMotion.TURN_LEFT, MascotMotion.TURN_RIGHT -> "Walk"
+            MascotMotion.IDLE -> "Idle"
+            MascotMotion.WALK -> "Walk"
+            MascotMotion.TURN_LEFT -> "Turn_Left"
+            MascotMotion.TURN_RIGHT -> "Turn_Right"
+            MascotMotion.LOOK_AT_PLAYER -> "Look_At_Player"
+            MascotMotion.GREETING -> "Greeting"
+            MascotMotion.THINKING -> "Thinking"
+            MascotMotion.CRITICAL -> "Critical"
             MascotMotion.VICTORY -> "Victory"
-            else -> "Idle"
+            MascotMotion.DEFEAT -> "Defeat"
+            MascotMotion.SIT -> "Sit"
+            MascotMotion.RUN -> "Run"
         }
     }
 }
