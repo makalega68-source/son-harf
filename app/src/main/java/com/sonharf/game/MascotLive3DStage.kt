@@ -74,6 +74,7 @@ internal fun MascotLive3DStage(
         fileLocation = modelLocation,
     )
     val clip = MascotCatalog.clip(resolvedId, motion)
+    val staticPreview = BuildConfig.DEBUG && resolvedId == MascotCatalog.CHIBI_WIZARD_ID
 
     Box(modifier, contentAlignment = Alignment.Center) {
         if (modelInstance == null) {
@@ -93,9 +94,9 @@ internal fun MascotLive3DStage(
                 ) {
                     ModelNode(
                         modelInstance = modelInstance,
-                        autoAnimate = true,
-                        animationName = clip,
-                        animationLoop = motion !in setOf(
+                        autoAnimate = !staticPreview,
+                        animationName = if (staticPreview) null else clip,
+                        animationLoop = !staticPreview && motion !in setOf(
                             MascotMotion.VICTORY,
                             MascotMotion.DEFEAT,
                             MascotMotion.CRITICAL,
