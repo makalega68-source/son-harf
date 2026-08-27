@@ -1,8 +1,8 @@
 package com.sonharf.game
 
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -17,18 +17,12 @@ internal val PortalGreen = Color(0xFF32C985)
 internal val PortalRed = Color(0xFFFF7891)
 
 /**
- * Root shell. HOME owns a fixed transparent Eve slot beside the Son Harf card; Eve does not
- * roam over the interface. The center bottom-navigation action opens the full Eve room overlay,
- * while gameplay and the other product surfaces remain unobstructed.
+ * Root shell for the active Son Harf product.
+ * Eve remains archived and is not started, rendered, or exposed by active navigation.
  */
 @Composable
 fun GamePortalApp() {
     val context = LocalContext.current
-
-    DisposableEffect(Unit) {
-        EveMascotRuntime.startLivingBehavior()
-        onDispose { EveMascotRuntime.stopLivingBehavior() }
-    }
 
     androidx.compose.runtime.LaunchedEffect(Unit) {
         RemoteExperience.refresh(context.applicationContext)
@@ -36,14 +30,5 @@ fun GamePortalApp() {
 
     Box(Modifier.fillMaxSize()) {
         ClassicPremiumApp()
-
-        if (EveLivingRoomRuntime.open) {
-            Column(Modifier.fillMaxSize()) {
-                SonHarfTopAdBanner()
-                Box(Modifier.fillMaxWidth().weight(1f)) {
-                    EveForestScreen(onNavigateBack = { EveLivingRoomRuntime.hide() })
-                }
-            }
-        }
     }
 }
