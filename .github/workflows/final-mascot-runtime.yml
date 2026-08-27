@@ -77,11 +77,11 @@ jobs:
             adb logcat -c
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.MascotRuntimeSmokeActivity --es mascot_id mascot_chibi_wizard
-            sleep 2
+            timeout 20 sh -c "until adb logcat -d | grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Idle'; do sleep 1; done"
             adb exec-out screencap -p > artifacts/mascot/chibi-idle.png
-            sleep 3.4
+            timeout 20 sh -c "until adb logcat -d | grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Run'; do sleep 1; done"
             adb exec-out screencap -p > artifacts/mascot/chibi-run.png
-            sleep 3.4
+            timeout 20 sh -c "until adb logcat -d | grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Special_Attack'; do sleep 1; done"
             adb exec-out screencap -p > artifacts/mascot/chibi-victory.png
             adb logcat -d > artifacts/mascot/chibi-logcat.txt
 
