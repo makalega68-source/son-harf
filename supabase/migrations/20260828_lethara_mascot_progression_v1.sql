@@ -41,6 +41,7 @@ create table if not exists public.user_mascot_progress (
   fullness integer not null default 70 check (fullness between 0 and 100),
   energy integer not null default 90 check (energy between 0 and 100),
   memory_fragments integer not null default 0 check (memory_fragments between 0 and 120),
+  game_xp_synced integer not null default 0 check (game_xp_synced >= 0),
   updated_at timestamptz not null default now(),
   primary key(user_id,mascot_id)
 );
@@ -102,6 +103,61 @@ end $$;
 revoke all on function public.ensure_mascot_progress_v1(text) from public,anon;
 grant execute on function public.ensure_mascot_progress_v1(text) to authenticated;
 
+create or replace function public.sync_mascot_game_xp_v1(p_mascot_id text)
+returns integer
+language plpgsql
+security definer
+set search_path=public,pg_temp
+as $
+declare
+  v_uid uuid:=auth.uid();
+  v_game_xp integer:=0;
+  v_bond_xp integer:=0;
+  v_synced integer:=0;
+  v_delta integer:=0;
+begin
+  if v_uid is null then raise exception 'not_authenticated'; end if;
+  perform public.ensure_mascot_progress_v1(p_mascot_id);
+
+  select (
+    coalesce(wins,0)*120
+    + coalesce(losses,0)*35
+    + coalesce(valid_words,0)*3
+    + coalesce(total_rounds,0)*5
+  )::integer
+  into v_game_xp
+  from public.profiles
+  where id=v_uid;
+
+  -- Ten Hatırlatıcı XP become one companion bond XP. This keeps mascot progression meaningful
+  -- without turning ranked play into a pay-to-win or runaway leveling system.
+  v_bond_xp:=greatest(0,coalesce(v_game_xp,0)/10);
+
+  select game_xp_synced into v_synced
+  from public.user_mascot_progress
+  where user_id=v_uid and mascot_id=p_mascot_id
+  for update;
+
+  v_delta:=greatest(0,v_bond_xp-coalesce(v_synced,0));
+  if v_delta>0 then
+    update public.user_mascot_progress
+    set total_xp=total_xp+v_delta,
+        level=greatest(1,((total_xp+v_delta)/100)+1),
+        memory_fragments=least(120,(total_xp+v_delta)/10),
+        game_xp_synced=v_bond_xp,
+        updated_at=now()
+    where user_id=v_uid and mascot_id=p_mascot_id;
+  elsif v_bond_xp>coalesce(v_synced,0) then
+    update public.user_mascot_progress
+    set game_xp_synced=v_bond_xp,updated_at=now()
+    where user_id=v_uid and mascot_id=p_mascot_id;
+  end if;
+
+  return v_delta;
+end $;
+revoke all on function public.sync_mascot_game_xp_v1(text) from public,anon;
+grant execute on function public.sync_mascot_game_xp_v1(text) to authenticated;
+
 create or replace function public.get_mascot_progress_v1(p_mascot_id text)
 returns table(
   mascot_id text,pet_name text,total_xp integer,level integer,happiness integer,fullness integer,energy integer,
@@ -114,6 +170,7 @@ as $$
 declare v_uid uuid:=auth.uid();
 begin
   perform public.ensure_mascot_progress_v1(p_mascot_id);
+  perform public.sync_mascot_game_xp_v1(p_mascot_id);
   return query
   select p.mascot_id,p.pet_name,p.total_xp,p.level,p.happiness,p.fullness,p.energy,p.memory_fragments,
          coalesce(c.normal_fruit_used,0),3
