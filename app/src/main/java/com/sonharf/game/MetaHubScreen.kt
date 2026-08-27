@@ -5,6 +5,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -21,18 +23,37 @@ import kotlinx.coroutines.launch
 object SonHarfGameModeState { var mode by mutableStateOf("normal") }
 
 @Composable
-fun MetaHubScreen() {
+fun MetaHubScreen(
+    initialTab: Int = 0,
+    onBack: (() -> Unit)? = null,
+    onPlay: (() -> Unit)? = null,
+) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
-    var tab by remember { mutableIntStateOf(0) }
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 6)) }
     val labels = listOf(sh("Kariyer","Career"), sh("Sezon","Season"), sh("Görevler","Goals"), sh("Lig","League"), sh("Oyunlarım","Games"), sh("Rehber","Guide"), sh("Ayarlar","Settings"))
     Column(Modifier.fillMaxSize()) {
-        Text(sh("OYUNCU MERKEZİ","PLAYER HUB"),Modifier.padding(horizontal=16.dp,vertical=12.dp),fontSize=24.sp,fontWeight=FontWeight.Black)
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (onBack != null) {
+                IconButton(onClick = onBack) {
+                    Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
+                }
+            }
+            Text(
+                sh("OYUNCU MERKEZİ","PLAYER HUB"),
+                Modifier.padding(horizontal=8.dp,vertical=6.dp),
+                fontSize=24.sp,
+                fontWeight=FontWeight.Black,
+            )
+        }
         ScrollableTabRow(selectedTabIndex=tab,edgePadding=8.dp,containerColor=SonHarfSurface) {
             labels.forEachIndexed { i,s -> Tab(selected=tab==i,onClick={tab=i},text={Text(s,fontSize=10.sp)}) }
         }
         Box(Modifier.weight(1f)) {
             when(tab){
-                0 -> GrowthCenterScreen()
+                0 -> GrowthCenterScreen(onPlay = onPlay)
                 1 -> MetaProgressV2Screen()
                 2 -> RetentionGoalsPanel(backend)
                 3 -> RetentionLeaguePanel(backend)
