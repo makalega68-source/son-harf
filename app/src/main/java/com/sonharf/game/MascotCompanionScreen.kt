@@ -303,7 +303,8 @@ private fun MascotChatPanel(
                     playerName = playerName,
                     companionName = companionName,
                     gameContext = progress?.let {
-                        "Mascot level " + it.level + "; XP " + it.totalXp + "; memory fragments " + it.memoryFragments + "/120; fullness " + it.fullness + "; happiness " + it.happiness + "."
+                        val record = profile?.let { p -> " Player record: " + p.wins + " wins, " + p.losses + " losses." }.orEmpty()
+                        "Mascot level " + it.level + "; XP " + it.totalXp + "; memory fragments " + it.memoryFragments + "/120; fullness " + it.fullness + "; happiness " + it.happiness + "." + record
                     },
                     mascotId = mascotId,
                     mascotTitle = if (SonHarfUiState.isEnglish) character.titleEn else character.titleTr,
