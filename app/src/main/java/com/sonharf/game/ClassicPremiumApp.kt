@@ -66,6 +66,7 @@ fun ClassicPremiumApp() {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var screen by remember { mutableStateOf(ClassicScreen.HOME) }
     var gameKey by remember { mutableIntStateOf(0) }
+    var autoStartMatchmaking by remember { mutableStateOf(false) }
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
     var hubTab by remember { mutableIntStateOf(0) }
@@ -96,6 +97,7 @@ fun ClassicPremiumApp() {
     }
     LaunchedEffect(lobbyRequest) {
         if (authenticated && lobbyRequest > 0) {
+            autoStartMatchmaking = false
             gameKey += 1
             screen = ClassicScreen.GAME
         }
@@ -153,7 +155,7 @@ fun ClassicPremiumApp() {
                     ClassicScreen.HOME -> PremiumMasterHome(
                         backend = backend,
                         onPlay = { screen = ClassicScreen.PLAY },
-                        onQuickGame = { gameKey += 1; screen = ClassicScreen.GAME },
+                        onQuickGame = { autoStartMatchmaking = true; gameKey += 1; screen = ClassicScreen.GAME },
                         onBilBakalim = { screen = ClassicScreen.BIL_BAKALIM },
                         onAdmin = { screen = ClassicScreen.ADMIN },
                         onHub = { hubTab = 0; hubReturnScreen = ClassicScreen.HOME; screen = ClassicScreen.HUB },
@@ -168,7 +170,7 @@ fun ClassicPremiumApp() {
                     ClassicScreen.PLAY -> ClassicPlayScreen(
                         backend = backend,
                         onBack = { screen = ClassicScreen.HOME },
-                        onRandom = { gameKey += 1; screen = ClassicScreen.GAME },
+                        onRandom = { autoStartMatchmaking = true; gameKey += 1; screen = ClassicScreen.GAME },
                         onFriend = { FriendsQuickAccessState.open = true },
                     )
                     ClassicScreen.PROFILE -> ClassicProfileScreen(
@@ -184,7 +186,7 @@ fun ClassicPremiumApp() {
                         onBack = { screen = ClassicScreen.HOME },
                         onFullShop = { shopFullTab = 0; shopFullReturnScreen = ClassicScreen.SHOP; screen = ClassicScreen.SHOP_FULL },
                     )
-                    ClassicScreen.GAME -> key(gameKey) { TargetNeonGameScreen() }
+                    ClassicScreen.GAME -> key(gameKey) { TargetNeonGameScreen(autoStartMatchmaking = autoStartMatchmaking) }
                     ClassicScreen.BIL_BAKALIM -> TrackedBilBakalimStandaloneScreen { screen = ClassicScreen.HOME }
                     ClassicScreen.ADMIN -> AdminConsoleScreen { screen = ClassicScreen.HOME }
                     ClassicScreen.HUB -> MetaHubScreen(
