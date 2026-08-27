@@ -49,10 +49,32 @@ internal object EveAiChatService {
         }
     }
 
+    private fun localTestResponse(request: EveChatRequest): EveChatResponse {
+        val text = request.message.trim().take(180)
+        val reply = if (request.language.lowercase().startsWith("en")) {
+            if (text.isBlank()) "I'm here. 🌿" else "I heard you: “$text” 🌿"
+        } else {
+            if (text.isBlank()) "Buradayım. 🌿" else "Seni duydum: “$text” 🌿"
+        }
+        return EveChatResponse(
+            reply = reply,
+            mood = "calm",
+            animation = "idle_breathe",
+            memoryNote = "",
+        )
+    }
+
     suspend fun chat(request: EveChatRequest): EveChatResponse {
         check(SupabaseProvider.configured) { "Supabase yapılandırılmamış." }
-        val token = SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken
-            ?: error("Maskotla konuşmak için oturum açmalısın.")
+        var token = SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken
+        if (token == null && BuildConfig.DEBUG) {
+            runCatching { SupabaseProvider.client.auth.signInAnonymously() }
+            token = SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken
+        }
+        if (token == null) {
+            if (BuildConfig.DEBUG) return localTestResponse(request)
+            error("Maskotla konuşmak için oturum açmalısın.")
+        }
         val cleanRequest = request.copy(
             message = request.message.trim().take(1000),
             history = request.history.takeLast(12).map {
@@ -71,6 +93,7 @@ internal object EveAiChatService {
         val body = response.bodyAsText()
         if (!response.status.isSuccess()) {
             val code = runCatching { json.decodeFromString<EveErrorResponse>(body).error }.getOrNull().orEmpty()
+            if (BuildConfig.DEBUG) return localTestResponse(cleanRequest)
             error(when (code) {
                 "ai_not_configured" -> "Gemini anahtarı sunucuda doğrulanamadı."
                 "invalid_session", "unauthorized" -> "Oturum doğrulanamadı. Lütfen tekrar giriş yap."
