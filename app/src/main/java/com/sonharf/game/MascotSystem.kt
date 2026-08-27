@@ -209,15 +209,21 @@ internal fun MascotBehaviorBridge() {
                 val growth = b.getGrowthDashboard()
                 MascotRuntime.syncProgress(growth.xp, growth.level)
 
-                val active = SupabaseProvider.client
+                val rooms = SupabaseProvider.client
                     .from("game_rooms")
                     .select()
                     .decodeList<GameRoomDto>()
-                    .filter {
-                        (it.hostId == me || it.guestId == me) &&
-                            it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused", "finished")
-                    }
+                    .filter { it.hostId == me || it.guestId == me }
+
+                // Never let an old finished match shadow a new live match.
+                // A finished room is observed only when it is the room we were already tracking,
+                // which gives EVE one safe result reaction without replaying historical results.
+                val liveRoom = rooms
+                    .filter { it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused") }
                     .maxByOrNull { it.validWordCount }
+                val active = liveRoom ?: previousRoom?.let { previous ->
+                    rooms.firstOrNull { it.id == previous.id && it.status == "finished" }
+                }
 
                 if (active == null) {
                     MascotRuntime.setMatchActive(false)
