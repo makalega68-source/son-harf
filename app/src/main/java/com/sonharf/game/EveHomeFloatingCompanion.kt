@@ -168,7 +168,13 @@ internal fun EveHomeFloatingCompanion(
         val homeIntent = EveMascotRuntime.homeIntent
         val homeIntentVersion = EveMascotRuntime.homeIntentVersion
         val homePromptText = EveMascotRuntime.homePromptText
-        val visiblePrompt = tapPrompt.ifBlank { homePromptText }
+        val behaviorState = EveMascotRuntime.behaviorState
+        val runtimeBubbleText = EveMascotRuntime.bubbleText
+        val visiblePrompt = tapPrompt.ifBlank {
+            homePromptText.ifBlank {
+                if (behaviorState == EveBehaviorState.INTERACTING) runtimeBubbleText else ""
+            }
+        }
 
         val reactionX = remember { Animatable(0f) }
         val reactionY = remember { Animatable(0f) }
@@ -383,7 +389,7 @@ internal fun EveHomeFloatingCompanion(
                         )
                     }
                 } else if (
-                    EveMascotRuntime.behaviorState == EveBehaviorState.RESTING &&
+                    behaviorState == EveBehaviorState.RESTING &&
                     EveMascotRuntime.animation == EveAnimationCue.REST
                 ) {
                     Text(
