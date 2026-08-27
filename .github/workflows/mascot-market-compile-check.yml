@@ -46,3 +46,17 @@ jobs:
           name: chibi-preview-base-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
+
+      - name: Prepare APK signing tools
+        run: |
+          mkdir -p apk-tools/lib
+          cp "$ANDROID_HOME/build-tools/36.0.0/zipalign" apk-tools/
+          cp "$ANDROID_HOME/build-tools/36.0.0/apksigner" apk-tools/
+          cp "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" apk-tools/lib/
+
+      - name: Upload APK signing tools
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk-tools
+          path: apk-tools
+          retention-days: 7
