@@ -108,7 +108,7 @@ returns integer
 language plpgsql
 security definer
 set search_path=public,pg_temp
-as $
+as $fn$
 declare
   v_uid uuid:=auth.uid();
   v_game_xp integer:=0;
@@ -154,7 +154,7 @@ begin
   end if;
 
   return v_delta;
-end $;
+end $fn$;
 revoke all on function public.sync_mascot_game_xp_v1(text) from public,anon;
 grant execute on function public.sync_mascot_game_xp_v1(text) to authenticated;
 
