@@ -73,7 +73,8 @@ fun ClassicPremiumApp() {
     var lastHomeBack by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) {
-        authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
+        authenticated = BuildConfig.DEBUG ||
+            (SupabaseProvider.configured && hasVerifiedMembershipSession())
         authChecked = true
     }
     LaunchedEffect(authenticated) {
@@ -170,15 +171,6 @@ fun ClassicPremiumApp() {
                     ClassicScreen.SHOP_FULL -> EconomyShopScreen()
                 }
             }
-        }
-
-        // HOME companion is deliberately outside Scaffold content padding. It therefore renders
-        // above both the main cards and the bottom navigation, matching the floating-companion
-        // behavior while keeping only one compact TextureSurface alive.
-        if (screen == ClassicScreen.HOME && !EveLivingRoomRuntime.open) {
-            EveHomeFloatingCompanion(
-                modifier = Modifier.fillMaxSize(),
-            )
         }
 
         if (screen == ClassicScreen.GAME) {
