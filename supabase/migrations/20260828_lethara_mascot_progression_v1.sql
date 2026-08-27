@@ -42,6 +42,7 @@ create table if not exists public.user_mascot_progress (
   energy integer not null default 90 check (energy between 0 and 100),
   memory_fragments integer not null default 0 check (memory_fragments between 0 and 120),
   game_xp_synced integer not null default 0 check (game_xp_synced >= 0),
+  last_wellbeing_tick timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   primary key(user_id,mascot_id)
 );
@@ -167,9 +168,27 @@ language plpgsql
 security definer
 set search_path=public,pg_temp
 as $$
-declare v_uid uuid:=auth.uid();
+declare
+  v_uid uuid:=auth.uid();
+  v_steps integer:=0;
 begin
   perform public.ensure_mascot_progress_v1(p_mascot_id);
+
+  select least(6,greatest(0,floor(extract(epoch from (now()-last_wellbeing_tick))/28800)::integer))
+  into v_steps
+  from public.user_mascot_progress
+  where user_id=v_uid and mascot_id=p_mascot_id;
+
+  if coalesce(v_steps,0)>0 then
+    update public.user_mascot_progress
+    set fullness=greatest(20,fullness-(v_steps*4)),
+        energy=greatest(25,energy-(v_steps*2)),
+        happiness=greatest(25,happiness-v_steps),
+        last_wellbeing_tick=now(),
+        updated_at=now()
+    where user_id=v_uid and mascot_id=p_mascot_id;
+  end if;
+
   perform public.sync_mascot_game_xp_v1(p_mascot_id);
   return query
   select p.mascot_id,p.pet_name,p.total_xp,p.level,p.happiness,p.fullness,p.energy,p.memory_fragments,
