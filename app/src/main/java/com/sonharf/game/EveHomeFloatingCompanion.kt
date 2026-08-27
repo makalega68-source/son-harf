@@ -26,8 +26,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -47,6 +45,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -85,8 +84,7 @@ internal fun EveHomeFloatingCompanion(
     var playerName by remember { mutableStateOf(sh("Oyuncu", "Player")) }
     var renameOpen by remember { mutableStateOf(false) }
     var draftName by remember { mutableStateOf(companionName) }
-    var routineGeneration by remember { mutableIntStateOf(0) }
-    var routineResumeDelayMs by remember { mutableLongStateOf(0L) }
+    var routineJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(playerNameOverride) {
         playerNameOverride?.trim()?.takeIf { it.isNotBlank() }?.let {
@@ -105,31 +103,39 @@ internal fun EveHomeFloatingCompanion(
         }
     }
 
-    DisposableEffect(Unit) {
-        // HOME owns a deterministic routine; suspend random idle selection while this overlay lives.
-        EveMascotRuntime.stopLivingBehavior()
-        onDispose {
-            EveMascotRuntime.startLivingBehavior()
+    val routineScope = rememberCoroutineScope()
+
+    fun restartHomeRoutine(afterMs: Long = 0L, reason: String = "baseline") {
+        routineJob?.cancel()
+        routineJob = routineScope.launch {
+            if (BuildConfig.DEBUG) {
+                Log.i(EVE_HOME_ROUTINE_LOG, "restart reason=$reason afterMs=$afterMs")
+            }
+            if (afterMs > 0L) delay(afterMs)
+
+            if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=DIGGING")
+            EveMascotRuntime.homeDigging()
+            delay(routineTiming.digMs)
+
+            if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=SITTING")
+            EveMascotRuntime.homeSitting()
+            delay(routineTiming.sitMs)
+
+            if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=SLEEPING")
+            EveMascotRuntime.homeSleeping()
         }
     }
 
-    LaunchedEffect(routineGeneration, routineTiming) {
-        val resumeDelay = routineResumeDelayMs
-        if (resumeDelay > 0L) {
-            delay(resumeDelay)
+    DisposableEffect(routineTiming) {
+        // HOME owns one deterministic routine job. Contextual/touch reactions cancel this exact
+        // Job before taking control, eliminating timer races with TextureSurface/Compose frames.
+        EveMascotRuntime.stopLivingBehavior()
+        restartHomeRoutine()
+        onDispose {
+            routineJob?.cancel()
+            routineJob = null
+            EveMascotRuntime.startLivingBehavior()
         }
-        routineResumeDelayMs = 0L
-
-        if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=DIGGING")
-        EveMascotRuntime.homeDigging()
-        delay(routineTiming.digMs)
-
-        if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=SITTING")
-        EveMascotRuntime.homeSitting()
-        delay(routineTiming.sitMs)
-
-        if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=SLEEPING")
-        EveMascotRuntime.homeSleeping()
     }
 
     // Re-evaluate needs and recent conversation tone while HOME is visible. This is intentionally
@@ -138,11 +144,12 @@ internal fun EveHomeFloatingCompanion(
         while (currentCoroutineContext().isActive) {
             val firedIntent = EveMascotRuntime.updateContext(store.behaviorContext())
             if (firedIntent != null) {
-                // Context owns the character for its complete reaction window. Restarting the
-                // baseline timer cancels a pending DIG/SIT/SLEEP transition so it cannot overwrite
-                // hunger, boredom or conversation-mood behavior halfway through.
-                routineResumeDelayMs = firedIntent.homeHoldMs()
-                routineGeneration++
+                // Cancel the exact baseline Job immediately. Only after the contextual reaction
+                // has owned Eve for its full window do we restart DIG -> SIT -> SLEEP from zero.
+                restartHomeRoutine(
+                    afterMs = firedIntent.homeHoldMs(),
+                    reason = "context:$firedIntent",
+                )
             }
             delay(5_500L)
         }
@@ -440,9 +447,11 @@ internal fun EveHomeFloatingCompanion(
                             .fillMaxSize()
                             .clickable {
                                 store.markInteraction()
-                                routineResumeDelayMs = routineTiming.happyReactionMs
-                                routineGeneration++
                                 EveMascotRuntime.homeTouchHappy(playerName)
+                                restartHomeRoutine(
+                                    afterMs = routineTiming.happyReactionMs,
+                                    reason = "touch",
+                                )
                             }
                             .pointerInput(widthPx, heightPx) {
                                 detectDragGesturesAfterLongPress(
