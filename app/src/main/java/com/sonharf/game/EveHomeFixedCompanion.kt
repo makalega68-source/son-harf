@@ -28,7 +28,9 @@ internal fun EveHomeFixedCompanion(
     val store = remember { EveCompanionStore(context) }
 
     DisposableEffect(Unit) {
-        EveMascotRuntime.startLivingBehavior()
+        // Home must be visually stable: no autonomous digging/grazing/sleep loop and no drift.
+        EveMascotRuntime.stopLivingBehavior()
+        EveMascotRuntime.calm()
         onDispose { EveMascotRuntime.stopLivingBehavior() }
     }
 
