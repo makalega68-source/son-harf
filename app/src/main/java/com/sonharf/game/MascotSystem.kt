@@ -48,10 +48,10 @@ internal data class MascotMatchReaction(
 internal object MascotMatchReactionRegistry {
     fun definition(event: MascotMatchEvent): MascotMatchReaction = when (event) {
         MascotMatchEvent.WORD_CORRECT -> MascotMatchReaction(
-            MascotMotion.GREETING, "Güzel!", "Nice!", 1100L,
+            MascotMotion.LOOK_AT_PLAYER, "Güzel!", "Nice!", 1100L,
         )
         MascotMatchEvent.STRONG_WORD -> MascotMatchReaction(
-            MascotMotion.RUN, "Harika kelime!", "Great word!", 1400L,
+            MascotMotion.GREETING, "Harika kelime!", "Great word!", 1400L,
         )
         MascotMatchEvent.STREAK_3 -> MascotMatchReaction(
             MascotMotion.VICTORY, "3'lü seri! Devam!", "3-word streak! Keep going!", 1650L,
