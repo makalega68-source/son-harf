@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 
 /**
  * Debug-only HOME compositor smoke.
+ * Current-head acceptance is intentionally triggered through this debug-only source.
  *
  * Uses the exact production floating companion but accelerates the requested 60s DIG -> 60s SIT
  * -> SLEEP routine so CI can visually and log-wise prove all three states without a two-minute wait.
