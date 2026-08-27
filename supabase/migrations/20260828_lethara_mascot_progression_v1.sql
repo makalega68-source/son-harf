@@ -96,7 +96,7 @@ begin
   ) then raise exception 'mascot_not_owned'; end if;
 
   insert into public.user_mascot_progress(user_id,mascot_id,pet_name)
-  values(v_uid,p_mascot_id,case when p_mascot_id='mascot_chibi_wizard' then 'Lyra' else 'Dostum' end)
+  values(v_uid,p_mascot_id,case when p_mascot_id='mascot_white' then 'Lyra' when p_mascot_id='mascot_chibi_wizard' then 'Neris' else 'Dostum' end)
   on conflict(user_id,mascot_id) do nothing;
 end $$;
 revoke all on function public.ensure_mascot_progress_v1(text) from public,anon;
@@ -225,11 +225,17 @@ end $$;
 revoke all on function public.feed_mascot_v1(text,text) from public,anon;
 grant execute on function public.feed_mascot_v1(text,text) to authenticated;
 
--- Rebrand the currently verified licensed Chibi runtime as Lyra. Other canonical Seals remain lore-only
--- until their distinct licensed 3D assets are bundled and pass the same runtime gate.
+-- Canonical mapping of the two runtime-verified models.
 update public.shop_items set
-  name_tr='Lyra — Yıldız Büyücüsü',
-  name_en='Lyra — Star Mage',
-  description_tr='Altı Mühür’den Lyra. Lisanslı 3D maskot; görünüm, hikâye ve yoldaşlık içindir, maç gücü vermez.',
-  description_en='Lyra of the Six Seals. Licensed 3D mascot for story and companionship; grants no match power.'
+  name_tr='Lyra — Beyaz Mühür',
+  name_en='Lyra — White Seal',
+  description_tr='Altı Mühür’den Lyra’nın herkese açık başlangıç formu. Hikâye ve yoldaşlık içindir; maç gücü vermez.',
+  description_en='Lyra of the Six Seals in her free starter form. Story and companionship only; no match power.'
+where id='mascot_white' and kind='mascot';
+
+update public.shop_items set
+  name_tr='Neris — Gölge Bilgesi',
+  name_en='Neris — Shadow Sage',
+  description_tr='Altı Mühür’den Neris. Lisanslı 3D maskot; görünüm, hikâye ve yoldaşlık içindir, maç gücü vermez.',
+  description_en='Neris of the Six Seals. Licensed 3D mascot for story and companionship; grants no match power.'
 where id='mascot_chibi_wizard' and kind='mascot';
