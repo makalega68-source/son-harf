@@ -67,10 +67,7 @@ internal fun PremiumMasterHome(
     }
     LaunchedEffect(Unit) { reload() }
 
-    val rating = 1000 + (profile?.wins ?: 0) * 18
-    val nextLeague = 3000
-    val leagueProgress = (rating / nextLeague.toFloat()).coerceIn(0f, 1f)
-    val streak = growth?.bestStreak ?: 0
+    val streak = growth?.currentWinStreak ?: 0
 
     Box(Modifier.fillMaxSize()) {
         androidx.compose.foundation.lazy.LazyColumn(
@@ -79,8 +76,8 @@ internal fun PremiumMasterHome(
             verticalArrangement = Arrangement.spacedBy(11.dp),
         ) {
             item { MasterProfileHeader(profile, growth, isAdmin, onProfile, onAdmin, onNotifications) }
-            item { MasterLeagueBanner(rating, leagueProgress, onLeague) }
-            item { MasterLiveStrip(leaders.firstOrNull()?.displayName, streak) }
+            item { MasterLeagueBanner(growth, onLeague) }
+            item { MasterLiveStrip(streak) }
             item {
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
                     val compact = maxWidth < 600.dp
@@ -103,8 +100,8 @@ internal fun PremiumMasterHome(
                                     profile?.displayName ?: sh("Sen", "You"),
                                     profile?.avatarPath,
                                     profile?.gender,
-                                    leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"),
-                                    streak.coerceAtLeast(4),
+                                    sh("Rakip", "Rival"),
+                                    streak,
                                     onQuickGame,
                                 )
                             }
@@ -200,8 +197,6 @@ private fun MasterProfileHeader(
                 LinearProgressIndicator(progress = { growth?.let { it.levelProgress.toFloat()/it.levelTarget.coerceAtLeast(1) } ?: 0f }, modifier = Modifier.width(72.dp).height(5.dp).clip(CircleShape), color = MasterBlue, trackColor = MasterLine)
             }
         }
-        MasterWallet(Icons.Rounded.Paid, "${(growth?.xp ?: 0) * 2}", MasterGold)
-        Spacer(Modifier.width(5.dp))
         MasterWallet(Icons.Rounded.Diamond, "${profile?.diamonds ?: 0}", MasterBlue)
         Spacer(Modifier.width(5.dp))
         Surface(onClick = if (isAdmin) onAdmin else onNotifications, shape = CircleShape, color = Color.White, border = BorderStroke(1.dp, MasterLine), modifier = Modifier.size(40.dp)) {
@@ -218,33 +213,30 @@ private fun MasterProfileHeader(
     }
 }
 
-@Composable private fun MasterLeagueBanner(rating: Int, progress: Float, onClick: () -> Unit) {
+@Composable private fun MasterLeagueBanner(growth: GrowthDashboardDto?, onClick: () -> Unit) {
     Card(onClick = onClick, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, MasterLine)) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = RoundedCornerShape(18.dp), color = Color(0xFFFFF3E3)) { Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFFB66D31), modifier = Modifier.padding(12.dp).size(31.dp)) }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text("BRONZ II", color = MasterInk, fontWeight = FontWeight.Black, fontSize = 17.sp)
-                Text("🏆 $rating / 3.000", color = MasterInk, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                Text(sh("Gümüş Lig'e sadece 2 galibiyet!", "Only 2 wins to Silver League!"), color = MasterMuted, fontSize = 9.sp)
-                LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().padding(top = 5.dp).height(6.dp).clip(CircleShape), color = MasterBlue, trackColor = MasterLine)
+                Text(growth?.leagueName ?: sh("LİG", "LEAGUE"), color = MasterInk, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                Text("🏆 ${growth?.wins ?: 0} ${sh("galibiyet", "wins")}", color = MasterInk, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                Text(sh("Güncel sıralamanı ve lig detaylarını aç.", "Open your current ranking and league details."), color = MasterMuted, fontSize = 9.sp)
             }
             Spacer(Modifier.width(9.dp))
-            Column(horizontalAlignment = Alignment.End) {
-                Text(sh("Sıralamada", "Ranking"), color = MasterMuted, fontSize = 8.sp)
-                Text("#12.450", color = MasterInk, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                Surface(shape = RoundedCornerShape(12.dp), color = MasterSky, border = BorderStroke(1.dp, MasterBlue2)) { Text(sh("LİDERLİK ›", "LEADERBOARD ›"), Modifier.padding(horizontal = 7.dp, vertical = 5.dp), color = MasterBlue, fontSize = 8.sp, fontWeight = FontWeight.Black) }
+            Surface(shape = RoundedCornerShape(12.dp), color = MasterSky, border = BorderStroke(1.dp, MasterBlue2)) {
+                Text(sh("LİDERLİK ›", "LEADERBOARD ›"), Modifier.padding(horizontal = 7.dp, vertical = 7.dp), color = MasterBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
             }
         }
     }
 }
 
-@Composable private fun MasterLiveStrip(rival: String?, streak: Int) {
+@Composable private fun MasterLiveStrip(streak: Int) {
     Surface(shape = RoundedCornerShape(18.dp), color = MasterSky, border = BorderStroke(1.dp, MasterLine)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 10.dp, horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            LiveCell("👥", sh("Ezeli rakibin", "Arch-rival"), "${rival ?: sh("Rakip", "Rival")} ${sh("çevrimiçi!", "online!")}", Modifier.weight(1f))
-            LiveCell("🏆", sh("Turnuva başlıyor!", "Tournament starts!"), "18 dk", Modifier.weight(1f))
-            LiveCell("🔥", "${streak.coerceAtLeast(4)} ${sh("maçlık galibiyet", "win streak")}", sh("serin devam ediyor!", "keep it going!"), Modifier.weight(1f))
+            LiveCell("⚔", sh("Yeni düello", "New duel"), sh("Oyna sekmesinden başla", "Start from Play"), Modifier.weight(1f))
+            LiveCell("🏆", sh("Haftalık lig", "Weekly league"), sh("Sıralamanı kontrol et", "Check your ranking"), Modifier.weight(1f))
+            LiveCell("🔥", "$streak ${sh("maçlık seri", "win streak")}", if (streak > 0) sh("serin devam ediyor!", "keep it going!") else sh("yeni seri başlat", "start a new streak"), Modifier.weight(1f))
         }
     }
 }
@@ -271,7 +263,7 @@ private fun MasterProfileHeader(
                 Text("KALEM → MASA → ARABA", color = Color(0xFF583D26), fontWeight = FontWeight.Black, fontSize = 12.sp, modifier = Modifier.background(Color(0xFFFFE4B3), RoundedCornerShape(9.dp)).padding(horizontal = 8.dp, vertical = 7.dp))
                 Spacer(Modifier.weight(1f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    PlayerVsCell(playerName, "2150", Modifier.weight(1f), playerAvatarPath, playerGender); Text("VS", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black); PlayerVsCell(rivalName, "2186", Modifier.weight(1f))
+                    PlayerVsCell(playerName, Modifier.weight(1f), playerAvatarPath, playerGender); Text("VS", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black); PlayerVsCell(rivalName, Modifier.weight(1f))
                 }
                 Spacer(Modifier.height(9.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -285,7 +277,7 @@ private fun MasterProfileHeader(
 }
 
 @Composable private fun MasterLetterBackdrop() { Canvas(Modifier.fillMaxSize()) { val c=Color.White.copy(.13f); listOf(.12f,.28f,.76f,.88f).forEachIndexed{i,x->drawCircle(c, radius=22f, center=Offset(size.width*x,size.height*(.18f+i*.13f))) } } }
-@Composable private fun PlayerVsCell(name:String,rating:String,modifier:Modifier,avatarPath:String?=null,gender:String?=null){ Column(modifier,horizontalAlignment=Alignment.CenterHorizontally){ if(!avatarPath.isNullOrBlank()) ProfilePhotoAvatarWithGender(avatarPath=avatarPath,gender=gender,name=name,size=40.dp,accent=Color.White) else Surface(shape=CircleShape,color=Color.White.copy(.20f),border=BorderStroke(2.dp,Color.White)){Box(Modifier.size(36.dp),contentAlignment=Alignment.Center){Text(name.take(1).uppercase(),color=Color.White,fontWeight=FontWeight.Black)}};Text(name,color=Color.White,fontWeight=FontWeight.Black,fontSize=9.sp,maxLines=1);Text("🏆 $rating",color=MasterGold,fontSize=8.sp)} }
+@Composable private fun PlayerVsCell(name:String,modifier:Modifier,avatarPath:String?=null,gender:String?=null){ Column(modifier,horizontalAlignment=Alignment.CenterHorizontally){ if(!avatarPath.isNullOrBlank()) ProfilePhotoAvatarWithGender(avatarPath=avatarPath,gender=gender,name=name,size=40.dp,accent=Color.White) else Surface(shape=CircleShape,color=Color.White.copy(.20f),border=BorderStroke(2.dp,Color.White)){Box(Modifier.size(36.dp),contentAlignment=Alignment.Center){Text(name.take(1).uppercase(),color=Color.White,fontWeight=FontWeight.Black)}};Text(name,color=Color.White,fontWeight=FontWeight.Black,fontSize=9.sp,maxLines=1)} }
 
 @Composable private fun MasterBilBakalimCard(modifier:Modifier,onPlay:()->Unit){
     Card(onClick=onPlay,modifier=modifier.height(205.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent),border=BorderStroke(1.5.dp,MasterBlue2)){
@@ -302,13 +294,34 @@ private fun MasterProfileHeader(
 }
 
 @Composable private fun MasterDailySeries(modifier:Modifier,growth:GrowthDashboardDto?,message:String,onClaim:()->Unit){
+    val claimed = growth?.dailyClaimed == true
     Card(onClick=onClaim,modifier=modifier.height(154.dp),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,MasterLine)){
-        Column(Modifier.padding(12.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(sh("GÜNLÜK SERİ","DAILY STREAK"),color=MasterInk,fontWeight=FontWeight.Black,fontSize=14.sp);Text(if(message.isNotBlank())message else "⏱ 18 saat",color=MasterMuted,fontSize=8.sp)};Text(sh("Her gün oyna, ödülleri kaçırma!","Play daily, don't miss rewards!"),color=MasterMuted,fontSize=8.sp);Spacer(Modifier.height(8.dp));Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(4.dp)){(1..7).forEach{d->Surface(Modifier.weight(1f).height(65.dp),shape=RoundedCornerShape(10.dp),color=if(d==3)Color(0xFFDFF5FF) else MasterSky,border=BorderStroke(1.dp,if(d==3)MasterBlue else MasterLine)){Column(Modifier.fillMaxSize().padding(3.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceEvenly){Text("Gün $d",fontSize=7.sp,color=MasterInk);Text(if(d<=2)"✅" else if(d==7)"🎁" else "⭐",fontSize=15.sp);Text(listOf("100","150","200","5","300","10","500")[d-1],fontSize=8.sp,fontWeight=FontWeight.Black,color=MasterInk)}}}}
+        Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
+                Text(sh("GÜNLÜK ÖDÜL","DAILY REWARD"),color=MasterInk,fontWeight=FontWeight.Black,fontSize=14.sp)
+                Text(if(message.isNotBlank())message else if(claimed)sh("ALINDI","CLAIMED") else sh("HAZIR","READY"),color=if(claimed)MasterGreen else MasterBlue,fontSize=9.sp,fontWeight=FontWeight.Black)
+            }
+            Text(sh("Her gün giriş yaparak günlük ödülünü topla.","Sign in each day to collect your daily reward."),color=MasterMuted,fontSize=9.sp)
+            Surface(shape=RoundedCornerShape(14.dp),color=MasterSky,border=BorderStroke(1.dp,MasterLine)){
+                Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+                    Text(if(claimed)"✅" else "🎁",fontSize=27.sp)
+                    Text(if(claimed)sh("Bugünkü ödül alındı","Today's reward claimed") else "+${growth?.dailyReward ?: 40} SC",color=MasterInk,fontWeight=FontWeight.Black,fontSize=13.sp)
+                }
+            }
         }
     }
 }
 
-@Composable private fun MasterSeasonCard(modifier:Modifier,onClick:()->Unit){Card(onClick=onClick,modifier=modifier.height(154.dp),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,MasterLine)){Column(Modifier.padding(12.dp),horizontalAlignment=Alignment.CenterHorizontally){Text("SEZON 12",color=MasterInk,fontWeight=FontWeight.Black,fontSize=14.sp);Text("🎁",fontSize=39.sp);LinearProgressIndicator(progress={.72f},modifier=Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),color=MasterBlue,trackColor=MasterLine);Text("7.250 / 10.000",color=MasterInk,fontWeight=FontWeight.Bold,fontSize=8.sp);Text("24 gün 18 saat",color=MasterMuted,fontSize=7.sp)}}}
+@Composable private fun MasterSeasonCard(modifier:Modifier,onClick:()->Unit){
+    Card(onClick=onClick,modifier=modifier.height(154.dp),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,MasterLine)){
+        Column(Modifier.fillMaxSize().padding(12.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceEvenly){
+            Text(sh("SEZON","SEASON"),color=MasterInk,fontWeight=FontWeight.Black,fontSize=14.sp)
+            Text("🎁",fontSize=39.sp)
+            Text(sh("Sezon ilerlemeni ve ödüllerini aç","Open season progress and rewards"),color=MasterMuted,fontSize=8.sp,textAlign=TextAlign.Center)
+            Surface(shape=RoundedCornerShape(10.dp),color=MasterSky,border=BorderStroke(1.dp,MasterLine)){Text(sh("DETAYLAR ›","DETAILS ›"),Modifier.padding(horizontal=9.dp,vertical=5.dp),color=MasterBlue,fontSize=8.sp,fontWeight=FontWeight.Black)}
+        }
+    }
+}
 
 @Composable private fun MasterTopThree(leaders:List<LeaderboardV2Row>,onClick:()->Unit){Card(onClick=onClick,shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,MasterLine)){Column(Modifier.padding(12.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("🏆 ${sh("HAFTANIN EN İYİ 3 OYUNCUSU","TOP 3 THIS WEEK")}",color=MasterInk,fontWeight=FontWeight.Black,fontSize=11.sp);Text(sh("CANLI","LIVE"),color=MasterGreen,fontWeight=FontWeight.Black,fontSize=8.sp)};Spacer(Modifier.height(7.dp));Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)){leaders.take(3).forEachIndexed{i,r->Surface(Modifier.weight(1f),shape=RoundedCornerShape(14.dp),color=MasterSky){Column(Modifier.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(listOf("🥇","🥈","🥉").getOrElse(i){"#${i+1}"},fontSize=19.sp);Text(r.displayName,color=MasterInk,fontWeight=FontWeight.Black,fontSize=9.sp,maxLines=1);Text("${r.wins}W • ${r.winRate.toInt()}%",color=MasterMuted,fontSize=7.sp)}}}}}}}
 
