@@ -172,7 +172,7 @@ begin
 
   insert into public.daily_cipher_sessions(user_id,challenge_date,language)
   values(v_uid,current_date,v_lang)
-  on conflict (user_id,challenge_date,language) do nothing;
+  on conflict on constraint daily_cipher_sessions_pkey do nothing;
 
   select s.attempts,s.guesses,s.feedbacks,s.won,s.finished,s.reward_coins
     into v_attempts,v_guesses,v_feedbacks,v_won,v_finished,v_reward
@@ -230,10 +230,10 @@ begin
     end if;
   end if;
 
-  update public.daily_cipher_sessions
+  update public.daily_cipher_sessions as s
   set attempts=v_attempts,guesses=v_guesses,feedbacks=v_feedbacks,won=v_won,
       finished=v_finished,reward_coins=v_reward,updated_at=now()
-  where user_id=v_uid and challenge_date=current_date and language=v_lang;
+  where s.user_id=v_uid and s.challenge_date=current_date and s.language=v_lang;
 
   return query
     select current_date,v_lang,v_attempts,6,v_guesses,v_feedbacks,v_won,v_finished,
