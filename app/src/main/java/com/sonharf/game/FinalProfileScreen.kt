@@ -56,8 +56,8 @@ fun FinalProfileScreen() {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Text("PROFİL", fontSize = 30.sp, fontWeight = FontWeight.Black)
-            Text("Oyuncu kimliğin, gizliliğin ve ayarların", color = SonHarfMuted)
+            Text("HATIRLATICI PROFİLİ", fontSize = 26.sp, fontWeight = FontWeight.Black)
+            Text("Lethara’daki kimliğin, gizliliğin ve ayarların", color = SonHarfMuted)
         }
 
         item {
@@ -86,7 +86,7 @@ fun FinalProfileScreen() {
                     }
                     Text(profile?.displayName ?: "OYUNCU PROFİLİ", fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
-                        if (profile == null) "İlk maça girdiğinde profilin otomatik oluşturulur." else if (profile?.isVip == true) "VIP OYUNCU" else "SON HARF OYUNCUSU",
+                        if (profile == null) "İlk maça girdiğinde Hatırlatıcı profilin hazırlanır." else if (profile?.isVip == true) "VIP HATIRLATICI" else "HATIRLATICI",
                         color = if (profile?.isVip == true) SonHarfGold else SonHarfMuted,
                         textAlign = TextAlign.Center,
                     )
