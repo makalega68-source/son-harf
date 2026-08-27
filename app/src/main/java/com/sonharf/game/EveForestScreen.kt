@@ -216,6 +216,9 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
                     reactionNonce++
                 }
                 EveMascotRuntime.sleepForInactivity()
+            } else if (!EveMascotRuntime.sleepingByInactivity) {
+                // Awake room uses the same needs/conversation behavior director as HOME.
+                EveMascotRuntime.updateContext(store.behaviorContext())
             }
             delay(1_000L)
         }

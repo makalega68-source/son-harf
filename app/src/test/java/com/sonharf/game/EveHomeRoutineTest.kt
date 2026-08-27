@@ -15,7 +15,7 @@ class EveSleepWakeBehaviorTest {
 
     @Test
     fun autonomousIdleDoesNotReuseHeadBowingHomeAliases() {
-        val clips = EveAnimationCue.entries.map { it.clipName }
+        val clips = EveAnimationCue.values().toList().map { it.clipName }
         assertFalse(EveAnimationCue.entries.any { it.name == "HOME_DIG_RIGHT_PAW" })
         assertFalse(EveAnimationCue.entries.any { it.name == "HOME_SIT_HOLD" })
         assertTrue("IdleBreathe" in clips)
