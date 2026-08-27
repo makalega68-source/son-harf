@@ -152,6 +152,8 @@ jobs:
             grep -q "EVE_HOME_ROUTINE: phase=SLEEPING" artifacts/eve-home/logcat.txt || (echo "::error::HOME SLEEPING phase not observed"; exit 1)
             grep -q "EVE_HOME_REACTION: touch=HAPPY prompt=Hadi TestOyuncu bana xp topla" artifacts/eve-home/logcat.txt || (echo "::error::HOME tap did not trigger personalized happy XP reaction"; exit 1)
             grep -q "EVE_HOME_REACTION: context=ASK_PET" artifacts/eve-home/logcat.txt || (echo "::error::HOME boredom context did not trigger ASK_PET"; exit 1)
+            grep -q "EVE_HOME_ROUTINE: restart reason=context:ASK_PET afterMs=6500" artifacts/eve-home/logcat.txt || (echo "::error::ASK_PET bypassed production routine arbitration"; exit 1)
+            awk '/EVE_HOME_REACTION: context=ASK_PET/{seen=1; next} seen && /EVE_HOME_ROUTINE: phase=SITTING/{bad=1} END{exit bad}' artifacts/eve-home/logcat.txt || (echo "::error::Baseline SITTING overwrote ASK_PET before its hold window ended"; exit 1)
             test "$(stat -c%s artifacts/eve-home/home-frame-dig.png)" -gt 20000 || (echo "::error::Floating HOME DIG frame is unexpectedly empty"; exit 1)
             test "$(stat -c%s artifacts/eve-home/home-frame-sit.png)" -gt 20000 || (echo "::error::Floating HOME SIT frame is unexpectedly empty"; exit 1)
             test "$(stat -c%s artifacts/eve-home/home-frame-sleep.png)" -gt 20000 || (echo "::error::Floating HOME SLEEP frame is unexpectedly empty"; exit 1)

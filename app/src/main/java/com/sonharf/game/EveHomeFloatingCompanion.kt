@@ -77,6 +77,7 @@ internal fun EveHomeFloatingCompanion(
     onOpen: () -> Unit = { EveLivingRoomRuntime.show() },
     routineTiming: EveHomeRoutineTiming = EveHomeRoutineTiming(),
     playerNameOverride: String? = null,
+    behaviorContextOverride: EveBehaviorContext? = null,
 ) {
     val context = LocalContext.current
     val store = remember { EveCompanionStore(context) }
@@ -140,9 +141,10 @@ internal fun EveHomeFloatingCompanion(
 
     // Re-evaluate needs and recent conversation tone while HOME is visible. This is intentionally
     // low-frequency: Eve can express a need, but never nags or steals focus continuously.
-    LaunchedEffect(store) {
+    LaunchedEffect(store, behaviorContextOverride) {
         while (currentCoroutineContext().isActive) {
-            val firedIntent = EveMascotRuntime.updateContext(store.behaviorContext())
+            val contextSnapshot = behaviorContextOverride ?: store.behaviorContext()
+            val firedIntent = EveMascotRuntime.updateContext(contextSnapshot)
             if (firedIntent != null) {
                 // Cancel the exact baseline Job immediately. Only after the contextual reaction
                 // has owned Eve for its full window do we restart DIG -> SIT -> SLEEP from zero.

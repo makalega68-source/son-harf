@@ -11,6 +11,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -29,6 +34,20 @@ class EveHomeFloatingSmokeActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             MaterialTheme {
+                var forcedBehaviorContext by remember { mutableStateOf<EveBehaviorContext?>(null) }
+
+                LaunchedEffect(Unit) {
+                    // Do not call EveMascotRuntime directly: the production HOME component must
+                    // evaluate this override and cancel/restart its own baseline routine.
+                    kotlinx.coroutines.delay(25_000L)
+                    forcedBehaviorContext = EveBehaviorContext(
+                        fullness = 80,
+                        happiness = 80,
+                        energy = 80,
+                        minutesSinceInteraction = 90,
+                    )
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -73,22 +92,8 @@ class EveHomeFloatingSmokeActivity : ComponentActivity() {
                             happyReactionMs = 2_500L,
                         ),
                         playerNameOverride = "TestOyuncu",
+                        behaviorContextOverride = forcedBehaviorContext,
                     )
-
-                    androidx.compose.runtime.LaunchedEffect(Unit) {
-                        // After CI taps Eve and verifies the happy reaction, force the same boredom
-                        // context used in production so ASK_PET and routine arbitration are covered.
-                        kotlinx.coroutines.delay(25_000L)
-                        EveMascotRuntime.updateContext(
-                            EveBehaviorContext(
-                                fullness = 80,
-                                happiness = 80,
-                                energy = 80,
-                                minutesSinceInteraction = 90,
-                            ),
-                            nowMs = System.currentTimeMillis() + 90_000L,
-                        )
-                    }
 
                     Text(
                         text = "🐾  EVE EVİ",
