@@ -126,7 +126,7 @@ internal fun MascotLive3DStage(
                     modelLoader = modelLoader,
                     isOpaque = false,
                     autoCenterContent = true,
-                    autoFitContent = false,
+                    autoFitContent = resolvedId == MascotCatalog.CHIBI_WIZARD_ID,
                     cameraNode = cameraNode,
                     cameraManipulator = null,
                 ) {
@@ -144,8 +144,12 @@ internal fun MascotLive3DStage(
                             MascotMotion.CRITICAL -> 1.08f
                             else -> 1f
                         },
-                        scaleToUnits = if (resolvedId == MascotCatalog.DEFAULT_ID) 1.15f else 1.25f,
-                        centerOrigin = Position(x = 0f, y = -1f, z = 0f),
+                        scaleToUnits = if (resolvedId == MascotCatalog.DEFAULT_ID) 1.15f else 1.0f,
+                        centerOrigin = if (resolvedId == MascotCatalog.DEFAULT_ID) {
+                            Position(x = 0f, y = -1f, z = 0f)
+                        } else {
+                            Position(x = 0f, y = 0f, z = 0f)
+                        },
                         rotation = Rotation(x = 0f, y = 0f, z = 0f),
                         isEditable = false,
                     )
