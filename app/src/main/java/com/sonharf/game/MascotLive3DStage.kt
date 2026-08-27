@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import android.content.pm.PackageManager
 import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
@@ -44,6 +45,29 @@ internal fun MascotLive3DStage(
     val resolvedId = MascotCatalog.item(mascotId).id
     val modelLocation = remember(resolvedId) {
         MascotCatalog.modelLocation(context, resolvedId)
+    }
+    val vulkanSupported = remember(context) {
+        context.packageManager.hasSystemFeature(PackageManager.FEATURE_VULKAN_HARDWARE_LEVEL)
+    }
+
+    if (!vulkanSupported) {
+        Surface(
+            modifier = modifier.padding(8.dp),
+            shape = RoundedCornerShape(16.dp),
+            color = Color(0xFF102A43),
+            border = BorderStroke(1.dp, Color(0xFF38BDF8)),
+        ) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = if (SonHarfUiState.isEnglish) "3D mascot is not supported on this device" else "Bu cihaz 3D maskotu desteklemiyor",
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+        return
     }
 
     if (modelLocation == null) {
