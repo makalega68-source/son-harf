@@ -443,6 +443,10 @@ private fun TargetArena(
         Box(Modifier.fillMaxSize().background(TGbg), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(sh("MAÇ TAMAMLANDI", "MATCH FINISHED"), color = TGtext, fontWeight = FontWeight.Black, fontSize = 24.sp)
+                MascotLive3DStage(
+                    modifier = Modifier.size(width = 110.dp, height = 130.dp),
+                    motion = MascotRuntime.motion,
+                )
                 Text(sh("Sonuç özeti açılmazsa ana menüye güvenle dönebilirsin.", "If the result summary does not open, you can safely return home."), color = TGmuted, fontSize = 12.sp, textAlign = TextAlign.Center)
                 Button(onClick = onExit, colors = ButtonDefaults.buttonColors(containerColor = TGcyan)) {
                     Text(sh("ANA MENÜ", "HOME"), color = Color.White, fontWeight = FontWeight.Black)
@@ -464,8 +468,20 @@ private fun TargetArena(
         }
 
         Spacer(Modifier.height(14.dp))
-        Text("TUR ${room.roundNo}/3", color = TGtext, fontWeight = FontWeight.Black, fontSize = 13.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
-        Spacer(Modifier.height(12.dp))
+        Box(Modifier.fillMaxWidth().height(64.dp)) {
+            Text(
+                "TUR ${room.roundNo}/3",
+                color = TGtext,
+                fontWeight = FontWeight.Black,
+                fontSize = 13.sp,
+                modifier = Modifier.align(Alignment.Center),
+            )
+            MascotLive3DStage(
+                modifier = Modifier.align(Alignment.CenterEnd).size(width = 58.dp, height = 64.dp),
+                motion = MascotRuntime.motion,
+            )
+        }
+        Spacer(Modifier.height(8.dp))
 
         Card(colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .35f))) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
