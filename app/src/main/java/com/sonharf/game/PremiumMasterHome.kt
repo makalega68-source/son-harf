@@ -123,8 +123,8 @@ internal fun PremiumMasterHome(
                                 profile?.displayName ?: sh("Sen", "You"),
                                 profile?.avatarPath,
                                 profile?.gender,
-                                leaders.firstOrNull()?.displayName ?: sh("Rakip", "Rival"),
-                                streak.coerceAtLeast(4),
+                                sh("Rakip", "Rival"),
+                                streak,
                                 onQuickGame,
                             )
                             MasterBilBakalimCard(Modifier.weight(.82f), onBilBakalim)
