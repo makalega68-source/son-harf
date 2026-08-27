@@ -18,5 +18,5 @@ internal object MascotPolicy {
     const val WHITE_MASCOT_SIZE_BYTES = 781_848
 
     const val CHIBI_WIZARD_LICENSE_APPROVED = true
-    const val CHIBI_WIZARD_ASSET_READY = false
+    const val CHIBI_WIZARD_ASSET_READY = true
 }
