@@ -91,7 +91,7 @@ internal fun PremiumMasterHome(
                                 // She now scrolls with this content instead of floating over menus.
                                 EveHomeFixedCompanion(
                                     modifier = Modifier
-                                        .width(104.dp)
+                                        .width(132.dp)
                                         .fillMaxHeight(),
                                 )
                                 MasterSonHarfCard(
@@ -114,7 +114,7 @@ internal fun PremiumMasterHome(
                         ) {
                             EveHomeFixedCompanion(
                                 modifier = Modifier
-                                    .width(132.dp)
+                                    .width(148.dp)
                                     .height(250.dp),
                             )
                             MasterSonHarfCard(
