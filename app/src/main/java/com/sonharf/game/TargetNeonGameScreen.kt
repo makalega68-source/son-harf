@@ -241,6 +241,7 @@ fun TargetNeonGameScreen(autoStartMatchmaking: Boolean = false) {
                                     "word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "turn_expired"
                                 )
                                 notice = if (rejected) friendly(updated.lastEvent.orEmpty()) else "${submitted.uppercase()} kabul edildi"
+                                MascotRuntime.react(if (rejected) MascotMotion.DEFEAT else MascotMotion.VICTORY)
                             }
                             .onFailure { notice = friendly(it.message.orEmpty()) }
                         busy = false
