@@ -162,7 +162,7 @@ internal fun PremiumMasterHome(
                         if (d == null || d.dailyClaimed) return@MasterShortcut
                         scope.launch { runCatching { backend?.claimDailyCheckin() }; reload() }
                     }
-                    MasterShortcut(Icons.Rounded.EmojiEvents, sh("LİGLER", "LEAGUES"), 0, Modifier.weight(1f), onLeague)
+                    MasterShortcut(Icons.Rounded.EmojiEvents, sh("MÜHÜR LİGLERİ", "SEAL LEAGUES"), 0, Modifier.weight(1f), onLeague)
                     MasterShortcut(Icons.Rounded.ShoppingCart, "STYLE", 0, Modifier.weight(1f), onShop)
                     MasterShortcut(Icons.Rounded.Checkroom, sh("DOLABIM", "WARDROBE"), 0, Modifier.weight(1f), onWardrobe)
                 }
@@ -171,7 +171,7 @@ internal fun PremiumMasterHome(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MasterShortcut(Icons.Rounded.Lightbulb, sh("GÜNÜN ŞİFRESİ", "DAILY CIPHER"), 1, Modifier.weight(1f), onDailyCipher)
                     MasterShortcut(Icons.Rounded.MilitaryTech, sh("USTALIK YOLU", "MASTERY PATH"), 0, Modifier.weight(1f), onMastery)
-                    MasterShortcut(Icons.Rounded.Whatshot, sh("TURNUVA", "TOURNAMENT"), 0, Modifier.weight(1f), onMastery)
+                    MasterShortcut(Icons.Rounded.Whatshot, sh("SON MÜHÜR", "LAST SEAL"), 0, Modifier.weight(1f), onMastery)
                     MasterShortcut(Icons.Rounded.Groups, sh("EZELİ RAKİP", "ARCH RIVAL"), 0, Modifier.weight(1f), onMastery)
                 }
             }
@@ -370,9 +370,9 @@ private fun MasterLetharaBanner(onHistory: () -> Unit, onMascot: () -> Unit) {
 @Composable private fun MasterSeasonCard(modifier:Modifier,onClick:()->Unit){
     Card(onClick=onClick,modifier=modifier.height(154.dp),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,MasterLine)){
         Column(Modifier.fillMaxSize().padding(12.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceEvenly){
-            Text(sh("SEZON","SEASON"),color=MasterInk,fontWeight=FontWeight.Black,fontSize=14.sp)
+            Text(sh("LETHARA SEZONU","LETHARA SEASON"),color=MasterInk,fontWeight=FontWeight.Black,fontSize=13.sp)
             Text("🎁",fontSize=39.sp)
-            Text(sh("Sezon ilerlemeni ve ödüllerini aç","Open season progress and rewards"),color=MasterMuted,fontSize=8.sp,textAlign=TextAlign.Center)
+            Text(sh("Söz Dokusu sezon ilerlemeni ve ödüllerini aç","Open Word Weave season progress and rewards"),color=MasterMuted,fontSize=8.sp,textAlign=TextAlign.Center)
             Surface(shape=RoundedCornerShape(10.dp),color=MasterSky,border=BorderStroke(1.dp,MasterLine)){Text(sh("DETAYLAR ›","DETAILS ›"),Modifier.padding(horizontal=9.dp,vertical=5.dp),color=MasterBlue,fontSize=8.sp,fontWeight=FontWeight.Black)}
         }
     }
