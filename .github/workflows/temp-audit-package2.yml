@@ -1,0 +1,39 @@
+name: Temp Audit Package 2
+
+on:
+  push:
+    branches:
+      - audit/full-game-functional-20260827
+    paths:
+      - '.github/workflows/temp-audit-package2.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+      - name: Audit source assertions
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'BackHandler(enabled = !closing)' app/src/main/java/com/sonharf/game/PrivateRoomExperience.kt
+          grep -q 'Message could not be sent' app/src/main/java/com/sonharf/game/SocialExperience.kt
+          grep -q 'Invite could not be accepted' app/src/main/java/com/sonharf/game/GameInviteOverlay.kt
+          grep -q 'Friend request could not be accepted' app/src/main/java/com/sonharf/game/FriendRequestOverlay.kt
+          ! grep -q 'backend?.purchaseShopItem' app/src/main/java/com/sonharf/game/EconomyShopScreen.kt
+          ! grep -q 'backend?.claimRewardedAd' app/src/main/java/com/sonharf/game/RewardCenterScreen.kt
+          ! grep -q 'Karanlık mod","Dark mode' app/src/main/java/com/sonharf/game/MetaHubScreen.kt
+      - name: Unit tests and debug build
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
