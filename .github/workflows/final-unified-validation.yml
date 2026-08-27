@@ -36,8 +36,9 @@ jobs:
           set -euo pipefail
           test ! -f app/src/main/assets/models/eve/eve.glb
           test -f archive/eve/eve.glb
-          if find . -type f \( -iname '*.fbx' -o -iname '*.unitypackage' \) -print -quit | grep -q .; then
+          if git ls-files '*.fbx' '*.unitypackage' | grep -q .; then
             echo "::error::Purchased source mascot assets must not be committed"
+            git ls-files '*.fbx' '*.unitypackage'
             exit 1
           fi
           grep -q 'DAILY_CIPHER' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
