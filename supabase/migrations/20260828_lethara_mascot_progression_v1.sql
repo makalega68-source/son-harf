@@ -232,6 +232,37 @@ end $$;
 revoke all on function public.buy_mascot_fruit_v1(text,integer) from public,anon;
 grant execute on function public.buy_mascot_fruit_v1(text,integer) to authenticated;
 
+create or replace function public.care_mascot_v1(p_mascot_id text,p_action text)
+returns table(success boolean,mascot_id text,action text,happiness integer,fullness integer,energy integer)
+language plpgsql
+security definer
+set search_path=public,pg_temp
+as $care$
+declare
+  v_uid uuid:=auth.uid();
+  v_action text:=lower(trim(coalesce(p_action,'')));
+  v_happiness integer;
+  v_fullness integer;
+  v_energy integer;
+begin
+  if v_uid is null then raise exception 'not_authenticated'; end if;
+  if v_action not in ('love','play','groom') then raise exception 'invalid_care_action'; end if;
+  perform public.ensure_mascot_progress_v1(p_mascot_id);
+
+  update public.user_mascot_progress
+  set happiness=least(100,happiness+case v_action when 'love' then 8 when 'play' then 6 else 4 end),
+      fullness=least(100,fullness+case when v_action='groom' then 2 else 0 end),
+      energy=greatest(0,least(100,energy+case v_action when 'love' then 2 when 'play' then -4 else 5 end)),
+      updated_at=now()
+  where user_id=v_uid and user_mascot_progress.mascot_id=p_mascot_id
+  returning user_mascot_progress.happiness,user_mascot_progress.fullness,user_mascot_progress.energy
+  into v_happiness,v_fullness,v_energy;
+
+  return query select true,p_mascot_id,v_action,v_happiness,v_fullness,v_energy;
+end $care$;
+revoke all on function public.care_mascot_v1(text,text) from public,anon;
+grant execute on function public.care_mascot_v1(text,text) to authenticated;
+
 create or replace function public.feed_mascot_v1(p_mascot_id text,p_fruit_id text)
 returns table(
   success boolean,mascot_id text,fruit_id text,xp_gained integer,total_xp integer,level integer,memory_fragments integer,
