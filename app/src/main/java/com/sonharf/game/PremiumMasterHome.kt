@@ -87,9 +87,9 @@ internal fun PremiumMasterHome(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                // Keep Eve inside the same LazyColumn item as the main game card.
-                                // She now scrolls with this content instead of floating over menus.
-                                EveHomeFixedCompanion(
+                                // Keep the selected mascot inside the same LazyColumn item as the main game card.
+                                // It scrolls with this content instead of floating over menus.
+                                MascotHomeCompanion(
                                     modifier = Modifier
                                         .width(132.dp)
                                         .fillMaxHeight(),
@@ -113,7 +113,7 @@ internal fun PremiumMasterHome(
                             horizontalArrangement = Arrangement.spacedBy(10.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            EveHomeFixedCompanion(
+                            MascotHomeCompanion(
                                 modifier = Modifier
                                     .width(148.dp)
                                     .height(250.dp),
