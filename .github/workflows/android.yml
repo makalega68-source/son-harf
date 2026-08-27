@@ -61,6 +61,7 @@ jobs:
           SON_HARF_RELEASE_KEY_PASSWORD: ${{ secrets.SON_HARF_RELEASE_KEY_PASSWORD }}
           SON_HARF_ADMOB_APP_ID: ${{ secrets.SON_HARF_ADMOB_APP_ID }}
           SON_HARF_ADMOB_REWARDED_ID: ${{ secrets.SON_HARF_ADMOB_REWARDED_ID }}
+          SON_HARF_ADMOB_BANNER_ID: ${{ secrets.SON_HARF_ADMOB_BANNER_ID }}
         run: |
           printf '%s' "$RELEASE_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/son-harf-upload.jks"
           gradle assembleRelease bundleRelease --stacktrace --warning-mode all \
@@ -69,7 +70,8 @@ jobs:
             -PSON_HARF_RELEASE_KEY_ALIAS="$SON_HARF_RELEASE_KEY_ALIAS" \
             -PSON_HARF_RELEASE_KEY_PASSWORD="$SON_HARF_RELEASE_KEY_PASSWORD" \
             -PSON_HARF_ADMOB_APP_ID="$SON_HARF_ADMOB_APP_ID" \
-            -PSON_HARF_ADMOB_REWARDED_ID="$SON_HARF_ADMOB_REWARDED_ID"
+            -PSON_HARF_ADMOB_REWARDED_ID="$SON_HARF_ADMOB_REWARDED_ID" \
+            -PSON_HARF_ADMOB_BANNER_ID="$SON_HARF_ADMOB_BANNER_ID"
 
       - name: Upload signed release artifacts
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'
