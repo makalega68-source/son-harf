@@ -57,7 +57,6 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -216,13 +215,7 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
         Image(
             painter = painterResource(R.drawable.mascot_realm_bg),
             contentDescription = null,
-            modifier = Modifier
-                .fillMaxSize()
-                .graphicsLayer {
-                    scaleX = 1.08f
-                    scaleY = 1.08f
-                    translationY = 32.dp.toPx()
-                },
+            modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,
         )
 
