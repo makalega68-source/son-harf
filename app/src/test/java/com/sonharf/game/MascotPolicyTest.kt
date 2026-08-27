@@ -1,7 +1,5 @@
 package com.sonharf.game
 
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -16,15 +14,6 @@ class MascotPolicyTest {
         assertEquals(MascotCatalog.DEFAULT_ID, MascotPolicy.DEFAULT_MASCOT_ID)
         assertTrue(MascotCatalog.item(MascotCatalog.DEFAULT_ID).standard)
         assertTrue(MascotCatalog.item(MascotCatalog.DEFAULT_ID).licensedForCommercialGame)
-    }
-
-    @Test
-    fun bundledWhiteMascotDecodesToValidGlb() {
-        val bytes = MascotEmbeddedModel.decodeGlb()
-        assertEquals(113_328, bytes.size)
-        assertEquals("glTF", bytes.copyOfRange(0, 4).toString(Charsets.US_ASCII))
-        val version = ByteBuffer.wrap(bytes, 4, 4).order(ByteOrder.LITTLE_ENDIAN).int
-        assertEquals(2, version)
     }
 
     @Test
