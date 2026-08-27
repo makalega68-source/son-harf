@@ -410,14 +410,31 @@ private fun TargetArena(
     var showVipNotice by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
     var confirmForfeit by remember { mutableStateOf(false) }
-    DisposableEffect(room.id) { SonHarfUiState.inMatch = true; onDispose { SonHarfUiState.inMatch = false } }
+    DisposableEffect(room.id) {
+        SonHarfUiState.inMatch = true
+        MascotRuntime.setMatchActive(true)
+        MascotRuntime.react(MascotMotion.IDLE)
+        onDispose {
+            SonHarfUiState.inMatch = false
+            MascotRuntime.setMatchActive(false)
+            MascotRuntime.react(MascotMotion.IDLE)
+        }
+    }
     BackHandler(enabled = room.status != "finished") { confirmForfeit = true }
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
+        if (room.status in listOf("playing", "final", "sudden_death")) MascotRuntime.react(MascotMotion.IDLE)
         while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
             seconds = runCatching { (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0) }.getOrDefault(45)
+            if (myTurn && seconds in 1..5) MascotRuntime.react(MascotMotion.CRITICAL)
             if (seconds <= 0) { onTimeout(); break }
             delay(1000)
+        }
+    }
+
+    LaunchedEffect(room.status, room.winnerId) {
+        if (room.status == "finished") {
+            MascotRuntime.react(if (room.winnerId == me) MascotMotion.VICTORY else MascotMotion.DEFEAT)
         }
     }
 
