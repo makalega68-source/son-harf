@@ -1,0 +1,40 @@
+name: Mascot Market Compile Check
+
+on:
+  pull_request:
+    branches:
+      - integration/eve-sleep-wake-layout-20260827
+    paths:
+      - 'app/**'
+      - 'supabase/migrations/**'
+      - '.github/workflows/mascot-market-compile-check.yml'
+  workflow_dispatch:
+
+jobs:
+  compile-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: yes | sdkmanager --licenses >/dev/null || true; sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Verify Eve is parked
+        run: |
+          test ! -f app/src/main/assets/models/eve/eve.glb
+          test -f archive/eve/eve.glb
+
+      - name: Unit tests and Kotlin compile
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon testDebugUnitTest compileDebugKotlin
