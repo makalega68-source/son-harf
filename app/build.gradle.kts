@@ -31,7 +31,7 @@ android {
             .orElse("ca-app-pub-3940256099942544/5224354917")
             .get()
         val bannerAdUnitId = providers.gradleProperty("SON_HARF_ADMOB_BANNER_ID")
-            .orElse("ca-app-pub-3940256099942544/6300978111")
+            .orElse("")
             .get()
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
