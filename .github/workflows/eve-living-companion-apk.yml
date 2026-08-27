@@ -118,50 +118,47 @@ jobs:
             adb shell wm size 720x1600
             adb shell wm density 280
 
-            # HOME gate: cold process, exact production floating companion, compact TextureSurface.
-            # Debug timing accelerates the production 60s DIG -> 60s SIT -> SLEEP routine so CI can
-            # prove all three real-GLB states while keeping the release timing unchanged.
+            # HOME gate: exact production floating companion. Debug smoke shortens only the
+            # 60-second inactivity threshold to 8 seconds; release behavior remains 60 seconds.
             adb logcat -c
             adb shell am force-stop com.sonharf.game
             adb shell am start -W -n com.sonharf.game/.EveHomeFloatingSmokeActivity
-            sleep 6
+            sleep 4
             adb shell pidof com.sonharf.game | tr -d '\r' > artifacts/eve-home/base-pid.txt || true
             test -s artifacts/eve-home/base-pid.txt || (adb logcat -d > artifacts/eve-home/start-failure-logcat.txt; echo "::error::Floating HOME process did not remain alive"; exit 1)
-            adb exec-out screencap -p > artifacts/eve-home/home-frame-dig.png
-            sleep 4
-            adb exec-out screencap -p > artifacts/eve-home/home-frame-sit.png
-            sleep 5
-            adb exec-out screencap -p > artifacts/eve-home/home-frame-sleep.png
+            adb exec-out screencap -p > artifacts/eve-home/home-frame-awake.png
 
-            # Tap the actual HOME mascot hit area while asleep. The dedicated Compose overlay must
-            # intercept this above TextureSurface, wake Eve, and emit the personalized XP prompt.
+            # No interaction: Eve must enter persistent Rest after the accelerated threshold.
+            sleep 6
+            adb exec-out screencap -p > artifacts/eve-home/home-frame-sleep-a.png
+            sleep 3
+            adb exec-out screencap -p > artifacts/eve-home/home-frame-sleep-b.png
+
+            # Direct mascot touch must be the wake source and show the personalized XP prompt.
             adb shell input tap 125 800
             sleep 1
             adb exec-out screencap -p > artifacts/eve-home/home-frame-touch.png
-            sleep 10
-            adb exec-out screencap -p > artifacts/eve-home/home-frame-context.png
+
+            # With no further touch/chat, the accelerated 8-second inactivity sleep must recur.
+            sleep 9
+            adb exec-out screencap -p > artifacts/eve-home/home-frame-resleep.png
 
             adb shell pidof com.sonharf.game | tr -d '\r' > artifacts/eve-home/current-pid.txt || true
-            cmp -s artifacts/eve-home/base-pid.txt artifacts/eve-home/current-pid.txt || (echo "::error::Floating HOME process changed during DIG/SIT/SLEEP"; exit 1)
+            cmp -s artifacts/eve-home/base-pid.txt artifacts/eve-home/current-pid.txt || (echo "::error::Floating HOME process changed during sleep/wake test"; exit 1)
             adb shell dumpsys activity activities > artifacts/eve-home/activities.txt || true
             adb logcat -d > artifacts/eve-home/logcat.txt || true
             grep -q "EveHomeFloatingSmokeActivity" artifacts/eve-home/activities.txt || (echo "::error::Floating HOME smoke Activity is not active"; exit 1)
             grep -q "FEngine resolved backend: Vulkan" artifacts/eve-home/logcat.txt || (echo "::error::Floating HOME did not report Vulkan backend"; exit 1)
-            grep -q "EVE_HOME_ROUTINE: phase=DIGGING" artifacts/eve-home/logcat.txt || (echo "::error::HOME DIGGING phase not observed"; exit 1)
-            grep -q "EVE_HOME_ROUTINE: phase=SITTING" artifacts/eve-home/logcat.txt || (echo "::error::HOME SITTING phase not observed"; exit 1)
-            grep -q "EVE_HOME_ROUTINE: phase=SLEEPING" artifacts/eve-home/logcat.txt || (echo "::error::HOME SLEEPING phase not observed"; exit 1)
-            grep -q "EVE_HOME_REACTION: touch=HAPPY prompt=Hadi TestOyuncu bana xp topla" artifacts/eve-home/logcat.txt || (echo "::error::HOME tap did not trigger personalized happy XP reaction"; exit 1)
-            grep -q "EVE_HOME_REACTION: context=ASK_PET" artifacts/eve-home/logcat.txt || (echo "::error::HOME boredom context did not trigger ASK_PET"; exit 1)
-            grep -q "EVE_HOME_ROUTINE: restart reason=context:ASK_PET afterMs=6500" artifacts/eve-home/logcat.txt || (echo "::error::ASK_PET bypassed production routine arbitration"; exit 1)
-            awk '/EVE_HOME_REACTION: context=ASK_PET/{seen=1; next} seen && /EVE_HOME_ROUTINE: phase=SITTING/{bad=1} END{exit bad}' artifacts/eve-home/logcat.txt || (echo "::error::Baseline SITTING overwrote ASK_PET before its hold window ended"; exit 1)
-            test "$(stat -c%s artifacts/eve-home/home-frame-dig.png)" -gt 20000 || (echo "::error::Floating HOME DIG frame is unexpectedly empty"; exit 1)
-            test "$(stat -c%s artifacts/eve-home/home-frame-sit.png)" -gt 20000 || (echo "::error::Floating HOME SIT frame is unexpectedly empty"; exit 1)
-            test "$(stat -c%s artifacts/eve-home/home-frame-sleep.png)" -gt 20000 || (echo "::error::Floating HOME SLEEP frame is unexpectedly empty"; exit 1)
-            test "$(stat -c%s artifacts/eve-home/home-frame-touch.png)" -gt 20000 || (echo "::error::Floating HOME TOUCH frame is unexpectedly empty"; exit 1)
-            test "$(stat -c%s artifacts/eve-home/home-frame-context.png)" -gt 20000 || (echo "::error::Floating HOME CONTEXT frame is unexpectedly empty"; exit 1)
-            python3 -c 'import hashlib, pathlib; p=[pathlib.Path("artifacts/eve-home/home-frame-dig.png"),pathlib.Path("artifacts/eve-home/home-frame-sit.png"),pathlib.Path("artifacts/eve-home/home-frame-sleep.png"),pathlib.Path("artifacts/eve-home/home-frame-touch.png"),pathlib.Path("artifacts/eve-home/home-frame-context.png")]; h=[hashlib.sha256(x.read_bytes()).hexdigest() for x in p]; pathlib.Path("artifacts/eve-home/frame-sha256.txt").write_text("\n".join(h)+"\n"); assert len(set(h)) >= 4, "HOME routine/touch/context frames did not visibly diverge enough"'
-            ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal|FATAL EXCEPTION|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|Input dispatching timed out" artifacts/eve-home/logcat.txt || (echo "::error::Native/Surface/ANR signature found during floating HOME routine"; exit 1)
-            echo ">> [PASS] Floating HOME DIG -> SIT -> SLEEP stayed on Vulkan TextureSurface with stable PID"
+            test "$(grep -c "EVE_SLEEP_WAKE: sleep=inactivity" artifacts/eve-home/logcat.txt)" -ge 2 || (echo "::error::HOME did not sleep, wake, then re-sleep by inactivity"; exit 1)
+            grep -q "EVE_SLEEP_WAKE: wake=touch" artifacts/eve-home/logcat.txt || (echo "::error::HOME mascot touch did not wake Eve"; exit 1)
+            grep -q "EVE_HOME_REACTION: touch=HAPPY prompt=Hadi TestOyuncu bana xp topla" artifacts/eve-home/logcat.txt || (echo "::error::HOME touch did not show personalized XP reaction"; exit 1)
+            test "$(stat -c%s artifacts/eve-home/home-frame-awake.png)" -gt 20000 || (echo "::error::HOME awake frame empty"; exit 1)
+            test "$(stat -c%s artifacts/eve-home/home-frame-sleep-a.png)" -gt 20000 || (echo "::error::HOME sleep frame A empty"; exit 1)
+            test "$(stat -c%s artifacts/eve-home/home-frame-sleep-b.png)" -gt 20000 || (echo "::error::HOME sleep frame B empty"; exit 1)
+            test "$(stat -c%s artifacts/eve-home/home-frame-touch.png)" -gt 20000 || (echo "::error::HOME touch frame empty"; exit 1)
+            test "$(stat -c%s artifacts/eve-home/home-frame-resleep.png)" -gt 20000 || (echo "::error::HOME re-sleep frame empty"; exit 1)
+            ! grep -Eqi "createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic|Fatal signal|FATAL EXCEPTION|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|Input dispatching timed out" artifacts/eve-home/logcat.txt || (echo "::error::Native/Surface/ANR signature found during HOME sleep/wake"; exit 1)
+            echo ">> [PASS] HOME persistent inactivity sleep and touch wake stayed Vulkan-stable"
 
             # Hard process boundary: HOME TextureSurface and room Surface never teardown/recreate in
             # one process during this test. This mirrors navigation ownership and avoids conflating

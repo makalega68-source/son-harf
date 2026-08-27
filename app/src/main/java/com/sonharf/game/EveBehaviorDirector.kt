@@ -66,3 +66,11 @@ internal fun EveHomeIntent.homeHoldMs(): Long = when (this) {
     EveHomeIntent.COMFORT -> 5_600L
     EveHomeIntent.CELEBRATE -> 4_800L
 }
+
+
+internal object EveInactivityPolicy {
+    const val SLEEP_AFTER_MS: Long = 60_000L
+
+    fun shouldSleep(millisecondsSinceInteraction: Long): Boolean =
+        millisecondsSinceInteraction >= SLEEP_AFTER_MS
+}

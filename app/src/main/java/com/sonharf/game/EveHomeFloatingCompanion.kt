@@ -1,6 +1,5 @@
 package com.sonharf.game
 
-import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
@@ -53,13 +52,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
-internal data class EveHomeRoutineTiming(
-    val digMs: Long = 60_000L,
-    val sitMs: Long = 60_000L,
-    val happyReactionMs: Long = 3_200L,
-)
-
-private const val EVE_HOME_ROUTINE_LOG = "EVE_HOME_ROUTINE"
+private const val EVE_HOME_TOUCH_PROMPT_MS = 3_200L
 
 /**
  * Home-only living companion layer.
@@ -74,9 +67,9 @@ private const val EVE_HOME_ROUTINE_LOG = "EVE_HOME_ROUTINE"
 internal fun EveHomeFloatingCompanion(
     modifier: Modifier = Modifier,
     onOpen: () -> Unit = { EveLivingRoomRuntime.show() },
-    routineTiming: EveHomeRoutineTiming = EveHomeRoutineTiming(),
     playerNameOverride: String? = null,
     behaviorContextOverride: EveBehaviorContext? = null,
+    inactivitySleepMs: Long = EveInactivityPolicy.SLEEP_AFTER_MS,
 ) {
     val context = LocalContext.current
     val store = remember { EveCompanionStore(context) }
@@ -84,7 +77,8 @@ internal fun EveHomeFloatingCompanion(
     var playerName by remember { mutableStateOf(sh("Oyuncu", "Player")) }
     var renameOpen by remember { mutableStateOf(false) }
     var draftName by remember { mutableStateOf(companionName) }
-    var routineJob by remember { mutableStateOf<Job?>(null) }
+    var tapPrompt by remember { mutableStateOf("") }
+    var tapPromptClearJob by remember { mutableStateOf<Job?>(null) }
 
     LaunchedEffect(playerNameOverride) {
         playerNameOverride?.trim()?.takeIf { it.isNotBlank() }?.let {
@@ -103,70 +97,47 @@ internal fun EveHomeFloatingCompanion(
         }
     }
 
-    val routineScope = rememberCoroutineScope()
-
-    fun restartHomeRoutine(afterMs: Long = 0L, reason: String = "baseline") {
-        routineJob?.cancel()
-        routineJob = routineScope.launch {
-            if (BuildConfig.DEBUG) {
-                Log.i(EVE_HOME_ROUTINE_LOG, "restart reason=$reason afterMs=$afterMs")
-            }
-            if (afterMs > 0L) delay(afterMs)
-
-            if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=DIGGING")
-            EveMascotRuntime.homeDigging()
-            delay(routineTiming.digMs)
-
-            if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=SITTING")
-            EveMascotRuntime.homeSitting()
-            delay(routineTiming.sitMs)
-
-            if (BuildConfig.DEBUG) Log.i(EVE_HOME_ROUTINE_LOG, "phase=SLEEPING")
-            EveMascotRuntime.homeSleeping()
-        }
-    }
-
-    DisposableEffect(routineTiming) {
-        // HOME owns one deterministic routine job. Contextual/touch reactions cancel this exact
-        // Job before taking control, eliminating timer races with TextureSurface/Compose frames.
-        EveMascotRuntime.stopLivingBehavior()
-        restartHomeRoutine()
+    DisposableEffect(Unit) {
+        EveMascotRuntime.startLivingBehavior()
         onDispose {
-            routineJob?.cancel()
-            routineJob = null
-            EveMascotRuntime.startLivingBehavior()
+            tapPromptClearJob?.cancel()
+            tapPromptClearJob = null
+            EveMascotRuntime.stopLivingBehavior()
         }
     }
 
-    // Re-evaluate needs and recent conversation tone while HOME is visible. This is intentionally
-    // low-frequency: Eve can express a need, but never nags or steals focus continuously.
-    LaunchedEffect(store, behaviorContextOverride) {
+    // One minute without mascot interaction puts Eve into persistent Rest. Contextual needs can
+    // animate only while she is awake; sleeping never expires on its own.
+    LaunchedEffect(store, behaviorContextOverride, inactivitySleepMs) {
         while (currentCoroutineContext().isActive) {
             val contextSnapshot = behaviorContextOverride ?: store.behaviorContext()
-            val firedIntent = EveMascotRuntime.updateContext(contextSnapshot)
-            if (firedIntent != null) {
-                // Cancel the exact baseline Job immediately. Only after the contextual reaction
-                // has owned Eve for its full window do we restart DIG -> SIT -> SLEEP from zero.
-                restartHomeRoutine(
-                    afterMs = firedIntent.homeHoldMs(),
-                    reason = "context:$firedIntent",
-                )
+            val idleMs = behaviorContextOverride
+                ?.let { it.minutesSinceInteraction.coerceAtLeast(0L) * 60_000L }
+                ?: store.millisecondsSinceInteraction()
+
+            if (idleMs >= inactivitySleepMs) {
+                EveMascotRuntime.sleepForInactivity()
+            } else if (!EveMascotRuntime.sleepingByInactivity) {
+                EveMascotRuntime.updateContext(contextSnapshot)
             }
-            delay(5_500L)
+            delay(1_000L)
         }
     }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
         val density = LocalDensity.current
         val scope = rememberCoroutineScope()
-        val motionEffect = EveMascotRuntime.motionEffect
-        val motionVersion = EveMascotRuntime.motionVersion
         val homeIntent = EveMascotRuntime.homeIntent
         val homeIntentVersion = EveMascotRuntime.homeIntentVersion
         val homePromptText = EveMascotRuntime.homePromptText
+        val behaviorState = EveMascotRuntime.behaviorState
+        val runtimeBubbleText = EveMascotRuntime.bubbleText
+        val visiblePrompt = tapPrompt.ifBlank {
+            homePromptText.ifBlank {
+                if (behaviorState == EveBehaviorState.INTERACTING) runtimeBubbleText else ""
+            }
+        }
 
-        val reactionX = remember { Animatable(0f) }
-        val reactionY = remember { Animatable(0f) }
         val presenceX = remember { Animatable(0f) }
         val presenceY = remember { Animatable(0f) }
 
@@ -185,8 +156,6 @@ internal fun EveHomeFloatingCompanion(
         val topInsetPx = with(density) { 38.dp.toPx() }
         val bottomInsetPx = with(density) { 4.dp.toPx() }
         val driftPx = with(density) { 9.dp.toPx() }
-        val jumpPx = with(density) { 22.dp.toPx() }
-        val sleepySettlePx = with(density) { 7.dp.toPx() }
         val approachLiftPx = with(density) { 6.dp.toPx() }
 
         val widthPx = constraints.maxWidth.toFloat()
@@ -218,12 +187,10 @@ internal fun EveHomeFloatingCompanion(
             presenceX.stop()
             presenceY.stop()
 
-            // Keep contextual approach in Eve's left-side territory so the primary cards remain
-            // readable while she comes closer to the player.
-            val focusX = ((widthPx - mascotPx) * 0.28f).coerceIn(minX, maxX)
-            val focusY = (heightPx * 0.25f).coerceIn(minY, maxY)
-            val targetX = focusX - x.value
-            val targetY = focusY - y.value
+            // Context reactions stay in Eve's left-side territory. A small right/up translation
+            // reads as "coming closer" without covering SON HARF / BİL BAKALIM labels.
+            val targetX = with(density) { 18.dp.toPx() }
+            val targetY = -with(density) { 30.dp.toPx() }
 
             when (homeIntent) {
                 EveHomeIntent.NORMAL -> coroutineScope {
@@ -256,37 +223,10 @@ internal fun EveHomeFloatingCompanion(
             }
         }
 
-        // TextureSurface must remain a genuinely transparent Android layer. Scale/rotation via
-        // Compose graphics layers can expose its rectangular backing, so reactions use only layout
-        // translation here; all articulation remains in the accepted rigged GLB clips.
-        LaunchedEffect(motionEffect, motionVersion, jumpPx, sleepySettlePx) {
-            reactionX.stop()
-            reactionY.stop()
-
-            when (motionEffect) {
-                EveMotionEffect.NONE -> coroutineScope {
-                    launch { reactionX.animateTo(0f, tween(180, easing = FastOutSlowInEasing)) }
-                    launch { reactionY.animateTo(0f, tween(180, easing = FastOutSlowInEasing)) }
-                }
-
-                EveMotionEffect.BOUNCE -> {
-                    reactionY.animateTo(-jumpPx, tween(170, easing = FastOutSlowInEasing))
-                    reactionY.animateTo(0f, tween(320, easing = FastOutSlowInEasing))
-                }
-
-                EveMotionEffect.WIGGLE -> {
-                    reactionX.snapTo(0f)
-                    val wigglePx = driftPx * 0.72f
-                    for (target in listOf(wigglePx, -wigglePx, wigglePx * 0.65f, -wigglePx * 0.65f, 0f)) {
-                        reactionX.animateTo(target, tween(95))
-                    }
-                }
-
-                EveMotionEffect.SAD_SETTLE -> {
-                    reactionY.animateTo(sleepySettlePx, tween(460, easing = FastOutSlowInEasing))
-                }
-            }
-        }
+        // Do not animate the TextureSurface itself for tap reactions. Rapid movement of Android's
+        // TextureView exposes its rectangular backing for a frame on some devices/emulators.
+        // Happiness/curiosity/sadness remain real skeletal GLB clips; only slow contextual approach
+        // and user drag move the surface.
         var anchorX by remember { mutableStateOf(0f) }
         var anchorY by remember { mutableStateOf(0f) }
         var initialized by remember { mutableStateOf(false) }
@@ -309,7 +249,12 @@ internal fun EveHomeFloatingCompanion(
             }
 
             while (currentCoroutineContext().isActive) {
-                if (!dragging && !renameOpen && homeIntent == EveHomeIntent.NORMAL) {
+                if (
+                    !dragging &&
+                    !renameOpen &&
+                    homeIntent == EveHomeIntent.NORMAL &&
+                    !EveMascotRuntime.sleepingByInactivity
+                ) {
                     // Tiny organic drift around the current anchor. Large autonomous screen travel
                     // would look like foot sliding because the accepted GLB walk clip has root
                     // translation and is intentionally not used until an in-place Blender export.
@@ -344,8 +289,8 @@ internal fun EveHomeFloatingCompanion(
             modifier = Modifier
                 .offset {
                     IntOffset(
-                        (x.value + presenceX.value + reactionX.value).roundToInt(),
-                        (y.value + presenceY.value + reactionY.value).roundToInt(),
+                        (x.value + presenceX.value).roundToInt(),
+                        (y.value + presenceY.value).roundToInt(),
                     )
                 }
                 .width(containerWidth)
@@ -361,7 +306,7 @@ internal fun EveHomeFloatingCompanion(
                     .height(promptHeight),
                 contentAlignment = Alignment.BottomCenter,
             ) {
-                if (homePromptText.isNotBlank()) {
+                if (visiblePrompt.isNotBlank()) {
                     Surface(
                         modifier = Modifier.width(138.dp),
                         color = Color.White.copy(alpha = 0.96f),
@@ -369,7 +314,7 @@ internal fun EveHomeFloatingCompanion(
                         shadowElevation = 5.dp,
                     ) {
                         Text(
-                            text = homePromptText.take(64),
+                            text = visiblePrompt.take(64),
                             modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
                             color = Color(0xFF163B58),
                             fontWeight = FontWeight.Bold,
@@ -380,7 +325,7 @@ internal fun EveHomeFloatingCompanion(
                         )
                     }
                 } else if (
-                    EveMascotRuntime.behaviorState == EveBehaviorState.RESTING &&
+                    behaviorState == EveBehaviorState.RESTING &&
                     EveMascotRuntime.animation == EveAnimationCue.REST
                 ) {
                     Text(
@@ -414,16 +359,21 @@ internal fun EveHomeFloatingCompanion(
                             .fillMaxSize()
                             .clickable {
                                 store.markInteraction()
+                                val prompt = eveHomeXpPrompt(playerName)
+                                tapPrompt = prompt
+                                tapPromptClearJob?.cancel()
+                                tapPromptClearJob = scope.launch {
+                                    delay(EVE_HOME_TOUCH_PROMPT_MS)
+                                    tapPrompt = ""
+                                }
                                 EveMascotRuntime.homeTouchHappy(playerName)
-                                restartHomeRoutine(
-                                    afterMs = routineTiming.happyReactionMs,
-                                    reason = "touch",
-                                )
                             }
                             .pointerInput(widthPx, heightPx) {
                                 detectDragGesturesAfterLongPress(
                                     onDragStart = {
                                         dragging = true
+                                        store.markInteraction()
+                                        EveMascotRuntime.wakeFromTouch()
                                         scope.launch {
                                             x.stop()
                                             y.stop()
