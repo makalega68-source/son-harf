@@ -1,16 +1,17 @@
 package com.sonharf.game
 
 /**
- * Single accepted Eve asset contract. A build must fail before packaging when this exact
- * rigged GLB is absent or changed; runtime is not allowed to substitute a 2D/video mascot.
+ * Active mascot product policy.
+ *
+ * Eve is intentionally parked and must not be surfaced by the active UI. The bundled white
+ * companion is the default free mascot. Additional mascots may be sold only after both their
+ * commercial-game license and runtime asset pass verification.
  */
 internal object MascotPolicy {
     const val ENABLED = true
     const val ALLOW_2D_OR_VIDEO_FALLBACK = false
-    const val SKELETAL_ASSET_READY = true
-    const val MODEL_ASSET = EveAssetPolicy.MODEL_ASSET
-    const val MODEL_SHA256 = "0c68ac4c4f5475332fac77ccb9bda4bb08bd202a5d596114552e37ab27d6c39e"
-    const val MODEL_SIZE_BYTES = 4_870_220L
-    const val JOINT_COUNT = 38
-    const val ANIMATION_COUNT = 16
+    const val DEFAULT_MASCOT_ID = MascotCatalog.DEFAULT_ID
+    const val EVE_ACTIVE = false
+    const val CHIBI_WIZARD_LICENSE_APPROVED = true
+    const val CHIBI_WIZARD_ASSET_READY = false
 }
