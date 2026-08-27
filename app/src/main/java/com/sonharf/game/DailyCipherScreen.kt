@@ -109,8 +109,8 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                     Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = CipherText)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("GÜNÜN ŞİFRESİ", "DAILY CIPHER"), color = CipherText, fontSize = 25.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Herkes için aynı günlük 5 harfli şifre.", "The same daily five-letter cipher for everyone."), color = CipherMuted, fontSize = 10.sp)
+                    Text(sh("SÖZ DOKUSU • GÜNÜN ŞİFRESİ", "WORD WEAVE • DAILY CIPHER"), color = CipherText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Lethara’nın herkese aynı görünen günlük 5 harfli mührü.", "Lethara’s daily five-letter seal, shared by everyone."), color = CipherMuted, fontSize = 10.sp)
                 }
                 Text("1×", color = CipherGold, fontWeight = FontWeight.Black)
             }
