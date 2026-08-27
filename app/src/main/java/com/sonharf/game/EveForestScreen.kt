@@ -187,10 +187,14 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
         }
     }
 
-    BackHandler {
+    fun navigateBack() {
         focusManager.clearFocus()
         keyboardController?.hide()
         onNavigateBack()
+    }
+
+    BackHandler {
+        navigateBack()
     }
 
     LaunchedEffect(Unit) {
@@ -230,7 +234,7 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
         ) {
             EveForestHeader(
                 store = store,
-                onBack = onNavigateBack,
+                onBack = ::navigateBack,
                 onStyle = { styleDialog = true },
                 onRoom = { roomDialog = true },
             )
