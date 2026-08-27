@@ -224,6 +224,22 @@ internal object EveMascotRuntime {
         )
     }
 
+    /** Wake Eve silently when a live match needs a reaction. */
+    fun wakeForGameplay() {
+        if (!sleepingByInactivity) return
+        sleepingByInactivity = false
+        resetJob?.cancel()
+        motionResetJob?.cancel()
+        homeIntentResetJob?.cancel()
+        isThinking = false
+        behaviorState = EveBehaviorState.IDLE_BASE
+        mood = EveMood.CALM
+        publishHomeIntent(EveHomeIntent.NORMAL)
+        publishMotion(EveMotionEffect.NONE)
+        publishAnimation(EveAnimationCue.IDLE_BREATHE)
+        if (BuildConfig.DEBUG) Log.i("EVE_SLEEP_WAKE", "wake=gameplay")
+    }
+
     fun homeTouchHappy(playerName: String) {
         sleepingByInactivity = false
         val prompt = eveHomeXpPrompt(playerName)
