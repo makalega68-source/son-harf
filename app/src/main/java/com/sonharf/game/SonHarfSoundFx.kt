@@ -20,7 +20,30 @@ object SonHarfSoundFx {
     fun victory() { click(18, 0.17, 0.50); delayedClick(38, 16, 0.15, 0.56); delayedClick(76, 15, 0.13, 0.60) }
     fun defeat() = click(26, 0.14, 0.28)
     fun countdown() = click(13, 0.08, 0.38)
-    fun heartbeat() { click(58, 0.15, 0.07); delayedClick(118, 46, 0.11, 0.05) }
+    fun heartbeat() {
+        if (!enabled) return
+        Thread {
+            // Two soft low-frequency body thumps (lub-dub), shaped like a heartbeat rather than a digital click.
+            val durationSec = 0.34
+            val count = (SAMPLE_RATE * durationSec).toInt()
+            val pcm = ShortArray(count)
+            for (i in pcm.indices) {
+                val t = i.toDouble() / SAMPLE_RATE
+                var sample = 0.0
+                for ((start, gain) in arrayOf(0.018 to 0.17, 0.145 to 0.105)) {
+                    val x = t - start
+                    if (x in 0.0..0.14) {
+                        val attack = (x / 0.012).coerceIn(0.0, 1.0)
+                        val body = kotlin.math.sin(2.0 * Math.PI * 68.0 * x) * exp(-x * 24.0)
+                        val sub = kotlin.math.sin(2.0 * Math.PI * 42.0 * x) * exp(-x * 18.0)
+                        sample += (body * 0.72 + sub * 0.28) * attack * gain
+                    }
+                }
+                pcm[i] = (sample.coerceIn(-1.0, 1.0) * Short.MAX_VALUE).toInt().toShort()
+            }
+            play(pcm)
+        }.start()
+    }
 
     /** Soft, low-volume applause used by victory/confetti effects. Kept under the old API name for compatibility. */
     fun fireworks() {
