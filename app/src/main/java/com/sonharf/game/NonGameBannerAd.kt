@@ -26,7 +26,9 @@ import com.google.android.gms.ads.MobileAds
 @Composable
 fun SonHarfTopAdBanner(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val adUnitId = BuildConfig.ADMOB_BANNER_AD_UNIT_ID
+    val adUnitId = BuildConfig.ADMOB_BANNER_AD_UNIT_ID.ifBlank {
+        if (BuildConfig.DEBUG) "ca-app-pub-3940256099942544/6300978111" else ""
+    }
     if (adUnitId.isBlank()) return
 
     val adView = remember(context, adUnitId) {
