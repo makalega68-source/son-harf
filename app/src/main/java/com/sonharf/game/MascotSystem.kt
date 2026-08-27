@@ -256,8 +256,9 @@ internal fun MascotBehaviorBridge() {
 
                 val wordAdvanced = previousSameRoom != null &&
                     active.validWordCount > previousSameRoom.validWordCount
-                val myAcceptedWord = wordAdvanced && active.lastEventPlayerId == me &&
-                    active.lastEvent in setOf("valid_word", "streak_bonus")
+                val myAcceptedWord = wordAdvanced &&
+                    active.lastEvent !in failedEvents &&
+                    (active.lastEventPlayerId == me || myScore > previousMyScore)
                 val opponentFailed = previousSameRoom != null &&
                     active.lastEventPlayerId != null &&
                     active.lastEventPlayerId != me &&
@@ -282,6 +283,7 @@ internal fun MascotBehaviorBridge() {
                     }
                     active.currentPlayerId == me &&
                         active.status in listOf("playing", "final", "sudden_death") &&
+                        secondsLeft != null &&
                         secondsLeft in 1..10 -> {
                         reactionKey = "time-low-${active.id}-${active.turnDeadline}"
                         reaction = { MascotRuntime.reactMatch(MascotMatchEvent.TIME_LOW, active.language) }
