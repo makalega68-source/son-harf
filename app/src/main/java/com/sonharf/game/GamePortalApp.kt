@@ -37,6 +37,8 @@ fun GamePortalApp() {
 
     Box(Modifier.fillMaxSize()) {
         ClassicPremiumApp()
+        EveMatchReactionBridge()
+        EveMatchReactionOverlay()
 
         if (EveLivingRoomRuntime.open) {
             Box(Modifier.fillMaxSize()) {
