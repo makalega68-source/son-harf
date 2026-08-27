@@ -28,6 +28,8 @@ jobs:
         run: yes | sdkmanager --licenses >/dev/null || true; sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
 
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.4"
 
       - name: Verify Eve is parked
         run: |
@@ -36,8 +38,7 @@ jobs:
 
       - name: Unit tests and debug APK
         run: |
-          chmod +x gradlew
-          ./gradlew --no-daemon testDebugUnitTest assembleDebug
+          gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
 
       - name: Upload preview base APK
         uses: actions/upload-artifact@v4
