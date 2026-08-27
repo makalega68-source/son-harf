@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.android.filament.Engine
 import io.github.sceneview.SceneView
 import io.github.sceneview.SurfaceType
 import io.github.sceneview.math.Position
@@ -65,7 +66,12 @@ internal fun MascotLive3DStage(
         return
     }
 
-    val engine = rememberEngine()
+    // Filament's OpenGL backend can exceed the GLES vertex-uniform limit on skinned mascot
+    // materials (notably emulator/low-capability drivers). Vulkan avoids that native shader-link
+    // crash and is the production renderer for the 3D mascot stage.
+    val engine = rememberEngine(
+        engineCreator = { _ -> Engine.create(Engine.Backend.VULKAN) },
+    )
     val modelLoader = rememberModelLoader(engine)
     val cameraNode = rememberCameraNode(engine) {
         position = Position(x = 0f, y = 0.25f, z = 3.2f)
@@ -75,7 +81,14 @@ internal fun MascotLive3DStage(
         fileLocation = modelLocation,
     )
     val clip = MascotCatalog.clip(resolvedId, motion)
-    val staticPreview = BuildConfig.DEBUG && resolvedId == MascotCatalog.CHIBI_WIZARD_ID
+
+    LaunchedEffect(modelInstance, resolvedId, clip) {
+        if (modelInstance != null) {
+            // Give Filament a short window to submit the first frame before declaring runtime ready.
+            kotlinx.coroutines.delay(1_200)
+            Log.i("MascotSmoke", "MASCOT_RENDER_READY id=$resolvedId clip=$clip")
+        }
+    }
 
     Box(modifier, contentAlignment = Alignment.Center) {
         if (modelInstance == null) {
@@ -95,9 +108,9 @@ internal fun MascotLive3DStage(
                 ) {
                     ModelNode(
                         modelInstance = modelInstance,
-                        autoAnimate = !staticPreview,
-                        animationName = if (staticPreview) null else clip,
-                        animationLoop = !staticPreview && motion !in setOf(
+                        autoAnimate = true,
+                        animationName = clip,
+                        animationLoop = motion !in setOf(
                             MascotMotion.VICTORY,
                             MascotMotion.DEFEAT,
                             MascotMotion.CRITICAL,
