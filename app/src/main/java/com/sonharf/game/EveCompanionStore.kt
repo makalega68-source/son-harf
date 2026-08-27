@@ -165,14 +165,20 @@ internal class EveCompanionStore(context: Context) {
         prefs.edit().putLong("last_interaction_at_ms", nowMs).apply()
     }
 
-    fun minutesSinceInteraction(nowMs: Long = System.currentTimeMillis()): Long {
+    fun millisecondsSinceInteraction(nowMs: Long = System.currentTimeMillis()): Long {
         val saved = prefs.getLong("last_interaction_at_ms", 0L)
         if (saved <= 0L || nowMs <= saved) {
             markInteraction(nowMs)
             return 0L
         }
-        return (nowMs - saved) / 60_000L
+        return nowMs - saved
     }
+
+    fun minutesSinceInteraction(nowMs: Long = System.currentTimeMillis()): Long =
+        millisecondsSinceInteraction(nowMs) / 60_000L
+
+    fun shouldSleepForInactivity(nowMs: Long = System.currentTimeMillis()): Boolean =
+        EveInactivityPolicy.shouldSleep(millisecondsSinceInteraction(nowMs))
 
     fun recordConversationMood(mood: EveMood, nowMs: Long = System.currentTimeMillis()) {
         prefs.edit()

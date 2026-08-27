@@ -36,12 +36,6 @@ internal enum class EveAnimationCue(
     IDLE_LOOK_AROUND("IdleLookAround", true),
     IDLE_GRAZE("IdleGraze", true),
     GRAZE_ONCE("GrazeOnce", false),
-
-    // HOME behavior aliases. These are NOT invented GLB clip names: they deliberately reuse the
-    // real accepted clips Attack and GoToRest with safer timing for a domestic-animal behavior.
-    HOME_DIG_RIGHT_PAW("Attack", true, playbackSpeed = 0.32f),
-    HOME_SIT_HOLD("GoToRest", false, holdAtSeconds = 0.98f),
-
     REST("Rest", true),
     GO_TO_REST("GoToRest", false),
     REST_TO_STAND("RestToGoBackUp", false),
@@ -86,8 +80,6 @@ private fun EveAnimationCue.safeForCompanionStage(): EveAnimationCue = when (thi
     EveAnimationCue.IDLE_LOOK_AROUND,
     EveAnimationCue.IDLE_GRAZE,
     EveAnimationCue.GRAZE_ONCE,
-    EveAnimationCue.HOME_DIG_RIGHT_PAW,
-    EveAnimationCue.HOME_SIT_HOLD,
     EveAnimationCue.REST -> this
 
     EveAnimationCue.GO_TO_REST,
@@ -109,9 +101,10 @@ internal object EveMascotRuntime {
     private val animationScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val recentIdleClips = ArrayDeque<EveAnimationCue>(1)
     private val idlePool = listOf(
-        WeightedIdle(EveAnimationCue.IDLE_LOOK_AROUND, 52, 3_200L, 4_800L),
-        WeightedIdle(EveAnimationCue.IDLE_GRAZE, 28, 3_800L, 5_600L),
-        WeightedIdle(EveAnimationCue.GRAZE_ONCE, 20, 2_400L, 3_100L),
+        // Do not loop IdleGraze autonomously: visually it reads as repetitive head-bowing.
+        // IdleBreathe stays as the base pose; these are only occasional flavor clips.
+        WeightedIdle(EveAnimationCue.IDLE_LOOK_AROUND, 86, 2_800L, 4_200L),
+        WeightedIdle(EveAnimationCue.GRAZE_ONCE, 14, 1_800L, 2_500L),
     )
 
     private var resetJob: Job? = null
@@ -153,6 +146,9 @@ internal object EveMascotRuntime {
     var isThinking by mutableStateOf(false)
         private set
 
+    var sleepingByInactivity by mutableStateOf(false)
+        private set
+
     /**
      * Continuous companion loop.
      *
@@ -170,14 +166,14 @@ internal object EveMascotRuntime {
             while (isActive) {
                 when {
                     isThinking || behaviorState == EveBehaviorState.INTERACTING -> delay(220L)
+                    sleepingByInactivity -> delay(300L)
                     behaviorState == EveBehaviorState.RESTING -> delay(300L)
                     behaviorState == EveBehaviorState.IDLE_BASE -> {
                         when (Random.nextInt(100)) {
-                            in 0..7 -> playAutonomousSleep()
-                            in 8..21 -> playAutonomousPlay()
+                            in 0..15 -> playAutonomousPlay()
                             else -> playAutonomousIdle(selectNextIdle())
                         }
-                        delay(Random.nextLong(650L, 1_201L))
+                        delay(Random.nextLong(850L, 1_501L))
                     }
                     else -> delay(280L)
                 }
@@ -191,46 +187,45 @@ internal object EveMascotRuntime {
     }
 
     /**
-     * Deterministic HOME baseline requested for Eve:
-     * scratch the floor gently -> sit -> sleep.
-     *
-     * IDLE_FLAVOR intentionally blocks the autonomous random-idle loop without marking Eve as a
-     * user interaction, so contextual hunger/conversation reactions can still interrupt if needed.
+     * Enter persistent sleep after one minute without player interaction. Unlike ordinary tired
+     * flavor behavior this has no timer back to idle: only touch/petting or chat clears it.
      */
-    fun homeDigging() {
-        resetJob?.cancel()
-        homeIntentResetJob?.cancel()
-        isThinking = false
-        mood = EveMood.CALM
-        behaviorState = EveBehaviorState.IDLE_FLAVOR
-        publishHomeIntent(EveHomeIntent.NORMAL)
-        publishMotion(EveMotionEffect.NONE)
-        publishAnimation(EveAnimationCue.HOME_DIG_RIGHT_PAW)
-    }
+    fun sleepForInactivity() {
+        if (
+            sleepingByInactivity &&
+            behaviorState == EveBehaviorState.RESTING &&
+            animation == EveAnimationCue.REST
+        ) return
 
-    fun homeSitting() {
         resetJob?.cancel()
         homeIntentResetJob?.cancel()
-        isThinking = false
-        mood = EveMood.CALM
-        behaviorState = EveBehaviorState.IDLE_FLAVOR
-        publishHomeIntent(EveHomeIntent.NORMAL)
-        publishMotion(EveMotionEffect.SAD_SETTLE, 800L)
-        publishAnimation(EveAnimationCue.HOME_SIT_HOLD)
-    }
-
-    fun homeSleeping() {
-        resetJob?.cancel()
-        homeIntentResetJob?.cancel()
+        motionResetJob?.cancel()
+        sleepingByInactivity = true
         isThinking = false
         mood = EveMood.TIRED
         behaviorState = EveBehaviorState.RESTING
+        bubbleText = ""
         publishHomeIntent(EveHomeIntent.NORMAL)
-        publishMotion(EveMotionEffect.SAD_SETTLE, 2_400L)
+        publishMotion(EveMotionEffect.NONE)
         publishAnimation(EveAnimationCue.REST)
+        if (BuildConfig.DEBUG) Log.i("EVE_SLEEP_WAKE", "sleep=inactivity")
+    }
+
+    fun wakeFromTouch(bubble: String? = null) {
+        sleepingByInactivity = false
+        if (BuildConfig.DEBUG) Log.i("EVE_SLEEP_WAKE", "wake=touch")
+        react(
+            cue = EveAnimationCue.IDLE_LOOK_AROUND,
+            nextMood = EveMood.HAPPY,
+            effect = EveMotionEffect.BOUNCE,
+            effectDurationMs = 850L,
+            bubble = bubble,
+            returnToIdleAfterMs = 2_600L,
+        )
     }
 
     fun homeTouchHappy(playerName: String) {
+        sleepingByInactivity = false
         val prompt = eveHomeXpPrompt(playerName)
         if (BuildConfig.DEBUG) Log.i("EVE_HOME_REACTION", "touch=HAPPY prompt=$prompt")
         react(
@@ -246,6 +241,8 @@ internal object EveMascotRuntime {
     }
 
     fun thinking() {
+        sleepingByInactivity = false
+        if (BuildConfig.DEBUG) Log.i("EVE_SLEEP_WAKE", "wake=chat")
         resetJob?.cancel()
         isThinking = true
         mood = EveMood.THINKING
@@ -256,6 +253,7 @@ internal object EveMascotRuntime {
     }
 
     fun apply(response: EveChatResponse) {
+        sleepingByInactivity = false
         isThinking = false
         val responseMood = response.mood.toEveMood()
         mood = responseMood
@@ -304,6 +302,13 @@ internal object EveMascotRuntime {
     }
 
     fun calm() {
+        if (sleepingByInactivity) {
+            mood = EveMood.TIRED
+            behaviorState = EveBehaviorState.RESTING
+            publishMotion(EveMotionEffect.NONE)
+            if (animation != EveAnimationCue.REST) publishAnimation(EveAnimationCue.REST)
+            return
+        }
         resetJob?.cancel()
         isThinking = false
         mood = EveMood.CALM
@@ -321,6 +326,7 @@ internal object EveMascotRuntime {
         context: EveBehaviorContext,
         nowMs: Long = System.currentTimeMillis(),
     ): EveHomeIntent? {
+        if (sleepingByInactivity) return null
         if (isThinking || behaviorState == EveBehaviorState.INTERACTING) return null
 
         val intent = EveBehaviorDirector.decide(context)
@@ -409,6 +415,10 @@ internal object EveMascotRuntime {
         bubble: String? = null,
         returnToIdleAfterMs: Long = 2_400,
     ) {
+        if (sleepingByInactivity && cue != EveAnimationCue.REST) {
+            bubble?.let(::setBubble)
+            return
+        }
         resetJob?.cancel()
         val safeCue = cue.safeForCompanionStage()
         isThinking = false
@@ -427,6 +437,7 @@ internal object EveMascotRuntime {
 
     /** Visible positive reaction for a direct tap on the home companion. */
     fun touchReaction() {
+        sleepingByInactivity = false
         when (Random.nextInt(3)) {
             0 -> react(
                 cue = EveAnimationCue.IDLE_LOOK_AROUND,
@@ -452,14 +463,17 @@ internal object EveMascotRuntime {
         }
     }
 
-    fun petReaction(bubble: String? = null) = react(
-        cue = EveAnimationCue.IDLE_LOOK_AROUND,
-        nextMood = EveMood.HAPPY,
-        effect = EveMotionEffect.WIGGLE,
-        effectDurationMs = 1_100L,
-        bubble = bubble,
-        returnToIdleAfterMs = 2_100L,
-    )
+    fun petReaction(bubble: String? = null) {
+        sleepingByInactivity = false
+        react(
+            cue = EveAnimationCue.IDLE_LOOK_AROUND,
+            nextMood = EveMood.HAPPY,
+            effect = EveMotionEffect.WIGGLE,
+            effectDurationMs = 1_100L,
+            bubble = bubble,
+            returnToIdleAfterMs = 2_100L,
+        )
+    }
 
     fun feedReaction(bubble: String? = null) = react(
         cue = EveAnimationCue.GRAZE_ONCE,
@@ -509,6 +523,10 @@ internal object EveMascotRuntime {
         bubble: String? = null,
         returnToIdleAfterMs: Long,
     ) {
+        if (sleepingByInactivity) {
+            bubble?.let(::setBubble)
+            return
+        }
         resetJob?.cancel()
         homeIntentResetJob?.cancel()
         publishHomeIntent(EveHomeIntent.NORMAL)
@@ -540,21 +558,11 @@ internal object EveMascotRuntime {
         scheduleReturnToBaseIdle(Random.nextLong(2_000L, 2_801L))
     }
 
-    private fun playAutonomousSleep() {
-        resetJob?.cancel()
-        behaviorState = EveBehaviorState.RESTING
-        mood = EveMood.TIRED
-        publishAnimation(EveAnimationCue.REST)
-        val sleepMs = Random.nextLong(6_500L, 10_501L)
-        publishMotion(EveMotionEffect.SAD_SETTLE, sleepMs)
-        scheduleReturnToBaseIdle(sleepMs)
-    }
-
     private fun scheduleReturnToBaseIdle(delayMs: Long) {
         val versionAtStart = animationVersion
         resetJob = animationScope.launch {
             delay(delayMs)
-            if (animationVersion == versionAtStart) {
+            if (!sleepingByInactivity && animationVersion == versionAtStart) {
                 behaviorState = EveBehaviorState.IDLE_BASE
                 mood = EveMood.CALM
                 publishHomeIntent(EveHomeIntent.NORMAL)
