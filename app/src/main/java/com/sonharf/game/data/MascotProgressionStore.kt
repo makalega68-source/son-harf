@@ -58,6 +58,16 @@ data class MascotFeedResultDto(
 )
 
 @Serializable
+data class MascotCareResultDto(
+    val success: Boolean = true,
+    @SerialName("mascot_id") val mascotId: String,
+    val action: String,
+    val happiness: Int,
+    val fullness: Int,
+    val energy: Int,
+)
+
+@Serializable
 data class MascotFruitPurchaseDto(
     val success: Boolean = true,
     @SerialName("fruit_id") val fruitId: String,
@@ -111,5 +121,15 @@ suspend fun OnlineGameBackend.feedMascot(mascotId: String, fruitId: String): Mas
         buildJsonObject {
             put("p_mascot_id", mascotId)
             put("p_fruit_id", fruitId)
+        },
+    ).decodeSingle()
+
+
+suspend fun OnlineGameBackend.careForMascot(mascotId: String, action: String): MascotCareResultDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "care_mascot_v1",
+        buildJsonObject {
+            put("p_mascot_id", mascotId)
+            put("p_action", action)
         },
     ).decodeSingle()
