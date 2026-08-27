@@ -37,3 +37,5 @@ jobs:
           grep -q 'private fun comboV9' app/src/main/java/com/sonharf/game/ComboOverlayV9.kt
       - name: Unit tests and debug build
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+# rerun after final wide-layout correction
