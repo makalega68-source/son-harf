@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -44,6 +45,7 @@ fun EconomyShopScreen() {
 
 @Composable
 private fun EconomyCatalogScreen() {
+    val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -64,6 +66,7 @@ private fun EconomyCatalogScreen() {
         owned = runCatching { b.getInventory() }.getOrDefault(emptySet())
         equipped = runCatching { b.getEquippedCosmetics() }.getOrNull()
         SonHarfCosmetics.apply(equipped)
+        equipped?.mascotId?.let { MascotSelectionRuntime.select(context, it) }
     }
 
     LaunchedEffect(Unit) { loading = true; reload(); loading = false }
@@ -75,6 +78,7 @@ private fun EconomyCatalogScreen() {
         "keyboard_theme" -> equipped?.keyboardThemeId == item.id
         "victory_effect" -> equipped?.victoryEffectId == item.id
         "emoji_pack" -> equipped?.emojiPackId == item.id
+        "mascot" -> (equipped?.mascotId ?: MascotCatalog.DEFAULT_ID) == item.id
         else -> false
     }
 
@@ -83,6 +87,7 @@ private fun EconomyCatalogScreen() {
             1 -> item.kind in setOf("profile_frame", "name_style")
             2 -> item.kind in setOf("game_theme", "keyboard_theme")
             3 -> item.kind in setOf("victory_effect", "emoji_pack")
+            4 -> item.kind == "mascot"
             else -> true
         }
     }
@@ -105,7 +110,7 @@ private fun EconomyCatalogScreen() {
 
         item {
             ScrollableTabRow(selectedTabIndex = category, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
-                listOf(sh("TÜMÜ", "ALL"), sh("PROFİL", "PROFILE"), sh("TEMA", "THEME"), sh("EFEKT", "EFFECTS")).forEachIndexed { index, label ->
+                listOf(sh("TÜMÜ", "ALL"), sh("PROFİL", "PROFILE"), sh("TEMA", "THEME"), sh("EFEKT", "EFFECTS"), sh("MASKOT", "MASCOT")).forEachIndexed { index, label ->
                     Tab(selected = category == index, onClick = { category = index }, text = { Text(label, color = if (category == index) SonHarfCyan else SonHarfMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold) })
                 }
             }
@@ -121,7 +126,7 @@ private fun EconomyCatalogScreen() {
         items(filtered, key = { it.id }) { item ->
             val name = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
             val description = if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr
-            val mine = item.id in owned
+            val mine = item.id in owned || item.id == MascotCatalog.DEFAULT_ID
             val active = isEquipped(item)
             Card(
                 colors = CardDefaults.cardColors(containerColor = SonHarfSurface.copy(alpha = .96f)),
@@ -145,7 +150,7 @@ private fun EconomyCatalogScreen() {
                                     busy = item.id
                                     if (mine) {
                                         runCatching { backend?.equipShopItem(item.id) }
-                                            .onSuccess { notice = sh("${name} etkinleştirildi.", "$name equipped."); reload() }
+                                            .onSuccess { if (item.kind == "mascot") MascotSelectionRuntime.select(context, item.id); notice = sh("${name} etkinleştirildi.", "$name equipped."); reload() }
                                             .onFailure { notice = sh("Style öğesi etkinleştirilemedi.", "Style item could not be equipped.") }
                                     } else {
                                         runCatching { backend?.purchaseShopItem(item.id) }
@@ -220,6 +225,7 @@ private fun CosmeticPreview(item: ShopItemDto) {
                 "keyboard_theme" -> Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("S","O","N","H","A","R","F").forEach { k -> Surface(color = Color(0xFFEAF8FF), shape = RoundedCornerShape(7.dp), border = BorderStroke(1.5.dp, SonHarfCyan)) { Text(k, Modifier.padding(horizontal = 8.dp, vertical = 10.dp), color = SonHarfCyan, fontWeight = FontWeight.Black) } } }
                 "victory_effect" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text("✦", color = SonHarfCyan, fontSize = 30.sp); Text("♛", color = SonHarfGold, fontSize = 50.sp, fontWeight = FontWeight.Black, modifier = Modifier.scale(pulse)); Text("✦", color = SonHarfPink, fontSize = 30.sp) }
                 "emoji_pack" -> Text("👑  ⚡  😎  🔥  ◈", fontSize = 30.sp)
+                "mascot" -> MascotLive3DStage(Modifier.fillMaxSize(), mascotId = item.id, motion = MascotMotion.IDLE)
                 else -> Text("◇", fontSize = 44.sp, color = SonHarfCyan)
             }
         }
