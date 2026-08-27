@@ -49,6 +49,8 @@ internal fun PremiumMasterHome(
     onSeason: () -> Unit = onHub,
     onWardrobe: () -> Unit = onProfile,
     onNotifications: () -> Unit = onProfile,
+    onDailyCipher: () -> Unit = onHub,
+    onMastery: () -> Unit = onHub,
 ) {
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -156,8 +158,16 @@ internal fun PremiumMasterHome(
                         scope.launch { runCatching { backend?.claimDailyCheckin() }; reload() }
                     }
                     MasterShortcut(Icons.Rounded.EmojiEvents, sh("LİGLER", "LEAGUES"), 0, Modifier.weight(1f), onLeague)
-                    MasterShortcut(Icons.Rounded.ShoppingCart, sh("MAĞAZA", "SHOP"), 0, Modifier.weight(1f), onShop)
+                    MasterShortcut(Icons.Rounded.ShoppingCart, "STYLE", 0, Modifier.weight(1f), onShop)
                     MasterShortcut(Icons.Rounded.Checkroom, sh("DOLABIM", "WARDROBE"), 0, Modifier.weight(1f), onWardrobe)
+                }
+            }
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MasterShortcut(Icons.Rounded.Lightbulb, sh("GÜNÜN ŞİFRESİ", "DAILY CIPHER"), 1, Modifier.weight(1f), onDailyCipher)
+                    MasterShortcut(Icons.Rounded.MilitaryTech, sh("USTALIK YOLU", "MASTERY PATH"), 0, Modifier.weight(1f), onMastery)
+                    MasterShortcut(Icons.Rounded.Whatshot, sh("TURNUVA", "TOURNAMENT"), 0, Modifier.weight(1f), onMastery)
+                    MasterShortcut(Icons.Rounded.Groups, sh("EZELİ RAKİP", "ARCH RIVAL"), 0, Modifier.weight(1f), onMastery)
                 }
             }
             item { Spacer(Modifier.height(8.dp)) }
@@ -197,7 +207,7 @@ private fun MasterProfileHeader(
                 LinearProgressIndicator(progress = { growth?.let { it.levelProgress.toFloat()/it.levelTarget.coerceAtLeast(1) } ?: 0f }, modifier = Modifier.width(72.dp).height(5.dp).clip(CircleShape), color = MasterBlue, trackColor = MasterLine)
             }
         }
-        MasterWallet(Icons.Rounded.Diamond, "${profile?.diamonds ?: 0}", MasterBlue)
+        MasterWallet(Icons.Rounded.Paid, "${profile?.diamonds ?: 0} SC", MasterGold)
         Spacer(Modifier.width(5.dp))
         Surface(onClick = if (isAdmin) onAdmin else onNotifications, shape = CircleShape, color = Color.White, border = BorderStroke(1.dp, MasterLine), modifier = Modifier.size(40.dp)) {
             Box(contentAlignment = Alignment.Center) { Icon(if (isAdmin) Icons.Rounded.AdminPanelSettings else Icons.Rounded.Notifications, null, tint = MasterInk, modifier = Modifier.size(20.dp)) }
