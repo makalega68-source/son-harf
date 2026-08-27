@@ -6,10 +6,6 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
-/**
- * Legacy mascot API retained so older screens still compile while the old pet implementation is gone.
- * Every motion is now translated to an Eve animation cue.
- */
 internal enum class MascotMotion {
     IDLE,
     WALK,
@@ -34,20 +30,15 @@ internal data class MascotAnimationDef(
 )
 
 internal object MascotAnimationRegistry {
-    val all = listOf(
-        MascotAnimationDef("idle", MascotMotion.IDLE, "IdleBreathe", 1, true),
-        MascotAnimationDef("walk", MascotMotion.WALK, "Walk", 1, true),
-        MascotAnimationDef("turn_left", MascotMotion.TURN_LEFT, "WalkTurnL", 1, false),
-        MascotAnimationDef("turn_right", MascotMotion.TURN_RIGHT, "WalkTurnR", 1, false),
-        MascotAnimationDef("look_at_player", MascotMotion.LOOK_AT_PLAYER, "IdleLookAround", 1, true),
-        MascotAnimationDef("greeting", MascotMotion.GREETING, "IdleLookAround", 1, true),
-        MascotAnimationDef("thinking", MascotMotion.THINKING, "IdleLookAround", 1, true),
-        MascotAnimationDef("critical", MascotMotion.CRITICAL, "IdleBreathe", 1, true),
-        MascotAnimationDef("victory", MascotMotion.VICTORY, "IdleBreathe", 1, true),
-        MascotAnimationDef("defeat", MascotMotion.DEFEAT, "Rest", 1, true),
-        MascotAnimationDef("sit", MascotMotion.SIT, "Rest", 1, true),
-        MascotAnimationDef("run", MascotMotion.RUN, "Run", 1, true),
-    )
+    val all = MascotMotion.entries.map { motion ->
+        MascotAnimationDef(
+            id = motion.name.lowercase(),
+            motion = motion,
+            clipName = MascotCatalog.clip(MascotCatalog.DEFAULT_ID, motion),
+            unlockLevel = 1,
+            loop = motion !in setOf(MascotMotion.VICTORY, MascotMotion.DEFEAT, MascotMotion.CRITICAL),
+        )
+    }
 
     fun definition(motion: MascotMotion): MascotAnimationDef = all.first { it.motion == motion }
     fun unlocked(level: Int): List<MascotAnimationDef> = all.filter { level.coerceAtLeast(1) >= it.unlockLevel }
@@ -59,7 +50,7 @@ internal object MascotRuntime {
         private set
     var message by mutableStateOf("")
         private set
-    var petName by mutableStateOf("Eve")
+    var petName by mutableStateOf("Dostum")
         private set
     var playerLevel by mutableIntStateOf(1)
         private set
@@ -69,7 +60,7 @@ internal object MascotRuntime {
         private set
 
     fun rename(value: String) {
-        petName = value.trim().take(18).ifBlank { "Eve" }
+        petName = value.trim().take(18).ifBlank { "Dostum" }
     }
 
     fun syncProgress(xp: Int, level: Int) {
@@ -77,39 +68,33 @@ internal object MascotRuntime {
         playerLevel = level.coerceAtLeast(1)
     }
 
-    fun setMatchActive(active: Boolean) { inActiveMatch = active }
+    fun setMatchActive(active: Boolean) {
+        inActiveMatch = active
+    }
 
     fun react(next: MascotMotion, language: String = SonHarfUiState.language) {
         motion = next
         message = localizedMessage(next, language)
-        EveMascotRuntime.play(next.toEveCue(), message.takeIf { it.isNotBlank() })
     }
 
     private fun localizedMessage(motion: MascotMotion, language: String): String {
         val en = language == "en"
         return when (motion) {
-            MascotMotion.GREETING -> if (en) "I'm here. 🤍" else "Buradayım. 🤍"
+            MascotMotion.GREETING -> if (en) "Ready!" else "Hazırım!"
             MascotMotion.THINKING -> if (en) "Let me think…" else "Bir düşüneyim…"
-            MascotMotion.CRITICAL -> if (en) "You've got this." else "Yapabilirsin."
-            MascotMotion.VICTORY -> if (en) "That was lovely!" else "Harikaydın!"
-            MascotMotion.DEFEAT -> if (en) "Stay with it; the next one is yours." else "Canını sıkma, sıradaki senin."
+            MascotMotion.CRITICAL -> if (en) "Focus!" else "Odaklan!"
+            MascotMotion.VICTORY -> if (en) "Great game!" else "Harika oynadın!"
+            MascotMotion.DEFEAT -> if (en) "Next one." else "Sıradaki bizim."
             MascotMotion.LOOK_AT_PLAYER -> if (en) "I'm listening." else "Seni dinliyorum."
-            MascotMotion.SIT -> if (en) "A tiny rest." else "Biraz dinleniyorum."
+            MascotMotion.SIT -> if (en) "Resting." else "Dinleniyorum."
             MascotMotion.RUN -> if (en) "Let's go!" else "Hadi!"
-            MascotMotion.IDLE, MascotMotion.WALK, MascotMotion.TURN_LEFT, MascotMotion.TURN_RIGHT -> ""
+            MascotMotion.IDLE,
+            MascotMotion.WALK,
+            MascotMotion.TURN_LEFT,
+            MascotMotion.TURN_RIGHT -> ""
         }
     }
 }
 
-private fun MascotMotion.toEveCue(): EveAnimationCue = when (this) {
-    MascotMotion.IDLE -> EveAnimationCue.IDLE_BREATHE
-    MascotMotion.WALK, MascotMotion.TURN_LEFT, MascotMotion.TURN_RIGHT -> EveAnimationCue.WALK
-    MascotMotion.LOOK_AT_PLAYER, MascotMotion.GREETING, MascotMotion.THINKING -> EveAnimationCue.IDLE_LOOK_AROUND
-    MascotMotion.CRITICAL, MascotMotion.VICTORY -> EveAnimationCue.IDLE_BREATHE
-    MascotMotion.DEFEAT, MascotMotion.SIT -> EveAnimationCue.REST
-    MascotMotion.RUN -> EveAnimationCue.RUN
-}
-
-/** Old autonomous-pet polling is intentionally removed. Eve's behavior is driven by chat/game context. */
 @Composable
 internal fun MascotBehaviorBridge() = Unit
