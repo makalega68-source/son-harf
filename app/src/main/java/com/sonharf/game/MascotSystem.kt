@@ -257,7 +257,7 @@ internal fun MascotBehaviorBridge() {
                 val wordAdvanced = previousSameRoom != null &&
                     active.validWordCount > previousSameRoom.validWordCount
                 val myAcceptedWord = wordAdvanced &&
-                    active.lastEvent !in failedEvents &&
+                    (active.lastEvent == null || active.lastEvent !in failedEvents) &&
                     (active.lastEventPlayerId == me || myScore > previousMyScore)
                 val opponentFailed = previousSameRoom != null &&
                     active.lastEventPlayerId != null &&
