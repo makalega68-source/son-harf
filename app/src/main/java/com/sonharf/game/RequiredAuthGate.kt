@@ -79,6 +79,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var success by remember { mutableStateOf(false) }
+    var showForm by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val pulse by rememberInfiniteTransition(label = "authLogo").animateFloat(
         initialValue = .96f, targetValue = 1.04f,
@@ -135,12 +136,56 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     )
                 )
             )
+            if (!showForm) {
+                Column(
+                    Modifier.fillMaxSize().padding(horizontal = 22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom,
+                ) {
+                    Button(
+                        onClick = { register = false; notice = ""; showForm = true },
+                        modifier = Modifier.fillMaxWidth().height(58.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LetharaPalette.Gold,
+                            contentColor = Color(0xFF211830),
+                        ),
+                    ) {
+                        Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 19.sp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { register = false; notice = ""; showForm = true },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            border = BorderStroke(1.dp, LetharaPalette.Cyan),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = LetharaPalette.Text),
+                        ) {
+                            Text(sh("GİRİŞ YAP", "SIGN IN"), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        }
+                        Button(
+                            onClick = { register = true; notice = ""; showForm = true },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = LetharaPalette.Violet),
+                        ) {
+                            Text(sh("KAYIT OL", "REGISTER"), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(90.dp))
+                }
+            } else {
             Column(
                 Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 18.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                Spacer(Modifier.height(225.dp))
+                Spacer(Modifier.height(90.dp))
+                TextButton(
+                    onClick = { showForm = false; notice = ""; success = false },
+                    modifier = Modifier.align(Alignment.Start),
+                ) {
+                    Text("‹ " + sh("Lethara'ya dön", "Back to Lethara"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
+                }
                 Surface(
                     color = LetharaPalette.PanelStrong.copy(alpha = .78f),
                     shape = RoundedCornerShape(18.dp),
@@ -296,6 +341,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     }
                 }
                 Spacer(Modifier.height(24.dp))
+            }
             }
         }
     }
