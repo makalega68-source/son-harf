@@ -124,7 +124,7 @@ internal fun MascotLive3DStage(
                     modelLoader = modelLoader,
                     isOpaque = false,
                     autoCenterContent = true,
-                    autoFitContent = resolvedId == MascotCatalog.CHIBI_WIZARD_ID,
+                    autoFitContent = false,
                     cameraNode = cameraNode,
                     cameraManipulator = null,
                 ) {
