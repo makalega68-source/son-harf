@@ -12,7 +12,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -118,8 +117,7 @@ internal fun MascotLive3DStage(
         if (modelInstance == null) {
             CircularProgressIndicator(color = SonHarfCyan, strokeWidth = 2.dp)
         } else {
-            key(resolvedId, clip, modelLocation) {
-                SceneView(
+            SceneView(
                     modifier = Modifier.fillMaxSize(),
                     surfaceType = SurfaceType.TextureSurface,
                     engine = engine,
@@ -132,7 +130,7 @@ internal fun MascotLive3DStage(
                 ) {
                     ModelNode(
                         modelInstance = modelInstance,
-                        autoAnimate = true,
+                        autoAnimate = false,
                         animationName = clip,
                         animationLoop = motion !in setOf(
                             MascotMotion.VICTORY,
@@ -154,7 +152,6 @@ internal fun MascotLive3DStage(
                         isEditable = false,
                     )
                 }
-            }
         }
     }
 }
