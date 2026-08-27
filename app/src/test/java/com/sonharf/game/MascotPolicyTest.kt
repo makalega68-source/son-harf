@@ -1,6 +1,5 @@
 package com.sonharf.game
 
-import com.sonharf.game.mascotdata2.MascotEmbeddedModel
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import org.junit.Assert.assertEquals

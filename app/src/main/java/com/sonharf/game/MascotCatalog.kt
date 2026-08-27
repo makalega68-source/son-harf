@@ -5,7 +5,6 @@ import android.net.Uri
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import com.sonharf.game.mascotdata2.MascotEmbeddedModel
 
 internal data class MascotCatalogItem(
     val id: String,
@@ -42,7 +41,7 @@ internal object MascotCatalog {
         all.firstOrNull { it.id == id } ?: all.first { it.id == DEFAULT_ID }
 
     fun isAssetReady(context: Context, id: String): Boolean = when (id) {
-        DEFAULT_ID -> runCatching { MascotEmbeddedModel.ensureFile(context).isFile }.getOrDefault(false)
+        DEFAULT_ID -> false
         CHIBI_WIZARD_ID -> runCatching {
             context.assets.open(requireNotNull(item(id).assetPath)).use { }
             true
@@ -51,7 +50,7 @@ internal object MascotCatalog {
     }
 
     fun modelLocation(context: Context, id: String): String? = when (id) {
-        DEFAULT_ID -> runCatching { Uri.fromFile(MascotEmbeddedModel.ensureFile(context)).toString() }.getOrNull()
+        DEFAULT_ID -> null
         CHIBI_WIZARD_ID -> item(id).assetPath?.takeIf { isAssetReady(context, id) }
         else -> null
     }
