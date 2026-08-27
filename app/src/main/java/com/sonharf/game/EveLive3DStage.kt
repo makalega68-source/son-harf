@@ -291,18 +291,18 @@ internal fun EveLive3DStage(
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .offset(y = maxHeight * 0.218f)
-                        .width(maxWidth * 0.30f)
-                        .height(maxHeight * 0.018f)
-                        .background(Color.Black.copy(alpha = 0.055f), CircleShape),
+                        .offset(y = maxHeight * 0.226f)
+                        .width(maxWidth * 0.36f)
+                        .height(maxHeight * 0.024f)
+                        .background(Color.Black.copy(alpha = 0.16f), CircleShape),
                 )
                 Box(
                     modifier = Modifier
                         .align(Alignment.Center)
-                        .offset(y = maxHeight * 0.216f)
-                        .width(maxWidth * 0.21f)
-                        .height(maxHeight * 0.011f)
-                        .background(Color.Black.copy(alpha = 0.080f), CircleShape),
+                        .offset(y = maxHeight * 0.224f)
+                        .width(maxWidth * 0.24f)
+                        .height(maxHeight * 0.015f)
+                        .background(Color.Black.copy(alpha = 0.24f), CircleShape),
                 )
             }
         }
