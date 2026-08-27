@@ -97,7 +97,7 @@ fun RewardCenterScreen() {
                     runCatching { b.claimRewardedAd(rewardType, responseId) }
                         .onSuccess { claim ->
                             notice = when (rewardType) {
-                                "diamonds" -> sh("+${claim?.diamondsAwarded ?: 10} elmas hesabına eklendi.", "+${claim?.diamondsAwarded ?: 10} diamonds added.")
+                                "diamonds" -> sh("+${claim?.diamondsAwarded ?: 10} Son Coin hesabına eklendi.", "+${claim?.diamondsAwarded ?: 10} Son Coin added.")
                                 "chest" -> sh("1 ödül sandığı kazandın.", "You earned 1 reward chest.")
                                 else -> sh("24 saatlik premium kozmetik denemen başladı.", "Your 24-hour premium cosmetic trial has started.")
                             }
@@ -125,13 +125,13 @@ fun RewardCenterScreen() {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Text(sh("ÜCRETSİZ ÖDÜLLER", "FREE REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
-            Text(sh("Reklamlar tamamen isteğe bağlıdır. Maç öncesi, maç sonrası veya ekran geçişlerinde zorunlu reklam gösterilmez.", "Ads are completely optional. No forced ads are shown before matches, after matches, or between screens."), color = SonHarfMuted, fontSize = 10.sp)
+            Text(sh("Ödüllü reklamlar isteğe bağlıdır. İnce banner yalnızca oyun dışı menülerde gösterilir; maçlarda ve oyun alanlarında reklam yoktur.", "Rewarded ads are optional. A thin banner appears only on non-game menus; matches and gameplay areas remain ad-free."), color = SonHarfMuted, fontSize = 10.sp)
         }
 
         item {
             RewardAdCard(
-                icon = "💎", title = sh("ELMAS", "DIAMONDS"),
-                description = sh("Her tamamlanan reklam +10 elmas verir. Elmasları Mağaza'daki kozmetiklerde kullan.", "Each completed ad gives +10 diamonds. Spend diamonds on cosmetics in the Shop."),
+                icon = "◈", title = sh("SON COIN", "DIAMONDS"),
+                description = sh("Her tamamlanan reklam +10 Son Coin verir. Son Coinları Mağaza'daki kozmetiklerde kullan.", "Each completed ad gives +10 diamonds. Spend Son Coin on Style items in the Shop."),
                 progress = "${s?.diamondAdsUsed ?: 0}/${s?.diamondAdsLimit ?: 3}",
                 button = sh("REKLAM İZLE  +10", "WATCH AD  +10"),
                 enabled = adReady && (s?.diamondAdsUsed ?: 0) < (s?.diamondAdsLimit ?: 3) && busy == null,
@@ -142,7 +142,7 @@ fun RewardCenterScreen() {
         item {
             RewardAdCard(
                 icon = "🎁", title = sh("ÖDÜL SANDIĞI", "REWARD CHEST"),
-                description = sh("Reklam başına 1 sandık hakkı. Sandık açıldığında 15, 25 veya 40 elmas çıkar.", "Earn 1 chest per ad. Opening a chest awards 15, 25, or 40 diamonds."),
+                description = sh("Reklam başına 1 sandık hakkı. Sandık açıldığında 15, 25 veya 40 Son Coin çıkar.", "Earn 1 chest per ad. Opening a chest awards 15, 25, or 40 diamonds."),
                 progress = "${s?.chestAdsUsed ?: 0}/${s?.chestAdsLimit ?: 2}",
                 button = sh("REKLAM İZLE  +1 SANDIK", "WATCH AD  +1 CHEST"),
                 enabled = adReady && (s?.chestAdsUsed ?: 0) < (s?.chestAdsLimit ?: 2) && busy == null,
@@ -157,7 +157,7 @@ fun RewardCenterScreen() {
                         Text(sh("SANDIKLARIM", "MY CHESTS"), color = SonHarfGold, fontWeight = FontWeight.Black)
                         Text("🎁 ${s?.chestKeys ?: 0}", fontWeight = FontWeight.Black)
                     }
-                    Text(sh("Buradan kazandığın sandıkları aç. Çıkan elmaslar doğrudan cüzdanına eklenir ve mağazada kullanılabilir.", "Open earned chests here. Diamonds go directly to your wallet and can be spent in the shop."), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(sh("Buradan kazandığın sandıkları aç. Çıkan Son Coinlar doğrudan cüzdanına eklenir ve mağazada kullanılabilir.", "Open earned chests here. Diamonds go directly to your wallet and can be spent in the shop."), color = SonHarfMuted, fontSize = 9.sp)
                     Button(
                         onClick = {
                             val b = backend
@@ -168,7 +168,7 @@ fun RewardCenterScreen() {
                             scope.launch {
                                 busy = "open_chest"
                                 runCatching { b.openRewardChest() }
-                                    .onSuccess { reward -> notice = sh("Sandıktan ${reward?.diamondsAwarded ?: 0} elmas çıktı!", "Chest awarded ${reward?.diamondsAwarded ?: 0} diamonds!"); reload() }
+                                    .onSuccess { reward -> notice = sh("Sandıktan ${reward?.diamondsAwarded ?: 0} Son Coin çıktı!", "Chest awarded ${reward?.diamondsAwarded ?: 0} diamonds!"); reload() }
                                     .onFailure { notice = sh("Açılacak sandığın yok.", "You do not have a chest to open.") }
                                 busy = null
                             }
@@ -227,7 +227,7 @@ fun RewardCenterScreen() {
                 Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(sh("GÜNLÜK YENİLENME", "DAILY RESET"), fontWeight = FontWeight.Bold, fontSize = 10.sp)
                     Text(sh("Kotalar her gün UTC gün değişiminde sunucuda yenilenir. Cihaz saatini değiştirmek veya uygulamayı silmek kotayı sıfırlamaz.", "Quotas reset on the server each UTC day. Changing device time or reinstalling the app does not reset them."), color = SonHarfMuted, fontSize = 9.sp)
-                    Text("💎 ${profile?.diamonds ?: 0}", color = SonHarfCyan, fontWeight = FontWeight.Black)
+                    Text("◈ ${profile?.diamonds ?: 0}", color = SonHarfCyan, fontWeight = FontWeight.Black)
                 }
             }
         }

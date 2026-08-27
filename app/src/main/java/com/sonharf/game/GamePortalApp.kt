@@ -1,7 +1,6 @@
 package com.sonharf.game
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Modifier
@@ -39,8 +38,11 @@ fun GamePortalApp() {
         ClassicPremiumApp()
 
         if (EveLivingRoomRuntime.open) {
-            Box(Modifier.fillMaxSize()) {
-                EveForestScreen(onNavigateBack = { EveLivingRoomRuntime.hide() })
+            Column(Modifier.fillMaxSize()) {
+                SonHarfTopAdBanner()
+                Box(Modifier.fillMaxWidth().weight(1f)) {
+                    EveForestScreen(onNavigateBack = { EveLivingRoomRuntime.hide() })
+                }
             }
         }
     }

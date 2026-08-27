@@ -39,7 +39,7 @@ import com.sonharf.game.data.getLeaderboardV2
 import kotlinx.coroutines.launch
 
 private enum class ClassicScreen {
-    HOME, PLAY, GAME, BIL_BAKALIM, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL
+    HOME, PLAY, GAME, BIL_BAKALIM, DAILY_CIPHER, MASTERY, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL
 }
 
 private val ClassicBg = Color(0xFFF4FBFF)
@@ -150,8 +150,11 @@ fun ClassicPremiumApp() {
                 }
             },
         ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding)) {
-                when (screen) {
+            val showTopBanner = screen !in setOf(ClassicScreen.GAME, ClassicScreen.BIL_BAKALIM, ClassicScreen.DAILY_CIPHER)
+            Column(Modifier.fillMaxSize().padding(padding)) {
+                if (showTopBanner) SonHarfTopAdBanner()
+                Box(Modifier.fillMaxWidth().weight(1f)) {
+                    when (screen) {
                     ClassicScreen.HOME -> PremiumMasterHome(
                         backend = backend,
                         onPlay = { screen = ClassicScreen.PLAY },
@@ -166,6 +169,8 @@ fun ClassicPremiumApp() {
                         onSeason = { hubTab = 1; hubReturnScreen = ClassicScreen.HOME; screen = ClassicScreen.HUB },
                         onWardrobe = { shopFullTab = 0; shopFullReturnScreen = ClassicScreen.HOME; screen = ClassicScreen.SHOP_FULL },
                         onNotifications = { profileFullTab = 2; profileFullReturnScreen = ClassicScreen.HOME; screen = ClassicScreen.PROFILE_FULL },
+                        onDailyCipher = { screen = ClassicScreen.DAILY_CIPHER },
+                        onMastery = { screen = ClassicScreen.MASTERY },
                     )
                     ClassicScreen.PLAY -> ClassicPlayScreen(
                         backend = backend,
@@ -188,6 +193,12 @@ fun ClassicPremiumApp() {
                     )
                     ClassicScreen.GAME -> key(gameKey) { TargetNeonGameScreen(autoStartMatchmaking = autoStartMatchmaking) }
                     ClassicScreen.BIL_BAKALIM -> TrackedBilBakalimStandaloneScreen { screen = ClassicScreen.HOME }
+                    ClassicScreen.DAILY_CIPHER -> DailyCipherScreen { screen = ClassicScreen.HOME }
+                    ClassicScreen.MASTERY -> MasteryPathScreen(
+                        onBack = { screen = ClassicScreen.HOME },
+                        onPlay = { screen = ClassicScreen.PLAY },
+                        onLeague = { screen = ClassicScreen.LEAGUE },
+                    )
                     ClassicScreen.ADMIN -> AdminConsoleScreen { screen = ClassicScreen.HOME }
                     ClassicScreen.HUB -> MetaHubScreen(
                         initialTab = hubTab,
@@ -203,6 +214,7 @@ fun ClassicPremiumApp() {
                         initialTab = shopFullTab,
                         onBack = { screen = shopFullReturnScreen },
                     )
+                    }
                 }
             }
         }
