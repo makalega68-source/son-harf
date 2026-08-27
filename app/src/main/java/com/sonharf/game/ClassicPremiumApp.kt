@@ -80,7 +80,9 @@ fun ClassicPremiumApp() {
     LaunchedEffect(authenticated) {
         if (!authenticated) return@LaunchedEffect
         runCatching { backend?.getPreferredGameMode() }.getOrNull()?.let { SonHarfGameModeState.mode = it }
-        SonHarfCosmetics.apply(runCatching { backend?.getEquippedCosmetics() }.getOrNull())
+        val equipped = runCatching { backend?.getEquippedCosmetics() }.getOrNull()
+        SonHarfCosmetics.apply(equipped)
+        MascotSelectionRuntime.select(context, equipped?.mascotId ?: MascotCatalog.DEFAULT_ID)
     }
     LaunchedEffect(lobbyRequest) {
         if (authenticated && lobbyRequest > 0) {
