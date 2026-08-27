@@ -33,6 +33,7 @@ fun GameInviteOverlay() {
     var invite by remember { mutableStateOf<GameInviteDto?>(null) }
     var sender by remember { mutableStateOf<ProfileDto?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var notice by remember { mutableStateOf("") }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -69,6 +70,7 @@ fun GameInviteOverlay() {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(sh("Seni Son Harf düellosuna davet ediyor.", "invited you to a Son Harf duel."), color = SonHarfText, fontSize = 15.sp)
                 Text("${current.language.uppercase()} • ${sh("Özel eşleşme", "Private match")}", color = SonHarfMuted, fontSize = 12.sp)
+                if (notice.isNotBlank()) Text(notice, color = SonHarfPink, fontSize = 11.sp)
             }
         },
         confirmButton = {
@@ -79,9 +81,13 @@ fun GameInviteOverlay() {
                         busy = true
                         runCatching { backend.respondGameInvite(current.id, true) }
                             .onSuccess {
+                                notice = ""
                                 invite = null
                                 sender = null
                                 SonHarfGameNavigation.requestLobby()
+                            }
+                            .onFailure {
+                                notice = sh("Davet kabul edilemedi. Bağlantıyı kontrol edip tekrar dene.", "Invite could not be accepted. Check your connection and try again.")
                             }
                         busy = false
                     }
@@ -96,8 +102,14 @@ fun GameInviteOverlay() {
                     scope.launch {
                         busy = true
                         runCatching { backend.respondGameInvite(current.id, false) }
-                        invite = null
-                        sender = null
+                            .onSuccess {
+                                notice = ""
+                                invite = null
+                                sender = null
+                            }
+                            .onFailure {
+                                notice = sh("Davet reddedilemedi. Tekrar dene.", "Invite could not be declined. Try again.")
+                            }
                         busy = false
                     }
                 },
