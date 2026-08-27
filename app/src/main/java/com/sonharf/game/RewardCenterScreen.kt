@@ -55,11 +55,25 @@ fun RewardCenterScreen() {
     var notice by remember { mutableStateOf<String?>(null) }
 
     suspend fun reload() {
-        val b = backend ?: return
-        if (b.currentUserId() == null) b.ensurePlayer(sh("Oyuncu", "Player"))
-        status = runCatching { b.getRewardCenterStatus() }.getOrNull()
-        items = runCatching { b.getShopItems() }.getOrDefault(emptyList())
-        profile = b.currentUserId()?.let { runCatching { b.getProfile(it) }.getOrNull() }
+        val b = backend
+        if (b == null) {
+            notice = sh("Ödül merkezi sunucu bağlantısı olmadan kullanılamaz.", "Reward Center requires a server connection.")
+            return
+        }
+        if (b.currentUserId() == null) {
+            runCatching { b.ensurePlayer(sh("Oyuncu", "Player")) }
+                .onFailure {
+                    notice = sh("Oyuncu oturumu hazırlanamadı.", "Player session is not ready.")
+                    return
+                }
+        }
+        runCatching {
+            status = b.getRewardCenterStatus()
+            items = b.getShopItems()
+            profile = b.currentUserId()?.let { b.getProfile(it) }
+        }.onFailure {
+            notice = sh("Ödül verileri yüklenemedi.", "Reward data could not be loaded.")
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -69,13 +83,18 @@ fun RewardCenterScreen() {
 
     fun showRewarded(rewardType: String) {
         val a = activity
+        val b = backend
         if (a == null || busy != null) return
+        if (b == null) {
+            notice = sh("Ödül merkezi şu anda çevrimdışı.", "Reward Center is currently offline.")
+            return
+        }
         busy = rewardType
         adController.show(
             a,
             onEarned = { responseId ->
                 scope.launch {
-                    runCatching { backend?.claimRewardedAd(rewardType, responseId) }
+                    runCatching { b.claimRewardedAd(rewardType, responseId) }
                         .onSuccess { claim ->
                             notice = when (rewardType) {
                                 "diamonds" -> sh("+${claim?.diamondsAwarded ?: 10} elmas hesabına eklendi.", "+${claim?.diamondsAwarded ?: 10} diamonds added.")
@@ -141,9 +160,14 @@ fun RewardCenterScreen() {
                     Text(sh("Buradan kazandığın sandıkları aç. Çıkan elmaslar doğrudan cüzdanına eklenir ve mağazada kullanılabilir.", "Open earned chests here. Diamonds go directly to your wallet and can be spent in the shop."), color = SonHarfMuted, fontSize = 9.sp)
                     Button(
                         onClick = {
+                            val b = backend
+                            if (b == null) {
+                                notice = sh("Ödül merkezi şu anda çevrimdışı.", "Reward Center is currently offline.")
+                                return@Button
+                            }
                             scope.launch {
                                 busy = "open_chest"
-                                runCatching { backend?.openRewardChest() }
+                                runCatching { b.openRewardChest() }
                                     .onSuccess { reward -> notice = sh("Sandıktan ${reward?.diamondsAwarded ?: 0} elmas çıktı!", "Chest awarded ${reward?.diamondsAwarded ?: 0} diamonds!"); reload() }
                                     .onFailure { notice = sh("Açılacak sandığın yok.", "You do not have a chest to open.") }
                                 busy = null
@@ -177,9 +201,14 @@ fun RewardCenterScreen() {
                     Text(s.trialExpiresAt.orEmpty(), color = SonHarfMuted, fontSize = 8.sp)
                     Button(
                         onClick = {
+                            val b = backend
+                            if (b == null) {
+                                notice = sh("Ödül merkezi şu anda çevrimdışı.", "Reward Center is currently offline.")
+                                return@Button
+                            }
                             scope.launch {
                                 busy = "equip_trial"
-                                runCatching { backend?.equipRewardTrial() }
+                                runCatching { b.equipRewardTrial() }
                                     .onSuccess { notice = sh("Deneme kozmetiği etkinleştirildi.", "Trial cosmetic equipped."); reload() }
                                     .onFailure { notice = sh("Deneme artık aktif değil.", "The trial is no longer active."); reload() }
                                 busy = null
