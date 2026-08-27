@@ -28,6 +28,13 @@ fun GamePortalApp() {
 
     Box(Modifier.fillMaxSize()) {
         ClassicPremiumApp()
-        // Maskot entegrasyonu bir sonraki özel aşamaya ertelendi.
+        MascotBehaviorBridge()
+        if (
+            MascotRuntime.inActiveMatch ||
+            MascotRuntime.motion == MascotMotion.VICTORY ||
+            MascotRuntime.motion == MascotMotion.DEFEAT
+        ) {
+            Mascot3DLayer()
+        }
     }
 }
