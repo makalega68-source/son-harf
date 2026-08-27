@@ -90,8 +90,9 @@ internal object MascotSelectionRuntime {
         if (loaded) return
         val stored = context.applicationContext
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY, MascotCatalog.DEFAULT_ID)
-        selectedId = MascotCatalog.item(stored).id
+            .getString(KEY, null)
+        val fallback = if (BuildConfig.DEBUG) MascotCatalog.CHIBI_WIZARD_ID else MascotCatalog.DEFAULT_ID
+        selectedId = MascotCatalog.item(stored ?: fallback).id
         loaded = true
     }
 
