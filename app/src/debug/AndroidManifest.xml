@@ -10,18 +10,5 @@
             android:exported="true"
             android:screenOrientation="portrait"
             android:windowSoftInputMode="adjustResize" />
-        <activity
-            android:name=".Eve3DSmokeActivity"
-            android:exported="true"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".EveHomeFloatingSmokeActivity"
-            android:exported="true"
-            android:screenOrientation="portrait" />
-        <activity
-            android:name=".EveImeSmokeActivity"
-            android:exported="true"
-            android:screenOrientation="portrait"
-            android:windowSoftInputMode="adjustNothing" />
     </application>
 </manifest>
