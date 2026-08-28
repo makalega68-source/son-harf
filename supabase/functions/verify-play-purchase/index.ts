@@ -4,7 +4,8 @@ import { GoogleAuth } from "npm:google-auth-library@9";
 
 const jsonHeaders = { "Content-Type": "application/json" };
 const subscriptionProducts = new Set(["vip_monthly", "vip_yearly", "season_pass_monthly"]);
-const oneTimeProducts = new Set(["coins_500", "coins_1500", "theme_neon"]);
+const oneTimeProducts = new Set(["coins_500", "coins_1500", "coins_3500", "coins_8000", "starter_style_pack", "theme_neon"]);
+const consumableProducts = new Set(["coins_500", "coins_1500", "coins_3500", "coins_8000"]);
 const entitlementStates = new Set([
   "SUBSCRIPTION_STATE_ACTIVE",
   "SUBSCRIPTION_STATE_IN_GRACE_PERIOD",
@@ -90,13 +91,37 @@ Deno.serve(async (req: Request) => {
   if (grantError) return response(500, { error: "entitlement_grant_failed" });
 
   let acknowledged = acknowledgementState?.includes("ACKNOWLEDGED") === true;
-  if (!acknowledged) {
+  let consumed = false;
+
+  if (consumableProducts.has(productId)) {
+    const consumeUrl =
+      `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(packageName)}/purchases/products/${encodeURIComponent(productId)}/tokens/${encodedToken}:consume`;
+    const consumeResponse = await fetch(consumeUrl, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    consumed = consumeResponse.ok;
+    acknowledged = acknowledged || consumed;
+    if (!consumed) {
+      return response(502, {
+        error: "google_play_consume_failed",
+        verified: true,
+        productId,
+        grant: grantData,
+      });
+    }
+  } else if (!acknowledged) {
     const ackUrl = isSubscription
       ? `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(packageName)}/purchases/subscriptions/${encodeURIComponent(productId)}/tokens/${encodedToken}:acknowledge`
       : `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${encodeURIComponent(packageName)}/purchases/products/${encodeURIComponent(productId)}/tokens/${encodedToken}:acknowledge`;
-    const ackResponse = await fetch(ackUrl, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    const ackResponse = await fetch(ackUrl, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
     acknowledged = ackResponse.ok;
   }
 
-  return response(200, { verified: true, productId, acknowledged, grant: grantData });
+  return response(200, { verified: true, productId, acknowledged, consumed, grant: grantData });
 });
