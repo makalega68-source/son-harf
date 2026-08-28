@@ -39,7 +39,7 @@ import com.sonharf.game.data.getLeaderboardV2
 import kotlinx.coroutines.launch
 
 private enum class ClassicScreen {
-    HOME, PLAY, GAME, BIL_BAKALIM, DAILY_CIPHER, MASTERY, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL
+    HOME, PLAY, GAME, BIL_BAKALIM, DAILY_CIPHER, MASTERY, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL, HISTORY, MASCOT
 }
 
 private val ClassicBg = Color(0xFFF4FBFF)
@@ -173,6 +173,8 @@ fun ClassicPremiumApp() {
                         onNotifications = { profileFullTab = 2; profileFullReturnScreen = ClassicScreen.HOME; screen = ClassicScreen.PROFILE_FULL },
                         onDailyCipher = { screen = ClassicScreen.DAILY_CIPHER },
                         onMastery = { screen = ClassicScreen.MASTERY },
+                        onHistory = { screen = ClassicScreen.HISTORY },
+                        onMascot = { screen = ClassicScreen.MASCOT },
                     )
                     ClassicScreen.PLAY -> ClassicPlayScreen(
                         backend = backend,
@@ -215,6 +217,21 @@ fun ClassicPremiumApp() {
                     ClassicScreen.SHOP_FULL -> EconomyShopScreen(
                         initialTab = shopFullTab,
                         onBack = { screen = shopFullReturnScreen },
+                    )
+                    ClassicScreen.HISTORY -> WizardHistoryScreen(
+                        backend = backend,
+                        onBack = { screen = ClassicScreen.HOME },
+                        onOpenMascot = { screen = ClassicScreen.MASCOT },
+                    )
+                    ClassicScreen.MASCOT -> MascotCompanionScreen(
+                        backend = backend,
+                        onBack = { screen = ClassicScreen.HOME },
+                        onOpenHistory = { screen = ClassicScreen.HISTORY },
+                        onOpenShop = {
+                            shopFullTab = 1
+                            shopFullReturnScreen = ClassicScreen.MASCOT
+                            screen = ClassicScreen.SHOP_FULL
+                        },
                     )
                     }
                 }

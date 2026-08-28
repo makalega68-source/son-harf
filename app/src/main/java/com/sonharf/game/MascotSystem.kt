@@ -79,16 +79,19 @@ internal object MascotRuntime {
 
     private fun localizedMessage(motion: MascotMotion, language: String): String {
         val en = language == "en"
+        val character = LetharaLore.characterForMascot(MascotSelectionRuntime.selectedId)
         return when (motion) {
-            MascotMotion.GREETING -> if (en) "Ready!" else "Hazırım!"
-            MascotMotion.THINKING -> if (en) "Let me think…" else "Bir düşüneyim…"
-            MascotMotion.CRITICAL -> if (en) "Focus!" else "Odaklan!"
-            MascotMotion.VICTORY -> if (en) "Great game!" else "Harika oynadın!"
-            MascotMotion.DEFEAT -> if (en) "Next one." else "Sıradaki bizim."
-            MascotMotion.LOOK_AT_PLAYER -> if (en) "I'm listening." else "Seni dinliyorum."
-            MascotMotion.SIT -> if (en) "Resting." else "Dinleniyorum."
-            MascotMotion.RUN -> if (en) "Let's go!" else "Hadi!"
-            MascotMotion.IDLE,
+            MascotMotion.GREETING -> if (en) "The seal stirs. I'm ready." else "Mühür kıpırdandı. Hazırım."
+            MascotMotion.THINKING -> if (en) "Quiet... the Word Weave is moving." else "Sessiz... Söz Dokusu hareket ediyor."
+            MascotMotion.CRITICAL -> if (en) "Hold the final letter!" else "Son harfi bırakma!"
+            MascotMotion.VICTORY -> if (en) "A memory spark! The old stars saw that." else "Bir hafıza kıvılcımı! Eski yıldızlar bunu gördü."
+            MascotMotion.DEFEAT -> if (en) "The weave bent, not broke." else "Doku büküldü, kırılmadı."
+            MascotMotion.LOOK_AT_PLAYER -> if (en) "I'm listening, Remembrancer." else "Dinliyorum, Hatırlatıcı."
+            MascotMotion.SIT -> if (en) "Even seals need a quiet moment." else "Mühürlerin bile sessiz bir ana ihtiyacı olur."
+            MascotMotion.RUN -> if (en) "The path is open!" else "Yol açıldı!"
+            MascotMotion.IDLE -> if (playerXp > 0 && playerXp % 90 == 0) {
+                LetharaLore.randomWhisper(character, language, playerXp + playerLevel)
+            } else ""
             MascotMotion.WALK,
             MascotMotion.TURN_LEFT,
             MascotMotion.TURN_RIGHT -> ""

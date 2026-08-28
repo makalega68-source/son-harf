@@ -34,7 +34,7 @@ fun EconomyShopScreen(
     initialTab: Int = 0,
     onBack: (() -> Unit)? = null,
 ) {
-    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 1)) }
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
     Column(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))
@@ -52,10 +52,17 @@ fun EconomyShopScreen(
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("STYLE", "STYLE")) }, modifier = Modifier.weight(1f))
-            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("ÜCRETSİZ ÖDÜLLER", "FREE REWARDS")) }, modifier = Modifier.weight(1f))
+            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("STYLE", "STYLE"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
+            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("BÜYÜLÜ MEYVE", "MAGIC FRUIT"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
+            FilterChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text(sh("ÜCRETSİZ", "FREE"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
         }
-        Box(Modifier.weight(1f)) { if (tab == 0) EconomyCatalogScreen() else RewardCenterScreen() }
+        Box(Modifier.weight(1f)) {
+            when (tab) {
+                0 -> EconomyCatalogScreen()
+                1 -> MagicFruitShopScreen()
+                else -> RewardCenterScreen()
+            }
+        }
     }
 }
 
@@ -214,6 +221,48 @@ private fun EconomyCatalogScreen() {
                             colors = ButtonDefaults.buttonColors(containerColor = if (active) SonHarfGreen else SonHarfPurple),
                         ) {
                             Text(when { busy == item.id -> "…"; active -> sh("AKTİF", "EQUIPPED"); mine -> sh("KULLAN", "EQUIP"); else -> sh("SATIN AL", "BUY") }, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+            }
+        }
+
+        if (category == 0 || category == 4) {
+            item {
+                Text(sh("UYANMAYI BEKLEYEN MÜHÜRLER", "SEALS AWAITING AWAKENING"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                Text(
+                    sh("Kael, Ryvan, Mivo ve Selen mağaza planına hazır; ayrı lisanslı 3D formları runtime testini geçmeden satışa açılmaz.", "Kael, Ryvan, Mivo and Selen are prepared for the shop; they will not be sold until their distinct licensed 3D forms pass runtime verification."),
+                    color = SonHarfMuted,
+                    fontSize = 9.sp,
+                )
+            }
+            items(LetharaLore.characters.filter { it.mascotId == null }, key = { "future_" + it.key }) { seal ->
+                val plannedPrice = when (seal.key) {
+                    "kael" -> 850
+                    "ryvan" -> 900
+                    "mivo" -> 800
+                    "selen" -> 950
+                    else -> 900
+                }
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = LetharaPalette.Panel.copy(alpha = .92f)),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, seal.color.copy(alpha = .35f)),
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = CircleShape, color = seal.color.copy(alpha = .15f), border = BorderStroke(1.dp, seal.color.copy(alpha = .55f))) {
+                            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                                Text("✦", color = seal.color, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(seal.name + " — " + if (SonHarfUiState.isEnglish) seal.titleEn else seal.titleTr, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            Text(if (SonHarfUiState.isEnglish) seal.temperamentEn else seal.temperamentTr, color = SonHarfMuted, fontSize = 9.sp)
+                            Text("◈ " + plannedPrice + " SC", color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        }
+                        OutlinedButton(onClick = {}, enabled = false) {
+                            Text(sh("MÜHÜR KİLİTLİ", "SEAL LOCKED"), fontSize = 8.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }

@@ -124,7 +124,7 @@ fun RewardCenterScreen() {
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Text(sh("ÜCRETSİZ ÖDÜLLER", "FREE REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
+            Text(sh("LETHARA ÖDÜLLERİ", "LETHARA REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
             Text(sh("Ödüllü reklamlar isteğe bağlıdır. İnce banner yalnızca oyun dışı menülerde gösterilir; maçlarda ve oyun alanlarında reklam yoktur.", "Rewarded ads are optional. A thin banner appears only on non-game menus; matches and gameplay areas remain ad-free."), color = SonHarfMuted, fontSize = 10.sp)
         }
 

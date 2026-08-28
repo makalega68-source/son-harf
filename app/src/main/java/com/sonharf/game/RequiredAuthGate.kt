@@ -6,6 +6,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -19,7 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -76,6 +79,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var success by remember { mutableStateOf(false) }
+    var showForm by remember { mutableStateOf(false) }
     val scrollState = rememberScrollState()
     val pulse by rememberInfiniteTransition(label = "authLogo").animateFloat(
         initialValue = .96f, targetValue = 1.04f,
@@ -93,40 +97,111 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         else -> raw.take(170).ifBlank { "İşlem tamamlanamadı. Tekrar dene." }
     }
 
-    val authColors = lightColorScheme(
-        primary = SonHarfPurple,
-        secondary = SonHarfCyan,
-        background = Color.White,
-        surface = Color.White,
-        surfaceVariant = Color(0xFFF6F7FB),
-        onBackground = Color(0xFF111522),
-        onSurface = Color(0xFF111522),
-        onSurfaceVariant = Color(0xFF596176),
+    val authColors = darkColorScheme(
+        primary = LetharaPalette.Gold,
+        secondary = LetharaPalette.Cyan,
+        background = LetharaPalette.Night,
+        surface = LetharaPalette.PanelStrong,
+        surfaceVariant = LetharaPalette.Panel,
+        onPrimary = Color(0xFF211830),
+        onBackground = LetharaPalette.Text,
+        onSurface = LetharaPalette.Text,
+        onSurfaceVariant = LetharaPalette.Muted,
     )
 
     MaterialTheme(colorScheme = authColors) {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Color.White)
+                .background(LetharaPalette.Night)
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .imePadding(),
         ) {
+            Image(
+                painter = painterResource(R.drawable.lethara_login_bg),
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.Crop,
+            )
+            Box(
+                Modifier.matchParentSize().background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color(0x22030A18),
+                            Color(0x33030A18),
+                            Color(0x99100924),
+                            Color(0xEE071229),
+                        )
+                    )
+                )
+            )
+            if (!showForm) {
+                Column(
+                    Modifier.fillMaxSize().padding(horizontal = 22.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom,
+                ) {
+                    Button(
+                        onClick = { register = false; notice = ""; showForm = true },
+                        modifier = Modifier.fillMaxWidth().height(58.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = LetharaPalette.Gold,
+                            contentColor = Color(0xFF211830),
+                        ),
+                    ) {
+                        Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 19.sp)
+                    }
+                    Spacer(Modifier.height(8.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { register = false; notice = ""; showForm = true },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            border = BorderStroke(1.dp, LetharaPalette.Cyan),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = LetharaPalette.Text),
+                        ) {
+                            Text(sh("GİRİŞ YAP", "SIGN IN"), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        }
+                        Button(
+                            onClick = { register = true; notice = ""; showForm = true },
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = LetharaPalette.Violet),
+                        ) {
+                            Text(sh("KAYIT OL", "REGISTER"), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        }
+                    }
+                    Spacer(Modifier.height(90.dp))
+                }
+            } else {
             Column(
-                Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 22.dp, vertical = 14.dp),
+                Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 18.dp, vertical = 12.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                SonHarfBrandLogo(modifier = Modifier.scale(pulse), size = 118.dp)
-                Text("SON HARF", color = Color(0xFF111522), fontWeight = FontWeight.Black, fontSize = 36.sp, letterSpacing = 2.sp)
-                Text("Kelime düellosuna girmek için doğrulanmış üyelik gerekiyor.", color = Color(0xFF697086), textAlign = TextAlign.Center, fontSize = 15.sp)
+                Spacer(Modifier.height(90.dp))
+                TextButton(
+                    onClick = { showForm = false; notice = ""; success = false },
+                    modifier = Modifier.align(Alignment.Start),
+                ) {
+                    Text("‹ " + sh("Lethara'ya dön", "Back to Lethara"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
+                }
+                Surface(
+                    color = LetharaPalette.PanelStrong.copy(alpha = .78f),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, LetharaPalette.Gold.copy(alpha = .38f)),
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(sh("HATIRLATICI, MÜHÜRLER SENİ BEKLİYOR", "REMEMBRANCER, THE SEALS AWAIT"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 12.sp, textAlign = TextAlign.Center)
+                        Text(sh("Misafir girişi yoktur; ilerlemen, maskot hafızan ve Lethara arşivin üyeliğine bağlıdır.", "There is no guest mode; your progress, mascot memories and Lethara archive belong to your account."), color = LetharaPalette.Muted, textAlign = TextAlign.Center, fontSize = 10.sp)
+                    }
+                }
 
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = LetharaPalette.PanelStrong.copy(alpha = .96f)),
                     shape = RoundedCornerShape(28.dp),
-                    border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .22f)),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                    border = BorderStroke(1.dp, LetharaPalette.Gold.copy(alpha = .38f)),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 ) {
                     Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -135,8 +210,8 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                         }
                         if (register) {
                             OutlinedTextField(displayName, { displayName = it.take(24) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Oyuncu adı") })
-                            Text("Bu ad kayıt tamamlandığında kalıcı olur.", color = Color(0xFF697086), fontSize = 13.sp)
-                            Text("Cinsiyet", color = Color(0xFF111522), fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                            Text(sh("Bu ad, Hatırlatıcı kimliğin olarak kalıcı olur.", "This becomes your permanent Remembrancer identity."), color = LetharaPalette.Muted, fontSize = 12.sp)
+                            Text(sh("Profil seçimi", "Profile selection"), color = LetharaPalette.Text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 listOf("erkek" to "Erkek", "kadın" to "Kadın", "diğer" to "Diğer").forEach { (value, label) ->
                                     FilterChip(selected = gender == value, onClick = { gender = value }, label = { Text(label, fontSize = 14.sp) }, modifier = Modifier.weight(1f))
@@ -175,7 +250,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
-                                    Text("Beni hatırla", color = Color(0xFF111522), fontWeight = FontWeight.SemiBold, fontSize = 17.sp)
+                                    Text(sh("Bu cihazda beni hatırla", "Remember me on this device"), color = LetharaPalette.Text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                                 }
                             }
                             TextButton(
@@ -204,7 +279,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 enabled = !busy,
                                 modifier = Modifier.align(Alignment.End),
                             ) {
-                                Text("Şifremi unuttum", color = SonHarfPurple, fontWeight = FontWeight.Bold)
+                                Text(sh("Şifremi unuttum", "Forgot password"), color = LetharaPalette.Cyan, fontWeight = FontWeight.Bold)
                             }
                         }
                         Button(
@@ -250,16 +325,23 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             enabled = !busy,
                             modifier = Modifier.fillMaxWidth().height(58.dp),
                             shape = RoundedCornerShape(18.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = if (register) SonHarfPurple else SonHarfCyan, contentColor = Color.White),
-                        ) { Text(if (busy) "…" else if (register) "ÜYELİK OLUŞTUR" else "OYUNA GİR", fontWeight = FontWeight.Black, fontSize = 17.sp) }
+                            colors = ButtonDefaults.buttonColors(containerColor = if (register) LetharaPalette.Violet else LetharaPalette.Gold, contentColor = if (register) Color.White else Color(0xFF211830)),
+                        ) {
+                            Text(
+                                if (busy) "…" else if (register) sh("KAYIT OL", "REGISTER") else sh("OYNA", "PLAY"),
+                                fontWeight = FontWeight.Black,
+                                fontSize = 17.sp,
+                            )
+                        }
                         if (notice.isNotBlank()) {
-                            Surface(color = if (success) Color(0xFFE8F8EF) else Color(0xFFFFF4D7), shape = RoundedCornerShape(14.dp)) {
-                                Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = Color(0xFF232735), fontSize = 14.sp, textAlign = TextAlign.Center)
+                            Surface(color = if (success) LetharaPalette.Green.copy(alpha=.18f) else LetharaPalette.Gold.copy(alpha=.12f), shape = RoundedCornerShape(14.dp)) {
+                                Text(notice, Modifier.fillMaxWidth().padding(12.dp), color = LetharaPalette.Text, fontSize = 14.sp, textAlign = TextAlign.Center)
                             }
                         }
                     }
                 }
                 Spacer(Modifier.height(24.dp))
+            }
             }
         }
     }

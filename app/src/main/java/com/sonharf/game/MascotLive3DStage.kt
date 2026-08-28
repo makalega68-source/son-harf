@@ -105,6 +105,21 @@ internal fun MascotLive3DStage(
     )
     val clip = MascotCatalog.clip(resolvedId, motion)
 
+    LaunchedEffect(motion) {
+        if (motion in setOf(MascotMotion.VICTORY, MascotMotion.DEFEAT, MascotMotion.CRITICAL, MascotMotion.GREETING)) {
+            kotlinx.coroutines.delay(
+                when (motion) {
+                    MascotMotion.VICTORY -> 2_050L
+                    MascotMotion.DEFEAT -> 1_850L
+                    MascotMotion.CRITICAL -> 1_250L
+                    MascotMotion.GREETING -> 1_650L
+                    else -> 1_500L
+                }
+            )
+            if (MascotRuntime.motion == motion) MascotRuntime.react(MascotMotion.IDLE)
+        }
+    }
+
     LaunchedEffect(modelInstance, resolvedId, clip) {
         if (modelInstance != null) {
             // Give Filament a short window to submit the first frame before declaring runtime ready.

@@ -51,6 +51,8 @@ internal fun PremiumMasterHome(
     onNotifications: () -> Unit = onProfile,
     onDailyCipher: () -> Unit = onHub,
     onMastery: () -> Unit = onHub,
+    onHistory: () -> Unit = onHub,
+    onMascot: () -> Unit = onProfile,
 ) {
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -79,6 +81,7 @@ internal fun PremiumMasterHome(
         ) {
             item { MasterProfileHeader(profile, growth, isAdmin, onProfile, onAdmin, onNotifications) }
             item { MasterLeagueBanner(growth, onLeague) }
+            item { MasterLetharaBanner(onHistory, onMascot) }
             item { MasterLiveStrip(streak) }
             item {
                 BoxWithConstraints(Modifier.fillMaxWidth()) {
@@ -159,7 +162,7 @@ internal fun PremiumMasterHome(
                         if (d == null || d.dailyClaimed) return@MasterShortcut
                         scope.launch { runCatching { backend?.claimDailyCheckin() }; reload() }
                     }
-                    MasterShortcut(Icons.Rounded.EmojiEvents, sh("LİGLER", "LEAGUES"), 0, Modifier.weight(1f), onLeague)
+                    MasterShortcut(Icons.Rounded.EmojiEvents, sh("MÜHÜR LİGLERİ", "SEAL LEAGUES"), 0, Modifier.weight(1f), onLeague)
                     MasterShortcut(Icons.Rounded.ShoppingCart, "STYLE", 0, Modifier.weight(1f), onShop)
                     MasterShortcut(Icons.Rounded.Checkroom, sh("DOLABIM", "WARDROBE"), 0, Modifier.weight(1f), onWardrobe)
                 }
@@ -168,8 +171,14 @@ internal fun PremiumMasterHome(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MasterShortcut(Icons.Rounded.Lightbulb, sh("GÜNÜN ŞİFRESİ", "DAILY CIPHER"), 1, Modifier.weight(1f), onDailyCipher)
                     MasterShortcut(Icons.Rounded.MilitaryTech, sh("USTALIK YOLU", "MASTERY PATH"), 0, Modifier.weight(1f), onMastery)
-                    MasterShortcut(Icons.Rounded.Whatshot, sh("TURNUVA", "TOURNAMENT"), 0, Modifier.weight(1f), onMastery)
+                    MasterShortcut(Icons.Rounded.Whatshot, sh("SON MÜHÜR", "LAST SEAL"), 0, Modifier.weight(1f), onMastery)
                     MasterShortcut(Icons.Rounded.Groups, sh("EZELİ RAKİP", "ARCH RIVAL"), 0, Modifier.weight(1f), onMastery)
+                }
+            }
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    MasterShortcut(Icons.Rounded.AutoStories, sh("BÜYÜCÜLERİN GEÇMİŞİ", "PAST OF THE MAGES"), 0, Modifier.weight(1f), onHistory)
+                    MasterShortcut(Icons.Rounded.Pets, sh("YOLDAŞIM", "COMPANION"), 0, Modifier.weight(1f), onMascot)
                 }
             }
             item { Spacer(Modifier.height(8.dp)) }
@@ -238,6 +247,40 @@ private fun MasterProfileHeader(
             Spacer(Modifier.width(9.dp))
             Surface(shape = RoundedCornerShape(12.dp), color = MasterSky, border = BorderStroke(1.dp, MasterBlue2)) {
                 Text(sh("LİDERLİK ›", "LEADERBOARD ›"), Modifier.padding(horizontal = 7.dp, vertical = 7.dp), color = MasterBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+}
+
+@Composable
+private fun MasterLetharaBanner(onHistory: () -> Unit, onMascot: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = LetharaPalette.Night2,
+        border = BorderStroke(1.dp, LetharaPalette.Gold.copy(alpha = .45f)),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.AutoAwesome, null, tint = LetharaPalette.Gold, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(7.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("LETHARA", color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 1.4.sp)
+                    Text(sh("Her son, yeni bir başlangıçtır.", "Every ending is a new beginning."), color = LetharaPalette.Text, fontSize = 10.sp)
+                }
+            }
+            Text(
+                sh("Altı Mühür'ün hafızası parçalandı. Maçlar ve yoldaşlık, Söz Dokusu'nu yeniden uyandırıyor.", "The Six Seals lost their memories. Matches and companionship are awakening the Word Weave again."),
+                color = LetharaPalette.Muted,
+                fontSize = 9.sp,
+                lineHeight = 13.sp,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onHistory, modifier = Modifier.weight(1f), border = BorderStroke(1.dp, LetharaPalette.Gold)) {
+                    Text(sh("HİKÂYE", "STORY"), color = LetharaPalette.Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
+                Button(onClick = onMascot, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = LetharaPalette.Violet)) {
+                    Text(sh("YOLDAŞIM", "COMPANION"), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
             }
         }
     }
@@ -327,9 +370,9 @@ private fun MasterProfileHeader(
 @Composable private fun MasterSeasonCard(modifier:Modifier,onClick:()->Unit){
     Card(onClick=onClick,modifier=modifier.height(154.dp),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,MasterLine)){
         Column(Modifier.fillMaxSize().padding(12.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceEvenly){
-            Text(sh("SEZON","SEASON"),color=MasterInk,fontWeight=FontWeight.Black,fontSize=14.sp)
+            Text(sh("LETHARA SEZONU","LETHARA SEASON"),color=MasterInk,fontWeight=FontWeight.Black,fontSize=13.sp)
             Text("🎁",fontSize=39.sp)
-            Text(sh("Sezon ilerlemeni ve ödüllerini aç","Open season progress and rewards"),color=MasterMuted,fontSize=8.sp,textAlign=TextAlign.Center)
+            Text(sh("Söz Dokusu sezon ilerlemeni ve ödüllerini aç","Open Word Weave season progress and rewards"),color=MasterMuted,fontSize=8.sp,textAlign=TextAlign.Center)
             Surface(shape=RoundedCornerShape(10.dp),color=MasterSky,border=BorderStroke(1.dp,MasterLine)){Text(sh("DETAYLAR ›","DETAILS ›"),Modifier.padding(horizontal=9.dp,vertical=5.dp),color=MasterBlue,fontSize=8.sp,fontWeight=FontWeight.Black)}
         }
     }

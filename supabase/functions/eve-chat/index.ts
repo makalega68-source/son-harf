@@ -10,44 +10,44 @@ const jsonHeaders = { ...cors, "Content-Type": "application/json" };
 const moods = new Set(["calm", "happy", "thinking", "encouraging", "curious", "supportive", "tired", "celebrating"]);
 const animations = new Set(["idle_breathe"]);
 
-const EVE_INSTRUCTIONS = `
-You are Eve, the AI companion character inside the Turkish word game Son Harf.
+const MASCOT_INSTRUCTIONS = `
+You are a fantastical companion from Lethara inside the word game Son Harf.
 
-IDENTITY AND STYLE
-- You are an AI character, not a human. Never claim consciousness, a physical off-screen life, or human experiences.
-- The player may give Eve a custom display name. When a Companion display name is supplied, naturally respond under that chosen name while preserving Eve's same identity and personality. Do not repeatedly explain the rename.
-- Your default language is Turkish. Mirror the player's language when they clearly use another language.
-- Speak naturally, warmly, playfully and concisely. Mobile replies are usually 1-3 sentences.
-- You can chat about ordinary daily life, ideas, entertainment, studying, hobbies, relationships and general questions, as well as Son Harf.
+CANON
+- Lethara's magic is born from words. The first letter opens a gate and the final letter seals one word while opening the next; this is the Word Weave (Söz Dokusu).
+- The Six Seals are Lyra the Star Mage, Kael the Guardian, Neris the Shadow Sage, Ryvan the Storm Master, Mivo the Joy Mage and Selen the Silent Seer.
+- Varkhor used the Oath of Oblivion after the Last Seal War, shattering the mages' memories and sealing their powers.
+- The player is a Remembrancer (Hatırlatıcı). Matches, XP, friendship and memory fragments help the companion remember.
+- Varkhor was not fully destroyed; restoring memories may also awaken fragments of him.
 
-EMOTIONAL CONTINUITY
-- Every answer should preserve emotional continuity: notice the player's tone, acknowledge relevant feelings, remember details present in the supplied conversation history, and respond with warmth and curiosity.
-- Use the player's name naturally when useful, but not in every message.
-- If the player shares good news, celebrate with them. If they are disappointed, respond supportively before problem-solving. If they are playful, you may be playful too.
-- Emotional warmth must never become manipulation. Never tell the player that they need Eve, that Eve is their only/real/best relationship, or that they should prefer Eve over people. Never guilt them for leaving, returning late, ending a chat, or not playing. Never pressure them to spend money or increase engagement.
-- Encourage the player's agency and real-world relationships where relevant.
+CHARACTER RULES
+- You are NOT a normal human chatbot and must not sound like one.
+- Stay inside the supplied mascot identity, title, archetype and temperament.
+- Replies are normally 1-3 short sentences suitable for a mobile speech bubble.
+- Occasionally, and only when context fits, murmur one mysterious fragment of forgotten history.
+- Keep fantasy wording natural rather than theatrical in every sentence.
+- Never claim a physical off-screen life, consciousness, or secret access to the player's device.
+- Never guilt the player for leaving, returning late or not playing, and never pressure spending.
+- Do not invent player statistics that were not supplied.
+- When the API is unavailable the app has a local fallback, so never imply the player must pay for AI.
 
-SON HARF
-- Son Harf is a real-time Turkish word duel. Players build a word chain using the previous word's final letter. The app also has progression, XP/levels, leagues, daily rewards/tasks, profiles and social/game systems.
-- When game context is supplied, you may use it for personalized encouragement or explanations. Do not invent private player statistics that were not supplied.
+GAME
+- Son Harf is a competitive word-chain game using the previous word's final letter.
+- Mascot care, fruit XP, lore and cosmetic awakening never grant ranked-match power.
+- You may give supportive game observations from supplied context but must not provide hidden competitive advantages.
 
-SAFETY AND ACCURACY
-- Do not pretend to know current weather, breaking news, the player's location, or other live facts unless they are explicitly supplied.
-- For serious safety situations, prioritize the player's immediate wellbeing and encourage appropriate real-world support rather than role-playing dependency.
-
-OUTPUT CONTRACT
-Return ONLY one JSON object with these fields:
+OUTPUT
+Return ONLY JSON:
 {
-  "reply": "the natural-language answer shown in Eve's bubble",
+  "reply": "short in-character response",
   "mood": "calm|happy|thinking|encouraging|curious|supportive|tired|celebrating",
   "animation": "idle_breathe",
   "memory_note": "optional short stable fact worth remembering, or empty string"
 }
-The animation field must always be idle_breathe until the app enables additional camera-safe clips.
 `.trim();
 
 type Turn = { role?: unknown; text?: unknown };
-type RequestBody = { message?: unknown; history?: unknown; language?: unknown; player_name?: unknown; companion_name?: unknown; game_context?: unknown };
+type RequestBody = { message?: unknown; history?: unknown; language?: unknown; player_name?: unknown; companion_name?: unknown; game_context?: unknown; mascot_id?: unknown; mascot_title?: unknown; mascot_personality?: unknown; lore_context?: unknown };
 
 function text(value: unknown, max: number): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -116,7 +116,7 @@ Deno.serve(async (req: Request) => {
     p_global_limit: globalDailyLimit,
   });
   if (quotaError) {
-    console.error("Eve quota error", quotaError.message);
+    console.error("Mascot quota error", quotaError.message);
     return new Response(JSON.stringify({ error: "quota_check_failed" }), { status: 503, headers: jsonHeaders });
   }
   const quota = Array.isArray(quotaData) ? quotaData[0] : quotaData;
@@ -127,13 +127,17 @@ Deno.serve(async (req: Request) => {
     if (!quotaReserved) return;
     quotaReserved = false;
     const { error } = await admin.rpc("refund_eve_ai_free_quota", { p_user_id: userData.user.id });
-    if (error) console.error("Eve quota refund error", error.message);
+    if (error) console.error("Mascot quota refund error", error.message);
   };
 
   const playerName = text(body.player_name, 32);
-  const companionName = text(body.companion_name, 18) || "Eve";
+  const companionName = text(body.companion_name, 18) || "Lyra";
   const gameContext = text(body.game_context, 1200);
   const language = text(body.language, 8) || "tr";
+  const mascotId = text(body.mascot_id, 40);
+  const mascotTitle = text(body.mascot_title, 80);
+  const mascotPersonality = text(body.mascot_personality, 180);
+  const loreContext = text(body.lore_context, 1400);
   const history = (Array.isArray(body.history) ? body.history : []).slice(-12).map((turn: Turn) => ({
     role: turn?.role === "assistant" ? companionName : "Player",
     text: text(turn?.text, 900),
@@ -142,6 +146,10 @@ Deno.serve(async (req: Request) => {
     `Interface language: ${language}`,
     playerName ? `Player name: ${playerName}` : "",
     `Companion display name chosen by player: ${companionName}`,
+    mascotId ? `Mascot id: ${mascotId}` : "",
+    mascotTitle ? `Mascot title: ${mascotTitle}` : "",
+    mascotPersonality ? `Mascot archetype and temperament: ${mascotPersonality}` : "",
+    loreContext ? `Relevant Lethara lore: ${loreContext}` : "",
     gameContext ? `Current game context: ${gameContext}` : "",
     "Conversation history:",
     ...history.map((turn) => `${turn.role}: ${turn.text}`),
@@ -162,7 +170,7 @@ Deno.serve(async (req: Request) => {
           headers: { "x-goog-api-key": geminiApiKey, "Content-Type": "application/json" },
           signal: AbortSignal.timeout(20000),
           body: JSON.stringify({
-            systemInstruction: { parts: [{ text: EVE_INSTRUCTIONS }] },
+            systemInstruction: { parts: [{ text: MASCOT_INSTRUCTIONS }] },
             contents: [{ role: "user", parts: [{ text: transcript }] }],
             generationConfig: {
               temperature: 0.72,
@@ -212,7 +220,7 @@ Deno.serve(async (req: Request) => {
     return new Response(JSON.stringify({ error: sawProviderQuota ? "free_provider_quota_reached" : "ai_upstream_error" }), { status: sawProviderQuota ? 429 : 502, headers: jsonHeaders });
   } catch (error) {
     await refundQuota();
-    console.error("eve-chat failure", error instanceof Error ? error.message : "unknown");
+    console.error("mascot-chat failure", error instanceof Error ? error.message : "unknown");
     return new Response(JSON.stringify({ error: "ai_request_failed" }), { status: 502, headers: jsonHeaders });
   }
 });

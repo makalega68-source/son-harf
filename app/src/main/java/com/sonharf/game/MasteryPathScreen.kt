@@ -73,8 +73,8 @@ fun MasteryPathScreen(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MasteryText) }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("USTALIK YOLU", "MASTERY PATH"), color = MasteryText, fontSize = 25.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Her maç hesabını daha değerli hale getirir.", "Every match makes your account more valuable."), color = MasteryMuted, fontSize = 10.sp)
+                    Text(sh("MÜHÜR USTALIĞI", "SEAL MASTERY"), color = MasteryText, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Her düello Hatırlatıcı yolundaki ustalığını derinleştirir.", "Every duel deepens your mastery as a Remembrancer."), color = MasteryMuted, fontSize = 10.sp)
                 }
             }
         }
@@ -105,7 +105,7 @@ fun MasteryPathScreen(
         }
 
         item {
-            SectionTitle("⚔", sh("EZELİ RAKİP", "ARCH RIVAL"))
+            SectionTitle("⚔", sh("MÜHÜR RAKİBİ", "SEAL RIVAL"))
             Spacer(Modifier.height(7.dp))
             val r = rival
             if (r == null) {
