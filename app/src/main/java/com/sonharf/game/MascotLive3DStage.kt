@@ -32,6 +32,17 @@ import io.github.sceneview.rememberEngine
 import io.github.sceneview.rememberModelInstance
 import io.github.sceneview.rememberModelLoader
 
+internal object NerisAppearancePolicy {
+    const val FUR_MATERIAL_NAME = "Mage_Cat"
+    const val FUR_COLOR_LIFT = 1.55f
+    const val GENERAL_BRIGHTNESS_MAX = 1.22f
+
+    fun brightnessFor(materialName: String, requestedBrightness: Float): Float {
+        val general = requestedBrightness.coerceIn(1f, GENERAL_BRIGHTNESS_MAX)
+        return if (materialName == FUR_MATERIAL_NAME) maxOf(general, FUR_COLOR_LIFT) else general
+    }
+}
+
 @Composable
 internal fun MascotLive3DStage(
     modifier: Modifier = Modifier,
@@ -46,7 +57,7 @@ internal fun MascotLive3DStage(
 
     val resolvedId = MascotCatalog.item(mascotId).id
     val effectiveTint = appearanceTint
-    val effectiveBrightness = brightnessBoost.coerceIn(1f, 1.22f)
+    val effectiveBrightness = brightnessBoost.coerceIn(1f, NerisAppearancePolicy.GENERAL_BRIGHTNESS_MAX)
     val modelLocation = remember(resolvedId) {
         MascotCatalog.modelLocation(context, resolvedId)
     }
@@ -112,29 +123,39 @@ internal fun MascotLive3DStage(
         var applied = 0
         instance.materialInstances.forEach { material ->
             runCatching {
+                val materialBrightness =
+                    if (resolvedId == MascotCatalog.CHIBI_WIZARD_ID) {
+                        NerisAppearancePolicy.brightnessFor(material.name, effectiveBrightness)
+                    } else {
+                        effectiveBrightness
+                    }
+
                 if (effectiveTint != null) {
                     material.setParameter(
                         "baseColorFactor",
-                        (effectiveTint.red * effectiveBrightness).coerceAtMost(1.22f),
-                        (effectiveTint.green * effectiveBrightness).coerceAtMost(1.22f),
-                        (effectiveTint.blue * effectiveBrightness).coerceAtMost(1.22f),
+                        (effectiveTint.red * materialBrightness).coerceAtMost(NerisAppearancePolicy.FUR_COLOR_LIFT),
+                        (effectiveTint.green * materialBrightness).coerceAtMost(NerisAppearancePolicy.FUR_COLOR_LIFT),
+                        (effectiveTint.blue * materialBrightness).coerceAtMost(NerisAppearancePolicy.FUR_COLOR_LIFT),
                         effectiveTint.alpha,
                     )
-                } else if (effectiveBrightness > 1.001f) {
-                    // Multiplies the original texture/material color in the shader.
-                    // The source GLB textures are not resampled or modified.
+                } else if (materialBrightness > 1.001f) {
+                    // Runtime-only multiplier: original GLB texture pixels, UVs, mesh, rig and
+                    // animation data remain untouched. Only Neris' Mage_Cat fur gets the stronger lift.
                     material.setParameter(
                         "baseColorFactor",
-                        effectiveBrightness,
-                        effectiveBrightness,
-                        effectiveBrightness,
+                        materialBrightness,
+                        materialBrightness,
+                        materialBrightness,
                         1f,
                     )
                 }
                 applied += 1
             }
         }
-        Log.i("MascotSmoke", "CHIBI_LIGHTING_READY materials=$applied boost=$effectiveBrightness")
+        Log.i(
+            "MascotSmoke",
+            "CHIBI_LIGHTING_READY materials=$applied general=$effectiveBrightness fur=${NerisAppearancePolicy.FUR_COLOR_LIFT}",
+        )
     }
 
     LaunchedEffect(modelInstance, resolvedId, clip) {
