@@ -421,7 +421,7 @@ internal class ChibiGameBehaviorDirector(
                     "We won! Chibi's taking a victory lap!",
                     MascotMotion.RUN to 550L,
                     MascotMotion.VICTORY to 1_250L,
-                    MascotMotion.TURN_RIGHT to 500L,
+                    MascotMotion.TURN_LEFT to 500L,
                     MascotMotion.GREETING to 600L,
                     MascotMotion.LOOK_AT_PLAYER to 600L,
                     MascotMotion.IDLE to 300L,
