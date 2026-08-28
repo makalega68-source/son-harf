@@ -99,27 +99,20 @@ fun genderAvatarEmoji(gender: String?, fallbackIndex: Int = 0): String = when (g
 
 @Composable
 fun SocialAvatar(
+    avatarPath: String?,
     gender: String?,
     name: String,
     size: Dp = 48.dp,
     fallbackIndex: Int = 0,
     accent: Color = SonHarfCyan,
 ) {
-    Box(
-        Modifier
-            .size(size)
-            .clip(CircleShape)
-            .background(Brush.sweepGradient(listOf(accent, SonHarfPurple, SonHarfPink, accent)))
-            .padding(2.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Box(
-            Modifier.fillMaxSize().clip(CircleShape).background(SonHarfSurface),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(genderAvatarEmoji(gender, fallbackIndex), fontSize = (size.value * .55f).sp, textAlign = TextAlign.Center)
-        }
-    }
+    ProfilePhotoAvatarWithGender(
+        avatarPath = avatarPath,
+        gender = gender,
+        name = name,
+        size = size,
+        accent = accent,
+    )
 }
 
 object FriendsQuickAccessState {
@@ -218,7 +211,7 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
                                 border = BorderStroke(1.dp, if (profile.presenceStatus == "online") SonHarfCyan.copy(alpha = .25f) else Color.White.copy(alpha = .05f)),
                             ) {
                                 Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                                    SocialAvatar(profile.gender, profile.displayName, 48.dp, accent = if (profile.isVip) SonHarfGold else SonHarfCyan)
+                                    SocialAvatar(profile.avatarPath, profile.gender, profile.displayName, 48.dp, accent = if (profile.isVip) SonHarfGold else SonHarfCyan)
                                     Column(Modifier.weight(1f)) {
                                         Text(profile.displayName, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 16.sp)
                                         Text(
@@ -237,7 +230,7 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
                 val friend = selected!!
                 Column(Modifier.fillMaxWidth().heightIn(min = 410.dp, max = 600.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        SocialAvatar(friend.gender, friend.displayName, 64.dp, accent = if (friend.isVip) SonHarfGold else SonHarfPurple)
+                        SocialAvatar(friend.avatarPath, friend.gender, friend.displayName, 64.dp, accent = if (friend.isVip) SonHarfGold else SonHarfPurple)
                         Column(Modifier.weight(1f)) {
                             Text(friend.displayName, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 20.sp)
                             Text("${friend.wins}W • ${friend.losses}L", color = SonHarfMuted, fontSize = 12.sp)
