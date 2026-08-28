@@ -316,7 +316,7 @@ private fun FirstEntryMascotIntro(onFinished: () -> Unit) {
             launch { offsetY.animateTo(0f, animationSpec = tween(1050)) }
             launch { offsetX.animateTo(0f, animationSpec = tween(1050)) }
         }
-        motion = MascotMotion.GREETING
+        motion = MascotMotion.LOOK_AT_PLAYER
         speechVisible = true
         SonHarfSoundFx.softNotify()
         delay(1800)
