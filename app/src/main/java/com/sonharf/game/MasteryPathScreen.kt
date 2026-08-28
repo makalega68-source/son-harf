@@ -23,13 +23,13 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
 
-private val MasteryBg = Color(0xFF071A2C)
-private val MasteryPanel = Color(0xFF0E2B43)
-private val MasteryCyan = Color(0xFF2ED4E6)
-private val MasteryGold = Color(0xFFF1C75B)
-private val MasteryGreen = Color(0xFF45D391)
-private val MasteryText = Color(0xFFF5FAFF)
-private val MasteryMuted = Color(0xFF90AFC1)
+private val MasteryBg = Color(0xFFF7F9FC)
+private val MasteryPanel = Color.White
+private val MasteryCyan = Color(0xFF1769E0)
+private val MasteryGold = Color(0xFFF3A81A)
+private val MasteryGreen = Color(0xFF22B95F)
+private val MasteryText = Color(0xFF182235)
+private val MasteryMuted = Color(0xFF718096)
 
 @Composable
 fun MasteryPathScreen(
@@ -64,7 +64,7 @@ fun MasteryPathScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFF041320), MasteryBg, Color(0xFF0A273E)))
+            Brush.verticalGradient(listOf(Color.White, MasteryBg, Color(0xFFF0F4F8)))
         ),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
         verticalArrangement = Arrangement.spacedBy(11.dp),
@@ -73,8 +73,8 @@ fun MasteryPathScreen(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MasteryText) }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("MÜHÜR USTALIĞI", "SEAL MASTERY"), color = MasteryText, fontSize = 25.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Her düello Hatırlatıcı yolundaki ustalığını derinleştirir.", "Every duel deepens your mastery as a Remembrancer."), color = MasteryMuted, fontSize = 10.sp)
+                    Text(sh("KELİME USTALIĞI", "WORD MASTERY"), color = MasteryText, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Her maç kelime ustalığını ve rekabet seviyeni geliştirir.", "Every match improves your word mastery and competitive level."), color = MasteryMuted, fontSize = 10.sp)
                 }
             }
         }
@@ -105,7 +105,7 @@ fun MasteryPathScreen(
         }
 
         item {
-            SectionTitle("⚔", sh("MÜHÜR RAKİBİ", "SEAL RIVAL"))
+            SectionTitle("⚔", sh("EZELİ RAKİP", "ARCH RIVAL"))
             Spacer(Modifier.height(7.dp))
             val r = rival
             if (r == null) {
