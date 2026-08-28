@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -479,43 +481,73 @@ private fun TargetArena(
             Modifier
                 .fillMaxSize()
                 .windowInsetsPadding(WindowInsets.safeDrawing)
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .background(Brush.verticalGradient(listOf(Color.White, Color(0xFFFFFBF2), TGbg)))
+                .padding(horizontal = 20.dp, vertical = 18.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
+            Surface(shape = CircleShape, color = TGgold.copy(alpha = .12f)) {
+                Icon(Icons.Rounded.EmojiEvents, null, tint = TGgold, modifier = Modifier.padding(13.dp).size(32.dp))
+            }
+            Spacer(Modifier.height(10.dp))
             Text(
-                if (won) sh("KAZANDIN!", "YOU WON!") else sh("MAÇ TAMAMLANDI", "MATCH COMPLETE"),
-                color = if (won) TGgreen else TGtext,
+                if (won) sh("ZAFER", "VICTORY") else sh("MAÇ TAMAMLANDI", "MATCH COMPLETE"),
+                color = if (won) TGgold else TGtext,
                 fontWeight = FontWeight.Black,
-                fontSize = 28.sp,
+                fontSize = if (won) 42.sp else 30.sp,
+                letterSpacing = 2.sp,
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(8.dp))
-            Text(
-                if (won) sh("Güzel maç. Rövanşa hazır mısın?", "Good match. Ready for a rematch?")
-                else sh("Maç tamamlandı. Rövanşla geri dön.", "Match complete. Come back with a rematch."),
-                color = TGmuted,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-            )
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                Text("$myRounds", color = TGblue, fontSize = 42.sp, fontWeight = FontWeight.Black)
+                Text("—", color = TGtext, fontSize = 34.sp, fontWeight = FontWeight.Light)
+                Text("$oppRounds", color = TGpink, fontSize = 42.sp, fontWeight = FontWeight.Black)
+            }
             Spacer(Modifier.height(18.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    onClick = onRematch,
-                    modifier = Modifier.weight(1f).height(54.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = TGblue),
-                ) {
-                    Text(sh("RÖVANŞ", "REMATCH"), color = Color.White, fontWeight = FontWeight.Black)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = TGpanel,
+                border = BorderStroke(1.dp, Color(0xFFDDE5EE)),
+                shadowElevation = 3.dp,
+            ) {
+                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(sh("Senin maç puanın", "Your match score"), color = TGmuted, fontSize = 11.sp)
+                        Text("+$myScore", color = TGgreen, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(sh("Rakip maç puanı", "Rival match score"), color = TGmuted, fontSize = 11.sp)
+                        Text("+$oppScore", color = TGpink, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                    }
+                    HorizontalDivider(color = Color(0xFFE7ECF2))
+                    Text(
+                        sh("Lig ve rating ilerlemen hesabına işlendi.", "League and rating progress was applied to your account."),
+                        color = TGmuted,
+                        fontSize = 10.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                 }
-                OutlinedButton(
-                    onClick = onExit,
-                    modifier = Modifier.weight(1f).height(54.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, TGcyan),
-                ) {
-                    Text(sh("ANA MENÜ", "HOME"), color = TGblue, fontWeight = FontWeight.Black)
-                }
+            }
+            Spacer(Modifier.height(18.dp))
+            Button(
+                onClick = onRematch,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = TGblue),
+            ) {
+                Text(sh("RÖVANŞ", "REMATCH"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
+            }
+            Spacer(Modifier.height(9.dp))
+            OutlinedButton(
+                onClick = onExit,
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, TGblue.copy(alpha = .45f)),
+            ) {
+                Text(sh("YENİ RAKİP", "NEW RIVAL"), color = TGblue, fontWeight = FontWeight.Black, fontSize = 14.sp)
             }
         }
         return
@@ -529,61 +561,109 @@ private fun TargetArena(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 14.dp, vertical = 8.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-            TargetArenaPlayer(playerName, playerAvatarPath, playerGender, true, myScore, myRounds, myTurn, TGcyan, Modifier.weight(1f))
-            Spacer(Modifier.width(8.dp))
-            Box(Modifier.size(76.dp).clip(CircleShape).background(Brush.sweepGradient(listOf(TGcyan, TGpurple, TGpink, TGcyan))).padding(3.dp), contentAlignment = Alignment.Center) {
-                Box(Modifier.fillMaxSize().clip(CircleShape).background(TGpanel), contentAlignment = Alignment.Center) { Text("$seconds", color = TGtext, fontWeight = FontWeight.Black, fontSize = 28.sp) }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(20.dp),
+            color = TGpanel,
+            border = BorderStroke(1.dp, Color(0xFFDDE5EE)),
+            shadowElevation = 2.dp,
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 11.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
+                    Text(playerName, color = TGblue, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
+                    Text("🏆 $myScore", color = TGtext, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("$myRounds " + sh("tur", "round"), color = TGmuted, fontSize = 8.sp)
+                }
+                Box(
+                    Modifier
+                        .size(76.dp)
+                        .clip(CircleShape)
+                        .background(Brush.sweepGradient(listOf(TGblue, TGblue, TGpink, TGpink)))
+                        .padding(4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("$seconds", color = TGtext, fontWeight = FontWeight.Black, fontSize = 28.sp)
+                            Text(sh("sn", "sec"), color = TGmuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
+                    Text(opponentName, color = TGpink, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
+                    Text("🏆 $oppScore", color = TGtext, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("$oppRounds " + sh("tur", "round"), color = TGmuted, fontSize = 8.sp)
+                }
             }
-            Spacer(Modifier.width(8.dp))
-            TargetArenaPlayer(opponentName, opponentAvatarPath, opponentGender, opponentAvatarVisible, oppScore, oppRounds, !myTurn, TGpink, Modifier.weight(1f))
         }
 
         Spacer(Modifier.height(10.dp))
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = TGpanel2,
-            border = BorderStroke(1.dp, Color(0xFFD5DEE9)),
-        ) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("TUR ${room.roundNo}/3", color = TGtext, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                Text(if (myTurn) sh("SIRA SENDE", "YOUR TURN") else sh("SIRA RAKİPTE", "RIVAL'S TURN"), color = if (myTurn) TGcyan else TGpink, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text("TUR ${room.roundNo}/3", color = TGmuted, fontWeight = FontWeight.Black, fontSize = 10.sp)
+            Surface(shape = RoundedCornerShape(99.dp), color = (if (myTurn) TGblue else TGpink).copy(alpha = .08f)) {
+                Text(
+                    if (myTurn) sh("SIRA SENDE", "YOUR TURN") else sh("SIRA RAKİPTE", "RIVAL'S TURN"),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    color = if (myTurn) TGblue else TGpink,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                )
             }
         }
-        Spacer(Modifier.height(6.dp))
+        Spacer(Modifier.height(8.dp))
 
-        Card(colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .35f))) {
-            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        val activeLetter = words.lastOrNull()?.normalizedWord?.lastOrNull()?.uppercaseChar()?.toString().orEmpty()
+        Card(
+            colors = CardDefaults.cardColors(containerColor = TGpanel),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, Color(0xFFDDE5EE)),
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
                 if (words.isEmpty()) {
-                    Box(Modifier.fillMaxWidth().height(190.dp), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(if (myTurn) sh("SIRA SENDE", "YOUR TURN") else sh("SIRA RAKİPTE", "RIVAL'S TURN"), color = if (myTurn) TGcyan else TGpink, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                            Spacer(Modifier.height(24.dp))
-                            Text("İLK KELİME", color = TGtext, fontWeight = FontWeight.Black, fontSize = 40.sp)
-                            Text("İlk kelimeyi yaz", color = TGmuted, fontSize = 12.sp)
+                    Text(if (myTurn) sh("İLK KELİME", "FIRST WORD") else sh("RAKİP BAŞLIYOR", "RIVAL STARTS"), color = TGtext, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Kelime zincirini başlat", "Start the word chain"), color = TGmuted, fontSize = 11.sp)
+                } else {
+                    words.takeLast(3).forEachIndexed { index, w ->
+                        val upper = w.word.uppercase()
+                        val prefix = upper.dropLast(1)
+                        val last = upper.takeLast(1)
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(prefix, color = TGtext, fontSize = if (upper.length > 12) 24.sp else 32.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                            Text(last, color = TGblue, fontSize = if (upper.length > 12) 24.sp else 32.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                        }
+                        if (index != words.takeLast(3).lastIndex) {
+                            Text("↓", color = TGmuted.copy(alpha = .55f), fontSize = 18.sp)
                         }
                     }
-                } else {
-                    words.takeLast(5).forEachIndexed { index, w ->
-                        val lastChar = w.normalizedWord.lastOrNull()?.uppercaseChar()?.toString().orEmpty()
-                        val selected = index == words.takeLast(5).lastIndex
-                        Row(
-                            Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (selected) TGgold.copy(alpha = .06f) else Color.Transparent).padding(horizontal = 10.dp, vertical = 9.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                    Spacer(Modifier.height(2.dp))
+                    if (activeLetter.isNotBlank()) {
+                        Surface(
+                            shape = CircleShape,
+                            color = TGblue.copy(alpha = .08f),
+                            border = BorderStroke(1.5.dp, TGblue.copy(alpha = .22f)),
+                            shadowElevation = 3.dp,
                         ) {
-                            val wordSize = when { w.word.length >= 18 -> 15.sp; w.word.length >= 14 -> 17.sp; w.word.length >= 10 -> 20.sp; else -> 23.sp }
-                            Text(w.word.uppercase(), color = TGtext, fontSize = wordSize, letterSpacing = if (w.word.length >= 14) .3.sp else 1.2.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                            Surface(color = Color.Transparent, shape = RoundedCornerShape(5.dp), border = BorderStroke(1.dp, if (selected) TGgold else TGcyan)) {
-                                Text(lastChar, modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = TGtext, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                            }
-                            Spacer(Modifier.width(12.dp)); Text("✓", color = TGgreen, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                            Text(
+                                activeLetter,
+                                modifier = Modifier.padding(horizontal = 23.dp, vertical = 13.dp),
+                                color = TGblue,
+                                fontSize = 36.sp,
+                                fontWeight = FontWeight.Black,
+                            )
                         }
-                        if (index != words.takeLast(5).lastIndex) HorizontalDivider(color = TGmuted.copy(alpha = .14f))
+                        Text(
+                            activeLetter + sh(" ile başlayan kelime", " starting word"),
+                            color = TGmuted,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     }
                 }
             }
@@ -604,7 +684,14 @@ private fun TargetArena(
             modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).focusRequester(wordFocusRequester),
             textStyle = LocalTextStyle.current.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
             label = { Text(sh("Kelimen", "Your word"), fontSize = 12.sp) },
-            placeholder = { Text(if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Rakibin sırası…", "Rival's turn…"), fontSize = 15.sp) },
+            placeholder = {
+                Text(
+                    if (!myTurn) sh("Rakibin sırası…", "Rival's turn…")
+                    else if (activeLetter.isBlank()) sh("İlk kelimeyi yaz…", "Type the first word…")
+                    else activeLetter + sh(" ile başlayan kelime yaz", " — type a word"),
+                    fontSize = 14.sp,
+                )
+            },
             shape = RoundedCornerShape(16.dp),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Text,
