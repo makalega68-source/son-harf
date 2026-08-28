@@ -49,6 +49,8 @@ fun LightWordThemeApp() {
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
     var lastHomeBack by remember { mutableLongStateOf(0L) }
+    var firstSonHarfEntry by remember { mutableStateOf(true) }
+    var showSonHarfIntro by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
@@ -98,14 +100,24 @@ fun LightWordThemeApp() {
             when (screen) {
                 LightScreen.HOME -> LightHomeScreen(
                     backend,
-                    onSonHarf = { gameKey += 1; screen = LightScreen.SON_HARF },
+                    onSonHarf = {
+                        showSonHarfIntro = firstSonHarfEntry
+                        firstSonHarfEntry = false
+                        gameKey += 1
+                        screen = LightScreen.SON_HARF
+                    },
                     onKelimeAvi = { screen = LightScreen.KELIME_AVI },
                     onKelimeSavasi = { screen = LightScreen.KELIME_SAVASI },
                     onLeague = { screen = LightScreen.LEAGUE },
                     onTasks = { screen = LightScreen.TASKS },
                     onProfile = { screen = LightScreen.PROFILE },
                 )
-                LightScreen.SON_HARF -> key(gameKey) { TargetNeonGameScreen(autoStartMatchmaking = true) }
+                LightScreen.SON_HARF -> key(gameKey) {
+                    TargetNeonGameScreen(
+                        autoStartMatchmaking = true,
+                        showEntryMascotIntro = showSonHarfIntro,
+                    )
+                }
                 LightScreen.KELIME_AVI -> DailyCipherScreen { screen = LightScreen.HOME }
                 LightScreen.KELIME_SAVASI -> TrackedBilBakalimStandaloneScreen { screen = LightScreen.HOME }
                 LightScreen.LEAGUE -> LeaderboardExperienceScreen { screen = LightScreen.HOME }
@@ -222,9 +234,20 @@ private fun LightHomeScreen(
                     Text("SON HARF", color = LightText, fontSize = 28.sp, fontWeight = FontWeight.Black)
                     Text("Kelimeyi Sürdür, Rakibini Geç", color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 }
-                Surface(onClick = onProfile, shape = CircleShape, color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
-                    Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) {
-                        Text((profile?.displayName ?: "O").take(1).uppercase(), color = LightBlue, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Surface(
+                    onClick = onProfile,
+                    shape = CircleShape,
+                    color = LightSurface,
+                    border = BorderStroke(1.dp, LightBorder),
+                ) {
+                    Box(Modifier.padding(2.dp), contentAlignment = Alignment.Center) {
+                        ProfilePhotoAvatar(
+                            avatarPath = profile?.avatarPath,
+                            name = profile?.displayName ?: "Oyuncu",
+                            size = 42.dp,
+                            visible = true,
+                            accent = LightBlue,
+                        )
                     }
                 }
             }
@@ -309,7 +332,7 @@ private fun LightHomeScreen(
             LightGameCard(Icons.Rounded.Search, "Kelime Avı", "Günün kelimesini ipuçlarıyla bul.", "BAŞLA", LightGreen, onKelimeAvi)
         }
         item {
-            LightGameCard(Icons.Rounded.Bolt, "Kelime Savaşı", "Hızlı düşün, doğru tahminle öne geç.", "OYNA", LightGold, onKelimeSavasi)
+            LightGameCard(Icons.Rounded.Bolt, "Bil Bakalım", "Bilgi yarışmasında tahmin et, puanı kap.", "OYNA", LightGold, onKelimeSavasi)
         }
 
         item {
