@@ -35,17 +35,17 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
-private val TGbg = LetharaPalette.Night
-private val TGpanel = Color(0xFF101D39)
-private val TGpanel2 = Color(0xFF15284A)
-private val TGcyan = LetharaPalette.Cyan
-private val TGpurple = LetharaPalette.Violet
-private val TGpink = Color(0xFFFF8BCB)
-private val TGgold = LetharaPalette.Gold
-private val TGblue = Color(0xFF4DA6FF)
-private val TGgreen = LetharaPalette.Green
-private val TGtext = LetharaPalette.Text
-private val TGmuted = LetharaPalette.Muted
+private val TGbg = Color(0xFFF7F9FC)
+private val TGpanel = Color.White
+private val TGpanel2 = Color(0xFFF0F4F8)
+private val TGcyan = Color(0xFF1769E0)
+private val TGpurple = Color(0xFF6B4FD3)
+private val TGpink = Color(0xFFE95B72)
+private val TGgold = Color(0xFFF3A81A)
+private val TGblue = Color(0xFF1769E0)
+private val TGgreen = Color(0xFF22B95F)
+private val TGtext = Color(0xFF182235)
+private val TGmuted = Color(0xFF718096)
 
 @Composable
 fun TargetNeonGameScreen(autoStartMatchmaking: Boolean = false) {
@@ -172,7 +172,7 @@ fun TargetNeonGameScreen(autoStartMatchmaking: Boolean = false) {
         }
     }
 
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(LetharaPalette.Night, Color(0xFF0B1730), LetharaPalette.Night2)))) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, TGbg, Color(0xFFF1F6FC))))) {
         val active = room
         if (active == null) {
             TargetLobby(
