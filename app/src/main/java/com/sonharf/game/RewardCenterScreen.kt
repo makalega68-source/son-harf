@@ -32,7 +32,7 @@ fun ShopHubScreen() {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("MAĞAZA", "SHOP")) }, modifier = Modifier.weight(1f))
-            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("ÜCRETSİZ ÖDÜLLER", "FREE REWARDS")) }, modifier = Modifier.weight(1f))
+            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("MÜHÜR ÖDÜLLERİ", "SEAL REWARDS")) }, modifier = Modifier.weight(1f))
         }
         Box(Modifier.weight(1f)) {
             if (tab == 0) EconomyShopScreen() else RewardCenterScreen()
@@ -141,7 +141,7 @@ fun RewardCenterScreen() {
 
         item {
             RewardAdCard(
-                icon = "🎁", title = sh("ÖDÜL SANDIĞI", "REWARD CHEST"),
+                icon = "🎁", title = sh("MÜHÜR SANDIĞI", "SEAL CHEST"),
                 description = sh("Reklam başına 1 sandık hakkı. Sandık açıldığında 15, 25 veya 40 Son Coin çıkar.", "Earn 1 chest per ad. Opening a chest awards 15, 25, or 40 diamonds."),
                 progress = "${s?.chestAdsUsed ?: 0}/${s?.chestAdsLimit ?: 2}",
                 button = sh("REKLAM İZLE  +1 SANDIK", "WATCH AD  +1 CHEST"),
@@ -154,10 +154,10 @@ fun RewardCenterScreen() {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .30f))) {
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(sh("SANDIKLARIM", "MY CHESTS"), color = SonHarfGold, fontWeight = FontWeight.Black)
+                        Text(sh("MÜHÜR SANDIKLARIM", "MY SEAL CHESTS"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
                         Text("🎁 ${s?.chestKeys ?: 0}", fontWeight = FontWeight.Black)
                     }
-                    Text(sh("Buradan kazandığın sandıkları aç. Çıkan Son Coinlar doğrudan cüzdanına eklenir ve mağazada kullanılabilir.", "Open earned chests here. Diamonds go directly to your wallet and can be spent in the shop."), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(sh("Topladığın Mühür Sandıklarını aç. Çıkan Son Coin doğrudan cüzdanına eklenir ve yalnızca güç vermeyen içeriklerde kullanılır.", "Open collected Seal Chests. Son Coin goes directly to your wallet and is used only for non-power content."), color = SonHarfMuted, fontSize = 9.sp)
                     Button(
                         onClick = {
                             val b = backend
@@ -176,7 +176,7 @@ fun RewardCenterScreen() {
                         enabled = (s?.chestKeys ?: 0) > 0 && busy == null,
                         modifier = Modifier.fillMaxWidth(),
                         colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color.White),
-                    ) { Text(sh("SANDIK AÇ", "OPEN CHEST"), fontWeight = FontWeight.Black) }
+                    ) { Text(sh("MÜHRÜ AÇ", "OPEN SEAL"), fontWeight = FontWeight.Black) }
                 }
             }
         }
