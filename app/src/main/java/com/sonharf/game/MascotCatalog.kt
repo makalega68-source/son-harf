@@ -53,8 +53,22 @@ internal object MascotCatalog {
     }
 
     fun clip(id: String, motion: MascotMotion): String = when (id) {
-        DEFAULT_ID,
         CHIBI_WIZARD_ID -> when (motion) {
+            MascotMotion.WALK -> "Walk"
+            MascotMotion.TURN_LEFT -> "Turn_Left"
+            MascotMotion.TURN_RIGHT -> "Turn_Right"
+            MascotMotion.RUN -> "Run"
+            MascotMotion.VICTORY -> "Special_Attack"
+            MascotMotion.DEFEAT -> "Hurt"
+            MascotMotion.CRITICAL -> "Attack"
+            MascotMotion.GREETING -> "Turn_Right"
+            MascotMotion.THINKING,
+            MascotMotion.LOOK_AT_PLAYER -> "Turn_Left"
+            MascotMotion.IDLE,
+            MascotMotion.SIT -> "Idle"
+        }
+
+        DEFAULT_ID -> when (motion) {
             MascotMotion.WALK -> "Walk"
             MascotMotion.TURN_LEFT -> "Turn_Left"
             MascotMotion.TURN_RIGHT -> "Turn_Right"
@@ -68,6 +82,7 @@ internal object MascotCatalog {
             MascotMotion.THINKING,
             MascotMotion.SIT -> "Idle"
         }
+
         else -> "Idle"
     }
 }
