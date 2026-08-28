@@ -28,6 +28,14 @@ internal object SealRosterPolicy {
             )
         }
 
+        if (mascotId == MascotCatalog.LEGACY_WHITE_ID) {
+            return SealRosterState(
+                availability = SealRosterAvailability.AWAITING_3D,
+                active = false,
+                plannedPrice = null,
+            )
+        }
+
         val active = (equippedMascotId ?: MascotCatalog.DEFAULT_ID) == mascotId
         if (mascotId == MascotCatalog.DEFAULT_ID) {
             return SealRosterState(
@@ -50,7 +58,7 @@ internal object SealRosterPolicy {
         "ryvan" -> 900
         "mivo" -> 800
         "selen" -> 950
-        "neris" -> 700
+        "neris" -> 0
         else -> 0
     }
 
