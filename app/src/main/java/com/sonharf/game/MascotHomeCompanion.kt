@@ -36,6 +36,7 @@ internal fun MascotHomeCompanion(
             MascotLive3DStage(
                 modifier = Modifier.fillMaxSize(),
                 mascotId = selected.id,
+                displayScale = 1.75f,
             )
             Box(
                 Modifier

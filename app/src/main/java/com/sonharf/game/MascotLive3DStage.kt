@@ -37,11 +37,18 @@ internal fun MascotLive3DStage(
     modifier: Modifier = Modifier,
     mascotId: String = MascotSelectionRuntime.selectedId,
     motion: MascotMotion = MascotRuntime.motion,
+    displayScale: Float = 1f,
+    appearanceTint: Color? = null,
 ) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { MascotSelectionRuntime.load(context) }
 
     val resolvedId = MascotCatalog.item(mascotId).id
+    val effectiveTint = appearanceTint ?: if (resolvedId == MascotCatalog.DEFAULT_ID) {
+        Color(0xFFF8F8F6)
+    } else {
+        null
+    }
     val modelLocation = remember(resolvedId) {
         MascotCatalog.modelLocation(context, resolvedId)
     }
@@ -89,15 +96,12 @@ internal fun MascotLive3DStage(
         return
     }
 
-    // Filament's OpenGL backend can exceed the GLES vertex-uniform limit on skinned mascot
-    // materials (notably emulator/low-capability drivers). Vulkan avoids that native shader-link
-    // crash and is the production renderer for the 3D mascot stage.
     val engine = rememberEngine(
         engineCreator = { _ -> Engine.create(Engine.Backend.VULKAN) },
     )
     val modelLoader = rememberModelLoader(engine)
     val cameraNode = rememberCameraNode(engine) {
-        position = Position(x = 0f, y = 0.25f, z = 3.2f)
+        position = Position(x = 0f, y = 0.12f, z = 3.0f)
     }
     val modelInstance = rememberModelInstance(
         modelLoader = modelLoader,
@@ -105,9 +109,28 @@ internal fun MascotLive3DStage(
     )
     val clip = MascotCatalog.clip(resolvedId, motion)
 
+    LaunchedEffect(modelInstance, effectiveTint) {
+        val instance = modelInstance ?: return@LaunchedEffect
+        if (effectiveTint != null) {
+            var applied = 0
+            instance.materialInstances.forEach { material ->
+                runCatching {
+                    material.setParameter(
+                        "baseColorFactor",
+                        effectiveTint.red,
+                        effectiveTint.green,
+                        effectiveTint.blue,
+                        effectiveTint.alpha,
+                    )
+                    applied += 1
+                }
+            }
+            Log.i("MascotSmoke", "MASCOT_TINT_APPLIED id=$resolvedId materials=$applied")
+        }
+    }
+
     LaunchedEffect(modelInstance, resolvedId, clip) {
         if (modelInstance != null) {
-            // Give Filament a short window to submit the first frame before declaring runtime ready.
             kotlinx.coroutines.delay(1_200)
             Log.i("MascotSmoke", "MASCOT_RENDER_READY id=$resolvedId clip=$clip")
         }
@@ -118,36 +141,32 @@ internal fun MascotLive3DStage(
             CircularProgressIndicator(color = SonHarfCyan, strokeWidth = 2.dp)
         } else {
             SceneView(
-                    modifier = Modifier.fillMaxSize(),
-                    surfaceType = SurfaceType.TextureSurface,
-                    engine = engine,
-                    modelLoader = modelLoader,
-                    isOpaque = false,
-                    autoCenterContent = true,
-                    autoFitContent = false,
-                    cameraNode = cameraNode,
-                    cameraManipulator = null,
-                ) {
-                    ModelNode(
-                        modelInstance = modelInstance,
-                        autoAnimate = false,
-                        animationName = clip,
-                        animationLoop = MascotMotionPolicy.loops(motion),
-                        animationSpeed = when (motion) {
-                            MascotMotion.RUN -> 1.15f
-                            MascotMotion.CRITICAL -> 1.08f
-                            else -> 1f
-                        },
-                        scaleToUnits = if (resolvedId == MascotCatalog.DEFAULT_ID) 1.15f else 1.0f,
-                        centerOrigin = if (resolvedId == MascotCatalog.DEFAULT_ID) {
-                            Position(x = 0f, y = -1f, z = 0f)
-                        } else {
-                            Position(x = 0f, y = 0f, z = 0f)
-                        },
-                        rotation = Rotation(x = 0f, y = 0f, z = 0f),
-                        isEditable = false,
-                    )
-                }
+                modifier = Modifier.fillMaxSize(),
+                surfaceType = SurfaceType.TextureSurface,
+                engine = engine,
+                modelLoader = modelLoader,
+                isOpaque = false,
+                autoCenterContent = true,
+                autoFitContent = false,
+                cameraNode = cameraNode,
+                cameraManipulator = null,
+            ) {
+                ModelNode(
+                    modelInstance = modelInstance,
+                    autoAnimate = false,
+                    animationName = clip,
+                    animationLoop = MascotMotionPolicy.loops(motion),
+                    animationSpeed = when (motion) {
+                        MascotMotion.RUN -> 1.15f
+                        MascotMotion.CRITICAL -> 1.08f
+                        else -> 1f
+                    },
+                    scaleToUnits = (1.0f * displayScale).coerceIn(0.75f, 2.2f),
+                    centerOrigin = Position(x = 0f, y = 0f, z = 0f),
+                    rotation = Rotation(x = 0f, y = 0f, z = 0f),
+                    isEditable = false,
+                )
+            }
         }
     }
 }

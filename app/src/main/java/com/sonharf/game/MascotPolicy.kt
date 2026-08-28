@@ -4,8 +4,8 @@ package com.sonharf.game
  * Active mascot product policy.
  *
  * Eve is intentionally parked and must not be surfaced by the active UI.
- * The verified white skeletal pet is the standard free/default mascot.
- * Additional mascots may be sold only after both commercial-game license and runtime verification.
+ * Lyra and Neris use the licensed customizable Chibi Cat Wizard asset; Lyra is the free white
+ * presentation while Neris keeps the darker Shadow Sage presentation.
  */
 internal object MascotPolicy {
     const val ENABLED = true
@@ -14,8 +14,8 @@ internal object MascotPolicy {
     const val EVE_ACTIVE = false
 
     const val WHITE_MASCOT_ASSET = MascotCatalog.WHITE_ASSET
-    const val WHITE_MASCOT_SHA256 = "27779dcb3a201013c47dc4a5099540a17984f805c998984f45ff84cf34426a41"
-    const val WHITE_MASCOT_SIZE_BYTES = 781_848
+    const val WHITE_MASCOT_SHA256 = "b321193faea91bf6d75a78fb74f947bc4223892c3f5ede0be0c04a7a2be04db2"
+    const val WHITE_MASCOT_SIZE_BYTES = 1_500_344
 
     const val CHIBI_WIZARD_LICENSE_APPROVED = true
     const val CHIBI_WIZARD_ASSET_READY = true
