@@ -33,7 +33,7 @@ object SonHarfPreferences {
 
     fun soundEnabled(context: Context): Boolean = prefs(context).getBoolean(SOUND, true)
     fun vibrationEnabled(context: Context): Boolean = prefs(context).getBoolean(VIBRATION, true)
-    fun darkModeEnabled(context: Context): Boolean = true
+    fun darkModeEnabled(context: Context): Boolean = false
     fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"
     fun botDifficulty(context: Context): String = prefs(context).getString(BOT_DIFFICULTY, "normal")?.takeIf { it in setOf("easy","normal","hard") } ?: "normal"
     fun rememberLogin(context: Context): Boolean = prefs(context).getBoolean(REMEMBER_LOGIN, true)
@@ -52,10 +52,9 @@ object SonHarfPreferences {
     }
     fun setVibrationEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(VIBRATION, value).apply()
     fun setDarkModeEnabled(context: Context, value: Boolean) {
-        // Lethara currently has one canonical production appearance: the dark fantasy theme.
-        // Keep the legacy API for compatibility, but do not allow stale light-theme preferences to override branding.
-        prefs(context).edit().putBoolean(DARK_MODE, true).apply()
-        SonHarfUiState.darkMode = true
+        // The active product uses one canonical light appearance.
+        prefs(context).edit().putBoolean(DARK_MODE, false).apply()
+        SonHarfUiState.darkMode = false
     }
     fun setRememberLogin(context: Context, value: Boolean, email: String = "") {
         val editor = prefs(context).edit().putBoolean(REMEMBER_LOGIN, value)
@@ -132,9 +131,9 @@ object SonHarfPreferences {
         SonHarfBackgroundMusic.setEnabled(context, enabled)
     }
     fun syncUi(context: Context) {
-        SonHarfUiState.darkMode = true
+        SonHarfUiState.darkMode = false
         SonHarfUiState.language = language(context)
-        prefs(context).edit().putBoolean(DARK_MODE, true).apply()
+        prefs(context).edit().putBoolean(DARK_MODE, false).apply()
     }
 
     fun hapticTap(context: Context) {
