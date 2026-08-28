@@ -1,0 +1,129 @@
+name: Lyra White Runtime
+
+on:
+  push:
+    branches:
+      - fix/lyra-white-chibi-v11
+    paths:
+      - '.github/workflows/lyra-white-runtime.yml'
+      - 'app/**'
+
+permissions:
+  contents: read
+
+jobs:
+  lyra-white-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Unit tests and debug APK
+        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace
+
+      - name: Install image verifier
+        run: python3 -m pip install --disable-pip-version-check pillow
+
+      - name: Enable KVM
+        run: |
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+          fi
+
+      - name: Verify dedicated white Lyra on emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          cores: 4
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            set -eu
+            mkdir -p artifacts/lyra-white
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell wm size 720x1600
+            adb shell wm density 280
+
+            adb logcat -c
+            adb shell am start -W -n com.sonharf.game/.MascotRuntimeSmokeActivity --es mascot_id mascot_white
+            timeout 25 sh -c "until adb logcat -d | grep -q 'MASCOT_RENDER_READY id=mascot_white clip=Idle'; do sleep 1; done"
+            sleep 2
+            adb exec-out screencap -p > artifacts/lyra-white/lyra-white.png
+            adb logcat -d > artifacts/lyra-white/lyra-white-logcat.txt
+            grep -q 'MASCOT_MODEL_LOCATION id=mascot_white location=models/lyra_white_chibi.glb' artifacts/lyra-white/lyra-white-logcat.txt
+
+            adb shell am force-stop com.sonharf.game
+            adb logcat -c
+            adb shell am start -W -n com.sonharf.game/.MascotRuntimeSmokeActivity --es mascot_id mascot_chibi_wizard
+            timeout 25 sh -c "until adb logcat -d | grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Idle'; do sleep 1; done"
+            sleep 2
+            adb exec-out screencap -p > artifacts/lyra-white/neris-original.png
+            adb logcat -d > artifacts/lyra-white/neris-logcat.txt
+
+            python3 - <<'PY'
+            from PIL import Image
+            import numpy as np
+            from pathlib import Path
+
+            white = np.asarray(Image.open("artifacts/lyra-white/lyra-white.png").convert("RGB"), dtype=np.int16)
+            dark = np.asarray(Image.open("artifacts/lyra-white/neris-original.png").convert("RGB"), dtype=np.int16)
+
+            # Exact 3D stage region in MascotRuntimeSmokeActivity; excludes the mascot-id text.
+            white = white[500:1045, 180:540]
+            dark = dark[500:1045, 180:540]
+
+            delta = np.abs(white - dark).max(axis=2)
+            changed = delta > 24
+            changed_count = int(changed.sum())
+            if changed_count < 2500:
+                raise SystemExit(f"Lyra texture does not differ enough from Neris: changed={changed_count}")
+
+            def lum(rgb):
+                return 0.2126 * rgb[...,0] + 0.7152 * rgb[...,1] + 0.0722 * rgb[...,2]
+
+            w_lum = float(lum(white)[changed].mean())
+            d_lum = float(lum(dark)[changed].mean())
+            gain = w_lum - d_lum
+            report = f"LYRA_WHITE_VISUAL_PASS changed={changed_count} white_luma={w_lum:.2f} neris_luma={d_lum:.2f} gain={gain:.2f}"
+            Path("artifacts/lyra-white/visual-report.txt").write_text(report + "\n")
+            print(report)
+            if gain < 45:
+                raise SystemExit(f"Lyra is not visibly white enough: gain={gain:.2f}")
+            PY
+
+            ! grep -Eqi 'FATAL EXCEPTION|Fatal signal|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|PostconditionPanic' artifacts/lyra-white/lyra-white-logcat.txt
+            echo "LYRA_WHITE_RUNTIME_PASS"
+
+      - name: Upload Lyra white evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-Lyra-White-Evidence
+          path: artifacts/lyra-white/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Upload tested APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-Lyra-White-Tested-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
