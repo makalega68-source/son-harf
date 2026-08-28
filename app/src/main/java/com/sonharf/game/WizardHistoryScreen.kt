@@ -144,7 +144,7 @@ internal fun WizardHistoryScreen(
                     LetharaLore.characters.chunked(2).forEach { row ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             row.forEach { character ->
-                                val rosterState = SealRosterPolicy.state(character, ownedMascots, equipped?.mascotId)
+                                val rosterState = SealRosterPolicy.state(character, ownedMascots, MascotSelectionRuntime.selectedId)
                                 CharacterCard(
                                     character = character,
                                     rosterState = rosterState,
@@ -196,7 +196,7 @@ internal fun WizardHistoryScreen(
     }
 
     selectedCharacter?.let { character ->
-        val rosterState = SealRosterPolicy.state(character, ownedMascots, equipped?.mascotId)
+        val rosterState = SealRosterPolicy.state(character, ownedMascots, MascotSelectionRuntime.selectedId)
         val mascotId = character.mascotId
         val assetReady = remember(mascotId) { mascotId != null && MascotCatalog.isAssetReady(context, mascotId) }
         AlertDialog(
