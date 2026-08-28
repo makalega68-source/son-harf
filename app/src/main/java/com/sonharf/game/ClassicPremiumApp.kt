@@ -80,14 +80,7 @@ fun ClassicPremiumApp() {
     var lastHomeBack by remember { mutableLongStateOf(0L) }
 
     LaunchedEffect(Unit) {
-        authenticated = if (BuildConfig.DEBUG) {
-            if (backend != null && backend.currentUserId() == null) {
-                runCatching { backend.ensurePlayer(sh("Oyuncu", "Player")) }
-            }
-            true
-        } else {
-            SupabaseProvider.configured && hasVerifiedMembershipSession()
-        }
+        authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
         authChecked = true
     }
     LaunchedEffect(authenticated) {
@@ -142,19 +135,19 @@ fun ClassicPremiumApp() {
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                if (screen in setOf(ClassicScreen.HOME, ClassicScreen.PLAY, ClassicScreen.PROFILE, ClassicScreen.SHOP)) {
+                if (screen in setOf(ClassicScreen.HOME, ClassicScreen.LEAGUE, ClassicScreen.MASCOT, ClassicScreen.HISTORY, ClassicScreen.SHOP)) {
                     ClassicBottomBar(
                         current = screen,
                         onHome = { screen = ClassicScreen.HOME },
-                        onPlay = { screen = ClassicScreen.PLAY },
                         onLeague = { screen = ClassicScreen.LEAGUE },
-                        onSocial = { FriendsQuickAccessState.open = true },
-                        onProfile = { screen = ClassicScreen.PROFILE },
+                        onMascot = { screen = ClassicScreen.MASCOT },
+                        onHistory = { screen = ClassicScreen.HISTORY },
+                        onShop = { screen = ClassicScreen.SHOP },
                     )
                 }
             },
         ) { padding ->
-            val showTopBanner = screen !in setOf(ClassicScreen.GAME, ClassicScreen.BIL_BAKALIM, ClassicScreen.DAILY_CIPHER)
+            val showTopBanner = screen !in setOf(ClassicScreen.HOME, ClassicScreen.GAME, ClassicScreen.BIL_BAKALIM, ClassicScreen.DAILY_CIPHER)
             Column(Modifier.fillMaxSize().padding(padding)) {
                 if (showTopBanner) SonHarfTopAdBanner()
                 Box(Modifier.fillMaxWidth().weight(1f)) {
@@ -839,14 +832,28 @@ private fun ClassicPageScaffold(title: String, onBack: () -> Unit, trailing: @Co
 }
 
 @Composable
-private fun ClassicBottomBar(current: ClassicScreen, onHome: () -> Unit, onPlay: () -> Unit, onLeague: () -> Unit, onSocial: () -> Unit, onProfile: () -> Unit) {
-    Surface(color = ClassicBgDeep, shadowElevation = 18.dp, border = BorderStroke(1.dp, ClassicBorder)) {
-        Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 6.dp, vertical = 7.dp), horizontalArrangement = Arrangement.SpaceAround) {
+private fun ClassicBottomBar(
+    current: ClassicScreen,
+    onHome: () -> Unit,
+    onLeague: () -> Unit,
+    onMascot: () -> Unit,
+    onHistory: () -> Unit,
+    onShop: () -> Unit,
+) {
+    Surface(
+        color = ClassicBgDeep.copy(alpha = .98f),
+        shadowElevation = 18.dp,
+        border = BorderStroke(1.dp, ClassicBorder),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 6.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.SpaceAround,
+        ) {
             BottomItem(Icons.Rounded.Home, sh("Ana Sayfa", "Home"), current == ClassicScreen.HOME, Modifier.weight(1f), onHome)
-            BottomItem(Icons.Rounded.PlayArrow, sh("Oyna", "Play"), current == ClassicScreen.PLAY, Modifier.weight(1f), onPlay)
             BottomItem(Icons.Rounded.EmojiEvents, sh("Lig", "League"), current == ClassicScreen.LEAGUE, Modifier.weight(1f), onLeague)
-            BottomItem(Icons.Rounded.Group, sh("Sosyal", "Social"), false, Modifier.weight(1f), onSocial)
-            BottomItem(Icons.Rounded.Person, sh("Profil", "Profile"), current == ClassicScreen.PROFILE, Modifier.weight(1f), onProfile)
+            BottomItem(Icons.Rounded.Pets, sh("Maskot", "Mascot"), current == ClassicScreen.MASCOT, Modifier.weight(1f), onMascot)
+            BottomItem(Icons.Rounded.AutoStories, sh("Hikaye", "Story"), current == ClassicScreen.HISTORY, Modifier.weight(1f), onHistory)
+            BottomItem(Icons.Rounded.ShoppingCart, sh("Mağaza", "Shop"), current == ClassicScreen.SHOP, Modifier.weight(1f), onShop)
         }
     }
 }

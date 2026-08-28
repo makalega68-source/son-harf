@@ -23,10 +23,11 @@ import androidx.compose.ui.unit.sp
 internal fun MascotHomeCompanion(
     modifier: Modifier = Modifier,
     playerName: String? = null,
+    mascotId: String? = null,
 ) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { MascotSelectionRuntime.load(context) }
-    val selected = MascotCatalog.item(MascotSelectionRuntime.selectedId)
+    val selected = MascotCatalog.item(mascotId ?: MascotSelectionRuntime.selectedId)
 
     Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(

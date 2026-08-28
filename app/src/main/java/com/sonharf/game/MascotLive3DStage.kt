@@ -44,11 +44,7 @@ internal fun MascotLive3DStage(
     LaunchedEffect(Unit) { MascotSelectionRuntime.load(context) }
 
     val resolvedId = MascotCatalog.item(mascotId).id
-    val effectiveTint = appearanceTint ?: if (resolvedId == MascotCatalog.DEFAULT_ID) {
-        Color(0xFFF8F8F6)
-    } else {
-        null
-    }
+    val effectiveTint = appearanceTint
     val modelLocation = remember(resolvedId) {
         MascotCatalog.modelLocation(context, resolvedId)
     }

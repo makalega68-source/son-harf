@@ -18,7 +18,7 @@ internal data class MascotCatalogItem(
 internal object MascotCatalog {
     const val DEFAULT_ID = "mascot_white"
     const val CHIBI_WIZARD_ID = "mascot_chibi_wizard"
-    const val WHITE_ASSET = "embedded:chibi-wizard-v1"
+    const val WHITE_ASSET = "models/lyra_white_chibi.glb"
 
     val all = listOf(
         MascotCatalogItem(
@@ -41,13 +41,13 @@ internal object MascotCatalog {
         all.firstOrNull { it.id == id } ?: all.first { it.id == DEFAULT_ID }
 
     fun isAssetReady(context: Context, id: String): Boolean = when (id) {
-        DEFAULT_ID,
+        DEFAULT_ID -> runCatching { context.assets.open(WHITE_ASSET).use { } }.isSuccess
         CHIBI_WIZARD_ID -> runCatching { ChibiEmbeddedModel.ensureFile(context).isFile }.getOrDefault(false)
         else -> false
     }
 
     fun modelLocation(context: Context, id: String): String? = when (id) {
-        DEFAULT_ID,
+        DEFAULT_ID -> WHITE_ASSET.takeIf { isAssetReady(context, id) }
         CHIBI_WIZARD_ID -> runCatching { Uri.fromFile(ChibiEmbeddedModel.ensureFile(context)).toString() }.getOrNull()
         else -> null
     }

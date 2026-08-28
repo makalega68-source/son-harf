@@ -35,7 +35,9 @@ class MascotRuntimeSmokeActivity : ComponentActivity() {
 
                 LaunchedEffect(resolvedId) {
                     val ready = MascotCatalog.isAssetReady(this@MascotRuntimeSmokeActivity, resolvedId)
+                    val location = MascotCatalog.modelLocation(this@MascotRuntimeSmokeActivity, resolvedId)
                     Log.i("MascotSmoke", "MASCOT_ASSET_READY id=$resolvedId ready=$ready")
+                    Log.i("MascotSmoke", "MASCOT_MODEL_LOCATION id=$resolvedId location=$location")
                     check(ready) { "Mascot asset is not ready: $resolvedId" }
 
                     if (resolvedId == MascotCatalog.CHIBI_WIZARD_ID) {
