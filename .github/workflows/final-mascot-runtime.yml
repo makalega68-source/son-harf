@@ -5,6 +5,7 @@ on:
     branches:
       - integration/final-unified-20260827
       - main
+      - feat/neris-fur-lighten
     paths:
       - '.github/workflows/final-mascot-runtime.yml'
       - 'app/**'
