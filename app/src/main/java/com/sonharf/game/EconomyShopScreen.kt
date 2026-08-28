@@ -49,8 +49,8 @@ fun EconomyShopScreen(
                     Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
                 }
                 Column {
-                    Text(sh("LETHARA MAĞAZASI", "LETHARA SHOP"), color = LetharaPalette.Gold, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Style • Mühürler • Büyülü Meyveler", "Style • Seals • Magic Fruit"), color = LetharaPalette.Muted, fontSize = 9.sp)
+                    Text(sh("SON HARF MAĞAZASI", "SON HARF SHOP"), color = LetharaPalette.Gold, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Style • Görünüm • Efektler", "Style • Appearance • Effects"), color = LetharaPalette.Muted, fontSize = 9.sp)
                 }
             }
         }
@@ -105,7 +105,6 @@ private fun EconomyCatalogScreen() {
             owned = nextOwned
             equipped = nextEquipped
             SonHarfCosmetics.apply(nextEquipped)
-            MascotSelectionRuntime.select(context, nextEquipped?.mascotId ?: MascotCatalog.DEFAULT_ID)
         }.onFailure {
             notice = sh("Mağaza verileri yüklenemedi.", "Shop data could not be loaded.")
         }
@@ -120,16 +119,15 @@ private fun EconomyCatalogScreen() {
         "keyboard_theme" -> equipped?.keyboardThemeId == item.id
         "victory_effect" -> equipped?.victoryEffectId == item.id
         "emoji_pack" -> equipped?.emojiPackId == item.id
-        "mascot" -> (equipped?.mascotId ?: MascotCatalog.DEFAULT_ID) == item.id
         else -> false
     }
 
-    val filtered = items.filter { item ->
+    val supportedKinds = setOf("profile_frame", "name_style", "game_theme", "keyboard_theme", "victory_effect", "emoji_pack")
+    val filtered = items.filter { it.kind in supportedKinds }.filter { item ->
         when (category) {
             1 -> item.kind in setOf("profile_frame", "name_style")
             2 -> item.kind in setOf("game_theme", "keyboard_theme")
             3 -> item.kind in setOf("victory_effect", "emoji_pack")
-            4 -> item.kind == "mascot"
             else -> true
         }
     }
@@ -139,7 +137,7 @@ private fun EconomyCatalogScreen() {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
                     Text("STYLE", color = LetharaPalette.Gold, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Hatırlatıcı kimliğini kişiselleştir • güç satın alma", "Personalize your Remembrancer identity • never buy power"), color = SonHarfMuted, fontSize = 10.sp)
+                    Text(sh("Profilini ve görünümünü kişiselleştir • güç satın alma", "Personalize your profile and appearance • never buy power"), color = SonHarfMuted, fontSize = 10.sp)
                 }
                 Surface(shape = RoundedCornerShape(99.dp), color = SonHarfCyan.copy(alpha = .13f), border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f))) {
                     Text("◈ ${profile?.diamonds ?: 0} SC", Modifier.padding(horizontal = 13.dp, vertical = 8.dp), color = SonHarfCyan, fontWeight = FontWeight.Black)
@@ -152,7 +150,7 @@ private fun EconomyCatalogScreen() {
 
         item {
             ScrollableTabRow(selectedTabIndex = category, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
-                listOf(sh("TÜMÜ", "ALL"), sh("PROFİL", "PROFILE"), sh("TEMA", "THEME"), sh("EFEKT", "EFFECTS"), sh("MASKOT", "MASCOT")).forEachIndexed { index, label ->
+                listOf(sh("TÜMÜ", "ALL"), sh("PROFİL", "PROFILE"), sh("TEMA", "THEME"), sh("EFEKT", "EFFECTS")).forEachIndexed { index, label ->
                     Tab(selected = category == index, onClick = { category = index }, text = { Text(label, color = if (category == index) SonHarfCyan else SonHarfMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold) })
                 }
             }
@@ -168,7 +166,7 @@ private fun EconomyCatalogScreen() {
         items(filtered, key = { it.id }) { item ->
             val name = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
             val description = if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr
-            val mine = item.id in owned || item.id == MascotCatalog.DEFAULT_ID
+            val mine = item.id in owned
             val active = isEquipped(item)
             Card(
                 colors = CardDefaults.cardColors(containerColor = SonHarfSurface.copy(alpha = .96f)),
@@ -198,7 +196,6 @@ private fun EconomyCatalogScreen() {
                                     if (mine) {
                                         runCatching { b.equipShopItem(item.id) }
                                             .onSuccess {
-                                                if (item.kind == "mascot") MascotSelectionRuntime.select(context, item.id)
                                                 notice = sh("${name} etkinleştirildi.", "$name equipped.")
                                                 reload()
                                             }
@@ -224,54 +221,6 @@ private fun EconomyCatalogScreen() {
                             colors = ButtonDefaults.buttonColors(containerColor = if (active) SonHarfGreen else SonHarfPurple),
                         ) {
                             Text(when { busy == item.id -> "…"; active -> sh("AKTİF", "EQUIPPED"); mine -> sh("KULLAN", "EQUIP"); else -> sh("SATIN AL", "BUY") }, fontWeight = FontWeight.Black)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (category == 0 || category == 4) {
-            item {
-                Text(sh("DİĞER MÜHÜRLER", "OTHER SEALS"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 13.sp)
-                Text(
-                    sh("Kael, Ryvan, Mivo ve Selen mağazada büyük 3D önizlemeyle görünür; satış kilitleri değişmedi.", "Kael, Ryvan, Mivo and Selen are visible in the shop with large 3D previews; their sale locks are unchanged."),
-                    color = SonHarfMuted,
-                    fontSize = 9.sp,
-                )
-            }
-            items(LetharaLore.characters.filter { it.mascotId == null }, key = { "future_" + it.key }) { seal ->
-                val plannedPrice = SealRosterPolicy.plannedPrice(seal.key)
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = LetharaPalette.Panel.copy(alpha = .92f)),
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, seal.color.copy(alpha = .35f)),
-                ) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(13.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth().height(168.dp),
-                            color = SonHarfSurface2.copy(alpha = .72f),
-                            shape = RoundedCornerShape(18.dp),
-                        ) {
-                            MascotLive3DStage(
-                                modifier = Modifier.fillMaxSize(),
-                                mascotId = MascotCatalog.CHIBI_WIZARD_ID,
-                                motion = MascotMotion.IDLE,
-                                displayScale = 1.72f,
-                                appearanceTint = seal.color,
-                            )
-                        }
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(seal.name + " — " + if (SonHarfUiState.isEnglish) seal.titleEn else seal.titleTr, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                                Text(if (SonHarfUiState.isEnglish) seal.temperamentEn else seal.temperamentTr, color = SonHarfMuted, fontSize = 9.sp)
-                                Text("◈ " + plannedPrice + " SC", color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 11.sp)
-                            }
-                            OutlinedButton(onClick = {}, enabled = false) {
-                                Text(sh("MÜHÜR KİLİTLİ", "SEAL LOCKED"), fontSize = 8.sp, fontWeight = FontWeight.Black)
-                            }
                         }
                     }
                 }
@@ -310,7 +259,7 @@ private fun AnimatedVipShopCard(active: Boolean, onClick: () -> Unit) {
 private fun CosmeticPreview(item: ShopItemDto) {
     val transition = rememberInfiniteTransition(label = "preview_${item.id}")
     val pulse by transition.animateFloat(.94f, 1.04f, infiniteRepeatable(tween(1150), RepeatMode.Reverse), label = "previewPulse_${item.id}")
-    val previewHeight = if (item.kind == "mascot") 176.dp else 108.dp
+    val previewHeight = 108.dp
     Surface(modifier = Modifier.fillMaxWidth().height(previewHeight), color = SonHarfSurface2.copy(alpha = .72f), shape = RoundedCornerShape(18.dp)) {
         Box(Modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center) {
             when (item.kind) {
@@ -325,12 +274,6 @@ private fun CosmeticPreview(item: ShopItemDto) {
                 "keyboard_theme" -> Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("S","O","N","H","A","R","F").forEach { k -> Surface(color = LetharaPalette.PanelStrong, shape = RoundedCornerShape(7.dp), border = BorderStroke(1.5.dp, LetharaPalette.Cyan)) { Text(k, Modifier.padding(horizontal = 8.dp, vertical = 10.dp), color = LetharaPalette.Cyan, fontWeight = FontWeight.Black) } } }
                 "victory_effect" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text("✦", color = SonHarfCyan, fontSize = 30.sp); Text("♛", color = SonHarfGold, fontSize = 50.sp, fontWeight = FontWeight.Black, modifier = Modifier.scale(pulse)); Text("✦", color = SonHarfPink, fontSize = 30.sp) }
                 "emoji_pack" -> Text("👑  ⚡  😎  🔥  ◈", fontSize = 30.sp)
-                "mascot" -> MascotLive3DStage(
-                    modifier = Modifier.fillMaxSize(),
-                    mascotId = item.id,
-                    motion = MascotMotion.IDLE,
-                    displayScale = 1.82f,
-                )
                 else -> Text("◇", fontSize = 44.sp, color = SonHarfCyan)
             }
         }
