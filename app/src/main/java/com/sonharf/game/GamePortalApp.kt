@@ -17,8 +17,8 @@ internal val PortalGreen = LetharaPalette.Green
 internal val PortalRed = LetharaPalette.Red
 
 /**
- * Root shell for the active Son Harf product.
- * Eve remains archived and is not started, rendered, or exposed by active navigation.
+ * Root shell for the active Son Harf / Lethara product.
+ * Lethara is the canonical visual system; legacy Eve surfaces remain archived and are never exposed by active navigation.
  */
 @Composable
 fun GamePortalApp() {
