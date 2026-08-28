@@ -1,7 +1,11 @@
-# Mascot removal
+# Legacy mascot decision — superseded
 
-Product decision: the mascot concept is removed from Son Harf / Bil Bakalim.
+The earlier decision to remove mascots is no longer active.
 
-- Do not add mascot UI, mascot house, feeding/care, mascot dialogue, mascot cosmetics, mascot animations or mascot notifications.
-- Retention must come from fair competition: play, leagues/rating, streaks, rivals/rematch, daily missions, tournaments, rewards, Style and profile progression.
+Current product contract:
+- Son Harf has one active mascot: Neris, the dark Chibi Cat Wizard.
+- Eve is parked and must not be surfaced by the active UI.
+- Legacy Lyra assets may remain packaged only for migration/rollback compatibility.
+- Neris uses short, low-volume, non-verbal baby-like reaction sounds instead of spoken TTS.
+- Mascot reactions are cosmetic/companion feedback only and never grant competitive power.
 - Pay-to-win remains prohibited.

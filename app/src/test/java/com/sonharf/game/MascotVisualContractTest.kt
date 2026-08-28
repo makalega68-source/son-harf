@@ -7,15 +7,17 @@ import org.junit.Test
 
 class MascotVisualContractTest {
     @Test
-    fun freeLyraUsesDedicatedWhiteChibiAssetAndNotLegacyPet() {
+    fun nerisIsActiveAndLegacyWhiteAssetStaysRollbackOnly() {
         val catalog = sourceFile(
             "src/main/java/com/sonharf/game/MascotCatalog.kt",
             "app/src/main/java/com/sonharf/game/MascotCatalog.kt",
         ).readText()
 
+        assertTrue(catalog.contains("DEFAULT_ID = CHIBI_WIZARD_ID"))
         assertTrue(catalog.contains("WHITE_ASSET = \"models/lyra_white_chibi.glb\""))
-        assertTrue(catalog.contains("DEFAULT_ID -> runCatching { context.assets.open(WHITE_ASSET).use { } }.isSuccess"))
+        assertTrue(catalog.contains("LEGACY_WHITE_ID -> runCatching { context.assets.open(WHITE_ASSET).use { } }.isSuccess"))
         assertTrue(catalog.contains("CHIBI_WIZARD_ID -> runCatching { ChibiEmbeddedModel.ensureFile(context).isFile }"))
+        assertTrue(catalog.contains("id = CHIBI_WIZARD_ID"))
         assertFalse(catalog.contains("son_harf_white_pet_rigged.glb"))
     }
 

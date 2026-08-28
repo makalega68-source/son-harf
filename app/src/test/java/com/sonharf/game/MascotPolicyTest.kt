@@ -12,10 +12,12 @@ import org.junit.Test
 
 class MascotPolicyTest {
     @Test
-    fun whiteMascotIsDefaultAndEveIsParked() {
+    fun nerisIsDefaultAndEveIsParked() {
         assertTrue(MascotPolicy.ENABLED)
         assertFalse(MascotPolicy.ALLOW_2D_OR_VIDEO_FALLBACK)
         assertFalse(MascotPolicy.EVE_ACTIVE)
+        assertEquals(MascotCatalog.CHIBI_WIZARD_ID, MascotCatalog.DEFAULT_ID)
+        assertEquals(MascotCatalog.CHIBI_WIZARD_ID, MascotPolicy.ACTIVE_MASCOT_ID)
         assertEquals(MascotCatalog.DEFAULT_ID, MascotPolicy.DEFAULT_MASCOT_ID)
         assertTrue(MascotCatalog.item(MascotCatalog.DEFAULT_ID).standard)
         assertTrue(MascotCatalog.item(MascotCatalog.DEFAULT_ID).licensedForCommercialGame)
@@ -67,6 +69,18 @@ class MascotPolicyTest {
         assertTrue(MascotCatalog.all.all { it.licensedForCommercialGame })
         assertTrue(MascotPolicy.CHIBI_WIZARD_LICENSE_APPROVED)
         assertTrue(MascotPolicy.CHIBI_WIZARD_ASSET_READY)
+    }
+
+    @Test
+    fun nerisMotionSoundsStayNonVerbalAndContextual() {
+        assertEquals(MascotSoundCue.LAUGH, MascotSoundPolicy.cueForMotion(MascotMotion.VICTORY))
+        assertEquals(MascotSoundCue.SAD, MascotSoundPolicy.cueForMotion(MascotMotion.DEFEAT))
+        assertEquals(MascotSoundCue.EXCITED, MascotSoundPolicy.cueForMotion(MascotMotion.CRITICAL))
+        assertEquals(MascotSoundCue.EXCITED, MascotSoundPolicy.cueForMotion(MascotMotion.RUN))
+        assertEquals(MascotSoundCue.BORED, MascotSoundPolicy.cueForMotion(MascotMotion.SIT))
+        assertEquals(MascotSoundCue.MISS_YOU, MascotSoundPolicy.cueForMotion(MascotMotion.LOOK_AT_PLAYER))
+        assertEquals(null, MascotSoundPolicy.cueForMotion(MascotMotion.THINKING))
+        assertTrue(MascotSoundPolicy.VOLUME <= 0.20f)
     }
 
     @Test

@@ -140,6 +140,7 @@ internal object MascotRuntime {
 @Composable
 internal fun MascotBehaviorBridge() {
     val activeMotion = MascotRuntime.motion
+    MascotSoundBridge(activeMotion)
     androidx.compose.runtime.LaunchedEffect(activeMotion) {
         val duration = MascotMotionPolicy.durationMs(activeMotion) ?: return@LaunchedEffect
         kotlinx.coroutines.delay(duration)

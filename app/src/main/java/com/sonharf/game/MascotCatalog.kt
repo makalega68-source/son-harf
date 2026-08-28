@@ -16,23 +16,19 @@ internal data class MascotCatalogItem(
 )
 
 internal object MascotCatalog {
-    const val DEFAULT_ID = "mascot_white"
+    const val LEGACY_WHITE_ID = "mascot_white"
     const val CHIBI_WIZARD_ID = "mascot_chibi_wizard"
+    const val DEFAULT_ID = CHIBI_WIZARD_ID
     const val WHITE_ASSET = "models/lyra_white_chibi.glb"
 
+    // Product contract: Son Harf has one active mascot. Legacy Lyra assets remain packaged only
+    // for migration/rollback compatibility and are never surfaced by active selection.
     val all = listOf(
-        MascotCatalogItem(
-            id = DEFAULT_ID,
-            nameTr = "Lyra — Beyaz Mühür",
-            nameEn = "Lyra — White Seal",
-            standard = true,
-            licensedForCommercialGame = true,
-        ),
         MascotCatalogItem(
             id = CHIBI_WIZARD_ID,
             nameTr = "Neris — Gölge Bilgesi",
             nameEn = "Neris — Shadow Sage",
-            standard = false,
+            standard = true,
             licensedForCommercialGame = true,
         ),
     )
@@ -41,19 +37,19 @@ internal object MascotCatalog {
         all.firstOrNull { it.id == id } ?: all.first { it.id == DEFAULT_ID }
 
     fun isAssetReady(context: Context, id: String): Boolean = when (id) {
-        DEFAULT_ID -> runCatching { context.assets.open(WHITE_ASSET).use { } }.isSuccess
+        LEGACY_WHITE_ID -> runCatching { context.assets.open(WHITE_ASSET).use { } }.isSuccess
         CHIBI_WIZARD_ID -> runCatching { ChibiEmbeddedModel.ensureFile(context).isFile }.getOrDefault(false)
         else -> false
     }
 
     fun modelLocation(context: Context, id: String): String? = when (id) {
-        DEFAULT_ID -> WHITE_ASSET.takeIf { isAssetReady(context, id) }
+        LEGACY_WHITE_ID -> WHITE_ASSET.takeIf { isAssetReady(context, id) }
         CHIBI_WIZARD_ID -> runCatching { Uri.fromFile(ChibiEmbeddedModel.ensureFile(context)).toString() }.getOrNull()
         else -> null
     }
 
     fun clip(id: String, motion: MascotMotion): String = when (id) {
-        DEFAULT_ID,
+        LEGACY_WHITE_ID,
         CHIBI_WIZARD_ID -> when (motion) {
             MascotMotion.WALK -> "Walk"
             MascotMotion.TURN_LEFT -> "Turn_Left"

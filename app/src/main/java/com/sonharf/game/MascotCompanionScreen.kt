@@ -379,6 +379,8 @@ private fun MascotChatPanel(
     }
 
     fun speak(text: String) {
+        // Neris communicates vocally through short non-verbal baby-like reactions, not spoken TTS.
+        if (mascotId == MascotCatalog.CHIBI_WIZARD_ID) return
         if (!voiceEnabled || !ttsReady || text.isBlank()) return
         tts?.speak(text.take(420), TextToSpeech.QUEUE_FLUSH, null, "lethara_mascot_reply")
     }
