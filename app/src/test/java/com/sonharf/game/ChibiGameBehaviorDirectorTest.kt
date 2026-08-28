@@ -87,6 +87,43 @@ class ChibiGameBehaviorDirectorTest {
     }
 
     @Test
+    fun sampledPlansNeverRepeatTheSameRealClipBackToBack() {
+        val events = listOf(
+            ChibiGameEvent.MATCH_START,
+            ChibiGameEvent.PLAYER_TURN,
+            ChibiGameEvent.RIVAL_TURN,
+            ChibiGameEvent.PLAYER_WORD,
+            ChibiGameEvent.PLAYER_LONG_WORD,
+            ChibiGameEvent.PLAYER_STREAK,
+            ChibiGameEvent.RIVAL_WORD,
+            ChibiGameEvent.TIME_WARNING,
+            ChibiGameEvent.TIME_CRITICAL,
+            ChibiGameEvent.WIN,
+            ChibiGameEvent.LOSS,
+        )
+
+        events.forEachIndexed { index, event ->
+            val director = ChibiGameBehaviorDirector("tr")
+            val plan = requireNotNull(
+                director.plan(
+                    event,
+                    ChibiBehaviorContext(
+                        playerName = "Ümit",
+                        word = "merhaba",
+                        streak = 3,
+                        seconds = 5,
+                    ),
+                    nowMs = 100_000L + index * 20_000L,
+                )
+            )
+            val clips = plan.steps.map { MascotCatalog.clip(MascotCatalog.CHIBI_WIZARD_ID, it.motion) }
+            clips.zipWithNext().forEach { (a, b) ->
+                assertNotEquals("Adjacent duplicate clip in ${plan.id}", a, b)
+            }
+        }
+    }
+
+    @Test
     fun playerWordVariantsActuallyVary() {
         val director = ChibiGameBehaviorDirector("tr")
         val plans = listOf(
