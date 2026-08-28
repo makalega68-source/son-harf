@@ -91,7 +91,7 @@ internal class ChibiGameBehaviorDirector(
         val recent = recentPlanIds.takeLast(3).toSet()
         val nonRepeated = candidates.filterNot { it.id in recent }
         val pool = nonRepeated.ifEmpty { candidates }
-        val selected = pool[cursor.mod(pool.size)]
+        val selected = pool[cursor % pool.size]
         cursor += 1
 
         lastEventAt[event] = nowMs
