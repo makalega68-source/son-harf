@@ -175,7 +175,7 @@ fun RewardCenterScreen() {
                         },
                         enabled = (s?.chestKeys ?: 0) > 0 && busy == null,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color.White),
+                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF211830)),
                     ) { Text(sh("MÜHRÜ AÇ", "OPEN SEAL"), fontWeight = FontWeight.Black) }
                 }
             }
