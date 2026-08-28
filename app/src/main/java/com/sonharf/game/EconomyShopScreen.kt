@@ -34,7 +34,7 @@ fun EconomyShopScreen(
     initialTab: Int = 0,
     onBack: (() -> Unit)? = null,
 ) {
-    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 1)) }
     Column(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))
@@ -56,13 +56,11 @@ fun EconomyShopScreen(
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("STYLE", "STYLE"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
-            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("BÜYÜLÜ MEYVE", "MAGIC FRUIT"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
-            FilterChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text(sh("ÖDÜLLER", "REWARDS"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
+            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("ÖDÜLLER", "REWARDS"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
         }
         Box(Modifier.weight(1f)) {
             when (tab) {
                 0 -> EconomyCatalogScreen()
-                1 -> MagicFruitShopScreen()
                 else -> RewardCenterScreen()
             }
         }
