@@ -110,11 +110,9 @@ internal fun PremiumMasterHome(
             )
 
             Spacer(Modifier.height(4.dp))
-            Image(
-                painter = painterResource(R.drawable.son_harf_splash_logo),
-                contentDescription = "Son Harf",
+            SonHarfBrandLogo(
                 modifier = Modifier.fillMaxWidth(.68f).height(62.dp),
-                contentScale = ContentScale.Fit,
+                size = null,
             )
 
             Box(
