@@ -3,6 +3,7 @@ package com.sonharf.game
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -85,15 +86,12 @@ fun SonHarfBrandLogo(
     modifier: Modifier = Modifier,
     size: Dp? = 52.dp,
 ) {
-    val transparentLogo = rememberTransparentSonHarfLogo()
-    val resolvedModifier = if (size != null) modifier.then(Modifier) else modifier
+    val transparentLogo = rememberTransparentSonHarfLogo() ?: return
 
-    if (transparentLogo != null) {
-        Image(
-            bitmap = transparentLogo,
-            contentDescription = "Son Harf",
-            contentScale = ContentScale.Fit,
-            modifier = if (size != null) resolvedModifier.then(Modifier) else resolvedModifier,
-        )
-    }
+    Image(
+        bitmap = transparentLogo,
+        contentDescription = "Son Harf",
+        contentScale = ContentScale.Fit,
+        modifier = if (size != null) modifier.size(size) else modifier,
+    )
 }
