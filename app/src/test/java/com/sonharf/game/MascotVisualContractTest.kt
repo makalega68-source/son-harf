@@ -31,10 +31,13 @@ class MascotVisualContractTest {
             "app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt",
         ).readText()
 
-        assertTrue(home.contains("height(250.dp)"))
-        assertTrue(home.contains("displayScale = 1.55f"))
-        assertTrue(arena.contains("displayScale = 1.42f"))
+        assertTrue(home.contains("height(280.dp)"))
+        assertTrue(home.contains("displayScale = 1.72f"))
+        assertTrue(arena.contains("displayScale = 1.58f"))
         assertTrue(arena.contains("Seni özledim!"))
+        assertTrue(arena.contains("ChibiVictoryFlight"))
+        assertTrue(arena.contains("MascotMotion.VICTORY"))
+        assertTrue(home.contains("brightnessBoost = 1.16f"))
     }
 
     @Test
@@ -48,6 +51,8 @@ class MascotVisualContractTest {
         assertTrue(arena.contains("keyboard?.show()"))
         assertTrue(arena.contains("focusRequester(wordFocusRequester)"))
         assertTrue(arena.contains("imeAction = ImeAction.Send"))
+        assertTrue(arena.contains("verticalScroll(rememberScrollState())"))
+        assertTrue(arena.contains("imeVisible"))
     }
 
     private fun sourceFile(vararg candidates: String): File =
