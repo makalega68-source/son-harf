@@ -58,7 +58,7 @@ fun FriendRequestOverlay() {
         shape = RoundedCornerShape(26.dp),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                SocialAvatar(null, profile.displayName, 52.dp, accent = SonHarfCyan)
+                SocialAvatar(profile.avatarPath, profile.gender, profile.displayName, 52.dp, accent = SonHarfCyan)
                 Column {
                     Text(sh("ARKADAŞLIK İSTEĞİ", "FRIEND REQUEST"), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 19.sp)
                     Text(profile.displayName, color = SonHarfCyan, fontWeight = FontWeight.Bold, fontSize = 15.sp)

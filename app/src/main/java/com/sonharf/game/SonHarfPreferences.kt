@@ -33,7 +33,7 @@ object SonHarfPreferences {
 
     fun soundEnabled(context: Context): Boolean = prefs(context).getBoolean(SOUND, true)
     fun vibrationEnabled(context: Context): Boolean = prefs(context).getBoolean(VIBRATION, true)
-    fun darkModeEnabled(context: Context): Boolean = true
+    fun darkModeEnabled(context: Context): Boolean = false
     fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"
     fun botDifficulty(context: Context): String = prefs(context).getString(BOT_DIFFICULTY, "normal")?.takeIf { it in setOf("easy","normal","hard") } ?: "normal"
     fun rememberLogin(context: Context): Boolean = prefs(context).getBoolean(REMEMBER_LOGIN, true)
@@ -45,13 +45,16 @@ object SonHarfPreferences {
     fun friendRequestNotificationsEnabled(context: Context): Boolean = prefs(context).getBoolean(FRIEND_REQUEST_NOTIFICATIONS, prefs(context).getBoolean(NOTIFICATIONS, true))
     fun systemNotificationsEnabled(context: Context): Boolean = prefs(context).getBoolean(SYSTEM_NOTIFICATIONS, prefs(context).getBoolean(NOTIFICATIONS, true))
 
-    fun setSoundEnabled(context: Context, value: Boolean) { prefs(context).edit().putBoolean(SOUND, value).apply(); SonHarfSoundFx.setEnabled(value) }
+    fun setSoundEnabled(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(SOUND, value).apply()
+        SonHarfSoundFx.setEnabled(value)
+        SonHarfBackgroundMusic.setEnabled(context, value)
+    }
     fun setVibrationEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(VIBRATION, value).apply()
     fun setDarkModeEnabled(context: Context, value: Boolean) {
-        // Lethara currently has one canonical production appearance: the dark fantasy theme.
-        // Keep the legacy API for compatibility, but do not allow stale light-theme preferences to override branding.
-        prefs(context).edit().putBoolean(DARK_MODE, true).apply()
-        SonHarfUiState.darkMode = true
+        // The active product uses one canonical light appearance.
+        prefs(context).edit().putBoolean(DARK_MODE, false).apply()
+        SonHarfUiState.darkMode = false
     }
     fun setRememberLogin(context: Context, value: Boolean, email: String = "") {
         val editor = prefs(context).edit().putBoolean(REMEMBER_LOGIN, value)
@@ -122,11 +125,15 @@ object SonHarfPreferences {
         else -> ""
     }
 
-    fun syncSound(context: Context) = SonHarfSoundFx.setEnabled(soundEnabled(context))
+    fun syncSound(context: Context) {
+        val enabled = soundEnabled(context)
+        SonHarfSoundFx.setEnabled(enabled)
+        SonHarfBackgroundMusic.setEnabled(context, enabled)
+    }
     fun syncUi(context: Context) {
-        SonHarfUiState.darkMode = true
+        SonHarfUiState.darkMode = false
         SonHarfUiState.language = language(context)
-        prefs(context).edit().putBoolean(DARK_MODE, true).apply()
+        prefs(context).edit().putBoolean(DARK_MODE, false).apply()
     }
 
     fun hapticTap(context: Context) {

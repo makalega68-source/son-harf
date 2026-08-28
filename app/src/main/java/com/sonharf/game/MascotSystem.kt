@@ -31,10 +31,10 @@ internal data class MascotAnimationDef(
 
 internal object MascotMotionPolicy {
     private val oneShotDurations = mapOf(
-        MascotMotion.GREETING to 1_650L,
-        MascotMotion.CRITICAL to 1_250L,
-        MascotMotion.VICTORY to 2_050L,
-        MascotMotion.DEFEAT to 1_850L,
+        MascotMotion.GREETING to 1_450L,
+        MascotMotion.CRITICAL to 1_150L,
+        MascotMotion.VICTORY to 2_250L,
+        MascotMotion.DEFEAT to 1_700L,
     )
 
     private val priorities = mapOf(
@@ -66,15 +66,15 @@ internal object MascotAnimationRegistry {
         MascotAnimationDef(
             id = motion.name.lowercase(),
             motion = motion,
-            clipName = MascotCatalog.clip(MascotCatalog.DEFAULT_ID, motion),
+            clipName = MascotCatalog.clip(MascotCatalog.CHIBI_WIZARD_ID, motion),
             unlockLevel = 1,
             loop = MascotMotionPolicy.loops(motion),
         )
     }
 
     fun definition(motion: MascotMotion): MascotAnimationDef = all.first { it.motion == motion }
-    fun unlocked(level: Int): List<MascotAnimationDef> = all.filter { level.coerceAtLeast(1) >= it.unlockLevel }
-    fun nextUnlockLevel(level: Int): Int = ((level.coerceAtLeast(1) / 10) + 1) * 10
+    fun unlocked(level: Int): List<MascotAnimationDef> = all
+    fun nextUnlockLevel(level: Int): Int = Int.MAX_VALUE
 }
 
 internal object MascotRuntime {
@@ -82,8 +82,7 @@ internal object MascotRuntime {
         private set
     var message by mutableStateOf("")
         private set
-    var petName by mutableStateOf("Dostum")
-        private set
+    val petName: String get() = "Chibi"
     var playerLevel by mutableIntStateOf(1)
         private set
     var playerXp by mutableIntStateOf(0)
@@ -91,9 +90,7 @@ internal object MascotRuntime {
     var inActiveMatch by mutableStateOf(false)
         private set
 
-    fun rename(value: String) {
-        petName = value.trim().take(18).ifBlank { "Dostum" }
-    }
+    fun rename(value: String) = Unit
 
     fun syncProgress(xp: Int, level: Int) {
         playerXp = xp.coerceAtLeast(0)
@@ -108,28 +105,39 @@ internal object MascotRuntime {
         next: MascotMotion,
         language: String = SonHarfUiState.language,
         force: Boolean = false,
+        customMessage: String? = null,
     ) {
         if (!force && next != motion && !MascotMotionPolicy.canInterrupt(motion, next)) return
-        if (next == motion && !force) return
+        if (next == motion && !force && customMessage == null) return
         motion = next
-        message = localizedMessage(next, language)
+        message = customMessage
+            ?.trim()
+            ?.replace(Regex("\\s+"), " ")
+            ?.take(140)
+            ?.takeIf { it.isNotBlank() }
+            ?: localizedMessage(next, language)
+    }
+
+    fun say(
+        text: String,
+        motion: MascotMotion = MascotMotion.LOOK_AT_PLAYER,
+        force: Boolean = true,
+    ) {
+        react(motion, force = force, customMessage = text)
     }
 
     private fun localizedMessage(motion: MascotMotion, language: String): String {
         val en = language == "en"
-        val character = LetharaLore.characterForMascot(MascotSelectionRuntime.selectedId)
         return when (motion) {
-            MascotMotion.GREETING -> if (en) "The seal stirs. I'm ready." else "Mühür kıpırdandı. Hazırım."
-            MascotMotion.THINKING -> if (en) "Quiet... the Word Weave is moving." else "Sessiz... Söz Dokusu hareket ediyor."
-            MascotMotion.CRITICAL -> if (en) "Hold the final letter!" else "Son harfi bırakma!"
-            MascotMotion.VICTORY -> if (en) "A memory spark! The old stars saw that." else "Bir hafıza kıvılcımı! Eski yıldızlar bunu gördü."
-            MascotMotion.DEFEAT -> if (en) "The weave bent, not broke." else "Doku büküldü, kırılmadı."
-            MascotMotion.LOOK_AT_PLAYER -> if (en) "I'm listening, Remembrancer." else "Dinliyorum, Hatırlatıcı."
-            MascotMotion.SIT -> if (en) "Even seals need a quiet moment." else "Mühürlerin bile sessiz bir ana ihtiyacı olur."
-            MascotMotion.RUN -> if (en) "The path is open!" else "Yol açıldı!"
-            MascotMotion.IDLE -> if (playerXp > 0 && playerXp % 90 == 0) {
-                LetharaLore.randomWhisper(character, language, playerXp + playerLevel)
-            } else ""
+            MascotMotion.GREETING -> if (en) "Chibi's here. Let's get moving." else "Chibi burada. Hadi akışı başlatalım."
+            MascotMotion.THINKING -> if (en) "Final letter first. Then choose calmly." else "Önce son harf. Sonra sakin seç."
+            MascotMotion.CRITICAL -> if (en) "Clock's running! Pick the safe word." else "Süre gidiyor! Güvenli kelimeyi seç."
+            MascotMotion.VICTORY -> if (en) "That was clean! I like this streak." else "İşte bu! Bu oyun hoşuma gitti."
+            MascotMotion.DEFEAT -> if (en) "Shake it off. Next chain, better move." else "Bitti gitti. Sonraki zincirde daha iyisini yaparız."
+            MascotMotion.LOOK_AT_PLAYER -> if (en) "I'm watching. Your move." else "Seni izliyorum. Hamle sende."
+            MascotMotion.SIT -> if (en) "Tiny break. Then back in." else "Mini mola. Sonra yine oyundayız."
+            MascotMotion.RUN -> if (en) "I'm coming—let's play!" else "Geliyorum—hadi oynayalım!"
+            MascotMotion.IDLE,
             MascotMotion.WALK,
             MascotMotion.TURN_LEFT,
             MascotMotion.TURN_RIGHT -> ""
@@ -140,7 +148,6 @@ internal object MascotRuntime {
 @Composable
 internal fun MascotBehaviorBridge() {
     val activeMotion = MascotRuntime.motion
-    MascotSoundBridge(activeMotion)
     androidx.compose.runtime.LaunchedEffect(activeMotion) {
         val duration = MascotMotionPolicy.durationMs(activeMotion) ?: return@LaunchedEffect
         kotlinx.coroutines.delay(duration)

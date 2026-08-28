@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import com.sonharf.game.mascotdata3.ChibiEmbeddedModel
-import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.MessageDigest
@@ -12,45 +11,18 @@ import org.junit.Test
 
 class MascotPolicyTest {
     @Test
-    fun nerisIsDefaultAndEveIsParked() {
+    fun singleDarkChibiMascotIsTheOnlyCatalogEntry() {
         assertTrue(MascotPolicy.ENABLED)
         assertFalse(MascotPolicy.ALLOW_2D_OR_VIDEO_FALLBACK)
-        assertFalse(MascotPolicy.EVE_ACTIVE)
-        assertEquals(MascotCatalog.CHIBI_WIZARD_ID, MascotCatalog.DEFAULT_ID)
-        assertEquals(MascotCatalog.CHIBI_WIZARD_ID, MascotPolicy.ACTIVE_MASCOT_ID)
-        assertEquals(MascotCatalog.DEFAULT_ID, MascotPolicy.DEFAULT_MASCOT_ID)
-        assertTrue(MascotCatalog.item(MascotCatalog.DEFAULT_ID).standard)
-        assertTrue(MascotCatalog.item(MascotCatalog.DEFAULT_ID).licensedForCommercialGame)
+        assertEquals(MascotCatalog.CHIBI_WIZARD_ID, MascotPolicy.DEFAULT_MASCOT_ID)
+        assertEquals(1, MascotCatalog.all.size)
+        assertEquals(MascotCatalog.CHIBI_WIZARD_ID, MascotCatalog.all.single().id)
+        assertTrue(MascotCatalog.all.single().standard)
+        assertTrue(MascotCatalog.all.single().licensedForCommercialGame)
     }
 
     @Test
-    fun verifiedWhiteLyraUsesDedicatedWhiteChibiAsset() {
-        val file = listOf(
-            File("src/main/assets/${MascotPolicy.WHITE_MASCOT_ASSET}"),
-            File("app/src/main/assets/${MascotPolicy.WHITE_MASCOT_ASSET}"),
-        ).firstOrNull(File::isFile)
-        assertTrue("Dedicated white Lyra GLB is missing", file != null)
-
-        val bytes = requireNotNull(file).readBytes()
-        assertEquals(MascotPolicy.WHITE_MASCOT_SIZE_BYTES.toLong(), bytes.size.toLong())
-        assertEquals(MascotPolicy.WHITE_MASCOT_SHA256, sha256(bytes))
-        assertEquals("models/lyra_white_chibi.glb", MascotPolicy.WHITE_MASCOT_ASSET)
-        assertGlb2(bytes)
-
-        val json = glbJson(bytes)
-        assertTrue(json.contains("\"name\":\"Mage_Cat_Lyra_White\""))
-        assertTrue(json.contains("\"skins\""))
-        assertTrue(json.contains("\"animations\""))
-        ChibiEmbeddedModel.ANIMATION_NAMES.forEach { name ->
-            assertTrue("Missing Lyra Chibi animation: $name", json.contains("\"name\":\"$name\""))
-        }
-
-        val original = ChibiEmbeddedModel.decodeGlb()
-        assertFalse("Lyra must not be byte-identical to Neris", sha256(original) == sha256(bytes))
-    }
-
-    @Test
-    fun animatedChibiDecodesWithExactIntegrityAndNineRuntimeAnimations() {
+    fun darkChibiDecodesWithExactIntegrityAndRuntimeAnimations() {
         val bytes = ChibiEmbeddedModel.decodeGlb()
         assertEquals(ChibiEmbeddedModel.EXPECTED_BYTES, bytes.size.toLong())
         assertEquals(ChibiEmbeddedModel.EXPECTED_SHA256, sha256(bytes))
@@ -65,64 +37,16 @@ class MascotPolicyTest {
     }
 
     @Test
-    fun onlyCommerciallyApprovedCatalogEntriesCanBeActivated() {
-        assertTrue(MascotCatalog.all.all { it.licensedForCommercialGame })
-        assertTrue(MascotPolicy.CHIBI_WIZARD_LICENSE_APPROVED)
-        assertTrue(MascotPolicy.CHIBI_WIZARD_ASSET_READY)
-    }
-
-    @Test
-    fun nerisMotionSoundsStayNonVerbalAndContextual() {
-        assertEquals(MascotSoundCue.LAUGH, MascotSoundPolicy.cueForMotion(MascotMotion.VICTORY))
-        assertEquals(MascotSoundCue.SAD, MascotSoundPolicy.cueForMotion(MascotMotion.DEFEAT))
-        assertEquals(MascotSoundCue.EXCITED, MascotSoundPolicy.cueForMotion(MascotMotion.CRITICAL))
-        assertEquals(MascotSoundCue.EXCITED, MascotSoundPolicy.cueForMotion(MascotMotion.RUN))
-        assertEquals(MascotSoundCue.BORED, MascotSoundPolicy.cueForMotion(MascotMotion.SIT))
-        assertEquals(MascotSoundCue.MISS_YOU, MascotSoundPolicy.cueForMotion(MascotMotion.LOOK_AT_PLAYER))
-        assertEquals(null, MascotSoundPolicy.cueForMotion(MascotMotion.THINKING))
-        assertTrue(MascotSoundPolicy.VOLUME <= 0.20f)
+    fun whiteMascotIdentifiersAreGoneFromCatalogAndPolicy() {
+        val catalog = MascotCatalog.all.joinToString(" ") { it.id + it.nameTr + it.nameEn }
+        assertFalse(catalog.contains("white", ignoreCase = true))
+        assertFalse(catalog.contains("beyaz", ignoreCase = true))
+        assertFalse(catalog.contains("lyra", ignoreCase = true))
     }
 
     @Test
     fun genericMotionRegistryCoversEveryMotion() {
         assertEquals(MascotMotion.entries.toSet(), MascotAnimationRegistry.all.map { it.motion }.toSet())
-    }
-
-    @Test
-    fun oneShotMotionsCannotBeInterruptedByIdle() {
-        listOf(
-            MascotMotion.GREETING,
-            MascotMotion.CRITICAL,
-            MascotMotion.VICTORY,
-            MascotMotion.DEFEAT,
-        ).forEach { motion ->
-            assertTrue(MascotMotionPolicy.isOneShot(motion))
-            assertFalse(MascotMotionPolicy.loops(motion))
-            assertTrue((MascotMotionPolicy.durationMs(motion) ?: 0L) > 0L)
-            assertFalse(MascotMotionPolicy.canInterrupt(motion, MascotMotion.IDLE))
-        }
-    }
-
-    @Test
-    fun matchResultOverridesLowerPriorityMascotReactions() {
-        assertTrue(MascotMotionPolicy.canInterrupt(MascotMotion.CRITICAL, MascotMotion.VICTORY))
-        assertTrue(MascotMotionPolicy.canInterrupt(MascotMotion.GREETING, MascotMotion.DEFEAT))
-        assertFalse(MascotMotionPolicy.canInterrupt(MascotMotion.VICTORY, MascotMotion.CRITICAL))
-        assertTrue(MascotMotionPolicy.priority(MascotMotion.VICTORY) > MascotMotionPolicy.priority(MascotMotion.CRITICAL))
-    }
-
-    @Test
-    fun runtimeHonorsOneShotProtectionAndForceReset() {
-        MascotRuntime.react(MascotMotion.IDLE, force = true)
-        MascotRuntime.react(MascotMotion.GREETING, force = true)
-        MascotRuntime.react(MascotMotion.IDLE)
-        assertEquals(MascotMotion.GREETING, MascotRuntime.motion)
-
-        MascotRuntime.react(MascotMotion.VICTORY)
-        assertEquals(MascotMotion.VICTORY, MascotRuntime.motion)
-
-        MascotRuntime.react(MascotMotion.IDLE, force = true)
-        assertEquals(MascotMotion.IDLE, MascotRuntime.motion)
     }
 
     private fun assertGlb2(bytes: ByteArray) {

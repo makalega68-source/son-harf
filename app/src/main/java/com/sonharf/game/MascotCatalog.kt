@@ -16,41 +16,36 @@ internal data class MascotCatalogItem(
 )
 
 internal object MascotCatalog {
-    const val LEGACY_WHITE_ID = "mascot_white"
     const val CHIBI_WIZARD_ID = "mascot_chibi_wizard"
     const val DEFAULT_ID = CHIBI_WIZARD_ID
-    const val WHITE_ASSET = "models/lyra_white_chibi.glb"
 
-    // Product contract: Son Harf has one active mascot. Legacy Lyra assets remain packaged only
-    // for migration/rollback compatibility and are never surfaced by active selection.
     val all = listOf(
         MascotCatalogItem(
             id = CHIBI_WIZARD_ID,
-            nameTr = "Neris — Gölge Bilgesi",
-            nameEn = "Neris — Shadow Sage",
+            nameTr = "Chibi",
+            nameEn = "Chibi",
             standard = true,
             licensedForCommercialGame = true,
         ),
     )
 
     fun item(id: String?): MascotCatalogItem =
-        all.firstOrNull { it.id == id } ?: all.first { it.id == DEFAULT_ID }
+        all.firstOrNull { it.id == id } ?: all.first()
 
-    fun isAssetReady(context: Context, id: String): Boolean = when (id) {
-        LEGACY_WHITE_ID -> runCatching { context.assets.open(WHITE_ASSET).use { } }.isSuccess
-        CHIBI_WIZARD_ID -> runCatching { ChibiEmbeddedModel.ensureFile(context).isFile }.getOrDefault(false)
-        else -> false
-    }
+    fun isAssetReady(context: Context, id: String): Boolean =
+        id == CHIBI_WIZARD_ID &&
+            runCatching { ChibiEmbeddedModel.ensureFile(context).isFile }.getOrDefault(false)
 
-    fun modelLocation(context: Context, id: String): String? = when (id) {
-        LEGACY_WHITE_ID -> WHITE_ASSET.takeIf { isAssetReady(context, id) }
-        CHIBI_WIZARD_ID -> runCatching { Uri.fromFile(ChibiEmbeddedModel.ensureFile(context)).toString() }.getOrNull()
-        else -> null
-    }
+    fun modelLocation(context: Context, id: String): String? =
+        if (id == CHIBI_WIZARD_ID) {
+            runCatching { Uri.fromFile(ChibiEmbeddedModel.ensureFile(context)).toString() }.getOrNull()
+        } else {
+            null
+        }
 
-    fun clip(id: String, motion: MascotMotion): String = when (id) {
-        LEGACY_WHITE_ID,
-        CHIBI_WIZARD_ID -> when (motion) {
+    fun clip(id: String, motion: MascotMotion): String {
+        if (id != CHIBI_WIZARD_ID) return "Idle"
+        return when (motion) {
             MascotMotion.WALK -> "Walk"
             MascotMotion.TURN_LEFT -> "Turn_Left"
             MascotMotion.TURN_RIGHT -> "Turn_Right"
@@ -58,13 +53,12 @@ internal object MascotCatalog {
             MascotMotion.VICTORY -> "Special_Attack"
             MascotMotion.DEFEAT -> "Hurt"
             MascotMotion.CRITICAL -> "Attack"
-            MascotMotion.IDLE,
-            MascotMotion.LOOK_AT_PLAYER,
-            MascotMotion.GREETING,
+            MascotMotion.GREETING -> "Turn_Right"
             MascotMotion.THINKING,
+            MascotMotion.LOOK_AT_PLAYER -> "Turn_Left"
+            MascotMotion.IDLE,
             MascotMotion.SIT -> "Idle"
         }
-        else -> "Idle"
     }
 }
 
@@ -72,30 +66,29 @@ internal object MascotSelectionRuntime {
     private const val PREFS = "son_harf_mascot_selection"
     private const val KEY = "selected_mascot_id"
 
-    var selectedId by mutableStateOf(MascotCatalog.DEFAULT_ID)
+    var selectedId by mutableStateOf(MascotCatalog.CHIBI_WIZARD_ID)
         private set
 
     private var loaded = false
 
     fun load(context: Context) {
         if (loaded) return
-        val stored = context.applicationContext
+        selectedId = MascotCatalog.CHIBI_WIZARD_ID
+        context.applicationContext
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(KEY, MascotCatalog.DEFAULT_ID)
-        val requested = MascotCatalog.item(stored).id
-        selectedId = if (MascotCatalog.isAssetReady(context, requested)) requested else MascotCatalog.DEFAULT_ID
+            .edit()
+            .putString(KEY, MascotCatalog.CHIBI_WIZARD_ID)
+            .apply()
         loaded = true
     }
 
     fun select(context: Context, id: String) {
-        val requested = MascotCatalog.item(id).id
-        val resolved = if (MascotCatalog.isAssetReady(context, requested)) requested else MascotCatalog.DEFAULT_ID
-        selectedId = resolved
-        loaded = true
+        selectedId = MascotCatalog.CHIBI_WIZARD_ID
         context.applicationContext
             .getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit()
-            .putString(KEY, resolved)
+            .putString(KEY, MascotCatalog.CHIBI_WIZARD_ID)
             .apply()
+        loaded = true
     }
 }

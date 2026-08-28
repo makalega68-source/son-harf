@@ -1,24 +1,32 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -48,7 +56,10 @@ private val TGtext = Color(0xFF182235)
 private val TGmuted = Color(0xFF718096)
 
 @Composable
-fun TargetNeonGameScreen(autoStartMatchmaking: Boolean = false) {
+fun TargetNeonGameScreen(
+    autoStartMatchmaking: Boolean = false,
+    showEntryMascotIntro: Boolean = false,
+) {
     if (!SupabaseProvider.configured) {
         Box(Modifier.fillMaxSize().background(TGbg), contentAlignment = Alignment.Center) { Text("Sunucu bağlantısı yok", color = TGtext) }
         return
@@ -73,6 +84,7 @@ fun TargetNeonGameScreen(autoStartMatchmaking: Boolean = false) {
     var chatJob by remember { mutableStateOf<Job?>(null) }
     var matchJob by remember { mutableStateOf<Job?>(null) }
     var autoStartConsumed by remember(autoStartMatchmaking) { mutableStateOf(false) }
+    var entryIntroVisible by remember(showEntryMascotIntro) { mutableStateOf(showEntryMascotIntro) }
 
     fun friendly(raw: String) = when {
         "not_your_turn" in raw -> "Sıra rakibinde."
@@ -165,8 +177,8 @@ fun TargetNeonGameScreen(autoStartMatchmaking: Boolean = false) {
         busy = false
     }
 
-    LaunchedEffect(autoStartMatchmaking, profile?.id, room?.id, busy) {
-        if (autoStartMatchmaking && !autoStartConsumed && profile != null && room == null && !busy) {
+    LaunchedEffect(autoStartMatchmaking, profile?.id, room?.id, busy, entryIntroVisible) {
+        if (autoStartMatchmaking && !entryIntroVisible && !autoStartConsumed && profile != null && room == null && !busy) {
             autoStartConsumed = true
             startRandomSearch()
         }
@@ -177,6 +189,8 @@ fun TargetNeonGameScreen(autoStartMatchmaking: Boolean = false) {
         if (active == null) {
             TargetLobby(
                 playerName = profile?.displayName ?: "Oyuncu",
+                playerAvatarPath = profile?.avatarPath,
+                playerGender = profile?.gender,
                 language = language,
                 matching = matching,
                 busy = busy,
@@ -281,12 +295,82 @@ fun TargetNeonGameScreen(autoStartMatchmaking: Boolean = false) {
                 },
             )
         }
+
+        if (entryIntroVisible) {
+            FirstEntryMascotIntro(
+                onFinished = { entryIntroVisible = false },
+            )
+        }
+    }
+}
+
+@Composable
+private fun FirstEntryMascotIntro(onFinished: () -> Unit) {
+    val scale = remember { Animatable(0.48f) }
+    val offsetY = remember { Animatable(-260f) }
+    val offsetX = remember { Animatable(120f) }
+    var motion by remember { mutableStateOf(MascotMotion.RUN) }
+    var speechVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.coroutineScope {
+            launch { scale.animateTo(1.18f, animationSpec = tween(1050)) }
+            launch { offsetY.animateTo(0f, animationSpec = tween(1050)) }
+            launch { offsetX.animateTo(0f, animationSpec = tween(1050)) }
+        }
+        motion = MascotMotion.LOOK_AT_PLAYER
+        speechVisible = true
+        SonHarfSoundFx.softNotify()
+        delay(1800)
+        onFinished()
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color.White.copy(alpha = .97f),
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                MascotLive3DStage(
+                    modifier = Modifier
+                        .size(width = 230.dp, height = 270.dp)
+                        .graphicsLayer {
+                            translationX = offsetX.value
+                            translationY = offsetY.value
+                            scaleX = scale.value
+                            scaleY = scale.value
+                        },
+                    mascotId = MascotCatalog.CHIBI_WIZARD_ID,
+                    motion = motion,
+                    displayScale = 1.70f,
+                    brightnessBoost = 1.16f,
+                )
+                if (speechVisible) {
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = TGpanel,
+                        border = BorderStroke(1.dp, TGcyan.copy(alpha = .35f)),
+                        shadowElevation = 5.dp,
+                    ) {
+                        Text(
+                            sh("Seni özledim!", "I missed you!"),
+                            modifier = Modifier.padding(horizontal = 22.dp, vertical = 12.dp),
+                            color = TGtext,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
 private fun TargetLobby(
     playerName: String,
+    playerAvatarPath: String?,
+    playerGender: String?,
     language: String,
     matching: Boolean,
     busy: Boolean,
@@ -312,9 +396,9 @@ private fun TargetLobby(
         Text(if (matching) "RAKİP BULUNUYOR" else "DÜELLO", color = TGtext, fontWeight = FontWeight.Black, fontSize = 18.sp)
         if (matching) {
             Text("RAKİP\nBULUNUYOR!", color = TGcyan, fontWeight = FontWeight.Black, fontSize = 36.sp, textAlign = TextAlign.Center, lineHeight = 38.sp)
-            TargetMatchCard(playerName, "Usta", "1250", TGcyan)
+            TargetMatchCard(playerName, playerAvatarPath, playerGender, "Usta", "1250", TGcyan)
             Text("VS", color = TGpurple, fontWeight = FontWeight.Black, fontSize = 42.sp)
-            TargetMatchCard("RAKİP ARANIYOR", "…", "", TGpink)
+            TargetMatchCard("RAKİP ARANIYOR", null, null, "…", "", TGpink)
             Spacer(Modifier.weight(1f))
             CircularProgressIndicator(color = TGcyan, strokeWidth = 3.dp)
             OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(50.dp), border = BorderStroke(1.dp, TGpink), shape = RoundedCornerShape(16.dp)) { Text("İPTAL", color = TGpink, fontWeight = FontWeight.Black) }
@@ -361,10 +445,23 @@ private fun TargetLobby(
 }
 
 @Composable
-private fun TargetMatchCard(name: String, rank: String, score: String, accent: Color) {
+private fun TargetMatchCard(
+    name: String,
+    avatarPath: String?,
+    gender: String?,
+    rank: String,
+    score: String,
+    accent: Color,
+) {
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, accent)) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            TargetAvatar(name, accent, 54.dp)
+            ProfilePhotoAvatarWithGender(
+                avatarPath = avatarPath,
+                gender = gender,
+                name = name,
+                size = 54.dp,
+                accent = accent,
+            )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) { Text(name, color = TGtext, fontWeight = FontWeight.Black, fontSize = 17.sp); Text(rank, color = accent, fontSize = 10.sp) }
             if (score.isNotBlank()) Text("🏆 $score", color = TGgold, fontWeight = FontWeight.Bold)
@@ -405,11 +502,16 @@ private fun TargetArena(
     val myTurn = room.currentPlayerId == me && room.status in listOf("playing", "final", "sudden_death")
     var seconds by remember(room.turnDeadline) { mutableStateOf(45) }
     val focus = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
+    val wordFocusRequester = remember { FocusRequester() }
     var showChat by remember { mutableStateOf(false) }
     var showChain by remember { mutableStateOf(false) }
     var showVipNotice by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
     var confirmForfeit by remember { mutableStateOf(false) }
+    var resultAiLine by remember(room.id) { mutableStateOf("") }
     DisposableEffect(room.id) {
         SonHarfUiState.inMatch = true
         MascotRuntime.setMatchActive(true)
@@ -421,6 +523,63 @@ private fun TargetArena(
         }
     }
     BackHandler(enabled = room.status != "finished") { confirmForfeit = true }
+
+    LaunchedEffect(myTurn, busy, room.currentPlayerId, room.status) {
+        if (room.status !in listOf("playing", "final", "sudden_death")) return@LaunchedEffect
+        if (myTurn && !busy) {
+            MascotRuntime.react(
+                MascotMotion.THINKING,
+                force = true,
+                customMessage = sh("Hamle sende. Son harfi yakala.", "Your move. Catch the final letter."),
+            )
+            delay(180)
+            runCatching { wordFocusRequester.requestFocus() }
+            keyboard?.show()
+        } else {
+            focus.clearFocus()
+            keyboard?.hide()
+            MascotRuntime.react(
+                MascotMotion.LOOK_AT_PLAYER,
+                force = true,
+                customMessage = sh("Rakibi izliyorum… sıra birazdan sende.", "Watching the rival… your turn is next."),
+            )
+        }
+    }
+
+    LaunchedEffect(words.size) {
+        val last = words.lastOrNull() ?: return@LaunchedEffect
+        if (room.status !in listOf("playing", "final", "sudden_death")) return@LaunchedEffect
+        if (last.playerId == me) {
+            MascotRuntime.react(
+                MascotMotion.GREETING,
+                force = true,
+                customMessage = sh("Güzel kelime! Zincir devam ediyor.", "Nice word! Keep the chain moving."),
+            )
+        } else if (room.currentPlayerId == me) {
+            MascotRuntime.react(
+                MascotMotion.THINKING,
+                force = true,
+                customMessage = sh("Sıra sende. Cevabı buluyorum.", "Your turn. I'm thinking with you."),
+            )
+        }
+    }
+
+    LaunchedEffect(room.id, room.status) {
+        val ambient = listOf(MascotMotion.TURN_LEFT, MascotMotion.WALK, MascotMotion.TURN_RIGHT)
+        var ambientIndex = 0
+        while (room.status in listOf("playing", "final", "sudden_death")) {
+            delay(6_000)
+            if (MascotRuntime.motion == MascotMotion.IDLE) {
+                val next = ambient[ambientIndex % ambient.size]
+                ambientIndex += 1
+                MascotRuntime.react(next, force = true)
+                delay(1_250)
+                if (MascotRuntime.motion == next) {
+                    MascotRuntime.react(MascotMotion.IDLE, force = true)
+                }
+            }
+        }
+    }
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
         var criticalShown = false
@@ -445,32 +604,129 @@ private fun TargetArena(
 
     LaunchedEffect(room.status, room.winnerId) {
         if (room.status == "finished") {
+            val won = room.winnerId == me
+            val localLine = if (won) {
+                sh("İşte bu! Chibi kutlamaya hazır.", "That's it! Chibi is ready to celebrate.")
+            } else {
+                sh("Bu maç bitti; sıradaki zincirde yanındayım.", "This match is done; I'm with you for the next chain.")
+            }
+            resultAiLine = localLine
             MascotRuntime.react(
-                if (room.winnerId == me) MascotMotion.VICTORY else MascotMotion.DEFEAT,
+                if (won) MascotMotion.VICTORY else MascotMotion.DEFEAT,
                 force = true,
+                customMessage = localLine,
             )
+
+            val response = MascotAiChatService.chat(
+                MascotChatRequest(
+                    message = if (won)
+                        "Oyuncu Son Harf maçını kazandı. Chibi olarak kısa, doğal ve coşkulu tek cümle söyle."
+                    else
+                        "Oyuncu Son Harf maçını kaybetti. Chibi olarak kısa, doğal ve destekleyici tek cümle söyle.",
+                    language = room.language,
+                    playerName = playerName,
+                    companionName = "Chibi",
+                    gameContext = if (won)
+                        "Verified event: player won the current Son Harf match. Celebrate without inventing stats."
+                    else
+                        "Verified event: player lost the current Son Harf match. Encourage without inventing stats.",
+                    mascotId = MascotCatalog.CHIBI_WIZARD_ID,
+                    mascotTitle = "Chibi",
+                    mascotPersonality = "Lively, playful, concise and emotionally responsive.",
+                )
+            )
+            val cleanReply = response.reply.trim().take(120)
+            if (cleanReply.isNotBlank()) {
+                resultAiLine = cleanReply
+                MascotRuntime.react(
+                    if (won) MascotMotion.VICTORY else MascotMotion.LOOK_AT_PLAYER,
+                    force = true,
+                    customMessage = cleanReply,
+                )
+            }
         }
     }
 
     if (room.status == "finished") {
         BackHandler { onExit() }
-        Box(Modifier.fillMaxSize().background(TGbg), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(sh("DÜELLO TAMAMLANDI", "DUEL COMPLETE"), color = TGtext, fontWeight = FontWeight.Black, fontSize = 24.sp)
-                MascotLive3DStage(
-                    modifier = Modifier.size(width = 110.dp, height = 130.dp),
-                    motion = MascotRuntime.motion,
+        val won = room.winnerId == me
+        Column(
+            Modifier
+                .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
+                .padding(horizontal = 20.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                if (won) sh("KAZANDIN!", "YOU WON!") else sh("MAÇ TAMAMLANDI", "MATCH COMPLETE"),
+                color = if (won) TGgreen else TGtext,
+                fontWeight = FontWeight.Black,
+                fontSize = 28.sp,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(8.dp))
+            if (won) {
+                ChibiVictoryFlight(
+                    message = resultAiLine.ifBlank { sh("İşte bu! Güzel maçtı.", "That's it! Great match.") },
                 )
-                Text(sh("Sonuç özeti açılmazsa ana menüye güvenle dönebilirsin.", "If the result summary does not open, you can safely return home."), color = TGmuted, fontSize = 12.sp, textAlign = TextAlign.Center)
-                Button(onClick = onExit, colors = ButtonDefaults.buttonColors(containerColor = TGcyan)) {
-                    Text(sh("ANA MENÜ", "HOME"), color = Color.White, fontWeight = FontWeight.Black)
+            } else {
+                MascotLive3DStage(
+                    modifier = Modifier.size(width = 190.dp, height = 210.dp),
+                    mascotId = MascotCatalog.CHIBI_WIZARD_ID,
+                    motion = MascotRuntime.motion,
+                    displayScale = 1.58f,
+                    brightnessBoost = 1.16f,
+                )
+                if (resultAiLine.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = TGpanel2,
+                        border = BorderStroke(1.dp, TGcyan.copy(alpha = .22f)),
+                    ) {
+                        Text(
+                            resultAiLine,
+                            Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            color = TGtext,
+                            fontSize = 13.sp,
+                            lineHeight = 17.sp,
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(18.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(
+                    onClick = onRematch,
+                    modifier = Modifier.weight(1f).height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = TGblue),
+                ) {
+                    Text(sh("RÖVANŞ", "REMATCH"), color = Color.White, fontWeight = FontWeight.Black)
+                }
+                OutlinedButton(
+                    onClick = onExit,
+                    modifier = Modifier.weight(1f).height(54.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, TGcyan),
+                ) {
+                    Text(sh("ANA MENÜ", "HOME"), color = TGblue, fontWeight = FontWeight.Black)
                 }
             }
         }
         return
     }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 14.dp).imePadding()) {
+    Column(
+        Modifier
+            .fillMaxSize()
+            .windowInsetsPadding(WindowInsets.safeDrawing)
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 14.dp, vertical = 8.dp)
+    ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
             TargetArenaPlayer(playerName, playerAvatarPath, playerGender, true, myScore, myRounds, myTurn, TGcyan, Modifier.weight(1f))
             Spacer(Modifier.width(8.dp))
@@ -481,21 +737,44 @@ private fun TargetArena(
             TargetArenaPlayer(opponentName, opponentAvatarPath, opponentGender, opponentAvatarVisible, oppScore, oppRounds, !myTurn, TGpink, Modifier.weight(1f))
         }
 
-        Spacer(Modifier.height(14.dp))
-        Box(Modifier.fillMaxWidth().height(64.dp)) {
-            Text(
-                "TUR ${room.roundNo}/3",
-                color = TGtext,
-                fontWeight = FontWeight.Black,
-                fontSize = 13.sp,
-                modifier = Modifier.align(Alignment.Center),
-            )
+        Spacer(Modifier.height(10.dp))
+        Box(Modifier.fillMaxWidth().height(126.dp)) {
+            Column(
+                modifier = Modifier.align(Alignment.CenterStart).fillMaxWidth(.62f),
+                verticalArrangement = Arrangement.spacedBy(5.dp),
+            ) {
+                Text(
+                    "TUR ${room.roundNo}/3",
+                    color = TGtext,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 14.sp,
+                )
+                if (MascotRuntime.message.isNotBlank()) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = TGpanel2,
+                        border = BorderStroke(1.dp, TGcyan.copy(alpha = .20f)),
+                    ) {
+                        Text(
+                            MascotRuntime.message,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                            color = TGtext,
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp,
+                            maxLines = 2,
+                        )
+                    }
+                }
+            }
             MascotLive3DStage(
-                modifier = Modifier.align(Alignment.CenterEnd).size(width = 58.dp, height = 64.dp),
+                modifier = Modifier.align(Alignment.CenterEnd).size(width = 150.dp, height = 126.dp),
+                mascotId = MascotCatalog.CHIBI_WIZARD_ID,
                 motion = MascotRuntime.motion,
+                displayScale = 1.58f,
+                brightnessBoost = 1.16f,
             )
         }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(6.dp))
 
         Card(colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .35f))) {
             Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -523,7 +802,7 @@ private fun TargetArena(
                             }
                             Spacer(Modifier.width(12.dp)); Text("✓", color = TGgreen, fontWeight = FontWeight.Black, fontSize = 22.sp)
                         }
-                        if (index != words.takeLast(5).lastIndex) HorizontalDivider(color = Color.White.copy(alpha = .08f))
+                        if (index != words.takeLast(5).lastIndex) HorizontalDivider(color = TGmuted.copy(alpha = .14f))
                     }
                 }
             }
@@ -534,15 +813,17 @@ private fun TargetArena(
             VipLockedAction("💬 SOHBET", isVip, { showChat = true }, { showVipNotice = true }, Modifier.weight(1f))
             VipLockedAction("⛓ KELİME ZİNCİRİ", isVip, { showChain = true }, { showVipNotice = true }, Modifier.weight(1f))
         }
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(10.dp))
 
         OutlinedTextField(
             value = wordInput,
             onValueChange = onWordInput,
             enabled = myTurn && !busy,
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(if (myTurn) "Kelimenizi yazın…" else "Rakibin sırası…") },
+            modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).focusRequester(wordFocusRequester),
+            textStyle = LocalTextStyle.current.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
+            label = { Text(sh("Kelimen", "Your word"), fontSize = 12.sp) },
+            placeholder = { Text(if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Rakibin sırası…", "Rival's turn…"), fontSize = 15.sp) },
             shape = RoundedCornerShape(16.dp),
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Text,
@@ -550,15 +831,48 @@ private fun TargetArena(
                 showKeyboardOnFocus = true,
                 hintLocales = LocaleList(Locale(if (room.language == "tr") "tr-TR" else "en-US")),
             ),
-            keyboardActions = KeyboardActions(onSend = { if (myTurn && wordInput.isNotBlank() && !busy) { focus.clearFocus(); onSubmit() } }),
-            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = TGcyan, unfocusedBorderColor = Color.White.copy(alpha = .16f), focusedTextColor = TGtext, unfocusedTextColor = TGtext),
+            keyboardActions = KeyboardActions(onSend = { if (myTurn && wordInput.isNotBlank() && !busy) onSubmit() }),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = TGcyan,
+                unfocusedBorderColor = Color(0xFFD5DEE9),
+                focusedTextColor = TGtext,
+                unfocusedTextColor = TGtext,
+                cursorColor = TGcyan,
+            ),
         )
         Spacer(Modifier.height(10.dp))
-        Button(onClick = { focus.clearFocus(); onSubmit() }, enabled = myTurn && wordInput.isNotBlank() && !busy, modifier = Modifier.fillMaxWidth().height(54.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(14.dp)) { Text("GÖNDER", fontWeight = FontWeight.Black, fontSize = 16.sp) }
-        Spacer(Modifier.height(8.dp))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { confirmForfeit = true }, modifier = Modifier.weight(1f), border = BorderStroke(1.dp, TGpink)) { Text("⚑ PES ET", color = TGpink, fontSize = 10.sp) }
-            Surface(modifier = Modifier.weight(1f), color = TGpanel, shape = RoundedCornerShape(12.dp)) { Text(notice, Modifier.padding(12.dp), color = TGmuted, fontSize = 9.sp, textAlign = TextAlign.Center) }
+        Button(
+            onClick = { onSubmit() },
+            enabled = myTurn && wordInput.isNotBlank() && !busy,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = TGblue,
+                contentColor = Color.White,
+                disabledContainerColor = Color(0xFFE2E7EE),
+                disabledContentColor = Color(0xFF8A94A3),
+            ),
+            shape = RoundedCornerShape(16.dp),
+        ) { Text(sh("GÖNDER", "SEND"), fontWeight = FontWeight.Black, fontSize = 17.sp) }
+        if (!imeVisible) {
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = { confirmForfeit = true },
+                    modifier = Modifier.weight(1f).height(46.dp),
+                    border = BorderStroke(1.dp, TGpink),
+                    shape = RoundedCornerShape(14.dp),
+                ) { Text("⚑ PES ET", color = TGpink, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                Surface(
+                    modifier = Modifier.weight(1f).heightIn(min = 46.dp),
+                    color = TGpanel2,
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, Color(0xFFD5DEE9)),
+                ) {
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
+                        Text(notice, color = TGmuted, fontSize = 10.sp, lineHeight = 13.sp, textAlign = TextAlign.Center, maxLines = 2)
+                    }
+                }
+            }
         }
 
         if (confirmForfeit) {
@@ -606,7 +920,7 @@ private fun TargetArena(
                     LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp)) {
                         items(words.takeLast(30)) { w ->
                             Text(w.word.uppercase(), modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp), color = TGtext, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                            HorizontalDivider(color = Color.White.copy(alpha = .08f))
+                            HorizontalDivider(color = TGmuted.copy(alpha = .14f))
                         }
                     }
                 },
@@ -656,6 +970,82 @@ private fun TargetArena(
                         ) { Text("GÖNDER") }
                     }
                 },
+            )
+        }
+    }
+}
+
+@Composable
+private fun ChibiVictoryFlight(message: String) {
+    val offsetX = remember { Animatable(0f) }
+    val offsetY = remember { Animatable(35f) }
+    val scale = remember { Animatable(.86f) }
+    val rotation = remember { Animatable(0f) }
+
+    LaunchedEffect(Unit) {
+        kotlinx.coroutines.coroutineScope {
+            launch {
+                offsetX.animateTo(-105f, tween(420))
+                offsetX.animateTo(115f, tween(520))
+                offsetX.animateTo(-55f, tween(380))
+                offsetX.animateTo(0f, tween(380))
+            }
+            launch {
+                offsetY.animateTo(-85f, tween(420))
+                offsetY.animateTo(15f, tween(520))
+                offsetY.animateTo(-35f, tween(380))
+                offsetY.animateTo(0f, tween(380))
+            }
+            launch {
+                scale.animateTo(1.18f, tween(420))
+                scale.animateTo(1.05f, tween(520))
+                scale.animateTo(1.15f, tween(380))
+                scale.animateTo(1.08f, tween(380))
+            }
+            launch {
+                rotation.animateTo(-10f, tween(420))
+                rotation.animateTo(12f, tween(520))
+                rotation.animateTo(-6f, tween(380))
+                rotation.animateTo(0f, tween(380))
+            }
+        }
+    }
+
+    Column(
+        Modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(Modifier.fillMaxWidth().height(280.dp), contentAlignment = Alignment.Center) {
+            MascotLive3DStage(
+                modifier = Modifier
+                    .size(width = 220.dp, height = 240.dp)
+                    .graphicsLayer {
+                        translationX = offsetX.value
+                        translationY = offsetY.value
+                        scaleX = scale.value
+                        scaleY = scale.value
+                        rotationZ = rotation.value
+                    },
+                mascotId = MascotCatalog.CHIBI_WIZARD_ID,
+                motion = MascotMotion.VICTORY,
+                displayScale = 1.68f,
+                brightnessBoost = 1.18f,
+            )
+        }
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = TGpanel2,
+            border = BorderStroke(1.dp, TGgreen.copy(alpha = .35f)),
+        ) {
+            Text(
+                message,
+                Modifier.padding(horizontal = 16.dp, vertical = 11.dp),
+                color = TGtext,
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
+                textAlign = TextAlign.Center,
+                fontWeight = FontWeight.SemiBold,
             )
         }
     }
