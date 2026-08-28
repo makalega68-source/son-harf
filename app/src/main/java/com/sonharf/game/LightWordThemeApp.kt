@@ -168,6 +168,15 @@ private fun LightHomeScreen(
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
+    var rival by remember { mutableStateOf<ArchRivalDto?>(null) }
+
+    LaunchedEffect(backend) {
+        val b = backend ?: return@LaunchedEffect
+        val me = b.currentUserId() ?: return@LaunchedEffect
+        profile = runCatching { b.getProfile(me) }.getOrNull()
+        growth = runCatching { b.getGrowthDashboard() }.getOrNull()
+        rival = runCatching { b.getArchRival() }.getOrNull()
+    }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -209,6 +218,26 @@ private fun LightHomeScreen(
                         Text("Seviye " + (growth?.level ?: 1), color = LightMuted, fontSize = 10.sp)
                     }
                     Text((growth?.currentWinStreak ?: 0).toString() + " 🔥", color = LightText, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+
+        if (rival != null) {
+            item {
+                val r = rival!!
+                Surface(shape = RoundedCornerShape(19.dp), color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
+                    Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(Modifier.size(42.dp), shape = CircleShape, color = LightGold.copy(alpha = .12f)) {
+                            Box(contentAlignment = Alignment.Center) { Text("⚔", fontSize = 22.sp) }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("EZELİ RAKİP", color = LightGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text(r.displayName, color = LightText, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            Text("${r.matches} maç • Sen ${r.wins} - ${r.losses} Rakip", color = LightMuted, fontSize = 10.sp)
+                        }
+                        Text("${r.myPoints}:${r.theirPoints}", color = LightText, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                    }
                 }
             }
         }
