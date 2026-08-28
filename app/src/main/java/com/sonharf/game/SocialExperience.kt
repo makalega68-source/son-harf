@@ -99,6 +99,24 @@ fun genderAvatarEmoji(gender: String?, fallbackIndex: Int = 0): String = when (g
 
 @Composable
 fun SocialAvatar(
+    gender: String?,
+    name: String,
+    size: Dp = 48.dp,
+    fallbackIndex: Int = 0,
+    accent: Color = SonHarfCyan,
+) {
+    SocialAvatar(
+        avatarPath = null,
+        gender = gender,
+        name = name,
+        size = size,
+        fallbackIndex = fallbackIndex,
+        accent = accent,
+    )
+}
+
+@Composable
+fun SocialAvatar(
     avatarPath: String?,
     gender: String?,
     name: String,
