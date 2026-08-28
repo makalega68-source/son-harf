@@ -68,6 +68,46 @@ data class MascotCareResultDto(
 )
 
 @Serializable
+data class MascotRoomStateDto(
+    @SerialName("mascot_id") val mascotId: String,
+    @SerialName("friendship_xp") val friendshipXp: Int,
+    @SerialName("friendship_level") val friendshipLevel: Int,
+    @SerialName("selected_room_item") val selectedRoomItem: String,
+    @SerialName("loved_today") val lovedToday: Boolean = false,
+    @SerialName("played_today") val playedToday: Boolean = false,
+    @SerialName("groomed_today") val groomedToday: Boolean = false,
+    @SerialName("daily_bond_completed") val dailyBondCompleted: Boolean = false,
+)
+
+@Serializable
+data class MascotCareV2ResultDto(
+    val success: Boolean = true,
+    @SerialName("mascot_id") val mascotId: String,
+    val action: String,
+    val happiness: Int,
+    val fullness: Int,
+    val energy: Int,
+    @SerialName("friendship_xp") val friendshipXp: Int,
+    @SerialName("friendship_level") val friendshipLevel: Int,
+    @SerialName("friendship_gained") val friendshipGained: Int,
+    @SerialName("daily_bond_completed") val dailyBondCompleted: Boolean,
+    @SerialName("daily_bonus_awarded") val dailyBonusAwarded: Boolean,
+)
+
+@Serializable
+data class MascotRoomItemDto(
+    val id: String,
+    @SerialName("name_tr") val nameTr: String,
+    @SerialName("name_en") val nameEn: String,
+    @SerialName("description_tr") val descriptionTr: String,
+    @SerialName("description_en") val descriptionEn: String,
+    @SerialName("unlock_friendship_level") val unlockFriendshipLevel: Int,
+    val icon: String,
+    @SerialName("sort_order") val sortOrder: Int,
+    val active: Boolean = true,
+)
+
+@Serializable
 data class MascotFruitPurchaseDto(
     val success: Boolean = true,
     @SerialName("fruit_id") val fruitId: String,
@@ -131,5 +171,37 @@ suspend fun OnlineGameBackend.careForMascot(mascotId: String, action: String): M
         buildJsonObject {
             put("p_mascot_id", mascotId)
             put("p_action", action)
+        },
+    ).decodeSingle()
+
+
+suspend fun OnlineGameBackend.getMascotRoomState(mascotId: String): MascotRoomStateDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "get_mascot_room_state_v2",
+        buildJsonObject { put("p_mascot_id", mascotId) },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.careForMascotV2(mascotId: String, action: String): MascotCareV2ResultDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "care_mascot_v2",
+        buildJsonObject {
+            put("p_mascot_id", mascotId)
+            put("p_action", action)
+        },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.getMascotRoomCatalog(): List<MascotRoomItemDto> =
+    SupabaseProvider.client.from("mascot_room_catalog")
+        .select()
+        .decodeList<MascotRoomItemDto>()
+        .filter { it.active }
+        .sortedBy { it.sortOrder }
+
+suspend fun OnlineGameBackend.setMascotRoomItem(mascotId: String, roomItemId: String): MascotRoomStateDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "set_mascot_room_item_v2",
+        buildJsonObject {
+            put("p_mascot_id", mascotId)
+            put("p_room_item", roomItemId)
         },
     ).decodeSingle()
