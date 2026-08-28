@@ -33,17 +33,17 @@ fun MetaHubScreen(
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 6)) }
     val labels = listOf(
-        sh("Hatırlatıcı","Remembrancer"),
-        sh("Lethara Sezonu","Lethara Season"),
-        sh("Mühür Görevleri","Seal Goals"),
-        sh("Mühür Ligi","Seal League"),
-        sh("Düellolarım","My Duels"),
-        sh("Söz Rehberi","Word Guide"),
+        sh("Kariyer","Career"),
+        sh("Sezon","Season"),
+        sh("Görevler","Goals"),
+        sh("Lig","League"),
+        sh("Maçlarım","My Matches"),
+        sh("Oyun Rehberi","Game Guide"),
         sh("Ayarlar","Settings"),
     )
     Column(
         Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(LetharaPalette.Night, Color(0xFF0B1730), LetharaPalette.Night2))
+            Brush.verticalGradient(listOf(Color.White, SonHarfBg, SonHarfSurface2))
         )
     ) {
         Row(
@@ -57,13 +57,13 @@ fun MetaHubScreen(
             }
             Column(Modifier.padding(horizontal=8.dp,vertical=6.dp)) {
                 Text(
-                    sh("HATIRLATICI MERKEZİ","REMEMBRANCER HUB"),
+                    sh("SON HARF MERKEZİ","SON HARF HUB"),
                     color = LetharaPalette.Gold,
                     fontSize=24.sp,
                     fontWeight=FontWeight.Black,
                 )
                 Text(
-                    sh("Söz Dokusu ilerlemeni, mühür görevlerini ve sezonunu yönet.", "Manage your Word Weave progress, seal goals and season."),
+                    sh("İlerlemeni, görevlerini, sezonunu ve maç geçmişini yönet.", "Manage your progress, goals, season and match history."),
                     color = LetharaPalette.Muted,
                     fontSize = 9.sp,
                 )
@@ -72,16 +72,16 @@ fun MetaHubScreen(
         ScrollableTabRow(
             selectedTabIndex=tab,
             edgePadding=8.dp,
-            containerColor=LetharaPalette.Panel,
-            contentColor=LetharaPalette.Cyan,
-            divider = { HorizontalDivider(color = LetharaPalette.Gold.copy(alpha = .16f)) },
+            containerColor=SonHarfSurface,
+            contentColor=SonHarfBlue,
+            divider = { HorizontalDivider(color = Color(0xFFDDE5EE)) },
         ) {
             labels.forEachIndexed { i,s ->
                 Tab(
                     selected=tab==i,
                     onClick={tab=i},
-                    selectedContentColor=LetharaPalette.Gold,
-                    unselectedContentColor=LetharaPalette.Muted,
+                    selectedContentColor=SonHarfBlue,
+                    unselectedContentColor=SonHarfMuted,
                     text={Text(s,fontSize=10.sp,fontWeight=FontWeight.Bold)}
                 )
             }
@@ -141,7 +141,7 @@ private fun RetentionLeaguePanel(backend: OnlineGameBackend?) {
     var rows by remember{mutableStateOf<List<LeaderboardV2Row>>(emptyList())}; var language by remember{mutableStateOf(SonHarfUiState.language)}
     LaunchedEffect(language){rows=runCatching{backend?.getLeaderboardV2(language,"week",50).orEmpty()}.getOrDefault(emptyList());runCatching{backend?.logEvent("league_open",language)}}
     LazyColumn(Modifier.fillMaxSize(),contentPadding=PaddingValues(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)){
-        item{HubBanner("◇",sh("HAFTALIK MÜHÜR LİGİ","WEEKLY SEAL LEAGUE"),sh("Hatırlatıcılar her hafta yeniden sıralanır. Galibiyet ve istikrar seni yukarı taşır.","Remembrancers are ranked anew each week. Wins and consistency move you upward."),LetharaPalette.Cyan)}
+        item{HubBanner("◇",sh("HAFTALIK LİG","WEEKLY LEAGUE"),sh("Oyuncular her hafta yeniden sıralanır. Galibiyet ve istikrar seni yukarı taşır.","Players are ranked anew each week. Wins and consistency move you upward."),SonHarfBlue)}
         item{Row(horizontalArrangement=Arrangement.spacedBy(8.dp)){FilterChip(selected=language=="tr",onClick={language="tr"},label={Text("🇹🇷 TÜRKÇE")});FilterChip(selected=language=="en",onClick={language="en"},label={Text("🇬🇧 ENGLISH")})}}
         if(rows.isEmpty())item{Text(sh("Bu hafta sıralama henüz oluşmadı.","No ranking yet this week."),Modifier.fillMaxWidth().padding(24.dp),textAlign=TextAlign.Center,color=SonHarfMuted)}
         items(rows.take(40)){r-> val rank=rows.indexOf(r)+1; Card(colors=CardDefaults.cardColors(containerColor=if(rank<=3)SonHarfGold.copy(alpha=.08f) else SonHarfSurface),shape=RoundedCornerShape(15.dp),border=BorderStroke(1.dp,if(rank<=3)SonHarfGold.copy(alpha=.35f) else SonHarfMuted.copy(alpha=.08f))){Row(Modifier.fillMaxWidth().padding(12.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text(if(rank==1)"🥇" else if(rank==2)"🥈" else if(rank==3)"🥉" else "#$rank",fontWeight=FontWeight.Black);Text(r.displayName,Modifier.weight(1f).padding(horizontal=10.dp),fontWeight=FontWeight.Bold);Text("${r.wins}W • ${r.winRate.toInt()}%",color=SonHarfCyan,fontSize=9.sp)}}}
@@ -186,7 +186,7 @@ private fun RetentionSettingsPanel(backend: OnlineGameBackend?) {
         item{SettingsCard(sh("Bot zorluğu","Bot difficulty")){Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("easy" to sh("KOLAY","EASY"),"normal" to sh("NORMAL","NORMAL"),"hard" to sh("ZOR","HARD")).forEach{(v,t)->FilterChip(selected=bot==v,onClick={bot=v;SonHarfPreferences.setBotDifficulty(context,v)},label={Text(t,fontSize=9.sp)})}};Text(sh("Kolay bot daha yavaş, zor bot daha hızlı cevap verir.","Easy bot replies slower; hard bot replies faster."),color=SonHarfMuted,fontSize=8.sp)}}
         item{ToggleSetting(sh("Ses efektleri","Sound effects"),sound){sound=it;SonHarfPreferences.setSoundEnabled(context,it)}}
         item{ToggleSetting(sh("Titreşim","Vibration"),vibration){vibration=it;SonHarfPreferences.setVibrationEnabled(context,it)}}
-        item{HubInfo("☾",sh("LETHARA GÖRÜNÜMÜ","LETHARA APPEARANCE"),sh("Arayüz gece laciverti, büyülü turkuaz ve altın Lethara paletiyle çalışır.","The interface uses Lethara's midnight navy, magical cyan and gold palette."))}
+        item{HubInfo("◌",sh("CANLI ARENA GÖRÜNÜMÜ","LIVE ARENA APPEARANCE"),sh("Açık zemin, elektrik mavisi, mercan rakip rengi ve kontrollü altın prestij vurguları kullanılır.","The interface uses a light base, electric blue, coral rival accents and controlled gold prestige highlights."))}
     }
 }
 

@@ -238,7 +238,7 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
                                             fontSize = 12.sp,
                                         )
                                     }
-                                    Text("›", fontSize = 28.sp, color = SonHarfPurple)
+                                    Text("›", fontSize = 28.sp, color = SonHarfBlue)
                                 }
                             }
                         }
@@ -248,7 +248,7 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
                 val friend = selected!!
                 Column(Modifier.fillMaxWidth().heightIn(min = 410.dp, max = 600.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        SocialAvatar(friend.avatarPath, friend.gender, friend.displayName, 64.dp, accent = if (friend.isVip) SonHarfGold else SonHarfPurple)
+                        SocialAvatar(friend.avatarPath, friend.gender, friend.displayName, 64.dp, accent = if (friend.isVip) SonHarfGold else SonHarfBlue)
                         Column(Modifier.weight(1f)) {
                             Text(friend.displayName, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 20.sp)
                             Text("${friend.wins}W • ${friend.losses}L", color = SonHarfMuted, fontSize = 12.sp)
@@ -268,7 +268,7 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
                         },
                         enabled = friend.presenceStatus == "online" && !inviteBusy,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
+                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
                         shape = RoundedCornerShape(14.dp),
                     ) {
                         Text(if (inviteBusy) "…" else "⚔ ${sh("DÜELLOYA DAVET ET", "INVITE TO DUEL")}", fontWeight = FontWeight.Black)
@@ -281,7 +281,7 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
                         items(messages.takeLast(80), key = { it.id }) { msg ->
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = if (msg.senderId == me) Arrangement.End else Arrangement.Start) {
                                 Surface(
-                                    color = if (msg.senderId == me) SonHarfPurple.copy(alpha = .22f) else SonHarfSurface2,
+                                    color = if (msg.senderId == me) SonHarfBlue.copy(alpha = .12f) else SonHarfSurface2,
                                     shape = RoundedCornerShape(14.dp),
                                 ) {
                                     Text(msg.body, Modifier.padding(horizontal = 11.dp, vertical = 8.dp).widthIn(max = 250.dp), color = SonHarfText, fontSize = 14.sp)

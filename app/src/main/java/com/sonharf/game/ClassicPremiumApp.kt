@@ -44,11 +44,11 @@ private enum class ClassicScreen {
 
 private val ClassicBg = LetharaPalette.Night
 private val ClassicBgDeep = LetharaPalette.Night2
-private val ClassicPanel = Color(0xFF101D39)
-private val ClassicPanel2 = Color(0xFF15284A)
-private val ClassicBorder = Color(0xFF29486B)
+private val ClassicPanel = Color.White
+private val ClassicPanel2 = Color(0xFFF0F4F8)
+private val ClassicBorder = Color(0xFFDDE5EE)
 private val ClassicGold = LetharaPalette.Gold
-private val ClassicGoldSoft = Color(0xFFEAB957)
+private val ClassicGoldSoft = Color(0xFFF3A81A)
 private val ClassicCream = LetharaPalette.Text
 private val ClassicText = LetharaPalette.Text
 private val ClassicMuted = LetharaPalette.Muted
@@ -319,7 +319,7 @@ private fun ClassicHeader(profile: ProfileDto?, growth: GrowthDashboardDto?, onP
                 progress = { growth?.let { it.levelProgress.toFloat() / it.levelTarget.coerceAtLeast(1) }?.coerceIn(0f, 1f) ?: 0f },
                 modifier = Modifier.fillMaxWidth(.66f).height(5.dp).clip(CircleShape),
                 color = ClassicGold,
-                trackColor = Color.White.copy(alpha = .09f),
+                trackColor = Color(0xFFE2E7EE),
             )
             Text("${growth?.xp ?: 0} XP", color = ClassicMuted, fontSize = 9.sp)
         }
@@ -532,7 +532,7 @@ private fun ClassicSeasonCard(modifier: Modifier, onClick: () -> Unit) {
                 Column(Modifier.weight(1f)) {
                     Text(sh("24 gün 18 saat kaldı", "24 days 18 hours left"), color = ClassicMuted, fontSize = 7.5.sp, lineHeight = 10.sp, maxLines = 2)
                     Spacer(Modifier.height(5.dp))
-                    LinearProgressIndicator(progress = { .72f }, modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape), color = ClassicGold, trackColor = Color.White.copy(alpha = .08f))
+                    LinearProgressIndicator(progress = { .72f }, modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape), color = ClassicGold, trackColor = Color(0xFFE2E7EE))
                     Text("7.250 / 10.000", color = ClassicMuted, fontSize = 7.5.sp, maxLines = 1)
                 }
             }
@@ -553,7 +553,7 @@ private fun ClassicLeagueCard(growth: GrowthDashboardDto?, modifier: Modifier, o
                     Text("2.150 / 3.000", color = ClassicMuted, fontSize = 8.sp, maxLines = 1)
                 }
             }
-            LinearProgressIndicator(progress = { .72f }, modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape), color = ClassicGold, trackColor = Color.White.copy(alpha = .08f))
+            LinearProgressIndicator(progress = { .72f }, modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape), color = ClassicGold, trackColor = Color(0xFFE2E7EE))
             Text(sh("Sıralamanı yükselt", "Climb the ranking"), color = ClassicMuted, fontSize = 7.5.sp, maxLines = 1)
         }
     }
@@ -680,7 +680,7 @@ private fun ClassicProfileScreen(
                     progress = { growth?.let { it.levelProgress.toFloat() / it.levelTarget.coerceAtLeast(1) } ?: 0f },
                     modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
                     color = ClassicGold,
-                    trackColor = Color.White.copy(alpha = .08f),
+                    trackColor = Color(0xFFE2E7EE),
                 )
                 Text("${growth?.xp ?: 0} XP", color = ClassicMuted, fontSize = 9.sp)
             }

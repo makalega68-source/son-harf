@@ -88,7 +88,7 @@ fun FriendRequestOverlay() {
                         busy = false
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
+                colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
             ) { Text(sh("KABUL ET", "ACCEPT"), fontWeight = FontWeight.Black) }
         },
         dismissButton = {

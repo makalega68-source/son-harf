@@ -12,6 +12,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -66,7 +69,7 @@ private data class BilBonusAnswerDto(
 )
 
 private val BilBg = LetharaPalette.Night
-private val BilPanel = Color(0xFF101D39)
+private val BilPanel = Color.White
 private val BilInk = LetharaPalette.Text
 private val BilMuted = LetharaPalette.Muted
 private val BilGold = LetharaPalette.Gold
@@ -95,6 +98,8 @@ fun BilBakalimBonusOverlay() {
     var seconds by remember { mutableIntStateOf(20) }
     var hostProfile by remember { mutableStateOf<ProfileDto?>(null) }
     var guestProfile by remember { mutableStateOf<ProfileDto?>(null) }
+    val answerFocusRequester = remember { FocusRequester() }
+    val softwareKeyboard = LocalSoftwareKeyboardController.current
 
     suspend fun discoverRoom(): GameRoomDto? {
         val me = backend.currentUserId() ?: return null
@@ -205,10 +210,20 @@ fun BilBakalimBonusOverlay() {
     val iWon = activeRound.winnerSide == mySide || activeRound.winnerSide == "tie"
     val opponentWon = activeRound.winnerSide == (if (activeRoom.isBot) "bot" else if (host) "guest" else "host") || activeRound.winnerSide == "tie"
 
+    LaunchedEffect(activeRound.id, resolved, myAnswer, busy) {
+        if (!resolved && myAnswer == null && !busy) {
+            delay(140)
+            runCatching { answerFocusRequester.requestFocus() }
+            softwareKeyboard?.show()
+        } else {
+            softwareKeyboard?.hide()
+        }
+    }
+
     Box(
         Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(LetharaPalette.Night, Color(0xFF0B1730), LetharaPalette.Night2))
-        ).statusBarsPadding().navigationBarsPadding().padding(14.dp),
+            Brush.verticalGradient(listOf(Color.White, SonHarfBg, SonHarfSurface2))
+        ).statusBarsPadding().navigationBarsPadding().imePadding().padding(14.dp),
         contentAlignment = Alignment.Center,
     ) {
         Card(
@@ -222,7 +237,7 @@ fun BilBakalimBonusOverlay() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(13.dp),
             ) {
-                Text(sh("BİL BAKALIM • MÜHÜR TURU", "BIL BAKALIM • SEAL ROUND"), color = BilGold, fontWeight = FontWeight.Black, fontSize = 24.sp, textAlign = TextAlign.Center)
+                Text(sh("BİL BAKALIM • BONUS TURU", "BIL BAKALIM • BONUS ROUND"), color = BilGold, fontWeight = FontWeight.Black, fontSize = 24.sp, textAlign = TextAlign.Center)
                 Text("Doğru cevaba en yakın cevap kazanır.", color = BilMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
 
                 if (!resolved) {
@@ -238,7 +253,7 @@ fun BilBakalimBonusOverlay() {
                     OutlinedTextField(
                         value = input,
                         onValueChange = { raw -> input = raw.filter(Char::isDigit).take(12) },
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().focusRequester(answerFocusRequester),
                         singleLine = true,
                         textStyle = LocalTextStyle.current.copy(fontSize = 32.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center),
                         placeholder = { Text("Tahminin", modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
@@ -271,7 +286,7 @@ fun BilBakalimBonusOverlay() {
                         shape = RoundedCornerShape(16.dp),
                     ) { Text("CEVABI KİLİTLE", fontWeight = FontWeight.Black, fontSize = 16.sp) }
                 } else if (!resolved) {
-                    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = Color(0xFF15284A), border = BorderStroke(1.dp, BilBlue.copy(alpha = .4f))) {
+                    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = SonHarfSurface2, border = BorderStroke(1.dp, BilBlue.copy(alpha = .4f))) {
                         Column(Modifier.fillMaxWidth().padding(17.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("CEVABIN KİLİTLENDİ", color = BilBlue, fontWeight = FontWeight.Black, fontSize = 14.sp)
                             Text(myAnswer?.toString() ?: "—", color = BilInk, fontWeight = FontWeight.Black, fontSize = 34.sp)

@@ -49,8 +49,8 @@ fun EconomyShopScreen(
                     Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
                 }
                 Column {
-                    Text(sh("SON HARF MAĞAZASI", "SON HARF SHOP"), color = LetharaPalette.Gold, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Style • Görünüm • Efektler", "Style • Appearance • Effects"), color = LetharaPalette.Muted, fontSize = 9.sp)
+                    Text(sh("SON HARF MAĞAZASI", "SON HARF SHOP"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Style • Görünüm • Efektler", "Style • Appearance • Effects"), color = SonHarfMuted, fontSize = 9.sp)
                 }
             }
         }
@@ -120,11 +120,11 @@ private fun EconomyCatalogScreen() {
         else -> false
     }
 
-    val supportedKinds = setOf("profile_frame", "name_style", "game_theme", "keyboard_theme", "victory_effect", "emoji_pack")
+    val supportedKinds = setOf("profile_frame", "name_style", "game_theme", "victory_effect", "emoji_pack")
     val filtered = items.filter { it.kind in supportedKinds }.filter { item ->
         when (category) {
             1 -> item.kind in setOf("profile_frame", "name_style")
-            2 -> item.kind in setOf("game_theme", "keyboard_theme")
+            2 -> item.kind == "game_theme"
             3 -> item.kind in setOf("victory_effect", "emoji_pack")
             else -> true
         }
@@ -134,7 +134,7 @@ private fun EconomyCatalogScreen() {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("STYLE", color = LetharaPalette.Gold, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text("STYLE", color = SonHarfBlue, fontSize = 30.sp, fontWeight = FontWeight.Black)
                     Text(sh("Profilini ve görünümünü kişiselleştir • güç satın alma", "Personalize your profile and appearance • never buy power"), color = SonHarfMuted, fontSize = 10.sp)
                 }
                 Surface(shape = RoundedCornerShape(99.dp), color = SonHarfCyan.copy(alpha = .13f), border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f))) {

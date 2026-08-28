@@ -5,6 +5,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -15,8 +16,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -27,6 +32,7 @@ import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.getDailyCipherStatus
 import com.sonharf.game.data.submitDailyCipherGuess
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val CipherBg = Color(0xFFF7F9FC)
@@ -47,6 +53,8 @@ fun DailyCipherScreen(onBack: () -> Unit) {
     var guess by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
+    val guessFocusRequester = remember { FocusRequester() }
+    val softwareKeyboard = LocalSoftwareKeyboardController.current
 
     suspend fun reload() {
         val b = backend
@@ -62,6 +70,16 @@ fun DailyCipherScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         reload()
         runCatching { backend?.logEvent("daily_cipher_open", SonHarfUiState.language) }
+    }
+
+    LaunchedEffect(status?.finished, busy) {
+        if (status?.finished == false && !busy) {
+            delay(140)
+            runCatching { guessFocusRequester.requestFocus() }
+            softwareKeyboard?.show()
+        } else if (status?.finished == true) {
+            softwareKeyboard?.hide()
+        }
     }
 
     fun submit() {
@@ -101,7 +119,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
         )
     ) {
         Column(
-            Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
+            Modifier.fillMaxSize().imePadding().padding(horizontal = 16.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -174,14 +192,16 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                             onValueChange = { value ->
                                 guess = value.filter { it.isLetter() }.take(5).uppercase()
                             },
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().focusRequester(guessFocusRequester),
                             enabled = !busy && s != null,
                             singleLine = true,
                             label = { Text(sh("5 harfli tahmin", "Five-letter guess")) },
                             keyboardOptions = KeyboardOptions(
                                 capitalization = KeyboardCapitalization.Characters,
                                 keyboardType = KeyboardType.Text,
+                                imeAction = ImeAction.Done,
                             ),
+                            keyboardActions = KeyboardActions(onDone = { submit() }),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = CipherText,
                                 unfocusedTextColor = CipherText,

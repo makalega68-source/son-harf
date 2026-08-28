@@ -57,7 +57,7 @@ fun GameInviteOverlay() {
         shape = RoundedCornerShape(26.dp),
         title = {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Surface(shape = CircleShape, color = SonHarfPurple.copy(alpha = .20f), border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f))) {
+                Surface(shape = CircleShape, color = SonHarfBlue.copy(alpha = .10f), border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f))) {
                     Text("⚔", Modifier.padding(12.dp), fontSize = 24.sp)
                 }
                 Column {
@@ -92,7 +92,7 @@ fun GameInviteOverlay() {
                         busy = false
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
+                colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
             ) { Text(sh("KABUL ET", "ACCEPT"), fontWeight = FontWeight.Black) }
         },
         dismissButton = {
