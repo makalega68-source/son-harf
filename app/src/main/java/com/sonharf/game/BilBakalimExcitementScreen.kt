@@ -30,15 +30,15 @@ import kotlin.random.Random
 
 private enum class ExcitementPhase { ANSWER, RESULT, MATCH_END }
 
-private val BilBg = LetharaPalette.Night
-private val BilPanel = Color(0xFF101D39)
-private val BilPanel2 = Color(0xFF15284A)
-private val BilText = LetharaPalette.Text
-private val BilMuted = LetharaPalette.Muted
-private val BilCyan = LetharaPalette.Cyan
-private val BilGold = LetharaPalette.Gold
-private val BilGreen = LetharaPalette.Green
-private val BilRed = LetharaPalette.Red
+private val BilBg = Color(0xFFF7F9FC)
+private val BilPanel = Color.White
+private val BilPanel2 = Color(0xFFF0F4F8)
+private val BilText = Color(0xFF182235)
+private val BilMuted = Color(0xFF718096)
+private val BilCyan = Color(0xFF1769E0)
+private val BilGold = Color(0xFFF3A81A)
+private val BilGreen = Color(0xFF22B95F)
+private val BilRed = Color(0xFFE64B55)
 
 @Composable
 internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
@@ -133,15 +133,15 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
 
     BackHandler { onBack() }
     Column(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(BilBg, Color(0xFF0B1730), LetharaPalette.Night2)))
+        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, BilBg, Color(0xFFF1F6FC))))
             .statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("‹ OYUNLAR") }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("BİL BAKALIM", color = BilText, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Text(sh("1v1 SÖZ BİLGİSİ DÜELLOSU", "1v1 WORD KNOWLEDGE DUEL"), color = BilCyan, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Text("KELİME SAVAŞI", color = BilText, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                Text(sh("1v1 HIZLI TAHMİN DÜELLOSU", "1v1 QUICK GUESS DUEL"), color = BilCyan, fontSize = 10.sp, fontWeight = FontWeight.Black)
             }
             Text("$league\n$rating", color = BilText, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
         }
@@ -154,7 +154,7 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
 
         Surface(shape = RoundedCornerShape(16.dp), color = BilPanel2, border = BorderStroke(1.dp, BilCyan.copy(alpha = .24f))) {
             Row(Modifier.fillMaxWidth().padding(11.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(sh("✦ Günlük Mühür Arenası", "✦ Daily Seal Arena"), fontWeight = FontWeight.Black, color = BilText)
+                Text(sh("✦ Günlük Meydan Okuma", "✦ Daily Challenge"), fontWeight = FontWeight.Black, color = BilText)
                 Text("Günün meydan okuması aktif", color = BilMuted, fontSize = 11.sp)
             }
         }
