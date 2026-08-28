@@ -133,11 +133,11 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                 ) {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            VipBenefit("◇", "400 ELMAS", "Her ay", Modifier.weight(1f))
+                            VipBenefit("◈", "400 SON COIN", "Her ay", Modifier.weight(1f))
                             VipBenefit("♛", "ÖZEL ODA", "VIP erişim", Modifier.weight(1f))
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            VipBenefit("✦", "KOZMETİK", "Premium stil", Modifier.weight(1f))
+                            VipBenefit("✦", "STYLE", "Premium görünüm", Modifier.weight(1f))
                             VipBenefit("↗", "İSTATİSTİK", "Gelişmiş", Modifier.weight(1f))
                         }
                         Surface(color = SonHarfSurface.copy(alpha = .72f), shape = RoundedCornerShape(13.dp)) {

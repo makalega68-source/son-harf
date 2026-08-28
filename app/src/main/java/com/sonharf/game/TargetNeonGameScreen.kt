@@ -236,7 +236,6 @@ fun TargetNeonGameScreen(
                 opponentAvatarPath = opponentProfile?.avatarPath,
                 opponentGender = opponentProfile?.gender,
                 opponentAvatarVisible = true,
-                isVip = profile?.isVip == true,
                 words = words,
                 chatMessages = chatMessages,
                 wordInput = wordInput,
@@ -411,7 +410,6 @@ private fun TargetArena(
     opponentAvatarPath: String?,
     opponentGender: String?,
     opponentAvatarVisible: Boolean,
-    isVip: Boolean,
     words: List<GameWordDto>,
     chatMessages: List<ChatMessageDto>,
     wordInput: String,
@@ -439,7 +437,6 @@ private fun TargetArena(
     val wordFocusRequester = remember { FocusRequester() }
     var showChat by remember { mutableStateOf(false) }
     var showChain by remember { mutableStateOf(false) }
-    var showVipNotice by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
     var confirmForfeit by remember { mutableStateOf(false) }
     DisposableEffect(room.id) {
@@ -671,8 +668,17 @@ private fun TargetArena(
 
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            VipLockedAction("💬 SOHBET", isVip, { showChat = true }, { showVipNotice = true }, Modifier.weight(1f))
-            VipLockedAction("⛓ KELİME ZİNCİRİ", isVip, { showChain = true }, { showVipNotice = true }, Modifier.weight(1f))
+            OutlinedButton(
+                onClick = { showChat = true },
+                enabled = !room.isBot,
+                modifier = Modifier.weight(1f),
+                border = BorderStroke(1.dp, TGcyan.copy(alpha = .55f)),
+            ) { Text(if (room.isBot) sh("BOTTA SOHBET YOK", "NO BOT CHAT") else sh("💬 SOHBET", "💬 CHAT"), color = TGcyan, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+            OutlinedButton(
+                onClick = { showChain = true },
+                modifier = Modifier.weight(1f),
+                border = BorderStroke(1.dp, TGblue.copy(alpha = .45f)),
+            ) { Text(sh("⛓ KELİME ZİNCİRİ", "⛓ WORD CHAIN"), color = TGblue, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
         }
         Spacer(Modifier.height(10.dp))
 
@@ -769,14 +775,6 @@ private fun TargetArena(
                 titleContentColor = TGtext,
                 textContentColor = TGmuted,
                 shape = RoundedCornerShape(28.dp),
-            )
-        }
-        if (showVipNotice) {
-            AlertDialog(
-                onDismissRequest = { showVipNotice = false },
-                confirmButton = { TextButton(onClick = { showVipNotice = false }) { Text("TAMAM") } },
-                title = { Text("VIP ÖZELLİĞİ") },
-                text = { Text("Oyun içi sohbet ve tam kelime zinciri VIP üyelerine özeldir.") },
             )
         }
         if (showChain) {

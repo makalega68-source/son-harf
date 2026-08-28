@@ -27,6 +27,7 @@ object SonHarfCosmetics {
         get() = when (profileFrameId) {
             "frame_gold" -> SonHarfGold
             "frame_neon" -> SonHarfCyan
+            "frame_starter" -> SonHarfPurple
             else -> SonHarfMuted
         }
 

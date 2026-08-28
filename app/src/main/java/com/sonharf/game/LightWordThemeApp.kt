@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
 
-private enum class LightScreen { HOME, SON_HARF, KELIME_AVI, KELIME_SAVASI, LEAGUE, TASKS, PROFILE }
+private enum class LightScreen { HOME, SON_HARF, KELIME_AVI, KELIME_SAVASI, LEAGUE, MARKET, TASKS, PROFILE }
 
 private val LightBg = Color(0xFFF7F9FC)
 private val LightSurface = Color.White
@@ -79,11 +79,12 @@ fun LightWordThemeApp() {
     Scaffold(
         containerColor = Color.Transparent,
         bottomBar = {
-            if (screen in setOf(LightScreen.HOME, LightScreen.LEAGUE, LightScreen.TASKS, LightScreen.PROFILE)) {
+            if (screen in setOf(LightScreen.HOME, LightScreen.LEAGUE, LightScreen.MARKET, LightScreen.TASKS, LightScreen.PROFILE)) {
                 LightBottomBar(
                     screen,
                     { screen = LightScreen.HOME },
                     { screen = LightScreen.LEAGUE },
+                    { screen = LightScreen.MARKET },
                     { screen = LightScreen.TASKS },
                     { screen = LightScreen.PROFILE },
                 )
@@ -102,6 +103,7 @@ fun LightWordThemeApp() {
                     onKelimeAvi = { screen = LightScreen.KELIME_AVI },
                     onKelimeSavasi = { screen = LightScreen.KELIME_SAVASI },
                     onLeague = { screen = LightScreen.LEAGUE },
+                    onMarket = { screen = LightScreen.MARKET },
                     onTasks = { screen = LightScreen.TASKS },
                     onProfile = { screen = LightScreen.PROFILE },
                 )
@@ -111,6 +113,7 @@ fun LightWordThemeApp() {
                 LightScreen.KELIME_AVI -> DailyCipherScreen { screen = LightScreen.HOME }
                 LightScreen.KELIME_SAVASI -> TrackedBilBakalimStandaloneScreen { screen = LightScreen.HOME }
                 LightScreen.LEAGUE -> LeaderboardExperienceScreen { screen = LightScreen.HOME }
+                LightScreen.MARKET -> EconomyShopScreen(onBack = { screen = LightScreen.HOME })
                 LightScreen.TASKS -> LightTasksScreen(backend)
                 LightScreen.PROFILE -> ProfileExperienceScreen(onBack = { screen = LightScreen.HOME })
             }
@@ -123,6 +126,7 @@ private fun LightBottomBar(
     screen: LightScreen,
     onHome: () -> Unit,
     onLeague: () -> Unit,
+    onMarket: () -> Unit,
     onTasks: () -> Unit,
     onProfile: () -> Unit,
 ) {
@@ -133,6 +137,7 @@ private fun LightBottomBar(
         ) {
             LightBottomItem(Icons.Rounded.Home, "Ana Sayfa", screen == LightScreen.HOME, Modifier.weight(1f), onHome)
             LightBottomItem(Icons.Rounded.EmojiEvents, "Lig", screen == LightScreen.LEAGUE, Modifier.weight(1f), onLeague)
+            LightBottomItem(Icons.Rounded.ShoppingCart, "Market", screen == LightScreen.MARKET, Modifier.weight(1f), onMarket)
             LightBottomItem(Icons.Rounded.TaskAlt, "Görevler", screen == LightScreen.TASKS, Modifier.weight(1f), onTasks)
             LightBottomItem(Icons.Rounded.Person, "Profil", screen == LightScreen.PROFILE, Modifier.weight(1f), onProfile)
         }
@@ -157,11 +162,21 @@ private fun LightHomeScreen(
     onKelimeAvi: () -> Unit,
     onKelimeSavasi: () -> Unit,
     onLeague: () -> Unit,
+    onMarket: () -> Unit,
     onTasks: () -> Unit,
     onProfile: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
+    var rival by remember { mutableStateOf<ArchRivalDto?>(null) }
+
+    LaunchedEffect(backend) {
+        val b = backend ?: return@LaunchedEffect
+        val me = b.currentUserId() ?: return@LaunchedEffect
+        profile = runCatching { b.getProfile(me) }.getOrNull()
+        growth = runCatching { b.getGrowthDashboard() }.getOrNull()
+        rival = runCatching { b.getArchRival() }.getOrNull()
+    }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -207,6 +222,26 @@ private fun LightHomeScreen(
             }
         }
 
+        if (rival != null) {
+            item {
+                val r = rival!!
+                Surface(shape = RoundedCornerShape(19.dp), color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
+                    Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(Modifier.size(42.dp), shape = CircleShape, color = LightGold.copy(alpha = .12f)) {
+                            Box(contentAlignment = Alignment.Center) { Text("⚔", fontSize = 22.sp) }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("EZELİ RAKİP", color = LightGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text(r.displayName, color = LightText, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            Text("${r.matches} maç • Sen ${r.wins} - ${r.losses} Rakip", color = LightMuted, fontSize = 10.sp)
+                        }
+                        Text("${r.myPoints}:${r.theirPoints}", color = LightText, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                    }
+                }
+            }
+        }
+
         item {
             Surface(
                 shape = RoundedCornerShape(26.dp),
@@ -243,6 +278,9 @@ private fun LightHomeScreen(
         }
         item {
             LightGameCard(Icons.Rounded.Bolt, "Bil Bakalım", "Bilgi yarışmasında tahmin et, puanı kap.", "OYNA", LightGold, onKelimeSavasi)
+        }
+        item {
+            LightGameCard(Icons.Rounded.ShoppingCart, "Market", "VIP, Sezon Bileti, Son Coin ve Style ürünleri.", "AÇ", LightBlue, onMarket)
         }
 
         item {

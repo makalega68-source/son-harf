@@ -57,6 +57,9 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                                 notice = when (productId) {
                                     ProductCatalog.COINS_500 -> sh("500 Son Coin hesabına eklendi.", "500 Son Coins added to your account.")
                                     ProductCatalog.COINS_1500 -> sh("1500 Son Coin hesabına eklendi.", "1500 Son Coins added to your account.")
+                                    ProductCatalog.COINS_3500 -> sh("3500 Son Coin hesabına eklendi.", "3500 Son Coins added to your account.")
+                                    ProductCatalog.COINS_8000 -> sh("8000 Son Coin hesabına eklendi.", "8000 Son Coins added to your account.")
+                                    ProductCatalog.STARTER_STYLE_PACK -> sh("Başlangıç Style Paketi hesabına eklendi.", "Starter Style Pack added to your account.")
                                     ProductCatalog.THEME_NEON -> sh("Neon Tema hesabına eklendi.", "Neon Theme added to your account.")
                                     else -> sh("Satın alma doğrulandı.", "Purchase verified.")
                                 }
@@ -103,8 +106,8 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .28f)),
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(sh("GOOGLE PLAY PAKETLERİ", "GOOGLE PLAY PACKS"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 13.sp)
-            Text(sh("Ödeme Google Play üzerinden yapılır; Son Coin ve Style ürünleri yalnızca sunucu doğrulamasından sonra verilir.", "Payment is handled by Google Play; Son Coins and Style items are granted only after server verification."), color = SonHarfMuted, fontSize = 9.sp)
+            Text(sh("SON COIN & STYLE MARKET", "SON COIN & STYLE MARKET"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 13.sp)
+            Text(sh("Ödeme Google Play üzerinden yapılır; satın alınan ürün yalnızca sunucu doğrulamasından sonra hesaba eklenir. Para ile maç gücü satın alınamaz.", "Payment is handled by Google Play; purchases are granted only after server verification. Money can never buy match power."), color = SonHarfMuted, fontSize = 9.sp)
 
             PlayProductRow(
                 title = sh("500 Son Coin", "500 Son Coins"),
@@ -115,10 +118,31 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
 
             PlayProductRow(
                 title = sh("1500 Son Coin", "1500 Son Coins"),
-                subtitle = sh("Daha büyük Son Coin paketi", "Larger Son Coin pack"),
+                subtitle = sh("Orta Son Coin paketi", "Medium Son Coin pack"),
                 product = products[ProductCatalog.COINS_1500],
                 busy = busy == ProductCatalog.COINS_1500,
             ) { buy(ProductCatalog.COINS_1500) }
+
+            PlayProductRow(
+                title = sh("3500 Son Coin", "3500 Son Coins"),
+                subtitle = sh("Popüler paket • Style alışverişleri için", "Popular pack • for Style purchases"),
+                product = products[ProductCatalog.COINS_3500],
+                busy = busy == ProductCatalog.COINS_3500,
+            ) { buy(ProductCatalog.COINS_3500) }
+
+            PlayProductRow(
+                title = sh("8000 Son Coin", "8000 Son Coins"),
+                subtitle = sh("En büyük Son Coin paketi", "Largest Son Coin pack"),
+                product = products[ProductCatalog.COINS_8000],
+                busy = busy == ProductCatalog.COINS_8000,
+            ) { buy(ProductCatalog.COINS_8000) }
+
+            PlayProductRow(
+                title = sh("Başlangıç Style Paketi", "Starter Style Pack"),
+                subtitle = sh("800 Son Coin + özel Kurucu Işık Çerçevesi", "800 Son Coins + exclusive Founder Glow Frame"),
+                product = products[ProductCatalog.STARTER_STYLE_PACK],
+                busy = busy == ProductCatalog.STARTER_STYLE_PACK,
+            ) { buy(ProductCatalog.STARTER_STYLE_PACK) }
 
             PlayProductRow(
                 title = sh("Neon Tema", "Neon Theme"),

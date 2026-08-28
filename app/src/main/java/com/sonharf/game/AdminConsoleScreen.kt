@@ -280,8 +280,12 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                     listOf(
                         "vip_monthly" to "VIP Aylık Test",
                         "vip_yearly" to "VIP Yıllık Test",
-                        "coins_500" to "+500 Elmas Test",
-                        "coins_1500" to "+1500 Elmas Test",
+                        "coins_500" to "+500 Son Coin Test",
+                        "coins_1500" to "+1500 Son Coin Test",
+                        "coins_3500" to "+3500 Son Coin Test",
+                        "coins_8000" to "+8000 Son Coin Test",
+                        "season_pass_monthly" to "Sezon Bileti 30 Gün Test",
+                        "starter_style_pack" to "Başlangıç Style Paketi Test",
                         "theme_neon" to "Neon Tema Test",
                     ).forEach { (productId, label) ->
                         OutlinedButton(
@@ -350,7 +354,7 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                         singleLine = true,
                     )
                     Text("Bu değer yalnızca yönetici gelir analizinde kullanılır; Play Store fiyatını değiştirmez.", fontSize = 11.sp)
-                    Text("Bilinen ürünler: vip_monthly, vip_yearly, coins_500, coins_1500, theme_neon", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Bilinen ürünler: vip_monthly, vip_yearly, season_pass_monthly, coins_500, coins_1500, coins_3500, coins_8000, starter_style_pack, theme_neon", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
             confirmButton = {
