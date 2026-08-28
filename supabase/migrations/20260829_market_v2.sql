@@ -47,16 +47,9 @@ insert into public.shop_items(
 (
   'frame_starter','profile_frame',
   'Kurucu Işık Çerçevesi','Founder Glow Frame',
-  'Başlangıç Style Paketi ile açılan özel profil çerçevesi.',
-  'Exclusive profile frame unlocked with the Starter Style Pack.',
-  999999,false,true,15
-),
-(
-  'emoji_starter','emoji_pack',
-  'Kurucu Emoji Paketi','Founder Emoji Pack',
-  'Başlangıç Style Paketi ile açılan özel emoji seti.',
-  'Exclusive emoji set unlocked with the Starter Style Pack.',
-  999999,false,true,75
+  'Başlangıç Style Paketi ile açılabilir veya Son Coin ile alınabilir özel profil çerçevesi.',
+  'Exclusive profile frame unlockable with the Starter Style Pack or Son Coin.',
+  2200,false,true,15
 )
 on conflict(id) do update set
   kind=excluded.kind,
@@ -134,7 +127,7 @@ begin
     v_delta := 8000;
   elsif p_product_id='starter_style_pack' then
     v_delta := 800;
-    v_inventory_items := array['frame_starter','emoji_starter'];
+    v_inventory_items := array['frame_starter'];
   elsif p_product_id='theme_neon' then
     v_inventory_items := array['theme_neon'];
   else
