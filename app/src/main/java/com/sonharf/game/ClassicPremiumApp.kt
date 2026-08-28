@@ -727,7 +727,7 @@ private fun ClassicStoreScreen(backend: OnlineGameBackend?, onBack: () -> Unit, 
     }
     ClassicPageScaffold(sh("MAĞAZA", "SHOP"), onBack) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf(sh("Öne Çıkan", "Featured"), sh("Kozmetikler", "Cosmetics"), sh("Elmas", "Diamonds"), sh("Özel", "Special")).forEachIndexed { index, label ->
+            listOf(sh("Öne Çıkan", "Featured"), "STYLE", sh("Son Coin", "Son Coin"), sh("VIP / Bilet", "VIP / Pass")).forEachIndexed { index, label ->
                 FilterChip(
                     selected = tab == index,
                     onClick = {
@@ -743,15 +743,15 @@ private fun ClassicStoreScreen(backend: OnlineGameBackend?, onBack: () -> Unit, 
             }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StoreOffer(sh("Altın Paketi", "Gold Pack"), Icons.Rounded.Paid, "1.000", "₺49,99", ClassicGold, Modifier.weight(1f), onFullShop)
-            StoreOffer(sh("Elmas Paketi", "Diamond Pack"), Icons.Rounded.Diamond, "500", "₺99,99", ClassicBlue, Modifier.weight(1f), onFullShop)
-            StoreOffer(sh("VIP Üyelik", "VIP Membership"), Icons.Rounded.Star, sh("30 Gün", "30 Days"), "₺59,99", ClassicGoldSoft, Modifier.weight(1f), onFullShop)
+            StoreOffer(sh("Son Coin", "Son Coin"), Icons.Rounded.Paid, "500+", "PLAY", ClassicGold, Modifier.weight(1f), onFullShop)
+            StoreOffer(sh("Sezon Bileti", "Season Pass"), Icons.Rounded.Diamond, sh("Premium Yol", "Premium Track"), "PLAY", ClassicBlue, Modifier.weight(1f), onFullShop)
+            StoreOffer(sh("VIP Üyelik", "VIP Membership"), Icons.Rounded.Star, sh("Aylık / Yıllık", "Monthly / Yearly"), "PLAY", ClassicGoldSoft, Modifier.weight(1f), onFullShop)
         }
         Surface(shape = RoundedCornerShape(16.dp), color = ClassicPanel, border = BorderStroke(1.dp, ClassicBorder)) {
             Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
                     Text(sh("Mevcut Bakiyen", "Your Balance"), color = ClassicMuted, fontSize = 10.sp)
-                    Text("${profile?.diamonds ?: 0} 💎", color = ClassicText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text("◈ ${profile?.diamonds ?: 0} SC", color = ClassicText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
                 Button(onClick = onFullShop, colors = ButtonDefaults.buttonColors(containerColor = ClassicGold, contentColor = Color(0xFF2B1E0C))) {
                     Text(sh("TÜM MAĞAZAYI AÇ", "OPEN FULL SHOP"), fontSize = 9.sp, fontWeight = FontWeight.Bold)
