@@ -71,7 +71,7 @@ internal fun PremiumMasterHome(
         if (id != null) profile = runCatching { backend.getProfile(id) }.getOrNull()
         growth = runCatching { backend?.getGrowthDashboard() }.getOrNull()
         isAdmin = if (backend == null) false else runCatching { backend.getAdminDashboard(); true }.getOrDefault(false)
-        runCatching { backend?.logEvent("home_open_lethara_canonical") }
+        runCatching { backend?.logEvent("home_open_wordgame_canonical") }
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -111,7 +111,7 @@ internal fun PremiumMasterHome(
 
             Spacer(Modifier.height(4.dp))
             Image(
-                painter = painterResource(R.drawable.son_harf_brand_logo),
+                painter = painterResource(R.drawable.son_harf_splash_logo),
                 contentDescription = "Son Harf",
                 modifier = Modifier.fillMaxWidth(.68f).height(62.dp),
                 contentScale = ContentScale.Fit,
@@ -150,8 +150,8 @@ internal fun PremiumMasterHome(
                 ) {
                     Text(
                         text = sh(
-                            "Söz Dokusu fısıldıyor…\nBir parça daha hatırladım.",
-                            "The Word Weave whispers…\nI remembered another fragment.",
+                            "Yeni bir kelime zinciri hazır.\nBir maç daha?",
+                            "A new word chain is ready.\nOne more match?",
                         ),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
                         color = HomeText,
@@ -162,7 +162,7 @@ internal fun PremiumMasterHome(
                 }
 
                 Surface(
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 3.dp).clickable(onClick = onMascot),
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 3.dp),
                     shape = RoundedCornerShape(99.dp),
                     color = Color(0xB20B1935),
                     border = BorderStroke(1.dp, HomeCyan.copy(alpha = .48f)),
@@ -173,8 +173,8 @@ internal fun PremiumMasterHome(
                     ) {
                         Icon(Icons.Rounded.AutoAwesome, null, tint = HomeGold, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(5.dp))
-                        Text("LYRA", color = HomeText, fontWeight = FontWeight.Black, fontSize = 10.sp)
-                        Text(" • " + sh("Yıldız Büyücüsü", "Star Mage"), color = HomeCyan, fontSize = 9.sp)
+                        Text(sh("MASKOT", "MASCOT"), color = HomeText, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                        Text(" • " + sh("Hazırım!", "Ready!"), color = HomeCyan, fontSize = 9.sp)
                     }
                 }
             }
@@ -196,7 +196,7 @@ internal fun PremiumMasterHome(
             }
 
             Text(
-                text = "✦ " + sh("Lethara seni çağırıyor…", "Lethara is calling…") + " ✦",
+                text = "✦ " + sh("Kelimeyi sürdür, rakibini geç", "Keep the word going, beat your rival") + " ✦",
                 modifier = Modifier.padding(top = 5.dp, bottom = 8.dp),
                 color = HomeGold,
                 fontSize = 10.sp,
@@ -211,7 +211,7 @@ internal fun PremiumMasterHome(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Rounded.EmojiEvents,
                     title = sh("Lig Sezonu", "League Season"),
-                    subtitle = growth?.leagueName ?: sh("Mühür Ligi", "Seal League"),
+                    subtitle = growth?.leagueName ?: sh("Başlangıç Ligi", "Starter League"),
                     accent = HomeGold,
                     onClick = onLeague,
                 )
@@ -226,8 +226,8 @@ internal fun PremiumMasterHome(
                 HomeInfoCard(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Rounded.AutoStories,
-                    title = sh("Büyücülerin\nGeçmişi", "Past of the\nMages"),
-                    subtitle = sh("Hafıza parçalarını keşfet", "Discover memory fragments"),
+                    title = sh("Maç\nGeçmişi", "Match\nHistory"),
+                    subtitle = sh("Son maçlarını incele", "Review recent matches"),
                     accent = LetharaPalette.Violet,
                     onClick = onHistory,
                 )
@@ -252,7 +252,7 @@ private fun HomeTopBar(
             ProfilePhotoAvatarWithGender(
                 avatarPath = profile?.avatarPath,
                 gender = profile?.gender,
-                name = profile?.displayName ?: sh("Hatırlatıcı", "Remembrancer"),
+                name = profile?.displayName ?: sh("Oyuncu", "Player"),
                 size = 46.dp,
                 accent = HomeCyan,
             )
@@ -260,7 +260,7 @@ private fun HomeTopBar(
         Spacer(Modifier.width(6.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                sh("Hatırlatıcı", "Remembrancer"),
+                sh("Oyuncu", "Player"),
                 color = HomeText,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
