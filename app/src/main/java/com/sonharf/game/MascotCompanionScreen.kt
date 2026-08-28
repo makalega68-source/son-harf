@@ -166,6 +166,8 @@ internal fun MascotCompanionScreen(
                         mascotId = mascotId,
                         companionName = progress?.petName ?: character.name,
                         playerName = profile?.displayName,
+                        playerWins = profile?.wins,
+                        playerLosses = profile?.losses,
                         progress = progress,
                     )
                     MascotCompanionTab.CARE -> MascotCarePanel(
@@ -267,6 +269,8 @@ private fun MascotChatPanel(
     mascotId: String,
     companionName: String,
     playerName: String?,
+    playerWins: Int?,
+    playerLosses: Int?,
     progress: MascotProgressDto?,
 ) {
     val scope = rememberCoroutineScope()
@@ -381,7 +385,9 @@ private fun MascotChatPanel(
                     playerName = playerName,
                     companionName = companionName,
                     gameContext = progress?.let {
-                        val record = profile?.let { p -> " Player record: " + p.wins + " wins, " + p.losses + " losses." }.orEmpty()
+                        val record = if (playerWins != null && playerLosses != null) {
+                            " Player record: " + playerWins + " wins, " + playerLosses + " losses."
+                        } else ""
                         val memories = if (memoryNotes.isEmpty()) "" else " Stable remembered notes: " + memoryNotes.joinToString(" | ")
                         "Mascot level " + it.level + "; XP " + it.totalXp + "; memory fragments " + it.memoryFragments + "/120; fullness " + it.fullness + "; happiness " + it.happiness + "." + record + memories
                     },
