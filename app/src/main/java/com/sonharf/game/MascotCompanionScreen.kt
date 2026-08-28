@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.VolumeOff
@@ -44,6 +45,7 @@ internal fun MascotCompanionScreen(
     backend: OnlineGameBackend?,
     onBack: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenRoom: () -> Unit,
     onOpenShop: () -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -54,6 +56,7 @@ internal fun MascotCompanionScreen(
     val catalog = MascotCatalog.item(mascotId)
     val character = LetharaLore.characterForMascot(mascotId)
     var progress by remember(mascotId) { mutableStateOf<MascotProgressDto?>(null) }
+    var roomState by remember(mascotId) { mutableStateOf<MascotRoomStateDto?>(null) }
     var fruits by remember { mutableStateOf<List<MascotFruitDto>>(emptyList()) }
     var inventory by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -66,6 +69,7 @@ internal fun MascotCompanionScreen(
         val id = b.currentUserId()
         profile = id?.let { runCatching { b.getProfile(it) }.getOrNull() }
         progress = runCatching { b.getMascotProgress(mascotId) }.getOrNull()
+        roomState = runCatching { b.getMascotRoomState(mascotId) }.getOrNull()
         fruits = runCatching { b.getMascotFruitCatalog() }.getOrDefault(emptyList())
         inventory = runCatching { b.getMascotFruitInventory() }.getOrDefault(emptyList()).associate { it.fruitId to it.quantity }
         progress?.let {
@@ -99,6 +103,9 @@ internal fun MascotCompanionScreen(
                     Text(displayName.uppercase(), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 18.sp)
                     Text(character.name + " • " + if (SonHarfUiState.isEnglish) character.titleEn else character.titleTr, color = character.color, fontSize = 9.sp)
                 }
+                IconButton(onClick = onOpenRoom) {
+                    Icon(Icons.Rounded.Home, sh("Mühür Odası", "Seal Room"), tint = LetharaPalette.Gold)
+                }
                 IconButton(onClick = onOpenHistory) {
                     Icon(Icons.Rounded.AutoStories, sh("Hikâye", "Story"), tint = LetharaPalette.Cyan)
                 }
@@ -119,7 +126,7 @@ internal fun MascotCompanionScreen(
                             color = LetharaPalette.PanelStrong,
                         ) {
                             Text(
-                                sh("Seviye", "Level") + " " + p.level + "  •  ✦ " + p.memoryFragments + "/120",
+                                sh("Seviye", "Level") + " " + p.level + "  •  ♥ " + (roomState?.friendshipLevel ?: 1) + "  •  ✦ " + p.memoryFragments + "/120",
                                 Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                 color = LetharaPalette.Text,
                                 fontWeight = FontWeight.Bold,
@@ -197,12 +204,17 @@ internal fun MascotCompanionScreen(
                             if (b != null) {
                                 scope.launch {
                                     loading = true
-                                    runCatching { b.careForMascot(mascotId, action) }
-                                        .onSuccess {
-                                            notice = when (action) {
+                                    runCatching { b.careForMascotV2(mascotId, action) }
+                                        .onSuccess { care ->
+                                            val actionText = when (action) {
                                                 "love" -> sh("Yoldaşının mührü sıcak bir ışıkla parladı.", "Your companion's seal glowed with warm light.")
                                                 "play" -> sh("Kısa bir büyü oyunu yaptınız.", "You shared a short spell game.")
                                                 else -> sh("Mührün tozu temizlendi; yoldaşın rahatladı.", "The seal dust cleared; your companion relaxed.")
+                                            }
+                                            notice = if (care.friendshipGained > 0) {
+                                                actionText + "  +" + care.friendshipGained + " " + sh("Dostluk XP", "Friendship XP")
+                                            } else {
+                                                actionText
                                             }
                                             MascotRuntime.react(
                                                 when (action) {
@@ -243,7 +255,7 @@ internal fun MascotCompanionScreen(
                         },
                         onOpenShop = onOpenShop,
                     )
-                    MascotCompanionTab.MEMORY -> MascotMemoryPanel(character, progress, onOpenHistory)
+                    MascotCompanionTab.MEMORY -> MascotMemoryPanel(character, progress, roomState, onOpenHistory, onOpenRoom)
                 }
             }
         }
@@ -709,7 +721,9 @@ private fun MascotCarePanel(
 private fun MascotMemoryPanel(
     character: WizardLoreCharacter,
     progress: MascotProgressDto?,
+    roomState: MascotRoomStateDto?,
     onOpenHistory: () -> Unit,
+    onOpenRoom: () -> Unit,
 ) {
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -737,6 +751,28 @@ private fun MascotMemoryPanel(
         item {
             Surface(
                 shape = RoundedCornerShape(18.dp),
+                color = Color(0xFFFF8BCB).copy(alpha = .08f),
+                border = BorderStroke(1.dp, Color(0xFFFF8BCB).copy(alpha = .30f)),
+            ) {
+                Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("♥ " + sh("Dostluk Seviyesi", "Friendship Level") + " " + (roomState?.friendshipLevel ?: 1), color = Color(0xFFFFA6D6), fontWeight = FontWeight.Black)
+                        Spacer(Modifier.weight(1f))
+                        Text(((roomState?.friendshipXp ?: 0) % 40).toString() + "/40", color = LetharaPalette.Muted, fontSize = 10.sp)
+                    }
+                    LinearProgressIndicator(
+                        progress = { (((roomState?.friendshipXp ?: 0) % 40) / 40f).coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                        color = Color(0xFFFF8BCB),
+                        trackColor = Color.White.copy(alpha = .08f),
+                    )
+                    Text(sh("Dostluk, yeni oda mühürlerini ve hikâye bölümlerini açar.", "Friendship unlocks new room seals and story chapters."), color = LetharaPalette.Muted, fontSize = 9.sp)
+                }
+            }
+        }
+        item {
+            Surface(
+                shape = RoundedCornerShape(18.dp),
                 color = character.color.copy(alpha = .10f),
                 border = BorderStroke(1.dp, character.color.copy(alpha = .35f)),
             ) {
@@ -753,12 +789,21 @@ private fun MascotMemoryPanel(
             }
         }
         item {
-            Button(
-                onClick = onOpenHistory,
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = LetharaPalette.Gold, contentColor = Color(0xFF201A35)),
-            ) {
-                Text(sh("BÜYÜCÜLERİN GEÇMİŞİNİ AÇ", "OPEN PAST OF THE MAGES"), fontWeight = FontWeight.Black)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(
+                    onClick = onOpenRoom,
+                    modifier = Modifier.weight(1f),
+                    border = BorderStroke(1.dp, LetharaPalette.Cyan),
+                ) {
+                    Text(sh("MÜHÜR ODASI", "SEAL ROOM"), fontWeight = FontWeight.Black, fontSize = 9.sp)
+                }
+                Button(
+                    onClick = onOpenHistory,
+                    modifier = Modifier.weight(1f),
+                    colors = ButtonDefaults.buttonColors(containerColor = LetharaPalette.Gold, contentColor = Color(0xFF201A35)),
+                ) {
+                    Text(sh("HİKÂYE", "STORY"), fontWeight = FontWeight.Black, fontSize = 9.sp)
+                }
             }
         }
     }
