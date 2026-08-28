@@ -642,6 +642,7 @@ private fun ClassicProfileScreen(
     onDetails: () -> Unit,
     onCosmetics: () -> Unit,
     onAchievements: () -> Unit,
+    onHistory: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
@@ -800,7 +801,6 @@ private fun ClassicBottomBar(
     current: ClassicScreen,
     onHome: () -> Unit,
     onLeague: () -> Unit,
-    onHistory: () -> Unit,
     onShop: () -> Unit,
 ) {
     Surface(
