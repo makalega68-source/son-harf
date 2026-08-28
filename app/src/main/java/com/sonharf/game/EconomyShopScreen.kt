@@ -48,13 +48,16 @@ fun EconomyShopScreen(
                 IconButton(onClick = onBack) {
                     Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
                 }
-                Text(sh("MAĞAZA", "SHOP"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                Column {
+                    Text(sh("LETHARA MAĞAZASI", "LETHARA SHOP"), color = LetharaPalette.Gold, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Style • Mühürler • Büyülü Meyveler", "Style • Seals • Magic Fruit"), color = LetharaPalette.Muted, fontSize = 9.sp)
+                }
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("STYLE", "STYLE"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
             FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("BÜYÜLÜ MEYVE", "MAGIC FRUIT"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
-            FilterChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text(sh("ÜCRETSİZ", "FREE"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
+            FilterChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text(sh("ÖDÜLLER", "REWARDS"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
         }
         Box(Modifier.weight(1f)) {
             when (tab) {
@@ -135,8 +138,8 @@ private fun EconomyCatalogScreen() {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("STYLE", color = SonHarfText, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Tarzını seç • aç • hemen kullan", "Choose your style • unlock • equip instantly"), color = SonHarfMuted, fontSize = 10.sp)
+                    Text("STYLE", color = LetharaPalette.Gold, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Hatırlatıcı kimliğini kişiselleştir • güç satın alma", "Personalize your Remembrancer identity • never buy power"), color = SonHarfMuted, fontSize = 10.sp)
                 }
                 Surface(shape = RoundedCornerShape(99.dp), color = SonHarfCyan.copy(alpha = .13f), border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f))) {
                     Text("◈ ${profile?.diamonds ?: 0} SC", Modifier.padding(horizontal = 13.dp, vertical = 8.dp), color = SonHarfCyan, fontWeight = FontWeight.Black)
@@ -312,7 +315,7 @@ private fun CosmeticPreview(item: ShopItemDto) {
                 }
                 "name_style" -> Text("Oyuncu-10DD", color = SonHarfCyan, fontSize = 25.sp, fontWeight = FontWeight.Black)
                 "game_theme" -> Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(SonHarfPurple.copy(alpha = .35f), SonHarfCyan.copy(alpha = .28f), SonHarfGold.copy(alpha = .20f))), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text("AURORA ARENA", fontWeight = FontWeight.Black, color = SonHarfText) }
-                "keyboard_theme" -> Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("S","O","N","H","A","R","F").forEach { k -> Surface(color = Color(0xFFEAF8FF), shape = RoundedCornerShape(7.dp), border = BorderStroke(1.5.dp, SonHarfCyan)) { Text(k, Modifier.padding(horizontal = 8.dp, vertical = 10.dp), color = SonHarfCyan, fontWeight = FontWeight.Black) } } }
+                "keyboard_theme" -> Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("S","O","N","H","A","R","F").forEach { k -> Surface(color = LetharaPalette.PanelStrong, shape = RoundedCornerShape(7.dp), border = BorderStroke(1.5.dp, LetharaPalette.Cyan)) { Text(k, Modifier.padding(horizontal = 8.dp, vertical = 10.dp), color = LetharaPalette.Cyan, fontWeight = FontWeight.Black) } } }
                 "victory_effect" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text("✦", color = SonHarfCyan, fontSize = 30.sp); Text("♛", color = SonHarfGold, fontSize = 50.sp, fontWeight = FontWeight.Black, modifier = Modifier.scale(pulse)); Text("✦", color = SonHarfPink, fontSize = 30.sp) }
                 "emoji_pack" -> Text("👑  ⚡  😎  🔥  ◈", fontSize = 30.sp)
                 "mascot" -> MascotLive3DStage(

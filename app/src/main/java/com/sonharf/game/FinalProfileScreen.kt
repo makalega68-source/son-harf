@@ -47,8 +47,11 @@ fun FinalProfileScreen() {
 
     LaunchedEffect(Unit) {
         SonHarfPreferences.syncSound(context)
+        MascotSelectionRuntime.load(context)
         refresh()
     }
+
+    val activeSeal = LetharaLore.characterForMascot(MascotSelectionRuntime.selectedId)
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -90,6 +93,26 @@ fun FinalProfileScreen() {
                         color = if (profile?.isVip == true) SonHarfGold else SonHarfMuted,
                         textAlign = TextAlign.Center,
                     )
+                }
+            }
+        }
+
+        item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = activeSeal.color.copy(alpha = .08f)),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, activeSeal.color.copy(alpha = .34f)),
+            ) {
+                Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(shape = RoundedCornerShape(16.dp), color = activeSeal.color.copy(alpha = .14f)) {
+                        Text("✦", Modifier.padding(horizontal = 14.dp, vertical = 10.dp), color = activeSeal.color, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    }
+                    Spacer(Modifier.width(11.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(sh("AKTİF MÜHÜR", "ACTIVE SEAL"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                        Text(activeSeal.name + " — " + if (SonHarfUiState.isEnglish) activeSeal.titleEn else activeSeal.titleTr, fontWeight = FontWeight.Black)
+                        Text(if (SonHarfUiState.isEnglish) activeSeal.temperamentEn else activeSeal.temperamentTr, color = SonHarfMuted, fontSize = 9.sp)
+                    }
                 }
             }
         }
@@ -163,7 +186,7 @@ fun FinalProfileScreen() {
         if (leaders.isNotEmpty()) item {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("LİDERLİK", color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                    Text(sh("HATIRLATICI SIRALAMASI", "REMEMBRANCER RANKING"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 12.sp)
                     leaders.take(10).forEachIndexed { index, row ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                             Text("${index + 1}. ${row.profile.displayName}", fontWeight = if (row.profile.id == profile?.id) FontWeight.Black else FontWeight.Medium)

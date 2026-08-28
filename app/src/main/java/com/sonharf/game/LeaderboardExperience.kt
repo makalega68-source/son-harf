@@ -84,7 +84,10 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     shape = CircleShape,
                     border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f)),
                 ) { Text("‹", fontSize = 28.sp, color = SonHarfCyan) }
-                Text(sh("MÜHÜR LİGLERİ", "SEAL LEAGUES"), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(sh("MÜHÜR LİGLERİ", "SEAL LEAGUES"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                    Text(sh("Hatırlatıcı sıralaması", "Remembrancer ranking"), color = LetharaPalette.Muted, fontSize = 9.sp)
+                }
                 Spacer(Modifier.size(42.dp))
             }
         }
@@ -103,7 +106,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     NeonLeagueShield()
-                    Text("$league LİG", color = SonHarfCyan, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text("$league " + sh("MÜHÜRÜ", "SEAL"), color = LetharaPalette.Cyan, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     Text(
                         if (myIndex >= 0) sh("SIRALAMAN: ${myIndex + 1}", "YOUR RANK: ${myIndex + 1}") else sh("Bu dönemde henüz sıran yok", "No rank this period yet"),
                         color = SonHarfText,
@@ -148,7 +151,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfCyan) }
 
         item {
-            Text(sh("LİDERLER", "LEADERS"), color = SonHarfText, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Text(sh("ÖNDEKİ HATIRLATICILAR", "LEADING REMEMBRANCERS"), color = LetharaPalette.Gold, fontSize = 14.sp, fontWeight = FontWeight.Black)
         }
 
         itemsIndexed(rows, key = { _, row -> row.userId }) { index, row ->
