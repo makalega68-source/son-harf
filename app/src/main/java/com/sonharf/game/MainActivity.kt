@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -17,17 +17,17 @@ import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.runBlocking
 
-internal val SonHarfBg: Color get() = Color(0xFFF4FBFF)
-internal val SonHarfSurface: Color get() = Color(0xFFFFFFFF)
-internal val SonHarfSurface2: Color get() = Color(0xFFEAF8FF)
-internal val SonHarfPurple = Color(0xFF4ABCEB)
-internal val SonHarfCyan = Color(0xFF38C7F4)
-internal val SonHarfBlue = Color(0xFF24AEE4)
-internal val SonHarfGold = Color(0xFFFFC857)
-internal val SonHarfGreen = Color(0xFF32C985)
-internal val SonHarfText: Color get() = Color(0xFF173B57)
-internal val SonHarfMuted: Color get() = Color(0xFF6D879A)
-internal val SonHarfPink = Color(0xFFFF7891)
+internal val SonHarfBg: Color get() = LetharaPalette.Night
+internal val SonHarfSurface: Color get() = Color(0xFF101D39)
+internal val SonHarfSurface2: Color get() = Color(0xFF15284A)
+internal val SonHarfPurple = LetharaPalette.Violet
+internal val SonHarfCyan = LetharaPalette.Cyan
+internal val SonHarfBlue = Color(0xFF4DA6FF)
+internal val SonHarfGold = LetharaPalette.Gold
+internal val SonHarfGreen = LetharaPalette.Green
+internal val SonHarfText: Color get() = LetharaPalette.Text
+internal val SonHarfMuted: Color get() = LetharaPalette.Muted
+internal val SonHarfPink = Color(0xFFFF8BCB)
 
 private val SonHarfTypography = Typography(
     bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 25.sp),
@@ -66,16 +66,19 @@ class MainActivity : ComponentActivity() {
             val text = parseRemoteColor(remote.textColor, SonHarfText)
 
             MaterialTheme(
-                colorScheme = lightColorScheme(
+                colorScheme = darkColorScheme(
                     primary = primary,
                     secondary = secondary,
                     tertiary = SonHarfGreen,
                     background = background,
                     surface = surface,
                     surfaceVariant = surfaceVariant,
-                    onPrimary = Color.White,
+                    onPrimary = Color(0xFF201A35),
+                    onSecondary = Color(0xFF071229),
+                    onTertiary = Color(0xFF071229),
                     onBackground = text,
                     onSurface = text,
+                    onSurfaceVariant = text,
                 ),
                 typography = SonHarfTypography,
             ) {
