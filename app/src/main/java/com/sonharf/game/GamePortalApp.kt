@@ -18,7 +18,7 @@ internal val PortalRed = Color(0xFFE64B55)
 
 /**
  * Active Son Harf shell.
- * The product is word-game focused: one helper mascot, simple navigation and a light UI.
+ * The product is word-game focused with simple navigation and a light UI.
  */
 @Composable
 fun GamePortalApp() {

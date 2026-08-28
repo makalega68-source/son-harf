@@ -81,11 +81,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-
-    // Keep the GLB as a directly readable APK asset for Filament/SceneView.
-    androidResources {
-        noCompress += "glb"
-    }
 }
 
 dependencies {
@@ -97,9 +92,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
-
-    // Real-time glTF/GLB rendering on top of Google Filament. No 2D/MP4 mascot fallback.
-    implementation("io.github.sceneview:sceneview:4.31.0")
 
     implementation(platform("io.github.jan-tennert.supabase:bom:3.7.0"))
     implementation("io.github.jan-tennert.supabase:auth-kt")
