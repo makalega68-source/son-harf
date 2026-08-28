@@ -1,0 +1,35 @@
+name: Generate Lyra White Asset
+
+on:
+  push:
+    branches:
+      - fix/lyra-white-chibi-v11
+    paths:
+      - '.github/workflows/generate-lyra-white.yml'
+      - '.github/scripts/generate_lyra_white_glb.py'
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/lyra-white-chibi-v11
+      - name: Install Pillow
+        run: python3 -m pip install --disable-pip-version-check pillow
+      - name: Generate white Lyra GLB
+        run: python3 .github/scripts/generate_lyra_white_glb.py
+      - name: Commit generated Lyra asset
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/assets/models/lyra_white_chibi.glb
+          if git diff --cached --quiet; then
+            echo "Lyra asset already current"
+            exit 0
+          fi
+          git commit -m "Generate white Chibi asset for Lyra"
+          git push origin HEAD:fix/lyra-white-chibi-v11
