@@ -33,6 +33,19 @@ internal data class MascotChatRequest(
     @SerialName("mascot_title") val mascotTitle: String? = null,
     @SerialName("mascot_personality") val mascotPersonality: String? = null,
     @SerialName("lore_context") val loreContext: String? = null,
+    @SerialName("player_wins") val playerWins: Int? = null,
+    @SerialName("player_losses") val playerLosses: Int? = null,
+    @SerialName("friendship_level") val friendshipLevel: Int? = null,
+    @SerialName("memory_fragments") val memoryFragments: Int? = null,
+    @SerialName("season_level") val seasonLevel: Int? = null,
+    @SerialName("daily_play_streak") val dailyPlayStreak: Int? = null,
+    @SerialName("best_streak") val bestStreak: Int? = null,
+    @SerialName("longest_word") val longestWord: String? = null,
+    @SerialName("selected_title") val selectedTitle: String? = null,
+    @SerialName("rival_name") val rivalName: String? = null,
+    @SerialName("rival_matches") val rivalMatches: Int? = null,
+    @SerialName("rival_wins") val rivalWins: Int? = null,
+    @SerialName("rival_losses") val rivalLosses: Int? = null,
 )
 
 @Serializable
@@ -56,21 +69,28 @@ internal object MascotAiChatService {
 
     private fun localFallback(request: MascotChatRequest): MascotChatResponse {
         val character = LetharaLore.characterForMascot(request.mascotId)
-        val clean = request.message.trim().lowercase()
-        val en = request.language.lowercase().startsWith("en")
-        val reply = when {
-            clean.contains("varkhor") -> if (en) "That name scratches at an old seal... I remember violet fire, then silence." else "O isim eski bir mührü tırmalıyor... Mor bir ateş, sonra sessizlik hatırlıyorum."
-            clean.contains("hik") || clean.contains("geçmiş") || clean.contains("past") || clean.contains("story") ->
-                LetharaLore.randomWhisper(character, if (en) "en" else "tr", request.history.size + clean.length)
-            clean.contains("kaybett") || clean.contains("lost") -> if (en) "The Word Weave bends, it does not end. We will bind the next word more carefully." else "Söz Dokusu bükülür, ama bitmez. Sonraki kelimeyi daha sağlam bağlarız."
-            clean.contains("kazand") || clean.contains("won") -> if (en) "Ha! The seal sparked. Even the old stars noticed that victory." else "Hah! Mühür kıvılcımlandı. O zaferi eski yıldızlar bile fark etti."
-            else -> if (en) {
-                "${character.name} tilts their head. “I hear you. The Word Weave is quiet enough to listen.”"
-            } else {
-                "${character.name} başını hafifçe eğiyor. “Seni duyuyorum. Söz Dokusu bugün dinleyecek kadar sakin.”"
-            }
-        }
-        return MascotChatResponse(reply = reply, mood = "calm", animation = "idle_breathe", usedFallback = true)
+        val context = MascotVerifiedContext(
+            wins = request.playerWins ?: 0,
+            losses = request.playerLosses ?: 0,
+            friendshipLevel = request.friendshipLevel ?: 1,
+            memoryFragments = request.memoryFragments ?: 0,
+            seasonLevel = request.seasonLevel,
+            dailyPlayStreak = request.dailyPlayStreak,
+            bestStreak = request.bestStreak,
+            longestWord = request.longestWord,
+            selectedTitle = request.selectedTitle,
+            rivalName = request.rivalName,
+            rivalMatches = request.rivalMatches ?: 0,
+            rivalWins = request.rivalWins ?: 0,
+            rivalLosses = request.rivalLosses ?: 0,
+        )
+        return MascotCompanionCoach.localReply(
+            character = character,
+            message = request.message,
+            language = request.language,
+            context = context,
+            historySize = request.history.size,
+        )
     }
 
     suspend fun chat(request: MascotChatRequest): MascotChatResponse {
@@ -86,6 +106,19 @@ internal object MascotAiChatService {
             mascotTitle = request.mascotTitle?.take(80),
             mascotPersonality = request.mascotPersonality?.take(180),
             loreContext = request.loreContext?.take(1400),
+            playerWins = request.playerWins?.coerceIn(0, 1_000_000),
+            playerLosses = request.playerLosses?.coerceIn(0, 1_000_000),
+            friendshipLevel = request.friendshipLevel?.coerceIn(1, 30),
+            memoryFragments = request.memoryFragments?.coerceIn(0, 120),
+            seasonLevel = request.seasonLevel?.coerceIn(1, 10_000),
+            dailyPlayStreak = request.dailyPlayStreak?.coerceIn(0, 100_000),
+            bestStreak = request.bestStreak?.coerceIn(0, 100_000),
+            longestWord = request.longestWord?.trim()?.take(32),
+            selectedTitle = request.selectedTitle?.trim()?.take(32),
+            rivalName = request.rivalName?.trim()?.take(24),
+            rivalMatches = request.rivalMatches?.coerceIn(0, 1_000_000),
+            rivalWins = request.rivalWins?.coerceIn(0, 1_000_000),
+            rivalLosses = request.rivalLosses?.coerceIn(0, 1_000_000),
         )
         return runCatching {
             val response = client.post("${BuildConfig.SUPABASE_URL}/functions/v1/eve-chat") {
