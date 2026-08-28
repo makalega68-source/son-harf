@@ -39,12 +39,14 @@ internal fun MascotLive3DStage(
     motion: MascotMotion = MascotRuntime.motion,
     displayScale: Float = 1f,
     appearanceTint: Color? = null,
+    brightnessBoost: Float = 1.12f,
 ) {
     val context = LocalContext.current
     LaunchedEffect(Unit) { MascotSelectionRuntime.load(context) }
 
     val resolvedId = MascotCatalog.item(mascotId).id
     val effectiveTint = appearanceTint
+    val effectiveBrightness = brightnessBoost.coerceIn(1f, 1.22f)
     val modelLocation = remember(resolvedId) {
         MascotCatalog.modelLocation(context, resolvedId)
     }
@@ -105,24 +107,34 @@ internal fun MascotLive3DStage(
     )
     val clip = MascotCatalog.clip(resolvedId, motion)
 
-    LaunchedEffect(modelInstance, effectiveTint) {
+    LaunchedEffect(modelInstance, effectiveTint, effectiveBrightness) {
         val instance = modelInstance ?: return@LaunchedEffect
-        if (effectiveTint != null) {
-            var applied = 0
-            instance.materialInstances.forEach { material ->
-                runCatching {
+        var applied = 0
+        instance.materialInstances.forEach { material ->
+            runCatching {
+                if (effectiveTint != null) {
                     material.setParameter(
                         "baseColorFactor",
-                        effectiveTint.red,
-                        effectiveTint.green,
-                        effectiveTint.blue,
+                        (effectiveTint.red * effectiveBrightness).coerceAtMost(1.22f),
+                        (effectiveTint.green * effectiveBrightness).coerceAtMost(1.22f),
+                        (effectiveTint.blue * effectiveBrightness).coerceAtMost(1.22f),
                         effectiveTint.alpha,
                     )
-                    applied += 1
+                } else if (effectiveBrightness > 1.001f) {
+                    // Multiplies the original texture/material color in the shader.
+                    // The source GLB textures are not resampled or modified.
+                    material.setParameter(
+                        "baseColorFactor",
+                        effectiveBrightness,
+                        effectiveBrightness,
+                        effectiveBrightness,
+                        1f,
+                    )
                 }
+                applied += 1
             }
-            Log.i("MascotSmoke", "MASCOT_TINT_APPLIED id=$resolvedId materials=$applied")
         }
+        Log.i("MascotSmoke", "CHIBI_LIGHTING_READY materials=$applied boost=$effectiveBrightness")
     }
 
     LaunchedEffect(modelInstance, resolvedId, clip) {

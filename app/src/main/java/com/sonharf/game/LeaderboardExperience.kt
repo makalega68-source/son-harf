@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.LeaderboardV2Row
 import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.getLeaderboardV2
 
@@ -33,6 +34,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
     var language by remember { mutableStateOf(if (SonHarfUiState.language == "en") "en" else "tr") }
     var period by remember { mutableStateOf("week") }
     var rows by remember { mutableStateOf<List<LeaderboardV2Row>>(emptyList()) }
+    var profiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
     val me = backend?.currentUserId()
@@ -43,8 +45,15 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
         loading = true
         error = false
         runCatching { b.getLeaderboardV2(language, period, 50) }
-            .onSuccess { rows = it }
-            .onFailure { rows = emptyList(); error = true }
+            .onSuccess { loaded ->
+                rows = loaded
+                val loadedProfiles = linkedMapOf<String, ProfileDto?>()
+                loaded.forEach { row ->
+                    loadedProfiles[row.userId] = runCatching { b.getProfile(row.userId) }.getOrNull()
+                }
+                profiles = loadedProfiles
+            }
+            .onFailure { rows = emptyList(); profiles = emptyMap(); error = true }
         loading = false
         runCatching { b.logEvent("leaderboard_neon_open", "$language:$period") }
     }
@@ -85,8 +94,8 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f)),
                 ) { Text("‹", fontSize = 28.sp, color = SonHarfCyan) }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(sh("MÜHÜR LİGLERİ", "SEAL LEAGUES"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 22.sp)
-                    Text(sh("Hatırlatıcı sıralaması", "Remembrancer ranking"), color = LetharaPalette.Muted, fontSize = 9.sp)
+                    Text(sh("LİGLER", "LEAGUES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                    Text(sh("Oyuncu sıralaması", "Player ranking"), color = SonHarfMuted, fontSize = 9.sp)
                 }
                 Spacer(Modifier.size(42.dp))
             }
@@ -106,7 +115,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     NeonLeagueShield()
-                    Text("$league " + sh("MÜHÜRÜ", "SEAL"), color = LetharaPalette.Cyan, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text(if (SonHarfUiState.isEnglish) "$league LEAGUE" else "$league LİGİ", color = SonHarfCyan, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     Text(
                         if (myIndex >= 0) sh("SIRALAMAN: ${myIndex + 1}", "YOUR RANK: ${myIndex + 1}") else sh("Bu dönemde henüz sıran yok", "No rank this period yet"),
                         color = SonHarfText,
@@ -151,7 +160,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfCyan) }
 
         item {
-            Text(sh("ÖNDEKİ HATIRLATICILAR", "LEADING REMEMBRANCERS"), color = LetharaPalette.Gold, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Text(sh("ÖNDEKİ OYUNCULAR", "LEADING PLAYERS"), color = SonHarfGold, fontSize = 14.sp, fontWeight = FontWeight.Black)
         }
 
         itemsIndexed(rows, key = { _, row -> row.userId }) { index, row ->
@@ -169,9 +178,13 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Black,
                     )
-                    Box(Modifier.size(34.dp).clip(CircleShape).background(SonHarfSurface2), contentAlignment = Alignment.Center) {
-                        Text(row.displayName.take(1).uppercase(), color = SonHarfCyan, fontWeight = FontWeight.Black)
-                    }
+                    ProfilePhotoAvatar(
+                        avatarPath = profiles[row.userId]?.avatarPath,
+                        name = row.displayName,
+                        size = 36.dp,
+                        visible = true,
+                        accent = if (mine) SonHarfCyan else SonHarfPurple,
+                    )
                     Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f)) {
                         Text(row.displayName, color = SonHarfText, fontWeight = if (mine) FontWeight.Black else FontWeight.Bold, maxLines = 1)

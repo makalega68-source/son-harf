@@ -52,7 +52,7 @@ internal data class MascotChatRequest(
 internal data class MascotChatResponse(
     val reply: String,
     val mood: String = "calm",
-    val animation: String = "idle_breathe",
+    val animation: String = "idle",
     @SerialName("memory_note") val memoryNote: String? = null,
     @SerialName("used_fallback") val usedFallback: Boolean = false,
 )
@@ -68,29 +68,80 @@ internal object MascotAiChatService {
     }
 
     private fun localFallback(request: MascotChatRequest): MascotChatResponse {
-        val character = LetharaLore.characterForMascot(request.mascotId)
-        val context = MascotVerifiedContext(
-            wins = request.playerWins ?: 0,
-            losses = request.playerLosses ?: 0,
-            friendshipLevel = request.friendshipLevel ?: 1,
-            memoryFragments = request.memoryFragments ?: 0,
-            seasonLevel = request.seasonLevel,
-            dailyPlayStreak = request.dailyPlayStreak,
-            bestStreak = request.bestStreak,
-            longestWord = request.longestWord,
-            selectedTitle = request.selectedTitle,
-            rivalName = request.rivalName,
-            rivalMatches = request.rivalMatches ?: 0,
-            rivalWins = request.rivalWins ?: 0,
-            rivalLosses = request.rivalLosses ?: 0,
-        )
-        return MascotCompanionCoach.localReply(
-            character = character,
-            message = request.message,
-            language = request.language,
-            context = context,
-            historySize = request.history.size,
-        )
+        val en = request.language.lowercase().startsWith("en")
+        val clean = request.message.trim().lowercase()
+        val wins = request.playerWins ?: 0
+        val losses = request.playerLosses ?: 0
+        val total = (wins + losses).coerceAtLeast(0)
+        val streak = request.bestStreak ?: 0
+
+        val response = when {
+            clean.contains("kazand") || clean.contains("yendim") || clean.contains("win") || clean.contains("won") ->
+                MascotChatResponse(
+                    reply = if (en) "Great move. Keep the next word just as clean." else "Harika oynadın. Sonraki kelimeyi de temiz seç.",
+                    mood = "celebrating",
+                    animation = "victory",
+                    usedFallback = true,
+                )
+
+            clean.contains("kaybett") || clean.contains("yenild") || clean.contains("lose") || clean.contains("lost") ->
+                MascotChatResponse(
+                    reply = if (en) "Reset quickly. A safe short word is enough." else "Hızlı toparlan. Güvenli kısa bir kelime yeter.",
+                    mood = "encouraging",
+                    animation = "encouraging",
+                    usedFallback = true,
+                )
+
+            clean.contains("taktik") || clean.contains("öner") || clean.contains("nasıl") ||
+                clean.contains("tip") || clean.contains("advice") || clean.contains("strategy") ->
+                MascotChatResponse(
+                    reply = if (en) "Read the final letter first; keep one backup word." else "Önce son harfi gör; bir yedek kelime hazır tut.",
+                    mood = "supportive",
+                    animation = "thinking",
+                    usedFallback = true,
+                )
+
+            clean.contains("rakip") || clean.contains("rival") ->
+                MascotChatResponse(
+                    reply = if (en) "Watch the chain, not the rival. Your word decides." else "Rakibe değil zincire bak. Kararı kelimen verir.",
+                    mood = "supportive",
+                    animation = "look_at_player",
+                    usedFallback = true,
+                )
+
+            total == 0 ->
+                MascotChatResponse(
+                    reply = if (en) "I'm Chibi. Start simple and watch the final letter." else "Ben Chibi. Basit başla, son harfi takip et.",
+                    mood = "happy",
+                    animation = "greeting",
+                    usedFallback = true,
+                )
+
+            losses >= wins + 3 ->
+                MascotChatResponse(
+                    reply = if (en) "Today, choose reliable words before risky ones." else "Bugün riskten önce güvenilir kelimeleri seç.",
+                    mood = "encouraging",
+                    animation = "encouraging",
+                    usedFallback = true,
+                )
+
+            streak >= 3 ->
+                MascotChatResponse(
+                    reply = if (en) "You know how to build a streak. Keep it calm." else "Seri kurmayı biliyorsun. Sakin oyna, devam et.",
+                    mood = "happy",
+                    animation = "victory",
+                    usedFallback = true,
+                )
+
+            else ->
+                MascotChatResponse(
+                    reply = if (en) "I'm Chibi. One clean word and we're moving." else "Ben Chibi. Temiz bir kelimeyle akışı başlatalım.",
+                    mood = "calm",
+                    animation = "greeting",
+                    usedFallback = true,
+                )
+        }
+        return response.copy(reply = response.reply.take(110))
     }
 
     suspend fun chat(request: MascotChatRequest): MascotChatResponse {
@@ -121,7 +172,7 @@ internal object MascotAiChatService {
             rivalLosses = request.rivalLosses?.coerceIn(0, 1_000_000),
         )
         return runCatching {
-            val response = client.post("${BuildConfig.SUPABASE_URL}/functions/v1/eve-chat") {
+            val response = client.post("${BuildConfig.SUPABASE_URL}/functions/v1/chibi-chat") {
                 header(HttpHeaders.Authorization, "Bearer $token")
                 header("apikey", BuildConfig.SUPABASE_KEY)
                 contentType(ContentType.Application.Json)
