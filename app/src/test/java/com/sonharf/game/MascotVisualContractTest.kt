@@ -21,6 +21,21 @@ class MascotVisualContractTest {
     }
 
     @Test
+    fun nerisFurIsLightenedWithoutChangingOtherMaterials() {
+        assertTrue(NerisAppearancePolicy.FUR_COLOR_LIFT > NerisAppearancePolicy.GENERAL_BRIGHTNESS_MAX)
+        assertTrue(NerisAppearancePolicy.FUR_COLOR_LIFT <= 1.60f)
+        assertTrue(
+            NerisAppearancePolicy.brightnessFor(
+                NerisAppearancePolicy.FUR_MATERIAL_NAME,
+                1.16f,
+            ) == NerisAppearancePolicy.FUR_COLOR_LIFT,
+        )
+        assertTrue(
+            NerisAppearancePolicy.brightnessFor("Mage_Cat_Clothes", 1.16f) == 1.16f,
+        )
+    }
+
+    @Test
     fun homeAndArenaRequestLargeMascotPresentation() {
         val home = sourceFile(
             "src/main/java/com/sonharf/game/LightWordThemeApp.kt",
