@@ -343,6 +343,7 @@ private fun FirstEntryMascotIntro(onFinished: () -> Unit) {
                     mascotId = MascotCatalog.CHIBI_WIZARD_ID,
                     motion = motion,
                     displayScale = 1.70f,
+                    brightnessBoost = 1.16f,
                 )
                 if (speechVisible) {
                     Surface(
@@ -560,6 +561,21 @@ private fun TargetArena(
                 force = true,
                 customMessage = sh("Sıra sende. Cevabı buluyorum.", "Your turn. I'm thinking with you."),
             )
+        }
+    }
+
+    LaunchedEffect(room.id, room.status) {
+        val ambient = listOf(MascotMotion.TURN_LEFT, MascotMotion.WALK, MascotMotion.TURN_RIGHT)
+        var ambientIndex = 0
+        while (room.status in listOf("playing", "final", "sudden_death")) {
+            delay(6_000)
+            if (MascotRuntime.motion == MascotMotion.IDLE) {
+                val next = ambient[ambientIndex % ambient.size]
+                ambientIndex += 1
+                MascotRuntime.react(next, force = true)
+                delay(1_250)
+                if (MascotRuntime.motion == next) MascotRuntime.react(MascotMotion.IDLE, force = true)
+            }
         }
     }
 
