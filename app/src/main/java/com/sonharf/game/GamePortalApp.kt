@@ -7,14 +7,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-internal val PortalBg = Color(0xFFF4FBFF)
-internal val PortalCard = Color.White
-internal val PortalText = Color(0xFF173B57)
-internal val PortalMuted = Color(0xFF6D879A)
-internal val PortalBlue = Color(0xFF24AEE4)
-internal val PortalGold = Color(0xFFFFC857)
-internal val PortalGreen = Color(0xFF32C985)
-internal val PortalRed = Color(0xFFFF7891)
+internal val PortalBg = LetharaPalette.Night
+internal val PortalCard = Color(0xFF101D39)
+internal val PortalText = LetharaPalette.Text
+internal val PortalMuted = LetharaPalette.Muted
+internal val PortalBlue = LetharaPalette.Cyan
+internal val PortalGold = LetharaPalette.Gold
+internal val PortalGreen = LetharaPalette.Green
+internal val PortalRed = LetharaPalette.Red
 
 /**
  * Root shell for the active Son Harf product.
