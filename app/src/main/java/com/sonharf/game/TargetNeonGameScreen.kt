@@ -413,28 +413,42 @@ private fun TargetArena(
     DisposableEffect(room.id) {
         SonHarfUiState.inMatch = true
         MascotRuntime.setMatchActive(true)
-        MascotRuntime.react(MascotMotion.IDLE)
+        MascotRuntime.react(MascotMotion.IDLE, force = true)
         onDispose {
             SonHarfUiState.inMatch = false
             MascotRuntime.setMatchActive(false)
-            MascotRuntime.react(MascotMotion.IDLE)
+            MascotRuntime.react(MascotMotion.IDLE, force = true)
         }
     }
     BackHandler(enabled = room.status != "finished") { confirmForfeit = true }
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
-        if (room.status in listOf("playing", "final", "sudden_death")) MascotRuntime.react(MascotMotion.IDLE)
+        var criticalShown = false
+        if (room.status in listOf("playing", "final", "sudden_death")) {
+            MascotRuntime.react(MascotMotion.IDLE, force = true)
+        }
         while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
-            seconds = runCatching { (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0) }.getOrDefault(45)
-            if (myTurn && seconds in 1..5) MascotRuntime.react(MascotMotion.CRITICAL)
-            if (seconds <= 0) { onTimeout(); break }
+            seconds = runCatching {
+                (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0)
+            }.getOrDefault(45)
+            if (myTurn && seconds in 1..5 && !criticalShown) {
+                criticalShown = true
+                MascotRuntime.react(MascotMotion.CRITICAL)
+            }
+            if (seconds <= 0) {
+                onTimeout()
+                break
+            }
             delay(1000)
         }
     }
 
     LaunchedEffect(room.status, room.winnerId) {
         if (room.status == "finished") {
-            MascotRuntime.react(if (room.winnerId == me) MascotMotion.VICTORY else MascotMotion.DEFEAT)
+            MascotRuntime.react(
+                if (room.winnerId == me) MascotMotion.VICTORY else MascotMotion.DEFEAT,
+                force = true,
+            )
         }
     }
 

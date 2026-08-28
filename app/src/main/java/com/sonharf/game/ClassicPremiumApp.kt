@@ -138,6 +138,7 @@ fun ClassicPremiumApp() {
     }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(ClassicBg, ClassicBgDeep)))) {
+        MascotBehaviorBridge()
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {

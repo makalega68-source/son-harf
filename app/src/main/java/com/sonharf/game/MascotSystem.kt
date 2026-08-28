@@ -29,6 +29,38 @@ internal data class MascotAnimationDef(
     val loop: Boolean,
 )
 
+internal object MascotMotionPolicy {
+    private val oneShotDurations = mapOf(
+        MascotMotion.GREETING to 1_650L,
+        MascotMotion.CRITICAL to 1_250L,
+        MascotMotion.VICTORY to 2_050L,
+        MascotMotion.DEFEAT to 1_850L,
+    )
+
+    private val priorities = mapOf(
+        MascotMotion.IDLE to 0,
+        MascotMotion.WALK to 10,
+        MascotMotion.TURN_LEFT to 10,
+        MascotMotion.TURN_RIGHT to 10,
+        MascotMotion.SIT to 20,
+        MascotMotion.LOOK_AT_PLAYER to 25,
+        MascotMotion.THINKING to 30,
+        MascotMotion.RUN to 35,
+        MascotMotion.GREETING to 40,
+        MascotMotion.CRITICAL to 60,
+        MascotMotion.DEFEAT to 90,
+        MascotMotion.VICTORY to 100,
+    )
+
+    fun isOneShot(motion: MascotMotion): Boolean = motion in oneShotDurations
+    fun durationMs(motion: MascotMotion): Long? = oneShotDurations[motion]
+    fun loops(motion: MascotMotion): Boolean = !isOneShot(motion)
+    fun priority(motion: MascotMotion): Int = priorities[motion] ?: 0
+
+    fun canInterrupt(current: MascotMotion, next: MascotMotion): Boolean =
+        !isOneShot(current) || priority(next) > priority(current)
+}
+
 internal object MascotAnimationRegistry {
     val all = MascotMotion.entries.map { motion ->
         MascotAnimationDef(
@@ -36,7 +68,7 @@ internal object MascotAnimationRegistry {
             motion = motion,
             clipName = MascotCatalog.clip(MascotCatalog.DEFAULT_ID, motion),
             unlockLevel = 1,
-            loop = motion !in setOf(MascotMotion.VICTORY, MascotMotion.DEFEAT, MascotMotion.CRITICAL),
+            loop = MascotMotionPolicy.loops(motion),
         )
     }
 
@@ -72,7 +104,13 @@ internal object MascotRuntime {
         inActiveMatch = active
     }
 
-    fun react(next: MascotMotion, language: String = SonHarfUiState.language) {
+    fun react(
+        next: MascotMotion,
+        language: String = SonHarfUiState.language,
+        force: Boolean = false,
+    ) {
+        if (!force && next != motion && !MascotMotionPolicy.canInterrupt(motion, next)) return
+        if (next == motion && !force) return
         motion = next
         message = localizedMessage(next, language)
     }
@@ -100,4 +138,13 @@ internal object MascotRuntime {
 }
 
 @Composable
-internal fun MascotBehaviorBridge() = Unit
+internal fun MascotBehaviorBridge() {
+    val activeMotion = MascotRuntime.motion
+    androidx.compose.runtime.LaunchedEffect(activeMotion) {
+        val duration = MascotMotionPolicy.durationMs(activeMotion) ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(duration)
+        if (MascotRuntime.motion == activeMotion) {
+            MascotRuntime.react(MascotMotion.IDLE, force = true)
+        }
+    }
+}
