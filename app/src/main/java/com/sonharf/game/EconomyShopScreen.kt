@@ -240,13 +240,7 @@ private fun EconomyCatalogScreen() {
                 )
             }
             items(LetharaLore.characters.filter { it.mascotId == null }, key = { "future_" + it.key }) { seal ->
-                val plannedPrice = when (seal.key) {
-                    "kael" -> 850
-                    "ryvan" -> 900
-                    "mivo" -> 800
-                    "selen" -> 950
-                    else -> 900
-                }
+                val plannedPrice = SealRosterPolicy.plannedPrice(seal.key)
                 Card(
                     colors = CardDefaults.cardColors(containerColor = LetharaPalette.Panel.copy(alpha = .92f)),
                     shape = RoundedCornerShape(20.dp),
