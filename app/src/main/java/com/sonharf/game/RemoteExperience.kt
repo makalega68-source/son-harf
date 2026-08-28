@@ -13,18 +13,18 @@ import java.net.URL
 
 @Serializable
 data class RemoteExperienceConfig(
-    val version: Int = 1,
-    val primaryColor: String = "#24AEE4",
-    val secondaryColor: String = "#38C7F4",
-    val backgroundColor: String = "#F4FBFF",
-    val surfaceColor: String = "#FFFFFF",
-    val surfaceVariantColor: String = "#EAF8FF",
-    val textColor: String = "#173B57",
-    val mutedColor: String = "#6D879A",
-    val homeWordArenaBadgeTr: String = "CANLI KELİME ARENASI",
-    val homeWordArenaBadgeEn: String = "LIVE WORD ARENA",
-    val homeWordArenaSubtitleTr: String = "Kelimenin son harfiyle zafer senin!",
-    val homeWordArenaSubtitleEn: String = "Victory with the last letter!",
+    val version: Int = 3,
+    val primaryColor: String = "#FFD36A",
+    val secondaryColor: String = "#56D6FF",
+    val backgroundColor: String = "#071229",
+    val surfaceColor: String = "#101D39",
+    val surfaceVariantColor: String = "#15284A",
+    val textColor: String = "#F4F0FF",
+    val mutedColor: String = "#B8B5D4",
+    val homeWordArenaBadgeTr: String = "SÖZ DOKUSU DÜELLOSU",
+    val homeWordArenaBadgeEn: String = "WORD WEAVE DUEL",
+    val homeWordArenaSubtitleTr: String = "Her son harf, yeni bir mührü açar.",
+    val homeWordArenaSubtitleEn: String = "Every final letter opens a new seal.",
     val tournamentMinutes: Int = 18,
     val brandLogoBase64Url: String = "",
 )
@@ -46,7 +46,10 @@ object RemoteExperience {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         prefs.getString(KEY_CONFIG, null)?.let { cached ->
             runCatching { json.decodeFromString<RemoteExperienceConfig>(cached) }
-                .onSuccess { config = it }
+                .onSuccess { cachedConfig ->
+                    // Ignore the legacy light-theme cache after the Lethara migration.
+                    if (cachedConfig.version >= 3) config = cachedConfig
+                }
         }
         prefs.getString(KEY_LOGO, null)?.let { encoded ->
             runCatching { Base64.decode(encoded, Base64.DEFAULT) }
@@ -61,6 +64,7 @@ object RemoteExperience {
                 ?: return@withContext null
             val remote = runCatching { json.decodeFromString<RemoteExperienceConfig>(configText) }.getOrNull()
                 ?: return@withContext null
+            if (remote.version < 3) return@withContext null
             val logoEncoded = if (remote.brandLogoBase64Url.isNotBlank()) {
                 val separator = if (remote.brandLogoBase64Url.contains('?')) '&' else '?'
                 runCatching { URL("${remote.brandLogoBase64Url}${separator}ts=$stamp").readText().trim() }.getOrNull()
