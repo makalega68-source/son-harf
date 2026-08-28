@@ -16,6 +16,7 @@ on:
     branches: [ main ]
     paths:
       - '.github/workflows/lethara-companion-ime-runtime.yml'
+      - '.github/scripts/verify_companion_ime.py'
       - 'app/src/main/AndroidManifest.xml'
       - 'app/src/debug/AndroidManifest.xml'
       - 'app/src/debug/java/com/sonharf/game/MascotCompanionImeSmokeActivity.kt'
