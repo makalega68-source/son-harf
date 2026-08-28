@@ -27,8 +27,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.MascotProgressDto
+import com.sonharf.game.data.MascotRoomStateDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.getMascotProgress
+import com.sonharf.game.data.getMascotRoomState
 
 @Composable
 internal fun WizardHistoryScreen(
@@ -39,14 +41,21 @@ internal fun WizardHistoryScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(Unit) { MascotSelectionRuntime.load(context) }
     var progress by remember { mutableStateOf<MascotProgressDto?>(null) }
+    var roomState by remember { mutableStateOf<MascotRoomStateDto?>(null) }
     var selectedCharacter by remember { mutableStateOf<WizardLoreCharacter?>(null) }
     var selectedChapter by remember { mutableStateOf<WizardLoreChapter?>(null) }
 
     LaunchedEffect(MascotSelectionRuntime.selectedId) {
-        progress = if (backend != null) runCatching { backend.getMascotProgress(MascotSelectionRuntime.selectedId) }.getOrNull() else null
+        if (backend != null) {
+            progress = runCatching { backend.getMascotProgress(MascotSelectionRuntime.selectedId) }.getOrNull()
+            roomState = runCatching { backend.getMascotRoomState(MascotSelectionRuntime.selectedId) }.getOrNull()
+        } else {
+            progress = null
+            roomState = null
+        }
     }
 
-    val level = progress?.level ?: 1
+    val level = roomState?.friendshipLevel ?: progress?.level ?: 1
     val fragments = progress?.memoryFragments ?: 0
 
     Box(
@@ -128,7 +137,7 @@ internal fun WizardHistoryScreen(
                                 if (unlocked) {
                                     if (SonHarfUiState.isEnglish) chapter.summaryEn else chapter.summaryTr
                                 } else {
-                                    sh("Yoldaş seviyesi " + chapter.unlockLevel + " olduğunda açılır.", "Unlocks at companion level " + chapter.unlockLevel + ".")
+                                    sh("Dostluk seviyesi " + chapter.unlockLevel + " olduğunda açılır.", "Unlocks at friendship level " + chapter.unlockLevel + ".")
                                 },
                                 color = LetharaPalette.Muted, fontSize = 10.sp, lineHeight = 14.sp,
                             )
