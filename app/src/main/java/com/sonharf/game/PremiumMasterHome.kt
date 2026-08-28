@@ -310,10 +310,7 @@ private fun MasterLetharaBanner(onHistory: () -> Unit, onMascot: () -> Unit) {
         Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF172D59), Color(0xFF13234B), Color(0xFF241A4A)))).padding(13.dp)) {
             MasterLetterBackdrop()
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-                SonHarfBrandLogo(
-                    modifier = Modifier.padding(top = 2.dp, bottom = 3.dp),
-                    size = 82.dp,
-                )
+                LetharaGameMark()
                 Surface(shape = RoundedCornerShape(18.dp), color = Color(0xFF182B55), border = BorderStroke(1.dp, LetharaPalette.Gold.copy(.55f))) { Text(sh("SÖZ DOKUSU DÜELLOSU", "WORD WEAVE DUEL"), Modifier.padding(horizontal = 12.dp, vertical = 5.dp), color = LetharaPalette.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black) }
                 Spacer(Modifier.height(8.dp))
                 Text(sh("Her son harf, yeni bir mührü açar.", "Every final letter opens a new seal."), color = LetharaPalette.Text, fontWeight = FontWeight.Bold, fontSize = 10.sp)
@@ -331,6 +328,35 @@ private fun MasterLetharaBanner(onHistory: () -> Unit, onMascot: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun LetharaGameMark() {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Surface(
+            modifier = Modifier.size(58.dp),
+            shape = CircleShape,
+            color = Color(0xFF0C1733),
+            border = BorderStroke(2.dp, LetharaPalette.Gold),
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Rounded.AutoAwesome,
+                    contentDescription = null,
+                    tint = LetharaPalette.Cyan,
+                    modifier = Modifier.size(30.dp),
+                )
+                Text(
+                    "S",
+                    color = LetharaPalette.Gold,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 15.sp,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 5.dp),
+                )
+            }
+        }
+        Text("SON HARF", color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.8.sp)
     }
 }
 
