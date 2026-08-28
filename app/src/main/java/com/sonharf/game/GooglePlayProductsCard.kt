@@ -139,7 +139,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
 
             PlayProductRow(
                 title = sh("Başlangıç Style Paketi", "Starter Style Pack"),
-                subtitle = sh("800 Son Coin + özel çerçeve + özel emoji paketi", "800 Son Coins + exclusive frame + exclusive emoji pack"),
+                subtitle = sh("800 Son Coin + özel Kurucu Işık Çerçevesi", "800 Son Coins + exclusive Founder Glow Frame"),
                 product = products[ProductCatalog.STARTER_STYLE_PACK],
                 busy = busy == ProductCatalog.STARTER_STYLE_PACK,
             ) { buy(ProductCatalog.STARTER_STYLE_PACK) }
