@@ -134,7 +134,7 @@ fun PrivateRoomWaitingLayer() {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
                     shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .45f)),
+                    border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .28f)),
                 ) {
                     Column(
                         Modifier.fillMaxWidth().padding(22.dp),
@@ -170,7 +170,7 @@ fun PrivateRoomWaitingLayer() {
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
+                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
                     shape = RoundedCornerShape(18.dp),
                 ) {
                     Text(sh("ARKADAŞ DAVET ET", "INVITE A FRIEND"), fontWeight = FontWeight.Black)
