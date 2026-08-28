@@ -52,6 +52,41 @@ jobs:
           path: SonHarf-Final-Test.apk
           if-no-files-found: error
 
+      - name: Runtime preview Neris fur lift
+        if: success() && github.event_name == 'pull_request'
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          profile: pixel_6
+          cores: 4
+          disable-animations: false
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          script: |
+            mkdir -p artifacts/neris-fur-preview
+            adb install -r app/build/outputs/apk/debug/app-debug.apk
+            adb shell wm size 720x1600
+            adb shell wm density 280
+            adb logcat -c
+            adb shell am start -W -n com.sonharf.game/.MascotRuntimeSmokeActivity --es mascot_id mascot_chibi_wizard
+            timeout 25 sh -c "until adb logcat -d | grep -q 'MASCOT_RENDER_READY id=mascot_chibi_wizard clip=Idle'; do sleep 1; done"
+            sleep 2
+            adb exec-out screencap -p > artifacts/neris-fur-preview/neris-fur-idle.png
+            adb logcat -d > artifacts/neris-fur-preview/neris-fur-logcat.txt
+            grep -q 'CHIBI_LIGHTING_READY' artifacts/neris-fur-preview/neris-fur-logcat.txt
+            grep -q 'fur=1.55' artifacts/neris-fur-preview/neris-fur-logcat.txt
+            ! grep -Eqi 'FATAL EXCEPTION|Fatal signal|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game' artifacts/neris-fur-preview/neris-fur-logcat.txt
+            test $(wc -c < artifacts/neris-fur-preview/neris-fur-idle.png) -gt 20000
+
+      - name: Upload Neris fur preview
+        if: always() && github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: Neris-Fur-Lighten-Preview
+          path: artifacts/neris-fur-preview/
+          if-no-files-found: warn
+          retention-days: 3
+
       - name: Build signed release APK and AAB
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'
         env:
