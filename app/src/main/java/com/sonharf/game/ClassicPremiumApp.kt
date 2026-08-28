@@ -116,6 +116,7 @@ fun ClassicPremiumApp() {
         when (screen) {
             ClassicScreen.PROFILE_FULL -> screen = profileFullReturnScreen
             ClassicScreen.SHOP_FULL -> screen = shopFullReturnScreen
+            ClassicScreen.MASCOT_ROOM -> screen = ClassicScreen.MASCOT
             ClassicScreen.HUB -> screen = hubReturnScreen
             ClassicScreen.HOME -> {
                 val now = System.currentTimeMillis()
