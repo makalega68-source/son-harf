@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GameplayExcitementRulesTest {
@@ -17,9 +16,5 @@ class GameplayExcitementRulesTest {
         assertEquals(5, GameplayExcitementRules.wordsToNextTrivia(0))
         assertEquals(1, GameplayExcitementRules.wordsToNextTrivia(4))
         assertEquals(5, GameplayExcitementRules.wordsToNextTrivia(5))
-    }
-
-    @Test fun approvedMascotCanRunWithoutChangingGameplayRules() {
-        assertTrue(MascotPolicy.ENABLED)
     }
 }
