@@ -18,8 +18,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -326,11 +329,23 @@ private fun ArenaV10(
         else -> 44.sp
     }
     var seconds by remember(room.turnDeadline) { mutableIntStateOf(45) }
+    val wordFocusRequester = remember { FocusRequester() }
+    val softwareKeyboard = LocalSoftwareKeyboardController.current
     val timerScale by animateFloatAsState(
         targetValue = if (seconds in 1..10 && seconds % 2 == 0) 1.10f else 1f,
         animationSpec = tween(170),
         label = "finalTenHeartbeat",
     )
+
+    LaunchedEffect(myTurn, busy, room.status, room.currentPlayerId) {
+        if (myTurn && !busy && room.status != "quiz") {
+            delay(140)
+            runCatching { wordFocusRequester.requestFocus() }
+            softwareKeyboard?.show()
+        } else {
+            softwareKeyboard?.hide()
+        }
+    }
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
         var lastTick = -1
@@ -368,7 +383,7 @@ private fun ArenaV10(
 
     val arenaBrush = if (SonHarfCosmetics.auroraTheme) Brush.verticalGradient(listOf(Color(0xFFD9F1FF), Color(0xFFE8E2FF), Color(0xFFDDF9FF))) else Brush.verticalGradient(listOf(SonHarfSurface2, SonHarfBg, Color(0xFFE7F6FF)))
     Column(
-        Modifier.fillMaxSize().background(arenaBrush).statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 6.dp),
+        Modifier.fillMaxSize().background(arenaBrush).statusBarsPadding().navigationBarsPadding().imePadding().padding(horizontal = 10.dp, vertical = 6.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(Modifier.fillMaxWidth().height(84.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -404,7 +419,7 @@ private fun ArenaV10(
                     } else {
                         Text(if (myTurn) sh("SIRA SENDE", "YOUR TURN") else if (room.isBot && room.botTurn) sh("BOT DÜŞÜNÜYOR", "BOT THINKING") else sh("RAKİBİN SIRASI", "OPPONENT'S TURN"), color = if (myTurn) SonHarfCyan else SonHarfMuted, fontWeight = FontWeight.Black, fontSize = 16.sp)
                         if (lastWord.isNullOrBlank()) Text(sh("İLK KELİME", "FIRST WORD"), fontSize = 36.sp, fontWeight = FontWeight.Black)
-                        else Text(buildAnnotatedString { append(lastWord.dropLast(1)); withStyle(SpanStyle(color = SonHarfPink)) { append(lastWord.takeLast(1)) } }, modifier = Modifier.fillMaxWidth(), fontSize = lastWordFont, lineHeight = (lastWordFont.value * 1.08f).sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, maxLines = 2)
+                        else Text(buildAnnotatedString { append(lastWord.dropLast(1)); withStyle(SpanStyle(color = SonHarfBlue)) { append(lastWord.takeLast(1)) } }, modifier = Modifier.fillMaxWidth(), fontSize = lastWordFont, lineHeight = (lastWordFont.value * 1.08f).sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, maxLines = 2)
                         Text(if (required.isBlank()) sh("İlk kelimeyi yaz", "Enter the first word") else sh("$required ile başlayan bir kelime yaz", "Enter a word starting with $required"), color = SonHarfMuted, fontSize = 15.sp)
                     }
                 }
@@ -463,50 +478,48 @@ private fun ArenaV10(
             else if (isVip) Text(sh("VIP: maçtaki çıkan kelimelerin tamamı takip edilir", "VIP: all used words in the match are tracked"), color = SonHarfGold, fontSize = 12.sp, maxLines = 1)
         }
 
-        Surface(Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(17.dp), color = SonHarfSurface, border = BorderStroke(1.6.dp, if (myTurn) SonHarfCyan.copy(alpha=.75f) else SonHarfMuted.copy(alpha=.25f))) {
-            Row(Modifier.fillMaxSize().padding(horizontal=15.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(if (input.isBlank()) if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Rakibin sırası…", "Opponent's turn…") else input.uppercase(displayLocale), Modifier.weight(1f), color = if (input.isBlank()) SonHarfMuted else SonHarfText, fontSize=19.sp)
-                TextButton(onClick=onSubmit, enabled=myTurn && input.length>=2 && !busy) { Text("➤", fontSize=26.sp) }
-            }
-        }
-        KeyboardV10(room.language, myTurn && !busy && room.status != "quiz", input, onInput, onSubmit)
+        OutlinedTextField(
+            value = input,
+            onValueChange = { raw -> onInput(raw.filter(Char::isLetter).take(40)) },
+            enabled = myTurn && !busy && room.status != "quiz",
+            modifier = Modifier.fillMaxWidth().focusRequester(wordFocusRequester),
+            singleLine = true,
+            placeholder = {
+                Text(
+                    if (!myTurn) sh("Rakibin sırası…", "Opponent's turn…")
+                    else if (required.isBlank()) sh("İlk kelimeyi yaz…", "Type the first word…")
+                    else sh("$required ile başlayan kelime yaz", "Type a word starting with $required"),
+                )
+            },
+            textStyle = LocalTextStyle.current.copy(
+                fontSize = 19.sp,
+                fontWeight = FontWeight.SemiBold,
+            ),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Text,
+                imeAction = ImeAction.Send,
+                showKeyboardOnFocus = true,
+                hintLocales = LocaleList(Locale(if (room.language == "tr") "tr-TR" else "en-US")),
+            ),
+            keyboardActions = KeyboardActions(onSend = { if (myTurn && input.length >= 2 && !busy) onSubmit() }),
+            trailingIcon = {
+                TextButton(onClick = onSubmit, enabled = myTurn && input.length >= 2 && !busy) {
+                    Text("➤", color = SonHarfBlue, fontSize = 24.sp)
+                }
+            },
+            shape = RoundedCornerShape(17.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = SonHarfBlue,
+                unfocusedBorderColor = SonHarfMuted.copy(alpha = .25f),
+                focusedTextColor = SonHarfText,
+                unfocusedTextColor = SonHarfText,
+                cursorColor = SonHarfBlue,
+            ),
+        )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick=onForfeit, modifier=Modifier.weight(1f).height(44.dp), border=BorderStroke(1.dp, SonHarfPink.copy(alpha=.55f))) { Text(sh("⚑ PES ET", "⚑ FORFEIT"), color=SonHarfPink, fontWeight=FontWeight.Bold, fontSize=14.sp) }
             OutlinedButton(onClick=onChat, modifier=Modifier.weight(1f).height(44.dp), border=BorderStroke(1.dp, SonHarfCyan.copy(alpha=.55f))) { Text(if (isVip) sh("● SOHBET", "● CHAT") else sh("🔒 SOHBET • VIP", "🔒 CHAT • VIP"), color=if (isVip) SonHarfCyan else SonHarfGold, fontWeight=FontWeight.Bold, fontSize=14.sp) }
         }
-    }
-}
-
-@Composable
-private fun KeyboardV10(language: String, enabled: Boolean, input: String, onInput: (String) -> Unit, onSubmit: () -> Unit) {
-    val rows = if (language == "en") listOf(
-        listOf("q","w","e","r","t","y","u","i","o","p"),
-        listOf("a","s","d","f","g","h","j","k","l"),
-        listOf("z","x","c","v","b","n","m"),
-    ) else listOf(
-        listOf("q","w","e","r","t","y","u","ı","o","p","ğ","ü"),
-        listOf("a","s","d","f","g","h","j","k","l","ş","i"),
-        listOf("z","x","c","v","b","n","m","ö","ç"),
-    )
-    val neon = SonHarfCosmetics.keyboardIsNeon
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        rows.forEach { keys ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                keys.forEach { k ->
-                    val label = if (language == "tr") when (k) { "i" -> "İ"; "ı" -> "I"; else -> k.uppercase() } else k.uppercase()
-                    Button(onClick = { onInput(input + k) }, enabled = enabled && input.length < 40, modifier = Modifier.weight(1f).height(43.dp), shape = RoundedCornerShape(8.dp), colors = ButtonDefaults.buttonColors(containerColor = if (neon) Color(0xFF10283D) else SonHarfSurface2, contentColor = if (neon) SonHarfCyan else SonHarfText), border = if (neon) BorderStroke(1.dp, SonHarfCyan.copy(alpha=.65f)) else null, contentPadding = PaddingValues(0.dp)) {
-                        Text(label, fontSize=13.sp, fontWeight=FontWeight.Bold)
-                    }
-                }
-            }
-        }
-        OutlinedButton(
-            onClick = { if (input.isNotEmpty()) onInput(input.dropLast(1)) },
-            enabled = enabled && input.isNotEmpty(),
-            modifier = Modifier.fillMaxWidth().height(40.dp),
-            shape = RoundedCornerShape(9.dp),
-            contentPadding = PaddingValues(0.dp),
-        ) { Text("⌫", fontSize = 21.sp, fontWeight = FontWeight.Black) }
     }
 }
 
