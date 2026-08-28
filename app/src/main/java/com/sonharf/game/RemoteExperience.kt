@@ -13,7 +13,7 @@ import java.net.URL
 
 @Serializable
 data class RemoteExperienceConfig(
-    val version: Int = 3,
+    val version: Int = 4,
     val primaryColor: String = "#FFD36A",
     val secondaryColor: String = "#56D6FF",
     val backgroundColor: String = "#071229",
@@ -21,10 +21,10 @@ data class RemoteExperienceConfig(
     val surfaceVariantColor: String = "#15284A",
     val textColor: String = "#F4F0FF",
     val mutedColor: String = "#B8B5D4",
-    val homeWordArenaBadgeTr: String = "SÖZ DOKUSU DÜELLOSU",
-    val homeWordArenaBadgeEn: String = "WORD WEAVE DUEL",
-    val homeWordArenaSubtitleTr: String = "Her son harf, yeni bir mührü açar.",
-    val homeWordArenaSubtitleEn: String = "Every final letter opens a new seal.",
+    val homeWordArenaBadgeTr: String = "KELİME DÜELLOSU",
+    val homeWordArenaBadgeEn: String = "WORD DUEL",
+    val homeWordArenaSubtitleTr: String = "Kelimeyi sürdür, rakibini geç.",
+    val homeWordArenaSubtitleEn: String = "Keep the word going, beat your rival.",
     val tournamentMinutes: Int = 18,
     val brandLogoBase64Url: String = "",
 )
@@ -47,10 +47,10 @@ object RemoteExperience {
         prefs.getString(KEY_CONFIG, null)?.let { cached ->
             runCatching { json.decodeFromString<RemoteExperienceConfig>(cached) }
                 .onSuccess { cachedConfig ->
-                    if (cachedConfig.version >= 3) {
+                    if (cachedConfig.version >= 4) {
                         config = cachedConfig
                     } else {
-                        // Retire the legacy light theme and its old remote logo in one migration.
+                        // Retire the legacy story configuration and old remote logo in one migration.
                         brandLogoBytes = null
                         prefs.edit().remove(KEY_CONFIG).remove(KEY_LOGO).apply()
                     }
@@ -69,7 +69,7 @@ object RemoteExperience {
                 ?: return@withContext null
             val remote = runCatching { json.decodeFromString<RemoteExperienceConfig>(configText) }.getOrNull()
                 ?: return@withContext null
-            if (remote.version < 3) return@withContext null
+            if (remote.version < 4) return@withContext null
             val logoEncoded = if (remote.brandLogoBase64Url.isNotBlank()) {
                 val separator = if (remote.brandLogoBase64Url.contains('?')) '&' else '?'
                 runCatching { URL("${remote.brandLogoBase64Url}${separator}ts=$stamp").readText().trim() }.getOrNull()
