@@ -15,8 +15,9 @@ class LetharaLoreTest {
 
     @Test
     fun runtimeMascotsMapToCanonicalCharacters() {
-        assertEquals("Lyra", LetharaLore.characterForMascot(MascotCatalog.DEFAULT_ID).name)
+        assertEquals("Neris", LetharaLore.characterForMascot(MascotCatalog.DEFAULT_ID).name)
         assertEquals("Neris", LetharaLore.characterForMascot(MascotCatalog.CHIBI_WIZARD_ID).name)
+        assertEquals("Lyra", LetharaLore.characterForMascot(MascotCatalog.LEGACY_WHITE_ID).name)
     }
 
     @Test
