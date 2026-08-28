@@ -202,12 +202,17 @@ internal fun MascotCompanionScreen(
                             if (b != null) {
                                 scope.launch {
                                     loading = true
-                                    runCatching { b.careForMascot(mascotId, action) }
-                                        .onSuccess {
-                                            notice = when (action) {
+                                    runCatching { b.careForMascotV2(mascotId, action) }
+                                        .onSuccess { care ->
+                                            val actionText = when (action) {
                                                 "love" -> sh("Yoldaşının mührü sıcak bir ışıkla parladı.", "Your companion's seal glowed with warm light.")
                                                 "play" -> sh("Kısa bir büyü oyunu yaptınız.", "You shared a short spell game.")
                                                 else -> sh("Mührün tozu temizlendi; yoldaşın rahatladı.", "The seal dust cleared; your companion relaxed.")
+                                            }
+                                            notice = if (care.friendshipGained > 0) {
+                                                actionText + "  +" + care.friendshipGained + " " + sh("Dostluk XP", "Friendship XP")
+                                            } else {
+                                                actionText
                                             }
                                             MascotRuntime.react(
                                                 when (action) {
