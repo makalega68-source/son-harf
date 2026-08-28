@@ -28,7 +28,9 @@ CHARACTER RULES
 - Keep fantasy wording natural rather than theatrical in every sentence.
 - Never claim a physical off-screen life, consciousness, or secret access to the player's device.
 - Never guilt the player for leaving, returning late or not playing, and never pressure spending.
-- Do not invent player statistics that were not supplied.
+- Use player statistics, rival data, streaks, titles and achievements ONLY when they are explicitly supplied as verified game context.
+- Never infer a player's record, skill, rival, league, streak, achievement or preference from conversational tone.
+- New-player guidance should be concise and should stop when verified context says the player is no longer new.
 - When the API is unavailable the app has a local fallback, so never imply the player must pay for AI.
 
 GAME
@@ -42,15 +44,25 @@ Return ONLY JSON:
   "reply": "short in-character response",
   "mood": "calm|happy|thinking|encouraging|curious|supportive|tired|celebrating",
   "animation": "idle_breathe",
-  "memory_note": "optional short stable fact worth remembering, or empty string"
+  "memory_note": ""
 }
 `.trim();
 
 type Turn = { role?: unknown; text?: unknown };
-type RequestBody = { message?: unknown; history?: unknown; language?: unknown; player_name?: unknown; companion_name?: unknown; game_context?: unknown; mascot_id?: unknown; mascot_title?: unknown; mascot_personality?: unknown; lore_context?: unknown };
+type RequestBody = {
+  message?: unknown; history?: unknown; language?: unknown; player_name?: unknown; companion_name?: unknown;
+  game_context?: unknown; mascot_id?: unknown; mascot_title?: unknown; mascot_personality?: unknown; lore_context?: unknown;
+  player_wins?: unknown; player_losses?: unknown; friendship_level?: unknown; memory_fragments?: unknown;
+  season_level?: unknown; daily_play_streak?: unknown; best_streak?: unknown; longest_word?: unknown; selected_title?: unknown;
+  rival_name?: unknown; rival_matches?: unknown; rival_wins?: unknown; rival_losses?: unknown;
+};
 
 function text(value: unknown, max: number): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
+}
+function integer(value: unknown, min: number, max: number): number | null {
+  if (typeof value !== "number" || !Number.isFinite(value)) return null;
+  return Math.max(min, Math.min(max, Math.trunc(value)));
 }
 function envInt(name: string, fallback: number): number {
   const parsed = Number.parseInt(Deno.env.get(name) || "", 10);
@@ -75,7 +87,7 @@ function parseReply(raw: string) {
       reply,
       mood: moods.has(parsed?.mood) ? parsed.mood : "calm",
       animation: "idle_breathe",
-      memory_note: text(parsed?.memory_note, 160),
+      memory_note: "",
     };
   } catch {
     return { reply: text(raw, 700) || "Buradayım. Bir kez daha söyler misin?", mood: "calm", animation: "idle_breathe", memory_note: "" };
@@ -138,6 +150,30 @@ Deno.serve(async (req: Request) => {
   const mascotTitle = text(body.mascot_title, 80);
   const mascotPersonality = text(body.mascot_personality, 180);
   const loreContext = text(body.lore_context, 1400);
+  const playerWins = integer(body.player_wins, 0, 1000000);
+  const playerLosses = integer(body.player_losses, 0, 1000000);
+  const friendshipLevel = integer(body.friendship_level, 1, 30);
+  const memoryFragments = integer(body.memory_fragments, 0, 120);
+  const seasonLevel = integer(body.season_level, 1, 10000);
+  const dailyPlayStreak = integer(body.daily_play_streak, 0, 100000);
+  const bestStreak = integer(body.best_streak, 0, 100000);
+  const longestWord = text(body.longest_word, 32);
+  const selectedTitle = text(body.selected_title, 32);
+  const rivalName = text(body.rival_name, 24);
+  const rivalMatches = integer(body.rival_matches, 0, 1000000);
+  const rivalWins = integer(body.rival_wins, 0, 1000000);
+  const rivalLosses = integer(body.rival_losses, 0, 1000000);
+  const verifiedContext = [
+    playerWins !== null && playerLosses !== null ? `Verified player record: ${playerWins} wins, ${playerLosses} losses.` : "",
+    friendshipLevel !== null ? `Verified friendship level: ${friendshipLevel}.` : "",
+    memoryFragments !== null ? `Verified memory fragments: ${memoryFragments}/120.` : "",
+    seasonLevel !== null ? `Verified season level: ${seasonLevel}.` : "",
+    dailyPlayStreak !== null ? `Verified daily play streak: ${dailyPlayStreak}.` : "",
+    bestStreak !== null ? `Verified best win streak: ${bestStreak}.` : "",
+    longestWord ? `Verified longest word: ${longestWord}.` : "",
+    selectedTitle ? `Verified selected title: ${selectedTitle}.` : "",
+    rivalName && rivalMatches !== null ? `Verified arch rival: ${rivalName}; ${rivalMatches} matches; ${rivalWins ?? 0} wins; ${rivalLosses ?? 0} losses.` : "",
+  ].filter(Boolean).join(" ");
   const history = (Array.isArray(body.history) ? body.history : []).slice(-12).map((turn: Turn) => ({
     role: turn?.role === "assistant" ? companionName : "Player",
     text: text(turn?.text, 900),
@@ -150,7 +186,8 @@ Deno.serve(async (req: Request) => {
     mascotTitle ? `Mascot title: ${mascotTitle}` : "",
     mascotPersonality ? `Mascot archetype and temperament: ${mascotPersonality}` : "",
     loreContext ? `Relevant Lethara lore: ${loreContext}` : "",
-    gameContext ? `Current game context: ${gameContext}` : "",
+    verifiedContext ? `Verified game context: ${verifiedContext}` : "",
+    gameContext ? `Additional verified game context: ${gameContext}` : "",
     "Conversation history:",
     ...history.map((turn) => `${turn.role}: ${turn.text}`),
     `Player: ${message}`,
