@@ -228,11 +228,10 @@ internal fun EveMascotScreen(onClose: () -> Unit) {
 
 @Composable
 private fun FantasyForestBackground(modifier: Modifier) {
-    Image(
-        painter = painterResource(R.drawable.mascot_realm_bg),
-        contentDescription = null,
-        modifier = modifier,
-        contentScale = ContentScale.Crop,
+    Box(
+        modifier = modifier.background(
+            Brush.verticalGradient(listOf(Color.White, SonHarfBg, Color(0xFFF1F6FC)))
+        )
     )
 }
 
