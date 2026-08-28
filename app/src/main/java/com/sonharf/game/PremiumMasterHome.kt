@@ -240,7 +240,7 @@ private fun MasterProfileHeader(
 @Composable private fun MasterLeagueBanner(growth: GrowthDashboardDto?, onClick: () -> Unit) {
     Card(onClick = onClick, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MasterPanel), border = BorderStroke(1.dp, MasterLine)) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = RoundedCornerShape(18.dp), color = Color(0xFFFFF3E3)) { Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFFB66D31), modifier = Modifier.padding(12.dp).size(31.dp)) }
+            Surface(shape = RoundedCornerShape(18.dp), color = MasterGold.copy(alpha = .12f)) { Icon(Icons.Rounded.EmojiEvents, null, tint = MasterGold, modifier = Modifier.padding(12.dp).size(31.dp)) }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(growth?.leagueName ?: sh("LİG", "LEAGUE"), color = MasterInk, fontWeight = FontWeight.Black, fontSize = 17.sp)
@@ -353,7 +353,7 @@ private fun MasterLetharaBanner(onHistory: () -> Unit, onMascot: () -> Unit) {
 
 @Composable private fun MasterDailySeries(modifier:Modifier,growth:GrowthDashboardDto?,message:String,onClaim:()->Unit){
     val claimed = growth?.dailyClaimed == true
-    Card(onClick=onClaim,modifier=modifier.height(154.dp),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,MasterLine)){
+    Card(onClick=onClaim,modifier=modifier.height(154.dp),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=MasterPanel),border=BorderStroke(1.dp,MasterLine)){
         Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){
                 Text(sh("GÜNLÜK ÖDÜL","DAILY REWARD"),color=MasterInk,fontWeight=FontWeight.Black,fontSize=14.sp)
@@ -371,7 +371,7 @@ private fun MasterLetharaBanner(onHistory: () -> Unit, onMascot: () -> Unit) {
 }
 
 @Composable private fun MasterSeasonCard(modifier:Modifier,onClick:()->Unit){
-    Card(onClick=onClick,modifier=modifier.height(154.dp),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,MasterLine)){
+    Card(onClick=onClick,modifier=modifier.height(154.dp),shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=MasterPanel),border=BorderStroke(1.dp,MasterLine)){
         Column(Modifier.fillMaxSize().padding(12.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceEvenly){
             Text(sh("LETHARA SEZONU","LETHARA SEASON"),color=MasterInk,fontWeight=FontWeight.Black,fontSize=13.sp)
             Text("🎁",fontSize=39.sp)
@@ -381,6 +381,6 @@ private fun MasterLetharaBanner(onHistory: () -> Unit, onMascot: () -> Unit) {
     }
 }
 
-@Composable private fun MasterTopThree(leaders:List<LeaderboardV2Row>,onClick:()->Unit){Card(onClick=onClick,shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,MasterLine)){Column(Modifier.padding(12.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("🏆 ${sh("HAFTANIN EN İYİ 3 OYUNCUSU","TOP 3 THIS WEEK")}",color=MasterInk,fontWeight=FontWeight.Black,fontSize=11.sp);Text(sh("CANLI","LIVE"),color=MasterGreen,fontWeight=FontWeight.Black,fontSize=8.sp)};Spacer(Modifier.height(7.dp));Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)){leaders.take(3).forEachIndexed{i,r->Surface(Modifier.weight(1f),shape=RoundedCornerShape(14.dp),color=MasterSky){Column(Modifier.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(listOf("🥇","🥈","🥉").getOrElse(i){"#${i+1}"},fontSize=19.sp);Text(r.displayName,color=MasterInk,fontWeight=FontWeight.Black,fontSize=9.sp,maxLines=1);Text("${r.wins}W • ${r.winRate.toInt()}%",color=MasterMuted,fontSize=7.sp)}}}}}}}
+@Composable private fun MasterTopThree(leaders:List<LeaderboardV2Row>,onClick:()->Unit){Card(onClick=onClick,shape=RoundedCornerShape(20.dp),colors=CardDefaults.cardColors(containerColor=MasterPanel),border=BorderStroke(1.dp,MasterLine)){Column(Modifier.padding(12.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text("🏆 ${sh("HAFTANIN EN İYİ 3 OYUNCUSU","TOP 3 THIS WEEK")}",color=MasterInk,fontWeight=FontWeight.Black,fontSize=11.sp);Text(sh("CANLI","LIVE"),color=MasterGreen,fontWeight=FontWeight.Black,fontSize=8.sp)};Spacer(Modifier.height(7.dp));Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(7.dp)){leaders.take(3).forEachIndexed{i,r->Surface(Modifier.weight(1f),shape=RoundedCornerShape(14.dp),color=MasterSky){Column(Modifier.padding(8.dp),horizontalAlignment=Alignment.CenterHorizontally){Text(listOf("🥇","🥈","🥉").getOrElse(i){"#${i+1}"},fontSize=19.sp);Text(r.displayName,color=MasterInk,fontWeight=FontWeight.Black,fontSize=9.sp,maxLines=1);Text("${r.wins}W • ${r.winRate.toInt()}%",color=MasterMuted,fontSize=7.sp)}}}}}}}
 
-@Composable private fun MasterShortcut(icon:ImageVector,label:String,badge:Int,modifier:Modifier,onClick:()->Unit){Card(onClick=onClick,modifier=modifier.height(88.dp),shape=RoundedCornerShape(16.dp),colors=CardDefaults.cardColors(containerColor=Color.White),border=BorderStroke(1.dp,MasterLine)){Box(Modifier.fillMaxSize().padding(6.dp)){Column(Modifier.align(Alignment.Center),horizontalAlignment=Alignment.CenterHorizontally){Icon(icon,null,tint=MasterBlue,modifier=Modifier.size(25.dp));Spacer(Modifier.height(5.dp));Text(label,color=MasterInk,fontSize=7.5.sp,fontWeight=FontWeight.Black,textAlign=TextAlign.Center,maxLines=2)};if(badge>0)Surface(Modifier.align(Alignment.TopEnd).size(20.dp),shape=CircleShape,color=Color(0xFFE65E67)){Box(contentAlignment=Alignment.Center){Text("$badge",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black)}}}}}
+@Composable private fun MasterShortcut(icon:ImageVector,label:String,badge:Int,modifier:Modifier,onClick:()->Unit){Card(onClick=onClick,modifier=modifier.height(88.dp),shape=RoundedCornerShape(16.dp),colors=CardDefaults.cardColors(containerColor=MasterPanel),border=BorderStroke(1.dp,MasterLine)){Box(Modifier.fillMaxSize().padding(6.dp)){Column(Modifier.align(Alignment.Center),horizontalAlignment=Alignment.CenterHorizontally){Icon(icon,null,tint=MasterBlue,modifier=Modifier.size(25.dp));Spacer(Modifier.height(5.dp));Text(label,color=MasterInk,fontSize=7.5.sp,fontWeight=FontWeight.Black,textAlign=TextAlign.Center,maxLines=2)};if(badge>0)Surface(Modifier.align(Alignment.TopEnd).size(20.dp),shape=CircleShape,color=Color(0xFFE65E67)){Box(contentAlignment=Alignment.Center){Text("$badge",color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black)}}}}}
