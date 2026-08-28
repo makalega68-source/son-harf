@@ -25,14 +25,15 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
 
-private val MasterInk = Color(0xFF163B58)
-private val MasterBlue = Color(0xFF20AEE5)
-private val MasterBlue2 = Color(0xFF48C8F2)
-private val MasterSky = Color(0xFFEAF8FF)
-private val MasterLine = Color(0xFFB8E6F7)
-private val MasterGold = Color(0xFFFFC13B)
-private val MasterGreen = Color(0xFF36C981)
-private val MasterMuted = Color(0xFF6D879A)
+private val MasterInk = LetharaPalette.Text
+private val MasterBlue = LetharaPalette.Cyan
+private val MasterBlue2 = LetharaPalette.Violet
+private val MasterSky = Color(0xFF15284A)
+private val MasterPanel = Color(0xFF101D39)
+private val MasterLine = Color(0xFF29486B)
+private val MasterGold = LetharaPalette.Gold
+private val MasterGreen = LetharaPalette.Green
+private val MasterMuted = LetharaPalette.Muted
 
 @Composable
 internal fun PremiumMasterHome(
@@ -76,7 +77,7 @@ internal fun PremiumMasterHome(
 
     Box(Modifier.fillMaxSize()) {
         androidx.compose.foundation.lazy.LazyColumn(
-            modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, Color(0xFFF5FCFF), MasterSky))),
+            modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(LetharaPalette.Night, Color(0xFF0B1730), LetharaPalette.Night2))),
             contentPadding = PaddingValues(horizontal = 13.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(11.dp),
         ) {
@@ -222,14 +223,14 @@ private fun MasterProfileHeader(
         }
         MasterWallet(Icons.Rounded.Paid, "${profile?.diamonds ?: 0} SC", MasterGold)
         Spacer(Modifier.width(5.dp))
-        Surface(onClick = if (isAdmin) onAdmin else onNotifications, shape = CircleShape, color = Color.White, border = BorderStroke(1.dp, MasterLine), modifier = Modifier.size(40.dp)) {
+        Surface(onClick = if (isAdmin) onAdmin else onNotifications, shape = CircleShape, color = MasterPanel, border = BorderStroke(1.dp, MasterLine), modifier = Modifier.size(40.dp)) {
             Box(contentAlignment = Alignment.Center) { Icon(if (isAdmin) Icons.Rounded.AdminPanelSettings else Icons.Rounded.Notifications, null, tint = MasterInk, modifier = Modifier.size(20.dp)) }
         }
     }
 }
 
 @Composable private fun MasterWallet(icon: ImageVector, value: String, tint: Color) {
-    Surface(shape = RoundedCornerShape(16.dp), color = Color.White, border = BorderStroke(1.dp, MasterLine)) {
+    Surface(shape = RoundedCornerShape(16.dp), color = MasterPanel, border = BorderStroke(1.dp, MasterLine)) {
         Row(Modifier.padding(horizontal = 8.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, tint = tint, modifier = Modifier.size(15.dp)); Spacer(Modifier.width(4.dp)); Text(value, color = MasterInk, fontWeight = FontWeight.Black, fontSize = 10.sp)
         }
@@ -237,7 +238,7 @@ private fun MasterProfileHeader(
 }
 
 @Composable private fun MasterLeagueBanner(growth: GrowthDashboardDto?, onClick: () -> Unit) {
-    Card(onClick = onClick, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, MasterLine)) {
+    Card(onClick = onClick, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = MasterPanel), border = BorderStroke(1.dp, MasterLine)) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = RoundedCornerShape(18.dp), color = Color(0xFFFFF3E3)) { Icon(Icons.Rounded.EmojiEvents, null, tint = Color(0xFFB66D31), modifier = Modifier.padding(12.dp).size(31.dp)) }
             Spacer(Modifier.width(10.dp))
@@ -306,18 +307,18 @@ private fun MasterLetharaBanner(onHistory: () -> Unit, onMascot: () -> Unit) {
 
 @Composable private fun MasterSonHarfCard(modifier: Modifier, playerName:String, playerAvatarPath:String?, playerGender:String?, rivalName:String, streak:Int, onPlay:()->Unit) {
     Card(onClick = onPlay, modifier = modifier.height(250.dp), shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = Color.Transparent), border = BorderStroke(1.5.dp, MasterBlue2)) {
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF12A8EE), Color(0xFF0870C9), Color(0xFF064D9B)))).padding(13.dp)) {
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF172D59), Color(0xFF13234B), Color(0xFF241A4A)))).padding(13.dp)) {
             MasterLetterBackdrop()
             Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
                 SonHarfBrandLogo(
                     modifier = Modifier.padding(top = 2.dp, bottom = 3.dp),
                     size = 82.dp,
                 )
-                Surface(shape = RoundedCornerShape(18.dp), color = Color(0xFF0E4E96), border = BorderStroke(1.dp, Color.White.copy(.55f))) { Text("CANLI KELİME ARENASI", Modifier.padding(horizontal = 12.dp, vertical = 5.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                Surface(shape = RoundedCornerShape(18.dp), color = Color(0xFF182B55), border = BorderStroke(1.dp, LetharaPalette.Gold.copy(.55f))) { Text(sh("SÖZ DOKUSU DÜELLOSU", "WORD WEAVE DUEL"), Modifier.padding(horizontal = 12.dp, vertical = 5.dp), color = LetharaPalette.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black) }
                 Spacer(Modifier.height(8.dp))
-                Text("Kelimenin son harfiyle zafer senin!", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                Text(sh("Her son harf, yeni bir mührü açar.", "Every final letter opens a new seal."), color = LetharaPalette.Text, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                 Spacer(Modifier.height(10.dp))
-                Text("KALEM → MASA → ARABA", color = Color(0xFF583D26), fontWeight = FontWeight.Black, fontSize = 12.sp, modifier = Modifier.background(Color(0xFFFFE4B3), RoundedCornerShape(9.dp)).padding(horizontal = 8.dp, vertical = 7.dp))
+                Text("KALEM → MASA → ARABA", color = Color(0xFF221A38), fontWeight = FontWeight.Black, fontSize = 12.sp, modifier = Modifier.background(LetharaPalette.Gold, RoundedCornerShape(9.dp)).padding(horizontal = 8.dp, vertical = 7.dp))
                 Spacer(Modifier.weight(1f))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                     PlayerVsCell(playerName, Modifier.weight(1f), playerAvatarPath, playerGender); Text("VS", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black); PlayerVsCell(rivalName, Modifier.weight(1f))
@@ -325,7 +326,7 @@ private fun MasterLetharaBanner(onHistory: () -> Unit, onMascot: () -> Unit) {
                 Spacer(Modifier.height(9.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     Surface(Modifier.weight(.9f).height(54.dp), shape=RoundedCornerShape(16.dp), color=Color(0xFF0B5AA6)) { Column(Modifier.fillMaxSize().padding(horizontal=6.dp), horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.Center){Text("🔥 $streak",fontSize=15.sp);Text("GALİBİYET",color=Color.White,fontWeight=FontWeight.Black,fontSize=7.sp,maxLines=1,softWrap=false)} }
-                    Button(onClick=onPlay, modifier=Modifier.weight(1.8f).height(54.dp), shape=RoundedCornerShape(19.dp), colors=ButtonDefaults.buttonColors(containerColor=MasterBlue2),contentPadding=PaddingValues(horizontal=12.dp)) { Icon(Icons.Rounded.PlayArrow,null); Spacer(Modifier.width(5.dp)); Text("OYNA",fontWeight=FontWeight.Black,fontSize=16.sp,maxLines=1,softWrap=false) }
+                    Button(onClick=onPlay, modifier=Modifier.weight(1.8f).height(54.dp), shape=RoundedCornerShape(19.dp), colors=ButtonDefaults.buttonColors(containerColor=MasterGold, contentColor=Color(0xFF221A38)),contentPadding=PaddingValues(horizontal=12.dp)) { Icon(Icons.Rounded.PlayArrow,null); Spacer(Modifier.width(5.dp)); Text("OYNA",fontWeight=FontWeight.Black,fontSize=16.sp,maxLines=1,softWrap=false) }
                     Surface(Modifier.weight(.65f), shape=RoundedCornerShape(16.dp), color=Color(0xFF0B5AA6)) { Column(Modifier.padding(8.dp), horizontalAlignment=Alignment.CenterHorizontally){Icon(Icons.Rounded.GridView,null,tint=Color.White);Text("MOD",color=Color.White,fontSize=7.sp,fontWeight=FontWeight.Black)} }
                 }
             }
@@ -338,13 +339,13 @@ private fun MasterLetharaBanner(onHistory: () -> Unit, onMascot: () -> Unit) {
 
 @Composable private fun MasterBilBakalimCard(modifier:Modifier,onPlay:()->Unit){
     Card(onClick=onPlay,modifier=modifier.height(205.dp),shape=RoundedCornerShape(24.dp),colors=CardDefaults.cardColors(containerColor=Color.Transparent),border=BorderStroke(1.5.dp,MasterBlue2)){
-        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFFF4FDFF),Color(0xFFDDF6FF),Color.White))).padding(horizontal=14.dp,vertical=10.dp)){
+        Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF13254A),Color(0xFF101D39),Color(0xFF171638)))).padding(horizontal=14.dp,vertical=10.dp)){
             Column(Modifier.fillMaxSize(),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.SpaceEvenly){
                 Row(verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)){ Text("💡",fontSize=25.sp); Text("BİL BAKALIM",color=MasterInk,fontSize=24.sp,fontWeight=FontWeight.Black,maxLines=1,softWrap=false) }
                 Text("Doğru cevaba en yakın tahmin kazanır!",modifier=Modifier.fillMaxWidth(),color=MasterInk,fontSize=10.sp,textAlign=TextAlign.Center,maxLines=1)
                 Surface(shape=RoundedCornerShape(14.dp),color=MasterSky,border=BorderStroke(1.dp,MasterLine)){ Text("TÜRKÇE  •  ENGLISH",Modifier.padding(horizontal=12.dp,vertical=5.dp),color=MasterBlue,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1) }
-                Surface(shape=RoundedCornerShape(16.dp),color=MasterBlue){ Text("BUGÜNÜN MEYDAN OKUMASI",Modifier.padding(horizontal=11.dp,vertical=6.dp),color=Color.White,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1,softWrap=false) }
-                Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(42.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MasterBlue),contentPadding=PaddingValues(horizontal=10.dp)){ Icon(Icons.Rounded.PlayArrow,null,modifier=Modifier.size(20.dp)); Spacer(Modifier.width(5.dp)); Text("HEMEN OYNA",fontWeight=FontWeight.Black,fontSize=12.sp,maxLines=1,softWrap=false) }
+                Surface(shape=RoundedCornerShape(16.dp),color=Color(0xFF252052)){ Text(sh("BUGÜNÜN SÖZ MÜHRÜ", "TODAY'S WORD SEAL"),Modifier.padding(horizontal=11.dp,vertical=6.dp),color=LetharaPalette.Gold,fontSize=8.sp,fontWeight=FontWeight.Black,maxLines=1,softWrap=false) }
+                Button(onClick=onPlay,modifier=Modifier.fillMaxWidth().height(42.dp),shape=RoundedCornerShape(16.dp),colors=ButtonDefaults.buttonColors(containerColor=MasterGold, contentColor=Color(0xFF221A38)),contentPadding=PaddingValues(horizontal=10.dp)){ Icon(Icons.Rounded.PlayArrow,null,modifier=Modifier.size(20.dp)); Spacer(Modifier.width(5.dp)); Text("HEMEN OYNA",fontWeight=FontWeight.Black,fontSize=12.sp,maxLines=1,softWrap=false) }
             }
         }
     }
