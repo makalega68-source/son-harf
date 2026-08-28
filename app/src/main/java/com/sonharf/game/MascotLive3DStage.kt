@@ -106,17 +106,12 @@ internal fun MascotLive3DStage(
     val clip = MascotCatalog.clip(resolvedId, motion)
 
     LaunchedEffect(motion) {
-        if (motion in setOf(MascotMotion.VICTORY, MascotMotion.DEFEAT, MascotMotion.CRITICAL, MascotMotion.GREETING)) {
-            kotlinx.coroutines.delay(
-                when (motion) {
-                    MascotMotion.VICTORY -> 2_050L
-                    MascotMotion.DEFEAT -> 1_850L
-                    MascotMotion.CRITICAL -> 1_250L
-                    MascotMotion.GREETING -> 1_650L
-                    else -> 1_500L
-                }
-            )
-            if (MascotRuntime.motion == motion) MascotRuntime.react(MascotMotion.IDLE)
+        val oneShotDuration = MascotMotionPolicy.durationMs(motion)
+        if (oneShotDuration != null) {
+            kotlinx.coroutines.delay(oneShotDuration)
+            if (MascotRuntime.motion == motion) {
+                MascotRuntime.react(MascotMotion.IDLE, force = true)
+            }
         }
     }
 
@@ -147,11 +142,7 @@ internal fun MascotLive3DStage(
                         modelInstance = modelInstance,
                         autoAnimate = false,
                         animationName = clip,
-                        animationLoop = motion !in setOf(
-                            MascotMotion.VICTORY,
-                            MascotMotion.DEFEAT,
-                            MascotMotion.CRITICAL,
-                        ),
+                        animationLoop = MascotMotionPolicy.loops(motion),
                         animationSpeed = when (motion) {
                             MascotMotion.RUN -> 1.15f
                             MascotMotion.CRITICAL -> 1.08f
