@@ -42,19 +42,19 @@ private enum class ClassicScreen {
     HOME, PLAY, GAME, BIL_BAKALIM, DAILY_CIPHER, MASTERY, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL, HISTORY, MASCOT, MASCOT_ROOM
 }
 
-private val ClassicBg = Color(0xFFF4FBFF)
-private val ClassicBgDeep = Color(0xFFEAF8FF)
-private val ClassicPanel = Color(0xFFFFFFFF)
-private val ClassicPanel2 = Color(0xFFEAF8FF)
-private val ClassicBorder = Color(0xFFB9E8F8)
-private val ClassicGold = Color(0xFF24AEE4)
-private val ClassicGoldSoft = Color(0xFF1799D0)
-private val ClassicCream = Color(0xFF173B57)
-private val ClassicText = Color(0xFF173B57)
-private val ClassicMuted = Color(0xFF6D879A)
-private val ClassicGreen = Color(0xFF32C985)
-private val ClassicBlue = Color(0xFF38C7F4)
-private val ClassicRed = Color(0xFFFF7891)
+private val ClassicBg = LetharaPalette.Night
+private val ClassicBgDeep = LetharaPalette.Night2
+private val ClassicPanel = Color(0xFF101D39)
+private val ClassicPanel2 = Color(0xFF15284A)
+private val ClassicBorder = Color(0xFF29486B)
+private val ClassicGold = LetharaPalette.Gold
+private val ClassicGoldSoft = Color(0xFFEAB957)
+private val ClassicCream = LetharaPalette.Text
+private val ClassicText = LetharaPalette.Text
+private val ClassicMuted = LetharaPalette.Muted
+private val ClassicGreen = LetharaPalette.Green
+private val ClassicBlue = LetharaPalette.Cyan
+private val ClassicRed = LetharaPalette.Red
 
 /**
  * Premium-casual Son Harf shell designed for a mature audience.
