@@ -41,7 +41,7 @@ fun MetaProgressV2Screen() {
             val d = data
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .35f))) {
                 Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text("✦ ${sh("LETHARA SEZONU", "LETHARA SEASON")}", color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                    Text("✦ ${sh("SON HARF SEZONU", "SON HARF SEASON")}", color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 20.sp)
                     if (d == null) LinearProgressIndicator(Modifier.fillMaxWidth()) else {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(d.seasonName.uppercase(), fontWeight = FontWeight.Black); Text("${d.seasonDay}/${d.seasonDays}", color = SonHarfMuted) }
                         Text("LV ${d.seasonLevel} • ${d.seasonXp} XP", color = SonHarfCyan, fontWeight = FontWeight.Black)
@@ -68,7 +68,7 @@ fun MetaProgressV2Screen() {
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .3f))) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Text("◇ ${sh("HAFTALIK MÜHÜR KUPASI", "WEEKLY SEAL CUP")}", color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
+                        Text("◇ ${sh("HAFTALIK KUPA", "WEEKLY CUP")}", color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
                         Text("${d.cupPoints} ${sh("puan", "points")} • #${d.cupRank}", color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 18.sp)
                         Text(if (d.cupQualified) sh("✓ İlk 16 içindesin", "✓ You are in the Top 16") else sh("İlk 16 için maç kazanmaya devam et.", "Keep winning to reach the Top 16."), color = if (d.cupQualified) SonHarfGreen else SonHarfMuted)
                         Text(if (d.cupActive) sh("Kupa haftasonu aktif.", "Cup weekend is active.") else sh("Sıralama hafta boyunca oluşur; final heyecanı haftasonu.", "Ranking builds all week; finals peak on the weekend."), color = SonHarfMuted, fontSize = 9.sp)
@@ -77,7 +77,7 @@ fun MetaProgressV2Screen() {
             }
 
             item {
-                Text("📈 ${sh("HATIRLATICI KAYITLARI", "REMEMBRANCER RECORDS")}", fontWeight = FontWeight.Black); Spacer(Modifier.height(7.dp))
+                Text("📈 ${sh("OYUNCU REKORLARI", "PLAYER RECORDS")}", fontWeight = FontWeight.Black); Spacer(Modifier.height(7.dp))
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     RecordLine(sh("Farklı kelime", "Unique words"), d.uniqueWords.toString())
                     RecordLine(sh("En uzun kelime", "Longest word"), if (d.longestWord.isBlank()) "—" else "${d.longestWord} (${d.longestWordLength})")
@@ -124,9 +124,9 @@ private fun SeasonPassCard(active: Boolean, onPurchased: () -> Unit, onNotice: (
     DisposableEffect(manager) { manager.connect { manager.querySubscriptions(listOf(ProductCatalog.SEASON_PASS_MONTHLY)) { product = it[ProductCatalog.SEASON_PASS_MONTHLY] } }; onDispose { manager.close() } }
     Card(colors = CardDefaults.cardColors(containerColor = SonHarfGold.copy(alpha = .08f)), shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .4f))) {
         Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column { Text("⚡ LETHARA PASS", color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 19.sp); Text(sh("Her sezon ekstra ödül yolu", "Extra reward track each season"), color = SonHarfMuted, fontSize = 9.sp) }; Text(if (active) sh("AKTİF", "ACTIVE") else product?.subscriptionOfferDetails?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice ?: "PLAY", color = if (active) SonHarfGreen else SonHarfGold, fontWeight = FontWeight.Black) }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Column { Text("⚡ SEZON BİLETİ", color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 19.sp); Text(sh("Her sezon ekstra ödül yolu", "Extra reward track each season"), color = SonHarfMuted, fontSize = 9.sp) }; Text(if (active) sh("AKTİF", "ACTIVE") else product?.subscriptionOfferDetails?.firstOrNull()?.pricingPhases?.pricingPhaseList?.firstOrNull()?.formattedPrice ?: "PLAY", color = if (active) SonHarfGreen else SonHarfGold, fontWeight = FontWeight.Black) }
             Text(sh("Son Coin + ileride özel Style ödülleri. Skor, süre, rating veya lig avantajı vermez.", "Son Coin + future exclusive Style rewards. No score, time, rating or league advantage."), color = SonHarfText, fontSize = 10.sp)
-            if (!active) Button(onClick = { val p = product; if (activity == null || p == null) onNotice(sh("Season Pass Google Play'de henüz yayınlanmamış olabilir.", "Season Pass may not be published on Google Play yet.")) else { busy = true; val result = manager.launchProduct(activity, p); if (result.responseCode != BillingClient.BillingResponseCode.OK) { busy = false; onNotice(sh("Google Play ödeme ekranı açılamadı.", "Google Play billing could not open.")) } } }, enabled = !busy, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF251900))) { Text(if (busy) "…" else sh("LETHARA PASS AL", "GET LETHARA PASS"), fontWeight = FontWeight.Black) }
+            if (!active) Button(onClick = { val p = product; if (activity == null || p == null) onNotice(sh("Season Pass Google Play'de henüz yayınlanmamış olabilir.", "Season Pass may not be published on Google Play yet.")) else { busy = true; val result = manager.launchProduct(activity, p); if (result.responseCode != BillingClient.BillingResponseCode.OK) { busy = false; onNotice(sh("Google Play ödeme ekranı açılamadı.", "Google Play billing could not open.")) } } }, enabled = !busy, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF251900))) { Text(if (busy) "…" else sh("SEZON BİLETİ AL", "GET SEASON PASS"), fontWeight = FontWeight.Black) }
         }
     }
 }
