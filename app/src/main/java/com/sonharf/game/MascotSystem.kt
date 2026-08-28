@@ -138,4 +138,13 @@ internal object MascotRuntime {
 }
 
 @Composable
-internal fun MascotBehaviorBridge() = Unit
+internal fun MascotBehaviorBridge() {
+    val activeMotion = MascotRuntime.motion
+    androidx.compose.runtime.LaunchedEffect(activeMotion) {
+        val duration = MascotMotionPolicy.durationMs(activeMotion) ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(duration)
+        if (MascotRuntime.motion == activeMotion) {
+            MascotRuntime.react(MascotMotion.IDLE, force = true)
+        }
+    }
+}
