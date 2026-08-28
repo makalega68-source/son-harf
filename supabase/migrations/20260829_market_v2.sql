@@ -11,7 +11,8 @@ create table if not exists public.season_pass_entitlements (
 
 alter table public.season_pass_entitlements enable row level security;
 drop policy if exists season_pass_read_own on public.season_pass_entitlements;
-create policy season_pass_read_own
+drop policy if exists season_pass_self_select on public.season_pass_entitlements;
+create policy season_pass_self_select
 on public.season_pass_entitlements
 for select to authenticated
 using ((select auth.uid()) = user_id);
