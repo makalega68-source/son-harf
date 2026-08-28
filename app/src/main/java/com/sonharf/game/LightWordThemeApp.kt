@@ -207,6 +207,24 @@ private fun LightHomeScreen(
         mascotMotion = MascotHomeAiDirector.cachedMotion
     }
 
+    LaunchedEffect(homeContextLoaded) {
+        if (!homeContextLoaded) return@LaunchedEffect
+        val ambient = listOf(
+            MascotMotion.TURN_LEFT,
+            MascotMotion.WALK,
+            MascotMotion.TURN_RIGHT,
+            MascotMotion.LOOK_AT_PLAYER,
+        )
+        var ambientIndex = 0
+        while (true) {
+            delay(6_500)
+            if (mascotMotion == MascotMotion.IDLE) {
+                mascotMotion = ambient[ambientIndex % ambient.size]
+                ambientIndex += 1
+            }
+        }
+    }
+
     LaunchedEffect(mascotMotion) {
         val duration = MascotMotionPolicy.durationMs(mascotMotion) ?: when (mascotMotion) {
             MascotMotion.WALK,
