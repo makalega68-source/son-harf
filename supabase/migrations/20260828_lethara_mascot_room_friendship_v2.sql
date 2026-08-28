@@ -118,28 +118,38 @@ declare
   v_bonus integer:=0;
   v_completed boolean:=false;
   v_rewarded boolean:=false;
+  v_loved boolean:=false;
+  v_played boolean:=false;
+  v_groomed boolean:=false;
 begin
   if v_uid is null then raise exception 'not_authenticated'; end if;
   if v_action not in ('love','play','groom') then raise exception 'invalid_care_action'; end if;
   perform public.ensure_mascot_progress_v1(p_mascot_id);
 
-  v_base_gain:=case v_action when 'love' then 3 when 'play' then 4 else 2 end;
+  insert into public.user_mascot_daily_bond(user_id,mascot_id,bond_date)
+  values(v_uid,p_mascot_id,current_date)
+  on conflict(user_id,mascot_id,bond_date) do nothing;
 
-  insert into public.user_mascot_daily_bond(user_id,mascot_id,bond_date,loved,played,groomed)
-  values(
-    v_uid,p_mascot_id,current_date,
-    v_action='love',v_action='play',v_action='groom'
-  )
-  on conflict(user_id,mascot_id,bond_date) do update set
-    loved=public.user_mascot_daily_bond.loved or excluded.loved,
-    played=public.user_mascot_daily_bond.played or excluded.played,
-    groomed=public.user_mascot_daily_bond.groomed or excluded.groomed;
-
-  select loved and played and groomed,completion_rewarded
-  into v_completed,v_rewarded
+  select loved,played,groomed,completion_rewarded
+  into v_loved,v_played,v_groomed,v_rewarded
   from public.user_mascot_daily_bond
   where user_id=v_uid and mascot_id=p_mascot_id and bond_date=current_date
   for update;
+
+  v_base_gain:=case
+    when v_action='love' and not v_loved then 3
+    when v_action='play' and not v_played then 4
+    when v_action='groom' and not v_groomed then 2
+    else 0
+  end;
+
+  update public.user_mascot_daily_bond
+  set loved=loved or v_action='love',
+      played=played or v_action='play',
+      groomed=groomed or v_action='groom'
+  where user_id=v_uid and mascot_id=p_mascot_id and bond_date=current_date
+  returning loved and played and groomed,completion_rewarded
+  into v_completed,v_rewarded;
 
   if v_completed and not v_rewarded then
     v_bonus:=10;
