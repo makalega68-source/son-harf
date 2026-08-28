@@ -45,7 +45,11 @@ object SonHarfPreferences {
     fun friendRequestNotificationsEnabled(context: Context): Boolean = prefs(context).getBoolean(FRIEND_REQUEST_NOTIFICATIONS, prefs(context).getBoolean(NOTIFICATIONS, true))
     fun systemNotificationsEnabled(context: Context): Boolean = prefs(context).getBoolean(SYSTEM_NOTIFICATIONS, prefs(context).getBoolean(NOTIFICATIONS, true))
 
-    fun setSoundEnabled(context: Context, value: Boolean) { prefs(context).edit().putBoolean(SOUND, value).apply(); SonHarfSoundFx.setEnabled(value) }
+    fun setSoundEnabled(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(SOUND, value).apply()
+        SonHarfSoundFx.setEnabled(value)
+        SonHarfBackgroundMusic.setEnabled(context, value)
+    }
     fun setVibrationEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(VIBRATION, value).apply()
     fun setDarkModeEnabled(context: Context, value: Boolean) {
         // Lethara currently has one canonical production appearance: the dark fantasy theme.
@@ -122,7 +126,11 @@ object SonHarfPreferences {
         else -> ""
     }
 
-    fun syncSound(context: Context) = SonHarfSoundFx.setEnabled(soundEnabled(context))
+    fun syncSound(context: Context) {
+        val enabled = soundEnabled(context)
+        SonHarfSoundFx.setEnabled(enabled)
+        SonHarfBackgroundMusic.setEnabled(context, enabled)
+    }
     fun syncUi(context: Context) {
         SonHarfUiState.darkMode = true
         SonHarfUiState.language = language(context)
