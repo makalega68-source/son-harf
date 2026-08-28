@@ -140,8 +140,8 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack) { Text("‹ OYUNLAR") }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("KELİME SAVAŞI", color = BilText, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Text(sh("1v1 HIZLI TAHMİN DÜELLOSU", "1v1 QUICK GUESS DUEL"), color = BilCyan, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Text("BİL BAKALIM", color = BilText, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                Text(sh("BİLGİ YARIŞMASI • EN YAKIN TAHMİN", "TRIVIA • CLOSEST GUESS"), color = BilCyan, fontSize = 10.sp, fontWeight = FontWeight.Black)
             }
             Text("$league\n$rating", color = BilText, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End)
         }

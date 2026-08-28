@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 
 /** Runtime UI preferences shared by the whole Compose tree. */
 object SonHarfUiState {
-    var darkMode by mutableStateOf(true)
+    var darkMode by mutableStateOf(false)
     var language by mutableStateOf("tr")
     var inMatch by mutableStateOf(false)
     var homeRequest by mutableStateOf(0)

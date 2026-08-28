@@ -47,11 +47,8 @@ fun FinalProfileScreen() {
 
     LaunchedEffect(Unit) {
         SonHarfPreferences.syncSound(context)
-        MascotSelectionRuntime.load(context)
         refresh()
     }
-
-    val activeSeal = LetharaLore.characterForMascot(MascotSelectionRuntime.selectedId)
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -59,8 +56,8 @@ fun FinalProfileScreen() {
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Text("HATIRLATICI PROFİLİ", fontSize = 26.sp, fontWeight = FontWeight.Black)
-            Text("Lethara’daki kimliğin, gizliliğin ve ayarların", color = SonHarfMuted)
+            Text("OYUNCU PROFİLİ", fontSize = 26.sp, fontWeight = FontWeight.Black)
+            Text("Kimliğin, gizliliğin ve oyun ayarların", color = SonHarfMuted)
         }
 
         item {
@@ -74,45 +71,19 @@ fun FinalProfileScreen() {
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Surface(
-                        color = SonHarfPurple.copy(alpha = .18f),
-                        shape = RoundedCornerShape(999.dp),
-                        border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .25f)),
-                    ) {
-                        Text(
-                            profile?.displayName?.take(2)?.uppercase() ?: "SH",
-                            Modifier.padding(20.dp),
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Black,
-                            color = SonHarfCyan,
-                        )
-                    }
+                    ProfilePhotoAvatar(
+                        avatarPath = profile?.avatarPath,
+                        name = profile?.displayName ?: "Oyuncu",
+                        size = 112.dp,
+                        visible = true,
+                        accent = SonHarfCyan,
+                    )
                     Text(profile?.displayName ?: "OYUNCU PROFİLİ", fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
-                        if (profile == null) "İlk maça girdiğinde Hatırlatıcı profilin hazırlanır." else if (profile?.isVip == true) "VIP HATIRLATICI" else "HATIRLATICI",
+                        if (profile == null) "İlk maça girdiğinde oyuncu profilin hazırlanır." else if (profile?.isVip == true) "VIP OYUNCU" else "OYUNCU",
                         color = if (profile?.isVip == true) SonHarfGold else SonHarfMuted,
                         textAlign = TextAlign.Center,
                     )
-                }
-            }
-        }
-
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = activeSeal.color.copy(alpha = .08f)),
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, activeSeal.color.copy(alpha = .34f)),
-            ) {
-                Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = RoundedCornerShape(16.dp), color = activeSeal.color.copy(alpha = .14f)) {
-                        Text("✦", Modifier.padding(horizontal = 14.dp, vertical = 10.dp), color = activeSeal.color, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                    }
-                    Spacer(Modifier.width(11.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(sh("AKTİF MÜHÜR", "ACTIVE SEAL"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 10.sp)
-                        Text(activeSeal.name + " — " + if (SonHarfUiState.isEnglish) activeSeal.titleEn else activeSeal.titleTr, fontWeight = FontWeight.Black)
-                        Text(if (SonHarfUiState.isEnglish) activeSeal.temperamentEn else activeSeal.temperamentTr, color = SonHarfMuted, fontSize = 9.sp)
-                    }
                 }
             }
         }
@@ -157,8 +128,7 @@ fun FinalProfileScreen() {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("PROFİL FOTOĞRAFI & GİZLİLİK", color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                    Text("Fotoğraf varsayılan olarak gizlidir. Maç sırasında yalnızca seçtiğin rakibe açabilirsin; engellediğin oyuncular erişemez.", color = SonHarfMuted, lineHeight = 20.sp)
-                    if (profile?.isVip == true) Text("VIP: İzin verilen oyuncuların mini profil fotoğraflarını görebilirsin.", color = SonHarfGold, fontSize = 12.sp)
+                    Text("Profil fotoğrafın oyun içinde oyuncu kimliğinin göründüğü alanlarda kullanılır. Engellediğin oyuncularla etkileşim sınırlandırılır.", color = SonHarfMuted, lineHeight = 20.sp)
                 }
             }
         }
@@ -169,7 +139,10 @@ fun FinalProfileScreen() {
                     Text("ENGELLENENLER", color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 12.sp)
                     blocked.forEach { p ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Text(p.displayName, fontWeight = FontWeight.SemiBold)
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                ProfilePhotoAvatar(p.avatarPath, p.displayName, 34.dp, visible = true, accent = SonHarfCyan)
+                                Text(p.displayName, fontWeight = FontWeight.SemiBold)
+                            }
                             TextButton(onClick = {
                                 val b = backend ?: return@TextButton
                                 scope.launch {
@@ -186,10 +159,26 @@ fun FinalProfileScreen() {
         if (leaders.isNotEmpty()) item {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(sh("HATIRLATICI SIRALAMASI", "REMEMBRANCER RANKING"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                    Text(sh("OYUNCU SIRALAMASI", "PLAYER RANKING"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 12.sp)
                     leaders.take(10).forEachIndexed { index, row ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("${index + 1}. ${row.profile.displayName}", fontWeight = if (row.profile.id == profile?.id) FontWeight.Black else FontWeight.Medium)
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("${index + 1}.", modifier = Modifier.width(24.dp), color = SonHarfMuted)
+                            ProfilePhotoAvatar(
+                                avatarPath = row.profile.avatarPath,
+                                name = row.profile.displayName,
+                                size = 34.dp,
+                                visible = true,
+                                accent = if (row.profile.id == profile?.id) SonHarfCyan else SonHarfPurple,
+                            )
+                            Text(
+                                row.profile.displayName,
+                                modifier = Modifier.weight(1f),
+                                fontWeight = if (row.profile.id == profile?.id) FontWeight.Black else FontWeight.Medium,
+                            )
                             Text("${row.profile.wins} G • %${row.winRate}", color = SonHarfMuted, fontSize = 12.sp)
                         }
                     }

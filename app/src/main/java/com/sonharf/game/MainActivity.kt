@@ -44,6 +44,21 @@ private val SonHarfTypography = Typography(
 enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
 
 class MainActivity : ComponentActivity() {
+    override fun onStart() {
+        super.onStart()
+        SonHarfBackgroundMusic.start(this)
+    }
+
+    override fun onStop() {
+        SonHarfBackgroundMusic.pause()
+        super.onStop()
+    }
+
+    override fun onDestroy() {
+        SonHarfBackgroundMusic.release()
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         SonHarfPreferences.syncSound(this)

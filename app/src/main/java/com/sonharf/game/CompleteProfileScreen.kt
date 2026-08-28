@@ -31,8 +31,8 @@ fun CompleteProfileScreen(
                     Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
                 }
                 Column {
-                    Text(sh("HATIRLATICI PROFİLİ", "REMEMBRANCER PROFILE"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 21.sp)
-                    Text(sh("Kimliğin, mührün ve Lethara ayarların", "Your identity, seal and Lethara settings"), color = LetharaPalette.Muted, fontSize = 9.sp)
+                    Text(sh("OYUNCU PROFİLİ", "PLAYER PROFILE"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 21.sp)
+                    Text(sh("Kimlik, gizlilik ve oyun ayarların", "Identity, privacy and game settings"), color = SonHarfMuted, fontSize = 9.sp)
                 }
             }
         }
@@ -41,7 +41,7 @@ fun CompleteProfileScreen(
                 Tab(selected = tab == index, onClick = { tab = index }, text = { Text(title, color = if (tab == index) SonHarfCyan else SonHarfMuted, fontWeight = FontWeight.Bold, fontSize = 11.sp) })
             }
         }
-        Surface(Modifier.fillMaxWidth().height(1.dp), color = LetharaPalette.Gold.copy(alpha = .30f), shape = RoundedCornerShape(999.dp)) {}
+        Surface(Modifier.fillMaxWidth().height(1.dp), color = SonHarfGold.copy(alpha = .30f), shape = RoundedCornerShape(999.dp)) {}
         Box(Modifier.weight(1f)) {
             when (tab) { 0 -> ProfileExperienceV2Screen(); 1 -> FinalProfileScreen(); else -> DetailedPreferencesSettings() }
         }
@@ -58,8 +58,8 @@ private fun DetailedPreferencesSettings() {
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
-            Text(sh("LETHARA TERCİHLERİ", "LETHARA PREFERENCES"), color = LetharaPalette.Gold, fontSize = 24.sp, fontWeight = FontWeight.Black)
-            Text(sh("Dil ve bildirim ayarlarını Söz Dokusu deneyiminden bağımsız yönet.", "Manage language and notification settings independently from Word Weave progression."), color = SonHarfMuted, fontSize = 12.sp)
+            Text(sh("UYGULAMA TERCİHLERİ", "APP PREFERENCES"), color = SonHarfGold, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            Text(sh("Dil ve bildirim ayarlarını buradan yönet.", "Manage language and notification settings here."), color = SonHarfMuted, fontSize = 12.sp)
         }
         item {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(18.dp)) {

@@ -117,19 +117,16 @@ internal object MascotRuntime {
 
     private fun localizedMessage(motion: MascotMotion, language: String): String {
         val en = language == "en"
-        val character = LetharaLore.characterForMascot(MascotSelectionRuntime.selectedId)
         return when (motion) {
-            MascotMotion.GREETING -> if (en) "The seal stirs. I'm ready." else "Mühür kıpırdandı. Hazırım."
-            MascotMotion.THINKING -> if (en) "Quiet... the Word Weave is moving." else "Sessiz... Söz Dokusu hareket ediyor."
-            MascotMotion.CRITICAL -> if (en) "Hold the final letter!" else "Son harfi bırakma!"
-            MascotMotion.VICTORY -> if (en) "A memory spark! The old stars saw that." else "Bir hafıza kıvılcımı! Eski yıldızlar bunu gördü."
-            MascotMotion.DEFEAT -> if (en) "The weave bent, not broke." else "Doku büküldü, kırılmadı."
-            MascotMotion.LOOK_AT_PLAYER -> if (en) "I'm listening, Remembrancer." else "Dinliyorum, Hatırlatıcı."
-            MascotMotion.SIT -> if (en) "Even seals need a quiet moment." else "Mühürlerin bile sessiz bir ana ihtiyacı olur."
-            MascotMotion.RUN -> if (en) "The path is open!" else "Yol açıldı!"
-            MascotMotion.IDLE -> if (playerXp > 0 && playerXp % 90 == 0) {
-                LetharaLore.randomWhisper(character, language, playerXp + playerLevel)
-            } else ""
+            MascotMotion.GREETING -> if (en) "Ready? Let's start with one good word." else "Hazırsan tek iyi kelimeyle başlayalım."
+            MascotMotion.THINKING -> if (en) "Check the final letter first." else "Önce son harfi kontrol et."
+            MascotMotion.CRITICAL -> if (en) "Time is low. Pick the safe word!" else "Süre azalıyor. Güvenli kelimeyi seç!"
+            MascotMotion.VICTORY -> if (en) "Great play! Keep the streak going." else "Harika oynadın! Seriyi sürdür."
+            MascotMotion.DEFEAT -> if (en) "Quick reset. The next match is yours." else "Hızlı toparlan. Sıradaki maç senin."
+            MascotMotion.LOOK_AT_PLAYER -> if (en) "I'm here. Let's think together." else "Buradayım. Birlikte düşünelim."
+            MascotMotion.SIT -> if (en) "A short break is fine." else "Kısa bir mola iyi gelir."
+            MascotMotion.RUN -> if (en) "Come on, let's play!" else "Hadi, oyuna girelim!"
+            MascotMotion.IDLE,
             MascotMotion.WALK,
             MascotMotion.TURN_LEFT,
             MascotMotion.TURN_RIGHT -> ""
