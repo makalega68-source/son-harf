@@ -39,7 +39,7 @@ import com.sonharf.game.data.getLeaderboardV2
 import kotlinx.coroutines.launch
 
 private enum class ClassicScreen {
-    HOME, PLAY, GAME, BIL_BAKALIM, DAILY_CIPHER, MASTERY, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL, HISTORY, MASCOT, MASCOT_ROOM
+    HOME, PLAY, GAME, BIL_BAKALIM, DAILY_CIPHER, MASTERY, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL
 }
 
 private val ClassicBg = LetharaPalette.Night
@@ -88,7 +88,6 @@ fun ClassicPremiumApp() {
         runCatching { backend?.getPreferredGameMode() }.getOrNull()?.let { SonHarfGameModeState.mode = it }
         val equipped = runCatching { backend?.getEquippedCosmetics() }.getOrNull()
         SonHarfCosmetics.apply(equipped)
-        MascotSelectionRuntime.select(context, equipped?.mascotId ?: MascotCatalog.DEFAULT_ID)
     }
     LaunchedEffect(lobbyRequest) {
         if (authenticated && lobbyRequest > 0) {
@@ -109,7 +108,6 @@ fun ClassicPremiumApp() {
         when (screen) {
             ClassicScreen.PROFILE_FULL -> screen = profileFullReturnScreen
             ClassicScreen.SHOP_FULL -> screen = shopFullReturnScreen
-            ClassicScreen.MASCOT_ROOM -> screen = ClassicScreen.MASCOT
             ClassicScreen.HUB -> screen = hubReturnScreen
             ClassicScreen.HOME -> {
                 val now = System.currentTimeMillis()
@@ -131,17 +129,14 @@ fun ClassicPremiumApp() {
     }
 
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(ClassicBg, ClassicBgDeep)))) {
-        MascotBehaviorBridge()
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                if (screen in setOf(ClassicScreen.HOME, ClassicScreen.LEAGUE, ClassicScreen.MASCOT, ClassicScreen.HISTORY, ClassicScreen.SHOP)) {
+                if (screen in setOf(ClassicScreen.HOME, ClassicScreen.LEAGUE, ClassicScreen.SHOP)) {
                     ClassicBottomBar(
                         current = screen,
                         onHome = { screen = ClassicScreen.HOME },
                         onLeague = { screen = ClassicScreen.LEAGUE },
-                        onMascot = { screen = ClassicScreen.MASCOT },
-                        onHistory = { screen = ClassicScreen.HISTORY },
                         onShop = { screen = ClassicScreen.SHOP },
                     )
                 }
@@ -168,9 +163,6 @@ fun ClassicPremiumApp() {
                         onNotifications = { profileFullTab = 2; profileFullReturnScreen = ClassicScreen.HOME; screen = ClassicScreen.PROFILE_FULL },
                         onDailyCipher = { screen = ClassicScreen.DAILY_CIPHER },
                         onMastery = { screen = ClassicScreen.MASTERY },
-                        onHistory = { screen = ClassicScreen.HISTORY },
-                        onMascot = { screen = ClassicScreen.MASCOT },
-                        onRoom = { screen = ClassicScreen.MASCOT_ROOM },
                     )
                     ClassicScreen.PLAY -> ClassicPlayScreen(
                         backend = backend,
@@ -214,34 +206,7 @@ fun ClassicPremiumApp() {
                         initialTab = shopFullTab,
                         onBack = { screen = shopFullReturnScreen },
                     )
-                    ClassicScreen.HISTORY -> WizardHistoryScreen(
-                        backend = backend,
-                        onBack = { screen = ClassicScreen.HOME },
-                        onOpenMascot = { screen = ClassicScreen.MASCOT },
-                        onOpenShop = {
-                            shopFullTab = 0
-                            shopFullReturnScreen = ClassicScreen.HISTORY
-                            screen = ClassicScreen.SHOP_FULL
-                        },
-                    )
-                    ClassicScreen.MASCOT -> MascotCompanionScreen(
-                        backend = backend,
-                        onBack = { screen = ClassicScreen.HOME },
-                        onOpenHistory = { screen = ClassicScreen.HISTORY },
-                        onOpenRoom = { screen = ClassicScreen.MASCOT_ROOM },
-                        onOpenShop = {
-                            shopFullTab = 1
-                            shopFullReturnScreen = ClassicScreen.MASCOT
-                            screen = ClassicScreen.SHOP_FULL
-                        },
-                    )
-                    ClassicScreen.MASCOT_ROOM -> MascotRoomScreen(
-                        backend = backend,
-                        onBack = { screen = ClassicScreen.MASCOT },
-                        onOpenCompanion = { screen = ClassicScreen.MASCOT },
-                        onOpenHistory = { screen = ClassicScreen.HISTORY },
-                    )
-                    }
+}
                 }
             }
         }
@@ -677,7 +642,6 @@ private fun ClassicProfileScreen(
     onDetails: () -> Unit,
     onCosmetics: () -> Unit,
     onAchievements: () -> Unit,
-    onHistory: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
@@ -836,7 +800,6 @@ private fun ClassicBottomBar(
     current: ClassicScreen,
     onHome: () -> Unit,
     onLeague: () -> Unit,
-    onMascot: () -> Unit,
     onHistory: () -> Unit,
     onShop: () -> Unit,
 ) {
@@ -851,8 +814,6 @@ private fun ClassicBottomBar(
         ) {
             BottomItem(Icons.Rounded.Home, sh("Ana Sayfa", "Home"), current == ClassicScreen.HOME, Modifier.weight(1f), onHome)
             BottomItem(Icons.Rounded.EmojiEvents, sh("Lig", "League"), current == ClassicScreen.LEAGUE, Modifier.weight(1f), onLeague)
-            BottomItem(Icons.Rounded.Pets, sh("Maskot", "Mascot"), current == ClassicScreen.MASCOT, Modifier.weight(1f), onMascot)
-            BottomItem(Icons.Rounded.AutoStories, sh("Hikaye", "Story"), current == ClassicScreen.HISTORY, Modifier.weight(1f), onHistory)
             BottomItem(Icons.Rounded.ShoppingCart, sh("Mağaza", "Shop"), current == ClassicScreen.SHOP, Modifier.weight(1f), onShop)
         }
     }
