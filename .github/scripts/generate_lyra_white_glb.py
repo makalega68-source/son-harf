@@ -2,6 +2,7 @@
 import base64
 import colorsys
 import gzip
+import hashlib
 import io
 import json
 import re
@@ -138,4 +139,5 @@ out += bin_bytes
 OUT.parent.mkdir(parents=True, exist_ok=True)
 OUT.write_bytes(out)
 print("LYRA_WHITE_GLB", OUT, len(out))
+print("LYRA_WHITE_SHA256", hashlib.sha256(out).hexdigest())
 print("WHITE_IMAGE", new_image_index, "WHITE_TEXTURE", new_texture_index, "MAGE_MATERIAL", mage_index, "CLOTHES_MATERIAL", clothes_index)
