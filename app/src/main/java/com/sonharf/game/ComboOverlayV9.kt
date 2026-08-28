@@ -172,7 +172,7 @@ fun ComboOverlayV9() {
     }
     reaction?.let { r ->
         Box(Modifier.fillMaxSize().statusBarsPadding().padding(top=62.dp),contentAlignment=Alignment.TopCenter) {
-            Surface(shape=RoundedCornerShape(22.dp),color=SonHarfPurple.copy(alpha=.92f)) { Text(r,Modifier.padding(horizontal=18.dp,vertical=8.dp),fontSize=28.sp) }
+            Surface(shape=RoundedCornerShape(22.dp),color=SonHarfBlue.copy(alpha=.92f)) { Text(r,Modifier.padding(horizontal=18.dp,vertical=8.dp),fontSize=28.sp) }
         }
     }
 
@@ -191,7 +191,7 @@ fun ComboOverlayV9() {
                 Column(Modifier.fillMaxWidth().padding(14.dp),verticalArrangement=Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                         Column { Text(if(won)"🏆 ${sh("ZAFER ÖZETİ","VICTORY SUMMARY")}" else "📊 ${sh("MAÇ ÖZETİ","MATCH SUMMARY")}",fontWeight=FontWeight.Black,fontSize=23.sp,color=SonHarfText);Text("$myRounds - $oppRounds  •  $myScore - $oppScore",color=SonHarfText,fontSize=14.sp,fontWeight=FontWeight.Bold) }
-                        IconButton(onClick={dismissSummary(fin.id)},modifier=Modifier.size(48.dp)){Text("×",fontSize=28.sp,fontWeight=FontWeight.Black,color=SonHarfPurple)}
+                        IconButton(onClick={dismissSummary(fin.id)},modifier=Modifier.size(48.dp)){Text("×",fontSize=28.sp,fontWeight=FontWeight.Black,color=SonHarfBlue)}
                     }
                     Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                         SummaryMetric("🧠",myWords.toString(),sh("Kelime","Words"),Modifier.weight(1f));SummaryMetric("📏",longest,sh("En uzun","Longest"),Modifier.weight(1f));SummaryMetric("🔥",(growth?.currentWinStreak?:0).toString(),sh("Seri","Streak"),Modifier.weight(1f))
