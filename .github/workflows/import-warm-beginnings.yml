@@ -1,0 +1,35 @@
+name: Import Warm Beginnings audio
+
+on:
+  push:
+    branches:
+      - chore/add-warm-beginnings-audio
+    paths:
+      - .github/workflows/import-warm-beginnings.yml
+
+permissions:
+  contents: write
+
+jobs:
+  import-audio:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: chore/add-warm-beginnings-audio
+
+      - name: Download and verify audio
+        run: |
+          mkdir -p app/src/main/res/raw
+          curl -L --fail --retry 3 "https://d2ol7oe51mr4n9.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/96a12086-277f-4e17-9b04-d5b56929e68c.mp3" -o app/src/main/res/raw/warm_beginnings.mp3
+          echo "4787a1289dae1db67fb672f17e868cdc06f23e6c347a4a085aefcbe97b117c10  app/src/main/res/raw/warm_beginnings.mp3" | sha256sum -c -
+
+      - name: Commit audio and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/import-warm-beginnings.yml
+          git add app/src/main/res/raw/warm_beginnings.mp3 .github/workflows/import-warm-beginnings.yml
+          git commit -m "chore: add Warm Beginnings background music"
+          git push origin HEAD:chore/add-warm-beginnings-audio
