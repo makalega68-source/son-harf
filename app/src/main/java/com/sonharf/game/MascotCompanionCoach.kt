@@ -122,11 +122,11 @@ internal object MascotCompanionCoach {
         val intent = when {
             clean.contains("varkhor") -> "varkhor"
             clean.contains("hik") || clean.contains("geçmiş") || clean.contains("story") || clean.contains("past") -> "story"
+            clean.contains("rakip") || clean.contains("rival") -> "rival"
             clean.contains("taktik") || clean.contains("öner") || clean.contains("nasıl") ||
                 clean.contains("strategy") || clean.contains("advice") || clean.contains("tip") -> "advice"
             clean.contains("kaybett") || clean.contains("yenild") || clean.contains("lost") || clean.contains("lose") -> "loss"
             clean.contains("kazand") || clean.contains("yendim") || clean.contains("won") || clean.contains("win") -> "win"
-            clean.contains("rakip") || clean.contains("rival") -> "rival"
             else -> "default"
         }
 
