@@ -125,6 +125,8 @@ private suspend fun completeLegacyIdentityV2(name: String, gender: String): Prof
 fun ProfileExperienceV2Screen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { MascotSelectionRuntime.load(context) }
+    val activeSeal = LetharaLore.characterForMascot(MascotSelectionRuntime.selectedId)
     var profile by remember { mutableStateOf<ProfileV2Dto?>(null) }
     var avatarBytes by remember { mutableStateOf<ByteArray?>(null) }
     var loading by remember { mutableStateOf(true) }
@@ -189,6 +191,21 @@ fun ProfileExperienceV2Screen() {
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                 )
+                Spacer(Modifier.height(6.dp))
+                Surface(
+                    shape = RoundedCornerShape(99.dp),
+                    color = activeSeal.color.copy(alpha = .10f),
+                    border = BorderStroke(1.dp, activeSeal.color.copy(alpha = .32f)),
+                ) {
+                    Text(
+                        sh("AKTİF MÜHÜR", "ACTIVE SEAL") + " • " + activeSeal.name + " — " +
+                            if (SonHarfUiState.isEnglish) activeSeal.titleEn else activeSeal.titleTr,
+                        Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        color = activeSeal.color,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
                 p?.gender?.let { Text(genderLabelV2(it), color = SonHarfMuted, fontSize = 14.sp) }
                 if (p != null && !p.identityLocked) {
                     Spacer(Modifier.height(12.dp))

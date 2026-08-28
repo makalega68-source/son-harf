@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -567,7 +568,13 @@ private fun MascotChatPanel(
                 placeholder = { Text(sh("Yoldaşına bir şey söyle…", "Say something to your companion…")) },
                 maxLines = 3,
                 enabled = !sending,
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Send,
+                    showKeyboardOnFocus = true,
+                ),
+                keyboardActions = KeyboardActions(
+                    onSend = { if (input.isNotBlank() && !sending) send() },
+                ),
                 shape = RoundedCornerShape(18.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = LetharaPalette.Text,
