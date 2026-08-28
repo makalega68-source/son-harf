@@ -198,7 +198,7 @@ internal fun WizardHistoryScreen(
     selectedCharacter?.let { character ->
         val rosterState = SealRosterPolicy.state(character, ownedMascots, equipped?.mascotId)
         val mascotId = character.mascotId
-        val assetReady = mascotId != null && MascotCatalog.isAssetReady(context, mascotId)
+        val assetReady = remember(mascotId) { mascotId != null && MascotCatalog.isAssetReady(context, mascotId) }
         AlertDialog(
             onDismissRequest = { if (rosterBusy == null) selectedCharacter = null },
             confirmButton = {
@@ -333,7 +333,7 @@ private fun CharacterCard(
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val mascotId = character.mascotId
-    val assetReady = mascotId != null && MascotCatalog.isAssetReady(context, mascotId)
+    val assetReady = remember(mascotId) { mascotId != null && MascotCatalog.isAssetReady(context, mascotId) }
     Surface(
         modifier = modifier.height(160.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
