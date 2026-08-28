@@ -512,25 +512,79 @@ private fun TargetArena(
     var chatInput by remember { mutableStateOf("") }
     var confirmForfeit by remember { mutableStateOf(false) }
     var resultAiLine by remember(room.id) { mutableStateOf("") }
+    var resultChibiPlanId by remember(room.id) { mutableStateOf("") }
+    val chibiScope = rememberCoroutineScope()
+    val chibiDirector = remember(room.id, room.language) { ChibiGameBehaviorDirector(room.language) }
+    var chibiBehaviorJob by remember(room.id) { mutableStateOf<Job?>(null) }
+    var chibiBehaviorPriority by remember(room.id) { mutableIntStateOf(0) }
+    var chibiBehaviorToken by remember(room.id) { mutableIntStateOf(0) }
+
+    fun dispatchChibi(
+        event: ChibiGameEvent,
+        context: ChibiBehaviorContext = ChibiBehaviorContext(playerName = playerName),
+    ): ChibiBehaviorPlan? {
+        val plan = chibiDirector.plan(event, context) ?: return null
+        if (chibiBehaviorJob?.isActive == true && plan.priority < chibiBehaviorPriority) return null
+
+        chibiBehaviorToken += 1
+        val token = chibiBehaviorToken
+        chibiBehaviorJob?.cancel()
+        chibiBehaviorPriority = plan.priority
+        val bubble = plan.message(room.language)
+
+        chibiBehaviorJob = chibiScope.launch {
+            try {
+                plan.steps.forEach { step ->
+                    val message = when {
+                        step.motion == MascotMotion.IDLE -> ""
+                        bubble.isNotBlank() -> bubble
+                        else -> null
+                    }
+                    MascotRuntime.react(
+                        step.motion,
+                        force = true,
+                        customMessage = message,
+                    )
+                    delay(step.durationMs)
+                }
+            } finally {
+                if (chibiBehaviorToken == token) {
+                    chibiBehaviorPriority = 0
+                    MascotRuntime.react(MascotMotion.IDLE, force = true, customMessage = "")
+                }
+            }
+        }
+        return plan
+    }
     DisposableEffect(room.id) {
         SonHarfUiState.inMatch = true
         MascotRuntime.setMatchActive(true)
         MascotRuntime.react(MascotMotion.IDLE, force = true)
         onDispose {
+            chibiBehaviorToken += 1
+            chibiBehaviorJob?.cancel()
             SonHarfUiState.inMatch = false
             MascotRuntime.setMatchActive(false)
-            MascotRuntime.react(MascotMotion.IDLE, force = true)
+            MascotRuntime.react(MascotMotion.IDLE, force = true, customMessage = "")
         }
     }
+
+    LaunchedEffect(room.id) {
+        delay(350)
+        dispatchChibi(
+            ChibiGameEvent.MATCH_START,
+            ChibiBehaviorContext(playerName = playerName),
+        )
+    }
+
     BackHandler(enabled = room.status != "finished") { confirmForfeit = true }
 
     LaunchedEffect(myTurn, busy, room.currentPlayerId, room.status) {
         if (room.status !in listOf("playing", "final", "sudden_death")) return@LaunchedEffect
         if (myTurn && !busy) {
-            MascotRuntime.react(
-                MascotMotion.THINKING,
-                force = true,
-                customMessage = sh("Hamle sende. Son harfi yakala.", "Your move. Catch the final letter."),
+            dispatchChibi(
+                ChibiGameEvent.PLAYER_TURN,
+                ChibiBehaviorContext(playerName = playerName),
             )
             delay(180)
             runCatching { wordFocusRequester.requestFocus() }
@@ -538,10 +592,9 @@ private fun TargetArena(
         } else {
             focus.clearFocus()
             keyboard?.hide()
-            MascotRuntime.react(
-                MascotMotion.LOOK_AT_PLAYER,
-                force = true,
-                customMessage = sh("Rakibi izliyorum… sıra birazdan sende.", "Watching the rival… your turn is next."),
+            dispatchChibi(
+                ChibiGameEvent.RIVAL_TURN,
+                ChibiBehaviorContext(playerName = playerName),
             )
         }
     }
@@ -549,50 +602,68 @@ private fun TargetArena(
     LaunchedEffect(words.size) {
         val last = words.lastOrNull() ?: return@LaunchedEffect
         if (room.status !in listOf("playing", "final", "sudden_death")) return@LaunchedEffect
+
         if (last.playerId == me) {
-            MascotRuntime.react(
-                MascotMotion.GREETING,
-                force = true,
-                customMessage = sh("Güzel kelime! Zincir devam ediyor.", "Nice word! Keep the chain moving."),
+            val acceptedByMe = words.count { it.playerId == me }
+            val event = when {
+                acceptedByMe >= 3 && acceptedByMe % 3 == 0 -> ChibiGameEvent.PLAYER_STREAK
+                last.word.length >= 10 -> ChibiGameEvent.PLAYER_LONG_WORD
+                else -> ChibiGameEvent.PLAYER_WORD
+            }
+            dispatchChibi(
+                event,
+                ChibiBehaviorContext(
+                    playerName = playerName,
+                    word = last.word,
+                    streak = acceptedByMe,
+                ),
             )
-        } else if (room.currentPlayerId == me) {
-            MascotRuntime.react(
-                MascotMotion.THINKING,
-                force = true,
-                customMessage = sh("Sıra sende. Cevabı buluyorum.", "Your turn. I'm thinking with you."),
+        } else {
+            dispatchChibi(
+                ChibiGameEvent.RIVAL_WORD,
+                ChibiBehaviorContext(
+                    playerName = playerName,
+                    word = last.word,
+                ),
             )
         }
     }
 
     LaunchedEffect(room.id, room.status) {
-        val ambient = listOf(MascotMotion.TURN_LEFT, MascotMotion.WALK, MascotMotion.TURN_RIGHT)
-        var ambientIndex = 0
+        var beat = 0
         while (room.status in listOf("playing", "final", "sudden_death")) {
-            delay(6_000)
-            if (MascotRuntime.motion == MascotMotion.IDLE) {
-                val next = ambient[ambientIndex % ambient.size]
-                ambientIndex += 1
-                MascotRuntime.react(next, force = true)
-                delay(1_250)
-                if (MascotRuntime.motion == next) {
-                    MascotRuntime.react(MascotMotion.IDLE, force = true)
-                }
+            delay(8_000L + (beat % 3) * 1_500L)
+            beat += 1
+            if (chibiBehaviorPriority <= 5 && MascotRuntime.motion == MascotMotion.IDLE) {
+                dispatchChibi(
+                    ChibiGameEvent.AMBIENT,
+                    ChibiBehaviorContext(playerName = playerName),
+                )
             }
         }
     }
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
+        var warningShown = false
         var criticalShown = false
-        if (room.status in listOf("playing", "final", "sudden_death")) {
-            MascotRuntime.react(MascotMotion.IDLE, force = true)
-        }
         while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
             seconds = runCatching {
                 (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0)
             }.getOrDefault(45)
+
+            if (myTurn && seconds in 6..10 && !warningShown) {
+                warningShown = true
+                dispatchChibi(
+                    ChibiGameEvent.TIME_WARNING,
+                    ChibiBehaviorContext(playerName = playerName, seconds = seconds),
+                )
+            }
             if (myTurn && seconds in 1..5 && !criticalShown) {
                 criticalShown = true
-                MascotRuntime.react(MascotMotion.CRITICAL)
+                dispatchChibi(
+                    ChibiGameEvent.TIME_CRITICAL,
+                    ChibiBehaviorContext(playerName = playerName, seconds = seconds),
+                )
             }
             if (seconds <= 0) {
                 onTimeout()
@@ -605,18 +676,19 @@ private fun TargetArena(
     LaunchedEffect(room.status, room.winnerId) {
         if (room.status == "finished") {
             val won = room.winnerId == me
-            val localLine = if (won) {
-                sh("İşte bu! Chibi kutlamaya hazır.", "That's it! Chibi is ready to celebrate.")
-            } else {
-                sh("Bu maç bitti; sıradaki zincirde yanındayım.", "This match is done; I'm with you for the next chain.")
-            }
-            resultAiLine = localLine
-            MascotRuntime.react(
-                if (won) MascotMotion.VICTORY else MascotMotion.DEFEAT,
-                force = true,
-                customMessage = localLine,
+            val event = if (won) ChibiGameEvent.WIN else ChibiGameEvent.LOSS
+            val plan = dispatchChibi(
+                event,
+                ChibiBehaviorContext(playerName = playerName),
             )
+            resultChibiPlanId = plan?.id.orEmpty()
+            resultAiLine = plan?.message(room.language).orEmpty().ifBlank {
+                if (won) sh("İşte bu! Güzel maçtı.", "That's it! Great match.")
+                else sh("Bu maç bitti. Rövanşta toparlarız.", "This one's done. We'll reset for the rematch.")
+            }
 
+            // Gemini supplies the short context-aware line. The local Chibi director owns
+            // choreography so network latency can never freeze or loop the mascot.
             val response = MascotAiChatService.chat(
                 MascotChatRequest(
                     message = if (won)
@@ -635,14 +707,8 @@ private fun TargetArena(
                     mascotPersonality = "Lively, playful, concise and emotionally responsive.",
                 )
             )
-            val cleanReply = response.reply.trim().take(120)
-            if (cleanReply.isNotBlank()) {
-                resultAiLine = cleanReply
-                MascotRuntime.react(
-                    if (won) MascotMotion.VICTORY else MascotMotion.LOOK_AT_PLAYER,
-                    force = true,
-                    customMessage = cleanReply,
-                )
+            response.reply.trim().take(120).takeIf { it.isNotBlank() }?.let {
+                resultAiLine = it
             }
         }
     }
@@ -669,6 +735,7 @@ private fun TargetArena(
             if (won) {
                 ChibiVictoryFlight(
                     message = resultAiLine.ifBlank { sh("İşte bu! Güzel maçtı.", "That's it! Great match.") },
+                    variantId = resultChibiPlanId,
                 )
             } else {
                 MascotLive3DStage(
@@ -976,37 +1043,73 @@ private fun TargetArena(
 }
 
 @Composable
-private fun ChibiVictoryFlight(message: String) {
+private fun ChibiVictoryFlight(
+    message: String,
+    variantId: String,
+) {
     val offsetX = remember { Animatable(0f) }
     val offsetY = remember { Animatable(35f) }
     val scale = remember { Animatable(.86f) }
     val rotation = remember { Animatable(0f) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(variantId) {
+        val variant = when {
+            variantId.endsWith("-b") -> 1
+            variantId.endsWith("-c") -> 2
+            else -> 0
+        }
         kotlinx.coroutines.coroutineScope {
             launch {
-                offsetX.animateTo(-105f, tween(420))
-                offsetX.animateTo(115f, tween(520))
-                offsetX.animateTo(-55f, tween(380))
-                offsetX.animateTo(0f, tween(380))
+                when (variant) {
+                    1 -> {
+                        offsetX.animateTo(120f, tween(430))
+                        offsetX.animateTo(-115f, tween(520))
+                        offsetX.animateTo(45f, tween(380))
+                    }
+                    2 -> {
+                        offsetX.animateTo(-70f, tween(350))
+                        offsetX.animateTo(95f, tween(420))
+                        offsetX.animateTo(-90f, tween(420))
+                    }
+                    else -> {
+                        offsetX.animateTo(-105f, tween(420))
+                        offsetX.animateTo(115f, tween(520))
+                        offsetX.animateTo(-55f, tween(380))
+                    }
+                }
+                offsetX.animateTo(0f, tween(360))
             }
             launch {
-                offsetY.animateTo(-85f, tween(420))
-                offsetY.animateTo(15f, tween(520))
-                offsetY.animateTo(-35f, tween(380))
-                offsetY.animateTo(0f, tween(380))
+                when (variant) {
+                    1 -> {
+                        offsetY.animateTo(-55f, tween(430))
+                        offsetY.animateTo(-95f, tween(520))
+                        offsetY.animateTo(10f, tween(380))
+                    }
+                    2 -> {
+                        offsetY.animateTo(-110f, tween(350))
+                        offsetY.animateTo(20f, tween(420))
+                        offsetY.animateTo(-65f, tween(420))
+                    }
+                    else -> {
+                        offsetY.animateTo(-85f, tween(420))
+                        offsetY.animateTo(15f, tween(520))
+                        offsetY.animateTo(-35f, tween(380))
+                    }
+                }
+                offsetY.animateTo(0f, tween(360))
             }
             launch {
-                scale.animateTo(1.18f, tween(420))
-                scale.animateTo(1.05f, tween(520))
-                scale.animateTo(1.15f, tween(380))
-                scale.animateTo(1.08f, tween(380))
+                scale.animateTo(if (variant == 2) 1.22f else 1.18f, tween(420))
+                scale.animateTo(1.04f, tween(520))
+                scale.animateTo(1.13f, tween(380))
+                scale.animateTo(1.08f, tween(360))
             }
             launch {
-                rotation.animateTo(-10f, tween(420))
-                rotation.animateTo(12f, tween(520))
-                rotation.animateTo(-6f, tween(380))
-                rotation.animateTo(0f, tween(380))
+                rotation.animateTo(if (variant == 1) 12f else -10f, tween(420))
+                rotation.animateTo(if (variant == 2) -14f else 10f, tween(520))
+                rotation.animateTo(if (variant == 1) -7f else 6f, tween(380))
+                rotation.animateTo(0f, tween(360))
             }
         }
     }
@@ -1028,7 +1131,7 @@ private fun ChibiVictoryFlight(message: String) {
                         rotationZ = rotation.value
                     },
                 mascotId = MascotCatalog.CHIBI_WIZARD_ID,
-                motion = MascotMotion.VICTORY,
+                motion = MascotRuntime.motion,
                 displayScale = 1.68f,
                 brightnessBoost = 1.18f,
             )
