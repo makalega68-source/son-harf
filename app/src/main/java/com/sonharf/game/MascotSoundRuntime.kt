@@ -40,6 +40,7 @@ internal object MascotSoundPolicy {
 }
 
 internal class MascotSoundPlayer(context: Context) {
+    private val loaded = mutableSetOf<Int>()
     private val soundPool = SoundPool.Builder()
         .setMaxStreams(1)
         .setAudioAttributes(
@@ -49,8 +50,12 @@ internal class MascotSoundPlayer(context: Context) {
                 .build()
         )
         .build()
+        .also { pool ->
+            pool.setOnLoadCompleteListener { _, sampleId, status ->
+                if (status == 0) loaded += sampleId
+            }
+        }
 
-    private val loaded = mutableSetOf<Int>()
     private val soundIds = mapOf(
         MascotSoundCue.LAUGH to soundPool.load(context.applicationContext, R.raw.mascot_laugh, 1),
         MascotSoundCue.SAD to soundPool.load(context.applicationContext, R.raw.mascot_sad, 1),
@@ -60,12 +65,6 @@ internal class MascotSoundPlayer(context: Context) {
     )
 
     private var lastPlayedAtMs = 0L
-
-    init {
-        soundPool.setOnLoadCompleteListener { _, sampleId, status ->
-            if (status == 0) loaded += sampleId
-        }
-    }
 
     fun play(cue: MascotSoundCue) {
         val soundId = soundIds[cue] ?: return
