@@ -225,6 +225,11 @@ fun ClassicPremiumApp() {
                         backend = backend,
                         onBack = { screen = ClassicScreen.HOME },
                         onOpenMascot = { screen = ClassicScreen.MASCOT },
+                        onOpenShop = {
+                            shopFullTab = 0
+                            shopFullReturnScreen = ClassicScreen.HISTORY
+                            screen = ClassicScreen.SHOP_FULL
+                        },
                     )
                     ClassicScreen.MASCOT -> MascotCompanionScreen(
                         backend = backend,
