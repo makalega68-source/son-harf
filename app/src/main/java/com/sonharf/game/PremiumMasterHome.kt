@@ -59,8 +59,6 @@ internal fun PremiumMasterHome(
     onDailyCipher: () -> Unit = onHub,
     onMastery: () -> Unit = onHub,
     onHistory: () -> Unit = onHub,
-    onMascot: () -> Unit = onProfile,
-    onRoom: () -> Unit = onMascot,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
@@ -127,15 +125,6 @@ internal fun PremiumMasterHome(
                     HomeSideAction(Icons.Rounded.AutoStories, sh("Haberler", "News"), onDailyCipher)
                 }
 
-                MascotHomeCompanion(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .fillMaxWidth(.72f)
-                        .fillMaxHeight(.96f),
-                    playerName = profile?.displayName,
-                    mascotId = MascotCatalog.DEFAULT_ID,
-                )
-
                 Surface(
                     modifier = Modifier
                         .align(Alignment.TopEnd)
@@ -157,23 +146,6 @@ internal fun PremiumMasterHome(
                         lineHeight = 12.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
-                }
-
-                Surface(
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 3.dp),
-                    shape = RoundedCornerShape(99.dp),
-                    color = Color(0xB20B1935),
-                    border = BorderStroke(1.dp, HomeCyan.copy(alpha = .48f)),
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 12.dp, vertical = 5.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Icons.Rounded.AutoAwesome, null, tint = HomeGold, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(5.dp))
-                        Text(sh("MASKOT", "MASCOT"), color = HomeText, fontWeight = FontWeight.Black, fontSize = 10.sp)
-                        Text(" • " + sh("Hazırım!", "Ready!"), color = HomeCyan, fontSize = 9.sp)
-                    }
                 }
             }
 
