@@ -26,32 +26,67 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.EquippedCosmeticsDto
 import com.sonharf.game.data.MascotProgressDto
 import com.sonharf.game.data.MascotRoomStateDto
 import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.equipShopItem
+import com.sonharf.game.data.getEquippedCosmetics
+import com.sonharf.game.data.getInventory
 import com.sonharf.game.data.getMascotProgress
 import com.sonharf.game.data.getMascotRoomState
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun WizardHistoryScreen(
     backend: OnlineGameBackend?,
     onBack: () -> Unit,
     onOpenMascot: () -> Unit,
+    onOpenShop: () -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { MascotSelectionRuntime.load(context) }
     var progress by remember { mutableStateOf<MascotProgressDto?>(null) }
     var roomState by remember { mutableStateOf<MascotRoomStateDto?>(null) }
+    var ownedMascots by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var equipped by remember { mutableStateOf<EquippedCosmeticsDto?>(null) }
+    var rosterLoaded by remember { mutableStateOf(false) }
+    var rosterNotice by remember { mutableStateOf<String?>(null) }
+    var rosterBusy by remember { mutableStateOf<String?>(null) }
     var selectedCharacter by remember { mutableStateOf<WizardLoreCharacter?>(null) }
     var selectedChapter by remember { mutableStateOf<WizardLoreChapter?>(null) }
+
+    suspend fun reloadRoster() {
+        val b = backend
+        if (b == null) {
+            rosterLoaded = true
+            ownedMascots = emptySet()
+            equipped = null
+            return
+        }
+        runCatching {
+            ownedMascots = b.getInventory()
+            equipped = b.getEquippedCosmetics()
+            equipped?.mascotId?.let { MascotSelectionRuntime.select(context, it) }
+        }.onSuccess {
+            rosterLoaded = true
+            rosterNotice = null
+        }.onFailure {
+            rosterLoaded = false
+            rosterNotice = sh("Mühür sahipliği şu an doğrulanamadı.", "Seal ownership could not be verified right now.")
+        }
+    }
 
     LaunchedEffect(MascotSelectionRuntime.selectedId) {
         if (backend != null) {
             progress = runCatching { backend.getMascotProgress(MascotSelectionRuntime.selectedId) }.getOrNull()
             roomState = runCatching { backend.getMascotRoomState(MascotSelectionRuntime.selectedId) }.getOrNull()
+            reloadRoster()
         } else {
             progress = null
             roomState = null
+            rosterLoaded = true
         }
     }
 
@@ -109,7 +144,13 @@ internal fun WizardHistoryScreen(
                     LetharaLore.characters.chunked(2).forEach { row ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             row.forEach { character ->
-                                CharacterCard(character, Modifier.weight(1f)) { selectedCharacter = character }
+                                val rosterState = SealRosterPolicy.state(character, ownedMascots, equipped?.mascotId)
+                                CharacterCard(
+                                    character = character,
+                                    rosterState = rosterState,
+                                    rosterLoaded = rosterLoaded,
+                                    modifier = Modifier.weight(1f),
+                                ) { selectedCharacter = character }
                             }
                             if (row.size == 1) Spacer(Modifier.weight(1f))
                         }
@@ -145,24 +186,104 @@ internal fun WizardHistoryScreen(
                     }
                 }
             }
+            rosterNotice?.let { message ->
+                item {
+                    Text(message, modifier = Modifier.fillMaxWidth(), color = LetharaPalette.Cyan, fontSize = 10.sp, textAlign = TextAlign.Center)
+                }
+            }
             item { Spacer(Modifier.height(18.dp)) }
         }
     }
 
     selectedCharacter?.let { character ->
+        val rosterState = SealRosterPolicy.state(character, ownedMascots, equipped?.mascotId)
+        val mascotId = character.mascotId
+        val assetReady = mascotId != null && MascotCatalog.isAssetReady(context, mascotId)
         AlertDialog(
-            onDismissRequest = { selectedCharacter = null },
-            confirmButton = { TextButton(onClick = { selectedCharacter = null }) { Text(sh("Kapat", "Close")) } },
+            onDismissRequest = { if (rosterBusy == null) selectedCharacter = null },
+            confirmButton = {
+                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    TextButton(onClick = { selectedCharacter = null }, enabled = rosterBusy == null) {
+                        Text(sh("Kapat", "Close"))
+                    }
+                    when {
+                        rosterState.active -> Button(onClick = {
+                            selectedCharacter = null
+                            onOpenMascot()
+                        }) {
+                            Text(sh("YOLDAŞIMA GİT", "OPEN COMPANION"), fontWeight = FontWeight.Black, fontSize = 9.sp)
+                        }
+                        rosterState.availability == SealRosterAvailability.STORE -> Button(onClick = {
+                            selectedCharacter = null
+                            onOpenShop()
+                        }) {
+                            Text(sh("MAĞAZADA AÇ", "OPEN IN SHOP"), fontWeight = FontWeight.Black, fontSize = 9.sp)
+                        }
+                        SealRosterPolicy.canEquip(rosterState) && mascotId != null && assetReady -> Button(
+                            enabled = rosterBusy == null && rosterLoaded,
+                            onClick = {
+                                val b = backend
+                                if (b == null) {
+                                    rosterNotice = sh("Mühür seçimi için sunucu bağlantısı gerekli.", "A server connection is required to select a Seal.")
+                                    return@Button
+                                }
+                                scope.launch {
+                                    rosterBusy = mascotId
+                                    runCatching { b.equipShopItem(mascotId) }
+                                        .onSuccess {
+                                            MascotSelectionRuntime.select(context, mascotId)
+                                            equipped = b.getEquippedCosmetics()
+                                            progress = runCatching { b.getMascotProgress(mascotId) }.getOrNull()
+                                            roomState = runCatching { b.getMascotRoomState(mascotId) }.getOrNull()
+                                            rosterNotice = sh(character.name + " aktif Mührün oldu.", character.name + " is now your active Seal.")
+                                            selectedCharacter = null
+                                        }
+                                        .onFailure {
+                                            rosterNotice = sh("Mühür etkinleştirilemedi.", "The Seal could not be equipped.")
+                                        }
+                                    rosterBusy = null
+                                }
+                            },
+                        ) {
+                            Text(if (rosterBusy == mascotId) "…" else sh("MÜHRÜ SEÇ", "SELECT SEAL"), fontWeight = FontWeight.Black, fontSize = 9.sp)
+                        }
+                    }
+                }
+            },
             title = {
                 Text(character.name + " — " + if (SonHarfUiState.isEnglish) character.titleEn else character.titleTr, color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
             },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    WizardEmblem(character, 78.dp)
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    if (assetReady && mascotId != null) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().height(210.dp),
+                            shape = RoundedCornerShape(18.dp),
+                            color = character.color.copy(alpha = .08f),
+                            border = BorderStroke(1.dp, character.color.copy(alpha = .32f)),
+                        ) {
+                            MascotLive3DStage(
+                                modifier = Modifier.fillMaxSize(),
+                                mascotId = mascotId,
+                                motion = MascotMotion.IDLE,
+                            )
+                        }
+                    } else {
+                        WizardEmblem(character, 86.dp)
+                    }
+                    SealStatusBadge(character, rosterState, rosterLoaded)
                     Text(if (SonHarfUiState.isEnglish) character.nameMeaningEn else character.nameMeaningTr, color = LetharaPalette.Text)
                     Text(if (SonHarfUiState.isEnglish) character.archetypeEn else character.archetypeTr, color = character.color, fontWeight = FontWeight.Bold)
                     Text(if (SonHarfUiState.isEnglish) character.temperamentEn else character.temperamentTr, color = LetharaPalette.Muted)
                     Text("“" + LetharaLore.randomWhisper(character, SonHarfUiState.language, fragments + character.name.length) + "”", color = LetharaPalette.Text, fontStyle = FontStyle.Italic)
+                    if (rosterState.availability == SealRosterAvailability.AWAITING_3D) {
+                        Text(
+                            sh("Bu Mührün kimliği ve hikâyesi hazır; ayrı lisanslı 3D formu runtime testini geçmeden oynanabilir yapılmaz.", "This Seal's identity and story are ready; it will not become playable until its distinct licensed 3D form passes runtime validation."),
+                            color = LetharaPalette.Muted,
+                            fontSize = 9.sp,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
             },
             containerColor = LetharaPalette.PanelStrong,
@@ -197,19 +318,73 @@ private fun LorePanel(
 }
 
 @Composable
-private fun CharacterCard(character: WizardLoreCharacter, modifier: Modifier, onClick: () -> Unit) {
+private fun CharacterCard(
+    character: WizardLoreCharacter,
+    rosterState: SealRosterState,
+    rosterLoaded: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val mascotId = character.mascotId
+    val assetReady = mascotId != null && MascotCatalog.isAssetReady(context, mascotId)
     Surface(
-        modifier = modifier.height(150.dp).clickable(onClick = onClick),
+        modifier = modifier.height(190.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         color = LetharaPalette.Panel,
-        border = BorderStroke(1.dp, character.color.copy(alpha=.55f)),
+        border = BorderStroke(if (rosterState.active) 1.8.dp else 1.dp, if (rosterState.active) LetharaPalette.Gold else character.color.copy(alpha=.55f)),
     ) {
-        Column(Modifier.fillMaxSize().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            WizardEmblem(character, 58.dp)
-            Spacer(Modifier.height(7.dp))
+        Column(Modifier.fillMaxSize().padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            if (assetReady && mascotId != null) {
+                Box(Modifier.fillMaxWidth().height(102.dp)) {
+                    MascotLive3DStage(
+                        modifier = Modifier.fillMaxSize(),
+                        mascotId = mascotId,
+                        motion = MascotMotion.IDLE,
+                    )
+                }
+            } else {
+                WizardEmblem(character, 58.dp)
+                Spacer(Modifier.height(6.dp))
+            }
             Text(character.name.uppercase(), color = LetharaPalette.Text, fontWeight = FontWeight.Black, fontSize = 14.sp)
             Text(if (SonHarfUiState.isEnglish) character.titleEn else character.titleTr, color = character.color, fontWeight = FontWeight.Bold, fontSize = 9.sp, textAlign = TextAlign.Center)
+            Spacer(Modifier.height(5.dp))
+            SealStatusBadge(character, rosterState, rosterLoaded)
         }
+    }
+}
+
+@Composable
+private fun SealStatusBadge(
+    character: WizardLoreCharacter,
+    rosterState: SealRosterState,
+    rosterLoaded: Boolean,
+) {
+    val text = when {
+        rosterState.active -> sh("AKTİF MÜHÜR", "ACTIVE SEAL")
+        rosterState.availability == SealRosterAvailability.AWAITING_3D ->
+            sh("3D FORM BEKLENİYOR", "AWAITING 3D FORM")
+        !rosterLoaded && character.mascotId != MascotCatalog.DEFAULT_ID ->
+            sh("DOĞRULANIYOR", "VERIFYING")
+        rosterState.availability == SealRosterAvailability.FREE ->
+            sh("ÜCRETSİZ", "FREE")
+        rosterState.availability == SealRosterAvailability.OWNED ->
+            sh("SAHİPSİN", "OWNED")
+        else -> "◈ " + (rosterState.plannedPrice ?: SealRosterPolicy.plannedPrice(character.key)) + " SC"
+    }
+    val color = when {
+        rosterState.active -> LetharaPalette.Gold
+        rosterState.availability == SealRosterAvailability.AWAITING_3D -> LetharaPalette.Muted
+        rosterState.availability == SealRosterAvailability.OWNED || rosterState.availability == SealRosterAvailability.FREE -> LetharaPalette.Green
+        else -> character.color
+    }
+    Surface(
+        shape = RoundedCornerShape(99.dp),
+        color = color.copy(alpha = .10f),
+        border = BorderStroke(1.dp, color.copy(alpha = .32f)),
+    ) {
+        Text(text, Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = color, fontSize = 7.sp, fontWeight = FontWeight.Black)
     }
 }
 
