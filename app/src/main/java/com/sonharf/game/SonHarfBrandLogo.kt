@@ -38,14 +38,20 @@ fun SonHarfBrandLogo(modifier: Modifier = Modifier, size: Dp = 52.dp) {
         } else {
             Box(
                 modifier = Modifier.fillMaxSize().background(
-                    Brush.verticalGradient(listOf(Color(0xFF05255E), Color(0xFF0B4CB8))),
+                    Brush.radialGradient(
+                        listOf(
+                            LetharaPalette.Cyan.copy(alpha = .28f),
+                            Color(0xFF17264D),
+                            LetharaPalette.Night,
+                        )
+                    ),
                     RoundedCornerShape(18.dp),
                 ),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                    androidx.compose.material3.Text("SON", color = Color.White, fontSize = (size.value * .20f).sp, fontWeight = FontWeight.Black)
-                    androidx.compose.material3.Text("HARF", color = Color(0xFFFFC857), fontSize = (size.value * .18f).sp, fontWeight = FontWeight.Black)
+                    androidx.compose.material3.Text("✦", color = LetharaPalette.Cyan, fontSize = (size.value * .28f).sp, fontWeight = FontWeight.Black)
+                    androidx.compose.material3.Text("SON HARF", color = LetharaPalette.Gold, fontSize = (size.value * .13f).sp, fontWeight = FontWeight.Black)
                 }
             }
         }
