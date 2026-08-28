@@ -132,12 +132,14 @@ fun ClassicPremiumApp() {
         Scaffold(
             containerColor = Color.Transparent,
             bottomBar = {
-                if (screen in setOf(ClassicScreen.HOME, ClassicScreen.LEAGUE, ClassicScreen.SHOP)) {
+                if (screen in setOf(ClassicScreen.HOME, ClassicScreen.LEAGUE, ClassicScreen.PROFILE)) {
                     ClassicBottomBar(
                         current = screen,
                         onHome = { screen = ClassicScreen.HOME },
                         onLeague = { screen = ClassicScreen.LEAGUE },
-                        onShop = { screen = ClassicScreen.SHOP },
+                        onPlay = { screen = ClassicScreen.PLAY },
+                        onSocial = { FriendsQuickAccessState.open = true },
+                        onProfile = { screen = ClassicScreen.PROFILE },
                     )
                 }
             },
@@ -801,20 +803,34 @@ private fun ClassicBottomBar(
     current: ClassicScreen,
     onHome: () -> Unit,
     onLeague: () -> Unit,
-    onShop: () -> Unit,
+    onPlay: () -> Unit,
+    onSocial: () -> Unit,
+    onProfile: () -> Unit,
 ) {
     Surface(
-        color = ClassicBgDeep.copy(alpha = .98f),
-        shadowElevation = 18.dp,
-        border = BorderStroke(1.dp, ClassicBorder),
+        color = Color.White,
+        shadowElevation = 12.dp,
+        border = BorderStroke(1.dp, Color(0xFFDDE5EE)),
     ) {
         Row(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 6.dp, vertical = 7.dp),
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 5.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceAround,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             BottomItem(Icons.Rounded.Home, sh("Ana Sayfa", "Home"), current == ClassicScreen.HOME, Modifier.weight(1f), onHome)
             BottomItem(Icons.Rounded.EmojiEvents, sh("Lig", "League"), current == ClassicScreen.LEAGUE, Modifier.weight(1f), onLeague)
-            BottomItem(Icons.Rounded.ShoppingCart, sh("Mağaza", "Shop"), current == ClassicScreen.SHOP, Modifier.weight(1f), onShop)
+            Column(
+                Modifier.weight(1f).clickable(onClick = onPlay),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Surface(shape = CircleShape, color = SonHarfBlue, shadowElevation = 6.dp) {
+                    Icon(Icons.Rounded.PlayArrow, null, tint = Color.White, modifier = Modifier.padding(11.dp).size(26.dp))
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(sh("Oyna", "Play"), color = SonHarfBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            }
+            BottomItem(Icons.Rounded.Group, sh("Sosyal", "Social"), false, Modifier.weight(1f), onSocial)
+            BottomItem(Icons.Rounded.Person, sh("Profil", "Profile"), current == ClassicScreen.PROFILE, Modifier.weight(1f), onProfile)
         }
     }
 }
@@ -825,8 +841,8 @@ private fun BottomItem(icon: ImageVector, label: String, selected: Boolean, modi
         modifier.clip(RoundedCornerShape(13.dp)).clickable(onClick = onClick).padding(vertical = 7.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Icon(icon, null, tint = if (selected) ClassicGold else ClassicMuted, modifier = Modifier.size(23.dp))
-        Text(label, color = if (selected) ClassicGoldSoft else ClassicMuted, fontSize = 8.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
+        Icon(icon, null, tint = if (selected) SonHarfBlue else SonHarfMuted, modifier = Modifier.size(22.dp))
+        Text(label, color = if (selected) SonHarfBlue else SonHarfMuted, fontSize = 8.sp, fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal)
     }
 }
 
