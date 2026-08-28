@@ -7,9 +7,9 @@ import org.junit.Test
 
 class SealRosterPolicyTest {
     @Test
-    fun lyraIsAlwaysFreeAndCanBeEquipped() {
+    fun nerisIsAlwaysFreeAndCanBeEquipped() {
         val state = SealRosterPolicy.state(
-            character = LetharaLore.character("lyra"),
+            character = LetharaLore.character("neris"),
             ownedItemIds = emptySet(),
             equippedMascotId = MascotCatalog.DEFAULT_ID,
         )
@@ -20,25 +20,16 @@ class SealRosterPolicyTest {
     }
 
     @Test
-    fun nerisRequiresOwnershipBeforeEquip() {
-        val locked = SealRosterPolicy.state(
-            character = LetharaLore.character("neris"),
-            ownedItemIds = emptySet(),
-            equippedMascotId = MascotCatalog.DEFAULT_ID,
+    fun legacyLyraIsParkedAndCannotBeEquipped() {
+        val state = SealRosterPolicy.state(
+            character = LetharaLore.character("lyra"),
+            ownedItemIds = setOf(MascotCatalog.LEGACY_WHITE_ID),
+            equippedMascotId = MascotCatalog.LEGACY_WHITE_ID,
         )
-        assertEquals(SealRosterAvailability.STORE, locked.availability)
-        assertFalse(locked.active)
-        assertFalse(SealRosterPolicy.canEquip(locked))
-        assertEquals(700, locked.plannedPrice)
-
-        val owned = SealRosterPolicy.state(
-            character = LetharaLore.character("neris"),
-            ownedItemIds = setOf(MascotCatalog.CHIBI_WIZARD_ID),
-            equippedMascotId = MascotCatalog.CHIBI_WIZARD_ID,
-        )
-        assertEquals(SealRosterAvailability.OWNED, owned.availability)
-        assertTrue(owned.active)
-        assertTrue(SealRosterPolicy.canEquip(owned))
+        assertEquals(SealRosterAvailability.AWAITING_3D, state.availability)
+        assertFalse(state.active)
+        assertFalse(SealRosterPolicy.canEquip(state))
+        assertEquals(null, state.plannedPrice)
     }
 
     @Test
