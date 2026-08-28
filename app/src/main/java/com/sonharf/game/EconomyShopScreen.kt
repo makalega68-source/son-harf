@@ -120,11 +120,11 @@ private fun EconomyCatalogScreen() {
         else -> false
     }
 
-    val supportedKinds = setOf("profile_frame", "name_style", "game_theme", "keyboard_theme", "victory_effect", "emoji_pack")
+    val supportedKinds = setOf("profile_frame", "name_style", "game_theme", "victory_effect", "emoji_pack")
     val filtered = items.filter { it.kind in supportedKinds }.filter { item ->
         when (category) {
             1 -> item.kind in setOf("profile_frame", "name_style")
-            2 -> item.kind in setOf("game_theme", "keyboard_theme")
+            2 -> item.kind == "game_theme"
             3 -> item.kind in setOf("victory_effect", "emoji_pack")
             else -> true
         }
