@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import re
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
@@ -41,7 +42,10 @@ def tap(xml_path: str):
     left, top, right, bottom = parse_bounds(candidates[-1].attrib.get("bounds", ""))
     if right <= left or bottom <= top:
         raise SystemExit("Chat input has invalid pre-IME bounds")
-    print((left + right) // 2, (top + bottom) // 2)
+    x = (left + right) // 2
+    y = (top + bottom) // 2
+    subprocess.run(["adb", "shell", "input", "tap", str(x), str(y)], check=True)
+    print(f"COMPANION_INPUT_TAP x={x} y={y}")
 
 
 def verify(xml_path: str, log_path: str):
