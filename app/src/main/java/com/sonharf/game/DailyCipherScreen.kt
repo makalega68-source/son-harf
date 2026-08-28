@@ -29,14 +29,14 @@ import com.sonharf.game.data.getDailyCipherStatus
 import com.sonharf.game.data.submitDailyCipherGuess
 import kotlinx.coroutines.launch
 
-private val CipherBg = Color(0xFF061A2C)
-private val CipherPanel = Color(0xFF0D2940)
-private val CipherPanel2 = Color(0xFF12354F)
-private val CipherCyan = Color(0xFF2ED4E6)
-private val CipherGold = Color(0xFFF3C760)
-private val CipherGreen = Color(0xFF43D18C)
-private val CipherText = Color(0xFFF4FAFF)
-private val CipherMuted = Color(0xFF8EABBD)
+private val CipherBg = Color(0xFFF7F9FC)
+private val CipherPanel = Color.White
+private val CipherPanel2 = Color(0xFFF0F4F8)
+private val CipherCyan = Color(0xFF1769E0)
+private val CipherGold = Color(0xFFF3A81A)
+private val CipherGreen = Color(0xFF22B95F)
+private val CipherText = Color(0xFF182235)
+private val CipherMuted = Color(0xFF718096)
 
 @Composable
 fun DailyCipherScreen(onBack: () -> Unit) {
@@ -51,11 +51,11 @@ fun DailyCipherScreen(onBack: () -> Unit) {
     suspend fun reload() {
         val b = backend
         if (b == null) {
-            notice = sh("Günün Şifresi çevrimiçi bağlantı gerektirir.", "Daily Cipher requires an online connection.")
+            notice = sh("Kelime Avı çevrimiçi bağlantı gerektirir.", "Word Hunt requires an online connection.")
             return
         }
         status = runCatching { b.getDailyCipherStatus(SonHarfUiState.language) }
-            .onFailure { notice = sh("Günün Şifresi yüklenemedi.", "Daily Cipher could not be loaded.") }
+            .onFailure { notice = sh("Kelime Avı yüklenemedi.", "Word Hunt could not be loaded.") }
             .getOrNull()
     }
 
@@ -97,7 +97,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
 
     Box(
         Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFF041321), CipherBg, Color(0xFF0A253B)))
+            Brush.verticalGradient(listOf(Color.White, CipherBg, Color(0xFFF1F6FC)))
         )
     ) {
         Column(
@@ -109,8 +109,8 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                     Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = CipherText)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("SÖZ DOKUSU • GÜNÜN ŞİFRESİ", "WORD WEAVE • DAILY CIPHER"), color = CipherText, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Lethara’nın herkese aynı görünen günlük 5 harfli mührü.", "Lethara’s daily five-letter seal, shared by everyone."), color = CipherMuted, fontSize = 10.sp)
+                    Text(sh("KELİME AVI", "WORD HUNT"), color = CipherText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Günün 5 harfli kelimesini ipuçlarıyla bul.", "Find today's five-letter word using the clues."), color = CipherMuted, fontSize = 10.sp)
                 }
                 Text("1×", color = CipherGold, fontWeight = FontWeight.Black)
             }

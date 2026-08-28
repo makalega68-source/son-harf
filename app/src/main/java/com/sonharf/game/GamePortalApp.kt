@@ -7,18 +7,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-internal val PortalBg = LetharaPalette.Night
-internal val PortalCard = Color(0xFF101D39)
-internal val PortalText = LetharaPalette.Text
-internal val PortalMuted = LetharaPalette.Muted
-internal val PortalBlue = LetharaPalette.Cyan
-internal val PortalGold = LetharaPalette.Gold
-internal val PortalGreen = LetharaPalette.Green
-internal val PortalRed = LetharaPalette.Red
+internal val PortalBg = Color(0xFFF7F9FC)
+internal val PortalCard = Color.White
+internal val PortalText = Color(0xFF182235)
+internal val PortalMuted = Color(0xFF718096)
+internal val PortalBlue = Color(0xFF1769E0)
+internal val PortalGold = Color(0xFFF3A81A)
+internal val PortalGreen = Color(0xFF22B95F)
+internal val PortalRed = Color(0xFFE64B55)
 
 /**
- * Root shell for the active Son Harf / Lethara product.
- * Lethara is the canonical visual system; legacy Eve surfaces remain archived and are never exposed by active navigation.
+ * Active Son Harf shell.
+ * The product is word-game focused: one helper mascot, simple navigation and a light UI.
  */
 @Composable
 fun GamePortalApp() {
@@ -29,6 +29,6 @@ fun GamePortalApp() {
     }
 
     Box(Modifier.fillMaxSize()) {
-        ClassicPremiumApp()
+        LightWordThemeApp()
     }
 }
