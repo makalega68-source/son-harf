@@ -119,7 +119,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
         )
     ) {
         Column(
-            Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp),
+            Modifier.fillMaxSize().imePadding().padding(horizontal = 16.dp, vertical = 10.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
