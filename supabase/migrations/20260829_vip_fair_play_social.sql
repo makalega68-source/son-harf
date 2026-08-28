@@ -44,7 +44,7 @@ begin
     'freezer_count',0,'swap_count',0,'hint_count',0,'streak_shield_count',0,
     'xp_multiplier',1,'diamond_multiplier',1,
     'rewarded_ad_bypass',coalesce(v_vip,false),
-    'used_words_access',coalesce(v_vip,false),
+    'used_words_access',true,
     'direct_messages_access',true
   );
 end $$;
