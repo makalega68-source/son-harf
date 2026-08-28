@@ -422,7 +422,7 @@ private fun TargetLobby(
                         OutlinedTextField(
                             privateCode,
                             onPrivateCode,
-                            modifier = Modifier.fillMaxWidth().focusRequester(wordFocusRequester),
+                            modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
                             label = { Text("Oda kodu") },
                             placeholder = { Text("6 haneli kod") },
@@ -658,7 +658,7 @@ private fun TargetArena(
             onValueChange = onWordInput,
             enabled = myTurn && !busy,
             singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().focusRequester(wordFocusRequester),
             placeholder = { Text(if (myTurn) "Kelimenizi yazın…" else "Rakibin sırası…") },
             shape = RoundedCornerShape(16.dp),
             keyboardOptions = KeyboardOptions(
