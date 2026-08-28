@@ -213,7 +213,7 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
             .background(Brush.verticalGradient(roomGradient)),
     ) {
         Image(
-            painter = painterResource(R.drawable.mascot_realm_bg),
+            painter = painterResource(R.drawable.son_harf_ana_menu_arka_plan),
             contentDescription = null,
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.Crop,

@@ -229,7 +229,7 @@ internal fun EveMascotScreen(onClose: () -> Unit) {
 @Composable
 private fun FantasyForestBackground(modifier: Modifier) {
     Image(
-        painter = painterResource(R.drawable.mascot_realm_bg),
+        painter = painterResource(R.drawable.son_harf_ana_menu_arka_plan),
         contentDescription = null,
         modifier = modifier,
         contentScale = ContentScale.Crop,

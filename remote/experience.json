@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "primaryColor": "#FFD36A",
   "secondaryColor": "#56D6FF",
   "backgroundColor": "#071229",
@@ -7,10 +7,10 @@
   "surfaceVariantColor": "#15284A",
   "textColor": "#F4F0FF",
   "mutedColor": "#B8B5D4",
-  "homeWordArenaBadgeTr": "SÖZ DOKUSU DÜELLOSU",
-  "homeWordArenaBadgeEn": "WORD WEAVE DUEL",
-  "homeWordArenaSubtitleTr": "Her son harf, yeni bir mührü açar.",
-  "homeWordArenaSubtitleEn": "Every final letter opens a new seal.",
+  "homeWordArenaBadgeTr": "KELİME DÜELLOSU",
+  "homeWordArenaBadgeEn": "WORD DUEL",
+  "homeWordArenaSubtitleTr": "Kelimeyi sürdür, rakibini geç.",
+  "homeWordArenaSubtitleEn": "Keep the word going, beat your rival.",
   "tournamentMinutes": 18,
   "brandLogoBase64Url": ""
 }
