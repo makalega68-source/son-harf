@@ -47,8 +47,13 @@ object RemoteExperience {
         prefs.getString(KEY_CONFIG, null)?.let { cached ->
             runCatching { json.decodeFromString<RemoteExperienceConfig>(cached) }
                 .onSuccess { cachedConfig ->
-                    // Ignore the legacy light-theme cache after the Lethara migration.
-                    if (cachedConfig.version >= 3) config = cachedConfig
+                    if (cachedConfig.version >= 3) {
+                        config = cachedConfig
+                    } else {
+                        // Retire the legacy light theme and its old remote logo in one migration.
+                        brandLogoBytes = null
+                        prefs.edit().remove(KEY_CONFIG).remove(KEY_LOGO).apply()
+                    }
                 }
         }
         prefs.getString(KEY_LOGO, null)?.let { encoded ->
@@ -83,6 +88,9 @@ object RemoteExperience {
                 brandLogoBytes = bytes
                 prefs.edit().putString(KEY_LOGO, logoEncoded).apply()
             }
+        } else {
+            brandLogoBytes = null
+            prefs.edit().remove(KEY_LOGO).apply()
         }
     }
 }
