@@ -213,6 +213,12 @@ internal fun WizardHistoryScreen(
                         }) {
                             Text(sh("YOLDAŞIMA GİT", "OPEN COMPANION"), fontWeight = FontWeight.Black, fontSize = 9.sp)
                         }
+                        !rosterLoaded && mascotId != null && mascotId != MascotCatalog.DEFAULT_ID -> OutlinedButton(
+                            onClick = {},
+                            enabled = false,
+                        ) {
+                            Text(sh("DOĞRULANIYOR", "VERIFYING"), fontWeight = FontWeight.Black, fontSize = 9.sp)
+                        }
                         rosterState.availability == SealRosterAvailability.STORE -> Button(onClick = {
                             selectedCharacter = null
                             onOpenShop()
@@ -329,24 +335,17 @@ private fun CharacterCard(
     val mascotId = character.mascotId
     val assetReady = mascotId != null && MascotCatalog.isAssetReady(context, mascotId)
     Surface(
-        modifier = modifier.height(190.dp).clickable(onClick = onClick),
+        modifier = modifier.height(160.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         color = LetharaPalette.Panel,
         border = BorderStroke(if (rosterState.active) 1.8.dp else 1.dp, if (rosterState.active) LetharaPalette.Gold else character.color.copy(alpha=.55f)),
     ) {
         Column(Modifier.fillMaxSize().padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            if (assetReady && mascotId != null) {
-                Box(Modifier.fillMaxWidth().height(102.dp)) {
-                    MascotLive3DStage(
-                        modifier = Modifier.fillMaxSize(),
-                        mascotId = mascotId,
-                        motion = MascotMotion.IDLE,
-                    )
-                }
-            } else {
-                WizardEmblem(character, 58.dp)
-                Spacer(Modifier.height(6.dp))
+            WizardEmblem(character, 58.dp)
+            if (assetReady) {
+                Text(sh("3D FORM HAZIR", "3D FORM READY"), color = character.color, fontSize = 6.sp, fontWeight = FontWeight.Black)
             }
+            Spacer(Modifier.height(5.dp))
             Text(character.name.uppercase(), color = LetharaPalette.Text, fontWeight = FontWeight.Black, fontSize = 14.sp)
             Text(if (SonHarfUiState.isEnglish) character.titleEn else character.titleTr, color = character.color, fontWeight = FontWeight.Bold, fontSize = 9.sp, textAlign = TextAlign.Center)
             Spacer(Modifier.height(5.dp))
