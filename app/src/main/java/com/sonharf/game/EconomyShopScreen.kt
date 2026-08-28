@@ -49,8 +49,8 @@ fun EconomyShopScreen(
                     Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
                 }
                 Column {
-                    Text(sh("SON HARF MAĞAZASI", "SON HARF SHOP"), color = LetharaPalette.Gold, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Style • Görünüm • Efektler", "Style • Appearance • Effects"), color = LetharaPalette.Muted, fontSize = 9.sp)
+                    Text(sh("SON HARF MAĞAZASI", "SON HARF SHOP"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Style • Görünüm • Efektler", "Style • Appearance • Effects"), color = SonHarfMuted, fontSize = 9.sp)
                 }
             }
         }
@@ -134,7 +134,7 @@ private fun EconomyCatalogScreen() {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
-                    Text("STYLE", color = LetharaPalette.Gold, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text("STYLE", color = SonHarfBlue, fontSize = 30.sp, fontWeight = FontWeight.Black)
                     Text(sh("Profilini ve görünümünü kişiselleştir • güç satın alma", "Personalize your profile and appearance • never buy power"), color = SonHarfMuted, fontSize = 10.sp)
                 }
                 Surface(shape = RoundedCornerShape(99.dp), color = SonHarfCyan.copy(alpha = .13f), border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f))) {
