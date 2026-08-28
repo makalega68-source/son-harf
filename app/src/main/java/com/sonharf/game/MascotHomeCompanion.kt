@@ -14,7 +14,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,7 +51,7 @@ internal fun MascotHomeCompanion(
         Spacer(Modifier.height(2.dp))
         Text(
             text = if (SonHarfUiState.isEnglish) selected.nameEn else selected.nameTr,
-            color = Color(0xFF163B58),
+            color = LetharaPalette.Text,
             fontWeight = FontWeight.Black,
             fontSize = 11.sp,
             maxLines = 1,
