@@ -39,7 +39,7 @@ import com.sonharf.game.data.getLeaderboardV2
 import kotlinx.coroutines.launch
 
 private enum class ClassicScreen {
-    HOME, PLAY, GAME, BIL_BAKALIM, DAILY_CIPHER, MASTERY, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL, HISTORY, MASCOT
+    HOME, PLAY, GAME, BIL_BAKALIM, DAILY_CIPHER, MASTERY, ADMIN, PROFILE, SHOP, HUB, LEAGUE, PROFILE_FULL, SHOP_FULL, HISTORY, MASCOT, MASCOT_ROOM
 }
 
 private val ClassicBg = Color(0xFFF4FBFF)
@@ -175,6 +175,7 @@ fun ClassicPremiumApp() {
                         onMastery = { screen = ClassicScreen.MASTERY },
                         onHistory = { screen = ClassicScreen.HISTORY },
                         onMascot = { screen = ClassicScreen.MASCOT },
+                        onRoom = { screen = ClassicScreen.MASCOT_ROOM },
                     )
                     ClassicScreen.PLAY -> ClassicPlayScreen(
                         backend = backend,
@@ -227,11 +228,18 @@ fun ClassicPremiumApp() {
                         backend = backend,
                         onBack = { screen = ClassicScreen.HOME },
                         onOpenHistory = { screen = ClassicScreen.HISTORY },
+                        onOpenRoom = { screen = ClassicScreen.MASCOT_ROOM },
                         onOpenShop = {
                             shopFullTab = 1
                             shopFullReturnScreen = ClassicScreen.MASCOT
                             screen = ClassicScreen.SHOP_FULL
                         },
+                    )
+                    ClassicScreen.MASCOT_ROOM -> MascotRoomScreen(
+                        backend = backend,
+                        onBack = { screen = ClassicScreen.MASCOT },
+                        onOpenCompanion = { screen = ClassicScreen.MASCOT },
+                        onOpenHistory = { screen = ClassicScreen.HISTORY },
                     )
                     }
                 }
