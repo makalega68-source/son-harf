@@ -131,17 +131,15 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     Modifier.fillMaxSize().padding(horizontal = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Spacer(Modifier.height(54.dp))
-                    Image(
-                        painter = painterResource(R.drawable.son_harf_splash_logo),
-                        contentDescription = "Son Harf",
-                        modifier = Modifier.fillMaxWidth(.86f).height(210.dp),
-                        contentScale = ContentScale.Fit,
+                    Spacer(Modifier.height(34.dp))
+                    SonHarfBrandLogo(
+                        modifier = Modifier.fillMaxWidth(.84f).height(190.dp),
+                        size = null,
                     )
-                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.height(56.dp))
                     Button(
                         onClick = { register = false; notice = ""; showForm = true },
-                        modifier = Modifier.fillMaxWidth().height(58.dp),
+                        modifier = Modifier.fillMaxWidth(.90f).height(58.dp),
                         shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = Color(0xFF1769E0),
@@ -154,7 +152,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     Spacer(Modifier.height(12.dp))
                     OutlinedButton(
                         onClick = { register = true; notice = ""; showForm = true },
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        modifier = Modifier.fillMaxWidth(.90f).height(56.dp),
                         shape = RoundedCornerShape(18.dp),
                         border = BorderStroke(1.dp, Color(0xFF8CB8F3)),
                         colors = ButtonDefaults.outlinedButtonColors(
@@ -164,7 +162,8 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     ) {
                         Text(sh("Kayıt Ol", "Register"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
                     }
-                    Spacer(Modifier.height(136.dp))
+                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.height(28.dp))
                 }
             } else {
             Column(
