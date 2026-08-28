@@ -60,6 +60,8 @@ internal fun MascotCompanionScreen(
     var fruits by remember { mutableStateOf<List<MascotFruitDto>>(emptyList()) }
     var inventory by remember { mutableStateOf<Map<String, Int>>(emptyMap()) }
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var archRival by remember { mutableStateOf<ArchRivalDto?>(null) }
+    var metaProgress by remember { mutableStateOf<MetaProgressV2Dto?>(null) }
     var tab by remember { mutableStateOf(MascotCompanionTab.CHAT) }
     var notice by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(false) }
@@ -70,6 +72,8 @@ internal fun MascotCompanionScreen(
         profile = id?.let { runCatching { b.getProfile(it) }.getOrNull() }
         progress = runCatching { b.getMascotProgress(mascotId) }.getOrNull()
         roomState = runCatching { b.getMascotRoomState(mascotId) }.getOrNull()
+        archRival = runCatching { b.getArchRival() }.getOrNull()
+        metaProgress = runCatching { b.getMetaProgressV2() }.getOrNull()
         fruits = runCatching { b.getMascotFruitCatalog() }.getOrDefault(emptyList())
         inventory = runCatching { b.getMascotFruitInventory() }.getOrDefault(emptyList()).associate { it.fruitId to it.quantity }
         progress?.let {
@@ -175,6 +179,9 @@ internal fun MascotCompanionScreen(
                         playerName = profile?.displayName,
                         playerWins = profile?.wins,
                         playerLosses = profile?.losses,
+                        friendshipLevel = roomState?.friendshipLevel,
+                        archRival = archRival,
+                        metaProgress = metaProgress,
                         progress = progress,
                     )
                     MascotCompanionTab.CARE -> MascotCarePanel(
@@ -283,6 +290,9 @@ private fun MascotChatPanel(
     playerName: String?,
     playerWins: Int?,
     playerLosses: Int?,
+    friendshipLevel: Int?,
+    archRival: ArchRivalDto?,
+    metaProgress: MetaProgressV2Dto?,
     progress: MascotProgressDto?,
 ) {
     val scope = rememberCoroutineScope()
@@ -315,36 +325,44 @@ private fun MascotChatPanel(
             }
         }
     }
-    val memoryNotes = remember(mascotId) {
-        mutableStateListOf<String>().apply {
-            addAll(
-                prefs.getString("memory_notes", "")
-                    .orEmpty()
-                    .lineSequence()
-                    .map { it.trim() }
-                    .filter { it.isNotBlank() }
-                    .take(12)
-                    .toList()
-            )
-        }
-    }
     var input by remember { mutableStateOf("") }
     var sending by remember { mutableStateOf(false) }
 
+    val verifiedContext = remember(
+        playerWins,
+        playerLosses,
+        friendshipLevel,
+        progress?.memoryFragments,
+        metaProgress,
+        archRival,
+    ) {
+        MascotVerifiedContext(
+            wins = playerWins ?: 0,
+            losses = playerLosses ?: 0,
+            friendshipLevel = friendshipLevel ?: 1,
+            memoryFragments = progress?.memoryFragments ?: 0,
+            seasonLevel = metaProgress?.seasonLevel,
+            dailyPlayStreak = metaProgress?.dailyPlayStreak,
+            bestStreak = metaProgress?.bestStreak,
+            longestWord = metaProgress?.longestWord,
+            selectedTitle = metaProgress?.selectedTitle,
+            rivalName = archRival?.displayName,
+            rivalMatches = archRival?.matches ?: 0,
+            rivalWins = archRival?.wins ?: 0,
+            rivalLosses = archRival?.losses ?: 0,
+        )
+    }
     val daySeed = remember { java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR) }
-    val dailyQuest = remember(character.key, daySeed, playerName) {
-        val seed = kotlin.math.abs(character.key.hashCode() + daySeed)
-        when (seed % 3) {
-            0 -> sh("Bugün 1 düello kazan; bir hafıza kıvılcımını uyandır.", "Win 1 duel today and awaken a memory spark.")
-            1 -> sh("Bugün 3 düelloyu tamamla; Söz Dokusu’nun ritmini koru.", "Complete 3 duels today and keep the rhythm of the Word Weave.")
-            else -> sh("Bugün 2 düello kazan; mühür yankısını güçlendir.", "Win 2 duels today and strengthen the seal echo.")
-        }
+    val dailyQuest = remember(verifiedContext, daySeed, SonHarfUiState.language) {
+        MascotCompanionCoach.dailyQuest(verifiedContext, SonHarfUiState.language, daySeed)
+    }
+    val onboardingHint = remember(verifiedContext, SonHarfUiState.language) {
+        MascotCompanionCoach.onboardingHint(verifiedContext, SonHarfUiState.language)
     }
 
     fun persist() {
         prefs.edit()
             .putString("history", json.encodeToString(serializer, history.takeLast(30)))
-            .putString("memory_notes", memoryNotes.takeLast(12).joinToString("\n"))
             .putBoolean("voice_enabled", voiceEnabled)
             .apply()
     }
@@ -397,25 +415,32 @@ private fun MascotChatPanel(
                     playerName = playerName,
                     companionName = companionName,
                     gameContext = progress?.let {
-                        val record = if (playerWins != null && playerLosses != null) {
-                            " Player record: " + playerWins + " wins, " + playerLosses + " losses."
-                        } else ""
-                        val memories = if (memoryNotes.isEmpty()) "" else " Stable remembered notes: " + memoryNotes.joinToString(" | ")
-                        "Mascot level " + it.level + "; XP " + it.totalXp + "; memory fragments " + it.memoryFragments + "/120; fullness " + it.fullness + "; happiness " + it.happiness + "." + record + memories
+                        verifiedContext.safeSummary(SonHarfUiState.language) +
+                            " Mascot level: " + it.level +
+                            "; mascot XP: " + it.totalXp +
+                            "; fullness: " + it.fullness +
+                            "; happiness: " + it.happiness + "."
                     },
                     mascotId = mascotId,
                     mascotTitle = if (SonHarfUiState.isEnglish) character.titleEn else character.titleTr,
                     mascotPersonality = if (SonHarfUiState.isEnglish) character.archetypeEn + "; " + character.temperamentEn else character.archetypeTr + "; " + character.temperamentTr,
                     loreContext = if (SonHarfUiState.isEnglish) LetharaLore.introEn else LetharaLore.introTr,
+                    playerWins = verifiedContext.wins,
+                    playerLosses = verifiedContext.losses,
+                    friendshipLevel = verifiedContext.friendshipLevel,
+                    memoryFragments = verifiedContext.memoryFragments,
+                    seasonLevel = verifiedContext.seasonLevel,
+                    dailyPlayStreak = verifiedContext.dailyPlayStreak,
+                    bestStreak = verifiedContext.bestStreak,
+                    longestWord = verifiedContext.longestWord,
+                    selectedTitle = verifiedContext.selectedTitle,
+                    rivalName = verifiedContext.rivalName,
+                    rivalMatches = verifiedContext.rivalMatches,
+                    rivalWins = verifiedContext.rivalWins,
+                    rivalLosses = verifiedContext.rivalLosses,
                 )
             )
             history += MascotChatTurn("assistant", response.reply)
-            response.memoryNote?.trim()?.takeIf { it.length in 3..180 }?.let { note ->
-                if (note !in memoryNotes) {
-                    memoryNotes += note
-                    while (memoryNotes.size > 12) memoryNotes.removeAt(0)
-                }
-            }
             persist()
             speak(response.reply)
             MascotRuntime.react(
@@ -473,6 +498,19 @@ private fun MascotChatPanel(
             Column(Modifier.padding(horizontal = 11.dp, vertical = 8.dp)) {
                 Text(sh("BUGÜNÜN MÜHÜR GÖREVİ", "TODAY'S SEAL QUEST"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 9.sp)
                 Text(dailyQuest, color = LetharaPalette.Text, fontSize = 10.sp, lineHeight = 14.sp)
+            }
+        }
+        onboardingHint?.let { hint ->
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
+                shape = RoundedCornerShape(14.dp),
+                color = character.color.copy(alpha = .08f),
+                border = BorderStroke(1.dp, character.color.copy(alpha = .22f)),
+            ) {
+                Column(Modifier.padding(horizontal = 11.dp, vertical = 8.dp)) {
+                    Text(sh("İLK MÜHÜRLER", "FIRST SEALS"), color = character.color, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                    Text(hint, color = LetharaPalette.Text, fontSize = 10.sp, lineHeight = 14.sp)
+                }
             }
         }
         LazyColumn(
