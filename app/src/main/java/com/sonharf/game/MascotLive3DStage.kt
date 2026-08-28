@@ -110,7 +110,10 @@ internal fun MascotLive3DStage(
     LaunchedEffect(modelInstance, effectiveTint, effectiveBrightness) {
         val instance = modelInstance ?: return@LaunchedEffect
         var applied = 0
-        instance.materialInstances.forEach { material ->
+        instance.materialInstances.forEachIndexed { index, material ->
+            if (BuildConfig.DEBUG) {
+                Log.d("MascotSmoke", "CHIBI_MATERIAL index=$index name=${material.name}")
+            }
             runCatching {
                 if (effectiveTint != null) {
                     material.setParameter(
