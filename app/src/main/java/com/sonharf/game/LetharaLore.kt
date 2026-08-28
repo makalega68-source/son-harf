@@ -64,7 +64,7 @@ internal object LetharaLore {
             temperamentTr = "Sıcak, meraklı ve heyecanlı.",
             temperamentEn = "Warm, curious and excitable.",
             color = Color(0xFF7EDBFF),
-            mascotId = MascotCatalog.DEFAULT_ID,
+            mascotId = MascotCatalog.LEGACY_WHITE_ID,
             whisperTr = listOf("Yıldızlar... bu mühürü daha önce gördü.", "Mor Ay Kulesi... neden adını hatırlıyorum?", "Bir son harf... başka bir kapıyı açıyordu."),
             whisperEn = listOf("The stars... have seen this seal before.", "The Violet Moon Tower... why do I remember that name?", "A final letter... used to open another gate."),
         ),
