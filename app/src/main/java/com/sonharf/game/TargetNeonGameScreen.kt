@@ -574,7 +574,9 @@ private fun TargetArena(
                 ambientIndex += 1
                 MascotRuntime.react(next, force = true)
                 delay(1_250)
-                if (MascotRuntime.motion == next) MascotRuntime.react(MascotMotion.IDLE, force = true)
+                if (MascotRuntime.motion == next) {
+                    MascotRuntime.react(MascotMotion.IDLE, force = true)
+                }
             }
         }
     }
@@ -602,6 +604,50 @@ private fun TargetArena(
 
     LaunchedEffect(room.status, room.winnerId) {
         if (room.status == "finished") {
+            val won = room.winnerId == me
+            val localLine = if (won) {
+                sh("İşte bu! Chibi kutlamaya hazır.", "That's it! Chibi is ready to celebrate.")
+            } else {
+                sh("Bu maç bitti; sıradaki zincirde yanındayım.", "This match is done; I'm with you for the next chain.")
+            }
+            resultAiLine = localLine
+            MascotRuntime.react(
+                if (won) MascotMotion.VICTORY else MascotMotion.DEFEAT,
+                force = true,
+                customMessage = localLine,
+            )
+
+            val response = MascotAiChatService.chat(
+                MascotChatRequest(
+                    message = if (won)
+                        "Oyuncu Son Harf maçını kazandı. Chibi olarak kısa, doğal ve coşkulu tek cümle söyle."
+                    else
+                        "Oyuncu Son Harf maçını kaybetti. Chibi olarak kısa, doğal ve destekleyici tek cümle söyle.",
+                    language = room.language,
+                    playerName = playerName,
+                    companionName = "Chibi",
+                    gameContext = if (won)
+                        "Verified event: player won the current Son Harf match. Celebrate without inventing stats."
+                    else
+                        "Verified event: player lost the current Son Harf match. Encourage without inventing stats.",
+                    mascotId = MascotCatalog.CHIBI_WIZARD_ID,
+                    mascotTitle = "Chibi",
+                    mascotPersonality = "Lively, playful, concise and emotionally responsive.",
+                )
+            )
+            val cleanReply = response.reply.trim().take(120)
+            if (cleanReply.isNotBlank()) {
+                resultAiLine = cleanReply
+                MascotRuntime.react(
+                    if (won) MascotMotion.VICTORY else MascotMotion.LOOK_AT_PLAYER,
+                    force = true,
+                    customMessage = cleanReply,
+                )
+            }
+        }
+    }
+
+    if (room.status == "finished") {
         BackHandler { onExit() }
         val won = room.winnerId == me
         Column(
@@ -667,23 +713,6 @@ private fun TargetArena(
                     border = BorderStroke(1.dp, TGcyan),
                 ) {
                     Text(sh("ANA MENÜ", "HOME"), color = TGblue, fontWeight = FontWeight.Black)
-                }
-            }
-        }
-        return
-    }
-
-    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(sh("DÜELLO TAMAMLANDI", "DUEL COMPLETE"), color = TGtext, fontWeight = FontWeight.Black, fontSize = 24.sp)
-                MascotLive3DStage(
-                    modifier = Modifier.size(width = 160.dp, height = 180.dp),
-                    mascotId = MascotCatalog.CHIBI_WIZARD_ID,
-                    motion = MascotRuntime.motion,
-                    displayScale = 1.45f,
-                )
-                Text(sh("Sonuç özeti açılmazsa ana menüye güvenle dönebilirsin.", "If the result summary does not open, you can safely return home."), color = TGmuted, fontSize = 12.sp, textAlign = TextAlign.Center)
-                Button(onClick = onExit, colors = ButtonDefaults.buttonColors(containerColor = TGcyan)) {
-                    Text(sh("ANA MENÜ", "HOME"), color = Color.White, fontWeight = FontWeight.Black)
                 }
             }
         }
