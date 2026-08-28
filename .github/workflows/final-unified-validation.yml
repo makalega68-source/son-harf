@@ -5,6 +5,9 @@ on:
     branches:
       - integration/final-unified-20260827
       - main
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:
@@ -35,19 +38,16 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          test ! -f app/src/main/assets/models/eve/eve.glb
-          test -f archive/eve/eve.glb
-          if git ls-files '*.fbx' '*.unitypackage' | grep -q .; then
-            echo "::error::Purchased source mascot assets must not be committed"
-            git ls-files '*.fbx' '*.unitypackage'
-            exit 1
-          fi
           grep -q 'DAILY_CIPHER' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
           grep -q 'MASTERY' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
           grep -q 'SonHarfTopAdBanner' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
-          grep -q 'MascotHomeCompanion' app/src/main/java/com/sonharf/game/PremiumMasterHome.kt
-          ! grep -q 'EveHomeFixedCompanion' app/src/main/java/com/sonharf/game/PremiumMasterHome.kt
-          grep -q 'MASKOT' app/src/main/java/com/sonharf/game/EconomyShopScreen.kt
+          test ! -f app/src/main/java/com/sonharf/game/MascotSystem.kt
+          test ! -f app/src/main/java/com/sonharf/game/MascotLive3DStage.kt
+          test ! -f app/src/main/java/com/sonharf/game/ChibiGameBehaviorDirector.kt
+          if grep -R -n -E 'Mascot(HomeCompanion|Live3DStage|Runtime|Catalog)|Chibi(GameBehaviorDirector)?' app/src/main/java/com/sonharf/game --include='*.kt'; then
+            echo "::error::Mascot runtime reference found in active app source"
+            exit 1
+          fi
 
       - name: Unit tests and debug APK
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
@@ -58,11 +58,11 @@ jobs:
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -f "$APK"
-          if unzip -l "$APK" | grep -q 'assets/models/eve/eve.glb'; then
-            echo "::error::Parked Eve leaked into active APK assets"
+          if unzip -l "$APK" | grep -Ei '(mascot|chibi)'; then
+            echo "::error::Mascot artifact leaked into active APK"
             exit 1
           fi
-          echo ">> [PASS] Eve is parked and final debug APK is built"
+          echo ">> [PASS] Mascot-free debug APK is built"
 
       - uses: actions/upload-artifact@v4
         with:
