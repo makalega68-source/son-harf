@@ -5,6 +5,7 @@ on:
     branches: [ main ]
     paths:
       - '.github/workflows/lethara-companion-ime-runtime.yml'
+      - '.github/scripts/verify_companion_ime.py'
       - 'app/src/main/AndroidManifest.xml'
       - 'app/src/debug/AndroidManifest.xml'
       - 'app/src/debug/java/com/sonharf/game/MascotCompanionImeSmokeActivity.kt'
@@ -86,34 +87,7 @@ jobs:
             adb shell uiautomator dump /sdcard/companion-before.xml >/dev/null
             adb pull /sdcard/companion-before.xml artifacts/companion-ime/companion-before.xml >/dev/null
 
-            python3 - <<'PY' > /tmp/companion_tap.txt
-            import re
-            import xml.etree.ElementTree as ET
-
-            root = ET.parse("artifacts/companion-ime/companion-before.xml").getroot()
-            candidates = []
-            for node in root.iter("node"):
-                if node.attrib.get("package") != "com.sonharf.game":
-                    continue
-                cls = node.attrib.get("class", "")
-                text = node.attrib.get("text", "")
-                if cls == "android.widget.EditText" or "Yoldaşına bir şey söyle" in text or "Say something to your companion" in text:
-                    candidates.append(node)
-            if candidates:
-                bounds = candidates[-1].attrib.get("bounds", "")
-                m = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
-                if not m:
-                    raise SystemExit("Unable to parse chat input bounds: " + bounds)
-                l, t, r, b = map(int, m.groups())
-                print((l + r) // 2, (t + b) // 2)
-            else:
-                # Fixed emulator fallback. The post-IME assertion below still has to find the real
-                # application EditText, so this does not weaken the visibility gate.
-                print(300, 1450)
-            PY
-
-            read TAP_X TAP_Y < /tmp/companion_tap.txt
-            adb shell input tap "$TAP_X" "$TAP_Y"
+            python3 .github/scripts/verify_companion_ime.py tap artifacts/companion-ime/companion-before.xml
             timeout 25 sh -c "until adb logcat -d | grep -q 'MASCOT_COMPANION_IME_VISIBLE=true'; do sleep 1; done"
 
             adb shell input text ime_smoke
@@ -123,50 +97,7 @@ jobs:
             adb logcat -d > artifacts/companion-ime/companion-logcat.txt
             adb exec-out screencap -p > artifacts/companion-ime/companion-ime.png
 
-            python3 - <<'PY'
-            import re
-            import xml.etree.ElementTree as ET
-            from pathlib import Path
-
-            root = ET.parse("artifacts/companion-ime/companion-ime.xml").getroot()
-            editable = []
-            for node in root.iter("node"):
-                if node.attrib.get("package") != "com.sonharf.game":
-                    continue
-                if node.attrib.get("class") == "android.widget.EditText":
-                    editable.append(node)
-            if not editable:
-                raise SystemExit("Production companion EditText is missing while IME is visible")
-
-            chat = editable[-1]
-            bounds = chat.attrib.get("bounds", "")
-            match = re.fullmatch(r"\[(\d+),(\d+)\]\[(\d+),(\d+)\]", bounds)
-            if not match:
-                raise SystemExit("Unable to parse visible chat input bounds: " + bounds)
-            left, top, right, bottom = map(int, match.groups())
-
-            log = Path("artifacts/companion-ime/companion-logcat.txt").read_text(errors="replace")
-            samples = re.findall(
-                r"MASCOT_COMPANION_IME_VISIBLE=true root_height=(\d+) ime_bottom=(\d+) safe_bottom=(\d+)",
-                log,
-            )
-            if not samples:
-                raise SystemExit("IME-visible inset sample was not logged")
-            root_height, ime_bottom, safe_bottom = map(int, samples[-1])
-            if ime_bottom <= 0:
-                raise SystemExit(f"IME reported visible with invalid inset: {ime_bottom}")
-            if bottom > safe_bottom + 4:
-                raise SystemExit(
-                    f"Chat input is obscured by IME: input_bottom={bottom}, safe_bottom={safe_bottom}"
-                )
-            if right <= left or bottom <= top:
-                raise SystemExit("Chat input has invalid visible bounds")
-            print(
-                "COMPANION_IME_LAYOUT_PASS "
-                f"input=[{left},{top}][{right},{bottom}] "
-                f"root_height={root_height} ime_bottom={ime_bottom} safe_bottom={safe_bottom}"
-            )
-            PY
+            python3 .github/scripts/verify_companion_ime.py verify artifacts/companion-ime/companion-ime.xml artifacts/companion-ime/companion-logcat.txt
 
             test "$(stat -c%s artifacts/companion-ime/companion-ime.png)" -gt 20000
             ! grep -Eqi 'FATAL EXCEPTION|Fatal signal|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|PostconditionPanic' artifacts/companion-ime/companion-logcat.txt
