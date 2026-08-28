@@ -105,7 +105,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                 shape = RoundedCornerShape(26.dp),
-                border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .45f)),
+                border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .24f)),
             ) {
                 Column(
                     Modifier.fillMaxWidth().background(
@@ -149,7 +149,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     Button(
                         onClick = { period = key },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (selected) SonHarfPurple else Color.Transparent, contentColor = SonHarfText),
+                        colors = ButtonDefaults.buttonColors(containerColor = if (selected) SonHarfBlue else Color.Transparent, contentColor = SonHarfText),
                         shape = RoundedCornerShape(11.dp),
                         contentPadding = PaddingValues(horizontal = 5.dp, vertical = 8.dp),
                     ) { Text(title, fontSize = 9.sp, fontWeight = FontWeight.Black) }
@@ -166,9 +166,9 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
         itemsIndexed(rows, key = { _, row -> row.userId }) { index, row ->
             val mine = row.userId == me
             Card(
-                colors = CardDefaults.cardColors(containerColor = if (mine) SonHarfPurple.copy(alpha = .20f) else SonHarfSurface),
+                colors = CardDefaults.cardColors(containerColor = if (mine) SonHarfBlue.copy(alpha = .10f) else SonHarfSurface),
                 shape = RoundedCornerShape(15.dp),
-                border = BorderStroke(1.dp, when { mine -> SonHarfPurple; index == 0 -> SonHarfGold.copy(alpha = .55f); else -> SonHarfMuted.copy(alpha = .10f) }),
+                border = BorderStroke(1.dp, when { mine -> SonHarfBlue; index == 0 -> SonHarfGold.copy(alpha = .55f); else -> SonHarfMuted.copy(alpha = .10f) }),
             ) {
                 Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -183,7 +183,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                         name = row.displayName,
                         size = 36.dp,
                         visible = true,
-                        accent = if (mine) SonHarfCyan else SonHarfPurple,
+                        accent = if (mine) SonHarfBlue else Color(0xFF6B4FD3),
                     )
                     Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f)) {
