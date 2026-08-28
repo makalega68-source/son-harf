@@ -232,9 +232,9 @@ private fun EconomyCatalogScreen() {
 
         if (category == 0 || category == 4) {
             item {
-                Text(sh("UYANMAYI BEKLEYEN MÜHÜRLER", "SEALS AWAITING AWAKENING"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                Text(sh("DİĞER MÜHÜRLER", "OTHER SEALS"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 13.sp)
                 Text(
-                    sh("Kael, Ryvan, Mivo ve Selen mağaza planına hazır; ayrı lisanslı 3D formları runtime testini geçmeden satışa açılmaz.", "Kael, Ryvan, Mivo and Selen are prepared for the shop; they will not be sold until their distinct licensed 3D forms pass runtime verification."),
+                    sh("Kael, Ryvan, Mivo ve Selen mağazada büyük 3D önizlemeyle görünür; satış kilitleri değişmedi.", "Kael, Ryvan, Mivo and Selen are visible in the shop with large 3D previews; their sale locks are unchanged."),
                     color = SonHarfMuted,
                     fontSize = 9.sp,
                 )
@@ -246,20 +246,32 @@ private fun EconomyCatalogScreen() {
                     shape = RoundedCornerShape(20.dp),
                     border = BorderStroke(1.dp, seal.color.copy(alpha = .35f)),
                 ) {
-                    Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = seal.color.copy(alpha = .15f), border = BorderStroke(1.dp, seal.color.copy(alpha = .55f))) {
-                            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                                Text("✦", color = seal.color, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                    Column(
+                        Modifier.fillMaxWidth().padding(13.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth().height(168.dp),
+                            color = SonHarfSurface2.copy(alpha = .72f),
+                            shape = RoundedCornerShape(18.dp),
+                        ) {
+                            MascotLive3DStage(
+                                modifier = Modifier.fillMaxSize(),
+                                mascotId = MascotCatalog.CHIBI_WIZARD_ID,
+                                motion = MascotMotion.IDLE,
+                                displayScale = 1.72f,
+                                appearanceTint = seal.color,
+                            )
+                        }
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(seal.name + " — " + if (SonHarfUiState.isEnglish) seal.titleEn else seal.titleTr, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                                Text(if (SonHarfUiState.isEnglish) seal.temperamentEn else seal.temperamentTr, color = SonHarfMuted, fontSize = 9.sp)
+                                Text("◈ " + plannedPrice + " SC", color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 11.sp)
                             }
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(seal.name + " — " + if (SonHarfUiState.isEnglish) seal.titleEn else seal.titleTr, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                            Text(if (SonHarfUiState.isEnglish) seal.temperamentEn else seal.temperamentTr, color = SonHarfMuted, fontSize = 9.sp)
-                            Text("◈ " + plannedPrice + " SC", color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 11.sp)
-                        }
-                        OutlinedButton(onClick = {}, enabled = false) {
-                            Text(sh("MÜHÜR KİLİTLİ", "SEAL LOCKED"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            OutlinedButton(onClick = {}, enabled = false) {
+                                Text(sh("MÜHÜR KİLİTLİ", "SEAL LOCKED"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            }
                         }
                     }
                 }
@@ -298,7 +310,8 @@ private fun AnimatedVipShopCard(active: Boolean, onClick: () -> Unit) {
 private fun CosmeticPreview(item: ShopItemDto) {
     val transition = rememberInfiniteTransition(label = "preview_${item.id}")
     val pulse by transition.animateFloat(.94f, 1.04f, infiniteRepeatable(tween(1150), RepeatMode.Reverse), label = "previewPulse_${item.id}")
-    Surface(modifier = Modifier.fillMaxWidth().height(108.dp), color = SonHarfSurface2.copy(alpha = .72f), shape = RoundedCornerShape(18.dp)) {
+    val previewHeight = if (item.kind == "mascot") 176.dp else 108.dp
+    Surface(modifier = Modifier.fillMaxWidth().height(previewHeight), color = SonHarfSurface2.copy(alpha = .72f), shape = RoundedCornerShape(18.dp)) {
         Box(Modifier.fillMaxSize().padding(10.dp), contentAlignment = Alignment.Center) {
             when (item.kind) {
                 "profile_frame" -> {
@@ -316,6 +329,7 @@ private fun CosmeticPreview(item: ShopItemDto) {
                     modifier = Modifier.fillMaxSize(),
                     mascotId = item.id,
                     motion = MascotMotion.IDLE,
+                    displayScale = 1.82f,
                 )
                 else -> Text("◇", fontSize = 44.sp, color = SonHarfCyan)
             }
