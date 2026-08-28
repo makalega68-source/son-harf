@@ -187,6 +187,8 @@ fun TargetNeonGameScreen(
         if (active == null) {
             TargetLobby(
                 playerName = profile?.displayName ?: "Oyuncu",
+                playerAvatarPath = profile?.avatarPath,
+                playerGender = profile?.gender,
                 language = language,
                 matching = matching,
                 busy = busy,
@@ -364,6 +366,8 @@ private fun FirstEntryMascotIntro(onFinished: () -> Unit) {
 @Composable
 private fun TargetLobby(
     playerName: String,
+    playerAvatarPath: String?,
+    playerGender: String?,
     language: String,
     matching: Boolean,
     busy: Boolean,
@@ -389,9 +393,9 @@ private fun TargetLobby(
         Text(if (matching) "RAKİP BULUNUYOR" else "DÜELLO", color = TGtext, fontWeight = FontWeight.Black, fontSize = 18.sp)
         if (matching) {
             Text("RAKİP\nBULUNUYOR!", color = TGcyan, fontWeight = FontWeight.Black, fontSize = 36.sp, textAlign = TextAlign.Center, lineHeight = 38.sp)
-            TargetMatchCard(playerName, "Usta", "1250", TGcyan)
+            TargetMatchCard(playerName, playerAvatarPath, playerGender, "Usta", "1250", TGcyan)
             Text("VS", color = TGpurple, fontWeight = FontWeight.Black, fontSize = 42.sp)
-            TargetMatchCard("RAKİP ARANIYOR", "…", "", TGpink)
+            TargetMatchCard("RAKİP ARANIYOR", null, null, "…", "", TGpink)
             Spacer(Modifier.weight(1f))
             CircularProgressIndicator(color = TGcyan, strokeWidth = 3.dp)
             OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(50.dp), border = BorderStroke(1.dp, TGpink), shape = RoundedCornerShape(16.dp)) { Text("İPTAL", color = TGpink, fontWeight = FontWeight.Black) }
@@ -438,10 +442,23 @@ private fun TargetLobby(
 }
 
 @Composable
-private fun TargetMatchCard(name: String, rank: String, score: String, accent: Color) {
+private fun TargetMatchCard(
+    name: String,
+    avatarPath: String?,
+    gender: String?,
+    rank: String,
+    score: String,
+    accent: Color,
+) {
     Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, accent)) {
         Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            TargetAvatar(name, accent, 54.dp)
+            ProfilePhotoAvatarWithGender(
+                avatarPath = avatarPath,
+                gender = gender,
+                name = name,
+                size = 54.dp,
+                accent = accent,
+            )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) { Text(name, color = TGtext, fontWeight = FontWeight.Black, fontSize = 17.sp); Text(rank, color = accent, fontSize = 10.sp) }
             if (score.isNotBlank()) Text("🏆 $score", color = TGgold, fontWeight = FontWeight.Bold)
