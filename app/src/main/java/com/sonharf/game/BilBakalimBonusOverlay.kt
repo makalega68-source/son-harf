@@ -223,7 +223,7 @@ fun BilBakalimBonusOverlay() {
     Box(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(listOf(Color.White, SonHarfBg, SonHarfSurface2))
-        ).statusBarsPadding().navigationBarsPadding().padding(14.dp),
+        ).statusBarsPadding().navigationBarsPadding().imePadding().padding(14.dp),
         contentAlignment = Alignment.Center,
     ) {
         Card(
