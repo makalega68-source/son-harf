@@ -186,7 +186,7 @@ private fun RetentionSettingsPanel(backend: OnlineGameBackend?) {
         item{SettingsCard(sh("Bot zorluğu","Bot difficulty")){Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("easy" to sh("KOLAY","EASY"),"normal" to sh("NORMAL","NORMAL"),"hard" to sh("ZOR","HARD")).forEach{(v,t)->FilterChip(selected=bot==v,onClick={bot=v;SonHarfPreferences.setBotDifficulty(context,v)},label={Text(t,fontSize=9.sp)})}};Text(sh("Kolay bot daha yavaş, zor bot daha hızlı cevap verir.","Easy bot replies slower; hard bot replies faster."),color=SonHarfMuted,fontSize=8.sp)}}
         item{ToggleSetting(sh("Ses efektleri","Sound effects"),sound){sound=it;SonHarfPreferences.setSoundEnabled(context,it)}}
         item{ToggleSetting(sh("Titreşim","Vibration"),vibration){vibration=it;SonHarfPreferences.setVibrationEnabled(context,it)}}
-        item{HubInfo("☾",sh("LETHARA GÖRÜNÜMÜ","LETHARA APPEARANCE"),sh("Arayüz gece laciverti, büyülü turkuaz ve altın Lethara paletiyle çalışır.","The interface uses Lethara's midnight navy, magical cyan and gold palette."))}
+        item{HubInfo("◌",sh("CANLI ARENA GÖRÜNÜMÜ","LIVE ARENA APPEARANCE"),sh("Açık zemin, elektrik mavisi, mercan rakip rengi ve kontrollü altın prestij vurguları kullanılır.","The interface uses a light base, electric blue, coral rival accents and controlled gold prestige highlights."))}
     }
 }
 
