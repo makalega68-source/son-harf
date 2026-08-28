@@ -144,6 +144,7 @@ private fun EconomyCatalogScreen() {
         }
 
         item { AnimatedVipShopCard(profile?.isVip == true) { showVip = true } }
+        item { SeasonPassPurchaseCard { scope.launch { reload() } } }
         item { GooglePlayProductsCard { scope.launch { reload() } } }
 
         item {
