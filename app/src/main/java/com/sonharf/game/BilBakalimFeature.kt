@@ -21,9 +21,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -144,8 +147,8 @@ internal fun BilBakalimHomeCard(onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF112A3E)),
-        border = BorderStroke(1.dp, Color(0xFFD8AC5C).copy(alpha = .72f)),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, Color(0xFFDDE5EE)),
     ) {
         Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -156,10 +159,10 @@ internal fun BilBakalimHomeCard(onClick: () -> Unit) {
             ) { Icon(Icons.Rounded.AutoAwesome, null, tint = Color(0xFF2B1E0B), modifier = Modifier.size(31.dp)) }
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text("BİL BAKALIM", color = Color(0xFFF7F4EC), fontWeight = FontWeight.Black, fontSize = 20.sp)
+                Text("BİL BAKALIM", color = Color(0xFF182235), fontWeight = FontWeight.Black, fontSize = 20.sp)
                 Text("Doğru cevaba en yakın tahmin kazanır", color = Color(0xFF6C8293), fontSize = 12.sp)
                 Spacer(Modifier.height(5.dp))
-                Text("20 sn • +10 puan", color = Color(0xFFF0D59A), fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                Text("20 sn • +10 puan", color = Color(0xFF1769E0), fontWeight = FontWeight.Bold, fontSize = 11.sp)
             }
             Icon(Icons.Rounded.Bolt, null, tint = Color(0xFFD8AC5C), modifier = Modifier.size(28.dp))
         }
@@ -193,6 +196,8 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
     var playerWon by remember { mutableStateOf<Boolean?>(null) }
     val q = deck[questionIndex]
     val questionNo = questionIndex + 1
+    val answerFocusRequester = remember { FocusRequester() }
+    val softwareKeyboard = LocalSoftwareKeyboardController.current
 
     LaunchedEffect(bilLanguage) {
         questionIndex = 0
@@ -235,8 +240,14 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
         }
     }
     LaunchedEffect(questionIndex, phase) {
-        if (phase != BilPhase.ANSWER) return@LaunchedEffect
+        if (phase != BilPhase.ANSWER) {
+            softwareKeyboard?.hide()
+            return@LaunchedEffect
+        }
         seconds = 20
+        delay(140)
+        runCatching { answerFocusRequester.requestFocus() }
+        softwareKeyboard?.show()
         while (seconds > 0 && phase == BilPhase.ANSWER) { delay(1000); seconds -= 1 }
         if (seconds <= 0 && phase == BilPhase.ANSWER) finishRound(null)
     }
@@ -306,11 +317,46 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
                     Text("${q.category.uppercase()} • ${bil("SORU", "QUESTION")} $questionNo/15", color = Color(0xFF2CA9DC), fontWeight = FontWeight.Bold, fontSize = if (tiny) 9.sp else 10.sp, maxLines = 1)
                     Text(q.question, color = Color(0xFF17344A), fontWeight = FontWeight.Black, fontSize = if (tiny) 17.sp else if (compact) 19.sp else 21.sp, lineHeight = if (tiny) 21.sp else 25.sp, textAlign = TextAlign.Center, maxLines = 3)
                     if (phase == BilPhase.ANSWER) {
-                        Surface(Modifier.fillMaxWidth(), color = Color(0xFFF0F9FE), shape = RoundedCornerShape(14.dp), border = BorderStroke(2.dp, Color(0xFF69C9EF))) {
-                            Text(input.ifBlank { bil("Tahminin", "Your guess") }, Modifier.fillMaxWidth().padding(vertical = if (tiny) 7.dp else 9.dp, horizontal = 10.dp), textAlign = TextAlign.Center, color = if (input.isBlank()) Color(0xFF8EA2B1) else Color(0xFF17344A), fontSize = if (tiny) 23.sp else 27.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                        }
-                        NumericEstimatePad(input, { input = it }, compact = compact || tiny)
-                        Button(onClick = { finishRound(input.replace(',', '.').toDoubleOrNull()) }, enabled = input.replace(',', '.').toDoubleOrNull() != null, modifier = Modifier.fillMaxWidth().height(if (tiny) 42.dp else 47.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8)), shape = RoundedCornerShape(14.dp)) { Text(bil("CEVABI KİLİTLE", "LOCK ANSWER"), fontWeight = FontWeight.Black, fontSize = if (tiny) 12.sp else 14.sp) }
+                        OutlinedTextField(
+                            value = input,
+                            onValueChange = { raw ->
+                                val filtered = raw.filter { it.isDigit() || it == ',' || it == '.' }.take(15)
+                                val separatorIndex = filtered.indexOfFirst { it == ',' || it == '.' }
+                                input = if (separatorIndex < 0) filtered
+                                else filtered.take(separatorIndex + 1) + filtered.drop(separatorIndex + 1).filter { it.isDigit() }
+                            },
+                            modifier = Modifier.fillMaxWidth().focusRequester(answerFocusRequester),
+                            singleLine = true,
+                            placeholder = { Text(bil("Tahminin", "Your guess")) },
+                            textStyle = LocalTextStyle.current.copy(
+                                textAlign = TextAlign.Center,
+                                fontSize = if (tiny) 23.sp else 27.sp,
+                                fontWeight = FontWeight.Black,
+                            ),
+                            keyboardOptions = KeyboardOptions(
+                                keyboardType = KeyboardType.Decimal,
+                                imeAction = ImeAction.Done,
+                            ),
+                            keyboardActions = KeyboardActions(
+                                onDone = {
+                                    input.replace(',', '.').toDoubleOrNull()?.let { finishRound(it) }
+                                }
+                            ),
+                            shape = RoundedCornerShape(14.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF1769E0),
+                                unfocusedBorderColor = Color(0xFFDDE5EE),
+                                focusedTextColor = Color(0xFF182235),
+                                unfocusedTextColor = Color(0xFF182235),
+                                cursorColor = Color(0xFF1769E0),
+                            ),
+                        )
+                        Text(
+                            bil("Android klavyesiyle tahminini gir", "Enter your estimate with the Android keyboard"),
+                            color = Color(0xFF718096),
+                            fontSize = 9.sp,
+                        )
+                        Button(onClick = { finishRound(input.replace(',', '.').toDoubleOrNull()) }, enabled = input.replace(',', '.').toDoubleOrNull() != null, modifier = Modifier.fillMaxWidth().height(if (tiny) 42.dp else 47.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1769E0)), shape = RoundedCornerShape(14.dp)) { Text(bil("CEVABI KİLİTLE", "LOCK ANSWER"), fontWeight = FontWeight.Black, fontSize = if (tiny) 12.sp else 14.sp) }
                     } else {
                         AnswerLine(bil("Senin cevabın", "Your answer"), playerAnswer?.let(::prettyNumber) ?: bil("Cevap yok", "No answer"), phase == BilPhase.RESULT && playerWon == true)
                         AnswerLine(bil("Bot cevabı", "Bot answer"), botAnswer?.let(::prettyNumber) ?: bil("Cevap bekleniyor…", "Waiting for answer…"), phase == BilPhase.RESULT && playerWon == false)
@@ -327,33 +373,6 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
                         Text(if (playerWon == true) bil("KAZANDIN! • +10 PUAN", "YOU WON! • +10 POINTS") else bil("YANLIŞ CEVAP", "WRONG ANSWER"), color = if (playerWon == true) Color(0xFF18B864) else Color(0xFFDD5968), fontWeight = FontWeight.Black, fontSize = if (tiny) 14.sp else 17.sp, maxLines = 1)
                         Button(onClick = ::advance, modifier = Modifier.fillMaxWidth().height(if (tiny) 38.dp else 43.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4BBBE8)), shape = RoundedCornerShape(14.dp)) { Text(if (questionNo == 15) bil("MAÇI BİTİR", "FINISH MATCH") else bil("SONRAKİ SORU", "NEXT QUESTION"), fontWeight = FontWeight.Black, fontSize = if (tiny) 12.sp else 14.sp) }
                     }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun NumericEstimatePad(value: String, onValue: (String) -> Unit, compact: Boolean = false) {
-    val rows = listOf(listOf("1","2","3"), listOf("4","5","6"), listOf("7","8","9"), listOf(",","0","⌫"))
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        rows.forEach { row ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEach { key ->
-                    Button(
-                        onClick = {
-                            val next = when (key) {
-                                "⌫" -> value.dropLast(1)
-                                "," -> if (value.contains(',') || value.contains('.')) value else if (value.isBlank()) "0," else value + ","
-                                else -> if (value.length >= 15) value else value + key
-                            }
-                            onValue(next)
-                        },
-                        modifier = Modifier.weight(1f).height(if (compact) 33.dp else 40.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE7F6FD), contentColor = Color(0xFF17344A)),
-                        contentPadding = PaddingValues(0.dp),
-                        shape = RoundedCornerShape(12.dp),
-                    ) { Text(key, fontWeight = FontWeight.Black, fontSize = if (compact) 17.sp else 20.sp) }
                 }
             }
         }
@@ -382,13 +401,13 @@ private fun ScoreBox(label: String, score: Int, accent: Color, modifier: Modifie
 private fun AnswerLine(label: String, value: String, winner: Boolean) {
     Surface(
         modifier = Modifier.fillMaxWidth().heightIn(min = 78.dp),
-        color = if (winner) Color(0xFF0F3B2C) else Color(0xFF102230),
+        color = if (winner) Color(0xFFF0FBF5) else Color.White,
         shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, if (winner) Color(0xFF39D875) else Color(0xFF46627A)),
+        border = BorderStroke(1.dp, if (winner) Color(0xFF22B95F) else Color(0xFFDDE5EE)),
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(label, color = Color(0xFFB8C7D2), fontSize = 10.sp, maxLines = 1)
-            Text(value, color = if (winner) Color(0xFF39E884) else Color.White, fontWeight = FontWeight.Black, fontSize = 27.sp, lineHeight = 29.sp, textAlign = TextAlign.Center, maxLines = 1)
+            Text(label, color = Color(0xFF718096), fontSize = 10.sp, maxLines = 1)
+            Text(value, color = if (winner) Color(0xFF22B95F) else Color(0xFF182235), fontWeight = FontWeight.Black, fontSize = 27.sp, lineHeight = 29.sp, textAlign = TextAlign.Center, maxLines = 1)
         }
     }
 }
