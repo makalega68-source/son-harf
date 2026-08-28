@@ -53,6 +53,7 @@ internal fun PremiumMasterHome(
     onMastery: () -> Unit = onHub,
     onHistory: () -> Unit = onHub,
     onMascot: () -> Unit = onProfile,
+    onRoom: () -> Unit = onMascot,
 ) {
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -179,6 +180,7 @@ internal fun PremiumMasterHome(
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     MasterShortcut(Icons.Rounded.AutoStories, sh("BÜYÜCÜLERİN GEÇMİŞİ", "PAST OF THE MAGES"), 0, Modifier.weight(1f), onHistory)
                     MasterShortcut(Icons.Rounded.Pets, sh("YOLDAŞIM", "COMPANION"), 0, Modifier.weight(1f), onMascot)
+                    MasterShortcut(Icons.Rounded.Home, sh("MÜHÜR ODASI", "SEAL ROOM"), 0, Modifier.weight(1f), onRoom)
                 }
             }
             item { Spacer(Modifier.height(8.dp)) }
