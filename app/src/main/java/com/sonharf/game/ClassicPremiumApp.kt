@@ -44,11 +44,11 @@ private enum class ClassicScreen {
 
 private val ClassicBg = LetharaPalette.Night
 private val ClassicBgDeep = LetharaPalette.Night2
-private val ClassicPanel = Color(0xFF101D39)
-private val ClassicPanel2 = Color(0xFF15284A)
-private val ClassicBorder = Color(0xFF29486B)
+private val ClassicPanel = Color.White
+private val ClassicPanel2 = Color(0xFFF0F4F8)
+private val ClassicBorder = Color(0xFFDDE5EE)
 private val ClassicGold = LetharaPalette.Gold
-private val ClassicGoldSoft = Color(0xFFEAB957)
+private val ClassicGoldSoft = Color(0xFFF3A81A)
 private val ClassicCream = LetharaPalette.Text
 private val ClassicText = LetharaPalette.Text
 private val ClassicMuted = LetharaPalette.Muted
