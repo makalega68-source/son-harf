@@ -6,6 +6,11 @@
             android:exported="true"
             android:screenOrientation="portrait" />
         <activity
+            android:name=".MascotCompanionImeSmokeActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+        <activity
             android:name=".Eve3DSmokeActivity"
             android:exported="true"
             android:screenOrientation="portrait" />
