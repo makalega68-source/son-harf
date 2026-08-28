@@ -65,14 +65,14 @@ private data class BilBonusAnswerDto(
     @SerialName("answer_index") val answerValue: Long,
 )
 
-private val BilBg = Color(0xFFF7F7F5)
-private val BilPanel = Color(0xFFFFFFFF)
-private val BilInk = Color(0xFF263442)
-private val BilMuted = Color(0xFF66717C)
-private val BilGold = Color(0xFFD39A25)
-private val BilGreen = Color(0xFF18A957)
-private val BilRed = Color(0xFFD74C4C)
-private val BilBlue = Color(0xFF168FBA)
+private val BilBg = LetharaPalette.Night
+private val BilPanel = Color(0xFF101D39)
+private val BilInk = LetharaPalette.Text
+private val BilMuted = LetharaPalette.Muted
+private val BilGold = LetharaPalette.Gold
+private val BilGreen = LetharaPalette.Green
+private val BilRed = LetharaPalette.Red
+private val BilBlue = LetharaPalette.Cyan
 
 /**
  * Server-synchronised closest-estimate bonus round.
@@ -207,7 +207,7 @@ fun BilBakalimBonusOverlay() {
 
     Box(
         Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color(0xFFF4F7FA), BilBg, Color(0xFFF2EFE7)))
+            Brush.verticalGradient(listOf(LetharaPalette.Night, Color(0xFF0B1730), LetharaPalette.Night2))
         ).statusBarsPadding().navigationBarsPadding().padding(14.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -222,16 +222,16 @@ fun BilBakalimBonusOverlay() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(13.dp),
             ) {
-                Text("BİL BAKALIM", color = BilGold, fontWeight = FontWeight.Black, fontSize = 28.sp, textAlign = TextAlign.Center)
+                Text(sh("BİL BAKALIM • MÜHÜR TURU", "BIL BAKALIM • SEAL ROUND"), color = BilGold, fontWeight = FontWeight.Black, fontSize = 24.sp, textAlign = TextAlign.Center)
                 Text("Doğru cevaba en yakın cevap kazanır.", color = BilMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
 
                 if (!resolved) {
                     Surface(shape = RoundedCornerShape(100.dp), color = if (seconds <= 5) BilRed else BilGold) {
-                        Text("$seconds", Modifier.padding(horizontal = 20.dp, vertical = 7.dp), color = Color.White, fontWeight = FontWeight.Black, fontSize = 26.sp)
+                        Text("$seconds", Modifier.padding(horizontal = 20.dp, vertical = 7.dp), color = if (seconds <= 5) Color.White else Color(0xFF211830), fontWeight = FontWeight.Black, fontSize = 26.sp)
                     }
                 }
 
-                HorizontalDivider(color = Color(0xFFE4E7EA))
+                HorizontalDivider(color = BilMuted.copy(alpha = .18f))
                 Text(activeQuestion.question, color = BilInk, fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 31.sp, textAlign = TextAlign.Center)
 
                 if (!resolved && myAnswer == null) {
@@ -271,7 +271,7 @@ fun BilBakalimBonusOverlay() {
                         shape = RoundedCornerShape(16.dp),
                     ) { Text("CEVABI KİLİTLE", fontWeight = FontWeight.Black, fontSize = 16.sp) }
                 } else if (!resolved) {
-                    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = Color(0xFFF0F6FA), border = BorderStroke(1.dp, BilBlue.copy(alpha = .4f))) {
+                    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = Color(0xFF15284A), border = BorderStroke(1.dp, BilBlue.copy(alpha = .4f))) {
                         Column(Modifier.fillMaxWidth().padding(17.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("CEVABIN KİLİTLENDİ", color = BilBlue, fontWeight = FontWeight.Black, fontSize = 14.sp)
                             Text(myAnswer?.toString() ?: "—", color = BilInk, fontWeight = FontWeight.Black, fontSize = 34.sp)
@@ -311,8 +311,8 @@ fun BilBakalimBonusOverlay() {
 private fun ResultAnswerCard(name: String, answer: Long?, winner: Boolean) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (winner) Color(0xFFE9F8EF) else Color(0xFFF4F5F6),
-        border = BorderStroke(if (winner) 2.dp else 1.dp, if (winner) BilGreen else Color(0xFFD9DEE2)),
+        color = if (winner) BilGreen.copy(alpha = .10f) else Color(0xFF15284A),
+        border = BorderStroke(if (winner) 2.dp else 1.dp, if (winner) BilGreen else BilMuted.copy(alpha = .18f)),
         shape = RoundedCornerShape(18.dp),
     ) {
         Column(Modifier.fillMaxWidth().padding(13.dp), horizontalAlignment = Alignment.CenterHorizontally) {
