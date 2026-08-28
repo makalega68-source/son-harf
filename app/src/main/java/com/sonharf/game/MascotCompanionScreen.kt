@@ -806,13 +806,5 @@ private fun MascotMemoryPanel(
                 }
             }
         }
-        /* legacy full-width story button intentionally replaced by the paired room/story actions */
-        /*
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = LetharaPalette.Gold, contentColor = Color(0xFF201A35)),
-            ) {
-                Text(sh("BÜYÜCÜLERİN GEÇMİŞİNİ AÇ", "OPEN PAST OF THE MAGES"), fontWeight = FontWeight.Black)
-            }
-        }*/
     }
 }
