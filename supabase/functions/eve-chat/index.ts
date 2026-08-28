@@ -133,7 +133,11 @@ Deno.serve(async (req: Request) => {
   const playerName = text(body.player_name, 32);
   const companionName = text(body.companion_name, 18) || "Lyra";
   const gameContext = text(body.game_context, 1200);
-  const language = text(body.language, 8) || "tr";\n  const mascotId = text(body.mascot_id, 40);\n  const mascotTitle = text(body.mascot_title, 80);\n  const mascotPersonality = text(body.mascot_personality, 180);\n  const loreContext = text(body.lore_context, 1400);
+  const language = text(body.language, 8) || "tr";
+  const mascotId = text(body.mascot_id, 40);
+  const mascotTitle = text(body.mascot_title, 80);
+  const mascotPersonality = text(body.mascot_personality, 180);
+  const loreContext = text(body.lore_context, 1400);
   const history = (Array.isArray(body.history) ? body.history : []).slice(-12).map((turn: Turn) => ({
     role: turn?.role === "assistant" ? companionName : "Player",
     text: text(turn?.text, 900),
@@ -142,6 +146,10 @@ Deno.serve(async (req: Request) => {
     `Interface language: ${language}`,
     playerName ? `Player name: ${playerName}` : "",
     `Companion display name chosen by player: ${companionName}`,
+    mascotId ? `Mascot id: ${mascotId}` : "",
+    mascotTitle ? `Mascot title: ${mascotTitle}` : "",
+    mascotPersonality ? `Mascot archetype and temperament: ${mascotPersonality}` : "",
+    loreContext ? `Relevant Lethara lore: ${loreContext}` : "",
     gameContext ? `Current game context: ${gameContext}` : "",
     "Conversation history:",
     ...history.map((turn) => `${turn.role}: ${turn.text}`),
