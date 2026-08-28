@@ -1,0 +1,45 @@
+name: Import Neris reaction audio
+
+on:
+  push:
+    branches:
+      - feat/neris-mascot-audio
+    paths:
+      - .github/workflows/import-neris-audio.yml
+
+permissions:
+  contents: write
+
+jobs:
+  import-audio:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feat/neris-mascot-audio
+
+      - name: Download and verify Neris audio
+        run: |
+          set -euo pipefail
+          mkdir -p app/src/main/res/raw
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260828_145614_c5bc2f85-eb27-484b-8623-48b4c0e21283.mp3' -o app/src/main/res/raw/mascot_laugh.mp3
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260828_145614_3ed5d56a-972e-400f-b387-17f6cd6b9929.mp3' -o app/src/main/res/raw/mascot_sad.mp3
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260828_145614_3f0a970a-d970-4f27-ab75-cc8a7b4447b3.mp3' -o app/src/main/res/raw/mascot_excited.mp3
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260828_145614_40fce1cd-65db-418a-ada1-7054e889758d.mp3' -o app/src/main/res/raw/mascot_bored.mp3
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260828_145817_781e035e-9063-4e58-a8c6-aab91305f3df.mp3' -o app/src/main/res/raw/mascot_miss_you.mp3
+
+          echo '856010b10cf7681b19fce8caaa444917aacd4a3d2cb12697034bd7ebee72980b  app/src/main/res/raw/mascot_laugh.mp3' | sha256sum -c -
+          echo 'e015a6432c5d99930c91ca3132a59fac546c5b8a032f760478a3fd88212b3b8f  app/src/main/res/raw/mascot_sad.mp3' | sha256sum -c -
+          echo '2e48f24bdb82f41bed46b704ad2fcb1655f92c0d9659405c8c76c62381f7eead  app/src/main/res/raw/mascot_excited.mp3' | sha256sum -c -
+          echo '691304a4cdf1a2c8eb6f8dc8ee8a25ec9a6fc26384bd420c713becf37bd9f5aa  app/src/main/res/raw/mascot_bored.mp3' | sha256sum -c -
+          echo '2e54dbc7c36ca74307283b55d0426e5099e67ef97c5c71e8b3f53c4c1173f178  app/src/main/res/raw/mascot_miss_you.mp3' | sha256sum -c -
+
+      - name: Commit audio and remove temporary workflow
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm .github/workflows/import-neris-audio.yml
+          git add app/src/main/res/raw/mascot_*.mp3 .github/workflows/import-neris-audio.yml
+          git commit -m "feat: add Neris non-verbal reaction audio"
+          git push origin HEAD:feat/neris-mascot-audio
