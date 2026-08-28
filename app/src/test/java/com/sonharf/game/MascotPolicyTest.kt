@@ -101,6 +101,20 @@ class MascotPolicyTest {
         assertTrue(MascotMotionPolicy.priority(MascotMotion.VICTORY) > MascotMotionPolicy.priority(MascotMotion.CRITICAL))
     }
 
+    @Test
+    fun runtimeHonorsOneShotProtectionAndForceReset() {
+        MascotRuntime.react(MascotMotion.IDLE, force = true)
+        MascotRuntime.react(MascotMotion.GREETING, force = true)
+        MascotRuntime.react(MascotMotion.IDLE)
+        assertEquals(MascotMotion.GREETING, MascotRuntime.motion)
+
+        MascotRuntime.react(MascotMotion.VICTORY)
+        assertEquals(MascotMotion.VICTORY, MascotRuntime.motion)
+
+        MascotRuntime.react(MascotMotion.IDLE, force = true)
+        assertEquals(MascotMotion.IDLE, MascotRuntime.motion)
+    }
+
     private fun assertGlb2(bytes: ByteArray) {
         assertTrue(bytes.size >= 20)
         assertEquals("glTF", bytes.copyOfRange(0, 4).toString(Charsets.US_ASCII))
