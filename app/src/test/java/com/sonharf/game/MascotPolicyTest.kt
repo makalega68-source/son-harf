@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import com.sonharf.game.mascotdata3.ChibiEmbeddedModel
+import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.MessageDigest
@@ -21,21 +22,29 @@ class MascotPolicyTest {
     }
 
     @Test
-    fun verifiedWhiteLyraUsesExactLicensedChibiAsset() {
-        val bytes = ChibiEmbeddedModel.decodeGlb()
+    fun verifiedWhiteLyraUsesDedicatedWhiteChibiAsset() {
+        val file = listOf(
+            File("src/main/assets/${MascotPolicy.WHITE_MASCOT_ASSET}"),
+            File("app/src/main/assets/${MascotPolicy.WHITE_MASCOT_ASSET}"),
+        ).firstOrNull(File::isFile)
+        assertTrue("Dedicated white Lyra GLB is missing", file != null)
+
+        val bytes = requireNotNull(file).readBytes()
         assertEquals(MascotPolicy.WHITE_MASCOT_SIZE_BYTES.toLong(), bytes.size.toLong())
         assertEquals(MascotPolicy.WHITE_MASCOT_SHA256, sha256(bytes))
-        assertEquals(ChibiEmbeddedModel.EXPECTED_BYTES, bytes.size.toLong())
-        assertEquals(ChibiEmbeddedModel.EXPECTED_SHA256, sha256(bytes))
-        assertEquals("embedded:chibi-wizard-v1", MascotPolicy.WHITE_MASCOT_ASSET)
+        assertEquals("models/lyra_white_chibi.glb", MascotPolicy.WHITE_MASCOT_ASSET)
         assertGlb2(bytes)
 
         val json = glbJson(bytes)
+        assertTrue(json.contains("\"name\":\"Mage_Cat_Lyra_White\""))
         assertTrue(json.contains("\"skins\""))
         assertTrue(json.contains("\"animations\""))
         ChibiEmbeddedModel.ANIMATION_NAMES.forEach { name ->
             assertTrue("Missing Lyra Chibi animation: $name", json.contains("\"name\":\"$name\""))
         }
+
+        val original = ChibiEmbeddedModel.decodeGlb()
+        assertFalse("Lyra must not be byte-identical to Neris", sha256(original) == sha256(bytes))
     }
 
     @Test
