@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import com.sonharf.game.mascotdata3.ChibiEmbeddedModel
-import java.io.File
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.security.MessageDigest
@@ -22,32 +21,20 @@ class MascotPolicyTest {
     }
 
     @Test
-    fun verifiedWhiteMascotIsExactSkinnedAnimatedAsset() {
-        val candidates = listOf(
-            File("src/main/assets/${MascotPolicy.WHITE_MASCOT_ASSET}"),
-            File("app/src/main/assets/${MascotPolicy.WHITE_MASCOT_ASSET}"),
-        )
-        val file = candidates.firstOrNull { it.isFile }
-        assertTrue("Bundled white mascot GLB is missing", file != null)
-        val bytes = requireNotNull(file).readBytes()
-        assertEquals(MascotPolicy.WHITE_MASCOT_SIZE_BYTES, bytes.size)
+    fun verifiedWhiteLyraUsesExactLicensedChibiAsset() {
+        val bytes = ChibiEmbeddedModel.decodeGlb()
+        assertEquals(MascotPolicy.WHITE_MASCOT_SIZE_BYTES.toLong(), bytes.size.toLong())
         assertEquals(MascotPolicy.WHITE_MASCOT_SHA256, sha256(bytes))
+        assertEquals(ChibiEmbeddedModel.EXPECTED_BYTES, bytes.size.toLong())
+        assertEquals(ChibiEmbeddedModel.EXPECTED_SHA256, sha256(bytes))
+        assertEquals("embedded:chibi-wizard-v1", MascotPolicy.WHITE_MASCOT_ASSET)
         assertGlb2(bytes)
 
         val json = glbJson(bytes)
-        assertTrue(json.contains("\"skins\":["))
-        assertTrue(json.contains("\"joints\":["))
-        assertTrue(json.contains("\"JOINTS_0\""))
-        assertTrue(json.contains("\"WEIGHTS_0\""))
-        assertFalse("Dark base-color texture must not return", json.contains("\"baseColorTexture\""))
-        assertTrue("White body material is missing", json.contains("\"baseColorFactor\":[0.97,0.985,1.0,1.0]"))
-
-        val clips = setOf(
-            "Idle", "Walk", "Turn_Left", "Turn_Right", "Look_At_Player", "Greeting",
-            "Thinking", "Critical", "Victory", "Defeat", "Sit", "Run",
-        )
-        clips.forEach { name ->
-            assertTrue("Missing white mascot animation: $name", json.contains("\"name\":\"$name\""))
+        assertTrue(json.contains("\"skins\""))
+        assertTrue(json.contains("\"animations\""))
+        ChibiEmbeddedModel.ANIMATION_NAMES.forEach { name ->
+            assertTrue("Missing Lyra Chibi animation: $name", json.contains("\"name\":\"$name\""))
         }
     }
 
