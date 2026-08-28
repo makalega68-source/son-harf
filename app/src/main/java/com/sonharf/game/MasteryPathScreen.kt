@@ -201,7 +201,7 @@ fun MasteryPathScreen(
                         progress = { fraction },
                         modifier = Modifier.fillMaxWidth(),
                         color = if (milestone.unlocked) MasteryGreen else MasteryCyan,
-                        trackColor = Color.White.copy(alpha = .08f),
+                        trackColor = Color(0xFFE2E7EE),
                     )
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text("${milestone.progress.coerceAtMost(milestone.target)}/${milestone.target}", color = MasteryMuted, fontSize = 9.sp)
@@ -256,7 +256,7 @@ private fun MasteryHero(completed: Int, unlocked: Int, total: Int) {
                 progress = { if (total == 0) 0f else completed.toFloat() / total },
                 modifier = Modifier.fillMaxWidth(),
                 color = MasteryGold,
-                trackColor = Color.White.copy(alpha = .08f),
+                trackColor = Color(0xFFE2E7EE),
             )
             Text("$unlocked ${sh("basamak açıldı", "milestones unlocked")}", color = MasteryMuted, fontSize = 10.sp)
         }
