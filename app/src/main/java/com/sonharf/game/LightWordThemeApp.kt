@@ -49,8 +49,6 @@ fun LightWordThemeApp() {
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
     var lastHomeBack by remember { mutableLongStateOf(0L) }
-    var firstSonHarfEntry by remember { mutableStateOf(true) }
-    var showSonHarfIntro by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
@@ -100,12 +98,7 @@ fun LightWordThemeApp() {
             when (screen) {
                 LightScreen.HOME -> LightHomeScreen(
                     backend,
-                    onSonHarf = {
-                        showSonHarfIntro = firstSonHarfEntry
-                        firstSonHarfEntry = false
-                        gameKey += 1
-                        screen = LightScreen.SON_HARF
-                    },
+                    onSonHarf = { gameKey += 1; screen = LightScreen.SON_HARF },
                     onKelimeAvi = { screen = LightScreen.KELIME_AVI },
                     onKelimeSavasi = { screen = LightScreen.KELIME_SAVASI },
                     onLeague = { screen = LightScreen.LEAGUE },
@@ -113,10 +106,7 @@ fun LightWordThemeApp() {
                     onProfile = { screen = LightScreen.PROFILE },
                 )
                 LightScreen.SON_HARF -> key(gameKey) {
-                    TargetNeonGameScreen(
-                        autoStartMatchmaking = true,
-                        showEntryMascotIntro = showSonHarfIntro,
-                    )
+                    TargetNeonGameScreen(autoStartMatchmaking = true)
                 }
                 LightScreen.KELIME_AVI -> DailyCipherScreen { screen = LightScreen.HOME }
                 LightScreen.KELIME_SAVASI -> TrackedBilBakalimStandaloneScreen { screen = LightScreen.HOME }
@@ -172,74 +162,6 @@ private fun LightHomeScreen(
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
-    var homeContextLoaded by remember { mutableStateOf(false) }
-    var mascotMotion by remember { mutableStateOf(MascotMotion.GREETING) }
-    var mascotSpeech by remember { mutableStateOf("Chibi burada. Hadi başlayalım!") }
-
-    LaunchedEffect(Unit) {
-        val id = backend?.currentUserId()
-        if (id != null) profile = runCatching { backend.getProfile(id) }.getOrNull()
-        growth = runCatching { backend?.getGrowthDashboard() }.getOrNull()
-        homeContextLoaded = true
-    }
-
-    LaunchedEffect(homeContextLoaded) {
-        if (!homeContextLoaded) return@LaunchedEffect
-
-        if (MascotHomeAiDirector.hasFreshCache()) {
-            mascotSpeech = MascotHomeAiDirector.cachedReply
-            mascotMotion = MascotHomeAiDirector.cachedMotion
-            return@LaunchedEffect
-        }
-
-        mascotMotion = MascotMotion.THINKING
-        mascotSpeech = if (SonHarfUiState.isEnglish) "Chibi is thinking..." else "Chibi düşünüyor..."
-
-        val response = MascotAiChatService.chat(
-            MascotHomeAiDirector.homeRequest(
-                playerName = profile?.displayName,
-                growth = growth,
-                language = SonHarfUiState.language,
-            )
-        )
-        MascotHomeAiDirector.cache(response)
-        mascotSpeech = MascotHomeAiDirector.cachedReply
-        mascotMotion = MascotHomeAiDirector.cachedMotion
-    }
-
-    LaunchedEffect(homeContextLoaded) {
-        if (!homeContextLoaded) return@LaunchedEffect
-        val ambient = listOf(
-            MascotMotion.TURN_LEFT,
-            MascotMotion.WALK,
-            MascotMotion.TURN_RIGHT,
-            MascotMotion.LOOK_AT_PLAYER,
-        )
-        var ambientIndex = 0
-        while (true) {
-            delay(6_500)
-            if (mascotMotion == MascotMotion.IDLE) {
-                mascotMotion = ambient[ambientIndex % ambient.size]
-                ambientIndex += 1
-            }
-        }
-    }
-
-    LaunchedEffect(mascotMotion) {
-        val duration = MascotMotionPolicy.durationMs(mascotMotion) ?: when (mascotMotion) {
-            MascotMotion.WALK,
-            MascotMotion.RUN,
-            MascotMotion.THINKING,
-            MascotMotion.LOOK_AT_PLAYER,
-            MascotMotion.TURN_LEFT,
-            MascotMotion.TURN_RIGHT -> 2_600L
-            else -> null
-        }
-        if (duration != null) {
-            delay(duration)
-            mascotMotion = MascotMotion.IDLE
-        }
-    }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -297,44 +219,6 @@ private fun LightHomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .height(280.dp)
-                            .clip(RoundedCornerShape(22.dp))
-                            .background(Color(0xFFFBFDFF)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        MascotLive3DStage(
-                            modifier = Modifier.fillMaxSize(),
-                            mascotId = MascotCatalog.CHIBI_WIZARD_ID,
-                            motion = mascotMotion,
-                            displayScale = 1.72f,
-                            brightnessBoost = 1.16f,
-                        )
-                    }
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        color = LightSurface2,
-                        border = BorderStroke(1.dp, LightBorder),
-                    ) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 10.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(Icons.Rounded.ChatBubble, null, tint = LightBlue, modifier = Modifier.size(20.dp))
-                            Spacer(Modifier.width(9.dp))
-                            Text(
-                                mascotSpeech,
-                                color = LightText,
-                                fontSize = 12.sp,
-                                lineHeight = 17.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
                     Text("Son Harf", color = LightText, fontWeight = FontWeight.Black, fontSize = 22.sp)
                     Text("Son harften yeni kelime üret, rakibini geç.", color = LightMuted, fontSize = 11.sp, textAlign = TextAlign.Center)
                     Button(
