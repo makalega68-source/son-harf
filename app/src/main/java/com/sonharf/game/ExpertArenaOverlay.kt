@@ -49,17 +49,11 @@ fun ExpertArenaOverlay() {
     var input by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    var isVip by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
     var chat by remember { mutableStateOf<List<ChatMessageDto>>(emptyList()) }
     var chatInput by remember { mutableStateOf("") }
     var playerProfile by remember { mutableStateOf<ProfileDto?>(null) }
     var opponentProfile by remember { mutableStateOf<ProfileDto?>(null) }
-
-    suspend fun refreshVip() {
-        val me = backend.currentUserId() ?: return
-        isVip = runCatching { backend.getProfile(me).isVip }.getOrDefault(false)
-    }
 
     suspend fun discover(): GameRoomDto? {
         val uid = backend.currentUserId() ?: return null
@@ -72,7 +66,6 @@ fun ExpertArenaOverlay() {
     }
 
     LaunchedEffect(Unit) {
-        refreshVip()
         while (true) {
             val current = room
             val next = if (current == null) {
@@ -94,7 +87,7 @@ fun ExpertArenaOverlay() {
                     val opponentId = if (next.hostId == me) next.guestId else next.hostId
                     opponentProfile = if (next.isBot) null else opponentId?.let { runCatching { backend.getProfile(it) }.getOrNull() }
                 }
-                if (showChat && !next.isBot && isVip) chat = runCatching { backend.getChat(next.id) }.getOrDefault(chat)
+                if (showChat && !next.isBot) chat = runCatching { backend.getChat(next.id) }.getOrDefault(chat)
             }
             delay(500)
         }
@@ -215,17 +208,11 @@ fun ExpertArenaOverlay() {
                     }
                     Column(Modifier.fillMaxWidth()) {
                         Text(sh("KELİME ZİNCİRİ", "WORD CHAIN"), color = SonHarfMuted, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                        if (isVip) {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                items(words.takeLast(30)) { w ->
-                                    Surface(shape = RoundedCornerShape(12.dp), color = SonHarfGold.copy(alpha = .10f), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .35f))) {
-                                        Text(w.word.uppercase(), Modifier.padding(horizontal = 10.dp, vertical = 7.dp), fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                                    }
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(words.takeLast(30)) { w ->
+                                Surface(shape = RoundedCornerShape(12.dp), color = SonHarfGold.copy(alpha = .10f), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .35f))) {
+                                    Text(w.word.uppercase(), Modifier.padding(horizontal = 10.dp, vertical = 7.dp), fontWeight = FontWeight.Bold, fontSize = 10.sp)
                                 }
-                            }
-                        } else {
-                            Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), color = SonHarfSurface2, border = BorderStroke(1.dp, SonHarfGold.copy(alpha=.35f))) {
-                                Text(sh("🔒 Kelime zinciri VIP üyelerine özel", "🔒 Word chain is for VIP members"), Modifier.fillMaxWidth().padding(10.dp), color = SonHarfGold, fontWeight = FontWeight.Bold, fontSize = 10.sp, textAlign = TextAlign.Center)
                             }
                         }
                     }
@@ -258,18 +245,17 @@ fun ExpertArenaOverlay() {
                 ) { Text(sh("⚑ PES ET", "⚑ FORFEIT"), color = SonHarfPink) }
                 OutlinedButton(
                     onClick = {
-                        if (!isVip) notice = sh("Sohbet VIP üyelerine özeldir.", "Chat is for VIP members.")
-                        else if (active.isBot) notice = sh("Bot maçında sohbet kapalı.", "Chat is disabled in bot matches.")
+                        if (active.isBot) notice = sh("Bot maçında sohbet kapalı.", "Chat is disabled in bot matches.")
                         else scope.launch { chat = runCatching { backend.getChat(active.id) }.getOrDefault(emptyList()); showChat = true }
                     },
                     modifier = Modifier.weight(1f),
-                    border = BorderStroke(1.dp, if (isVip) SonHarfCyan.copy(alpha=.5f) else SonHarfGold.copy(alpha=.5f)),
-                ) { Text(if (isVip) sh("● SOHBET", "● CHAT") else sh("🔒 SOHBET • VIP", "🔒 CHAT • VIP"), color = if (isVip) SonHarfCyan else SonHarfGold, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                    border = BorderStroke(1.dp, SonHarfCyan.copy(alpha=.5f)),
+                ) { Text(sh("● SOHBET", "● CHAT"), color = SonHarfCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
             }
         }
     }
 
-    if (showChat && isVip && !active.isBot) {
+    if (showChat && !active.isBot) {
         AlertDialog(
             onDismissRequest = { showChat = false },
             title = { Text(sh("MAÇ SOHBETİ", "MATCH CHAT"), fontWeight = FontWeight.Black, fontSize = 21.sp) },
