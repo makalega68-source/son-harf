@@ -50,14 +50,31 @@ Status: PASS
 - Post-merge Final Mascot Runtime PASS for both white Lyra and animated Chibi Neris
 
 ## Stage 7 — Mascot AI personality and player-context hardening
+Status: PASS
+- Free local fallback has distinct Six Seal personalities
+- Daily Seal Quest uses verified player progress
+- Coaching uses backend-derived wins/losses, friendship, season, streak, title and arch-rival context
+- New-player guidance stops after the first three verified matches
+- AI memory_note is disabled; coaching does not promote model-generated facts into player truth
+- Gemini remains optional; local fallback is free and gameplay-independent
+- Unit regression tests PASS
+- Android CI + Final APK PASS
+- Edge Function eve-chat v7 ACTIVE with JWT verification
+- Merged to main as 792fa7ba622104c1760150c7270a7f9738936b72
+- Post-merge Android CI PASS
+- Post-merge Current APK Build PASS
+- Post-merge Final Unified Validation PASS
+- Post-merge Final Mascot Runtime PASS for white Lyra and animated Chibi Neris
+
+## Stage 8 — Six Seal roster and profile integration
 Status: NEXT
 Release gates:
-1. Free local fallback has distinct Six Seal personalities
-2. Daily seal quests use real player progress instead of random-only selection
-3. Companion receives only verified game context for coaching
-4. New-player guidance is concise and stops after onboarding
-5. Rival / league context is grounded in backend data when available
-6. No AI feature is required for gameplay or paid to function
+1. Six canonical Seal profiles expose title, meaning, archetype, temperament and lore state
+2. Available 3D mascots use real runtime preview; unavailable Seals never fake a playable model
+3. Lyra remains free; Neris purchase/equip flow remains intact
+4. Kael, Ryvan, Mivo and Selen stay visibly gated until distinct licensed 3D assets pass runtime validation
+5. Profile/Archive/Shop/Companion navigation agrees on selected Seal
+6. No roster/profile feature grants PvP power
 7. Unit tests PASS
 8. Android CI + Final APK PASS
 9. Merge to main
