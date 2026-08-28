@@ -67,15 +67,32 @@ Status: PASS
 - Post-merge Final Mascot Runtime PASS for white Lyra and animated Chibi Neris
 
 ## Stage 8 — Six Seal roster and profile integration
+Status: PASS
+- Six canonical Seal profiles expose title, meaning, archetype, temperament and lore state
+- Validated playable Seals use real 3D runtime preview in detail view
+- Lyra remains free; Neris uses verified inventory and shop ownership
+- Kael, Ryvan, Mivo and Selen remain gated until distinct licensed 3D assets pass runtime validation
+- Archive can equip an owned playable Seal and routes unowned Neris to the shop
+- Roster active state follows actual runtime selection
+- No roster/profile feature grants PvP power
+- Unit tests PASS
+- Android CI + Final APK PASS
+- Merged to main as f8756b70dc0067e39badc62ee57047028ae9381a
+- Post-merge Android CI PASS
+- Post-merge Current APK Build PASS
+- Post-merge Final Unified Validation PASS
+- Post-merge Final Mascot Runtime PASS for white Lyra and animated Chibi Neris
+
+## Stage 9 — End-to-end Lethara release audit
 Status: NEXT
 Release gates:
-1. Six canonical Seal profiles expose title, meaning, archetype, temperament and lore state
-2. Available 3D mascots use real runtime preview; unavailable Seals never fake a playable model
-3. Lyra remains free; Neris purchase/equip flow remains intact
-4. Kael, Ryvan, Mivo and Selen stay visibly gated until distinct licensed 3D assets pass runtime validation
-5. Profile/Archive/Shop/Companion navigation agrees on selected Seal
-6. No roster/profile feature grants PvP power
-7. Unit tests PASS
-8. Android CI + Final APK PASS
-9. Merge to main
-10. Post-merge Final Unified Validation + Final Mascot Runtime PASS
+1. Companion chat opens the Android soft keyboard and remains usable with keyboard visible
+2. Mascot placement never blocks primary gameplay controls
+3. Normal fruit grants +3 XP; magic fruit tiers grant +10/+20/+30 XP from server truth
+4. Magic fruit purchase, inventory and feeding flows remain server-authoritative
+5. Lyra is free and Neris is purchasable/equippable; unreleased Seals remain inactive
+6. Lore, shop, companion, room, profile, leagues and match surfaces use one selected-Seal identity
+7. Legacy mascot code cannot override the active production mascot path
+8. No gameplay, rating, time or ranked advantage is sold
+9. Full unit/build/APK/runtime regression PASS
+10. Final production-readiness report
