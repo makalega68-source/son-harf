@@ -212,13 +212,6 @@ internal fun EveForestScreen(onNavigateBack: () -> Unit) {
             .fillMaxSize()
             .background(Brush.verticalGradient(roomGradient)),
     ) {
-        Image(
-            painter = painterResource(R.drawable.mascot_realm_bg),
-            contentDescription = null,
-            modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Crop,
-        )
-
         Column(
             modifier = Modifier
                 .fillMaxWidth()
