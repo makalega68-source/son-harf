@@ -253,7 +253,7 @@ fun BilBakalimStandaloneScreen(onBack: () -> Unit) {
     }
 
     BackHandler { onBack() }
-    BoxWithConstraints(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, Color(0xFFF5FBFF), Color(0xFFE8F6FF))))) {
+    BoxWithConstraints(Modifier.fillMaxSize().imePadding().background(Brush.verticalGradient(listOf(Color.White, Color(0xFFF5FBFF), Color(0xFFE8F6FF))))) {
         val compact = maxHeight < 720.dp
         val tiny = maxHeight < 620.dp
         val side = if (tiny) 10.dp else 14.dp
