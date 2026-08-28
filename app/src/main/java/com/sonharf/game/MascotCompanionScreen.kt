@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.AutoStories
+import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material.icons.rounded.VolumeOff
@@ -44,6 +45,7 @@ internal fun MascotCompanionScreen(
     backend: OnlineGameBackend?,
     onBack: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenRoom: () -> Unit,
     onOpenShop: () -> Unit,
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -98,6 +100,9 @@ internal fun MascotCompanionScreen(
                     val displayName = progress?.petName ?: if (SonHarfUiState.isEnglish) catalog.nameEn else catalog.nameTr
                     Text(displayName.uppercase(), color = LetharaPalette.Gold, fontWeight = FontWeight.Black, fontSize = 18.sp)
                     Text(character.name + " • " + if (SonHarfUiState.isEnglish) character.titleEn else character.titleTr, color = character.color, fontSize = 9.sp)
+                }
+                IconButton(onClick = onOpenRoom) {
+                    Icon(Icons.Rounded.Home, sh("Mühür Odası", "Seal Room"), tint = LetharaPalette.Gold)
                 }
                 IconButton(onClick = onOpenHistory) {
                     Icon(Icons.Rounded.AutoStories, sh("Hikâye", "Story"), tint = LetharaPalette.Cyan)
