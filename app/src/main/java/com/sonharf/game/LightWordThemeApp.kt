@@ -160,20 +160,54 @@ private fun LightHomeScreen(
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
-    var mascotMotion by remember { mutableStateOf(MascotMotion.IDLE) }
+    var homeContextLoaded by remember { mutableStateOf(false) }
+    var mascotMotion by remember { mutableStateOf(MascotMotion.GREETING) }
+    var mascotSpeech by remember { mutableStateOf("Hazırsan başlayalım!") }
 
     LaunchedEffect(Unit) {
         val id = backend?.currentUserId()
         if (id != null) profile = runCatching { backend.getProfile(id) }.getOrNull()
         growth = runCatching { backend?.getGrowthDashboard() }.getOrNull()
+        homeContextLoaded = true
     }
-    LaunchedEffect(Unit) {
-        val motions = listOf(MascotMotion.IDLE, MascotMotion.TURN_LEFT, MascotMotion.IDLE, MascotMotion.TURN_RIGHT, MascotMotion.WALK)
-        var index = 0
-        while (true) {
-            mascotMotion = motions[index % motions.size]
-            index += 1
-            delay(4200)
+
+    LaunchedEffect(homeContextLoaded) {
+        if (!homeContextLoaded) return@LaunchedEffect
+
+        if (MascotHomeAiDirector.hasFreshCache()) {
+            mascotSpeech = MascotHomeAiDirector.cachedReply
+            mascotMotion = MascotHomeAiDirector.cachedMotion
+            return@LaunchedEffect
+        }
+
+        mascotMotion = MascotMotion.THINKING
+        mascotSpeech = if (SonHarfUiState.isEnglish) "Thinking of a good start..." else "İyi bir başlangıç düşünüyorum..."
+
+        val response = MascotAiChatService.chat(
+            MascotHomeAiDirector.homeRequest(
+                playerName = profile?.displayName,
+                growth = growth,
+                language = SonHarfUiState.language,
+            )
+        )
+        MascotHomeAiDirector.cache(response)
+        mascotSpeech = MascotHomeAiDirector.cachedReply
+        mascotMotion = MascotHomeAiDirector.cachedMotion
+    }
+
+    LaunchedEffect(mascotMotion) {
+        val duration = MascotMotionPolicy.durationMs(mascotMotion) ?: when (mascotMotion) {
+            MascotMotion.WALK,
+            MascotMotion.RUN,
+            MascotMotion.THINKING,
+            MascotMotion.LOOK_AT_PLAYER,
+            MascotMotion.TURN_LEFT,
+            MascotMotion.TURN_RIGHT -> 2_600L
+            else -> null
+        }
+        if (duration != null) {
+            delay(duration)
+            mascotMotion = MascotMotion.IDLE
         }
     }
 
@@ -222,13 +256,35 @@ private fun LightHomeScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Box(Modifier.fillMaxWidth().height(170.dp)) {
+                    Box(Modifier.fillMaxWidth().height(250.dp)) {
                         MascotLive3DStage(
                             modifier = Modifier.fillMaxSize(),
                             mascotId = MascotCatalog.CHIBI_WIZARD_ID,
                             motion = mascotMotion,
-                            displayScale = 1.05f,
+                            displayScale = 1.55f,
                         )
+                    }
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        color = LightSurface2,
+                        border = BorderStroke(1.dp, LightBorder),
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Rounded.ChatBubble, null, tint = LightBlue, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(9.dp))
+                            Text(
+                                mascotSpeech,
+                                color = LightText,
+                                fontSize = 11.sp,
+                                lineHeight = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
                     }
                     Text("Son Harf", color = LightText, fontWeight = FontWeight.Black, fontSize = 22.sp)
                     Text("Son harften yeni kelime üret, rakibini geç.", color = LightMuted, fontSize = 11.sp, textAlign = TextAlign.Center)
