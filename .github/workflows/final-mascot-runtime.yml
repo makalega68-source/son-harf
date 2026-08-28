@@ -70,6 +70,7 @@ jobs:
             adb logcat -d > artifacts/mascot-white/white-logcat.txt
             grep -q 'MASCOT_ASSET_READY id=mascot_white ready=true' artifacts/mascot-white/white-logcat.txt
             grep -q 'MASCOT_RENDER_READY id=mascot_white clip=Idle' artifacts/mascot-white/white-logcat.txt
+            grep -Eq 'MASCOT_TINT_APPLIED id=mascot_white materials=[1-9][0-9]*' artifacts/mascot-white/white-logcat.txt
             test "$(stat -c%s artifacts/mascot-white/white-idle.png)" -gt 20000
             ! grep -Eqi 'FATAL EXCEPTION|Fatal signal|SIGABRT|SIGSEGV|ANR in com\.sonharf\.game|createVkSurfaceKHR|vkCreateAndroidSurfaceKHR|PostconditionPanic' artifacts/mascot-white/white-logcat.txt
             echo "WHITE_MASCOT_RUNTIME_PASS"
