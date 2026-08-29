@@ -123,12 +123,18 @@ revoke all on public.weekly_tournament_entries from anon;
 revoke all on public.weekly_tournament_match_events from anon;
 revoke all on public.weekly_tournament_reward_claims from anon;
 
+revoke all on public.clubs from authenticated;
+revoke all on public.club_members from authenticated;
+revoke all on public.club_messages from authenticated;
+revoke all on public.club_point_events from authenticated;
+revoke all on public.weekly_tournaments from authenticated;
+revoke all on public.weekly_tournament_entries from authenticated;
+revoke all on public.weekly_tournament_match_events from authenticated;
+revoke all on public.weekly_tournament_reward_claims from authenticated;
+
 grant select on public.clubs to authenticated;
 grant select on public.club_members to authenticated;
 grant select,insert,delete on public.club_messages to authenticated;
-grant select on public.weekly_tournaments to authenticated;
-grant select on public.weekly_tournament_entries to authenticated;
-grant select on public.weekly_tournament_reward_claims to authenticated;
 
 drop policy if exists clubs_read_authenticated on public.clubs;
 create policy clubs_read_authenticated on public.clubs for select to authenticated using (true);
