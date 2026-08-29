@@ -108,7 +108,7 @@ fun WordArenaInviteOverlay() {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     sh(
-                        "Seni 60 saniyelik Kelime Arenası düellosuna davet ediyor.",
+                        sh("Seni 60 saniyelik Kelime Arenası düellosuna davet ediyor.", "Invites you to a 60-second Word Arena duel."),
                         "invited you to a 60-second Word Arena duel.",
                     ),
                     color = SonHarfText,
