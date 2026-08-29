@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Son Harf • E-posta Adresini Doğrula</title>
+</head>
+<body style="margin:0;padding:0;background:#f3f7fc;font-family:Arial,Helvetica,sans-serif;color:#142b4f;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f7fc;padding:28px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border:1px solid #dce8f7;border-radius:24px;overflow:hidden;box-shadow:0 12px 36px rgba(23,105,224,.10);">
+          <tr>
+            <td style="background:linear-gradient(135deg,#1769e0,#6a4fd8);padding:28px 28px 24px;text-align:center;color:#ffffff;">
+              <div style="font-size:30px;font-weight:800;letter-spacing:.5px;">SON HARF</div>
+              <div style="font-size:13px;line-height:20px;opacity:.92;margin-top:6px;">Kelimeyi Sürdür, Rakibini Geç</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:30px 30px 10px;">
+              <h1 style="margin:0 0 12px;font-size:24px;line-height:32px;color:#142b4f;">E-posta adresini doğrula</h1>
+              <p style="margin:0;color:#607596;font-size:15px;line-height:24px;">
+                Son Harf hesabını tamamlamak için aşağıdaki butona dokun. Telefonda Son Harf yüklüyse uygulama açılır ve doğrulama otomatik tamamlanır.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:20px 30px 14px;">
+              <a href="{{ .ConfirmationURL }}"
+                 style="display:inline-block;background:#1769e0;color:#ffffff;text-decoration:none;font-size:16px;font-weight:700;line-height:20px;padding:16px 28px;border-radius:14px;">
+                E-postamı Doğrula
+              </a>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:8px 30px 10px;">
+              <div style="height:1px;background:#e5edf7;"></div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 30px 6px;text-align:center;">
+              <p style="margin:0 0 10px;color:#607596;font-size:13px;line-height:20px;">
+                Buton açılmazsa Son Harf uygulamasındaki doğrulama ekranına şu 6 haneli kodu gir:
+              </p>
+              <div style="display:inline-block;background:#eef5ff;border:1px solid #cfe0f7;border-radius:14px;padding:14px 22px;color:#173b77;font-size:28px;font-weight:800;letter-spacing:8px;">
+                {{ .Token }}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:22px 30px 28px;">
+              <p style="margin:0;color:#7a8da9;font-size:12px;line-height:19px;text-align:center;">
+                Bu kaydı sen başlatmadıysan bu e-postayı dikkate alabilirsin. Doğrulama kodunu hiç kimseyle paylaşma.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#f8fbff;border-top:1px solid #e5edf7;padding:18px 28px;text-align:center;color:#8a9ab1;font-size:11px;line-height:18px;">
+              © Son Harf • Güvenli hesap doğrulama
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
