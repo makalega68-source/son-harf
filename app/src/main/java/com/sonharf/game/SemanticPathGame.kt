@@ -29,7 +29,7 @@ internal data class SemanticPathPuzzle(
     val goldSteps: Int,
 )
 
-private object SemanticPathEngine {
+internal object SemanticPathEngine {
     private val tr = Locale.forLanguageTag("tr-TR")
 
     private val links: Map<String, Set<String>> = buildMap {
