@@ -262,7 +262,7 @@ private fun LightBottomBar(
 @Composable
 private fun LightBottomItem(icon: ImageVector, label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     Column(
-        modifier.clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(vertical = 6.dp),
+        modifier.clip(RoundedCornerShape(14.dp)).clickable { SonHarfSoundFx.tap(); onClick() }.padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Icon(icon, null, tint = if (selected) LightBlue else LightMuted, modifier = Modifier.size(23.dp))
@@ -414,7 +414,7 @@ private fun LightHomeScreen(
                     Text("Son Harf", color = LightText, fontWeight = FontWeight.Black, fontSize = 22.sp)
                     Text("Son harften yeni kelime üret, rakibini geç.", color = LightMuted, fontSize = 11.sp, textAlign = TextAlign.Center)
                     Button(
-                        onClick = onSonHarf,
+                        onClick = { SonHarfSoundFx.tap(); onSonHarf() },
                         modifier = Modifier.fillMaxWidth().height(64.dp),
                         shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = LightBlue, contentColor = Color.White),
@@ -430,7 +430,7 @@ private fun LightHomeScreen(
 
         item {
             Surface(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onKelimeArenasi),
+                modifier = Modifier.fillMaxWidth().clickable { SonHarfSoundFx.tap(); onKelimeArenasi() },
                 shape = RoundedCornerShape(22.dp),
                 color = Color.White,
                 border = BorderStroke(1.dp, LightBlue.copy(alpha = .28f)),
@@ -505,7 +505,7 @@ private fun LightHomeScreen(
 @Composable
 private fun LightGameCard(icon: ImageVector, title: String, subtitle: String, buttonText: String, accent: Color, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth().clickable { SonHarfSoundFx.tap(); onClick() },
         shape = RoundedCornerShape(20.dp),
         color = LightSurface,
         border = BorderStroke(1.dp, LightBorder),
@@ -529,7 +529,7 @@ private fun LightGameCard(icon: ImageVector, title: String, subtitle: String, bu
 
 @Composable
 private fun LightShortcut(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier = modifier.clickable(onClick = onClick), shape = RoundedCornerShape(17.dp), color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
+    Surface(modifier = modifier.clickable { SonHarfSoundFx.tap(); onClick() }, shape = RoundedCornerShape(17.dp), color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
         Column(Modifier.padding(vertical = 13.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(icon, null, tint = LightBlue, modifier = Modifier.size(23.dp))
             Spacer(Modifier.height(5.dp))
