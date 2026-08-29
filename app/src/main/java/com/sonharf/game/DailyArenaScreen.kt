@@ -312,8 +312,8 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                                                             )
                                                         "team_arena_active" in e.message.orEmpty() ->
                                                             sh(
-                                                                "Açık 2v2 lobin var. Takım Arenası'na dönüp lobiyi kapat.",
-                                                                "A 2v2 lobby is still open. Return to Team Arena and close it.",
+                                                                "Takım Arenası maçın sürüyor. Önce 2v2 maçı bitir.",
+                                                                "Your Team Arena match is active. Finish the 2v2 match first.",
                                                             )
                                                         else -> sh(
                                                             "Koşu başlatılamadı. Tekrar dene.",
@@ -424,7 +424,9 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                             value = input,
                             onValueChange = { value ->
                                 if (!busy && prepSeconds == 0 && remainingSeconds > 0) {
-                                    input = value.filter(Char::isLetter).take(10).uppercase()
+                                    val next = value.filter(Char::isLetter).take(10).uppercase()
+                                    if (next.length > input.length) SonHarfSoundFx.typingClick()
+                                    input = next
                                 }
                             },
                             modifier = Modifier.fillMaxWidth().focusRequester(inputFocusRequester),
@@ -453,6 +455,42 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                                 }
                             },
                         )
+                    }
+
+                    item {
+                        val target = leaderboard
+                            .filter { !it.isMe && it.score > s.score }
+                            .minByOrNull { it.score }
+                            ?: leaderboard.firstOrNull { !it.isMe }
+                        if (target != null) {
+                            val gap = (target.score - s.score).coerceAtLeast(0)
+                            Surface(
+                                shape = RoundedCornerShape(16.dp),
+                                color = SonHarfGold.copy(alpha = .08f),
+                                border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .25f)),
+                            ) {
+                                Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    ProfilePhotoAvatar(
+                                        avatarPath = leaderboardProfiles[target.userId]?.avatarPath,
+                                        name = target.displayName,
+                                        size = 38.dp,
+                                        accent = SonHarfGold,
+                                    )
+                                    Spacer(Modifier.width(9.dp))
+                                    Column(Modifier.weight(1f)) {
+                                        Text(sh("HEDEF RAKİP", "TARGET RIVAL"), color = SonHarfGold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                        Text(target.displayName, color = SonHarfText, fontWeight = FontWeight.Black, maxLines = 1)
+                                        Text(
+                                            if (gap > 0) sh("Geçmene $gap puan kaldı.", "$gap points to pass.")
+                                            else sh("Skorunu koru; rakip hemen arkanda.", "Hold your score; the rival is close."),
+                                            color = SonHarfMuted,
+                                            fontSize = 9.sp,
+                                        )
+                                    }
+                                    Text("${target.score}", color = SonHarfBlue, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                                }
+                            }
+                        }
                     }
 
                     item {
