@@ -460,7 +460,6 @@ internal fun WordConquestGameScreen(onExit: () -> Unit) {
                     )
                 }
             }
-            }
         }
 
         ModernCountdownOverlay(value = countdown, visible = phase == ConquestPhase.COUNTDOWN)
