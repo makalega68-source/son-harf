@@ -57,20 +57,12 @@ fun LightWordThemeApp() {
 
     val openMode: (String) -> Unit = { mode ->
         when (mode) {
-            "duel" -> { gameKey += 1; screen = LightScreen.SON_HARF }
-            "word_arena" -> {
+            "duel", "word_arena" -> {
                 arenaInitialRoomId = null
                 WordArenaNavigation.clearRoom()
                 screen = LightScreen.KELIME_ARENASI
             }
-            "team_arena" -> {
-                teamArenaInitialRoomId = null
-                TeamArenaNavigation.clearRoom()
-                screen = LightScreen.TAKIM_ARENASI
-            }
-            "daily_arena" -> screen = LightScreen.GUNLUK_ARENA
-            "daily_cipher" -> screen = LightScreen.KELIME_AVI
-            "bil_bakalim" -> screen = LightScreen.KELIME_SAVASI
+            "daily_cipher", "semantic_path" -> screen = LightScreen.KELIME_AVI
             else -> screen = LightScreen.TASKS
         }
     }
@@ -184,8 +176,8 @@ fun LightWordThemeApp() {
                     )
                     ModeEntryOverlay(
                         key = "word-arena-${arenaRequest}-${arenaInitialRoomId.orEmpty()}",
-                        title = sh("KELİME ARENASI", "WORD ARENA"),
-                        subtitle = sh("60 saniye • aynı harfler • canlı skor", "60 seconds • same letters • live score"),
+                        title = sh("KELİME DÜELLOSU", "WORD DUEL"),
+                        subtitle = sh("60 saniye • aynı harfler • canlı rakip", "60 seconds • same letters • live rival"),
                     )
                 }
                 LightScreen.TAKIM_ARENASI -> Box(Modifier.fillMaxSize()) {
@@ -212,11 +204,11 @@ fun LightWordThemeApp() {
                     )
                 }
                 LightScreen.KELIME_AVI -> Box(Modifier.fillMaxSize()) {
-                    DailyCipherScreen { screen = LightScreen.HOME }
+                    SemanticPathGameScreen { screen = LightScreen.HOME }
                     ModeEntryOverlay(
-                        key = "daily-cipher",
-                        title = sh("SEN VS GÜNÜN ŞİFRESİ", "YOU VS DAILY CIPHER"),
-                        subtitle = sh("6 hak • tek hedef • günlük seri", "6 tries • one target • daily streak"),
+                        key = "semantic-path",
+                        title = sh("KELİME YOLU", "WORD PATH"),
+                        subtitle = sh("Bağlantılı kelimeler • en kısa rota • altın yol", "Connected words • shortest route • golden path"),
                     )
                 }
                 LightScreen.KELIME_SAVASI -> Box(Modifier.fillMaxSize()) {
@@ -369,26 +361,29 @@ private fun LightHomeScreen(
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth().clickable { SonHarfSoundFx.tap(); onSonHarf() },
-                shape = RoundedCornerShape(26.dp),
-                color = LightBlue,
-                shadowElevation = 5.dp,
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Text("SON HARF DÜELLOSU", color = Color.White.copy(alpha = .76f), fontSize = 10.sp, fontWeight = FontWeight.Black)
-                        Text("OYNA", color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.Black)
-                        Text("Son harften kelime üret • rakibini geç", color = Color.White.copy(alpha = .82f), fontSize = 10.sp)
-                    }
-                    Surface(shape = CircleShape, color = Color.White.copy(alpha = .16f)) {
-                        Icon(Icons.Rounded.PlayArrow, null, tint = Color.White, modifier = Modifier.padding(14.dp).size(30.dp))
-                    }
-                }
-            }
+            Text("İKİ ANA OYUN", color = LightMuted, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+        }
+
+        item {
+            LightGameCard(
+                icon = Icons.Rounded.Route,
+                title = "KELİME YOLU",
+                subtitle = "Bağlantılı kelimelerle hedefe en kısa rotadan ulaş.",
+                buttonText = "YOLU BUL",
+                accent = LightGreen,
+                onClick = onKelimeAvi,
+            )
+        }
+
+        item {
+            LightGameCard(
+                icon = Icons.Rounded.Bolt,
+                title = "KELİME DÜELLOSU",
+                subtitle = "Aynı harflerden kelime üret; canlı rakibini geç.",
+                buttonText = "DÜELLO",
+                accent = LightBlue,
+                onClick = onKelimeArenasi,
+            )
         }
 
         if (nextRoute != null) {
@@ -414,24 +409,22 @@ private fun LightHomeScreen(
             }
         }
 
-        item { Text("OYUNLAR", color = LightMuted, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp) }
-
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HomeModeTile(Icons.Rounded.Bolt, "Kelime Arenası", "60 sn", LightBlue, Modifier.weight(1f), onKelimeArenasi)
-                HomeModeTile(Icons.Rounded.EmojiEvents, "Günlük Arena", "Bugün", LightGold, Modifier.weight(1f), onGunlukArena)
-            }
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HomeModeTile(Icons.Rounded.Groups, "Takım Arenası", "2v2", Color(0xFF6B4FD3), Modifier.weight(1f), onTakimArenasi)
-                HomeModeTile(Icons.Rounded.Bolt, "Bil Bakalım", "10 soru", Color(0xFFE85D75), Modifier.weight(1f), onKelimeSavasi)
-            }
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HomeModeTile(Icons.Rounded.Search, "Kelime Avı", "Günlük", LightGreen, Modifier.weight(1f), onKelimeAvi)
-                HomeModeTile(Icons.Rounded.Groups, "Rekabet", "Kulüpler", Color(0xFF3557C8), Modifier.weight(1f), onCompetition)
+            Surface(
+                modifier = Modifier.fillMaxWidth().clickable { SonHarfSoundFx.tap(); onCompetition() },
+                shape = RoundedCornerShape(18.dp),
+                color = Color(0xFFF1F4FF),
+                border = BorderStroke(1.dp, Color(0xFFDCE3FF)),
+            ) {
+                Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Groups, null, tint = Color(0xFF3557C8))
+                    Spacer(Modifier.width(9.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("SOSYAL & REKABET", color = LightText, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        Text("Arkadaşlar • ezeli rakip • kulüpler • turnuvalar", color = LightMuted, fontSize = 9.sp)
+                    }
+                    Icon(Icons.Rounded.ChevronRight, null, tint = LightMuted)
+                }
             }
         }
 
@@ -462,7 +455,8 @@ private fun LightHomeScreen(
         }
 
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                HomeQuickAction(Icons.Rounded.Groups, "Sosyal", Modifier.weight(1f), onCompetition)
                 HomeQuickAction(Icons.Rounded.ShoppingCart, "Market", Modifier.weight(1f), onMarket)
                 HomeQuickAction(Icons.Rounded.TaskAlt, "Görevler", Modifier.weight(1f), onTasks)
                 HomeQuickAction(Icons.Rounded.EmojiEvents, "Lig", Modifier.weight(1f), onLeague)
