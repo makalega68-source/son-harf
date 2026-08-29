@@ -440,8 +440,8 @@ private fun LightHomeScreen(
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text("HAFTANIN ZİRVESİ", color = LightMuted, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        HomeWeeklyClubTile(topClubs.firstOrNull(), Modifier.weight(1f))
-                        HomeWeeklyPlayerTile(topPlayers.firstOrNull(), topPlayerProfiles, Modifier.weight(1f))
+                        HomeWeeklyClubTile(topClubs, Modifier.weight(1f))
+                        HomeWeeklyPlayerTile(topPlayers, topPlayerProfiles, Modifier.weight(1f))
                     }
                 }
             }
@@ -497,38 +497,51 @@ private fun HomeModeTile(
 }
 
 @Composable
-private fun HomeWeeklyClubTile(club: ClubDirectoryRowDto?, modifier: Modifier) {
-    Surface(modifier = modifier.height(92.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFFFFF7E8)) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("🥇 KULÜP", color = LightGold, fontSize = 8.sp, fontWeight = FontWeight.Black)
-            Text(club?.name ?: "Sıralama oluşuyor", color = LightText, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
-            Text(club?.let { "${it.weeklyPoints} puan • ${it.memberCount} üye" } ?: "—", color = LightMuted, fontSize = 8.sp)
+private fun HomeWeeklyClubTile(clubs: List<ClubDirectoryRowDto>, modifier: Modifier) {
+    Surface(modifier = modifier.height(118.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFFFFF7E8)) {
+        Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("🏆 KULÜPLER", color = LightGold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            if (clubs.isEmpty()) {
+                Text("Sıralama oluşuyor", color = LightMuted, fontSize = 9.sp)
+            } else {
+                clubs.take(3).forEachIndexed { index, club ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("${index + 1}", color = LightGold, fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(15.dp))
+                        Text(club.name, color = LightText, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f))
+                        Text("${club.weeklyPoints}", color = LightMuted, fontSize = 8.sp)
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
 private fun HomeWeeklyPlayerTile(
-    player: WeeklyTournamentLeaderboardRowDto?,
+    players: List<WeeklyTournamentLeaderboardRowDto>,
     profiles: Map<String, ProfileDto?>,
     modifier: Modifier,
 ) {
-    Surface(modifier = modifier.height(92.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFFEEF4FF)) {
-        Row(Modifier.fillMaxSize().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (player != null) {
-                ProfilePhotoAvatar(
-                    avatarPath = profiles[player.userId]?.avatarPath,
-                    name = player.displayName,
-                    size = 34.dp,
-                    visible = true,
-                    accent = LightBlue,
-                )
-                Spacer(Modifier.width(7.dp))
-            }
-            Column(Modifier.weight(1f)) {
-                Text("🥇 OYUNCU", color = LightBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                Text(player?.displayName ?: "Sıralama oluşuyor", color = LightText, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                Text(player?.let { "${it.points} puan" } ?: "—", color = LightMuted, fontSize = 8.sp)
+    Surface(modifier = modifier.height(118.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFFEEF4FF)) {
+        Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("🏆 OYUNCULAR", color = LightBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            if (players.isEmpty()) {
+                Text("Sıralama oluşuyor", color = LightMuted, fontSize = 9.sp)
+            } else {
+                players.take(3).forEachIndexed { index, player ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ProfilePhotoAvatar(
+                            avatarPath = profiles[player.userId]?.avatarPath,
+                            name = player.displayName,
+                            size = 22.dp,
+                            visible = true,
+                            accent = LightBlue,
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Text("${index + 1}. ${player.displayName}", color = LightText, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.weight(1f))
+                        Text("${player.points}", color = LightMuted, fontSize = 8.sp)
+                    }
+                }
             }
         }
     }
