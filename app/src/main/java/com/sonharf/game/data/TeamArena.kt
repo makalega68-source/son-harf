@@ -109,6 +109,14 @@ data class TeamArenaSubmitDto(
     @SerialName("team_word_count") val teamWordCount: Int = 0,
 )
 
+@Serializable
+data class TeamArenaRematchDto(
+    val status: String = "",
+    @SerialName("room_id") val roomId: String,
+    @SerialName("invited_count") val invitedCount: Int = 0,
+    val reused: Boolean = false,
+)
+
 suspend fun OnlineGameBackend.getMyActiveTeamArena(): TeamArenaActiveDto =
     SupabaseProvider.client.postgrest.rpc("get_my_active_team_arena_v1").decodeSingle()
 
@@ -200,5 +208,11 @@ suspend fun OnlineGameBackend.cancelTeamArenaLobby(roomId: String): Boolean =
 suspend fun OnlineGameBackend.leaveTeamArenaLobby(roomId: String): Boolean =
     SupabaseProvider.client.postgrest.rpc(
         "leave_team_arena_lobby_v1",
+        buildJsonObject { put("p_room_id", roomId) },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.createTeamArenaRematch(roomId: String): TeamArenaRematchDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "create_team_arena_rematch_v1",
         buildJsonObject { put("p_room_id", roomId) },
     ).decodeSingle()
