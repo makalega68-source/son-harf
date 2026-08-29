@@ -55,6 +55,8 @@ private fun DetailedPreferencesSettings() {
     var gameInvites by remember { mutableStateOf(SonHarfPreferences.gameInviteNotificationsEnabled(context)) }
     var friendRequests by remember { mutableStateOf(SonHarfPreferences.friendRequestNotificationsEnabled(context)) }
     var system by remember { mutableStateOf(SonHarfPreferences.systemNotificationsEnabled(context)) }
+    val privacyOptionsRequired = AdPrivacyManager.privacyOptionsRequired
+    var privacyNotice by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -75,6 +77,61 @@ private fun DetailedPreferencesSettings() {
         item { NotificationToggleCard("⚔", sh("Oyun davetleri", "Game invitations"), sh("Arkadaşların seni düelloya çağırdığında uyar.", "Alerts when friends invite you to a duel."), gameInvites) { gameInvites = it; SonHarfPreferences.setGameInviteNotificationsEnabled(context, it) } }
         item { NotificationToggleCard("👥", sh("Arkadaşlık istekleri", "Friend requests"), sh("Yeni arkadaşlık isteği geldiğinde uyar.", "Alerts when a new friend request arrives."), friendRequests) { friendRequests = it; SonHarfPreferences.setFriendRequestNotificationsEnabled(context, it) } }
         item { NotificationToggleCard("✦", sh("Sistem duyuruları", "System announcements"), sh("Ödül, bakım ve önemli oyun duyuruları.", "Rewards, maintenance and important game announcements."), system) { system = it; SonHarfPreferences.setSystemNotificationsEnabled(context, it) } }
+
+        if (privacyOptionsRequired) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+                    shape = RoundedCornerShape(18.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, SonHarfBlue.copy(alpha = .22f)),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(15.dp),
+                        verticalArrangement = Arrangement.spacedBy(9.dp),
+                    ) {
+                        Text(
+                            sh("Reklam gizlilik seçenekleri", "Ad privacy options"),
+                            color = SonHarfText,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 16.sp,
+                        )
+                        Text(
+                            sh(
+                                "Google reklam gizliliği tercihlerini görüntüle veya değiştir. Bu seçenek yalnız bölgen ve mevcut mesaj ayarları gerektirdiğinde görünür.",
+                                "View or change your Google ad privacy choices. This option appears only when required for your region and current message settings.",
+                            ),
+                            color = SonHarfMuted,
+                            fontSize = 12.sp,
+                        )
+                        Button(
+                            onClick = {
+                                val activity = AdPrivacyManager.findActivity(context)
+                                if (activity == null) {
+                                    privacyNotice = sh("Gizlilik formu açılamadı.", "Privacy form could not be opened.")
+                                } else {
+                                    AdPrivacyManager.showPrivacyOptions(activity) { success ->
+                                        privacyNotice = if (success) {
+                                            sh("Reklam gizliliği tercihleri güncellendi.", "Ad privacy choices updated.")
+                                        } else {
+                                            sh("Gizlilik formu tamamlanamadı.", "Privacy form could not be completed.")
+                                        }
+                                    }
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
+                        ) {
+                            Text(
+                                sh("GİZLİLİK SEÇENEKLERİNİ AÇ", "OPEN PRIVACY OPTIONS"),
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
+                        privacyNotice?.let {
+                            Text(it, color = SonHarfMuted, fontSize = 10.sp)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
