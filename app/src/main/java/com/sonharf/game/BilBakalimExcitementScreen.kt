@@ -47,9 +47,6 @@ private val BilRed = Color(0xFFE64B55)
 @Composable
 internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
     val context = LocalContext.current
-    val focus = LocalFocusManager.current
-    val softwareKeyboard = LocalSoftwareKeyboardController.current
-    val answerFocusRequester = remember { FocusRequester() }
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var playerProfile by remember { mutableStateOf<ProfileDto?>(null) }
     val prefs = remember { context.getSharedPreferences("bil_bakalim_excitement", 0) }
@@ -70,6 +67,8 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
     var hint by remember { mutableStateOf<String?>(null) }
     var roundMessage by remember { mutableStateOf("") }
     var lastTitle by remember { mutableStateOf<String?>(null) }
+    var lastPlayerAnswer by remember { mutableStateOf<Double?>(null) }
+    var lastRivalAnswer by remember { mutableStateOf<Double?>(null) }
     var correctCount by remember { mutableIntStateOf(0) }
     var playedCount by remember { mutableIntStateOf(0) }
     var finalApplied by remember { mutableStateOf(false) }
@@ -88,28 +87,50 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
     }
 
     fun resetQuestion() {
-        input = ""; seconds = 20; phase = ExcitementPhase.ANSWER; risk = false; hint = null; roundMessage = ""; lastTitle = null
+        input = ""
+        seconds = 20
+        phase = ExcitementPhase.ANSWER
+        risk = false
+        hint = null
+        roundMessage = ""
+        lastTitle = null
+        lastPlayerAnswer = null
+        lastRivalAnswer = null
     }
 
     fun resetMatch() {
         deck = bilBakalimQuestions.shuffled().take(10)
-        index = 0; playerScore = 0; rivalScore = 0; matchStreak = 0; correctCount = 0; playedCount = 0; jokerUsed = false; finalApplied = false
+        index = 0
+        playerScore = 0
+        rivalScore = 0
+        matchStreak = 0
+        correctCount = 0
+        playedCount = 0
+        jokerUsed = false
+        finalApplied = false
         resetQuestion()
     }
 
     fun advance() {
-        if (index >= deck.lastIndex) phase = ExcitementPhase.MATCH_END else { index += 1; resetQuestion() }
+        if (index >= deck.lastIndex) phase = ExcitementPhase.MATCH_END
+        else {
+            index += 1
+            resetQuestion()
+        }
     }
 
     fun submit(answer: Double?) {
         if (phase != ExcitementPhase.ANSWER) return
-        focus.clearFocus()
         val spread = max(1.0, abs(q.answer) * Random.nextDouble(.08, .38))
-        val rivalAnswer = if (q.answer == 0.0) Random.nextDouble(0.0, 4.0) else max(0.0, q.answer + if (Random.nextBoolean()) spread else -spread)
+        val rivalAnswer = if (q.answer == 0.0) Random.nextDouble(0.0, 4.0)
+        else max(0.0, q.answer + if (Random.nextBoolean()) spread else -spread)
+
+        lastPlayerAnswer = answer
+        lastRivalAnswer = rivalAnswer
+
         val rules = BilRoundRules(questionNo = questionNo, secondsLeft = seconds, riskEnabled = risk, streak = matchStreak)
         val outcome = BilBakalimCompetitionEngine.resolve(answer, rivalAnswer, q.answer, rules)
-        val roundMultiplier = rules.multiplier
-        val rivalPoints = (10 + if (isBoss) 5 else 0) * roundMultiplier
+        val rivalPoints = (10 + if (isBoss) 5 else 0) * rules.multiplier
         playedCount += 1
         if (outcome.won) {
             SonHarfSoundFx.wordAccepted()
@@ -134,9 +155,6 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
 
     LaunchedEffect(index, phase) {
         if (phase != ExcitementPhase.ANSWER) return@LaunchedEffect
-        delay(100)
-        runCatching { answerFocusRequester.requestFocus() }
-        softwareKeyboard?.show()
         seconds = 20
         while (seconds > 0 && phase == ExcitementPhase.ANSWER) {
             delay(1000)
@@ -150,8 +168,19 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
         if (phase != ExcitementPhase.MATCH_END || finalApplied) return@LaunchedEffect
         finalApplied = true
         val won = playerScore >= rivalScore
-        if (won) { wins += 1; rating += 18 } else { losses += 1; rating = (rating - 12).coerceAtLeast(700) }
-        prefs.edit().putInt("rating", rating).putInt("wins", wins).putInt("losses", losses).putInt("best_streak", bestStreak).apply()
+        if (won) {
+            wins += 1
+            rating += 18
+        } else {
+            losses += 1
+            rating = (rating - 12).coerceAtLeast(700)
+        }
+        prefs.edit()
+            .putInt("rating", rating)
+            .putInt("wins", wins)
+            .putInt("losses", losses)
+            .putInt("best_streak", bestStreak)
+            .apply()
         runCatching {
             backend?.logUnifiedEvent(
                 "bil_bakalim_match_finished",
@@ -162,47 +191,27 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
     }
 
     BackHandler { onBack() }
+
     Column(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, BilBg, Color(0xFFF1F6FC))))
-            .statusBarsPadding().navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color.White, BilBg, Color(0xFFF1F6FC))))
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 12.dp, vertical = 7.dp),
+        verticalArrangement = Arrangement.spacedBy(7.dp),
     ) {
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            TextButton(
-                onClick = onBack,
-                contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-            ) {
-                Text("‹ OYUNLAR", color = BilCyan, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClick = onBack, contentPadding = PaddingValues(horizontal = 2.dp, vertical = 4.dp)) {
+                Text("‹ OYUNLAR", color = BilCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
-            Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("BİL BAKALIM", color = BilText, fontSize = 25.sp, fontWeight = FontWeight.Black)
-                Text(
-                    sh("BİLGİ YARIŞMASI • EN YAKIN TAHMİN", "TRIVIA • CLOSEST GUESS"),
-                    color = BilCyan,
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp,
-                    fontWeight = FontWeight.Black,
-                    textAlign = TextAlign.Center,
-                )
+                Text("BİL BAKALIM", color = BilText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                Text("EN YAKIN TAHMİN", color = BilCyan, fontSize = 9.sp, fontWeight = FontWeight.Black)
             }
-            Spacer(Modifier.width(6.dp))
-            Surface(
-                shape = RoundedCornerShape(14.dp),
-                color = BilPanel2,
-                border = BorderStroke(1.dp, BilCyan.copy(alpha = .28f)),
-            ) {
-                Column(
-                    Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(sh("BİL LİGİ", "TRIVIA LEAGUE"), color = BilMuted, fontSize = 7.sp, fontWeight = FontWeight.Black)
-                    Text(league, color = BilText, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    Text("$rating", color = BilCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(league, color = BilText, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text("$rating", color = BilCyan, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -224,127 +233,122 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
             opponentAction = if (roundMessage.startsWith("Rakip")) sh("Rakip soruyu aldı.", "Rival won the question.") else null,
         )
 
-        Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            MetaChip("🔥 Seri", matchStreak.toString(), Modifier.weight(1f))
-            MetaChip("🧠 Ustalık", "%$mastery", Modifier.weight(1f))
-            MetaChip("🏆 Skor", "$playerScore-$rivalScore", Modifier.weight(1f))
-        }
-
         Surface(
-            shape = RoundedCornerShape(16.dp),
-            color = BilPanel2,
-            border = BorderStroke(1.dp, BilCyan.copy(alpha = .24f)),
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            shape = RoundedCornerShape(20.dp),
+            color = BilPanel,
+            border = BorderStroke(
+                1.dp,
+                when {
+                    phase == ExcitementPhase.RESULT -> BilGreen.copy(alpha = .45f)
+                    isFinal -> BilRed.copy(alpha = .45f)
+                    isBoss -> BilGold.copy(alpha = .45f)
+                    else -> BilCyan.copy(alpha = .25f)
+                },
+            ),
         ) {
-            Column(
-                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
-                verticalArrangement = Arrangement.spacedBy(3.dp),
-            ) {
-                Text(
-                    sh("✦ Günlük Meydan Okuma", "✦ Daily Challenge"),
-                    fontWeight = FontWeight.Black,
-                    color = BilText,
-                    fontSize = 16.sp,
-                )
-                Text(
-                    sh("Günün meydan okuması aktif.", "Today's challenge is active."),
-                    color = BilMuted,
-                    fontSize = 11.sp,
-                    lineHeight = 15.sp,
-                )
-            }
-        }
-
-        when (phase) {
-            ExcitementPhase.ANSWER -> {
-                Surface(shape = RoundedCornerShape(22.dp), color = BilPanel, border = BorderStroke(1.dp, if (isFinal) BilRed else if (isBoss) BilGold else BilCyan.copy(alpha = .30f))) {
-                    Column(Modifier.fillMaxWidth().padding(17.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("SORU $questionNo/10", fontWeight = FontWeight.Black, color = BilMuted, fontSize = 16.sp)
-                            Text("⏱ $seconds sn", fontWeight = FontWeight.Black, color = if (seconds <= 5) BilRed else BilText, fontSize = 16.sp)
-                        }
-                        if (isBoss) Text("👑 BOSS SORUSU • +5 TABAN BONUS", color = BilCyan, fontWeight = FontWeight.Black)
-                        if (isFinal) Text("⚡ FİNAL SORUSU • x2", color = BilRed, fontWeight = FontWeight.Black)
-                        Text(q.category.uppercase(), color = BilCyan, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                        Text(q.question, color = BilText, fontSize = 20.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-                        hint?.let { Text("💡 Joker ipucu: $it", color = BilGreen, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) }
-                        OutlinedTextField(
-                            value = input,
-                            onValueChange = {
-                                val next = it.filter { c -> c.isDigit() || c == ',' || c == '.' || c == '-' }
-                                if (next.length > input.length) SonHarfSoundFx.typingClick()
-                                input = next
-                            },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).focusRequester(answerFocusRequester),
-                            singleLine = true,
-                            label = { Text("Tahminin", fontSize = 12.sp) },
-                            textStyle = LocalTextStyle.current.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
-                            shape = RoundedCornerShape(15.dp),
-                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = { submit(input.replace(',', '.').toDoubleOrNull()) }),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = BilCyan,
-                                unfocusedBorderColor = Color(0xFFD4DEE9),
-                                cursorColor = BilCyan,
-                            ),
+            when (phase) {
+                ExcitementPhase.ANSWER -> Column(
+                    Modifier.fillMaxSize().padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("SORU $questionNo/10", color = BilMuted, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        Text("⏱ $seconds sn", color = if (seconds <= 5) BilRed else BilText, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    }
+                    if (isBoss) Text("👑 BOSS +5", color = BilGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    if (isFinal) Text("⚡ FİNAL x2", color = BilRed, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(q.category.uppercase(), color = BilCyan, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        q.question,
+                        color = BilText,
+                        fontSize = 18.sp,
+                        lineHeight = 23.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    hint?.let { Text("💡 $it", color = BilGreen, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                    OutlinedTextField(
+                        value = input,
+                        onValueChange = {},
+                        readOnly = true,
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
+                        label = { Text("Tahminin", fontSize = 11.sp) },
+                        textStyle = LocalTextStyle.current.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = BilCyan,
+                            unfocusedBorderColor = BilCyan.copy(alpha = .45f),
+                            cursorColor = Color.Transparent,
+                        ),
+                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        FilterChip(
+                            selected = risk,
+                            onClick = { risk = !risk },
+                            label = { Text(if (risk) "💣 RİSK x2 AÇIK" else "💣 RİSK x2", fontSize = 9.sp) },
+                            modifier = Modifier.weight(1f).height(40.dp),
                         )
-                        Button(
-                            onClick = { submit(input.replace(',', '.').toDoubleOrNull()) },
-                            enabled = input.replace(',', '.').toDoubleOrNull() != null,
-                            modifier = Modifier.fillMaxWidth().height(54.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = BilCyan,
-                                contentColor = Color.White,
-                                disabledContainerColor = Color(0xFFE2E7EE),
-                                disabledContentColor = Color(0xFF8A94A3),
-                            ),
+                        OutlinedButton(
+                            onClick = {
+                                val r = BilBakalimCompetitionEngine.jokerHint(q.answer)
+                                hint = "${prettyEstimate(r.first)} – ${prettyEstimate(r.second)}"
+                                jokerUsed = true
+                            },
+                            enabled = !jokerUsed,
+                            modifier = Modifier.weight(1f).height(40.dp),
                         ) {
-                            Text("CEVABI KİLİTLE", fontWeight = FontWeight.Black, fontSize = 16.sp)
+                            Text(if (jokerUsed) "KULLANILDI" else "💡 JOKER", fontSize = 9.sp)
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterChip(
-                                selected = risk,
-                                onClick = { risk = !risk },
-                                label = { Text(if (risk) "💣 RİSK x2 AÇIK" else "💣 RİSK x2", fontSize = 12.sp, maxLines = 1) },
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                shape = RoundedCornerShape(14.dp),
-                            )
-                            OutlinedButton(
-                                onClick = {
-                                    val r = BilBakalimCompetitionEngine.jokerHint(q.answer)
-                                    hint = "${prettyEstimate(r.first)} – ${prettyEstimate(r.second)}"
-                                    jokerUsed = true
-                                },
-                                enabled = !jokerUsed,
-                                modifier = Modifier.weight(1f).height(48.dp),
-                                shape = RoundedCornerShape(14.dp),
-                            ) { Text(if (jokerUsed) "KULLANILDI" else "💡 JOKER", fontSize = 12.sp, maxLines = 1) }
-                        }
-                        Text("Hızlı doğru cevap + seri = daha yüksek puan. Satın alınabilir güç yok.", color = BilMuted, fontSize = 10.sp, textAlign = TextAlign.Center)
                     }
                 }
-            }
-            ExcitementPhase.RESULT -> {
-                Surface(shape = RoundedCornerShape(22.dp), color = BilPanel, border = BorderStroke(1.dp, BilGreen.copy(alpha = .45f))) {
-                    Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Text("DOĞRU CEVAP", color = BilMuted, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                        Text(q.displayAnswer, color = BilText, fontSize = 27.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-                        Text(roundMessage, color = if (roundMessage.startsWith("KAZANDIN")) BilGreen else BilRed, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-                        lastTitle?.let { Text("🎖 $it", color = BilCyan, fontWeight = FontWeight.Bold) }
-                        Text("Sen $playerScore • $rivalScore Rakip", color = BilText, fontWeight = FontWeight.Black)
-                        Button(onClick = { advance() }, modifier = Modifier.fillMaxWidth()) { Text(if (questionNo == 10) "MAÇ SONUCU" else "SONRAKİ SORU", fontWeight = FontWeight.Black) }
+
+                ExcitementPhase.RESULT -> Column(
+                    Modifier.fillMaxSize().padding(14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text("DOĞRU CEVAP", color = BilMuted, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(q.displayAnswer, color = BilText, fontSize = 24.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(Modifier.weight(1f), shape = RoundedCornerShape(14.dp), color = BilCyan.copy(alpha = .08f)) {
+                            Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("SENİN CEVABIN", color = BilCyan, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                Text(lastPlayerAnswer?.let(::prettyEstimate) ?: "—", color = BilText, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                        Surface(Modifier.weight(1f), shape = RoundedCornerShape(14.dp), color = BilRed.copy(alpha = .07f)) {
+                            Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("RAKİBİN CEVABI", color = BilRed, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                Text(lastRivalAnswer?.let(::prettyEstimate) ?: "—", color = BilText, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                    Text(roundMessage, color = if (roundMessage.startsWith("KAZANDIN")) BilGreen else BilRed, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                    lastTitle?.let { Text("🎖 $it", color = BilCyan, fontWeight = FontWeight.Bold, fontSize = 10.sp) }
+                    Text("Sen $playerScore • $rivalScore Rakip", color = BilText, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.weight(1f))
+                    Button(onClick = { advance() }, modifier = Modifier.fillMaxWidth().height(46.dp)) {
+                        Text(if (questionNo == 10) "MAÇ SONUCU" else "SONRAKİ SORU", fontWeight = FontWeight.Black)
                     }
                 }
-            }
-            ExcitementPhase.MATCH_END -> {
-                val won = playerScore >= rivalScore
-                Surface(shape = RoundedCornerShape(24.dp), color = BilPanel, border = BorderStroke(1.dp, if (won) BilGreen else BilRed)) {
-                    Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(if (won) "🏆 MAÇI KAZANDIN" else "⚔ RÖVANŞ ZAMANI", color = BilText, fontSize = 23.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-                        Text("$playerScore - $rivalScore", color = BilCyan, fontSize = 38.sp, fontWeight = FontWeight.Black)
+
+                ExcitementPhase.MATCH_END -> {
+                    val won = playerScore >= rivalScore
+                    Column(
+                        Modifier.fillMaxSize().padding(18.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(if (won) "🏆 MAÇI KAZANDIN" else "⚔ RÖVANŞ ZAMANI", color = BilText, fontSize = 22.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                        Spacer(Modifier.height(8.dp))
+                        Text("$playerScore - $rivalScore", color = BilCyan, fontSize = 36.sp, fontWeight = FontWeight.Black)
                         Text(BilBakalimCompetitionEngine.performanceText(playerScore, rivalScore), color = BilMuted)
-                        Text("🎁 ${BilBakalimCompetitionEngine.surpriseReward(wins)}", color = BilGreen, fontWeight = FontWeight.Bold)
-                        Text("🔥 En iyi seri: $bestStreak • $league $rating", color = BilText, fontWeight = FontWeight.Bold)
+                        Text("🔥 En iyi seri: $bestStreak • %$mastery ustalık", color = BilText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(14.dp))
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = { resetMatch() }, modifier = Modifier.weight(1f)) { Text("RÖVANŞ", fontWeight = FontWeight.Black) }
                             OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("OYUNLAR") }
@@ -352,6 +356,17 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
                     }
                 }
             }
+        }
+
+        if (phase != ExcitementPhase.MATCH_END) {
+            EmbeddedNumberKeyboard(
+                value = input,
+                enabled = phase == ExcitementPhase.ANSWER,
+                onValueChange = { next ->
+                    input = next.filter { it.isDigit() || it == ',' || it == '.' || it == '-' }.take(12)
+                },
+                onSubmit = { submit(input.replace(',', '.').toDoubleOrNull()) },
+            )
         }
     }
 }
