@@ -14,6 +14,8 @@ data class LeaderboardV2Row(
     val losses: Int = 0,
     val matches: Int = 0,
     @SerialName("win_rate") val winRate: Double = 0.0,
+    val rating: Int = 1000,
+    @SerialName("league_name") val leagueName: String = "BRONZ",
 )
 
 suspend fun OnlineGameBackend.getLeaderboardV2(
@@ -22,7 +24,7 @@ suspend fun OnlineGameBackend.getLeaderboardV2(
     limit: Int = 50,
 ): List<LeaderboardV2Row> =
     SupabaseProvider.client.postgrest.rpc(
-        "get_leaderboard_v2",
+        "get_rating_leaderboard_v1",
         buildJsonObject {
             put("p_language", language.lowercase())
             put("p_period", period.lowercase())
