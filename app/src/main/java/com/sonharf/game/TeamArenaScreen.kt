@@ -127,7 +127,34 @@ fun TeamArenaScreen(
         }
     }
 
-    BackHandler { onExit() }
+    fun closeScreen() {
+        val current = room
+        val id = roomId
+        val b = backend
+        if (current?.status == "lobby" && id != null && b != null) {
+            scope.launch {
+                busy = true
+                val result = if (current.isHost) {
+                    runCatching { b.cancelTeamArenaLobby(id) }
+                } else {
+                    runCatching { b.leaveTeamArenaLobby(id) }
+                }
+                result.onFailure { notice = teamArenaError(it.message.orEmpty()) }
+                busy = false
+                if (result.isSuccess) {
+                    roomId = null
+                    room = null
+                    members = emptyList()
+                    words = emptyList()
+                    onExit()
+                }
+            }
+        } else {
+            onExit()
+        }
+    }
+
+    BackHandler { closeScreen() }
 
     val active = room
     val myMember = members.firstOrNull { it.userId == me }
@@ -153,7 +180,19 @@ fun TeamArenaScreen(
                     SonHarfSoundFx.softNotify()
                     reload()
                 }
-                .onFailure { notice = teamArenaError(it.message.orEmpty()) }
+                .onFailure { error ->
+                    if ("team_arena_already_active" in error.message.orEmpty()) {
+                        val existing = runCatching { b.getMyActiveTeamArena() }.getOrNull()
+                        if (existing?.active == true && !existing.roomId.isNullOrBlank()) {
+                            roomId = existing.roomId
+                            reload()
+                        } else {
+                            notice = teamArenaError(error.message.orEmpty())
+                        }
+                    } else {
+                        notice = teamArenaError(error.message.orEmpty())
+                    }
+                }
             busy = false
         }
     }
@@ -201,7 +240,7 @@ fun TeamArenaScreen(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onExit) {
+            IconButton(onClick = ::closeScreen) {
                 Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"))
             }
             Column(Modifier.weight(1f)) {
