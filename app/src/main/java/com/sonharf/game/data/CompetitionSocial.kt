@@ -109,6 +109,24 @@ data class ClubWeeklyMissionClaimDto(
 )
 
 @Serializable
+data class WeeklyTournamentHistoryDto(
+    @SerialName("tournament_id") val tournamentId: String,
+    val name: String,
+    @SerialName("week_start") val weekStart: String,
+    @SerialName("starts_at") val startsAt: String,
+    @SerialName("ends_at") val endsAt: String,
+    val points: Long = 0,
+    val wins: Long = 0,
+    val losses: Long = 0,
+    val matches: Long = 0,
+    @SerialName("final_rank") val finalRank: Long = 0,
+    @SerialName("participant_count") val participantCount: Long = 0,
+    @SerialName("reward_coins") val rewardCoins: Int = 0,
+    @SerialName("reward_claimed") val rewardClaimed: Boolean = false,
+    @SerialName("reward_eligible") val rewardEligible: Boolean = false,
+)
+
+@Serializable
 data class TournamentRewardClaimDto(
     val success: Boolean = false,
     val rank: Int = 0,
@@ -193,6 +211,12 @@ suspend fun OnlineGameBackend.claimClubWeeklyMission(tier: Int): ClubWeeklyMissi
         "claim_club_weekly_mission_v1",
         buildJsonObject { put("p_tier", tier.coerceIn(1, 3)) },
     ).decodeSingle()
+
+suspend fun OnlineGameBackend.getWeeklyTournamentHistory(limit: Int = 12): List<WeeklyTournamentHistoryDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "get_weekly_tournament_history_v1",
+        buildJsonObject { put("p_limit", limit.coerceIn(1, 52)) },
+    ).decodeList()
 
 suspend fun OnlineGameBackend.claimPreviousWeeklyTournamentReward(): TournamentRewardClaimDto =
     SupabaseProvider.client.postgrest.rpc("claim_previous_weekly_tournament_reward_v1").decodeSingle()

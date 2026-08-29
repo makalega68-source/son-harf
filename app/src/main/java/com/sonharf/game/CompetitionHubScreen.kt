@@ -44,33 +44,44 @@ fun CompetitionHubScreen(onBack: () -> Unit) {
             }
             Column(Modifier.weight(1f)) {
                 Text(sh("REKABET MERKEZİ", "COMPETITION HUB"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                Text(sh("Kulüp • Haftalık Kupa • Rating", "Club • Weekly Cup • Rating"), color = SonHarfMuted, fontSize = 9.sp)
+                Text(sh("Kulüp • Haftalık Kupa • Rakipler", "Club • Weekly Cup • Rivals"), color = SonHarfMuted, fontSize = 9.sp)
             }
             Text("⚔", fontSize = 25.sp)
         }
 
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 5.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             FilterChip(
                 selected = tab == 0,
                 onClick = { tab = 0 },
-                leadingIcon = { Icon(Icons.Rounded.Groups, null, Modifier.size(18.dp)) },
-                label = { Text(sh("KULÜP", "CLUB"), fontWeight = FontWeight.Black) },
+                leadingIcon = { Icon(Icons.Rounded.Groups, null, Modifier.size(16.dp)) },
+                label = { Text(sh("KULÜP", "CLUB"), fontWeight = FontWeight.Black, fontSize = 9.sp) },
                 modifier = Modifier.weight(1f),
             )
             FilterChip(
                 selected = tab == 1,
                 onClick = { tab = 1 },
-                leadingIcon = { Icon(Icons.Rounded.EmojiEvents, null, Modifier.size(18.dp)) },
-                label = { Text(sh("HAFTALIK KUPA", "WEEKLY CUP"), fontWeight = FontWeight.Black) },
+                leadingIcon = { Icon(Icons.Rounded.EmojiEvents, null, Modifier.size(16.dp)) },
+                label = { Text(sh("KUPA", "CUP"), fontWeight = FontWeight.Black, fontSize = 9.sp) },
+                modifier = Modifier.weight(1f),
+            )
+            FilterChip(
+                selected = tab == 2,
+                onClick = { tab = 2 },
+                leadingIcon = { Text("⚔", fontSize = 14.sp) },
+                label = { Text(sh("RAKİPLER", "RIVALS"), fontWeight = FontWeight.Black, fontSize = 9.sp) },
                 modifier = Modifier.weight(1f),
             )
         }
 
         Box(Modifier.weight(1f)) {
-            if (tab == 0) ClubCompetitionTab() else WeeklyTournamentTab()
+            when (tab) {
+                0 -> ClubCompetitionTab()
+                1 -> WeeklyTournamentTab()
+                else -> RivalHistoryTab()
+            }
         }
     }
 }
@@ -444,6 +455,7 @@ private fun WeeklyTournamentTab() {
     val scope = rememberCoroutineScope()
     var tournament by remember { mutableStateOf<WeeklyTournamentDto?>(null) }
     var leaderboard by remember { mutableStateOf<List<WeeklyTournamentLeaderboardRowDto>>(emptyList()) }
+    var history by remember { mutableStateOf<List<WeeklyTournamentHistoryDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
@@ -454,6 +466,7 @@ private fun WeeklyTournamentTab() {
         runCatching {
             tournament = b.getWeeklyTournament()
             leaderboard = b.getWeeklyTournamentLeaderboard(50)
+            history = b.getWeeklyTournamentHistory(12)
         }.onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
         loading = false
     }
@@ -529,7 +542,22 @@ private fun WeeklyTournamentTab() {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(sh("KUPA ÖDÜLLERİ", "CUP REWARDS"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 11.sp)
                         Text("🥇 1.000 SC   •   🥈 600 SC   •   🥉 400 SC", color = SonHarfText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text(sh("4–10: 150 SC • Katılan diğer oyuncular: 50 SC", "4–10: 150 SC • Other participants: 50 SC"), color = SonHarfMuted, fontSize = 9.sp)
+                        Text(
+                            sh(
+                                "4–10: 150 SC • En az 1 maç oynayan diğer oyuncular: 50 SC",
+                                "4–10: 150 SC • Other players with at least 1 match: 50 SC",
+                            ),
+                            color = SonHarfMuted,
+                            fontSize = 9.sp,
+                        )
+                        Text(
+                            sh(
+                                "Maç oynamadan sıralama ve ödül kazanılmaz.",
+                                "No ranking or reward is earned without playing a match.",
+                            ),
+                            color = SonHarfMuted,
+                            fontSize = 8.sp,
+                        )
                     }
                 }
             }
@@ -546,16 +574,26 @@ private fun WeeklyTournamentTab() {
                                             "Ödül: #${reward.rank} • +${reward.rewardCoins} Son Coin",
                                             "Reward: #${reward.rank} • +${reward.rewardCoins} Son Coin",
                                         )
+                                        reload()
                                     }
                                 }
                                 .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
                             busy = false
                         }
                     },
-                    enabled = !busy,
+                    enabled = !busy && history.any { it.rewardEligible },
                     modifier = Modifier.fillMaxWidth(),
                     border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .48f)),
-                ) { Text(sh("ÖNCEKİ KUPA ÖDÜLÜNÜ AL", "CLAIM PREVIOUS CUP REWARD"), color = SonHarfGold, fontWeight = FontWeight.Black) }
+                ) {
+                    Text(
+                        if (history.any { it.rewardEligible })
+                            sh("KUPA ÖDÜLÜNÜ AL", "CLAIM CUP REWARD")
+                        else
+                            sh("ALINABİLİR ÖDÜL YOK", "NO REWARD TO CLAIM"),
+                        color = SonHarfGold,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
             }
         }
 
@@ -585,6 +623,353 @@ private fun WeeklyTournamentTab() {
                 }
             }
         }
+
+        item {
+            Spacer(Modifier.height(4.dp))
+            Text(sh("KUPA GEÇMİŞİM", "MY CUP HISTORY"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+        }
+
+        if (history.isEmpty()) {
+            item {
+                Text(
+                    sh("Henüz tamamlanmış kupa geçmişin yok.", "You do not have completed cup history yet."),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                    color = SonHarfMuted,
+                    fontSize = 10.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        } else {
+            items(history, key = { it.tournamentId }) { h ->
+                val played = h.matches > 0
+                val rankText = if (h.finalRank > 0) "#${h.finalRank}" else "—"
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(
+                        1.dp,
+                        when {
+                            h.rewardEligible -> SonHarfGold.copy(alpha = .45f)
+                            h.rewardClaimed -> SonHarfGreen.copy(alpha = .28f)
+                            else -> SonHarfMuted.copy(alpha = .13f)
+                        },
+                    ),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                when (h.finalRank) {
+                                    1L -> "🥇"
+                                    2L -> "🥈"
+                                    3L -> "🥉"
+                                    else -> "🏆"
+                                },
+                                fontSize = 22.sp,
+                            )
+                            Spacer(Modifier.width(9.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(h.name, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                                Text(
+                                    "${h.weekStart} • ${h.participantCount} ${sh("aktif oyuncu", "active players")}",
+                                    color = SonHarfMuted,
+                                    fontSize = 8.sp,
+                                )
+                            }
+                            Text(rankText, color = if (played) SonHarfGold else SonHarfMuted, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                        }
+
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        ) {
+                            CompetitionMetric("${h.points}", sh("PUAN", "POINTS"), Modifier.weight(1f))
+                            CompetitionMetric("${h.wins}-${h.losses}", "W-L", Modifier.weight(1f))
+                            CompetitionMetric("${h.matches}", sh("MAÇ", "MATCHES"), Modifier.weight(1f))
+                        }
+
+                        Text(
+                            when {
+                                !played -> sh(
+                                    "Maç oynamadığın için sıralama ve ödül oluşmadı.",
+                                    "No ranking or reward because no match was played.",
+                                )
+                                h.rewardClaimed -> sh(
+                                    "✓ +${h.rewardCoins} Son Coin alındı",
+                                    "✓ +${h.rewardCoins} Son Coin claimed",
+                                )
+                                h.rewardEligible -> sh(
+                                    "+${h.rewardCoins} Son Coin alınabilir",
+                                    "+${h.rewardCoins} Son Coin available",
+                                )
+                                else -> sh("Ödül durumu kapalı.", "Reward unavailable.")
+                            },
+                            color = when {
+                                h.rewardEligible -> SonHarfGold
+                                h.rewardClaimed -> SonHarfGreen
+                                else -> SonHarfMuted
+                            },
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+        }
+
+        item { Spacer(Modifier.height(10.dp)) }
+    }
+}
+
+@Composable
+private fun RivalHistoryTab() {
+    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
+    val scope = rememberCoroutineScope()
+    var rivals by remember { mutableStateOf<List<RivalHistoryDto>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var busyOpponent by remember { mutableStateOf<String?>(null) }
+    var notice by remember { mutableStateOf("") }
+
+    suspend fun reload(showLoading: Boolean = true) {
+        val b = backend ?: return
+        if (showLoading) loading = true
+        runCatching { b.getRivalHistory(30) }
+            .onSuccess { rivals = it }
+            .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+        if (showLoading) loading = false
+    }
+
+    LaunchedEffect(Unit) {
+        reload()
+        while (true) {
+            delay(12_000)
+            reload(showLoading = false)
+        }
+    }
+
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(14.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        if (loading) {
+            item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfBlue) }
+        }
+
+        item {
+            CompetitionHero(
+                icon = "⚔",
+                title = sh("RÖVANŞ HATTI", "REMATCH LINE"),
+                subtitle = sh(
+                    "Son Harf ve Kelime Arenası rakiplerin tek geçmişte. Arkadaşın çevrimiçiyse doğrudan yeniden meydan oku.",
+                    "Classic Son Harf and Word Arena rivals in one history. Challenge online friends again instantly.",
+                ),
+            )
+        }
+
+        if (notice.isNotBlank()) {
+            item {
+                Surface(
+                    shape = RoundedCornerShape(13.dp),
+                    color = SonHarfGold.copy(alpha = .10f),
+                    border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .28f)),
+                ) {
+                    Text(
+                        notice,
+                        Modifier.fillMaxWidth().padding(9.dp),
+                        color = SonHarfText,
+                        fontSize = 10.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+        }
+
+        if (!loading && rivals.isEmpty()) {
+            item {
+                Text(
+                    sh(
+                        "Henüz gerçek PvP rakip geçmişin yok.",
+                        "You do not have real PvP rival history yet.",
+                    ),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
+                    color = SonHarfMuted,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+
+        items(rivals, key = { it.opponentId }) { rival ->
+            Card(
+                colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(
+                    1.dp,
+                    if (rival.canChallenge) SonHarfBlue.copy(alpha = .30f) else SonHarfMuted.copy(alpha = .13f),
+                ),
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            Modifier.size(44.dp),
+                            shape = CircleShape,
+                            color = if (rival.canChallenge) SonHarfBlue.copy(alpha = .10f) else SonHarfSurface2,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(if (rival.lastMode == "arena") "⚡" else "⚔", fontSize = 21.sp)
+                            }
+                        }
+                        Spacer(Modifier.width(9.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(rival.displayName, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                            Text(
+                                "${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W/${rival.losses}L" +
+                                    if (rival.draws > 0) "/${rival.draws}D" else "",
+                                color = SonHarfMuted,
+                                fontSize = 9.sp,
+                            )
+                            Text(
+                                sh(
+                                    "Son mod: ${if (rival.lastMode == "arena") "Kelime Arenası" else "Son Harf"}",
+                                    "Last mode: ${if (rival.lastMode == "arena") "Word Arena" else "Son Harf"}",
+                                ),
+                                color = SonHarfMuted,
+                                fontSize = 8.sp,
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                "${rival.myPoints}:${rival.theirPoints}",
+                                color = SonHarfText,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 17.sp,
+                            )
+                            Text(
+                                if (rival.presenceStatus == "online") "● ${sh("Çevrimiçi", "Online")}" else sh("Çevrimdışı", "Offline"),
+                                color = if (rival.presenceStatus == "online") SonHarfGreen else SonHarfMuted,
+                                fontSize = 8.sp,
+                            )
+                        }
+                    }
+
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    ) {
+                        Surface(
+                            Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            color = SonHarfSurface2,
+                        ) {
+                            Text(
+                                "⚔ ${rival.classicMatches} Son Harf",
+                                Modifier.padding(vertical = 7.dp),
+                                color = SonHarfMuted,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                        Surface(
+                            Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            color = SonHarfSurface2,
+                        ) {
+                            Text(
+                                "⚡ ${rival.arenaMatches} Arena",
+                                Modifier.padding(vertical = 7.dp),
+                                color = SonHarfMuted,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+
+                    if (rival.canChallenge) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(7.dp),
+                        ) {
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        busyOpponent = rival.opponentId
+                                        runCatching { backend?.inviteFriend(rival.opponentId, SonHarfUiState.language) }
+                                            .onSuccess {
+                                                notice = sh(
+                                                    "${rival.displayName}: Son Harf daveti gönderildi.",
+                                                    "${rival.displayName}: Son Harf invite sent.",
+                                                )
+                                                SonHarfSoundFx.softNotify()
+                                            }
+                                            .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                                        busyOpponent = null
+                                    }
+                                },
+                                enabled = busyOpponent == null,
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
+                            ) {
+                                Text("⚔ SON HARF", fontWeight = FontWeight.Black, fontSize = 9.sp)
+                            }
+
+                            OutlinedButton(
+                                onClick = {
+                                    scope.launch {
+                                        busyOpponent = rival.opponentId
+                                        runCatching { backend?.inviteFriendToWordArena(rival.opponentId, SonHarfUiState.language) }
+                                            .onSuccess {
+                                                notice = sh(
+                                                    "${rival.displayName}: Arena daveti gönderildi.",
+                                                    "${rival.displayName}: Arena invite sent.",
+                                                )
+                                                SonHarfSoundFx.softNotify()
+                                            }
+                                            .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                                        busyOpponent = null
+                                    }
+                                },
+                                enabled = busyOpponent == null,
+                                modifier = Modifier.weight(1f),
+                                contentPadding = PaddingValues(horizontal = 6.dp, vertical = 8.dp),
+                                border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .55f)),
+                            ) {
+                                Text("⚡ ARENA", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                            }
+                        }
+                    } else {
+                        Text(
+                            when {
+                                !rival.isFriend -> sh(
+                                    "Canlı meydan okuma için önce arkadaş olmalısınız.",
+                                    "Become friends first to send a live challenge.",
+                                )
+                                rival.presenceStatus != "online" -> sh(
+                                    "Arkadaşın çevrimiçi olduğunda meydan okuyabilirsin.",
+                                    "You can challenge this friend when they are online.",
+                                )
+                                else -> sh(
+                                    "Bu rakibe şu anda meydan okunamıyor.",
+                                    "This rival cannot be challenged right now.",
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            color = SonHarfMuted,
+                            fontSize = 8.sp,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
+        }
+
         item { Spacer(Modifier.height(10.dp)) }
     }
 }
@@ -752,7 +1137,8 @@ private fun friendlyCompetitionError(raw: String): String = when {
     "owner_required" in raw -> sh("Bu işlem için kulüp sahibi olmalısın.", "Club owner permission is required.")
     "transfer_owner_before_leaving" in raw -> sh("Ayrılmadan önce kulüp sahipliğini devret.", "Transfer club ownership before leaving.")
     "reward_already_claimed" in raw -> sh("Bu kupa ödülünü zaten aldın.", "You already claimed this cup reward.")
-    "no_completed_tournament" in raw -> sh("Alınabilir geçmiş kupa ödülü yok.", "There is no previous cup reward to claim.")
+    "no_completed_tournament" in raw || "no_eligible_tournament_reward" in raw ->
+        sh("En az 1 maç oynadığın alınabilir geçmiş kupa ödülü yok.", "There is no claimable past cup reward with at least 1 played match.")
     "club_required" in raw -> sh("Takım Sandığı için önce bir kulübe katıl.", "Join a club before using Team Chest.")
     "club_mission_locked" in raw -> sh("Kulüp hedefi henüz tamamlanmadı.", "The club goal is not complete yet.")
     "club_contribution_required" in raw -> sh("Bu sandık için kişisel katkı barajını tamamla.", "Complete your personal contribution requirement for this chest.")
