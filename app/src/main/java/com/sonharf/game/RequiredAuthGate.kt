@@ -463,7 +463,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                                     }
                                                 }
                                             }.onSuccess { newUser ->
-                                                if (newUser.identities.isNullOrEmpty()) {
+                                                if (newUser == null || newUser.identities.isNullOrEmpty()) {
                                                     success = false
                                                     notice = friendly("existing_confirmed_account")
                                                     register = false
