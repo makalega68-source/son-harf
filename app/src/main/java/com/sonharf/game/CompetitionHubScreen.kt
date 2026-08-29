@@ -82,6 +82,7 @@ private fun ClubCompetitionTab() {
     var directory by remember { mutableStateOf<List<ClubDirectoryRowDto>>(emptyList()) }
     var members by remember { mutableStateOf<List<ClubMemberDto>>(emptyList()) }
     var messages by remember { mutableStateOf<List<ClubMessageDto>>(emptyList()) }
+    var clubMissions by remember { mutableStateOf<List<ClubWeeklyMissionDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
@@ -98,11 +99,13 @@ private fun ClubCompetitionTab() {
                 if (club == null) {
                     members = emptyList()
                     messages = emptyList()
+                    clubMissions = emptyList()
                     directory = runCatching { b.getClubDirectory(50) }.getOrDefault(emptyList())
                 } else {
                     directory = emptyList()
                     members = runCatching { b.getClubMembers(club.clubId) }.getOrDefault(emptyList())
                     messages = runCatching { b.getClubMessages(club.clubId) }.getOrDefault(emptyList())
+                    clubMissions = runCatching { b.getClubWeeklyMissions() }.getOrDefault(emptyList())
                 }
             }
             .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
@@ -221,6 +224,45 @@ private fun ClubCompetitionTab() {
                         }
                     }
                 }
+            }
+
+            item {
+                Text(sh("TAKIM SANDIĞI", "TEAM CHEST"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                Text(
+                    sh(
+                        "Kulüpçe hedefe ulaş; ödülü almak için kendi katkı barajını da tamamla.",
+                        "Reach the club goal together; complete your personal contribution requirement to claim.",
+                    ),
+                    color = SonHarfMuted,
+                    fontSize = 9.sp,
+                )
+            }
+
+            items(clubMissions, key = { "club-mission-${it.tier}" }) { mission ->
+                ClubMissionCard(
+                    mission = mission,
+                    busy = busy,
+                    onClaim = {
+                        scope.launch {
+                            busy = true
+                            runCatching { backend?.claimClubWeeklyMission(mission.tier) }
+                                .onSuccess { result ->
+                                    if (result?.success == true) {
+                                        SonHarfSoundFx.bonus()
+                                        notice = sh(
+                                            "Takım Sandığı ${mission.tier}: +${result.rewardCoin} Son Coin",
+                                            "Team Chest ${mission.tier}: +${result.rewardCoin} Son Coin",
+                                        )
+                                    } else {
+                                        notice = sh("Bu sandığı zaten aldın.", "You already claimed this chest.")
+                                    }
+                                    reload()
+                                }
+                                .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                            busy = false
+                        }
+                    },
+                )
             }
 
             item { Text(sh("ÜYELER & KATKI", "MEMBERS & CONTRIBUTION"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black) }
@@ -567,6 +609,127 @@ private fun CompetitionHero(icon: String, title: String, subtitle: String) {
 }
 
 @Composable
+private fun ClubMissionCard(
+    mission: ClubWeeklyMissionDto,
+    busy: Boolean,
+    onClaim: () -> Unit,
+) {
+    val clubProgress = (mission.clubPoints.toFloat() / mission.targetPoints.coerceAtLeast(1)).coerceIn(0f, 1f)
+    val myProgress = (mission.myPoints.toFloat() / mission.minContribution.coerceAtLeast(1)).coerceIn(0f, 1f)
+    val teamReady = mission.clubPoints >= mission.targetPoints
+    val meReady = mission.myPoints >= mission.minContribution
+
+    Card(
+        colors = CardDefaults.cardColors(
+            containerColor = if (mission.claimed) SonHarfGreen.copy(alpha = .08f) else SonHarfSurface
+        ),
+        shape = RoundedCornerShape(17.dp),
+        border = BorderStroke(
+            1.dp,
+            when {
+                mission.claimed -> SonHarfGreen.copy(alpha = .42f)
+                mission.eligible -> SonHarfGold.copy(alpha = .48f)
+                else -> SonHarfMuted.copy(alpha = .13f)
+            },
+        ),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    Modifier.size(42.dp),
+                    shape = RoundedCornerShape(13.dp),
+                    color = if (mission.claimed) SonHarfGreen.copy(alpha = .13f) else SonHarfGold.copy(alpha = .11f),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            when (mission.tier) { 1 -> "📦"; 2 -> "🎁"; else -> "🏆" },
+                            fontSize = 21.sp,
+                        )
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        sh("SANDIK ${mission.tier}", "CHEST ${mission.tier}"),
+                        color = SonHarfText,
+                        fontWeight = FontWeight.Black,
+                        fontSize = 13.sp,
+                    )
+                    Text(
+                        sh(
+                            "Takım ${mission.targetPoints} • Sen ${mission.minContribution} katkı",
+                            "Club ${mission.targetPoints} • You ${mission.minContribution} contribution",
+                        ),
+                        color = SonHarfMuted,
+                        fontSize = 9.sp,
+                    )
+                }
+                Text("+${mission.rewardCoin} SC", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            }
+
+            Text(
+                sh(
+                    "Kulüp: ${mission.clubPoints.coerceAtMost(mission.targetPoints.toLong())}/${mission.targetPoints}",
+                    "Club: ${mission.clubPoints.coerceAtMost(mission.targetPoints.toLong())}/${mission.targetPoints}",
+                ),
+                color = if (teamReady) SonHarfGreen else SonHarfMuted,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            LinearProgressIndicator(
+                progress = { clubProgress },
+                modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                color = if (teamReady) SonHarfGreen else SonHarfBlue,
+                trackColor = SonHarfMuted.copy(alpha = .13f),
+            )
+
+            Text(
+                sh(
+                    "Katkın: ${mission.myPoints.coerceAtMost(mission.minContribution.toLong())}/${mission.minContribution}",
+                    "Your contribution: ${mission.myPoints.coerceAtMost(mission.minContribution.toLong())}/${mission.minContribution}",
+                ),
+                color = if (meReady) SonHarfGreen else SonHarfMuted,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            LinearProgressIndicator(
+                progress = { myProgress },
+                modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
+                color = if (meReady) SonHarfGreen else SonHarfGold,
+                trackColor = SonHarfMuted.copy(alpha = .13f),
+            )
+
+            Button(
+                onClick = onClaim,
+                enabled = mission.eligible && !mission.claimed && !busy,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (mission.claimed) SonHarfGreen else SonHarfGold,
+                    contentColor = Color(0xFF2A210F),
+                    disabledContainerColor = if (mission.claimed) SonHarfGreen.copy(alpha = .18f) else SonHarfMuted.copy(alpha = .10f),
+                    disabledContentColor = if (mission.claimed) SonHarfGreen else SonHarfMuted,
+                ),
+            ) {
+                Text(
+                    when {
+                        mission.claimed -> sh("✓ ALINDI", "✓ CLAIMED")
+                        !teamReady -> sh("TAKIM HEDEFİ BEKLENİYOR", "WAITING FOR CLUB GOAL")
+                        !meReady -> sh("KATKI GEREKİYOR", "CONTRIBUTION REQUIRED")
+                        else -> sh("SANDIĞI AÇ", "OPEN CHEST")
+                    },
+                    fontWeight = FontWeight.Black,
+                    fontSize = 10.sp,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun CompetitionMetric(value: String, label: String, modifier: Modifier) {
     Surface(
         modifier,
@@ -589,6 +752,9 @@ private fun friendlyCompetitionError(raw: String): String = when {
     "transfer_owner_before_leaving" in raw -> sh("Ayrılmadan önce kulüp sahipliğini devret.", "Transfer club ownership before leaving.")
     "reward_already_claimed" in raw -> sh("Bu kupa ödülünü zaten aldın.", "You already claimed this cup reward.")
     "no_completed_tournament" in raw -> sh("Alınabilir geçmiş kupa ödülü yok.", "There is no previous cup reward to claim.")
+    "club_required" in raw -> sh("Takım Sandığı için önce bir kulübe katıl.", "Join a club before using Team Chest.")
+    "club_mission_locked" in raw -> sh("Kulüp hedefi henüz tamamlanmadı.", "The club goal is not complete yet.")
+    "club_contribution_required" in raw -> sh("Bu sandık için kişisel katkı barajını tamamla.", "Complete your personal contribution requirement for this chest.")
     "unauthorized" in raw || "not_authenticated" in raw -> sh("Oturumunu yenileyip tekrar dene.", "Refresh your session and try again.")
     else -> sh("İşlem tamamlanamadı. Tekrar dene.", "The action could not be completed. Try again.")
 }
