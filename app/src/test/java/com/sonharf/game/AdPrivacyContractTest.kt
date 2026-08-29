@@ -56,7 +56,8 @@ class AdPrivacyContractTest {
         assertTrue(gradle.contains("appId != googleTestAdMobAppId"))
         assertTrue(gradle.contains("rewardedId != googleTestRewardedAdUnitId"))
         assertFalse(workflow.contains("son-harf-release-v0.8.1"))
-        assertTrue(workflow.contains("son-harf-release-${{ github.run_number }}"))
+        assertTrue(workflow.contains("name: son-harf-release-"))
+        assertTrue(workflow.contains("github.run_number"))
     }
 
     private fun projectFile(path: String): File {
