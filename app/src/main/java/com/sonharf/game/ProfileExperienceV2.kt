@@ -425,8 +425,10 @@ fun ProfileExperienceV2Screen() {
                             history = history,
                             busy = seasonRewardBusyId == history.seasonId,
                             onClaim = {
-                                val b = backend ?: return@CompetitiveSeasonHistoryCardV2
-                                scope.launch {
+                                val b = backend
+                                if (b == null) {
+                                    notice = sh("Çevrimiçi bağlantı gerekli.", "Online connection required.")
+                                } else scope.launch {
                                     seasonRewardBusyId = history.seasonId
                                     runCatching {
                                         b.claimCompetitiveSeasonReward(history.seasonId)
