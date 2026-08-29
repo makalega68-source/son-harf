@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private enum class LightScreen { HOME, SON_HARF, KELIME_ARENASI, TAKIM_ARENASI, GUNLUK_ARENA, KELIME_AVI, KELIME_SAVASI, COMPETITION, LEAGUE, MARKET, TASKS, PROFILE }
 
