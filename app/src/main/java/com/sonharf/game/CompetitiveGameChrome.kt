@@ -94,7 +94,7 @@ internal fun CompetitionVsCard(
                     gender = opponentGender,
                     name = opponentName,
                     size = 38.dp,
-                    accent = PortalPink,
+                    accent = PortalRed,
                 )
             }
         }
@@ -153,18 +153,18 @@ internal fun CompetitionLeadStrip(
                     opponentStreak >= 2 -> "Rakip 🔥${opponentStreak}"
                     else -> critical.orEmpty()
                 },
-                color = if (opponentStreak >= 2) PortalPink else PortalMuted,
+                color = if (opponentStreak >= 2) PortalRed else PortalMuted,
                 fontSize = 8.sp,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             )
-            Text("${opponentScore}  RAKİP", color = PortalPink, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Text("${opponentScore}  RAKİP", color = PortalRed, fontSize = 10.sp, fontWeight = FontWeight.Black)
         }
         LinearProgressIndicator(
             progress = { progress },
             modifier = Modifier.fillMaxWidth().height(7.dp),
             color = PortalBlue,
-            trackColor = PortalPink.copy(alpha = .22f),
+            trackColor = PortalRed.copy(alpha = .22f),
         )
         val action = myAction ?: opponentAction
         if (!action.isNullOrBlank()) {
@@ -174,12 +174,12 @@ internal fun CompetitionLeadStrip(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
-                color = if (leader >= 0) PortalBlue.copy(alpha = .10f) else PortalPink.copy(alpha = .10f),
+                color = if (leader >= 0) PortalBlue.copy(alpha = .10f) else PortalRed.copy(alpha = .10f),
             ) {
                 Text(
                     announcement.orEmpty(),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
-                    color = if (leader >= 0) PortalBlue else PortalPink,
+                    color = if (leader >= 0) PortalBlue else PortalRed,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Black,
                     fontSize = 11.sp,
