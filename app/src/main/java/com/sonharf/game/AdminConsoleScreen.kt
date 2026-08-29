@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -44,6 +45,9 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
     var products by remember { mutableStateOf<List<AdminTopProductDto>>(emptyList()) }
     var storeItems by remember { mutableStateOf<List<AdminTopStoreItemDto>>(emptyList()) }
     var health by remember { mutableStateOf<List<AdminHealthDto>>(emptyList()) }
+    var ownerAccounts by remember { mutableStateOf<List<AdminOwnerAccountDto>>(emptyList()) }
+    var capacity by remember { mutableStateOf<List<AdminCapacityDto>>(emptyList()) }
+    var ownerEmailInput by remember { mutableStateOf("") }
     var monthlyRevenue by remember { mutableStateOf<List<AdminMonthlyRevenueDto>>(emptyList()) }
     var announcement by remember { mutableStateOf(AdminAnnouncementDto()) }
     var announcementText by remember { mutableStateOf("") }
@@ -55,6 +59,7 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
     var repairConfirm by remember { mutableStateOf<RepairAction?>(null) }
     var priceProduct by remember { mutableStateOf<String?>(null) }
     var priceText by remember { mutableStateOf("") }
+    val uriHandler = LocalUriHandler.current
 
     suspend fun reload() {
         loading = true
@@ -64,6 +69,8 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
             products = backend.getAdminTopProducts()
             storeItems = backend.getAdminTopStoreItems()
             health = backend.getAdminHealth()
+            ownerAccounts = backend.getAdminOwnerAccounts()
+            capacity = backend.getAdminCapacity()
             monthlyRevenue = backend.getAdminMonthlyRevenue()
             announcement = backend.getAdminAnnouncement()
             announcementText = announcement.message
@@ -239,70 +246,104 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                 AdminRepairGrid { action -> repairConfirm = action }
             }
 
-            item { AdminSectionTitle("BENİM TEST ARAÇLARIM", Icons.Rounded.Science) }
+            item { AdminSectionTitle("ÖZEL HESAPLAR", Icons.Rounded.VerifiedUser) }
+            if (ownerAccounts.isEmpty()) {
+                item { AdminEmpty("Henüz özel hesap tanımlı değil.") }
+            } else {
+                items(ownerAccounts, key = { it.userId }) { account ->
+                    AdminOwnerAccountCard(
+                        account = account,
+                        enabled = !busy,
+                        onChange = { lifetimeVip, unlimitedDiamonds, unlimitedSonCoin, active ->
+                            scope.launch {
+                                busy = true
+                                runCatching {
+                                    backend.adminSetOwnerAccount(
+                                        email = account.email,
+                                        lifetimeVip = lifetimeVip,
+                                        unlimitedDiamonds = unlimitedDiamonds,
+                                        unlimitedSonCoin = unlimitedSonCoin,
+                                        active = active,
+                                    )
+                                }.onSuccess {
+                                    notice = "${account.displayName} özel hesap ayarları güncellendi."
+                                }.onFailure {
+                                    error = it.message ?: "Özel hesap güncellenemedi."
+                                }
+                                reload()
+                                busy = false
+                            }
+                        },
+                    )
+                }
+            }
             item {
                 AdminWideCard {
-                    AdminToggleRow(
-                        title = "VIP test durumum",
-                        detail = "Gerçek abonelik oluşturmadan yalnızca bu yönetici hesabının VIP özelliğini açar/kapatır.",
-                        checked = d.myIsVip,
+                    Text("Yeni özel hesap", color = AdminText, fontWeight = FontWeight.Bold)
+                    Text(
+                        "En fazla 5 aktif hesap tanımlanabilir. Özel hesap olmak admin yetkisi vermez; yalnızca VIP ve sınırsız bakiye haklarını yönetir.",
+                        color = AdminMuted,
+                        fontSize = 10.sp,
+                    )
+                    OutlinedTextField(
+                        value = ownerEmailInput,
+                        onValueChange = { ownerEmailInput = it.trim().take(120) },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text("Hesabın e-posta adresi") },
+                        singleLine = true,
+                    )
+                    Button(
+                        onClick = {
+                            val targetEmail = ownerEmailInput.trim()
+                            if (targetEmail.isBlank()) {
+                                notice = "E-posta adresi gir."
+                            } else {
+                                scope.launch {
+                                    busy = true
+                                    runCatching {
+                                        backend.adminSetOwnerAccount(
+                                            email = targetEmail,
+                                            lifetimeVip = true,
+                                            unlimitedDiamonds = true,
+                                            unlimitedSonCoin = true,
+                                            active = true,
+                                        )
+                                    }.onSuccess {
+                                        notice = "$targetEmail özel hesap olarak eklendi."
+                                        ownerEmailInput = ""
+                                    }.onFailure {
+                                        error = when {
+                                            (it.message ?: "").contains("owner_account_limit_reached") -> "En fazla 5 aktif özel hesap kullanılabilir."
+                                            (it.message ?: "").contains("user_not_found") -> "Bu e-posta ile kayıtlı oyuncu bulunamadı."
+                                            else -> it.message ?: "Özel hesap eklenemedi."
+                                        }
+                                    }
+                                    reload()
+                                    busy = false
+                                }
+                            }
+                        },
                         enabled = !busy,
-                    ) { enabled ->
-                        scope.launch {
-                            busy = true
-                            runCatching { backend.adminSetMyVip(enabled) }
-                                .onSuccess { notice = if (enabled) "Yönetici hesabı VIP test moduna alındı." else "Yönetici hesabının VIP test modu kapatıldı." }
-                                .onFailure { error = it.message }
-                            reload(); busy = false
-                        }
-                    }
-                    HorizontalDivider(color = Color.White.copy(alpha=.08f))
-                    AdminToggleRow(
-                        title = "Satın alımlarım ücretsiz",
-                        detail = "Elmas mağazasındaki ürünleri bakiyeden düşmeden test eder. Gerçek oyuncuların fiyatlarını etkilemez.",
-                        checked = d.freeTestPurchases,
-                        enabled = !busy,
-                    ) { enabled ->
-                        scope.launch {
-                            busy = true
-                            runCatching { backend.adminSetFreePurchases(enabled) }
-                                .onSuccess { notice = if (enabled) "Ücretsiz test satın alımları açıldı." else "Ücretsiz test satın alımları kapatıldı." }
-                            reload(); busy = false
-                        }
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Icon(Icons.Rounded.PersonAdd, null)
+                        Spacer(Modifier.width(7.dp))
+                        Text("ÖZEL HESAP EKLE")
                     }
                 }
             }
 
-            item { AdminSectionTitle("ÜCRETSİZ TEST PAKETLERİ", Icons.Rounded.CardGiftcard) }
-            item {
-                AdminWideCard {
-                    Text("Bu paketler yalnızca yönetici hesabına test verisi verir; Google Play satın alımı ve gerçek gelir kaydı oluşturmaz.", color = AdminMuted, fontSize = 10.sp)
-                    listOf(
-                        "vip_monthly" to "VIP Aylık Test",
-                        "vip_yearly" to "VIP Yıllık Test",
-                        "coins_500" to "+500 Son Coin Test",
-                        "coins_1500" to "+1500 Son Coin Test",
-                        "coins_3500" to "+3500 Son Coin Test",
-                        "coins_8000" to "+8000 Son Coin Test",
-                        "season_pass_monthly" to "Sezon Bileti 30 Gün Test",
-                        "starter_style_pack" to "Başlangıç Style Paketi Test",
-                        "theme_neon" to "Neon Tema Test",
-                    ).forEach { (productId, label) ->
-                        OutlinedButton(
-                            onClick = {
-                                scope.launch {
-                                    busy = true
-                                    runCatching { backend.adminGrantTestProduct(productId) }
-                                        .onSuccess { notice = "$label ücretsiz olarak uygulandı." }
-                                        .onFailure { error = it.message ?: "Test ürünü uygulanamadı." }
-                                    reload(); busy = false
-                                }
-                            },
-                            enabled = !busy,
-                            modifier = Modifier.fillMaxWidth(),
-                            border = BorderStroke(1.dp, AdminGold.copy(alpha=.4f)),
-                        ) { Text(label, color = AdminText) }
-                    }
+            item { AdminSectionTitle("ALTYAPI & KAPASİTE", Icons.Rounded.Dns) }
+            if (capacity.isEmpty()) {
+                item { AdminEmpty("Altyapı bilgileri alınamadı.") }
+            } else {
+                items(capacity, key = { it.metricKey }) { metric ->
+                    AdminCapacityRow(
+                        metric = metric,
+                        onResolve = {
+                            if (metric.resolveUrl.isNotBlank()) uriHandler.openUri(metric.resolveUrl)
+                        },
+                    )
                 }
             }
 
@@ -486,6 +527,126 @@ private fun AdminRepairGrid(onAction: (RepairAction) -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun AdminOwnerAccountCard(
+    account: AdminOwnerAccountDto,
+    enabled: Boolean,
+    onChange: (Boolean, Boolean, Boolean, Boolean) -> Unit,
+) {
+    AdminWideCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(account.displayName, color = AdminText, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Text(account.email, color = AdminMuted, fontSize = 10.sp)
+            }
+            Surface(
+                color = if (account.active) AdminGreen.copy(alpha = .14f) else AdminRed.copy(alpha = .12f),
+                shape = RoundedCornerShape(999.dp),
+            ) {
+                Text(
+                    if (account.active) "AKTİF" else "PASİF",
+                    Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    color = if (account.active) AdminGreen else AdminRed,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+        }
+        Text(
+            "Rating: ${account.rating} • Görünen bakiye: ${account.currentDiamonds} • Sınırsız haklarda harcama düşmez.",
+            color = AdminMuted,
+            fontSize = 10.sp,
+        )
+        AdminToggleRow(
+            title = "Süresiz VIP",
+            detail = if (account.lifetimeVip) "VIP hakkı kalıcı olarak korunur." else "Süresiz VIP kapalı.",
+            checked = account.lifetimeVip,
+            enabled = enabled,
+        ) { onChange(it, account.unlimitedDiamonds, account.unlimitedSonCoin, account.active) }
+        HorizontalDivider(color = Color.White.copy(alpha = .08f))
+        AdminToggleRow(
+            title = "Sınırsız Elmas",
+            detail = "Mağaza alışverişlerinde elmas bakiyesi düşmez.",
+            checked = account.unlimitedDiamonds,
+            enabled = enabled,
+        ) { onChange(account.lifetimeVip, it, account.unlimitedSonCoin, account.active) }
+        HorizontalDivider(color = Color.White.copy(alpha = .08f))
+        AdminToggleRow(
+            title = "Sınırsız Son Coin",
+            detail = "Son Coin kullanan özel satın alımlarda bakiye düşmez.",
+            checked = account.unlimitedSonCoin,
+            enabled = enabled,
+        ) { onChange(account.lifetimeVip, account.unlimitedDiamonds, it, account.active) }
+        HorizontalDivider(color = Color.White.copy(alpha = .08f))
+        AdminToggleRow(
+            title = "Özel hesabı etkin tut",
+            detail = "Kapatılırsa sınırsız haklar devre dışı kalır; hesap ve verileri silinmez.",
+            checked = account.active,
+            enabled = enabled,
+        ) { onChange(account.lifetimeVip, account.unlimitedDiamonds, account.unlimitedSonCoin, it) }
+    }
+}
+
+@Composable
+private fun AdminCapacityRow(metric: AdminCapacityDto, onResolve: () -> Unit) {
+    val tone = when (metric.status) {
+        "critical" -> AdminRed
+        "warning" -> AdminGold
+        "ok" -> AdminGreen
+        else -> AdminBlue
+    }
+    AdminWideCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                when (metric.status) {
+                    "critical", "warning" -> Icons.Rounded.Warning
+                    "ok" -> Icons.Rounded.CheckCircle
+                    else -> Icons.Rounded.Info
+                },
+                null,
+                tint = tone,
+            )
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f)) {
+                Text(metric.title, color = AdminText, fontWeight = FontWeight.Bold)
+                Text(metric.detail, color = AdminMuted, fontSize = 10.sp)
+            }
+            if (metric.unit == "bytes") {
+                Text("%${metric.percentUsed}", color = tone, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        if (metric.unit == "bytes") {
+            LinearProgressIndicator(
+                progress = { (metric.percentUsed / 100f).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(7.dp),
+                color = tone,
+                trackColor = Color.White.copy(alpha = .07f),
+            )
+            Text(
+                "${formatBytes(metric.usedValue)} / ${formatBytes(metric.limitValue)}",
+                color = AdminMuted,
+                fontSize = 10.sp,
+            )
+        }
+        OutlinedButton(
+            onClick = onResolve,
+            modifier = Modifier.fillMaxWidth(),
+            border = BorderStroke(1.dp, tone.copy(alpha = .55f)),
+        ) {
+            Icon(Icons.Rounded.OpenInNew, null, tint = tone, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.width(6.dp))
+            Text("PROBLEMİ ÇÖZ / İLGİLİ SAYFAYI AÇ", color = tone, fontSize = 11.sp)
+        }
+    }
+}
+
+private fun formatBytes(value: Long): String {
+    if (value <= 0) return "0 B"
+    val mb = value / (1024.0 * 1024.0)
+    return if (mb < 1024) String.format(Locale.US, "%.1f MB", mb)
+    else String.format(Locale.US, "%.2f GB", mb / 1024.0)
 }
 
 @Composable
