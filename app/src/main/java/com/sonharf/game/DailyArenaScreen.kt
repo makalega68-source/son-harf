@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.EmojiEvents
@@ -16,7 +18,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,11 +41,14 @@ fun DailyArenaScreen(onBack: () -> Unit) {
     var status by remember { mutableStateOf<DailyArenaStatusDto?>(null) }
     var words by remember { mutableStateOf<List<DailyArenaWordDto>>(emptyList()) }
     var leaderboard by remember { mutableStateOf<List<DailyArenaLeaderboardDto>>(emptyList()) }
+    var leaderboardProfiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
     var input by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    val inputFocusRequester = remember { FocusRequester() }
+    val softwareKeyboard = LocalSoftwareKeyboardController.current
 
     suspend fun reload() {
         val b = backend ?: return
@@ -47,7 +56,13 @@ fun DailyArenaScreen(onBack: () -> Unit) {
             val next = b.getDailyArenaStatus(language)
             status = next
             words = next.runId?.let { b.getDailyArenaWords(it) }.orEmpty()
-            leaderboard = b.getDailyArenaLeaderboard(language, 50)
+            val nextLeaderboard = b.getDailyArenaLeaderboard(language, 50)
+            leaderboard = nextLeaderboard
+            val nextProfiles = mutableMapOf<String, ProfileDto?>()
+            for (row in nextLeaderboard) {
+                nextProfiles[row.userId] = runCatching { b.getProfile(row.userId) }.getOrNull()
+            }
+            leaderboardProfiles = nextProfiles
         }.onFailure {
             notice = sh("Günlük Arena yüklenemedi.", "Daily Arena could not be loaded.")
         }
@@ -55,6 +70,16 @@ fun DailyArenaScreen(onBack: () -> Unit) {
     }
 
     LaunchedEffect(language) { reload() }
+
+    LaunchedEffect(status?.status, busy, status?.runId) {
+        if (status?.status == "playing") {
+            delay(120)
+            runCatching { inputFocusRequester.requestFocus() }
+            softwareKeyboard?.show()
+        } else if (status?.status == "finished") {
+            softwareKeyboard?.hide()
+        }
+    }
 
     LaunchedEffect(status?.runId, status?.status, status?.endsAt) {
         if (status?.status == "playing") {
@@ -187,7 +212,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
         }
 
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().imePadding(),
             contentPadding = PaddingValues(14.dp),
             verticalArrangement = Arrangement.spacedBy(11.dp),
         ) {
@@ -397,15 +422,22 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                     item {
                         OutlinedTextField(
                             value = input,
-                            onValueChange = {
-                                input = it.filter(Char::isLetter).take(10).uppercase()
+                            onValueChange = { value ->
+                                if (!busy && prepSeconds == 0 && remainingSeconds > 0) {
+                                    input = value.filter(Char::isLetter).take(10).uppercase()
+                                }
                             },
-                            modifier = Modifier.fillMaxWidth(),
-                            enabled = !busy && prepSeconds == 0 && remainingSeconds > 0,
+                            modifier = Modifier.fillMaxWidth().focusRequester(inputFocusRequester),
+                            enabled = true,
                             singleLine = true,
                             label = {
                                 Text(sh("3–10 harfli kelime", "3–10 letter word"))
                             },
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Send,
+                                showKeyboardOnFocus = true,
+                            ),
+                            keyboardActions = KeyboardActions(onSend = { submit() }),
                             trailingIcon = {
                                 TextButton(
                                     onClick = ::submit,
@@ -579,6 +611,13 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                                 textAlign = TextAlign.Center,
                                 fontWeight = FontWeight.Black,
                             )
+                            ProfilePhotoAvatar(
+                                avatarPath = leaderboardProfiles[row.userId]?.avatarPath,
+                                name = row.displayName,
+                                size = 34.dp,
+                                accent = SonHarfBlue,
+                            )
+                            Spacer(Modifier.width(8.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(
                                     row.displayName,

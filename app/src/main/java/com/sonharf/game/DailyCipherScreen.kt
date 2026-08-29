@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -55,6 +56,8 @@ fun DailyCipherScreen(onBack: () -> Unit) {
     var notice by remember { mutableStateOf("") }
     val guessFocusRequester = remember { FocusRequester() }
     val softwareKeyboard = LocalSoftwareKeyboardController.current
+    val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
 
     suspend fun reload() {
         val b = backend
@@ -72,9 +75,9 @@ fun DailyCipherScreen(onBack: () -> Unit) {
         runCatching { backend?.logEvent("daily_cipher_open", SonHarfUiState.language) }
     }
 
-    LaunchedEffect(status?.finished, busy) {
-        if (status?.finished == false && !busy) {
-            delay(140)
+    LaunchedEffect(status?.finished, busy, guess) {
+        if (status?.finished == false) {
+            delay(120)
             runCatching { guessFocusRequester.requestFocus() }
             softwareKeyboard?.show()
         } else if (status?.finished == true) {
@@ -119,21 +122,23 @@ fun DailyCipherScreen(onBack: () -> Unit) {
         )
     ) {
         Column(
-            Modifier.fillMaxSize().imePadding().padding(horizontal = 16.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            Modifier.fillMaxSize().imePadding().padding(horizontal = 16.dp, vertical = if (imeVisible) 5.dp else 10.dp),
+            verticalArrangement = Arrangement.spacedBy(if (imeVisible) 6.dp else 12.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = CipherText)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME AVI", "WORD HUNT"), color = CipherText, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Günün 5 harfli kelimesini ipuçlarıyla bul.", "Find today's five-letter word using the clues."), color = CipherMuted, fontSize = 10.sp)
+                    Text(sh("KELİME AVI", "WORD HUNT"), color = CipherText, fontSize = if (imeVisible) 18.sp else 21.sp, fontWeight = FontWeight.Black)
+                    if (!imeVisible) {
+                        Text(sh("Günün 5 harfli kelimesini ipuçlarıyla bul.", "Find today's five-letter word using the clues."), color = CipherMuted, fontSize = 10.sp)
+                    }
                 }
                 Text("1×", color = CipherGold, fontWeight = FontWeight.Black)
             }
 
-            CipherHowToCard()
+            CipherHowToCard(compact = imeVisible)
 
             val s = status
             if (s == null && notice.isBlank()) {
@@ -148,7 +153,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                     repeat(6) { row ->
                         val word = s?.guesses?.getOrNull(row).orEmpty()
                         val feedback = s?.feedbacks?.getOrNull(row).orEmpty()
-                        CipherGuessRow(word, feedback)
+                        CipherGuessRow(word, feedback, compact = imeVisible)
                     }
 
                     if (s?.finished == true) {
@@ -193,7 +198,8 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                                 guess = value.filter { it.isLetter() }.take(5).uppercase()
                             },
                             modifier = Modifier.fillMaxWidth().focusRequester(guessFocusRequester),
-                            enabled = !busy && s != null,
+                            enabled = true,
+                            readOnly = busy || s == null,
                             singleLine = true,
                             label = { Text(sh("5 harfli tahmin", "Five-letter guess")) },
                             keyboardOptions = KeyboardOptions(
@@ -215,7 +221,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                         Button(
                             onClick = ::submit,
                             enabled = guess.length == 5 && !busy && s != null,
-                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            modifier = Modifier.fillMaxWidth().height(if (imeVisible) 44.dp else 52.dp),
                             shape = RoundedCornerShape(16.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = CipherCyan, contentColor = CipherBg),
                         ) {
@@ -233,38 +239,38 @@ fun DailyCipherScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun CipherHowToCard() {
+private fun CipherHowToCard(compact: Boolean) {
     Card(
         colors = CardDefaults.cardColors(containerColor = CipherPanel.copy(alpha = .92f)),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, CipherCyan.copy(alpha = .25f)),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(12.dp),
+            Modifier.fillMaxWidth().padding(if (compact) 7.dp else 12.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
-            CipherLegend("A", CipherGreen, sh("Doğru yer", "Exact"))
-            CipherLegend("R", CipherGold, sh("Var, yeri farklı", "Wrong spot"))
-            CipherLegend("K", CipherPanel2, sh("Yok", "Absent"))
+            CipherLegend("A", CipherGreen, sh("Doğru yer", "Exact"), compact)
+            CipherLegend("R", CipherGold, sh("Var, yeri farklı", "Wrong spot"), compact)
+            CipherLegend("K", CipherPanel2, sh("Yok", "Absent"), compact)
         }
     }
 }
 
 @Composable
-private fun CipherLegend(letter: String, color: Color, label: String) {
+private fun CipherLegend(letter: String, color: Color, label: String, compact: Boolean) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Surface(shape = RoundedCornerShape(8.dp), color = color) {
-            Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(if (compact) 28.dp else 34.dp), contentAlignment = Alignment.Center) {
                 Text(letter, color = CipherText, fontWeight = FontWeight.Black)
             }
         }
-        Spacer(Modifier.height(4.dp))
-        Text(label, color = CipherMuted, fontSize = 7.sp)
+        Spacer(Modifier.height(if (compact) 2.dp else 4.dp))
+        Text(label, color = CipherMuted, fontSize = if (compact) 6.sp else 7.sp)
     }
 }
 
 @Composable
-private fun CipherGuessRow(word: String, feedback: String) {
+private fun CipherGuessRow(word: String, feedback: String, compact: Boolean) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
         repeat(5) { index ->
             val marker = feedback.getOrNull(index)
@@ -274,14 +280,19 @@ private fun CipherGuessRow(word: String, feedback: String) {
                 'X' -> CipherPanel2
                 else -> Color.Transparent
             }
+            val cellModifier = if (compact) {
+                Modifier.weight(1f).height(38.dp)
+            } else {
+                Modifier.weight(1f).aspectRatio(1f)
+            }
             Surface(
-                modifier = Modifier.weight(1f).aspectRatio(1f),
+                modifier = cellModifier,
                 shape = RoundedCornerShape(11.dp),
                 color = color,
                 border = BorderStroke(1.dp, if (marker == null) CipherMuted.copy(alpha = .35f) else color),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(word.getOrNull(index)?.toString().orEmpty(), color = CipherText, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text(word.getOrNull(index)?.toString().orEmpty(), color = CipherText, fontSize = if (compact) 18.sp else 22.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
