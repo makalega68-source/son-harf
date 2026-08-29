@@ -883,7 +883,7 @@ private fun ArenaResultWordList(
 
 private fun friendlyArenaError(raw: String): String = when {
     "team_arena_active" in raw || "team_arena_already_active" in raw ->
-        sh("Açık 2v2 lobin var. Takım Arenası'na dönüp lobiyi kapat.", "A 2v2 lobby is still open. Return to Team Arena and close it.")
+        sh("Takım Arenası maçın sürüyor. Önce 2v2 maçı bitir.", "Your Team Arena match is active. Finish the 2v2 match first.")
     "daily_arena_active" in raw ->
         sh("Önce aktif Resmî Koşuyu bitir.", "Finish your active Official Run first.")
     "player_already_in_game" in raw -> sh("Önce aktif Son Harf maçını bitir.", "Finish your active Son Harf match first.")
