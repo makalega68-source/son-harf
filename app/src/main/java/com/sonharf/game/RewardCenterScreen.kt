@@ -51,6 +51,7 @@ fun RewardCenterScreen() {
     var items by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var adReady by remember { mutableStateOf(false) }
+    val adsAllowed = AdPrivacyManager.adsAllowed
     var busy by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
 
@@ -78,7 +79,15 @@ fun RewardCenterScreen() {
 
     LaunchedEffect(Unit) {
         runCatching { reload() }
-        adController.load { adReady = adController.ready }
+    }
+
+    LaunchedEffect(adsAllowed) {
+        if (adsAllowed) {
+            adController.load { adReady = adController.ready }
+        } else {
+            adController.clear()
+            adReady = false
+        }
     }
 
     fun showRewarded(rewardType: String) {

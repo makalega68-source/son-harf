@@ -87,6 +87,7 @@ class MainActivity : ComponentActivity() {
         SonHarfPreferences.syncUi(this)
         WordMeaningRuntime.init(this)
         RemoteExperience.loadCached(this)
+        AdPrivacyManager.requestConsent(this)
         if (!BuildConfig.DEBUG && SupabaseProvider.configured && !SonHarfPreferences.rememberLogin(this)) {
             runBlocking { runCatching { SupabaseProvider.client.auth.signOut() } }
         }
