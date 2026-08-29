@@ -251,11 +251,11 @@ private fun LightBottomBar(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 6.dp),
             horizontalArrangement = Arrangement.SpaceAround,
         ) {
-            LightBottomItem(Icons.Rounded.Home, "Ana Sayfa", screen == LightScreen.HOME, Modifier.weight(1f), onHome)
-            LightBottomItem(Icons.Rounded.EmojiEvents, "Lig", screen == LightScreen.LEAGUE, Modifier.weight(1f), onLeague)
-            LightBottomItem(Icons.Rounded.ShoppingCart, "Market", screen == LightScreen.MARKET, Modifier.weight(1f), onMarket)
-            LightBottomItem(Icons.Rounded.TaskAlt, "Görevler", screen == LightScreen.TASKS, Modifier.weight(1f), onTasks)
-            LightBottomItem(Icons.Rounded.Person, "Profil", screen == LightScreen.PROFILE, Modifier.weight(1f), onProfile)
+            LightBottomItem(Icons.Rounded.Home, sh("Ana Sayfa", "Home"), screen == LightScreen.HOME, Modifier.weight(1f), onHome)
+            LightBottomItem(Icons.Rounded.EmojiEvents, sh("Lig", "League"), screen == LightScreen.LEAGUE, Modifier.weight(1f), onLeague)
+            LightBottomItem(Icons.Rounded.ShoppingCart, sh("Market", "Shop"), screen == LightScreen.MARKET, Modifier.weight(1f), onMarket)
+            LightBottomItem(Icons.Rounded.TaskAlt, sh("Görevler", "Tasks"), screen == LightScreen.TASKS, Modifier.weight(1f), onTasks)
+            LightBottomItem(Icons.Rounded.Person, sh("Profil", "Profile"), screen == LightScreen.PROFILE, Modifier.weight(1f), onProfile)
         }
     }
 }
@@ -326,7 +326,7 @@ private fun LightHomeScreen(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("SON HARF", color = LightText, fontSize = 28.sp, fontWeight = FontWeight.Black)
-                    Text("Kelimeyi Sürdür, Rakibini Geç", color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text(sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the Word Going, Beat Your Rival"), color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 }
                 Surface(
                     onClick = onProfile,
@@ -337,7 +337,7 @@ private fun LightHomeScreen(
                     Box(Modifier.padding(2.dp), contentAlignment = Alignment.Center) {
                         ProfilePhotoAvatar(
                             avatarPath = profile?.avatarPath,
-                            name = profile?.displayName ?: "Oyuncu",
+                            name = profile?.displayName ?: sh("Oyuncu", "Player"),
                             size = 42.dp,
                             visible = true,
                             accent = LightBlue,
@@ -390,9 +390,9 @@ private fun LightHomeScreen(
                         }
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("EZELİ RAKİP", color = LightGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text(sh("EZELİ RAKİP", "ARCHRIVAL"), color = LightGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
                             Text(r.displayName, color = LightText, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                            Text("${r.matches} maç • Sen ${r.wins} - ${r.losses} Rakip", color = LightMuted, fontSize = 10.sp)
+                            Text(sh("${r.matches} maç • Sen ${r.wins} - ${r.losses} Rakip", "${r.matches} matches • You ${r.wins} - ${r.losses} Rival"), color = LightMuted, fontSize = 10.sp)
                         }
                         Text("${r.myPoints}:${r.theirPoints}", color = LightText, fontWeight = FontWeight.Black, fontSize = 17.sp)
                     }
@@ -413,7 +413,7 @@ private fun LightHomeScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     Text("Son Harf", color = LightText, fontWeight = FontWeight.Black, fontSize = 22.sp)
-                    Text("Son harften yeni kelime üret, rakibini geç.", color = LightMuted, fontSize = 11.sp, textAlign = TextAlign.Center)
+                    Text(sh("Son harften yeni kelime üret, rakibini geç.", "Build a new word from the last letter and beat your rival."), color = LightMuted, fontSize = 11.sp, textAlign = TextAlign.Center)
                     Button(
                         onClick = { SonHarfSoundFx.tap(); onSonHarf() },
                         modifier = Modifier.fillMaxWidth().height(64.dp),
@@ -423,7 +423,7 @@ private fun LightHomeScreen(
                     ) {
                         Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(28.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("OYNA", fontSize = 22.sp, fontWeight = FontWeight.Black)
+                        Text(sh("OYNA", "PLAY"), fontSize = 22.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -445,11 +445,11 @@ private fun LightHomeScreen(
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Kelime Arenası", color = LightText, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                        Text("Aynı harfler • 60 saniye • Benzersiz kelime 2×", color = LightMuted, fontSize = 10.sp)
+                        Text(sh("Kelime Arenası", "Word Arena"), color = LightText, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                        Text(sh("Aynı harfler • 60 saniye • Benzersiz kelime 2×", "Same letters • 60 seconds • Unique word 2×"), color = LightMuted, fontSize = 10.sp)
                     }
                     Surface(shape = RoundedCornerShape(12.dp), color = LightBlue) {
-                        Text("DÜELLO", Modifier.padding(horizontal = 12.dp, vertical = 9.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                        Text(sh("DÜELLO", "DUEL"), Modifier.padding(horizontal = 12.dp, vertical = 9.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -458,8 +458,8 @@ private fun LightHomeScreen(
         item {
             LightGameCard(
                 Icons.Rounded.Groups,
-                "Takım Arenası",
-                "2v2 • 4 arkadaş • ortak takım skoru • 60 saniye.",
+                sh("Takım Arenası", "Team Arena"),
+                sh("2v2 • 4 arkadaş • ortak takım skoru • 60 saniye.", "2v2 • 4 friends • shared team score • 60 seconds."),
                 "2v2",
                 LightBlue,
                 onTakimArenasi,
@@ -469,34 +469,34 @@ private fun LightHomeScreen(
         item {
             LightGameCard(
                 Icons.Rounded.EmojiEvents,
-                "Günlük Arena",
-                "Herkes aynı harflerle yarışır • tek resmî deneme • günlük seri.",
-                "BUGÜN",
+                sh("Günlük Arena", "Daily Arena"),
+                sh("Herkes aynı harflerle yarışır • tek resmî deneme • günlük seri.", "Everyone plays the same letters • one official run • daily streak."),
+                sh("BUGÜN", "TODAY"),
                 LightGold,
                 onGunlukArena,
             )
         }
 
-        item { Text("DİĞER OYUNLAR", color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Black) }
+        item { Text(sh("DİĞER OYUNLAR", "OTHER GAMES"), color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Black) }
 
         item {
-            LightGameCard(Icons.Rounded.Search, "Kelime Avı", "Günün kelimesini ipuçlarıyla bul.", "BAŞLA", LightGreen, onKelimeAvi)
+            LightGameCard(Icons.Rounded.Search, sh("Kelime Avı", "Word Hunt"), sh("Günün kelimesini ipuçlarıyla bul.", "Find today’s word using the clues."), sh("BAŞLA", "START"), LightGreen, onKelimeAvi)
         }
         item {
-            LightGameCard(Icons.Rounded.Bolt, "Bil Bakalım", "Bilgi yarışmasında tahmin et, puanı kap.", "OYNA", LightGold, onKelimeSavasi)
+            LightGameCard(Icons.Rounded.Bolt, sh("Bil Bakalım", "Trivia Duel"), sh("Bilgi yarışmasında tahmin et, puanı kap.", "Make your guess, win the question, take the points."), sh("OYNA", "PLAY"), LightGold, onKelimeSavasi)
         }
         item {
-            LightGameCard(Icons.Rounded.Groups, "Rekabet Merkezi", "Kulüpler, kulüp sohbeti ve ücretsiz Haftalık Kelime Kupası.", "GİR", LightBlue, onCompetition)
+            LightGameCard(Icons.Rounded.Groups, sh("Rekabet Merkezi", "Competition Hub"), sh("Kulüpler, kulüp sohbeti ve ücretsiz Haftalık Kelime Kupası.", "Clubs, club chat and the free Weekly Word Cup."), sh("GİR", "OPEN"), LightBlue, onCompetition)
         }
         item {
-            LightGameCard(Icons.Rounded.ShoppingCart, "Market", "VIP, Sezon Bileti, Son Coin ve Style ürünleri.", "AÇ", LightBlue, onMarket)
+            LightGameCard(Icons.Rounded.ShoppingCart, sh("Market", "Shop"), sh("VIP, Sezon Bileti, Son Coin ve Style ürünleri.", "VIP, Season Pass, Son Coin and Style items."), sh("AÇ", "OPEN"), LightBlue, onMarket)
         }
 
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                LightShortcut(Icons.Rounded.EmojiEvents, "Lig", Modifier.weight(1f), onLeague)
-                LightShortcut(Icons.Rounded.TaskAlt, "Görevler", Modifier.weight(1f), onTasks)
-                LightShortcut(Icons.Rounded.Person, "Profil", Modifier.weight(1f), onProfile)
+                LightShortcut(Icons.Rounded.EmojiEvents, sh("Lig", "League"), Modifier.weight(1f), onLeague)
+                LightShortcut(Icons.Rounded.TaskAlt, sh("Görevler", "Tasks"), Modifier.weight(1f), onTasks)
+                LightShortcut(Icons.Rounded.Person, sh("Profil", "Profile"), Modifier.weight(1f), onProfile)
             }
         }
         item { Spacer(Modifier.height(8.dp)) }
@@ -563,17 +563,17 @@ private fun LightTasksScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
-            Text("Görevler", color = LightText, fontSize = 25.sp, fontWeight = FontWeight.Black)
-            Text("Tüm oyunlar aynı rotaya hizmet eder. Rotayı tamamla, hesabını ilerlet.", color = LightMuted, fontSize = 10.sp)
+            Text(sh("Görevler", "Tasks"), color = LightText, fontSize = 25.sp, fontWeight = FontWeight.Black)
+            Text(sh("Tüm oyunlar aynı rotaya hizmet eder. Rotayı tamamla, hesabını ilerlet.", "Every mode advances the same route. Complete it and progress your account."), color = LightMuted, fontSize = 10.sp)
         }
 
         item {
-            Text("OYUN ROTASI", color = LightBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
+            Text(sh("OYUN ROTASI", "GAME ROUTE"), color = LightBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
         }
         if (unified.isEmpty()) {
             item {
                 Surface(shape = RoundedCornerShape(18.dp), color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
-                    Text("Oyun rotası hazırlanıyor.", Modifier.fillMaxWidth().padding(16.dp), color = LightMuted)
+                    Text(sh("Oyun rotası hazırlanıyor.", "Preparing your game route."), Modifier.fillMaxWidth().padding(16.dp), color = LightMuted)
                 }
             }
         } else {
@@ -589,11 +589,11 @@ private fun LightTasksScreen(
                             runCatching { b.claimUnifiedMission(mission.missionId) }
                                 .onSuccess {
                                     SonHarfSoundFx.missionComplete()
-                                    notice = "+${it.rewardCoins} Son Coin • Görev tamamlandı"
+                                    notice = sh("+${it.rewardCoins} Son Coin • Görev tamamlandı", "+${it.rewardCoins} Son Coin • Task completed")
                                     reload()
                                 }
                                 .onFailure {
-                                    notice = "Ödül şu anda alınamadı."
+                                    notice = sh("Ödül şu anda alınamadı.", "The reward cannot be claimed right now.")
                                     SonHarfSoundFx.warning()
                                 }
                             busy = false
@@ -610,12 +610,12 @@ private fun LightTasksScreen(
         }
 
         item {
-            Text("DİĞER GÖREVLER", color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Black)
+            Text(sh("DİĞER GÖREVLER", "OTHER TASKS"), color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Black)
         }
         if (goals.isEmpty()) {
             item {
                 Surface(shape = RoundedCornerShape(18.dp), color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
-                    Text("Yeni görevler hazırlanıyor.", Modifier.fillMaxWidth().padding(16.dp), color = LightMuted)
+                    Text(sh("Yeni görevler hazırlanıyor.", "New tasks are being prepared."), Modifier.fillMaxWidth().padding(16.dp), color = LightMuted)
                 }
             }
         } else {

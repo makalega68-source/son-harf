@@ -28,9 +28,9 @@ internal fun WeeklyClubPodiumCard(clubs: List<ClubDirectoryRowDto>) {
         shadowElevation = 2.dp,
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Text("HAFTANIN EN İYİ 3 KULÜBÜ", color = PortalText, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(sh("HAFTANIN EN İYİ 3 KULÜBÜ", "TOP 3 CLUBS THIS WEEK"), color = PortalText, fontSize = 13.sp, fontWeight = FontWeight.Black)
             if (clubs.isEmpty()) {
-                Text("Bu haftanın kulüp sıralaması oluşuyor.", color = PortalMuted, fontSize = 10.sp)
+                Text(sh("Bu haftanın kulüp sıralaması oluşuyor.", "This week’s club ranking is taking shape."), color = PortalMuted, fontSize = 10.sp)
             } else {
                 clubs.take(3).forEachIndexed { index, club ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -43,7 +43,7 @@ internal fun WeeklyClubPodiumCard(clubs: List<ClubDirectoryRowDto>) {
                         Spacer(Modifier.width(9.dp))
                         Column(Modifier.weight(1f)) {
                             Text(club.name, color = PortalText, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
-                            Text("[${club.tag}] • ${club.memberCount}/${club.maxMembers} oyuncu", color = PortalMuted, fontSize = 9.sp)
+                            Text(sh("[${club.tag}] • ${club.memberCount}/${club.maxMembers} oyuncu", "[${club.tag}] • ${club.memberCount}/${club.maxMembers} players"), color = PortalMuted, fontSize = 9.sp)
                         }
                         Text("${club.weeklyPoints}", color = PortalGold, fontWeight = FontWeight.Black, fontSize = 13.sp)
                     }
@@ -65,9 +65,9 @@ internal fun WeeklyPlayerPodiumCard(
         shadowElevation = 2.dp,
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Text("HAFTANIN EN İYİ 3 OYUNCUSU", color = PortalText, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(sh("HAFTANIN EN İYİ 3 OYUNCUSU", "TOP 3 PLAYERS THIS WEEK"), color = PortalText, fontSize = 13.sp, fontWeight = FontWeight.Black)
             if (players.isEmpty()) {
-                Text("Bu haftanın oyuncu sıralaması oluşuyor.", color = PortalMuted, fontSize = 10.sp)
+                Text(sh("Bu haftanın oyuncu sıralaması oluşuyor.", "This week’s player ranking is taking shape."), color = PortalMuted, fontSize = 10.sp)
             } else {
                 players.take(3).forEachIndexed { index, player ->
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -86,7 +86,7 @@ internal fun WeeklyPlayerPodiumCard(
                         Spacer(Modifier.width(9.dp))
                         Column(Modifier.weight(1f)) {
                             Text(player.displayName, color = PortalText, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
-                            Text("${player.leagueName} • ${player.rating} rating • ${player.wins} galibiyet", color = PortalMuted, fontSize = 9.sp)
+                            Text(sh("${player.leagueName} • ${player.rating} rating • ${player.wins} galibiyet", "${player.leagueName} • ${player.rating} rating • ${player.wins} wins"), color = PortalMuted, fontSize = 9.sp)
                         }
                         Text("${player.points}", color = PortalBlue, fontWeight = FontWeight.Black, fontSize = 13.sp)
                     }
@@ -115,7 +115,7 @@ internal fun UnifiedRouteCard(
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("BUGÜNÜN ROTASI", color = PortalBlue, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(sh("BUGÜNÜN ROTASI", "TODAY’S ROUTE"), color = PortalBlue, fontSize = 9.sp, fontWeight = FontWeight.Black)
                     Text(if (SonHarfUiState.isEnglish) mission.titleEn else mission.titleTr, color = PortalText, fontSize = 14.sp, fontWeight = FontWeight.Black)
                 }
                 Text("+${mission.rewardCoins} ◆", color = PortalGold, fontWeight = FontWeight.Black)
@@ -130,10 +130,10 @@ internal fun UnifiedRouteCard(
                 Text("${mission.progress.coerceAtMost(mission.target)}/${mission.target}", color = PortalMuted, fontSize = 9.sp)
                 Text(
                     when {
-                        mission.claimed -> "ÖDÜL ALINDI"
-                        mission.completed -> "ÖDÜL HAZIR"
-                        mission.modeKey == "route" -> "ROTAYI TAMAMLA"
-                        else -> "OYNA →"
+                        mission.claimed -> sh("ÖDÜL ALINDI", "REWARD CLAIMED")
+                        mission.completed -> sh("ÖDÜL HAZIR", "REWARD READY")
+                        mission.modeKey == "route" -> sh("ROTAYI TAMAMLA", "COMPLETE THE ROUTE")
+                        else -> sh("OYNA →", "PLAY →")
                     },
                     color = if (mission.completed) PortalGreen else PortalBlue,
                     fontSize = 9.sp,
@@ -160,7 +160,7 @@ internal fun UnifiedMissionCard(
         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (mission.scope == "daily") "GÜNLÜK" else "HAFTALIK",
+                    if (mission.scope == "daily") sh("GÜNLÜK", "DAILY") else sh("HAFTALIK", "WEEKLY"),
                     color = if (mission.scope == "daily") PortalBlue else PortalGold,
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Black,
@@ -184,18 +184,18 @@ internal fun UnifiedMissionCard(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Text("${mission.progress.coerceAtMost(mission.target)}/${mission.target}", color = PortalMuted, fontSize = 9.sp, modifier = Modifier.weight(1f))
                 when {
-                    mission.claimed -> Text("ALINDI ✓", color = PortalGreen, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    mission.claimed -> Text(sh("ALINDI ✓", "CLAIMED ✓"), color = PortalGreen, fontSize = 9.sp, fontWeight = FontWeight.Black)
                     mission.completed -> Button(
                         onClick = onClaim,
                         enabled = !busy,
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PortalGreen),
-                    ) { Text("ÖDÜLÜ AL", fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                    ) { Text(sh("ÖDÜLÜ AL", "CLAIM REWARD"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
                     mission.modeKey != "route" -> TextButton(
                         onClick = { onPlay(mission.modeKey) },
                         enabled = !busy,
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                    ) { Text("OYNA", fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                    ) { Text(sh("OYNA", "PLAY"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
                 }
             }
         }

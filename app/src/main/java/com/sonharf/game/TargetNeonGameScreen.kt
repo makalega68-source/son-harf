@@ -24,6 +24,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
@@ -59,11 +60,12 @@ fun TargetNeonGameScreen(
     autoStartMatchmaking: Boolean = false,
 ) {
     if (!SupabaseProvider.configured) {
-        Box(Modifier.fillMaxSize().background(TGbg), contentAlignment = Alignment.Center) { Text("Sunucu bağlantısı yok", color = TGtext) }
+        Box(Modifier.fillMaxSize().background(TGbg), contentAlignment = Alignment.Center) { Text(sh("Sunucu bağlantısı yok", "Server connection unavailable"), color = TGtext) }
         return
     }
 
     val backend = remember { OnlineGameBackend() }
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var opponentProfile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -72,7 +74,7 @@ fun TargetNeonGameScreen(
     var words by remember { mutableStateOf<List<GameWordDto>>(emptyList()) }
     var chatMessages by remember { mutableStateOf<List<ChatMessageDto>>(emptyList()) }
     var wordInput by remember { mutableStateOf("") }
-    var notice by remember { mutableStateOf("Düelloya hazır") }
+    var notice by remember { mutableStateOf(sh("Düelloya hazır", "Ready to duel")) }
     var busy by remember { mutableStateOf(false) }
     var matching by remember { mutableStateOf(false) }
     var privateCode by remember { mutableStateOf("") }
@@ -84,28 +86,28 @@ fun TargetNeonGameScreen(
     var autoStartConsumed by remember(autoStartMatchmaking) { mutableStateOf(false) }
 
     fun friendly(raw: String) = when {
-        "not_your_turn" in raw -> "Sıra rakibinde."
-        "word_already_used" in raw -> "Bu kelime daha önce kullanıldı."
-        "wrong_start_letter" in raw -> "Kelime son harfle başlamalı."
-        "not_in_dictionary" in raw -> "Bu kelime sözlükte bulunamadı."
-        "invalid_word" in raw -> "Bu kelime geçerli değil."
-        "turn_expired" in raw -> "Süren doldu."
-        "vip_required" in raw -> "Özel oda oluşturmak için aktif VIP üyeliği gerekli."
+        "not_your_turn" in raw -> sh("Sıra rakibinde.", "It is your rival's turn.")
+        "word_already_used" in raw -> sh("Bu kelime daha önce kullanıldı.", "This word has already been used.")
+        "wrong_start_letter" in raw -> sh("Kelime son harfle başlamalı.", "The word must start with the last letter.")
+        "not_in_dictionary" in raw -> sh("Bu kelime sözlükte bulunamadı.", "This word was not found in the dictionary.")
+        "invalid_word" in raw -> sh("Bu kelime geçerli değil.", "This word is not valid.")
+        "turn_expired" in raw -> sh("Süren doldu.", "Your time is up.")
+        "vip_required" in raw -> sh("Özel oda oluşturmak için aktif VIP üyeliği gerekli.", "An active VIP membership is required to create a private room.")
         "team_arena_active" in raw || "team_arena_already_active" in raw ->
-            "Takım Arenası maçın sürüyor. Önce 2v2 maçı bitir."
-        "word_arena_match_active" in raw -> "Aktif Kelime Arenası maçını bitir."
-        "daily_arena_active" in raw -> "Aktif Resmî Koşuyu bitir."
-        "player_already_in_game" in raw -> "Devam eden bir maçın varken yeni oda oluşturamazsın."
-        "room_not_available" in raw -> "Oda bulunamadı veya artık müsait değil."
+            sh("Takım Arenası maçın sürüyor. Önce 2v2 maçı bitir.", "Your Team Arena match is active. Finish the 2v2 match first.")
+        "word_arena_match_active" in raw -> sh("Aktif Kelime Arenası maçını bitir.", "Finish your active Word Arena match first.")
+        "daily_arena_active" in raw -> sh("Aktif Resmî Koşuyu bitir.", "Finish your active Official Run first.")
+        "player_already_in_game" in raw -> sh("Devam eden bir maçın varken yeni oda oluşturamazsın.", "You cannot create a new room while another match is active.")
+        "room_not_available" in raw -> sh("Oda bulunamadı veya artık müsait değil.", "The room was not found or is no longer available.")
         "timeout" in raw.lowercase() || "unreachable" in raw.lowercase() || "connect" in raw.lowercase() ->
-            "Sunucuya ulaşılamadı. Yeniden deneniyor."
-        else -> "Düello şu anda başlatılamadı. Tekrar dene."
+            sh("Sunucuya ulaşılamadı. Yeniden deneniyor.", "Could not reach the server. Retrying.")
+        else -> sh("Düello şu anda başlatılamadı. Tekrar dene.", "The duel could not be started right now. Try again.")
     }
 
     suspend fun ensureProfile(): ProfileDto {
-        if (backend.currentUserId() == null) backend.ensurePlayer("Oyuncu")
+        if (backend.currentUserId() == null) backend.ensurePlayer(sh("Oyuncu", "Player"))
         val id = requireNotNull(backend.currentUserId())
-        return runCatching { backend.getProfile(id) }.getOrElse { backend.ensurePlayer("Oyuncu") }.also { profile = it }
+        return runCatching { backend.getProfile(id) }.getOrElse { backend.ensurePlayer(sh("Oyuncu", "Player")) }.also { profile = it }
     }
 
     suspend fun activeRoom(): GameRoomDto? {
@@ -160,7 +162,7 @@ fun TargetNeonGameScreen(
                         if (found != null) {
                             room = found
                             language = found.language
-                            SonHarfUiState.language = found.language
+                            SonHarfPreferences.setLanguage(context, found.language)
                             observe(found)
                             SonHarfSoundFx.softNotify()
                             break
@@ -176,7 +178,7 @@ fun TargetNeonGameScreen(
         busy = true
         runCatching { ensureProfile() }.onSuccess {
             val old = runCatching { activeRoom() }.getOrNull()
-            if (old != null) { room = old; language = old.language; SonHarfUiState.language = old.language; observe(old) }
+            if (old != null) { room = old; language = old.language; SonHarfPreferences.setLanguage(context, old.language); observe(old) }
         }.onFailure {
             // Passive preload failures should not look like a connection outage before
             // the player has attempted an online action.
@@ -196,7 +198,7 @@ fun TargetNeonGameScreen(
         val active = room
         if (active == null) {
             TargetLobby(
-                playerName = profile?.displayName ?: "Oyuncu",
+                playerName = profile?.displayName ?: sh("Oyuncu", "Player"),
                 playerAvatarPath = profile?.avatarPath,
                 playerGender = profile?.gender,
                 language = language,
@@ -205,13 +207,13 @@ fun TargetNeonGameScreen(
                 notice = notice,
                 privateCode = privateCode,
                 showPrivate = showPrivate,
-                onLanguage = { next -> language = next; SonHarfUiState.language = next },
+                onLanguage = { next -> language = next; SonHarfPreferences.setLanguage(context, next) },
                 onPrivateCode = { privateCode = it.filter(Char::isLetterOrDigit).uppercase().take(6) },
                 onPrivateToggle = { showPrivate = !showPrivate },
                 onRandom = { startRandomSearch() },
-                onCancel = { scope.launch { matching = false; matchJob?.cancel(); runCatching { backend.cancelRandomMatchmaking() }; notice = "Eşleşme iptal edildi" } },
-                onCreate = { scope.launch { busy = true; runCatching { backend.createPrivateRoom(language) }.onSuccess { room = it; notice = "Özel oda oluşturuldu: ${it.code}"; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
-                onJoin = { scope.launch { busy = true; runCatching { backend.joinPrivateRoom(privateCode) }.onSuccess { room = it; language = it.language; SonHarfUiState.language = it.language; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
+                onCancel = { scope.launch { matching = false; matchJob?.cancel(); runCatching { backend.cancelRandomMatchmaking() }; notice = sh("Eşleşme iptal edildi", "Matchmaking cancelled") } },
+                onCreate = { scope.launch { busy = true; runCatching { backend.createPrivateRoom(language) }.onSuccess { room = it; notice = sh("Özel oda oluşturuldu: ${it.code}", "Private room created: ${it.code}"); observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
+                onJoin = { scope.launch { busy = true; runCatching { backend.joinPrivateRoom(privateCode) }.onSuccess { room = it; language = it.language; SonHarfPreferences.setLanguage(context, it.language); observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
             )
         } else {
             val me = backend.currentUserId()
@@ -337,22 +339,22 @@ private fun TargetLobby(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(if (privateCompact) 8.dp else 12.dp),
     ) {
-        Text(if (matching) "RAKİP BULUNUYOR" else "DÜELLO", color = TGtext, fontWeight = FontWeight.Black, fontSize = 18.sp)
+        Text(if (matching) sh("RAKİP BULUNUYOR", "FINDING A RIVAL") else sh("DÜELLO", "DUEL"), color = TGtext, fontWeight = FontWeight.Black, fontSize = 18.sp)
         if (matching) {
-            Text("RAKİP\nBULUNUYOR!", color = TGcyan, fontWeight = FontWeight.Black, fontSize = 36.sp, textAlign = TextAlign.Center, lineHeight = 38.sp)
-            TargetMatchCard(playerName, playerAvatarPath, playerGender, "Usta", "1250", TGcyan)
+            Text(sh("RAKİP\nBULUNUYOR!", "FINDING\nA RIVAL!"), color = TGcyan, fontWeight = FontWeight.Black, fontSize = 36.sp, textAlign = TextAlign.Center, lineHeight = 38.sp)
+            TargetMatchCard(playerName, playerAvatarPath, playerGender, sh("Usta", "Master"), "1250", TGcyan)
             Text("VS", color = TGpurple, fontWeight = FontWeight.Black, fontSize = 42.sp)
-            TargetMatchCard("RAKİP ARANIYOR", null, null, "…", "", TGpink)
+            TargetMatchCard(sh("RAKİP ARANIYOR", "SEARCHING FOR RIVAL"), null, null, "…", "", TGpink)
             Spacer(Modifier.weight(1f))
             CircularProgressIndicator(color = TGcyan, strokeWidth = 3.dp)
-            OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(50.dp), border = BorderStroke(1.dp, TGpink), shape = RoundedCornerShape(16.dp)) { Text("İPTAL", color = TGpink, fontWeight = FontWeight.Black) }
+            OutlinedButton(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(50.dp), border = BorderStroke(1.dp, TGpink), shape = RoundedCornerShape(16.dp)) { Text(sh("İPTAL", "CANCEL"), color = TGpink, fontWeight = FontWeight.Black) }
         } else {
             if (!imeVisible) {
                 Card(colors = CardDefaults.cardColors(containerColor = Color.Transparent), shape = RoundedCornerShape(26.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .55f))) {
                     Box(Modifier.fillMaxWidth().height(if (privateCompact) 138.dp else 205.dp).background(Brush.radialGradient(listOf(TGpurple.copy(alpha = .28f), TGpanel))), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("SON HARF", color = TGcyan, fontSize = if (privateCompact) 34.sp else 43.sp, fontWeight = FontWeight.Black)
-                            Text("CANLI KELİME DÜELLOSU", color = TGtext, fontSize = 9.sp, letterSpacing = 1.1.sp)
+                            Text(sh("CANLI KELİME DÜELLOSU", "LIVE WORD DUEL"), color = TGtext, fontSize = 9.sp, letterSpacing = 1.1.sp)
                         }
                     }
                 }
@@ -361,25 +363,25 @@ private fun TargetLobby(
                     FilterChip(selected = language == "en", onClick = { onLanguage("en") }, label = { Text("🇬🇧 ENGLISH", maxLines = 1) }, modifier = Modifier.weight(1f))
                 }
                 if (!showPrivate) {
-                    Button(onClick = onRandom, enabled = !busy, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(17.dp)) { Text(if (busy) "…" else "HEMEN OYNA", fontSize = 17.sp, fontWeight = FontWeight.Black) }
+                    Button(onClick = onRandom, enabled = !busy, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(17.dp)) { Text(if (busy) "…" else sh("HEMEN OYNA", "PLAY NOW"), fontSize = 17.sp, fontWeight = FontWeight.Black) }
                 }
-                Button(onClick = onPrivateToggle, enabled = !busy, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = TGblue), shape = RoundedCornerShape(17.dp)) { Text(if (showPrivate) "ÖZEL ODAYI KAPAT" else "ODA KUR / ODAYA KATIL", fontWeight = FontWeight.Black, maxLines = 1) }
+                Button(onClick = onPrivateToggle, enabled = !busy, modifier = Modifier.fillMaxWidth().height(50.dp), colors = ButtonDefaults.buttonColors(containerColor = TGblue), shape = RoundedCornerShape(17.dp)) { Text(if (showPrivate) sh("ÖZEL ODAYI KAPAT", "CLOSE PRIVATE ROOM") else sh("ODA KUR / ODAYA KATIL", "CREATE / JOIN ROOM"), fontWeight = FontWeight.Black, maxLines = 1) }
             }
             if (showPrivate) {
                 Card(modifier = Modifier.fillMaxWidth().weight(1f, fill = false), colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .45f))) {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("ÖZEL ODA", color = TGtext, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
-                        Button(onClick = onCreate, enabled = !busy, modifier = Modifier.fillMaxWidth().height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = TGpurple)) { Text(if (busy) "…" else "VIP ODA OLUŞTUR", fontWeight = FontWeight.Black, maxLines = 1) }
+                        Text(sh("ÖZEL ODA", "PRIVATE ROOM"), color = TGtext, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.align(Alignment.CenterHorizontally))
+                        Button(onClick = onCreate, enabled = !busy, modifier = Modifier.fillMaxWidth().height(46.dp), colors = ButtonDefaults.buttonColors(containerColor = TGpurple)) { Text(if (busy) "…" else sh("VIP ODA OLUŞTUR", "CREATE VIP ROOM"), fontWeight = FontWeight.Black, maxLines = 1) }
                         OutlinedTextField(
                             privateCode,
                             onPrivateCode,
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            label = { Text("Oda kodu") },
-                            placeholder = { Text("6 haneli kod") },
+                            label = { Text(sh("Oda kodu", "Room code")) },
+                            placeholder = { Text(sh("6 haneli kod", "6-character code")) },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text, imeAction = ImeAction.Done),
                         )
-                        OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6 && !busy, modifier = Modifier.fillMaxWidth().height(46.dp)) { Text(if (busy) "…" else "KATIL / ONAYLA", fontWeight = FontWeight.Black) }
+                        OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6 && !busy, modifier = Modifier.fillMaxWidth().height(46.dp)) { Text(if (busy) "…" else sh("KATIL / ONAYLA", "JOIN / CONFIRM"), fontWeight = FontWeight.Black) }
                     }
                 }
             }
@@ -656,7 +658,7 @@ private fun TargetArena(
         )
         Spacer(Modifier.height(7.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("TUR ${room.roundNo}/3", color = TGmuted, fontWeight = FontWeight.Black, fontSize = 10.sp)
+            Text(sh("TUR ${room.roundNo}/3", "ROUND ${room.roundNo}/3"), color = TGmuted, fontWeight = FontWeight.Black, fontSize = 10.sp)
             Surface(shape = RoundedCornerShape(99.dp), color = (if (myTurn) TGblue else TGpink).copy(alpha = .08f)) {
                 Text(
                     if (myTurn) sh("SIRA SENDE", "YOUR TURN") else sh("SIRA RAKİPTE", "RIVAL'S TURN"),
@@ -798,7 +800,7 @@ private fun TargetArena(
                     modifier = Modifier.weight(1f).height(46.dp),
                     border = BorderStroke(1.dp, TGpink),
                     shape = RoundedCornerShape(14.dp),
-                ) { Text("⚑ PES ET", color = TGpink, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
+                ) { Text(sh("⚑ PES ET", "⚑ FORFEIT"), color = TGpink, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
                 Surface(
                     modifier = Modifier.weight(1f).heightIn(min = 46.dp),
                     color = TGpanel2,
@@ -843,8 +845,8 @@ private fun TargetArena(
         if (showChain) {
             AlertDialog(
                 onDismissRequest = { showChain = false },
-                confirmButton = { TextButton(onClick = { showChain = false }) { Text("KAPAT") } },
-                title = { Text("KELİME ZİNCİRİ") },
+                confirmButton = { TextButton(onClick = { showChain = false }) { Text(sh("KAPAT", "CLOSE")) } },
+                title = { Text(sh("KELİME ZİNCİRİ", "WORD CHAIN")) },
                 text = {
                     LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp)) {
                         items(words.takeLast(30)) { w ->
@@ -858,15 +860,15 @@ private fun TargetArena(
         if (showChat) {
             AlertDialog(
                 onDismissRequest = { showChat = false },
-                confirmButton = { TextButton(onClick = { showChat = false }) { Text("KAPAT") } },
-                title = { Text("OYUN SOHBETİ") },
+                confirmButton = { TextButton(onClick = { showChat = false }) { Text(sh("KAPAT", "CLOSE")) } },
+                title = { Text(sh("OYUN SOHBETİ", "GAME CHAT")) },
                 text = {
                     Column(Modifier.fillMaxWidth().heightIn(max = 440.dp)) {
                         LazyColumn(Modifier.weight(1f, fill = false).fillMaxWidth().heightIn(min = 120.dp, max = 300.dp)) {
                             items(chatMessages.takeLast(40)) { message ->
                                 val mine = message.senderId == me
                                 Column(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
-                                    Text(if (mine) "Sen" else opponentName, color = if (mine) TGcyan else TGpink, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    Text(if (mine) sh("Sen", "You") else opponentName, color = if (mine) TGcyan else TGpink, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                     Surface(color = if (mine) TGcyan.copy(alpha = .12f) else TGpink.copy(alpha = .12f), shape = RoundedCornerShape(10.dp)) {
                                         Text(message.body, Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = TGtext, fontSize = 13.sp)
                                     }
@@ -879,7 +881,7 @@ private fun TargetArena(
                             onValueChange = { chatInput = it.take(300) },
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            placeholder = { Text("Mesaj yaz…") },
+                            placeholder = { Text(sh("Mesaj yaz…", "Write a message…")) },
                             keyboardOptions = KeyboardOptions(
                                 keyboardType = KeyboardType.Text,
                                 imeAction = ImeAction.Send,
@@ -896,7 +898,7 @@ private fun TargetArena(
                             onClick = { val text = chatInput.trim(); if (text.isNotEmpty()) { onSendChat(text); chatInput = "" } },
                             enabled = chatInput.isNotBlank(),
                             modifier = Modifier.fillMaxWidth(),
-                        ) { Text("GÖNDER") }
+                        ) { Text(sh("GÖNDER", "SEND")) }
                     }
                 },
             )
@@ -923,7 +925,7 @@ private fun TargetArena(
         Spacer(Modifier.height(5.dp))
         Text(name, color = TGtext, fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
         Text("🏆 $score", color = TGgold, fontSize = 8.sp)
-        Text("$rounds round", color = if (active) accent else TGmuted, fontSize = 8.sp)
+        Text(sh("$rounds tur", "$rounds rounds"), color = if (active) accent else TGmuted, fontSize = 8.sp)
     }
 }
 
@@ -939,22 +941,22 @@ private fun TargetArena(
     Box(Modifier.fillMaxSize().padding(20.dp), contentAlignment = Alignment.Center) {
         Card(colors = CardDefaults.cardColors(containerColor = TGpanel), shape = RoundedCornerShape(30.dp), border = BorderStroke(1.dp, TGpurple.copy(alpha = .55f))) {
             Column(Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(if (won) "KAZANDIN!" else "MAÇ BİTTİ", color = if (won) TGgold else TGpink, fontWeight = FontWeight.Black, fontSize = 42.sp)
+                Text(if (won) sh("KAZANDIN!", "YOU WON!") else sh("MAÇ BİTTİ", "MATCH OVER"), color = if (won) TGgold else TGpink, fontWeight = FontWeight.Black, fontSize = 42.sp)
                 Spacer(Modifier.height(20.dp)); Text("🏆", fontSize = 94.sp)
                 Spacer(Modifier.height(12.dp)); Text(if (won) playerName else opponentName, color = TGtext, fontWeight = FontWeight.Black, fontSize = 22.sp)
                 Spacer(Modifier.height(16.dp))
                 Surface(color = TGbg, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, Color.White.copy(alpha = .10f))) {
                     Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Sen", color = TGmuted); Text("+$myScore", color = TGtext, fontWeight = FontWeight.Black) }
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("Rakip", color = TGmuted); Text("+$oppScore", color = TGtext, fontWeight = FontWeight.Black) }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(sh("Sen", "You"), color = TGmuted); Text("+$myScore", color = TGtext, fontWeight = FontWeight.Black) }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(sh("Rakip", "Rival"), color = TGmuted); Text("+$oppScore", color = TGtext, fontWeight = FontWeight.Black) }
                         HorizontalDivider(color = Color.White.copy(alpha = .10f))
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text("TOPLAM", color = TGcyan, fontWeight = FontWeight.Black); Text(if (won) "+25 🏆  +10 ◆" else "+5 ◆", color = TGgold, fontWeight = FontWeight.Black) }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Text(sh("TOPLAM", "TOTAL"), color = TGcyan, fontWeight = FontWeight.Black); Text(if (won) "+25 🏆  +10 ◆" else "+5 ◆", color = TGgold, fontWeight = FontWeight.Black) }
                     }
                 }
                 Spacer(Modifier.height(18.dp))
-                Button(onClick = onRematch, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(14.dp)) { Text("TEKRAR OYNA", fontWeight = FontWeight.Black) }
+                Button(onClick = onRematch, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = TGgold, contentColor = Color(0xFF211500)), shape = RoundedCornerShape(14.dp)) { Text(sh("TEKRAR OYNA", "PLAY AGAIN"), fontWeight = FontWeight.Black) }
                 Spacer(Modifier.height(10.dp))
-                Button(onClick = onExit, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = TGpurple), shape = RoundedCornerShape(14.dp)) { Text("ANA MENÜ", fontWeight = FontWeight.Black) }
+                Button(onClick = onExit, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = TGpurple), shape = RoundedCornerShape(14.dp)) { Text(sh("ANA MENÜ", "MAIN MENU"), fontWeight = FontWeight.Black) }
             }
         }
     }

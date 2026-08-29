@@ -171,7 +171,7 @@ private fun ClubCompetitionTab() {
                     icon = "👥",
                     title = sh("BİR KULÜBE KATIL", "JOIN A CLUB"),
                     subtitle = sh(
-                        "En fazla 30 oyuncu. Her PvP galibiyeti kulübüne +10, mağlubiyet +3 haftalık puan kazandırır.",
+                        sh("En fazla 30 oyuncu. Her PvP galibiyeti kulübüne +10, mağlubiyet +3 haftalık puan kazandırır.", "Up to 30 players. Each PvP win earns your club +10 weekly points; each loss earns +3."),
                         "Up to 30 players. Every PvP win adds +10 and a loss +3 weekly club points.",
                     ),
                 )
@@ -253,7 +253,7 @@ private fun ClubCompetitionTab() {
                 Text(sh("TAKIM SANDIĞI", "TEAM CHEST"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
                 Text(
                     sh(
-                        "Kulüpçe hedefe ulaş; ödülü almak için kendi katkı barajını da tamamla.",
+                        sh("Kulüpçe hedefe ulaş; ödülü almak için kendi katkı barajını da tamamla.", "Reach the club target and meet your own contribution threshold to claim the reward."),
                         "Reach the club goal together; complete your personal contribution requirement to claim.",
                     ),
                     color = SonHarfMuted,
@@ -273,7 +273,7 @@ private fun ClubCompetitionTab() {
                                     if (result?.success == true) {
                                         SonHarfSoundFx.bonus()
                                         notice = sh(
-                                            "Takım Sandığı ${mission.tier}: +${result.rewardCoin} Son Coin",
+                                            sh("Takım Sandığı ${mission.tier}: +${result.rewardCoin} Son Coin", "Team Chest ${mission.tier}: +${result.rewardCoin} Son Coin"),
                                             "Team Chest ${mission.tier}: +${result.rewardCoin} Son Coin",
                                         )
                                     } else {
@@ -562,7 +562,7 @@ private fun WeeklyTournamentTab() {
                                         runCatching { backend?.joinWeeklyTournament() }
                                             .onSuccess {
                                                 notice = sh(
-                                                    "Haftalık Kupaya katıldın. Bundan sonraki PvP maçların puan kazandırır.",
+                                                    sh("Haftalık Kupaya katıldın. Bundan sonraki PvP maçların puan kazandırır.", "You joined the Weekly Cup. Your next PvP matches will earn points."),
                                                     "You joined the Weekly Cup. Your next PvP matches earn points.",
                                                 )
                                                 reload()
@@ -593,7 +593,7 @@ private fun WeeklyTournamentTab() {
                         Text("🥇 1.000 SC   •   🥈 600 SC   •   🥉 400 SC", color = SonHarfText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         Text(
                             sh(
-                                "4–10: 150 SC • En az 1 maç oynayan diğer oyuncular: 50 SC",
+                                sh("4–10: 150 SC • En az 1 maç oynayan diğer oyuncular: 50 SC", "4–10: 150 SC • Other players with at least 1 match: 50 SC"),
                                 "4–10: 150 SC • Other players with at least 1 match: 50 SC",
                             ),
                             color = SonHarfMuted,
@@ -601,7 +601,7 @@ private fun WeeklyTournamentTab() {
                         )
                         Text(
                             sh(
-                                "Maç oynamadan sıralama ve ödül kazanılmaz.",
+                                sh("Maç oynamadan sıralama ve ödül kazanılmaz.", "You cannot earn a rank or reward without playing a match."),
                                 "No ranking or reward is earned without playing a match.",
                             ),
                             color = SonHarfMuted,
@@ -620,7 +620,7 @@ private fun WeeklyTournamentTab() {
                                 .onSuccess { reward ->
                                     if (reward != null) {
                                         notice = sh(
-                                            "Ödül: #${reward.rank} • +${reward.rewardCoins} Son Coin",
+                                            sh("Ödül: #${reward.rank} • +${reward.rewardCoins} Son Coin", "Reward: #${reward.rank} • +${reward.rewardCoins} Son Coin"),
                                             "Reward: #${reward.rank} • +${reward.rewardCoins} Son Coin",
                                         )
                                         reload()
@@ -749,15 +749,15 @@ private fun WeeklyTournamentTab() {
                         Text(
                             when {
                                 !played -> sh(
-                                    "Maç oynamadığın için sıralama ve ödül oluşmadı.",
+                                    sh("Maç oynamadığın için sıralama ve ödül oluşmadı.", "No rank or reward was created because you did not play a match."),
                                     "No ranking or reward because no match was played.",
                                 )
                                 h.rewardClaimed -> sh(
-                                    "✓ +${h.rewardCoins} Son Coin alındı",
+                                    sh("✓ +${h.rewardCoins} Son Coin alındı", "✓ +${h.rewardCoins} Son Coin claimed"),
                                     "✓ +${h.rewardCoins} Son Coin claimed",
                                 )
                                 h.rewardEligible -> sh(
-                                    "+${h.rewardCoins} Son Coin alınabilir",
+                                    sh("+${h.rewardCoins} Son Coin alınabilir", "+${h.rewardCoins} Son Coin available"),
                                     "+${h.rewardCoins} Son Coin available",
                                 )
                                 else -> sh("Ödül durumu kapalı.", "Reward unavailable.")
@@ -832,7 +832,7 @@ private fun RivalHistoryTab() {
                 icon = "⚔",
                 title = sh("RÖVANŞ HATTI", "REMATCH LINE"),
                 subtitle = sh(
-                    "Son Harf ve Kelime Arenası rakiplerin tek geçmişte. Arkadaşın çevrimiçiyse doğrudan yeniden meydan oku.",
+                    sh("Son Harf ve Kelime Arenası rakiplerin tek geçmişte. Arkadaşın çevrimiçiyse doğrudan yeniden meydan oku.", "Your Son Harf and Word Arena rivals share one history. Challenge a friend again when they are online."),
                     "Classic Son Harf and Word Arena rivals in one history. Challenge online friends again instantly.",
                 ),
             )
@@ -860,7 +860,7 @@ private fun RivalHistoryTab() {
             item {
                 Text(
                     sh(
-                        "Henüz gerçek PvP rakip geçmişin yok.",
+                        sh("Henüz gerçek PvP rakip geçmişin yok.", "You do not have any real PvP rival history yet."),
                         "You do not have real PvP rival history yet.",
                     ),
                     modifier = Modifier.fillMaxWidth().padding(vertical = 28.dp),
@@ -901,7 +901,7 @@ private fun RivalHistoryTab() {
                             )
                             Text(
                                 sh(
-                                    "Son mod: ${if (rival.lastMode == "arena") "Kelime Arenası" else "Son Harf"}",
+                                    sh("Son mod: ${if (rival.lastMode == "arena") "Kelime Arenası" else "Son Harf"}", "Last mode: ${if (rival.lastMode == "arena") "Word Arena" else "Son Harf"}"),
                                     "Last mode: ${if (rival.lastMode == "arena") "Word Arena" else "Son Harf"}",
                                 ),
                                 color = SonHarfMuted,
@@ -969,7 +969,7 @@ private fun RivalHistoryTab() {
                                         runCatching { backend?.inviteFriend(rival.opponentId, SonHarfUiState.language) }
                                             .onSuccess {
                                                 notice = sh(
-                                                    "${rival.displayName}: Son Harf daveti gönderildi.",
+                                                    sh("${rival.displayName}: Son Harf daveti gönderildi.", "${rival.displayName}: Son Harf invite sent."),
                                                     "${rival.displayName}: Son Harf invite sent.",
                                                 )
                                                 SonHarfSoundFx.softNotify()
@@ -993,7 +993,7 @@ private fun RivalHistoryTab() {
                                         runCatching { backend?.inviteFriendToWordArena(rival.opponentId, SonHarfUiState.language) }
                                             .onSuccess {
                                                 notice = sh(
-                                                    "${rival.displayName}: Arena daveti gönderildi.",
+                                                    sh("${rival.displayName}: Arena daveti gönderildi.", "${rival.displayName}: Arena invite sent."),
                                                     "${rival.displayName}: Arena invite sent.",
                                                 )
                                                 SonHarfSoundFx.softNotify()
@@ -1014,15 +1014,15 @@ private fun RivalHistoryTab() {
                         Text(
                             when {
                                 !rival.isFriend -> sh(
-                                    "Canlı meydan okuma için önce arkadaş olmalısınız.",
+                                    sh("Canlı meydan okuma için önce arkadaş olmalısınız.", "You must be friends before sending a live challenge."),
                                     "Become friends first to send a live challenge.",
                                 )
                                 rival.presenceStatus != "online" -> sh(
-                                    "Arkadaşın çevrimiçi olduğunda meydan okuyabilirsin.",
+                                    sh("Arkadaşın çevrimiçi olduğunda meydan okuyabilirsin.", "You can challenge your friend when they are online."),
                                     "You can challenge this friend when they are online.",
                                 )
                                 else -> sh(
-                                    "Bu rakibe şu anda meydan okunamıyor.",
+                                    sh("Bu rakibe şu anda meydan okunamıyor.", "This rival cannot be challenged right now."),
                                     "This rival cannot be challenged right now.",
                                 )
                             },
@@ -1188,7 +1188,7 @@ private fun ClubMissionCard(
                     )
                     Text(
                         sh(
-                            "Takım ${mission.targetPoints} • Sen ${mission.minContribution} katkı",
+                            sh("Takım ${mission.targetPoints} • Sen ${mission.minContribution} katkı", "Team ${mission.targetPoints} • Your contribution ${mission.minContribution}"),
                             "Club ${mission.targetPoints} • You ${mission.minContribution} contribution",
                         ),
                         color = SonHarfMuted,
@@ -1200,7 +1200,7 @@ private fun ClubMissionCard(
 
             Text(
                 sh(
-                    "Kulüp: ${mission.clubPoints.coerceAtMost(mission.targetPoints.toLong())}/${mission.targetPoints}",
+                    sh("Kulüp: ${mission.clubPoints.coerceAtMost(mission.targetPoints.toLong())}/${mission.targetPoints}", "Club: ${mission.clubPoints.coerceAtMost(mission.targetPoints.toLong())}/${mission.targetPoints}"),
                     "Club: ${mission.clubPoints.coerceAtMost(mission.targetPoints.toLong())}/${mission.targetPoints}",
                 ),
                 color = if (teamReady) SonHarfGreen else SonHarfMuted,
@@ -1216,7 +1216,7 @@ private fun ClubMissionCard(
 
             Text(
                 sh(
-                    "Katkın: ${mission.myPoints.coerceAtMost(mission.minContribution.toLong())}/${mission.minContribution}",
+                    sh("Katkın: ${mission.myPoints.coerceAtMost(mission.minContribution.toLong())}/${mission.minContribution}", "Your contribution: ${mission.myPoints.coerceAtMost(mission.minContribution.toLong())}/${mission.minContribution}"),
                     "Your contribution: ${mission.myPoints.coerceAtMost(mission.minContribution.toLong())}/${mission.minContribution}",
                 ),
                 color = if (meReady) SonHarfGreen else SonHarfMuted,

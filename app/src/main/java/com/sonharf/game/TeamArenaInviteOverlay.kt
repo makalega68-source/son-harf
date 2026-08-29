@@ -109,7 +109,7 @@ fun TeamArenaInviteOverlay() {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     sh(
-                        "Seni 2v2 Kelime Arenası takım lobisine davet ediyor.",
+                        sh("Seni 2v2 Kelime Arenası takım lobisine davet ediyor.", "Invites you to a 2v2 Word Arena team lobby."),
                         "invited you to a 2v2 Word Arena team lobby.",
                     ),
                     color = SonHarfText,
@@ -122,7 +122,7 @@ fun TeamArenaInviteOverlay() {
                 )
                 Text(
                     sh(
-                        "Takım arkadaşınla aynı kelimeyi iki kez yazamazsınız. Rakip takımın kelimeleri maç bitene kadar gizli.",
+                        sh("Takım arkadaşınla aynı kelimeyi iki kez yazamazsınız. Rakip takımın kelimeleri maç bitene kadar gizli.", "You and your teammate cannot score the same word twice. The rival team’s words stay hidden until the match ends."),
                         "Your team cannot score the same word twice. Opponent words stay hidden until the match ends.",
                     ),
                     color = SonHarfMuted,

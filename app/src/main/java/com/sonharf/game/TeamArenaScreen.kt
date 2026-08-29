@@ -231,7 +231,7 @@ fun TeamArenaScreen(
                             SonHarfSoundFx.bonus()
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                             notice = sh(
-                                "🔥 ${result.combo}× combo • takım +${result.basePoints}",
+                                sh("🔥 ${result.combo}× combo • takım +${result.basePoints}", "🔥 ${result.combo}× combo • team +${result.basePoints}"),
                                 "🔥 ${result.combo}× combo • team +${result.basePoints}",
                             )
                         }
@@ -382,7 +382,7 @@ fun TeamArenaScreen(
                                     members = emptyList()
                                     words = emptyList()
                                     notice = sh(
-                                        "Rövanş lobisi hazır • ${result.invitedCount}/3 davet gönderildi.",
+                                        sh("Rövanş lobisi hazır • ${result.invitedCount}/3 davet gönderildi.", "Rematch lobby ready • ${result.invitedCount}/3 invites sent."),
                                         "Rematch lobby ready • ${result.invitedCount}/3 invites sent.",
                                     )
                                     SonHarfSoundFx.softNotify()
@@ -432,7 +432,7 @@ fun TeamArenaScreen(
                         runCatching { b.inviteFriendToTeamArena(id, friend.id, selectedTeam) }
                             .onSuccess {
                                 notice = sh(
-                                    "${friend.displayName} • Takım ${if (selectedTeam == 1) "A" else "B"} daveti gönderildi.",
+                                    sh("${friend.displayName} • Takım ${if (selectedTeam == 1) "A" else "B"} daveti gönderildi.", "${friend.displayName} • Team ${if (selectedTeam == 1) "A" else "B"} invite sent."),
                                     "${friend.displayName} • Team ${if (selectedTeam == 1) "A" else "B"} invite sent.",
                                 )
                                 SonHarfSoundFx.softNotify()
@@ -473,7 +473,7 @@ private fun TeamArenaIntro(
                     Text(sh("2v2 TAKIM DÜELLOSU", "2v2 TEAM DUEL"), fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh(
-                            "Bir lobi kur, üç çevrimiçi arkadaşını iki takıma dağıt. Herkes aynı harflerle 60 saniye yarışır.",
+                            sh("Bir lobi kur, üç çevrimiçi arkadaşını iki takıma dağıt. Herkes aynı harflerle 60 saniye yarışır.", "Create a lobby, split three online friends into two teams, and race for 60 seconds with the same letters."),
                             "Create a lobby and place three online friends into two teams. Everyone plays the same letters for 60 seconds.",
                         ),
                         color = SonHarfMuted,
@@ -529,7 +529,7 @@ private fun TeamArenaLobby(
         item {
             TeamArenaNotice(
                 sh(
-                    "${room.memberCount}/4 oyuncu • ${room.readyCount}/4 hazır • Başka moda geçersen bekleyen lobi otomatik bırakılır.",
+                    sh("${room.memberCount}/4 oyuncu • ${room.readyCount}/4 hazır • Başka moda geçersen bekleyen lobi otomatik bırakılır.", "${room.memberCount}/4 players • ${room.readyCount}/4 ready • A waiting lobby is left automatically when you switch modes."),
                     "${room.memberCount}/4 players • ${room.readyCount}/4 ready • Switching modes automatically leaves a waiting lobby.",
                 )
             )
@@ -841,7 +841,7 @@ private fun TeamArenaPlaying(
             Text(sh("TAKIM KELİMELERİ", "TEAM WORDS"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 11.sp)
             Text(
                 sh(
-                    "Takım arkadaşınla aynı kelime ikinci kez puan yazmaz. Rakip kelimeleri finalde açılır.",
+                    sh("Takım arkadaşınla aynı kelime ikinci kez puan yazmaz. Rakip kelimeleri finalde açılır.", "A word already used by your teammate cannot score again. Rival words are revealed at the end."),
                     "A teammate cannot score a team word twice. Rival words reveal at the finish.",
                 ),
                 color = SonHarfMuted,
@@ -915,7 +915,7 @@ private fun TeamArenaFinished(
                     Text("$myScore : $rivalScore", fontSize = 27.sp, fontWeight = FontWeight.Black, color = SonHarfBlue)
                     Text(
                         sh(
-                            "Sosyal 2v2 modu rating, lig veya Son Coin değiştirmez.",
+                            sh("Sosyal 2v2 modu rating, lig veya Son Coin değiştirmez.", "Social 2v2 does not change rating, league, or Son Coin."),
                             "Social 2v2 does not change rating, league, or Son Coin.",
                         ),
                         color = SonHarfMuted,
@@ -945,7 +945,7 @@ private fun TeamArenaFinished(
                         Column(Modifier.weight(1f)) {
                             Text(sh("MAÇIN MVP'Sİ", "MATCH MVP"), color = SonHarfGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
                             Text(mvp.second, color = SonHarfText, fontWeight = FontWeight.Black)
-                            Text("+${mvp.third} takım puanı", color = SonHarfMuted, fontSize = 9.sp)
+                            Text(sh("+${mvp.third} takım puanı", "+${mvp.third} team points"), color = SonHarfMuted, fontSize = 9.sp)
                         }
                         Text("🏅", fontSize = 25.sp)
                     }
@@ -1006,7 +1006,7 @@ private fun TeamArenaFinished(
             item {
                 Text(
                     sh(
-                        "Rövanşı önceki lobi sahibi başlatabilir; davet gelirse doğrudan kabul edebilirsin.",
+                        sh("Rövanşı önceki lobi sahibi başlatabilir; davet gelirse doğrudan kabul edebilirsin.", "The previous lobby host can start the rematch; if you receive an invite, you can accept it directly."),
                         "The previous lobby host can start the rematch; accept the invite when it arrives.",
                     ),
                     modifier = Modifier.fillMaxWidth(),
