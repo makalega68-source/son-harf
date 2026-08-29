@@ -728,6 +728,7 @@ private fun RivalHistoryTab() {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var rivals by remember { mutableStateOf<List<RivalHistoryDto>>(emptyList()) }
+    var matchHistory by remember { mutableStateOf<List<MatchHistoryDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var busyOpponent by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("") }
@@ -735,9 +736,10 @@ private fun RivalHistoryTab() {
     suspend fun reload(showLoading: Boolean = true) {
         val b = backend ?: return
         if (showLoading) loading = true
-        runCatching { b.getRivalHistory(30) }
-            .onSuccess { rivals = it }
-            .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+        runCatching {
+            rivals = b.getRivalHistory(30)
+            matchHistory = b.getMatchHistory(30)
+        }.onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
         if (showLoading) loading = false
     }
 
@@ -965,6 +967,85 @@ private fun RivalHistoryTab() {
                             fontSize = 8.sp,
                             textAlign = TextAlign.Center,
                         )
+                    }
+                }
+            }
+        }
+
+        item {
+            Spacer(Modifier.height(4.dp))
+            Text(sh("SON MAÇLAR", "RECENT MATCHES"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+        }
+
+        if (matchHistory.isEmpty()) {
+            item {
+                Text(
+                    sh("Henüz tamamlanmış gerçek PvP maçın yok.", "You do not have completed real PvP matches yet."),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
+                    color = SonHarfMuted,
+                    fontSize = 10.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        } else {
+            items(matchHistory, key = { "${it.mode}-${it.matchId}" }) { match ->
+                val resultColor = when (match.result) {
+                    "win" -> SonHarfGreen
+                    "loss" -> SonHarfPink
+                    else -> SonHarfGold
+                }
+                Surface(
+                    shape = RoundedCornerShape(15.dp),
+                    color = SonHarfSurface,
+                    border = BorderStroke(1.dp, resultColor.copy(alpha = .22f)),
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            Modifier.size(40.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            color = resultColor.copy(alpha = .09f),
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(if (match.mode == "arena") "⚡" else "⚔", fontSize = 19.sp)
+                            }
+                        }
+                        Spacer(Modifier.width(9.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(match.displayName, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            Text(
+                                "${match.playedAt.take(10)} • ${match.language.uppercase()} • " +
+                                    if (match.mode == "arena") sh("Arena", "Arena") else "Son Harf",
+                                color = SonHarfMuted,
+                                fontSize = 8.sp,
+                            )
+                            Text(
+                                when (match.result) {
+                                    "win" -> sh("GALİBİYET", "WIN")
+                                    "loss" -> sh("MAĞLUBİYET", "LOSS")
+                                    else -> sh("BERABERE", "DRAW")
+                                },
+                                color = resultColor,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                "${match.myScore}:${match.theirScore}",
+                                color = SonHarfText,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                            Text(
+                                (if (match.ratingDelta > 0) "+" else "") + match.ratingDelta + " rating",
+                                color = if (match.ratingDelta >= 0) SonHarfGreen else SonHarfPink,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 }
             }

@@ -29,9 +29,11 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.AchievementProgressDto
 import com.sonharf.game.data.CompetitiveSeasonDto
 import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.PersonalRecordsDto
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.getAchievements
 import com.sonharf.game.data.getCompetitiveSeason
+import com.sonharf.game.data.getPersonalRecords
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
@@ -134,6 +136,7 @@ fun ProfileExperienceV2Screen() {
     var profile by remember { mutableStateOf<ProfileV2Dto?>(null) }
     var season by remember { mutableStateOf<CompetitiveSeasonDto?>(null) }
     var achievements by remember { mutableStateOf<List<AchievementProgressDto>>(emptyList()) }
+    var records by remember { mutableStateOf<PersonalRecordsDto?>(null) }
     var avatarBytes by remember { mutableStateOf<ByteArray?>(null) }
     var loading by remember { mutableStateOf(true) }
     var photoEditor by remember { mutableStateOf(false) }
@@ -147,6 +150,7 @@ fun ProfileExperienceV2Screen() {
         avatarBytes = profile?.avatarPath?.let { runCatching { ProfilePhotoStorageV2.download(it) }.getOrNull() }
         season = runCatching { backend?.getCompetitiveSeason() }.getOrNull()
         achievements = runCatching { backend?.getAchievements().orEmpty() }.getOrDefault(emptyList())
+        records = runCatching { backend?.getPersonalRecords() }.getOrNull()
         loading = false
     }
 
@@ -230,6 +234,86 @@ fun ProfileExperienceV2Screen() {
                     ProfileMetricV2(totalMatches.toString(), sh("Maç", "Matches"), Modifier.weight(1f))
                     ProfileMetricV2((p?.validWords ?: 0).toString(), sh("Kelime", "Words"), Modifier.weight(1f))
                     ProfileMetricV2((p?.bestStreak ?: 0).toString(), sh("En iyi seri", "Best streak"), Modifier.weight(1f))
+                }
+            }
+        }
+
+        records?.let { r ->
+            item {
+                Text(sh("KİŞİSEL REKORLAR", "PERSONAL RECORDS"), fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(10.dp))
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .22f)),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(13.dp),
+                        verticalArrangement = Arrangement.spacedBy(9.dp),
+                    ) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            RecordTileV2(
+                                "🔤",
+                                if (r.longestWord.isBlank()) "—" else r.longestWord.uppercase(),
+                                if (r.longestWordLength > 0)
+                                    sh("${r.longestWordLength} harf", "${r.longestWordLength} letters")
+                                else sh("Uzun kelime", "Longest word"),
+                                Modifier.weight(1f),
+                            )
+                            RecordTileV2(
+                                "🔥",
+                                r.bestStreak.toString(),
+                                sh("En iyi seri", "Best streak"),
+                                Modifier.weight(1f),
+                            )
+                            RecordTileV2(
+                                "↗",
+                                "+${r.biggestWinMargin}",
+                                sh("En büyük fark", "Biggest margin"),
+                                Modifier.weight(1f),
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            RecordTileV2(
+                                "⚔",
+                                r.bestClassicScore.toString(),
+                                sh("Son Harf skor", "Son Harf score"),
+                                Modifier.weight(1f),
+                            )
+                            RecordTileV2(
+                                "⚡",
+                                r.bestArenaScore.toString(),
+                                sh("Arena skor", "Arena score"),
+                                Modifier.weight(1f),
+                            )
+                            RecordTileV2(
+                                "🎯",
+                                r.realPvpMatches.toString(),
+                                sh("Gerçek PvP", "Real PvP"),
+                                Modifier.weight(1f),
+                            )
+                        }
+
+                        if (r.favoriteRivalName.isNotBlank()) {
+                            Surface(
+                                shape = RoundedCornerShape(13.dp),
+                                color = SonHarfGold.copy(alpha = .09f),
+                            ) {
+                                Text(
+                                    sh(
+                                        "⚔ En sık rakip: ${r.favoriteRivalName} • ${r.favoriteRivalMatches} maç",
+                                        "⚔ Most played rival: ${r.favoriteRivalName} • ${r.favoriteRivalMatches} matches",
+                                    ),
+                                    Modifier.fillMaxWidth().padding(9.dp),
+                                    color = SonHarfText,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp,
+                                    textAlign = TextAlign.Center,
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -455,6 +539,41 @@ private fun ProfileMetricV2(value: String, label: String, modifier: Modifier) {
         Column(Modifier.padding(vertical = 12.dp, horizontal = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, fontSize = 21.sp, fontWeight = FontWeight.Black)
             Text(label, color = SonHarfMuted, fontSize = 13.sp, textAlign = TextAlign.Center)
+        }
+    }
+}
+
+@Composable
+private fun RecordTileV2(
+    icon: String,
+    value: String,
+    label: String,
+    modifier: Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(15.dp),
+        color = SonHarfSurface2,
+    ) {
+        Column(
+            Modifier.padding(horizontal = 7.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(icon, fontSize = 17.sp)
+            Text(
+                value,
+                fontSize = if (value.length > 12) 11.sp else 16.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+            )
+            Text(
+                label,
+                color = SonHarfMuted,
+                fontSize = 8.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+            )
         }
     }
 }
