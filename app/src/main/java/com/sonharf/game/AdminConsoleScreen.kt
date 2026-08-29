@@ -59,6 +59,8 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
     var gameControls by remember { mutableStateOf<List<AdminGameControlDto>>(emptyList()) }
     var selectedSection by remember { mutableStateOf(AdminSection.OVERVIEW) }
     var ownerEmailInput by remember { mutableStateOf("") }
+    var playerSearchText by remember { mutableStateOf("") }
+    var playerResults by remember { mutableStateOf<List<AdminPlayerSearchDto>>(emptyList()) }
     var monthlyRevenue by remember { mutableStateOf<List<AdminMonthlyRevenueDto>>(emptyList()) }
     var announcement by remember { mutableStateOf(AdminAnnouncementDto()) }
     var announcementText by remember { mutableStateOf("") }
@@ -219,6 +221,77 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
 
                 AdminSection.PLAYERS -> {
                     item { AdminSectionTitle("OYUNCULAR & VIP", Icons.Rounded.People) }
+                    item {
+                        AdminWideCard {
+                            Text("Oyuncu ara", color = AdminText, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                            Text(
+                                "E-posta veya oyuncu adıyla ara. Buradan yalnız VIP durumunu yönet.",
+                                color = AdminMuted,
+                                fontSize = 10.sp,
+                            )
+                            OutlinedTextField(
+                                value = playerSearchText,
+                                onValueChange = { playerSearchText = it.take(120) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("E-posta / oyuncu adı") },
+                                singleLine = true,
+                            )
+                            Button(
+                                onClick = {
+                                    val q = playerSearchText.trim()
+                                    if (q.length < 2) {
+                                        notice = "Arama için en az 2 karakter gir."
+                                    } else {
+                                        scope.launch {
+                                            busy = true
+                                            runCatching { backend.adminSearchPlayers(q) }
+                                                .onSuccess {
+                                                    playerResults = it
+                                                    notice = if (it.isEmpty()) "Oyuncu bulunamadı." else "${it.size} oyuncu bulundu."
+                                                }
+                                                .onFailure { error = it.message ?: "Oyuncu aranamadı." }
+                                            busy = false
+                                        }
+                                    }
+                                },
+                                enabled = !busy,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(Icons.Rounded.Search, null)
+                                Spacer(Modifier.width(7.dp))
+                                Text("OYUNCU ARA")
+                            }
+                        }
+                    }
+
+                    if (playerResults.isNotEmpty()) {
+                        items(playerResults, key = { it.userId }) { player ->
+                            AdminPlayerSearchRow(
+                                player = player,
+                                enabled = !busy,
+                                onVipChange = { value ->
+                                    scope.launch {
+                                        busy = true
+                                        runCatching { backend.adminSetPlayerVip(player.userId, value) }
+                                            .onSuccess {
+                                                notice = "${player.displayName} VIP durumu güncellendi."
+                                                playerResults = backend.adminSearchPlayers(playerSearchText)
+                                            }
+                                            .onFailure {
+                                                error = when {
+                                                    (it.message ?: "").contains("owner_lifetime_vip_locked") ->
+                                                        "Bu özel hesapta süresiz VIP korunuyor; kapatılamaz."
+                                                    else -> it.message ?: "VIP durumu değiştirilemedi."
+                                                }
+                                            }
+                                        reload()
+                                        busy = false
+                                    }
+                                },
+                            )
+                        }
+                    }
+
                     item {
                         AdminWideCard {
                             Text("Özel hesaplar", color = AdminText, fontSize = 17.sp, fontWeight = FontWeight.Black)
@@ -615,6 +688,45 @@ private fun AdminRepairGrid(onAction: (RepairAction) -> Unit) {
                 if (row.size == 1) Spacer(Modifier.weight(1f))
             }
         }
+    }
+}
+
+@Composable
+private fun AdminPlayerSearchRow(
+    player: AdminPlayerSearchDto,
+    enabled: Boolean,
+    onVipChange: (Boolean) -> Unit,
+) {
+    AdminWideCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(player.displayName, color = AdminText, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                Text(player.email, color = AdminMuted, fontSize = 10.sp)
+                Text(
+                    "Rating: ${player.rating} • Elmas: ${player.diamonds}",
+                    color = AdminMuted,
+                    fontSize = 10.sp,
+                )
+            }
+            if (player.isOwnerAccount) {
+                Surface(color = AdminGold.copy(alpha = .15f), shape = RoundedCornerShape(999.dp)) {
+                    Text(
+                        "ÖZEL",
+                        Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        color = AdminGold,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+            }
+        }
+        AdminToggleRow(
+            title = "VIP",
+            detail = if (player.isOwnerAccount) "Özel hesapta lifetime VIP koruması var." else "Oyuncunun VIP durumunu yönet.",
+            checked = player.isVip,
+            enabled = enabled && !(player.isOwnerAccount && player.isVip),
+            onChecked = onVipChange,
+        )
     }
 }
 
