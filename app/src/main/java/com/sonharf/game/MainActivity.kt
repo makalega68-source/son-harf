@@ -93,6 +93,7 @@ class MainActivity : ComponentActivity() {
                     if (FriendsQuickAccessState.open) FriendsQuickAccessOverlay()
                     GameInviteOverlay()
                     WordArenaInviteOverlay()
+                    TeamArenaInviteOverlay()
                     FriendRequestOverlay()
                 }
             }
