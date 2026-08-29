@@ -163,27 +163,69 @@ fun LightWordThemeApp() {
                     onRouteMode = openMode,
                 )
                 LightScreen.SON_HARF -> key(gameKey) {
-                    TargetNeonGameScreen(autoStartMatchmaking = true)
+                    Box(Modifier.fillMaxSize()) {
+                        TargetNeonGameScreen(autoStartMatchmaking = true)
+                        ModeEntryOverlay(
+                            key = "duel-$gameKey",
+                            title = sh("SON HARF DÜELLOSU", "LAST LETTER DUEL"),
+                            subtitle = sh("Rakibini geç • serini büyüt • rating kazan", "Beat your rival • build your streak • gain rating"),
+                        )
+                    }
                 }
-                LightScreen.KELIME_ARENASI -> WordArenaScreen(
-                    initialRoomId = arenaInitialRoomId,
-                    onExit = {
-                        arenaInitialRoomId = null
-                        WordArenaNavigation.clearRoom()
-                        screen = LightScreen.HOME
-                    },
-                )
-                LightScreen.TAKIM_ARENASI -> TeamArenaScreen(
-                    initialRoomId = teamArenaInitialRoomId,
-                    onExit = {
-                        teamArenaInitialRoomId = null
-                        TeamArenaNavigation.clearRoom()
-                        screen = LightScreen.HOME
-                    },
-                )
-                LightScreen.GUNLUK_ARENA -> DailyArenaScreen { screen = LightScreen.HOME }
-                LightScreen.KELIME_AVI -> DailyCipherScreen { screen = LightScreen.HOME }
-                LightScreen.KELIME_SAVASI -> TrackedBilBakalimStandaloneScreen { screen = LightScreen.HOME }
+                LightScreen.KELIME_ARENASI -> Box(Modifier.fillMaxSize()) {
+                    WordArenaScreen(
+                        initialRoomId = arenaInitialRoomId,
+                        onExit = {
+                            arenaInitialRoomId = null
+                            WordArenaNavigation.clearRoom()
+                            screen = LightScreen.HOME
+                        },
+                    )
+                    ModeEntryOverlay(
+                        key = "word-arena-${arenaRequest}-${arenaInitialRoomId.orEmpty()}",
+                        title = sh("KELİME ARENASI", "WORD ARENA"),
+                        subtitle = sh("60 saniye • aynı harfler • canlı skor", "60 seconds • same letters • live score"),
+                    )
+                }
+                LightScreen.TAKIM_ARENASI -> Box(Modifier.fillMaxSize()) {
+                    TeamArenaScreen(
+                        initialRoomId = teamArenaInitialRoomId,
+                        onExit = {
+                            teamArenaInitialRoomId = null
+                            TeamArenaNavigation.clearRoom()
+                            screen = LightScreen.HOME
+                        },
+                    )
+                    ModeEntryOverlay(
+                        key = "team-arena-${teamArenaRequest}-${teamArenaInitialRoomId.orEmpty()}",
+                        title = sh("TAKIM ARENASI", "TEAM ARENA"),
+                        subtitle = sh("2v2 • takım skoru • MVP mücadelesi", "2v2 • team score • MVP battle"),
+                    )
+                }
+                LightScreen.GUNLUK_ARENA -> Box(Modifier.fillMaxSize()) {
+                    DailyArenaScreen { screen = LightScreen.HOME }
+                    ModeEntryOverlay(
+                        key = "daily-arena",
+                        title = sh("GÜNLÜK ARENA", "DAILY ARENA"),
+                        subtitle = sh("Hedef rakibi yakala • günlük sıralamayı tırman", "Catch the target rival • climb today's ranking"),
+                    )
+                }
+                LightScreen.KELIME_AVI -> Box(Modifier.fillMaxSize()) {
+                    DailyCipherScreen { screen = LightScreen.HOME }
+                    ModeEntryOverlay(
+                        key = "daily-cipher",
+                        title = sh("SEN VS GÜNÜN ŞİFRESİ", "YOU VS DAILY CIPHER"),
+                        subtitle = sh("6 hak • tek hedef • günlük seri", "6 tries • one target • daily streak"),
+                    )
+                }
+                LightScreen.KELIME_SAVASI -> Box(Modifier.fillMaxSize()) {
+                    TrackedBilBakalimStandaloneScreen { screen = LightScreen.HOME }
+                    ModeEntryOverlay(
+                        key = "bil-bakalim",
+                        title = sh("BİL BAKALIM DÜELLOSU", "TRIVIA DUEL"),
+                        subtitle = sh("Hız • doğruluk • seri • final sorusu", "Speed • accuracy • streak • final question"),
+                    )
+                }
                 LightScreen.COMPETITION -> CompetitionHubScreen { screen = LightScreen.HOME }
                 LightScreen.LEAGUE -> LeaderboardExperienceScreen { screen = LightScreen.HOME }
                 LightScreen.MARKET -> EconomyShopScreen(onBack = { screen = LightScreen.HOME })
