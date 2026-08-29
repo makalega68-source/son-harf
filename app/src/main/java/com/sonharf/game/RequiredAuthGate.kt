@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -14,9 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -171,23 +168,58 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 .navigationBarsPadding()
                 .imePadding(),
         ) {
-            Image(
-                painter = painterResource(R.drawable.son_harf_login_bg),
-                contentDescription = null,
-                modifier = Modifier.matchParentSize(),
-                contentScale = ContentScale.Crop,
-            )
+            // The login surface is generated in Compose so an old raster background can
+            // never bleed through after an app update or on a different screen density.
             Box(
                 Modifier.matchParentSize().background(
                     Brush.verticalGradient(
                         listOf(
-                            Color.White.copy(alpha = .05f),
-                            Color.White.copy(alpha = .10f),
-                            Color(0xFFEAF3FF).copy(alpha = .22f),
-                            Color(0xFFDCEBFF).copy(alpha = .38f),
+                            Color(0xFFFBFDFF),
+                            Color(0xFFF2F7FF),
+                            Color(0xFFF7F5FF),
+                            Color(0xFFEEF5FF),
                         )
                     )
                 )
+            )
+            Box(
+                Modifier
+                    .size(360.dp)
+                    .offset(x = 170.dp, y = (-105).dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(Color(0xFF1769E0).copy(alpha = .18f), Color.Transparent)
+                        ),
+                        CircleShape,
+                    )
+            )
+            Box(
+                Modifier
+                    .size(310.dp)
+                    .offset(x = (-155).dp, y = 360.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(Color(0xFF6A4FD8).copy(alpha = .14f), Color.Transparent)
+                        ),
+                        CircleShape,
+                    )
+            )
+            Box(
+                Modifier
+                    .fillMaxWidth(.78f)
+                    .height(120.dp)
+                    .align(Alignment.Center)
+                    .offset(y = (-80).dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                Color(0xFF1769E0).copy(alpha = .06f),
+                                Color(0xFF6A4FD8).copy(alpha = .05f),
+                                Color.Transparent,
+                            )
+                        ),
+                        RoundedCornerShape(42.dp),
+                    )
             )
             if (!showForm) {
                 Column(
