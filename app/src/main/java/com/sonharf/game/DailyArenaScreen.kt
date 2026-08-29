@@ -105,7 +105,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
     BackHandler {
         if (status?.status == "playing") {
             notice = sh(
-                "Resmî koşu sürüyor; süre arka planda devam eder.",
+                sh("Resmî koşu sürüyor; süre arka planda devam eder.", "The official run is active; the timer continues in the background."),
                 "Official run is active; the timer keeps running.",
             )
         } else onBack()
@@ -140,7 +140,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                         )
                         if (result.combo >= 2) {
                             notice = sh(
-                                "🔥 ${result.combo}× hızlı seri",
+                                sh("🔥 ${result.combo}× hızlı seri", "🔥 ${result.combo}× speed combo"),
                                 "🔥 ${result.combo}× fast combo",
                             )
                         }
@@ -181,7 +181,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                 onClick = {
                     if (status?.status == "playing") {
                         notice = sh(
-                            "Resmî koşu sürüyor; süre devam ediyor.",
+                            sh("Resmî koşu sürüyor; süre devam ediyor.", "The official run is active; the timer is still running."),
                             "Official run is active; timer continues.",
                         )
                     } else onBack()
@@ -197,7 +197,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                 )
                 Text(
                     sh(
-                        "Aynı harfler • Tek resmî deneme • 60 saniye",
+                        sh("Aynı harfler • Tek resmî deneme • 60 saniye", "Same letters • One official run • 60 seconds"),
                         "Same letters • One official run • 60 seconds",
                     ),
                     color = SonHarfMuted,
@@ -232,7 +232,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                             Text(
                                 when (s.status) {
                                     "not_started" -> sh(
-                                        "BUGÜNÜN RESMÎ KOŞUSU",
+                                        sh("BUGÜNÜN RESMÎ KOŞUSU", "TODAY’S OFFICIAL RUN"),
                                         "TODAY'S OFFICIAL RUN",
                                     )
                                     "playing" -> if (prepSeconds > 0)
@@ -240,7 +240,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                                     else
                                         sh("$remainingSeconds SANİYE", "$remainingSeconds SECONDS")
                                     else -> sh(
-                                        "BUGÜNLÜK TAMAMLANDI",
+                                        sh("BUGÜNLÜK TAMAMLANDI", "DONE FOR TODAY"),
                                         "DONE FOR TODAY",
                                     )
                                 },
@@ -272,7 +272,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                             if (s.status == "not_started") {
                                 Text(
                                     sh(
-                                        "Harfler BAŞLA'ya basmadan görünmez. Uzun kelime daha çok puan; 8 saniye içinde yeni geçerli kelime combo kazandırır.",
+                                        sh("Harfler BAŞLA'ya basmadan görünmez. Uzun kelime daha çok puan; 8 saniye içinde yeni geçerli kelime combo kazandırır.", "Letters stay hidden until you press START. Longer words score more; a new valid word within 8 seconds builds a combo."),
                                         "Letters stay hidden until START. Longer words score more; another valid word within 8 seconds builds combo.",
                                     ),
                                     color = SonHarfMuted,
@@ -281,7 +281,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                                 )
                                 Text(
                                     sh(
-                                        "En az 1 geçerli kelime: +8 Son Coin • günlük yalnız 1 kez",
+                                        sh("En az 1 geçerli kelime: +8 Son Coin • günlük yalnız 1 kez", "At least 1 valid word: +8 Son Coin • once per day"),
                                         "At least 1 valid word: +8 Son Coin • once per day",
                                     ),
                                     color = SonHarfGold,
@@ -302,21 +302,21 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                                                     notice = when {
                                                         "player_already_in_game" in e.message.orEmpty() ->
                                                             sh(
-                                                                "Önce aktif maçını bitir.",
+                                                                sh("Önce aktif maçını bitir.", "Finish your active match first."),
                                                                 "Finish your active match first.",
                                                             )
                                                         "daily_arena_active" in e.message.orEmpty() ->
                                                             sh(
-                                                                "Başka dildeki Günlük Arena koşun sürüyor.",
+                                                                sh("Başka dildeki Günlük Arena koşun sürüyor.", "Your Daily Arena run in another language is still active."),
                                                                 "Your Daily Arena run in another language is active.",
                                                             )
                                                         "team_arena_active" in e.message.orEmpty() ->
                                                             sh(
-                                                                "Takım Arenası maçın sürüyor. Önce 2v2 maçı bitir.",
+                                                                sh("Takım Arenası maçın sürüyor. Önce 2v2 maçı bitir.", "Your Team Arena match is active. Finish the 2v2 match first."),
                                                                 "Your Team Arena match is active. Finish the 2v2 match first.",
                                                             )
                                                         else -> sh(
-                                                            "Koşu başlatılamadı. Tekrar dene.",
+                                                            sh("Koşu başlatılamadı. Tekrar dene.", "The run could not be started. Try again."),
                                                             "Run could not be started. Try again.",
                                                         )
                                                     }
@@ -333,7 +333,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                                 ) {
                                     Text(
                                         sh(
-                                            "RESMÎ KOŞUYU BAŞLAT",
+                                            sh("RESMÎ KOŞUYU BAŞLAT", "START OFFICIAL RUN"),
                                             "START OFFICIAL RUN",
                                         ),
                                         fontWeight = FontWeight.Black,
@@ -365,7 +365,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                                 if (s.rewardCoins > 0) {
                                     Text(
                                         sh(
-                                            "✓ Bugünün +${s.rewardCoins} Son Coin ödülü alındı.",
+                                            sh("✓ Bugünün +${s.rewardCoins} Son Coin ödülü alındı.", "✓ Today’s +${s.rewardCoins} Son Coin reward was claimed."),
                                             "✓ Today's +${s.rewardCoins} Son Coin reward claimed.",
                                         ),
                                         color = SonHarfGreen,
@@ -609,7 +609,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                 item {
                     Text(
                         sh(
-                            "Bugün henüz skor yazan yok.",
+                            sh("Bugün henüz skor yazan yok.", "No scores have been posted today yet."),
                             "No scores posted today yet.",
                         ),
                         modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
