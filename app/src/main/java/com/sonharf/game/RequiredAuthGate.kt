@@ -24,6 +24,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
+import io.github.jan.supabase.auth.OtpType
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.providers.builtin.Email
 import io.github.jan.supabase.postgrest.from
@@ -74,6 +75,8 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     var notice by remember { mutableStateOf("") }
     var success by remember { mutableStateOf(false) }
     var showForm by remember { mutableStateOf(false) }
+    var pendingVerificationEmail by remember { mutableStateOf<String?>(null) }
+    var otpCode by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
     fun friendly(raw: String): String = when {
         "Email not confirmed" in raw || "email_not_confirmed" in raw -> "E-posta adresini onaylamadan giriş yapamazsın. Gelen kutunu kontrol et."
@@ -84,6 +87,66 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         "invalid_gender" in raw -> "Cinsiyet seçimi gerekli."
         "password" in raw.lowercase() && "6" in raw -> "Şifre en az 6 karakter olmalı."
         else -> raw.take(170).ifBlank { "İşlem tamamlanamadı. Tekrar dene." }
+    }
+
+
+    fun verifyPendingEmail() {
+        val targetEmail = pendingVerificationEmail ?: return
+        if (busy) return
+        if (otpCode.length != 6) {
+            notice = "E-postana gelen 6 haneli kodu gir."
+            success = false
+            return
+        }
+        scope.launch {
+            busy = true
+            notice = ""
+            success = false
+            runCatching {
+                SupabaseProvider.client.auth.verifyEmailOtp(
+                    type = OtpType.Email.EMAIL,
+                    email = targetEmail,
+                    token = otpCode,
+                )
+                check(hasVerifiedMembershipSession()) { "Email not confirmed" }
+                val profile = currentIdentityProfile()
+                if (profile != null && !profile.identityLocked) {
+                    val pendingName = SonHarfPreferences.pendingRegistrationName(context, targetEmail)
+                    val pendingGender = SonHarfPreferences.pendingRegistrationGender(context, targetEmail)
+                    if (pendingName != null && pendingGender != null) lockIdentity(pendingName, pendingGender)
+                }
+                SonHarfPreferences.clearPendingRegistration(context, targetEmail)
+                SonHarfPreferences.setRememberLogin(context, true, targetEmail)
+            }.onSuccess {
+                success = true
+                notice = "E-posta doğrulandı. Hoş geldin!"
+                pendingVerificationEmail = null
+                otpCode = ""
+                onAuthenticated()
+            }.onFailure {
+                notice = friendly(it.message.orEmpty())
+            }
+            busy = false
+        }
+    }
+
+    fun resendPendingCode() {
+        val targetEmail = pendingVerificationEmail ?: return
+        if (busy) return
+        scope.launch {
+            busy = true
+            notice = ""
+            success = false
+            runCatching {
+                SupabaseProvider.client.auth.resendEmail(OtpType.Email.SIGNUP, targetEmail)
+            }.onSuccess {
+                success = true
+                notice = "Yeni doğrulama e-postası gönderildi. Gelen kutunu ve spam klasörünü kontrol et."
+            }.onFailure {
+                notice = friendly(it.message.orEmpty())
+            }
+            busy = false
+        }
     }
 
     val authColors = lightColorScheme(
@@ -178,6 +241,25 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 ) {
                     Text("‹ " + sh("Giriş ekranına dön", "Back to login"), color = Color(0xFF1769E0), fontWeight = FontWeight.Bold)
                 }
+                if (pendingVerificationEmail != null) {
+                    EmailVerificationCard(
+                        email = pendingVerificationEmail.orEmpty(),
+                        otpCode = otpCode,
+                        onOtpChange = { otpCode = it.filter(Char::isDigit).take(6) },
+                        busy = busy,
+                        notice = notice,
+                        success = success,
+                        onVerify = ::verifyPendingEmail,
+                        onResend = ::resendPendingCode,
+                        onChangeEmail = {
+                            pendingVerificationEmail = null
+                            otpCode = ""
+                            notice = ""
+                            success = false
+                            register = true
+                        },
+                    )
+                } else {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .94f)),
                     shape = RoundedCornerShape(24.dp),
@@ -275,15 +357,16 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                     if (register) {
                                         runCatching {
                                             SupabaseProvider.client.auth.signOut()
-                                            SupabaseProvider.client.auth.signUpWith(Email) {
+                                            SupabaseProvider.client.auth.signUpWith(Email, redirectUrl = "sonharf://auth") {
                                                 this.email = email.trim(); this.password = password
                                                 data = buildJsonObject { put("display_name", displayName.trim()); put("gender", gender) }
                                             }
                                         }.onSuccess {
                                             SonHarfPreferences.rememberPendingRegistration(context, email, displayName, gender)
                                             success = true
-                                            notice = "Onay e-postası gönderildi. Bağlantıyı açtıktan sonra Giriş Yap sekmesinden oturum aç. Oyuncu adın ve profil seçimin korunacak."
-                                            register = false
+                                            pendingVerificationEmail = email.trim()
+                                            otpCode = ""
+                                            notice = "Doğrulama e-postası gönderildi. Maildeki E-postamı Doğrula butonuna dokun veya 6 haneli kodu buraya gir."
                                         }.onFailure { notice = friendly(it.message.orEmpty()) }
                                     } else {
                                         runCatching {
@@ -321,8 +404,105 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                         }
                     }
                 }
+                }
                 Spacer(Modifier.height(24.dp))
             }
+            }
+        }
+    }
+}
+
+
+@Composable
+private fun EmailVerificationCard(
+    email: String,
+    otpCode: String,
+    onOtpChange: (String) -> Unit,
+    busy: Boolean,
+    notice: String,
+    success: Boolean,
+    onVerify: () -> Unit,
+    onResend: () -> Unit,
+    onChangeEmail: () -> Unit,
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .96f)),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(1.dp, Color(0xFFB8D4F7)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(20.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Surface(color = Color(0xFFEAF3FF), shape = CircleShape) {
+                Text("✉", Modifier.padding(14.dp), fontSize = 28.sp)
+            }
+            Text(
+                "E-postanı doğrula",
+                color = Color(0xFF142B4F),
+                fontWeight = FontWeight.Black,
+                fontSize = 22.sp,
+            )
+            Text(
+                email,
+                color = Color(0xFF1769E0),
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                "Maildeki “E-postamı Doğrula” butonuna dokunduğunda Son Harf otomatik açılır. Buton çalışmazsa aşağıdaki alana e-postadaki 6 haneli kodu gir.",
+                color = Color(0xFF607596),
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+            )
+            OutlinedTextField(
+                value = otpCode,
+                onValueChange = onOtpChange,
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                label = { Text("6 haneli doğrulama kodu") },
+                placeholder = { Text("000000") },
+                textStyle = LocalTextStyle.current.copy(
+                    textAlign = TextAlign.Center,
+                    fontWeight = FontWeight.Black,
+                    fontSize = 24.sp,
+                    letterSpacing = 6.sp,
+                ),
+            )
+            Button(
+                onClick = onVerify,
+                enabled = !busy && otpCode.length == 6,
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(18.dp),
+            ) {
+                Text(if (busy) "…" else "KODU DOĞRULA", fontWeight = FontWeight.Black)
+            }
+            OutlinedButton(
+                onClick = onResend,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text("KODU YENİDEN GÖNDER", fontWeight = FontWeight.Bold)
+            }
+            TextButton(onClick = onChangeEmail, enabled = !busy) {
+                Text("E-POSTA ADRESİNİ DEĞİŞTİR", fontWeight = FontWeight.Bold)
+            }
+            if (notice.isNotBlank()) {
+                Surface(
+                    color = if (success) Color(0xFFE8F7EE) else Color(0xFFFFF4E5),
+                    shape = RoundedCornerShape(14.dp),
+                ) {
+                    Text(
+                        notice,
+                        Modifier.fillMaxWidth().padding(12.dp),
+                        color = Color(0xFF142B4F),
+                        fontSize = 13.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
     }

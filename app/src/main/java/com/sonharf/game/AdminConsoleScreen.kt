@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -15,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -36,6 +38,14 @@ private val AdminBlue = Color(0xFF70B6D9)
 
 private data class RepairAction(val key: String, val title: String, val detail: String)
 
+private enum class AdminSection(val title: String) {
+    OVERVIEW("Ana Sayfa"),
+    PLAYERS("Oyuncular & VIP"),
+    GAMES("Oyunlar"),
+    ANNOUNCEMENTS("Duyurular"),
+    MAINTENANCE("Bakım"),
+}
+
 @Composable
 fun AdminConsoleScreen(onBack: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
@@ -44,6 +54,13 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
     var products by remember { mutableStateOf<List<AdminTopProductDto>>(emptyList()) }
     var storeItems by remember { mutableStateOf<List<AdminTopStoreItemDto>>(emptyList()) }
     var health by remember { mutableStateOf<List<AdminHealthDto>>(emptyList()) }
+    var ownerAccounts by remember { mutableStateOf<List<AdminOwnerAccountDto>>(emptyList()) }
+    var capacity by remember { mutableStateOf<List<AdminCapacityDto>>(emptyList()) }
+    var gameControls by remember { mutableStateOf<List<AdminGameControlDto>>(emptyList()) }
+    var selectedSection by remember { mutableStateOf(AdminSection.OVERVIEW) }
+    var ownerEmailInput by remember { mutableStateOf("") }
+    var playerSearchText by remember { mutableStateOf("") }
+    var playerResults by remember { mutableStateOf<List<AdminPlayerSearchDto>>(emptyList()) }
     var monthlyRevenue by remember { mutableStateOf<List<AdminMonthlyRevenueDto>>(emptyList()) }
     var announcement by remember { mutableStateOf(AdminAnnouncementDto()) }
     var announcementText by remember { mutableStateOf("") }
@@ -55,6 +72,7 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
     var repairConfirm by remember { mutableStateOf<RepairAction?>(null) }
     var priceProduct by remember { mutableStateOf<String?>(null) }
     var priceText by remember { mutableStateOf("") }
+    val uriHandler = LocalUriHandler.current
 
     suspend fun reload() {
         loading = true
@@ -64,6 +82,9 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
             products = backend.getAdminTopProducts()
             storeItems = backend.getAdminTopStoreItems()
             health = backend.getAdminHealth()
+            ownerAccounts = backend.getAdminOwnerAccounts()
+            capacity = backend.getAdminCapacity()
+            gameControls = backend.getAdminGameControls()
             monthlyRevenue = backend.getAdminMonthlyRevenue()
             announcement = backend.getAdminAnnouncement()
             announcementText = announcement.message
@@ -105,8 +126,8 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, null, tint = AdminText) }
                     Column(Modifier.weight(1f)) {
-                        Text("YÖNETİCİ PANELİ", color = AdminGold, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                        Text("Canlı operasyon • yalnızca yönetici hesabı", color = AdminMuted, fontSize = 11.sp)
+                        Text("SON HARF YÖNETİM", color = AdminGold, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                        Text("Sade operasyon merkezi", color = AdminMuted, fontSize = 11.sp)
                     }
                     IconButton(onClick = { scope.launch { reload() } }, enabled = !busy) {
                         Icon(Icons.Rounded.Refresh, null, tint = AdminBlue)
@@ -114,194 +135,376 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                 }
             }
 
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(AdminSection.entries, key = { it.name }) { section ->
+                        FilterChip(
+                            selected = selectedSection == section,
+                            onClick = { selectedSection = section; notice = null; error = null },
+                            label = { Text(section.title, fontSize = 12.sp, fontWeight = FontWeight.Bold) },
+                        )
+                    }
+                }
+            }
+
             notice?.let { message ->
                 item {
-                    Surface(color = AdminGreen.copy(alpha = .12f), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, AdminGreen.copy(alpha=.45f))) {
+                    Surface(
+                        color = AdminGreen.copy(alpha = .12f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, AdminGreen.copy(alpha=.45f)),
+                    ) {
                         Text(message, Modifier.fillMaxWidth().padding(12.dp), color = AdminGreen, fontSize = 13.sp)
                     }
                 }
             }
-
-            item { AdminSectionTitle("GENEL DURUM", Icons.Rounded.QueryStats) }
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AdminStatCard("Kayıtlı Oyuncu", d.totalUsers.toString(), "Toplam profil", Modifier.weight(1f))
-                    AdminStatCard("Şu An Aktif", d.activeNow.toString(), "Son 5 dk", Modifier.weight(1f))
-                }
-            }
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AdminStatCard("Bugün Aktif", d.activeToday.toString(), "24 saat", Modifier.weight(1f))
-                    AdminStatCard("7 Gün Aktif", d.active7d.toString(), "Son 7 gün", Modifier.weight(1f))
-                }
-            }
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AdminStatCard("Gerçek VIP", d.vipUsers.toString(), "Test hesabı hariç", Modifier.weight(1f))
-                    AdminStatCard("Canlı Maç", d.activeRooms.toString(), "Aktif odalar", Modifier.weight(1f))
-                }
-            }
-
-            item { AdminSectionTitle("GELİR & SATIN ALMA", Icons.Rounded.Payments) }
-            item {
-                AdminWideCard {
-                    Text("Kayıtlı Brüt Gelir", color = AdminMuted, fontSize = 12.sp)
-                    Text(formatMoney(d.grossRevenueMinor, d.revenueCurrency), color = AdminGold, fontSize = 31.sp, fontWeight = FontWeight.Black)
-                    Text("${d.verifiedPurchases} doğrulanmış satın alma", color = AdminText, fontSize = 13.sp)
-                    if (d.unpricedPurchases > 0) {
-                        Text("${d.unpricedPurchases} satın alımda ürün fiyatı tanımlı değil; gelir hesabına dahil edilmedi.", color = AdminRed, fontSize = 11.sp)
+            error?.let { message ->
+                item {
+                    Surface(
+                        color = AdminRed.copy(alpha = .12f),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, AdminRed.copy(alpha=.45f)),
+                    ) {
+                        Text(message, Modifier.fillMaxWidth().padding(12.dp), color = AdminRed, fontSize = 13.sp)
                     }
-                    Text("Gösterilen tutar kayıtlı brüt satış değeridir; mağaza komisyonu, vergi ve iadeler düşülmemiştir.", color = AdminMuted, fontSize = 10.sp)
-                }
-            }
-            if (products.isEmpty()) {
-                item { AdminEmpty("Henüz doğrulanmış gerçek satın alma yok.") }
-            } else {
-                items(products, key = { it.productId }) { p ->
-                    AdminProductRow(p) { priceProduct = p.productId; priceText = "" }
-                }
-            }
-            item {
-                OutlinedButton(
-                    onClick = { priceProduct = "vip_monthly"; priceText = "" },
-                    modifier = Modifier.fillMaxWidth(),
-                    border = BorderStroke(1.dp, AdminGold.copy(alpha=.55f)),
-                ) { Text("ÜRÜN FİYATI TANIMLA / GÜNCELLE", color = AdminGold) }
-            }
-
-            item { AdminSectionTitle("AYLIK GELİR", Icons.Rounded.CalendarMonth) }
-            item {
-                AdminWideCard {
-                    val current = monthlyRevenue.firstOrNull()
-                    Text("Bu ay kayıtlı brüt gelir", color = AdminMuted, fontSize = 12.sp)
-                    Text(formatMoney(current?.revenueMinor ?: 0, current?.currency ?: "TRY"), color = AdminGold, fontSize = 28.sp, fontWeight = FontWeight.Black)
-                    monthlyRevenue.take(6).forEach { m -> AdminSimpleRow(m.month, formatMoney(m.revenueMinor, m.currency)) }
                 }
             }
 
-            item { AdminSectionTitle("DUYURU PANOSU", Icons.Rounded.Campaign) }
-            item {
-                AdminWideCard {
-                    OutlinedTextField(announcementText, { announcementText = it.take(500) }, modifier = Modifier.fillMaxWidth(), label = { Text("Duyuru metni") }, minLines = 2, maxLines = 5)
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Duyuruyu yayınla", color = AdminText, fontWeight = FontWeight.Bold)
-                        Switch(checked = announcementEnabled, onCheckedChange = { announcementEnabled = it })
-                    }
-                    Button(onClick = {
-                        scope.launch {
-                            busy = true
-                            runCatching { backend.adminSetAnnouncement(announcementText.trim(), announcementEnabled) }
-                                .onSuccess { notice = "Duyuru panosu güncellendi." }
-                                .onFailure { error = it.message ?: "Duyuru güncellenemedi." }
-                            reload(); busy = false
-                        }
-                    }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("DUYURUYU KAYDET") }
-                }
-            }
-
-            item { AdminSectionTitle("OYUN TERCİHİ", Icons.Rounded.SportsEsports) }
-            item {
-                AdminWideCard {
-                    val total = d.sonHarfOpens + d.bilBakalimOpens
-                    val sonPct = if (total == 0L) 0 else (d.sonHarfOpens * 100 / total).toInt()
-                    val bilPct = if (total == 0L) 0 else (d.bilBakalimOpens * 100 / total).toInt()
-                    AdminUsageLine("Son Harf", d.sonHarfOpens, sonPct)
-                    AdminUsageLine("Bil Bakalım", d.bilBakalimOpens, bilPct)
-                    Text("Yönetici testleri bu karşılaştırmaya dahil edilmez.", color = AdminMuted, fontSize = 10.sp)
-                }
-            }
-
-            item { AdminSectionTitle("MAÇ İSTATİSTİKLERİ", Icons.Rounded.Leaderboard) }
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AdminStatCard("Toplam Maç", d.matchesTotal.toString(), "Tüm zamanlar", Modifier.weight(1f))
-                    AdminStatCard("Bugünkü Maç", d.matchesToday.toString(), "Son 24 saat", Modifier.weight(1f))
-                }
-            }
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    AdminStatCard("Kuyrukta", d.queueWaiting.toString(), "Eşleşme bekliyor", Modifier.weight(1f))
-                    AdminStatCard("Şüpheli Maç", d.staleRooms.toString(), "5 dk hareketsiz", Modifier.weight(1f))
-                }
-            }
-
-            item { AdminSectionTitle("EN ÇOK ALINAN MAĞAZA ÜRÜNLERİ", Icons.Rounded.ShoppingBag) }
-            if (storeItems.isEmpty()) item { AdminEmpty("Henüz mağaza edinimi yok.") }
-            else items(storeItems, key = { it.itemId }) { item ->
-                AdminSimpleRow(item.itemName, "${item.acquisitionCount} edinim")
-            }
-
-            item { AdminSectionTitle("SİSTEM SAĞLIĞI", Icons.Rounded.HealthAndSafety) }
-            items(health, key = { it.metricKey }) { h -> AdminHealthRow(h) }
-
-            item { AdminSectionTitle("ONARIM ARAÇLARI", Icons.Rounded.BuildCircle) }
-            item {
-                AdminRepairGrid { action -> repairConfirm = action }
-            }
-
-            item { AdminSectionTitle("BENİM TEST ARAÇLARIM", Icons.Rounded.Science) }
-            item {
-                AdminWideCard {
-                    AdminToggleRow(
-                        title = "VIP test durumum",
-                        detail = "Gerçek abonelik oluşturmadan yalnızca bu yönetici hesabının VIP özelliğini açar/kapatır.",
-                        checked = d.myIsVip,
-                        enabled = !busy,
-                    ) { enabled ->
-                        scope.launch {
-                            busy = true
-                            runCatching { backend.adminSetMyVip(enabled) }
-                                .onSuccess { notice = if (enabled) "Yönetici hesabı VIP test moduna alındı." else "Yönetici hesabının VIP test modu kapatıldı." }
-                                .onFailure { error = it.message }
-                            reload(); busy = false
+            when (selectedSection) {
+                AdminSection.OVERVIEW -> {
+                    item { AdminSectionTitle("GENEL DURUM", Icons.Rounded.Home) }
+                    item {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AdminStatCard("Kayıtlı Oyuncu", d.totalUsers.toString(), "Toplam profil", Modifier.weight(1f))
+                            AdminStatCard("Şu An Aktif", d.activeNow.toString(), "Son 5 dk", Modifier.weight(1f))
                         }
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha=.08f))
-                    AdminToggleRow(
-                        title = "Satın alımlarım ücretsiz",
-                        detail = "Elmas mağazasındaki ürünleri bakiyeden düşmeden test eder. Gerçek oyuncuların fiyatlarını etkilemez.",
-                        checked = d.freeTestPurchases,
-                        enabled = !busy,
-                    ) { enabled ->
-                        scope.launch {
-                            busy = true
-                            runCatching { backend.adminSetFreePurchases(enabled) }
-                                .onSuccess { notice = if (enabled) "Ücretsiz test satın alımları açıldı." else "Ücretsiz test satın alımları kapatıldı." }
-                            reload(); busy = false
+                    item {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AdminStatCard("Canlı Maç", d.activeRooms.toString(), "Aktif odalar", Modifier.weight(1f))
+                            AdminStatCard("VIP Oyuncu", d.vipUsers.toString(), "Aktif VIP", Modifier.weight(1f))
                         }
                     }
-                }
-            }
-
-            item { AdminSectionTitle("ÜCRETSİZ TEST PAKETLERİ", Icons.Rounded.CardGiftcard) }
-            item {
-                AdminWideCard {
-                    Text("Bu paketler yalnızca yönetici hesabına test verisi verir; Google Play satın alımı ve gerçek gelir kaydı oluşturmaz.", color = AdminMuted, fontSize = 10.sp)
-                    listOf(
-                        "vip_monthly" to "VIP Aylık Test",
-                        "vip_yearly" to "VIP Yıllık Test",
-                        "coins_500" to "+500 Son Coin Test",
-                        "coins_1500" to "+1500 Son Coin Test",
-                        "coins_3500" to "+3500 Son Coin Test",
-                        "coins_8000" to "+8000 Son Coin Test",
-                        "season_pass_monthly" to "Sezon Bileti 30 Gün Test",
-                        "starter_style_pack" to "Başlangıç Style Paketi Test",
-                        "theme_neon" to "Neon Tema Test",
-                    ).forEach { (productId, label) ->
-                        OutlinedButton(
-                            onClick = {
-                                scope.launch {
-                                    busy = true
-                                    runCatching { backend.adminGrantTestProduct(productId) }
-                                        .onSuccess { notice = "$label ücretsiz olarak uygulandı." }
-                                        .onFailure { error = it.message ?: "Test ürünü uygulanamadı." }
-                                    reload(); busy = false
+                    item {
+                        val warningCount = health.count { it.status != "ok" } +
+                            capacity.count { it.status == "warning" || it.status == "critical" }
+                        AdminWideCard {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    if (warningCount == 0) Icons.Rounded.CheckCircle else Icons.Rounded.Warning,
+                                    null,
+                                    tint = if (warningCount == 0) AdminGreen else AdminGold,
+                                    modifier = Modifier.size(28.dp),
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        if (warningCount == 0) "Sistem sağlıklı" else "$warningCount konu kontrol edilmeli",
+                                        color = AdminText,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 17.sp,
+                                    )
+                                    Text(
+                                        if (warningCount == 0) "Kritik bir sorun görünmüyor." else "Bakım bölümünde ayrıntıyı ve çözüm bağlantısını görebilirsin.",
+                                        color = AdminMuted,
+                                        fontSize = 11.sp,
+                                    )
                                 }
+                            }
+                        }
+                    }
+                    capacity.filter { it.metricKey == "supabase_database" || it.metricKey == "supabase_storage" }
+                        .forEach { metric ->
+                            item { AdminCapacityCompact(metric) }
+                        }
+                }
+
+                AdminSection.PLAYERS -> {
+                    item { AdminSectionTitle("OYUNCULAR & VIP", Icons.Rounded.People) }
+                    item {
+                        AdminWideCard {
+                            Text("Oyuncu ara", color = AdminText, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                            Text(
+                                "E-posta veya oyuncu adıyla ara. Buradan yalnız VIP durumunu yönet.",
+                                color = AdminMuted,
+                                fontSize = 10.sp,
+                            )
+                            OutlinedTextField(
+                                value = playerSearchText,
+                                onValueChange = { playerSearchText = it.take(120) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("E-posta / oyuncu adı") },
+                                singleLine = true,
+                            )
+                            Button(
+                                onClick = {
+                                    val q = playerSearchText.trim()
+                                    if (q.length < 2) {
+                                        notice = "Arama için en az 2 karakter gir."
+                                    } else {
+                                        scope.launch {
+                                            busy = true
+                                            runCatching { backend.adminSearchPlayers(q) }
+                                                .onSuccess {
+                                                    playerResults = it
+                                                    notice = if (it.isEmpty()) "Oyuncu bulunamadı." else "${it.size} oyuncu bulundu."
+                                                }
+                                                .onFailure { error = it.message ?: "Oyuncu aranamadı." }
+                                            busy = false
+                                        }
+                                    }
+                                },
+                                enabled = !busy,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(Icons.Rounded.Search, null)
+                                Spacer(Modifier.width(7.dp))
+                                Text("OYUNCU ARA")
+                            }
+                        }
+                    }
+
+                    if (playerResults.isNotEmpty()) {
+                        items(playerResults, key = { it.userId }) { player ->
+                            AdminPlayerSearchRow(
+                                player = player,
+                                enabled = !busy,
+                                onVipChange = { value ->
+                                    scope.launch {
+                                        busy = true
+                                        runCatching { backend.adminSetPlayerVip(player.userId, value) }
+                                            .onSuccess {
+                                                notice = "${player.displayName} VIP durumu güncellendi."
+                                                playerResults = backend.adminSearchPlayers(playerSearchText)
+                                            }
+                                            .onFailure {
+                                                error = when {
+                                                    (it.message ?: "").contains("owner_lifetime_vip_locked") ->
+                                                        "Bu özel hesapta süresiz VIP korunuyor; kapatılamaz."
+                                                    else -> it.message ?: "VIP durumu değiştirilemedi."
+                                                }
+                                            }
+                                        reload()
+                                        busy = false
+                                    }
+                                },
+                            )
+                        }
+                    }
+
+                    item {
+                        AdminWideCard {
+                            Text("Özel hesaplar", color = AdminText, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                            Text(
+                                "Bu hesaplar gerçek maç oynar. Rating veya lig puanı panelden değiştirilmez. Sadece VIP ve sınırsız oyun içi harcama hakları yönetilir.",
+                                color = AdminMuted,
+                                fontSize = 11.sp,
+                            )
+                        }
+                    }
+                    if (ownerAccounts.isEmpty()) {
+                        item { AdminEmpty("Henüz özel hesap tanımlı değil.") }
+                    } else {
+                        items(ownerAccounts, key = { it.userId }) { account ->
+                            AdminOwnerAccountCard(
+                                account = account,
+                                enabled = !busy,
+                                onChange = { lifetimeVip, unlimitedDiamonds, unlimitedSonCoin, active ->
+                                    scope.launch {
+                                        busy = true
+                                        runCatching {
+                                            backend.adminSetOwnerAccount(
+                                                email = account.email,
+                                                lifetimeVip = lifetimeVip,
+                                                unlimitedDiamonds = unlimitedDiamonds,
+                                                unlimitedSonCoin = unlimitedSonCoin,
+                                                active = active,
+                                            )
+                                        }.onSuccess {
+                                            notice = "${account.displayName} özel hesap ayarları güncellendi."
+                                        }.onFailure {
+                                            error = it.message ?: "Özel hesap güncellenemedi."
+                                        }
+                                        reload()
+                                        busy = false
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    item {
+                        AdminWideCard {
+                            Text("Yeni özel hesap", color = AdminText, fontWeight = FontWeight.Bold)
+                            Text(
+                                "En fazla 5 aktif hesap. Eklenen hesabın oyunda önceden kayıtlı olması gerekir.",
+                                color = AdminMuted,
+                                fontSize = 10.sp,
+                            )
+                            OutlinedTextField(
+                                value = ownerEmailInput,
+                                onValueChange = { ownerEmailInput = it.trim().take(120) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Hesabın e-posta adresi") },
+                                singleLine = true,
+                            )
+                            Button(
+                                onClick = {
+                                    val targetEmail = ownerEmailInput.trim()
+                                    if (targetEmail.isBlank()) {
+                                        notice = "E-posta adresi gir."
+                                    } else {
+                                        scope.launch {
+                                            busy = true
+                                            runCatching {
+                                                backend.adminSetOwnerAccount(
+                                                    email = targetEmail,
+                                                    lifetimeVip = true,
+                                                    unlimitedDiamonds = true,
+                                                    unlimitedSonCoin = true,
+                                                    active = true,
+                                                )
+                                            }.onSuccess {
+                                                notice = "$targetEmail özel hesap olarak eklendi."
+                                                ownerEmailInput = ""
+                                            }.onFailure {
+                                                error = when {
+                                                    (it.message ?: "").contains("owner_account_limit_reached") -> "En fazla 5 aktif özel hesap kullanılabilir."
+                                                    (it.message ?: "").contains("user_not_found") -> "Bu e-posta ile kayıtlı oyuncu bulunamadı."
+                                                    else -> it.message ?: "Özel hesap eklenemedi."
+                                                }
+                                            }
+                                            reload()
+                                            busy = false
+                                        }
+                                    }
+                                },
+                                enabled = !busy,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Icon(Icons.Rounded.PersonAdd, null)
+                                Spacer(Modifier.width(7.dp))
+                                Text("ÖZEL HESAP EKLE")
+                            }
+                        }
+                    }
+                }
+
+                AdminSection.GAMES -> {
+                    item { AdminSectionTitle("OYUNLAR", Icons.Rounded.SportsEsports) }
+                    item {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            AdminStatCard("Canlı Maç", d.activeRooms.toString(), "Şu an", Modifier.weight(1f))
+                            AdminStatCard("Kuyrukta", d.queueWaiting.toString(), "Eşleşme bekliyor", Modifier.weight(1f))
+                        }
+                    }
+                    if (gameControls.isEmpty()) {
+                        item { AdminEmpty("Oyun kontrol bilgileri alınamadı.") }
+                    } else {
+                        items(gameControls, key = { it.configKey }) { control ->
+                            AdminGameControlRow(
+                                control = control,
+                                enabled = !busy,
+                                onChange = { value ->
+                                    scope.launch {
+                                        busy = true
+                                        runCatching { backend.adminSetGameControl(control.configKey, value) }
+                                            .onSuccess { notice = "${control.title} ayarı güncellendi." }
+                                            .onFailure { error = it.message ?: "Ayar değiştirilemedi." }
+                                        reload()
+                                        busy = false
+                                    }
+                                },
+                            )
+                        }
+                    }
+                    item {
+                        Text(
+                            "Bakım modu gibi kritik ayarlar yalnız gerektiğinde kullanılmalı. Tüm değişiklikler audit log'a yazılır.",
+                            color = AdminMuted,
+                            fontSize = 10.sp,
+                        )
+                    }
+                }
+
+                AdminSection.ANNOUNCEMENTS -> {
+                    item { AdminSectionTitle("DUYURULAR", Icons.Rounded.Campaign) }
+                    item {
+                        AdminWideCard {
+                            Text(
+                                "Oyuncuların göreceği duyuruyu buradan yönet.",
+                                color = AdminMuted,
+                                fontSize = 11.sp,
+                            )
+                            OutlinedTextField(
+                                announcementText,
+                                { announcementText = it.take(500) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("Duyuru metni") },
+                                minLines = 3,
+                                maxLines = 6,
+                            )
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text("Duyuruyu yayınla", color = AdminText, fontWeight = FontWeight.Bold)
+                                Switch(
+                                    checked = announcementEnabled,
+                                    onCheckedChange = { announcementEnabled = it },
+                                    enabled = !busy,
+                                )
+                            }
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        busy = true
+                                        runCatching {
+                                            backend.adminSetAnnouncement(announcementText.trim(), announcementEnabled)
+                                        }.onSuccess {
+                                            notice = "Duyuru güncellendi."
+                                        }.onFailure {
+                                            error = it.message ?: "Duyuru güncellenemedi."
+                                        }
+                                        reload()
+                                        busy = false
+                                    }
+                                },
+                                enabled = !busy,
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Text("DUYURUYU KAYDET")
+                            }
+                        }
+                    }
+                }
+
+                AdminSection.MAINTENANCE -> {
+                    item { AdminSectionTitle("SİSTEM SAĞLIĞI", Icons.Rounded.HealthAndSafety) }
+                    if (health.isEmpty()) item { AdminEmpty("Sağlık bilgileri alınamadı.") }
+                    else items(health, key = { it.metricKey }) { h -> AdminHealthRow(h) }
+
+                    item { AdminSectionTitle("GÜVENLİ ONARIM", Icons.Rounded.BuildCircle) }
+                    item {
+                        AdminWideCard {
+                            Text(
+                                "Bu araçlar kullanıcı hesabı, XP veya oyun verilerini sıfırlamaz.",
+                                color = AdminMuted,
+                                fontSize = 11.sp,
+                            )
+                            AdminRepairGrid { action -> repairConfirm = action }
+                        }
+                    }
+
+                    item { AdminSectionTitle("ALTYAPI & KAPASİTE", Icons.Rounded.Dns) }
+                    if (capacity.isEmpty()) item { AdminEmpty("Altyapı bilgileri alınamadı.") }
+                    else items(capacity, key = { it.metricKey }) { metric ->
+                        AdminCapacityRow(
+                            metric = metric,
+                            onResolve = {
+                                if (metric.resolveUrl.isNotBlank()) uriHandler.openUri(metric.resolveUrl)
                             },
-                            enabled = !busy,
-                            modifier = Modifier.fillMaxWidth(),
-                            border = BorderStroke(1.dp, AdminGold.copy(alpha=.4f)),
-                        ) { Text(label, color = AdminText) }
+                        )
                     }
                 }
             }
@@ -486,6 +689,223 @@ private fun AdminRepairGrid(onAction: (RepairAction) -> Unit) {
             }
         }
     }
+}
+
+@Composable
+private fun AdminPlayerSearchRow(
+    player: AdminPlayerSearchDto,
+    enabled: Boolean,
+    onVipChange: (Boolean) -> Unit,
+) {
+    AdminWideCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(player.displayName, color = AdminText, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                Text(player.email, color = AdminMuted, fontSize = 10.sp)
+                Text(
+                    "Rating: ${player.rating} • Elmas: ${player.diamonds}",
+                    color = AdminMuted,
+                    fontSize = 10.sp,
+                )
+            }
+            if (player.isOwnerAccount) {
+                Surface(color = AdminGold.copy(alpha = .15f), shape = RoundedCornerShape(999.dp)) {
+                    Text(
+                        "ÖZEL",
+                        Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        color = AdminGold,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+            }
+        }
+        AdminToggleRow(
+            title = "VIP",
+            detail = if (player.isOwnerAccount) "Özel hesapta lifetime VIP koruması var." else "Oyuncunun VIP durumunu yönet.",
+            checked = player.isVip,
+            enabled = enabled && !(player.isOwnerAccount && player.isVip),
+            onChecked = onVipChange,
+        )
+    }
+}
+
+@Composable
+private fun AdminGameControlRow(
+    control: AdminGameControlDto,
+    enabled: Boolean,
+    onChange: (Boolean) -> Unit,
+) {
+    val isMaintenance = control.configKey == "maintenance_mode"
+    AdminWideCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(control.title, color = AdminText, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                Text(control.detail, color = AdminMuted, fontSize = 10.sp)
+            }
+            Switch(
+                checked = control.enabled,
+                onCheckedChange = onChange,
+                enabled = enabled,
+                colors = if (isMaintenance) {
+                    SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = AdminRed)
+                } else SwitchDefaults.colors()
+            )
+        }
+        if (isMaintenance && control.enabled) {
+            Text("BAKIM MODU AÇIK", color = AdminRed, fontWeight = FontWeight.Black, fontSize = 11.sp)
+        }
+    }
+}
+
+@Composable
+private fun AdminCapacityCompact(metric: AdminCapacityDto) {
+    val tone = when (metric.status) {
+        "critical" -> AdminRed
+        "warning" -> AdminGold
+        else -> AdminGreen
+    }
+    AdminWideCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(metric.title, color = AdminText, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Text("%${metric.percentUsed}", color = tone, fontWeight = FontWeight.Black)
+        }
+        LinearProgressIndicator(
+            progress = { (metric.percentUsed / 100f).coerceIn(0f, 1f) },
+            modifier = Modifier.fillMaxWidth().height(7.dp),
+            color = tone,
+            trackColor = Color.White.copy(alpha = .07f),
+        )
+        Text(
+            "${formatBytes(metric.usedValue)} / ${formatBytes(metric.limitValue)}",
+            color = AdminMuted,
+            fontSize = 10.sp,
+        )
+    }
+}
+
+@Composable
+private fun AdminOwnerAccountCard(
+    account: AdminOwnerAccountDto,
+    enabled: Boolean,
+    onChange: (Boolean, Boolean, Boolean, Boolean) -> Unit,
+) {
+    AdminWideCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(account.displayName, color = AdminText, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                Text(account.email, color = AdminMuted, fontSize = 10.sp)
+            }
+            Surface(
+                color = if (account.active) AdminGreen.copy(alpha = .14f) else AdminRed.copy(alpha = .12f),
+                shape = RoundedCornerShape(999.dp),
+            ) {
+                Text(
+                    if (account.active) "AKTİF" else "PASİF",
+                    Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    color = if (account.active) AdminGreen else AdminRed,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+        }
+        Text(
+            "Rating: ${account.rating} • Görünen bakiye: ${account.currentDiamonds} • Sınırsız haklarda harcama düşmez.",
+            color = AdminMuted,
+            fontSize = 10.sp,
+        )
+        AdminToggleRow(
+            title = "Süresiz VIP",
+            detail = if (account.lifetimeVip) "VIP hakkı kalıcı olarak korunur." else "Süresiz VIP kapalı.",
+            checked = account.lifetimeVip,
+            enabled = enabled,
+        ) { onChange(it, account.unlimitedDiamonds, account.unlimitedSonCoin, account.active) }
+        HorizontalDivider(color = Color.White.copy(alpha = .08f))
+        AdminToggleRow(
+            title = "Sınırsız Elmas",
+            detail = "Mağaza alışverişlerinde elmas bakiyesi düşmez.",
+            checked = account.unlimitedDiamonds,
+            enabled = enabled,
+        ) { onChange(account.lifetimeVip, it, account.unlimitedSonCoin, account.active) }
+        HorizontalDivider(color = Color.White.copy(alpha = .08f))
+        AdminToggleRow(
+            title = "Sınırsız Son Coin",
+            detail = "Son Coin kullanan özel satın alımlarda bakiye düşmez.",
+            checked = account.unlimitedSonCoin,
+            enabled = enabled,
+        ) { onChange(account.lifetimeVip, account.unlimitedDiamonds, it, account.active) }
+        HorizontalDivider(color = Color.White.copy(alpha = .08f))
+        AdminToggleRow(
+            title = "Özel hesabı etkin tut",
+            detail = "Kapatılırsa sınırsız haklar devre dışı kalır; hesap ve verileri silinmez.",
+            checked = account.active,
+            enabled = enabled,
+        ) { onChange(account.lifetimeVip, account.unlimitedDiamonds, account.unlimitedSonCoin, it) }
+    }
+}
+
+@Composable
+private fun AdminCapacityRow(metric: AdminCapacityDto, onResolve: () -> Unit) {
+    val tone = when (metric.status) {
+        "critical" -> AdminRed
+        "warning" -> AdminGold
+        "ok" -> AdminGreen
+        else -> AdminBlue
+    }
+    AdminWideCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                when (metric.status) {
+                    "critical", "warning" -> Icons.Rounded.Warning
+                    "ok" -> Icons.Rounded.CheckCircle
+                    else -> Icons.Rounded.Info
+                },
+                null,
+                tint = tone,
+            )
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f)) {
+                Text(metric.title, color = AdminText, fontWeight = FontWeight.Bold)
+                Text(metric.detail, color = AdminMuted, fontSize = 10.sp)
+            }
+            if (metric.unit == "bytes") {
+                Text("%${metric.percentUsed}", color = tone, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        if (metric.unit == "bytes") {
+            LinearProgressIndicator(
+                progress = { (metric.percentUsed / 100f).coerceIn(0f, 1f) },
+                modifier = Modifier.fillMaxWidth().height(7.dp),
+                color = tone,
+                trackColor = Color.White.copy(alpha = .07f),
+            )
+            Text(
+                "${formatBytes(metric.usedValue)} / ${formatBytes(metric.limitValue)}",
+                color = AdminMuted,
+                fontSize = 10.sp,
+            )
+        }
+        OutlinedButton(
+            onClick = onResolve,
+            modifier = Modifier.fillMaxWidth(),
+            border = BorderStroke(1.dp, tone.copy(alpha = .55f)),
+        ) {
+            Icon(Icons.Rounded.OpenInNew, null, tint = tone, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                if (metric.metricKey == "github_rollback") "SON SAĞLAM SÜRÜME DÖN" else "PROBLEMİ ÇÖZ / İLGİLİ SAYFAYI AÇ",
+                color = tone,
+                fontSize = 11.sp,
+            )
+        }
+    }
+}
+
+private fun formatBytes(value: Long): String {
+    if (value <= 0) return "0 B"
+    val mb = value / (1024.0 * 1024.0)
+    return if (mb < 1024) String.format(Locale.US, "%.1f MB", mb)
+    else String.format(Locale.US, "%.2f GB", mb / 1024.0)
 }
 
 @Composable

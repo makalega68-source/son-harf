@@ -1,0 +1,103 @@
+name: Rollback to Last Green
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "Son başarılı ana sürüme dön. Oyuncu veritabanına dokunulmaz."
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+
+concurrency:
+  group: rollback-main
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    if: ${{ inputs.confirm == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.4"
+
+      - name: Find previous successful main build
+        id: target
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          CURRENT="$(git rev-parse HEAD)"
+          TARGET="$(gh run list --workflow "Android CI" --branch main --status success --limit 20 --json headSha --jq '.[] | .headSha' | grep -v "^$CURRENT$" | head -n 1)"
+          if [ -z "$TARGET" ]; then
+            echo "::error::Önceki başarılı Android CI sürümü bulunamadı."
+            exit 1
+          fi
+          git cat-file -e "$TARGET^{commit}"
+          echo "sha=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "Önceki başarılı sürüm: $TARGET"
+
+      - name: Create recovery tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="before-rollback-$(date -u +%Y%m%d-%H%M%S)"
+          git tag "$TAG" HEAD
+          git push origin "$TAG"
+
+      - name: Restore code from last green commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET="${{ steps.target.outputs.sha }}"
+          git checkout "$TARGET" -- .
+          git reset
+          git add -A
+
+      - name: Verify restored app before push
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Commit safe rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          TARGET="${{ steps.target.outputs.sha }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --cached --quiet; then
+            echo "Kod zaten hedef başarılı sürümle aynı."
+            exit 0
+          fi
+          git commit -m "Safe rollback to $TARGET [admin]"
+          git push origin HEAD:main
+
+      - name: Summary
+        run: |
+          echo "### Güvenli geri dönüş tamamlandı" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Hedef sürüm: ${{ steps.target.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Oyuncu veritabanına dokunulmadı." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Geri dönüşten önce mevcut kod için recovery tag oluşturuldu." >> "$GITHUB_STEP_SUMMARY"
