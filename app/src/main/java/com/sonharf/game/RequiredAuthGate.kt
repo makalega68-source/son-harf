@@ -7,6 +7,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.MarkEmailUnread
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -78,7 +80,9 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     fun friendly(raw: String): String = when {
         "Email not confirmed" in raw || "email_not_confirmed" in raw -> "E-posta adresini onaylamadan giriş yapamazsın. Gelen kutunu kontrol et."
         "Invalid login credentials" in raw -> "E-posta veya şifre hatalı."
-        "already registered" in raw.lowercase() || "user_already_exists" in raw.lowercase() -> "Bu e-posta zaten kayıtlı. Giriş Yap sekmesini kullan."
+        "existing_confirmed_account" in raw -> "Bu e-posta zaten kayıtlı ve doğrulanmış. Giriş Yap bölümünü kullan; şifreni unuttuysan Şifremi unuttum'a dokun."
+        "already registered" in raw.lowercase() || "user_already_exists" in raw.lowercase() -> "Bu e-posta zaten kayıtlı. Giriş Yap bölümünü kullan."
+        "email rate limit" in raw.lowercase() || "over_email_send_rate_limit" in raw.lowercase() -> "Çok sık e-posta istendi. Birkaç dakika bekleyip tekrar dene."
         "Unable to validate email address" in raw || "validation_failed" in raw.lowercase() -> "E-posta adresi geçerli görünmüyor. Adresi kontrol edip tekrar dene."
         "invalid_display_name" in raw -> "Oyuncu adı 2-24 karakter olmalı."
         "invalid_gender" in raw -> "Cinsiyet seçimi gerekli."
@@ -135,7 +139,11 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
             notice = ""
             success = false
             runCatching {
-                SupabaseProvider.client.auth.resendEmail(OtpType.Email.SIGNUP, targetEmail)
+                SupabaseProvider.client.auth.resendEmail(
+                    type = OtpType.Email.SIGNUP,
+                    email = targetEmail,
+                    redirectUrl = "sonharf://auth",
+                )
             }.onSuccess {
                 success = true
                 notice = "Yeni doğrulama e-postası gönderildi. Gelen kutunu ve spam klasörünü kontrol et."
@@ -366,7 +374,10 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                         notice = ""
                                         success = false
                                         runCatching {
-                                            SupabaseProvider.client.auth.resetPasswordForEmail(email.trim())
+                                            SupabaseProvider.client.auth.resetPasswordForEmail(
+                                                email = email.trim(),
+                                                redirectUrl = "sonharf://auth",
+                                            )
                                         }.onSuccess {
                                             success = true
                                             notice = "Şifre sıfırlama bağlantısı e-posta adresine gönderildi. Gelen kutunu ve spam klasörünü kontrol et."
@@ -392,19 +403,81 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 scope.launch {
                                     busy = true; notice = ""; success = false
                                     if (register) {
-                                        runCatching {
+                                        val targetEmail = email.trim()
+
+                                        // First try the credentials. This prevents Supabase's
+                                        // repeated-signup privacy response from being mistaken
+                                        // for a newly sent verification email.
+                                        val existingLogin = runCatching {
                                             SupabaseProvider.client.auth.signOut()
-                                            SupabaseProvider.client.auth.signUpWith(Email, redirectUrl = "sonharf://auth") {
-                                                this.email = email.trim(); this.password = password
-                                                data = buildJsonObject { put("display_name", displayName.trim()); put("gender", gender) }
+                                            SupabaseProvider.client.auth.signInWith(Email) {
+                                                this.email = targetEmail
+                                                this.password = password
                                             }
-                                        }.onSuccess {
-                                            SonHarfPreferences.rememberPendingRegistration(context, email, displayName, gender)
+                                            check(hasVerifiedMembershipSession()) { "Email not confirmed" }
+                                        }
+
+                                        if (existingLogin.isSuccess) {
+                                            val profile = currentIdentityProfile()
+                                            if (profile != null && !profile.identityLocked) {
+                                                val pendingName = SonHarfPreferences.pendingRegistrationName(context, targetEmail)
+                                                val pendingGender = SonHarfPreferences.pendingRegistrationGender(context, targetEmail)
+                                                if (pendingName != null && pendingGender != null) lockIdentity(pendingName, pendingGender)
+                                            }
+                                            SonHarfPreferences.clearPendingRegistration(context, targetEmail)
+                                            SonHarfPreferences.setRememberLogin(context, true, targetEmail)
                                             success = true
-                                            pendingVerificationEmail = email.trim()
-                                            otpCode = ""
-                                            notice = "Doğrulama e-postası gönderildi. Maildeki E-postamı Doğrula butonuna dokun veya 6 haneli kodu buraya gir."
-                                        }.onFailure { notice = friendly(it.message.orEmpty()) }
+                                            notice = "Hesabın zaten vardı; giriş yapıldı."
+                                            busy = false
+                                            onAuthenticated()
+                                            return@launch
+                                        }
+
+                                        val existingError = existingLogin.exceptionOrNull()?.message.orEmpty()
+                                        if ("Email not confirmed" in existingError || "email_not_confirmed" in existingError) {
+                                            runCatching {
+                                                SupabaseProvider.client.auth.signOut()
+                                                SupabaseProvider.client.auth.resendEmail(
+                                                    type = OtpType.Email.SIGNUP,
+                                                    email = targetEmail,
+                                                    redirectUrl = "sonharf://auth",
+                                                )
+                                            }.onSuccess {
+                                                SonHarfPreferences.rememberPendingRegistration(context, targetEmail, displayName, gender)
+                                                success = true
+                                                pendingVerificationEmail = targetEmail
+                                                otpCode = ""
+                                                notice = "Doğrulama e-postası yeniden gönderildi. Gelen kutusu ve spam klasörünü kontrol et."
+                                            }.onFailure {
+                                                notice = friendly(it.message.orEmpty())
+                                            }
+                                        } else {
+                                            runCatching {
+                                                SupabaseProvider.client.auth.signOut()
+                                                SupabaseProvider.client.auth.signUpWith(Email, redirectUrl = "sonharf://auth") {
+                                                    this.email = targetEmail
+                                                    this.password = password
+                                                    data = buildJsonObject {
+                                                        put("display_name", displayName.trim())
+                                                        put("gender", gender)
+                                                    }
+                                                }
+                                            }.onSuccess { newUser ->
+                                                if (newUser == null || newUser.identities.isNullOrEmpty()) {
+                                                    success = false
+                                                    notice = friendly("existing_confirmed_account")
+                                                    register = false
+                                                } else {
+                                                    SonHarfPreferences.rememberPendingRegistration(context, targetEmail, displayName, gender)
+                                                    success = true
+                                                    pendingVerificationEmail = targetEmail
+                                                    otpCode = ""
+                                                    notice = "Doğrulama e-postası gönderildi. Maildeki doğrulama bağlantısına dokun veya 6 haneli kodu buraya gir."
+                                                }
+                                            }.onFailure {
+                                                notice = friendly(it.message.orEmpty())
+                                            }
+                                        }
                                     } else {
                                         runCatching {
                                             SupabaseProvider.client.auth.signOut()
@@ -473,8 +546,19 @@ private fun EmailVerificationCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Surface(color = Color(0xFFEAF3FF), shape = CircleShape) {
-                Text("✉", Modifier.padding(14.dp), fontSize = 28.sp)
+            Surface(
+                modifier = Modifier.size(72.dp),
+                color = Color(0xFFEAF3FF),
+                shape = CircleShape,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Rounded.MarkEmailUnread,
+                        contentDescription = null,
+                        tint = Color(0xFF1769E0),
+                        modifier = Modifier.size(34.dp),
+                    )
+                }
             }
             Text(
                 "E-postanı doğrula",
@@ -490,7 +574,7 @@ private fun EmailVerificationCard(
                 textAlign = TextAlign.Center,
             )
             Text(
-                "Maildeki “E-postamı Doğrula” butonuna dokunduğunda Son Harf otomatik açılır. Buton çalışmazsa aşağıdaki alana e-postadaki 6 haneli kodu gir.",
+                "Maildeki doğrulama bağlantısına dokunduğunda Kelime Tahtı otomatik açılır. Bağlantı çalışmazsa e-postadaki 6 haneli kodu gir.",
                 color = Color(0xFF607596),
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,

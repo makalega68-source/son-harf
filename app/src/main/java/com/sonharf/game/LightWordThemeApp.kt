@@ -310,8 +310,8 @@ private fun LightHomeScreen(
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("SON HARF", color = LightText, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                    Text("Kelimeyi Sürdür, Rakibini Geç", color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                    Text("KELİME TAHTI", color = LightText, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text("Kelimeyi Fethet, Tahtını Koru", color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 }
                 Box(Modifier.clickable { SonHarfSoundFx.tap(); onProfile() }) {
                     ProfilePhotoAvatar(
