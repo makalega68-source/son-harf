@@ -17,7 +17,8 @@ class BetaReleaseRegressionContractTest {
         assertFalse(classic.contains(".verticalScroll(rememberScrollState())"))
         assertFalse(classic.contains("words.takeLast(3)"))
         assertTrue(classic.contains("val current = words.last()"))
-        assertTrue(classic.contains("wordFocusRequester.requestFocus()"))
+        assertTrue(classic.contains("EmbeddedWordKeyboard("))
+        assertTrue(classic.contains("readOnly = true"))
         assertTrue(classic.contains("ProfilePhotoAvatarWithGender("))
     }
 
@@ -28,11 +29,11 @@ class BetaReleaseRegressionContractTest {
         val dailyArena = projectFile("app/src/main/java/com/sonharf/game/DailyArenaScreen.kt").readText()
         val teamArena = projectFile("app/src/main/java/com/sonharf/game/TeamArenaScreen.kt").readText()
 
-        assertTrue(cipher.contains("imeVisible"))
-        assertTrue(cipher.contains("height(38.dp)"))
-        assertTrue(cipher.contains("guessFocusRequester.requestFocus()"))
+        assertTrue(cipher.contains("EmbeddedWordKeyboard("))
+        assertFalse(cipher.contains("LocalSoftwareKeyboardController"))
         assertTrue(wordArena.contains("inputFocusRequester.requestFocus()"))
-        assertTrue(dailyArena.contains("inputFocusRequester.requestFocus()"))
+        assertTrue(dailyArena.contains("EmbeddedWordKeyboard("))
+        assertFalse(dailyArena.contains("Modifier.fillMaxSize().imePadding()"))
         assertTrue(teamArena.contains("inputFocusRequester.requestFocus()"))
     }
 
@@ -66,7 +67,7 @@ class BetaReleaseRegressionContractTest {
         assertTrue(vip.contains("BillingManager("))
         assertTrue(vip.contains("PlayPurchaseVerification.verify"))
         assertFalse(vip.contains("rememberInfiniteTransition"))
-        assertTrue(vip.contains("no competitive power"))
+        assertTrue(vip.lowercase().contains("no competitive power"))
     }
 
     @Test

@@ -47,9 +47,6 @@ fun DailyArenaScreen(onBack: () -> Unit) {
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    val inputFocusRequester = remember { FocusRequester() }
-    val softwareKeyboard = LocalSoftwareKeyboardController.current
-
     suspend fun reload() {
         val b = backend ?: return
         runCatching {
@@ -70,16 +67,6 @@ fun DailyArenaScreen(onBack: () -> Unit) {
     }
 
     LaunchedEffect(language) { reload() }
-
-    LaunchedEffect(status?.status, busy, status?.runId) {
-        if (status?.status == "playing") {
-            delay(120)
-            runCatching { inputFocusRequester.requestFocus() }
-            softwareKeyboard?.show()
-        } else if (status?.status == "finished") {
-            softwareKeyboard?.hide()
-        }
-    }
 
     LaunchedEffect(status?.runId, status?.status, status?.endsAt) {
         if (status?.status == "playing") {
@@ -212,7 +199,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
         }
 
         LazyColumn(
-            Modifier.fillMaxSize().imePadding(),
+            Modifier.fillMaxSize(),
             contentPadding = PaddingValues(14.dp),
             verticalArrangement = Arrangement.spacedBy(11.dp),
         ) {
@@ -422,38 +409,32 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                     item {
                         OutlinedTextField(
                             value = input,
-                            onValueChange = { value ->
-                                if (!busy && prepSeconds == 0 && remainingSeconds > 0) {
-                                    val next = value.filter(Char::isLetter).take(10).uppercase()
-                                    if (next.length > input.length) SonHarfSoundFx.typingClick()
-                                    input = next
-                                }
-                            },
-                            modifier = Modifier.fillMaxWidth().focusRequester(inputFocusRequester),
+                            onValueChange = {},
+                            modifier = Modifier.fillMaxWidth(),
                             enabled = true,
+                            readOnly = true,
                             singleLine = true,
                             label = {
                                 Text(sh("3–10 harfli kelime", "3–10 letter word"))
                             },
-                            keyboardOptions = KeyboardOptions(
-                                imeAction = ImeAction.Send,
-                                showKeyboardOnFocus = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = SonHarfBlue,
+                                unfocusedBorderColor = SonHarfMuted.copy(alpha = .45f),
+                                cursorColor = Color.Transparent,
                             ),
-                            keyboardActions = KeyboardActions(onSend = { submit() }),
-                            trailingIcon = {
-                                TextButton(
-                                    onClick = ::submit,
-                                    enabled = input.length in 3..10 &&
-                                        !busy &&
-                                        prepSeconds == 0 &&
-                                        remainingSeconds > 0,
-                                ) {
-                                    Text(
-                                        sh("GÖNDER", "SEND"),
-                                        fontWeight = FontWeight.Black,
-                                    )
-                                }
+                        )
+                    }
+
+                    item {
+                        EmbeddedWordKeyboard(
+                            value = input,
+                            language = language,
+                            enabled = !busy && prepSeconds == 0 && remainingSeconds > 0,
+                            maxLength = 10,
+                            onValueChange = { next ->
+                                input = next.filter(Char::isLetter).take(10).uppercase()
                             },
+                            onSubmit = { if (input.length in 3..10) submit() },
                         )
                     }
 

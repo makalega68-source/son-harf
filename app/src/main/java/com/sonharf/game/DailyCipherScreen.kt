@@ -5,8 +5,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Share
@@ -16,15 +14,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -34,7 +25,6 @@ import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.getDailyCipherStatus
 import com.sonharf.game.data.submitDailyCipherGuess
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 private val CipherBg = Color(0xFFF7F9FC)
@@ -56,10 +46,6 @@ fun DailyCipherScreen(onBack: () -> Unit) {
     var guess by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
-    val guessFocusRequester = remember { FocusRequester() }
-    val softwareKeyboard = LocalSoftwareKeyboardController.current
-    val density = LocalDensity.current
-    val imeVisible = WindowInsets.ime.getBottom(density) > 0
 
     suspend fun reload() {
         val b = backend
@@ -78,16 +64,6 @@ fun DailyCipherScreen(onBack: () -> Unit) {
         val me = b?.currentUserId()
         if (b != null && me != null) profile = runCatching { b.getProfile(me) }.getOrNull()
         runCatching { backend?.logEvent("daily_cipher_open", SonHarfUiState.language) }
-    }
-
-    LaunchedEffect(status?.finished, busy, guess) {
-        if (status?.finished == false) {
-            delay(120)
-            runCatching { guessFocusRequester.requestFocus() }
-            softwareKeyboard?.show()
-        } else if (status?.finished == true) {
-            softwareKeyboard?.hide()
-        }
     }
 
     fun submit() {
@@ -133,35 +109,21 @@ fun DailyCipherScreen(onBack: () -> Unit) {
         )
     ) {
         Column(
-            Modifier.fillMaxSize().imePadding().padding(horizontal = 16.dp, vertical = if (imeVisible) 5.dp else 10.dp),
-            verticalArrangement = Arrangement.spacedBy(if (imeVisible) 6.dp else 12.dp),
+            Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = CipherText)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME AVI", "WORD HUNT"), color = CipherText, fontSize = if (imeVisible) 18.sp else 21.sp, fontWeight = FontWeight.Black)
-                    if (!imeVisible) {
-                        Text(sh("Günün 5 harfli kelimesini ipuçlarıyla bul.", "Find today's five-letter word using the clues."), color = CipherMuted, fontSize = 10.sp)
-                    }
+                    Text(sh("KELİME AVI", "WORD HUNT"), color = CipherText, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Günün 5 harfli kelimesi", "Today's five-letter word"), color = CipherMuted, fontSize = 9.sp)
                 }
                 Text("1×", color = CipherGold, fontWeight = FontWeight.Black)
             }
 
-            if (!imeVisible) {
-                CompetitionVsCard(
-                    myName = profile?.displayName ?: sh("Sen", "You"),
-                    opponentName = sh("Günün Şifresi", "Daily Cipher"),
-                    myAvatarPath = profile?.avatarPath,
-                    opponentAvatarPath = null,
-                    myGender = profile?.gender,
-                    myRating = profile?.rating,
-                    centerText = "VS",
-                )
-            }
-
-            CipherHowToCard(compact = imeVisible)
+            CipherHowToCard(compact = true)
 
             val s = status
             if (s == null && notice.isBlank()) {
@@ -176,7 +138,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                     repeat(6) { row ->
                         val word = s?.guesses?.getOrNull(row).orEmpty()
                         val feedback = s?.feedbacks?.getOrNull(row).orEmpty()
-                        CipherGuessRow(word, feedback, compact = imeVisible)
+                        CipherGuessRow(word, feedback, compact = true)
                     }
 
                     if (s?.finished == true) {
@@ -217,20 +179,12 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                     } else {
                         OutlinedTextField(
                             value = guess,
-                            onValueChange = { value ->
-                                guess = value.filter { it.isLetter() }.take(5).uppercase()
-                            },
-                            modifier = Modifier.fillMaxWidth().focusRequester(guessFocusRequester),
+                            onValueChange = {},
+                            modifier = Modifier.fillMaxWidth().height(54.dp),
                             enabled = true,
-                            readOnly = busy || s == null,
+                            readOnly = true,
                             singleLine = true,
                             label = { Text(sh("5 harfli tahmin", "Five-letter guess")) },
-                            keyboardOptions = KeyboardOptions(
-                                capitalization = KeyboardCapitalization.Characters,
-                                keyboardType = KeyboardType.Text,
-                                imeAction = ImeAction.Done,
-                            ),
-                            keyboardActions = KeyboardActions(onDone = { submit() }),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedTextColor = CipherText,
                                 unfocusedTextColor = CipherText,
@@ -241,15 +195,14 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                                 cursorColor = CipherCyan,
                             ),
                         )
-                        Button(
-                            onClick = ::submit,
-                            enabled = guess.length == 5 && !busy && s != null,
-                            modifier = Modifier.fillMaxWidth().height(if (imeVisible) 44.dp else 52.dp),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = CipherCyan, contentColor = CipherBg),
-                        ) {
-                            Text(if (busy) "…" else sh("TAHMİN ET", "GUESS"), fontWeight = FontWeight.Black)
-                        }
+                        EmbeddedWordKeyboard(
+                            value = guess,
+                            language = SonHarfUiState.language,
+                            enabled = !busy && s != null,
+                            maxLength = 5,
+                            onValueChange = { guess = it.filter(Char::isLetter).take(5).uppercase() },
+                            onSubmit = { if (guess.length == 5) submit() },
+                        )
                     }
 
                     if (notice.isNotBlank()) {

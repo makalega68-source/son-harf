@@ -8,14 +8,23 @@ import org.junit.Test
 class GameplayKeyboardAvatarContractTest {
 
     @Test
-    fun wordHuntKeepsKeyboardAndCompactsForIme() {
+    fun wordHuntKeepsFixedKeyboardWithoutImeResize() {
         val source = projectFile("app/src/main/java/com/sonharf/game/DailyCipherScreen.kt").readText()
 
-        assertTrue(source.contains("LocalSoftwareKeyboardController"))
-        assertTrue(source.contains("guessFocusRequester.requestFocus()"))
-        assertTrue(source.contains("imeVisible"))
-        assertTrue(source.contains("readOnly = busy || s == null"))
-        assertTrue(source.contains("height(38.dp)"))
+        assertTrue(source.contains("EmbeddedWordKeyboard("))
+        assertTrue(source.contains("readOnly = true"))
+        assertTrue(!source.contains("LocalSoftwareKeyboardController"))
+        assertTrue(!source.contains("imeVisible"))
+    }
+
+    @Test
+    fun bilBakalimKeepsFixedNumericKeyboardAndShowsBothAnswers() {
+        val source = projectFile("app/src/main/java/com/sonharf/game/BilBakalimExcitementScreen.kt").readText()
+
+        assertTrue(source.contains("EmbeddedNumberKeyboard("))
+        assertTrue(source.contains("SENİN CEVABIN"))
+        assertTrue(source.contains("RAKİBİN CEVABI"))
+        assertTrue(!source.contains("softwareKeyboard?.show()"))
     }
 
     @Test
@@ -33,10 +42,10 @@ class GameplayKeyboardAvatarContractTest {
     fun dailyArenaKeepsKeyboardAndShowsRankingPhotos() {
         val source = projectFile("app/src/main/java/com/sonharf/game/DailyArenaScreen.kt").readText()
 
-        assertTrue(source.contains("inputFocusRequester.requestFocus()"))
+        assertTrue(source.contains("EmbeddedWordKeyboard("))
         assertTrue(source.contains("leaderboardProfiles"))
         assertTrue(source.contains("ProfilePhotoAvatar("))
-        assertTrue(source.contains("Modifier.fillMaxSize().imePadding()"))
+        assertTrue(!source.contains("Modifier.fillMaxSize().imePadding()"))
     }
 
     @Test

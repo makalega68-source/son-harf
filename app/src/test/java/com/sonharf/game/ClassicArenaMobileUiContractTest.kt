@@ -29,12 +29,12 @@ class ClassicArenaMobileUiContractTest {
     }
 
     @Test
-    fun classicArenaKeepsNativeKeyboardAndPlayerPhotosInMatch() {
+    fun classicArenaKeepsFixedKeyboardAndPlayerPhotosInMatch() {
         val arena = projectFile("app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt").readText()
 
-        assertTrue(arena.contains("wordFocusRequester.requestFocus()"))
-        assertTrue(arena.contains("keyboard?.show()"))
-        assertTrue(arena.contains("onValueChange = { value -> if (myTurn && !busy) onWordInput(value) }"))
+        assertTrue(arena.contains("EmbeddedWordKeyboard("))
+        assertTrue(arena.contains("readOnly = true"))
+        assertFalse(arena.contains("keyboard?.show()"))
         assertTrue(arena.contains("ProfilePhotoAvatarWithGender("))
     }
 
