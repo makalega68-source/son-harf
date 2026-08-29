@@ -558,7 +558,7 @@ begin
     and (r.status='finished' or w.user_id=v_uid)
   order by w.created_at,w.id;
 end
-$;
+$$;
 
 create or replace function public.submit_word_arena_v1(p_room_id uuid,p_word text)
 returns jsonb
@@ -685,7 +685,7 @@ create or replace function public.prevent_game_room_during_word_arena_v1()
 returns trigger
 language plpgsql
 set search_path=public,pg_temp
-as $
+as $$
 begin
   if exists(
     select 1 from public.word_arena_rooms ar
@@ -700,7 +700,7 @@ begin
   end if;
   return new;
 end
-$;
+$$;
 
 drop trigger if exists trg_prevent_game_room_during_word_arena_v1 on public.game_rooms;
 create trigger trg_prevent_game_room_during_word_arena_v1

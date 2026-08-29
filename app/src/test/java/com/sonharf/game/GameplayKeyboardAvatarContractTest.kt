@@ -31,8 +31,9 @@ class GameplayKeyboardAvatarContractTest {
     fun wordArenaKeepsKeyboardAndShowsBothPlayerPhotos() {
         val source = projectFile("app/src/main/java/com/sonharf/game/WordArenaScreen.kt").readText()
 
-        assertTrue(source.contains("inputFocusRequester.requestFocus()"))
-        assertTrue(source.contains("showKeyboardOnFocus = true"))
+        assertTrue(source.contains("EmbeddedWordKeyboard("))
+        assertTrue(!source.contains("LocalSoftwareKeyboardController"))
+        assertTrue(!source.contains("showKeyboardOnFocus = true"))
         assertTrue(source.contains("ProfilePhotoAvatarWithGender("))
         assertTrue(source.contains("myAvatarPath"))
         assertTrue(source.contains("opponentAvatarPath"))

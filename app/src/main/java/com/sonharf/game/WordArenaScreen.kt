@@ -9,8 +9,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bolt
@@ -22,13 +20,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,6 +53,12 @@ fun WordArenaScreen(
     var busy by remember { mutableStateOf(false) }
     var rematchStatus by remember { mutableStateOf("idle") }
     var clockMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var botMode by remember { mutableStateOf(false) }
+
+    if (botMode) {
+        WordDuelBotScreen(onExit = { botMode = false })
+        return
+    }
 
     suspend fun refreshRoom(id: String) {
         val b = backend ?: return
@@ -232,12 +232,20 @@ fun WordArenaScreen(
                     }
                 },
                 onBack = ::leaveScreen,
+                onBot = {
+                    scope.launch {
+                        runCatching { backend?.cancelWordArena() }
+                        matchmaking = "idle"
+                        botMode = true
+                    }
+                },
                 busy = busy,
             )
 
             active == null -> ArenaIntroScreen(
                 onBack = ::leaveScreen,
                 onPlay = ::startMatchmaking,
+                onBot = { botMode = true },
                 busy = busy,
                 notice = notice,
             )
@@ -359,6 +367,7 @@ fun WordArenaScreen(
 private fun ArenaIntroScreen(
     onBack: () -> Unit,
     onPlay: () -> Unit,
+    onBot: () -> Unit,
     busy: Boolean,
     notice: String,
 ) {
@@ -430,13 +439,24 @@ private fun ArenaIntroScreen(
             Button(
                 onClick = onPlay,
                 enabled = !busy,
-                modifier = Modifier.fillMaxWidth().height(60.dp),
+                modifier = Modifier.fillMaxWidth().height(58.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
             ) {
-                Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(28.dp))
+                Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(26.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (busy) "…" else sh("RAKİP BUL", "FIND OPPONENT"), fontSize = 19.sp, fontWeight = FontWeight.Black)
+                Text(if (busy) "…" else sh("CANLI RAKİP", "LIVE RIVAL"), fontSize = 18.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        item {
+            OutlinedButton(
+                onClick = onBot,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.5.dp, SonHarfBlue.copy(alpha = .45f)),
+            ) {
+                Text(sh("BOTLA OYNA", "PLAY BOT"), color = SonHarfBlue, fontWeight = FontWeight.Black, fontSize = 16.sp)
             }
         }
     }
@@ -463,7 +483,7 @@ private fun ArenaRuleCard(icon: String, title: String, text: String) {
 }
 
 @Composable
-private fun ArenaWaitingScreen(onCancel: () -> Unit, onBack: () -> Unit, busy: Boolean) {
+private fun ArenaWaitingScreen(onCancel: () -> Unit, onBack: () -> Unit, onBot: () -> Unit, busy: Boolean) {
     Column(
         Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -474,9 +494,10 @@ private fun ArenaWaitingScreen(onCancel: () -> Unit, onBack: () -> Unit, busy: B
         Text(sh("RAKİP ARANIYOR", "FINDING OPPONENT"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
         Text(sh("Rating seviyene yakın oyuncu aranıyor.", "Looking for a player near your rating."), color = SonHarfMuted, fontSize = 11.sp)
         Spacer(Modifier.height(22.dp))
-        OutlinedButton(onClick = onCancel, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Text(sh("ARAMAYI İPTAL ET", "CANCEL SEARCH"))
+        OutlinedButton(onClick = onBot, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            Text(sh("BOTLA HEMEN OYNA", "PLAY BOT NOW"), fontWeight = FontWeight.Black)
         }
+        TextButton(onClick = onCancel, enabled = !busy) { Text(sh("ARAMAYI İPTAL ET", "CANCEL SEARCH")) }
         TextButton(onClick = onBack) { Text(sh("ANA SAYFAYA DÖN", "BACK HOME")) }
     }
 }
@@ -510,21 +531,8 @@ private fun ArenaPlayScreen(
     val opponentWordsNow = words.filter { it.userId != me }
     val playing = preStartSeconds <= 0 && secondsLeft > 0
     val danger = secondsLeft in 1..10
-    val inputFocusRequester = remember { FocusRequester() }
-    val softwareKeyboard = LocalSoftwareKeyboardController.current
-
-    LaunchedEffect(room.id, room.status, busy, preStartSeconds, secondsLeft) {
-        if (room.status == "playing") {
-            delay(120)
-            runCatching { inputFocusRequester.requestFocus() }
-            softwareKeyboard?.show()
-        } else {
-            softwareKeyboard?.hide()
-        }
-    }
-
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().padding(12.dp),
+        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -564,20 +572,22 @@ private fun ArenaPlayScreen(
         )
 
         if (preStartSeconds > 0) {
-            Surface(
-                Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = SonHarfGold.copy(alpha = .11f),
-                border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .35f)),
-            ) {
-                Text(
-                    sh("$preStartSeconds… HAZIR OL!", "$preStartSeconds… GET READY!"),
-                    Modifier.fillMaxWidth().padding(12.dp),
-                    textAlign = TextAlign.Center,
-                    color = SonHarfGold,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 17.sp,
-                )
+            Box(Modifier.fillMaxWidth().height(118.dp), contentAlignment = Alignment.Center) {
+                Surface(
+                    modifier = Modifier.size(92.dp),
+                    shape = CircleShape,
+                    color = SonHarfBlue,
+                    shadowElevation = 10.dp,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            preStartSeconds.coerceIn(1, 3).toString(),
+                            color = Color.White,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 42.sp,
+                        )
+                    }
+                }
             }
         }
 
@@ -634,29 +644,44 @@ private fun ArenaPlayScreen(
             Text(notice, Modifier.fillMaxWidth(), color = if ("+" in notice) SonHarfGreen else SonHarfPink, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 10.sp)
         }
 
-        OutlinedTextField(
-            value = input,
-            onValueChange = { value -> if (playing && !busy) onInput(value) },
-            enabled = true,
-            modifier = Modifier.fillMaxWidth().focusRequester(inputFocusRequester),
-            singleLine = true,
-            label = { Text(sh("Kelime", "Word")) },
-            placeholder = {
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = SonHarfSurface,
+            border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .18f)),
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    when {
-                        preStartSeconds > 0 -> sh("Başlamayı bekle…", "Wait for start…")
-                        !playing -> sh("Süre doldu…", "Time is up…")
-                        else -> sh("Harflerden kelime üret…", "Build a word from the letters…")
-                    }
+                    input.ifBlank {
+                        when {
+                            preStartSeconds > 0 -> sh("Hazır ol", "Get ready")
+                            !playing -> sh("Süre doldu", "Time is up")
+                            else -> sh("Kelime yaz", "Type a word")
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    color = if (input.isBlank()) SonHarfMuted else SonHarfText,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
                 )
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send, showKeyboardOnFocus = true),
-            keyboardActions = KeyboardActions(onSend = { onSubmit() }),
-            trailingIcon = {
-                IconButton(onClick = onSubmit, enabled = playing && !busy && input.isNotBlank()) {
-                    Text("➤", color = SonHarfBlue, fontSize = 21.sp)
+                TextButton(
+                    onClick = onSubmit,
+                    enabled = playing && !busy && input.isNotBlank(),
+                ) {
+                    Text(sh("GÖNDER", "SEND"), fontWeight = FontWeight.Black)
                 }
-            },
+            }
+        }
+
+        EmbeddedWordKeyboard(
+            value = input,
+            language = SonHarfUiState.language,
+            enabled = playing && !busy,
+            maxLength = 10,
+            onValueChange = onInput,
+            onSubmit = onSubmit,
         )
     }
 }
