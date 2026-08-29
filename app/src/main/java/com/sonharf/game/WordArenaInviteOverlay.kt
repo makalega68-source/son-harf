@@ -17,7 +17,6 @@ import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.WordArenaInviteDto
 import com.sonharf.game.data.getIncomingWordArenaInvites
-import com.sonharf.game.data.getProfile
 import com.sonharf.game.data.respondWordArenaInvite
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.delay
