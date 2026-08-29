@@ -50,7 +50,7 @@ begin
     and d.active
     and char_length(d.normalized_word) between 3 and 10
     and public.arena_word_fits_letters_v1(d.normalized_word,v_letters)
-  order by char_length(d.normalized_word) desc, random()
+  order by random()
   limit v_limit;
 end
 $$;
