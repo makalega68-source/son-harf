@@ -5,6 +5,16 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
 }
 
+val googleTestAdMobAppId = "ca-app-pub-3940256099942544~3347511713"
+val googleTestRewardedAdUnitId = "ca-app-pub-3940256099942544/5224354917"
+
+val adMobAppIdProvider = providers.gradleProperty("SON_HARF_ADMOB_APP_ID")
+    .orElse(googleTestAdMobAppId)
+val rewardedAdUnitIdProvider = providers.gradleProperty("SON_HARF_ADMOB_REWARDED_ID")
+    .orElse(googleTestRewardedAdUnitId)
+val bannerAdUnitIdProvider = providers.gradleProperty("SON_HARF_ADMOB_BANNER_ID")
+    .orElse("")
+
 android {
     namespace = "com.sonharf.game"
     compileSdk = 36
@@ -22,15 +32,9 @@ android {
         val supabaseKey = providers.gradleProperty("SON_HARF_SUPABASE_KEY")
             .orElse("sb_publishable_e0SbZKPDCfEcRlxaJsXC7g_D9xkaDjf")
             .get()
-        val admobAppId = providers.gradleProperty("SON_HARF_ADMOB_APP_ID")
-            .orElse("ca-app-pub-3940256099942544~3347511713")
-            .get()
-        val rewardedAdUnitId = providers.gradleProperty("SON_HARF_ADMOB_REWARDED_ID")
-            .orElse("ca-app-pub-3940256099942544/5224354917")
-            .get()
-        val bannerAdUnitId = providers.gradleProperty("SON_HARF_ADMOB_BANNER_ID")
-            .orElse("")
-            .get()
+        val admobAppId = adMobAppIdProvider.get()
+        val rewardedAdUnitId = rewardedAdUnitIdProvider.get()
+        val bannerAdUnitId = bannerAdUnitIdProvider.get()
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
         buildConfigField("String", "ADMOB_REWARDED_AD_UNIT_ID", "\"$rewardedAdUnitId\"")
@@ -101,6 +105,40 @@ dependencies {
 
     implementation("com.android.billingclient:billing-ktx:8.0.0")
     implementation("com.google.android.gms:play-services-ads:24.5.0")
+    implementation("com.google.android.ump:user-messaging-platform:4.0.0")
     testImplementation("junit:junit:4.13.2")
     debugImplementation("androidx.compose.ui:ui-tooling")
+}
+
+
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
+    doFirst {
+        val appId = adMobAppIdProvider.get()
+        val rewardedId = rewardedAdUnitIdProvider.get()
+
+        check(appId.isNotBlank() && appId != googleTestAdMobAppId) {
+            "Production release blocked: configure SON_HARF_ADMOB_APP_ID with the production AdMob app ID."
+        }
+        check(rewardedId.isNotBlank() && rewardedId != googleTestRewardedAdUnitId) {
+            "Production release blocked: configure SON_HARF_ADMOB_REWARDED_ID with the production rewarded-ad unit ID."
+        }
+
+        val signingValues = listOf(
+            providers.gradleProperty("SON_HARF_RELEASE_STORE_FILE")
+                .orElse(providers.environmentVariable("SON_HARF_RELEASE_STORE_FILE"))
+                .orNull,
+            providers.gradleProperty("SON_HARF_RELEASE_STORE_PASSWORD")
+                .orElse(providers.environmentVariable("SON_HARF_RELEASE_STORE_PASSWORD"))
+                .orNull,
+            providers.gradleProperty("SON_HARF_RELEASE_KEY_ALIAS")
+                .orElse(providers.environmentVariable("SON_HARF_RELEASE_KEY_ALIAS"))
+                .orNull,
+            providers.gradleProperty("SON_HARF_RELEASE_KEY_PASSWORD")
+                .orElse(providers.environmentVariable("SON_HARF_RELEASE_KEY_PASSWORD"))
+                .orNull,
+        )
+        check(signingValues.all { !it.isNullOrBlank() }) {
+            "Production release blocked: release keystore path/password/key alias/key password are required."
+        }
+    }
 }
