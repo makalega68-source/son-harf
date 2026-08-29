@@ -52,6 +52,12 @@ class RewardedAdController(private val context: Context) {
         )
     }
 
+    fun clear() {
+        rewardedAd = null
+        loading = false
+        ready = false
+    }
+
     fun show(
         activity: Activity,
         onEarned: (String) -> Unit,
