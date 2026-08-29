@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Groups
@@ -18,9 +20,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +49,7 @@ fun TeamArenaScreen(
     var roomId by remember(initialRoomId) { mutableStateOf(initialRoomId) }
     var room by remember { mutableStateOf<TeamArenaRoomDto?>(null) }
     var members by remember { mutableStateOf<List<TeamArenaMemberDto>>(emptyList()) }
+    var memberProfiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
     var words by remember { mutableStateOf<List<TeamArenaWordDto>>(emptyList()) }
     var friends by remember { mutableStateOf<List<SocialProfileDto>>(emptyList()) }
     var inviteTeam by remember { mutableStateOf<Int?>(null) }
@@ -58,7 +65,11 @@ fun TeamArenaScreen(
         runCatching {
             val next = b.getTeamArenaRoom(id)
             room = next
-            members = b.getTeamArenaMembers(id)
+            val nextMembers = b.getTeamArenaMembers(id)
+            members = nextMembers
+            memberProfiles = nextMembers.associate { member ->
+                member.userId to runCatching { b.getProfile(member.userId) }.getOrNull()
+            }
             words = if (next.status in setOf("playing", "finished")) {
                 b.getTeamArenaWords(id)
             } else {
@@ -127,7 +138,29 @@ fun TeamArenaScreen(
         }
     }
 
-    BackHandler { onExit() }
+    fun closeScreen() {
+        val current = room
+        val id = roomId
+        if (current?.status == "lobby" && id != null && backend != null) {
+            scope.launch {
+                if (current.isHost) {
+                    runCatching { backend.cancelTeamArenaLobby(id) }
+                } else {
+                    runCatching { backend.leaveTeamArenaLobby(id) }
+                }
+                roomId = null
+                room = null
+                members = emptyList()
+                memberProfiles = emptyMap()
+                words = emptyList()
+                onExit()
+            }
+        } else {
+            onExit()
+        }
+    }
+
+    BackHandler { closeScreen() }
 
     val active = room
     val myMember = members.firstOrNull { it.userId == me }
@@ -153,7 +186,19 @@ fun TeamArenaScreen(
                     SonHarfSoundFx.softNotify()
                     reload()
                 }
-                .onFailure { notice = teamArenaError(it.message.orEmpty()) }
+                .onFailure { error ->
+                    if ("team_arena_already_active" in error.message.orEmpty()) {
+                        val existing = runCatching { b.getMyActiveTeamArena() }.getOrNull()
+                        if (existing?.active == true && !existing.roomId.isNullOrBlank()) {
+                            roomId = existing.roomId
+                            reload()
+                        } else {
+                            notice = teamArenaError(error.message.orEmpty())
+                        }
+                    } else {
+                        notice = teamArenaError(error.message.orEmpty())
+                    }
+                }
             busy = false
         }
     }
@@ -201,7 +246,7 @@ fun TeamArenaScreen(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onExit) {
+            IconButton(onClick = ::closeScreen) {
                 Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"))
             }
             Column(Modifier.weight(1f)) {
@@ -223,6 +268,7 @@ fun TeamArenaScreen(
             active.status == "lobby" -> TeamArenaLobby(
                 room = active,
                 members = members,
+                memberProfiles = memberProfiles,
                 me = me,
                 busy = busy,
                 notice = notice,
@@ -287,6 +333,7 @@ fun TeamArenaScreen(
             active.status == "playing" -> TeamArenaPlaying(
                 room = active,
                 members = members,
+                memberProfiles = memberProfiles,
                 words = words,
                 myTeam = myTeam,
                 prepSeconds = prepSeconds,
@@ -445,6 +492,7 @@ private fun TeamArenaIntro(
 private fun TeamArenaLobby(
     room: TeamArenaRoomDto,
     members: List<TeamArenaMemberDto>,
+    memberProfiles: Map<String, ProfileDto?>,
     me: String?,
     busy: Boolean,
     notice: String,
@@ -476,6 +524,7 @@ private fun TeamArenaLobby(
                     title = sh("TAKIM A", "TEAM A"),
                     team = 1,
                     members = members,
+                    memberProfiles = memberProfiles,
                     hostCanInvite = room.isHost,
                     onInvite = { onInvite(1) },
                     modifier = Modifier.weight(1f),
@@ -556,6 +605,7 @@ private fun TeamArenaTeamCard(
     title: String,
     team: Int,
     members: List<TeamArenaMemberDto>,
+    memberProfiles: Map<String, ProfileDto?>,
     hostCanInvite: Boolean,
     onInvite: () -> Unit,
     modifier: Modifier,
@@ -596,7 +646,13 @@ private fun TeamArenaTeamCard(
                             Text("＋", color = SonHarfMuted, fontSize = 20.sp)
                             Text(sh("Boş", "Empty"), color = SonHarfMuted, fontSize = 8.sp)
                         } else {
-                            Text(if (member.isHost) "👑" else if (member.ready) "✓" else "…", fontSize = 16.sp)
+                            ProfilePhotoAvatar(
+                                avatarPath = memberProfiles[member.userId]?.avatarPath,
+                                name = member.displayName,
+                                size = 34.dp,
+                                accent = if (team == 1) SonHarfBlue else SonHarfGold,
+                            )
+                            Text(if (member.isHost) "👑" else if (member.ready) "✓" else "…", fontSize = 12.sp)
                             Text(
                                 member.displayName,
                                 color = SonHarfText,
@@ -626,6 +682,7 @@ private fun TeamArenaTeamCard(
 private fun TeamArenaPlaying(
     room: TeamArenaRoomDto,
     members: List<TeamArenaMemberDto>,
+    memberProfiles: Map<String, ProfileDto?>,
     words: List<TeamArenaWordDto>,
     myTeam: Int,
     prepSeconds: Int,
@@ -639,9 +696,19 @@ private fun TeamArenaPlaying(
     val myScore = if (myTeam == 1) room.teamAScore else room.teamBScore
     val opponentScore = if (myTeam == 1) room.teamBScore else room.teamAScore
     val teammateNames = members.filter { it.team == myTeam }.joinToString(" + ") { it.displayName }
+    val inputFocusRequester = remember { FocusRequester() }
+    val softwareKeyboard = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(room.roomId, busy, prepSeconds, remainingSeconds) {
+        if (room.status == "playing") {
+            delay(120)
+            runCatching { inputFocusRequester.requestFocus() }
+            softwareKeyboard?.show()
+        }
+    }
 
     LazyColumn(
-        Modifier.fillMaxSize(),
+        Modifier.fillMaxSize().imePadding(),
         contentPadding = PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -662,6 +729,16 @@ private fun TeamArenaPlaying(
                         fontWeight = FontWeight.Black,
                         fontSize = 11.sp,
                     )
+                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        members.filter { it.team == myTeam }.forEach { member ->
+                            ProfilePhotoAvatar(
+                                avatarPath = memberProfiles[member.userId]?.avatarPath,
+                                name = member.displayName,
+                                size = 30.dp,
+                                accent = SonHarfBlue,
+                            )
+                        }
+                    }
                     Text(teammateNames, color = SonHarfMuted, fontSize = 9.sp)
                     Text(
                         if (prepSeconds > 0)
@@ -705,10 +782,13 @@ private fun TeamArenaPlaying(
             OutlinedTextField(
                 value = input,
                 onValueChange = onInput,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !busy && prepSeconds == 0 && remainingSeconds > 0,
+                modifier = Modifier.fillMaxWidth().focusRequester(inputFocusRequester),
+                enabled = true,
+                readOnly = busy || prepSeconds > 0 || remainingSeconds <= 0,
                 singleLine = true,
                 label = { Text(sh("3–10 harfli kelime", "3–10 letter word")) },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send, showKeyboardOnFocus = true),
+                keyboardActions = KeyboardActions(onSend = { onSubmit() }),
                 trailingIcon = {
                     TextButton(
                         onClick = onSubmit,
