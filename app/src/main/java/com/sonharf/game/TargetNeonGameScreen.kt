@@ -94,9 +94,15 @@ fun TargetNeonGameScreen(
         "invalid_word" in raw -> "Bu kelime geçerli değil."
         "turn_expired" in raw -> "Süren doldu."
         "vip_required" in raw -> "Özel oda oluşturmak için aktif VIP üyeliği gerekli."
+        "team_arena_active" in raw || "team_arena_already_active" in raw ->
+            "Açık 2v2 lobin var. Takım Arenası'na dönüp lobiyi kapat."
+        "word_arena_match_active" in raw -> "Aktif Kelime Arenası maçını bitir."
+        "daily_arena_active" in raw -> "Aktif Resmî Koşuyu bitir."
         "player_already_in_game" in raw -> "Devam eden bir maçın varken yeni oda oluşturamazsın."
         "room_not_available" in raw -> "Oda bulunamadı veya artık müsait değil."
-        else -> "Bağlantı sorunu. Yeniden deneniyor."
+        "timeout" in raw.lowercase() || "unreachable" in raw.lowercase() || "connect" in raw.lowercase() ->
+            "Sunucuya ulaşılamadı. Yeniden deneniyor."
+        else -> "Düello şu anda başlatılamadı. Tekrar dene."
     }
 
     suspend fun ensureProfile(): ProfileDto {
