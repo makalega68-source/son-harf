@@ -6,7 +6,6 @@ import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
-import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
 import java.util.UUID
@@ -18,11 +17,14 @@ class RewardedAdController(private val context: Context) {
     var ready: Boolean = false
         private set
 
-    init {
-        MobileAds.initialize(context.applicationContext) {}
-    }
-
     fun load(onState: (() -> Unit)? = null) {
+        if (!AdPrivacyManager.adsAllowed) {
+            rewardedAd = null
+            loading = false
+            ready = false
+            onState?.invoke()
+            return
+        }
         if (loading || rewardedAd != null) {
             onState?.invoke()
             return
@@ -56,6 +58,10 @@ class RewardedAdController(private val context: Context) {
         onUnavailable: () -> Unit,
         onClosed: (() -> Unit)? = null,
     ) {
+        if (!AdPrivacyManager.adsAllowed) {
+            onUnavailable()
+            return
+        }
         val ad = rewardedAd
         if (ad == null) {
             onUnavailable()
