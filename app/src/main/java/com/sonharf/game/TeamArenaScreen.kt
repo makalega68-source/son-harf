@@ -302,7 +302,33 @@ fun TeamArenaScreen(
                 room = active,
                 words = words,
                 myTeam = myTeam,
+                busy = busy,
                 notice = notice,
+                onRematch = {
+                    val b = backend
+                    val oldRoomId = roomId
+                    if (b != null && oldRoomId != null) {
+                        scope.launch {
+                            busy = true
+                            notice = ""
+                            runCatching { b.createTeamArenaRematch(oldRoomId) }
+                                .onSuccess { result ->
+                                    roomId = result.roomId
+                                    room = null
+                                    members = emptyList()
+                                    words = emptyList()
+                                    notice = sh(
+                                        "Rövanş lobisi hazır • ${result.invitedCount}/3 davet gönderildi.",
+                                        "Rematch lobby ready • ${result.invitedCount}/3 invites sent.",
+                                    )
+                                    SonHarfSoundFx.softNotify()
+                                    reload()
+                                }
+                                .onFailure { notice = teamArenaError(it.message.orEmpty()) }
+                            busy = false
+                        }
+                    }
+                },
                 onNewLobby = {
                     roomId = null
                     room = null
@@ -719,7 +745,9 @@ private fun TeamArenaFinished(
     room: TeamArenaRoomDto,
     words: List<TeamArenaWordDto>,
     myTeam: Int,
+    busy: Boolean,
     notice: String,
+    onRematch: () -> Unit,
     onNewLobby: () -> Unit,
     onHome: () -> Unit,
 ) {
@@ -784,9 +812,43 @@ private fun TeamArenaFinished(
 
         if (notice.isNotBlank()) item { TeamArenaNotice(notice) }
 
+        if (room.isHost) {
+            item {
+                Button(
+                    onClick = onRematch,
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold),
+                ) {
+                    Text(
+                        if (busy) "…" else sh("AYNI TAKIMLARLA RÖVANŞ", "REMATCH SAME TEAMS"),
+                        color = Color(0xFF2A210F),
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+            }
+        } else {
+            item {
+                Text(
+                    sh(
+                        "Rövanşı önceki lobi sahibi başlatabilir; davet gelirse doğrudan kabul edebilirsin.",
+                        "The previous lobby host can start the rematch; accept the invite when it arrives.",
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    color = SonHarfMuted,
+                    fontSize = 9.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+
         item {
-            Button(onClick = onNewLobby, modifier = Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue)) {
-                Text(sh("YENİ TAKIM LOBİSİ", "NEW TEAM LOBBY"), fontWeight = FontWeight.Black)
+            OutlinedButton(
+                onClick = onNewLobby,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(sh("FARKLI TAKIM LOBİSİ", "NEW TEAM LOBBY"), fontWeight = FontWeight.Bold)
             }
         }
         item {
@@ -935,6 +997,12 @@ private fun teamArenaError(raw: String): String = when {
         sh("Kelime 3–10 harf olmalı.", "Word must be 3–10 letters.")
     "team_arena_not_started" in raw ->
         sh("Hazırlık geri sayımı henüz bitmedi.", "The ready countdown is not finished yet.")
+    "team_arena_rematch_requires_finished" in raw ->
+        sh("Rövanş yalnız bitmiş bir 2v2 maçtan başlatılabilir.", "A rematch can only start from a finished 2v2 match.")
+    "team_arena_rematch_requires_four_players" in raw ->
+        sh("Rövanş için önceki maçta 4 oyuncu bulunmalı.", "The previous match must contain all 4 players.")
+    "team_arena_rematch_already_created" in raw ->
+        sh("Bu maçın rövanşı zaten oluşturuldu.", "A rematch has already been created for this match.")
     "team_arena_lobby_closed" in raw ->
         sh("Bu lobi kapandı veya süresi doldu.", "This lobby is closed or expired.")
     "team_slot_taken" in raw ->
