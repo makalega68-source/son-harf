@@ -35,6 +35,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
     var period by remember { mutableStateOf("week") }
     var rows by remember { mutableStateOf<List<LeaderboardV2Row>>(emptyList()) }
     var profiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
+    var myProfile by remember { mutableStateOf<ProfileDto?>(null) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
     val me = backend?.currentUserId()
@@ -44,6 +45,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
         if (b == null) { rows = emptyList(); error = true; return@LaunchedEffect }
         loading = true
         error = false
+        myProfile = me?.let { runCatching { b.getProfile(it) }.getOrNull() }
         runCatching { b.getLeaderboardV2(language, period, 50) }
             .onSuccess { loaded ->
                 rows = loaded
@@ -60,24 +62,9 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
 
     val myIndex = rows.indexOfFirst { it.userId == me }
     val myRow = rows.getOrNull(myIndex)
-    val league = leagueForWins(myRow?.wins ?: 0)
-    val nextAt = when (league) {
-        "BRONZ" -> 10
-        "GÜMÜŞ" -> 25
-        "ALTIN" -> 50
-        "PLATİN" -> 100
-        "ELMAS" -> 200
-        else -> 300
-    }
-    val currentFloor = when (league) {
-        "BRONZ" -> 0
-        "GÜMÜŞ" -> 10
-        "ALTIN" -> 25
-        "PLATİN" -> 50
-        "ELMAS" -> 100
-        else -> 200
-    }
-    val progress = (((myRow?.wins ?: 0) - currentFloor).toFloat() / (nextAt - currentFloor).coerceAtLeast(1)).coerceIn(0f, 1f)
+    val currentRating = myRow?.rating ?: myProfile?.rating ?: 1000
+    val leagueProgress = ratingLeagueProgress(currentRating)
+    val league = leagueProgress.leagueName
 
     LazyColumn(
         Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))),
@@ -122,15 +109,23 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
                     )
-                    if (myRow != null) {
-                        LinearProgressIndicator(
-                            progress = { progress },
-                            modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                            color = SonHarfPurple,
-                            trackColor = SonHarfMuted.copy(alpha = .16f),
-                        )
-                        Text("${myRow.wins} ${sh("galibiyet", "wins")} • ${sh("sonraki lig", "next league")}: $nextAt", color = SonHarfMuted, fontSize = 10.sp)
-                    }
+                    LinearProgressIndicator(
+                        progress = { leagueProgress.progress },
+                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
+                        color = SonHarfPurple,
+                        trackColor = SonHarfMuted.copy(alpha = .16f),
+                    )
+                    Text(
+                        if (leagueProgress.nextAt == null)
+                            sh("$currentRating rating • En üst lig", "$currentRating rating • Top league")
+                        else
+                            sh(
+                                "$currentRating rating • Sonraki lige ${leagueProgress.pointsToNext} puan",
+                                "$currentRating rating • ${leagueProgress.pointsToNext} points to next league",
+                            ),
+                        color = SonHarfMuted,
+                        fontSize = 10.sp,
+                    )
                 }
             }
         }
@@ -189,7 +184,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     Column(Modifier.weight(1f)) {
                         Text(row.displayName, color = SonHarfText, fontWeight = if (mine) FontWeight.Black else FontWeight.Bold, maxLines = 1)
                         val rate = if (row.winRate % 1.0 == 0.0) row.winRate.toInt().toString() else String.format("%.1f", row.winRate)
-                        Text("${row.wins}W • %$rate", color = SonHarfMuted, fontSize = 9.sp)
+                        Text("${row.leagueName} • ${row.rating} rating • ${row.wins}W • %$rate", color = SonHarfMuted, fontSize = 9.sp)
                     }
                     if (mine) Text(sh("SEN", "YOU"), color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 9.sp)
                 }
@@ -241,11 +236,3 @@ private fun NeonLeagueShield() {
     }
 }
 
-private fun leagueForWins(wins: Int): String = when {
-    wins >= 200 -> "EFSANE"
-    wins >= 100 -> "ELMAS"
-    wins >= 50 -> "PLATİN"
-    wins >= 25 -> "ALTIN"
-    wins >= 10 -> "GÜMÜŞ"
-    else -> "BRONZ"
-}

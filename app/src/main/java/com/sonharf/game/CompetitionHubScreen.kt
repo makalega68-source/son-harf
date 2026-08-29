@@ -1,0 +1,594 @@
+package com.sonharf.game
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.*
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+@Composable
+fun CompetitionHubScreen(onBack: () -> Unit) {
+    var tab by remember { mutableIntStateOf(0) }
+    Column(
+        Modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))
+        )
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = SonHarfText)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(sh("REKABET MERKEZİ", "COMPETITION HUB"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                Text(sh("Kulüp • Haftalık Kupa • Rating", "Club • Weekly Cup • Rating"), color = SonHarfMuted, fontSize = 9.sp)
+            }
+            Text("⚔", fontSize = 25.sp)
+        }
+
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 5.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(
+                selected = tab == 0,
+                onClick = { tab = 0 },
+                leadingIcon = { Icon(Icons.Rounded.Groups, null, Modifier.size(18.dp)) },
+                label = { Text(sh("KULÜP", "CLUB"), fontWeight = FontWeight.Black) },
+                modifier = Modifier.weight(1f),
+            )
+            FilterChip(
+                selected = tab == 1,
+                onClick = { tab = 1 },
+                leadingIcon = { Icon(Icons.Rounded.EmojiEvents, null, Modifier.size(18.dp)) },
+                label = { Text(sh("HAFTALIK KUPA", "WEEKLY CUP"), fontWeight = FontWeight.Black) },
+                modifier = Modifier.weight(1f),
+            )
+        }
+
+        Box(Modifier.weight(1f)) {
+            if (tab == 0) ClubCompetitionTab() else WeeklyTournamentTab()
+        }
+    }
+}
+
+@Composable
+private fun ClubCompetitionTab() {
+    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
+    val scope = rememberCoroutineScope()
+    var myClub by remember { mutableStateOf<MyClubDto?>(null) }
+    var directory by remember { mutableStateOf<List<ClubDirectoryRowDto>>(emptyList()) }
+    var members by remember { mutableStateOf<List<ClubMemberDto>>(emptyList()) }
+    var messages by remember { mutableStateOf<List<ClubMessageDto>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var busy by remember { mutableStateOf(false) }
+    var notice by remember { mutableStateOf("") }
+    var createOpen by remember { mutableStateOf(false) }
+    var leaveConfirm by remember { mutableStateOf(false) }
+    var messageInput by remember { mutableStateOf("") }
+
+    suspend fun reload() {
+        val b = backend ?: return
+        loading = true
+        runCatching { b.getMyClub() }
+            .onSuccess { club ->
+                myClub = club
+                if (club == null) {
+                    members = emptyList()
+                    messages = emptyList()
+                    directory = runCatching { b.getClubDirectory(50) }.getOrDefault(emptyList())
+                } else {
+                    directory = emptyList()
+                    members = runCatching { b.getClubMembers(club.clubId) }.getOrDefault(emptyList())
+                    messages = runCatching { b.getClubMessages(club.clubId) }.getOrDefault(emptyList())
+                }
+            }
+            .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+        loading = false
+    }
+
+    LaunchedEffect(Unit) { reload() }
+    LaunchedEffect(myClub?.clubId) {
+        while (myClub != null) {
+            delay(3500)
+            val club = myClub ?: break
+            val b = backend ?: break
+            messages = runCatching { b.getClubMessages(club.clubId) }.getOrDefault(messages)
+        }
+    }
+
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(14.dp),
+        verticalArrangement = Arrangement.spacedBy(11.dp),
+    ) {
+        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfBlue) }
+
+        if (notice.isNotBlank()) {
+            item {
+                Surface(
+                    shape = RoundedCornerShape(13.dp),
+                    color = SonHarfGold.copy(alpha = .12f),
+                    border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .35f)),
+                ) {
+                    Text(notice, Modifier.fillMaxWidth().padding(10.dp), color = SonHarfText, fontSize = 11.sp)
+                }
+            }
+        }
+
+        val club = myClub
+        if (club == null && !loading) {
+            item {
+                CompetitionHero(
+                    icon = "👥",
+                    title = sh("BİR KULÜBE KATIL", "JOIN A CLUB"),
+                    subtitle = sh(
+                        "En fazla 30 oyuncu. Her PvP galibiyeti kulübüne +10, mağlubiyet +3 haftalık puan kazandırır.",
+                        "Up to 30 players. Every PvP win adds +10 and a loss +3 weekly club points.",
+                    ),
+                )
+            }
+            item {
+                Button(
+                    onClick = { createOpen = true },
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
+                    shape = RoundedCornerShape(15.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
+                ) { Text(sh("＋ KULÜP OLUŞTUR", "＋ CREATE CLUB"), fontWeight = FontWeight.Black) }
+            }
+            item { Text(sh("KULÜP SIRALAMASI", "CLUB RANKING"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 13.sp) }
+
+            items(directory, key = { it.clubId }) { row ->
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .16f)),
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(Modifier.size(44.dp), shape = RoundedCornerShape(13.dp), color = SonHarfBlue.copy(alpha = .10f)) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(row.tag.take(3), color = SonHarfBlue, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text("[${row.tag}] ${row.name}", color = SonHarfText, fontWeight = FontWeight.Black, maxLines = 1)
+                            Text("${row.memberCount}/${row.maxMembers} • ${row.weeklyPoints} ${sh("haftalık puan", "weekly points")}", color = SonHarfMuted, fontSize = 9.sp)
+                            if (row.description.isNotBlank()) Text(row.description, color = SonHarfMuted, fontSize = 9.sp, maxLines = 1)
+                        }
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    busy = true
+                                    runCatching { backend?.joinClub(row.clubId) }
+                                        .onSuccess { notice = sh("Kulübe katıldın.", "You joined the club."); reload() }
+                                        .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                                    busy = false
+                                }
+                            },
+                            enabled = !busy && row.memberCount < row.maxMembers,
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp),
+                        ) { Text(sh("KATIL", "JOIN"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                    }
+                }
+            }
+        } else if (club != null) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    shape = RoundedCornerShape(23.dp),
+                    border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .25f)),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().background(
+                            Brush.linearGradient(listOf(SonHarfBlue.copy(alpha = .13f), SonHarfSurface, SonHarfGold.copy(alpha = .08f)))
+                        ).padding(15.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text("[${club.tag}] ${club.name}", color = SonHarfText, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                                Text(club.description.ifBlank { sh("Kulüp açıklaması yok.", "No club description.") }, color = SonHarfMuted, fontSize = 10.sp)
+                            }
+                            Text(if (club.role == "owner") "👑" else "🛡", fontSize = 27.sp)
+                        }
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                            CompetitionMetric("${club.weeklyPoints}", sh("HAFTALIK PUAN", "WEEKLY POINTS"), Modifier.weight(1f))
+                            CompetitionMetric("#${club.weeklyRank}", sh("KULÜP SIRASI", "CLUB RANK"), Modifier.weight(1f))
+                            CompetitionMetric("${club.memberCount}/${club.maxMembers}", sh("ÜYE", "MEMBERS"), Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+
+            item { Text(sh("ÜYELER & KATKI", "MEMBERS & CONTRIBUTION"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black) }
+            items(members, key = { it.userId }) { member ->
+                Surface(shape = RoundedCornerShape(14.dp), color = SonHarfSurface, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .13f))) {
+                    Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(when (member.role) { "owner" -> "👑"; "moderator" -> "🛡"; else -> "●" }, fontSize = 16.sp)
+                        Spacer(Modifier.width(8.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(member.displayName, color = SonHarfText, fontWeight = FontWeight.Bold)
+                            Text("${member.leagueName} • ${member.rating} rating", color = SonHarfMuted, fontSize = 9.sp)
+                        }
+                        Text("+${member.weeklyPoints}", color = SonHarfGreen, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                        if (club.role == "owner" && member.role != "owner") {
+                            TextButton(
+                                onClick = {
+                                    scope.launch {
+                                        busy = true
+                                        runCatching { backend?.transferClubOwner(member.userId) }
+                                            .onSuccess { notice = sh("Kulüp sahipliği devredildi.", "Club ownership transferred."); reload() }
+                                            .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                                        busy = false
+                                    }
+                                },
+                                enabled = !busy,
+                                contentPadding = PaddingValues(horizontal = 5.dp),
+                            ) { Text("👑", fontSize = 14.sp) }
+                        }
+                    }
+                }
+            }
+
+            item { Text(sh("KULÜP SOHBETİ", "CLUB CHAT"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black) }
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .16f)),
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        if (messages.isEmpty()) {
+                            Text(sh("İlk mesajı sen gönder.", "Send the first message."), Modifier.fillMaxWidth().padding(vertical = 16.dp), color = SonHarfMuted, textAlign = TextAlign.Center)
+                        } else {
+                            messages.takeLast(18).forEach { msg ->
+                                val sender = members.firstOrNull { it.userId == msg.senderId }?.displayName ?: sh("Üye", "Member")
+                                Column {
+                                    Text(sender, color = SonHarfBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                    Text(msg.body, color = SonHarfText, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                        HorizontalDivider(color = SonHarfMuted.copy(alpha = .12f))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            OutlinedTextField(
+                                value = messageInput,
+                                onValueChange = { messageInput = it.take(300) },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                placeholder = { Text(sh("Kulübe yaz…", "Message club…")) },
+                            )
+                            IconButton(
+                                onClick = {
+                                    val outgoing = messageInput.trim()
+                                    if (outgoing.isEmpty()) return@IconButton
+                                    scope.launch {
+                                        busy = true
+                                        runCatching { backend?.sendClubMessage(club.clubId, outgoing) }
+                                            .onSuccess {
+                                                messageInput = ""
+                                                messages = runCatching { backend?.getClubMessages(club.clubId).orEmpty() }.getOrDefault(messages)
+                                            }
+                                            .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                                        busy = false
+                                    }
+                                },
+                                enabled = !busy && messageInput.isNotBlank(),
+                            ) { Icon(Icons.Rounded.Send, sh("Gönder", "Send"), tint = SonHarfBlue) }
+                        }
+                    }
+                }
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = { leaveConfirm = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    border = BorderStroke(1.dp, SonHarfPink.copy(alpha = .45f)),
+                ) { Text(sh("KULÜPTEN AYRIL", "LEAVE CLUB"), color = SonHarfPink, fontWeight = FontWeight.Bold) }
+            }
+        }
+        item { Spacer(Modifier.height(10.dp)) }
+    }
+
+    if (createOpen) {
+        CreateClubDialog(
+            busy = busy,
+            onDismiss = { if (!busy) createOpen = false },
+            onCreate = { name, tag, description ->
+                scope.launch {
+                    busy = true
+                    runCatching { backend?.createClub(name, tag, description) }
+                        .onSuccess {
+                            createOpen = false
+                            notice = sh("Kulübün oluşturuldu.", "Your club was created.")
+                            reload()
+                        }
+                        .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                    busy = false
+                }
+            },
+        )
+    }
+
+    if (leaveConfirm) {
+        AlertDialog(
+            onDismissRequest = { if (!busy) leaveConfirm = false },
+            title = { Text(sh("Kulüpten ayrıl?", "Leave club?")) },
+            text = {
+                Text(
+                    if (myClub?.role == "owner" && (myClub?.memberCount ?: 0) > 1)
+                        sh("Önce sahipliği başka bir üyeye devretmelisin.", "Transfer ownership to another member first.")
+                    else sh("Haftalık kulüp katkın geçmişte kalır; tekrar bir kulübe katılabilirsin.", "Your past weekly contribution stays recorded; you can join another club later.")
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        scope.launch {
+                            busy = true
+                            runCatching { backend?.leaveClub() }
+                                .onSuccess { leaveConfirm = false; notice = sh("Kulüpten ayrıldın.", "You left the club."); reload() }
+                                .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                            busy = false
+                        }
+                    },
+                    enabled = !busy && !(myClub?.role == "owner" && (myClub?.memberCount ?: 0) > 1),
+                ) { Text(sh("AYRIL", "LEAVE")) }
+            },
+            dismissButton = { TextButton(onClick = { leaveConfirm = false }, enabled = !busy) { Text(sh("VAZGEÇ", "CANCEL")) } },
+        )
+    }
+}
+
+@Composable
+private fun CreateClubDialog(
+    busy: Boolean,
+    onDismiss: () -> Unit,
+    onCreate: (String, String, String) -> Unit,
+) {
+    var name by remember { mutableStateOf("") }
+    var tag by remember { mutableStateOf("") }
+    var description by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(sh("KULÜP OLUŞTUR", "CREATE CLUB"), fontWeight = FontWeight.Black) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(sh("Kulüp kurmak ücretsizdir. En fazla 30 oyuncu.", "Creating a club is free. Maximum 30 players."), color = SonHarfGreen, fontSize = 10.sp)
+                OutlinedTextField(name, { name = it.take(24) }, label = { Text(sh("Kulüp adı", "Club name")) }, singleLine = true)
+                OutlinedTextField(tag, { tag = it.uppercase().filter { ch -> ch.isLetterOrDigit() }.take(6) }, label = { Text(sh("Etiket (2–6)", "Tag (2–6)")) }, singleLine = true)
+                OutlinedTextField(description, { description = it.take(180) }, label = { Text(sh("Açıklama", "Description")) }, maxLines = 3)
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = { onCreate(name, tag, description) },
+                enabled = !busy && name.trim().length >= 3 && tag.trim().length >= 2,
+            ) { Text(if (busy) "…" else sh("OLUŞTUR", "CREATE")) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(sh("VAZGEÇ", "CANCEL")) } },
+    )
+}
+
+@Composable
+private fun WeeklyTournamentTab() {
+    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
+    val scope = rememberCoroutineScope()
+    var tournament by remember { mutableStateOf<WeeklyTournamentDto?>(null) }
+    var leaderboard by remember { mutableStateOf<List<WeeklyTournamentLeaderboardRowDto>>(emptyList()) }
+    var loading by remember { mutableStateOf(true) }
+    var busy by remember { mutableStateOf(false) }
+    var notice by remember { mutableStateOf("") }
+
+    suspend fun reload() {
+        val b = backend ?: return
+        loading = true
+        runCatching {
+            tournament = b.getWeeklyTournament()
+            leaderboard = b.getWeeklyTournamentLeaderboard(50)
+        }.onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+        loading = false
+    }
+
+    LaunchedEffect(Unit) { reload() }
+
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(14.dp),
+        verticalArrangement = Arrangement.spacedBy(11.dp),
+    ) {
+        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfGold) }
+
+        val t = tournament
+        if (t != null) {
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                    shape = RoundedCornerShape(24.dp),
+                    border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .42f)),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().background(
+                            Brush.linearGradient(listOf(SonHarfGold.copy(alpha = .15f), SonHarfSurface, SonHarfBlue.copy(alpha = .09f)))
+                        ).padding(16.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Text("🏆", fontSize = 42.sp)
+                        Text(t.name.uppercase(), color = SonHarfText, fontSize = 20.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                        Text(
+                            sh("Katılım ücretsiz • PvP galibiyet +3 • mağlubiyet +1", "Free entry • PvP win +3 • loss +1"),
+                            color = SonHarfGreen,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            textAlign = TextAlign.Center,
+                        )
+                        Text("${t.weekStart} • ${t.playerCount} ${sh("oyuncu", "players")}", color = SonHarfMuted, fontSize = 9.sp)
+                        if (!t.joined) {
+                            Button(
+                                onClick = {
+                                    scope.launch {
+                                        busy = true
+                                        runCatching { backend?.joinWeeklyTournament() }
+                                            .onSuccess {
+                                                notice = sh(
+                                                    "Haftalık Kupaya katıldın. Bundan sonraki PvP maçların puan kazandırır.",
+                                                    "You joined the Weekly Cup. Your next PvP matches earn points.",
+                                                )
+                                                reload()
+                                            }
+                                            .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                                        busy = false
+                                    }
+                                },
+                                enabled = !busy,
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF2A210F)),
+                            ) { Text(sh("ÜCRETSİZ KATIL", "JOIN FREE"), fontWeight = FontWeight.Black) }
+                        } else {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                                CompetitionMetric("${t.myPoints}", sh("PUAN", "POINTS"), Modifier.weight(1f))
+                                CompetitionMetric("#${if (t.myRank == 0L) "—" else t.myRank}", sh("SIRAN", "RANK"), Modifier.weight(1f))
+                                CompetitionMetric("${t.myWins}-${t.myLosses}", "W-L", Modifier.weight(1f))
+                            }
+                        }
+                    }
+                }
+            }
+
+            item {
+                Surface(shape = RoundedCornerShape(14.dp), color = SonHarfSurface, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .14f))) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(sh("KUPA ÖDÜLLERİ", "CUP REWARDS"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        Text("🥇 1.000 SC   •   🥈 600 SC   •   🥉 400 SC", color = SonHarfText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(sh("4–10: 150 SC • Katılan diğer oyuncular: 50 SC", "4–10: 150 SC • Other participants: 50 SC"), color = SonHarfMuted, fontSize = 9.sp)
+                    }
+                }
+            }
+
+            item {
+                OutlinedButton(
+                    onClick = {
+                        scope.launch {
+                            busy = true
+                            runCatching { backend?.claimPreviousWeeklyTournamentReward() }
+                                .onSuccess { reward ->
+                                    if (reward != null) {
+                                        notice = sh(
+                                            "Ödül: #${reward.rank} • +${reward.rewardCoins} Son Coin",
+                                            "Reward: #${reward.rank} • +${reward.rewardCoins} Son Coin",
+                                        )
+                                    }
+                                }
+                                .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                            busy = false
+                        }
+                    },
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                    border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .48f)),
+                ) { Text(sh("ÖNCEKİ KUPA ÖDÜLÜNÜ AL", "CLAIM PREVIOUS CUP REWARD"), color = SonHarfGold, fontWeight = FontWeight.Black) }
+            }
+        }
+
+        if (notice.isNotBlank()) {
+            item {
+                Surface(shape = RoundedCornerShape(13.dp), color = SonHarfBlue.copy(alpha = .08f)) {
+                    Text(notice, Modifier.fillMaxWidth().padding(10.dp), color = SonHarfText, fontSize = 10.sp)
+                }
+            }
+        }
+
+        item { Text(sh("CANLI SIRALAMA", "LIVE RANKING"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black) }
+        items(leaderboard, key = { it.userId }) { row ->
+            Surface(shape = RoundedCornerShape(14.dp), color = SonHarfSurface, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .13f))) {
+                Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        when (row.rank) { 1L -> "🥇"; 2L -> "🥈"; 3L -> "🥉"; else -> "#${row.rank}" },
+                        Modifier.width(42.dp),
+                        textAlign = TextAlign.Center,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Column(Modifier.weight(1f)) {
+                        Text(row.displayName, color = SonHarfText, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text("${row.leagueName} • ${row.rating} rating • ${row.wins}W/${row.losses}L", color = SonHarfMuted, fontSize = 9.sp)
+                    }
+                    Text("${row.points} pt", color = SonHarfBlue, fontWeight = FontWeight.Black)
+                }
+            }
+        }
+        item { Spacer(Modifier.height(10.dp)) }
+    }
+}
+
+@Composable
+private fun CompetitionHero(icon: String, title: String, subtitle: String) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+        shape = RoundedCornerShape(21.dp),
+        border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .18f)),
+    ) {
+        Row(Modifier.fillMaxWidth().padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(Modifier.size(52.dp), shape = CircleShape, color = SonHarfBlue.copy(alpha = .10f)) {
+                Box(contentAlignment = Alignment.Center) { Text(icon, fontSize = 25.sp) }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column {
+                Text(title, color = SonHarfText, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                Text(subtitle, color = SonHarfMuted, fontSize = 10.sp, lineHeight = 14.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompetitionMetric(value: String, label: String, modifier: Modifier) {
+    Surface(
+        modifier,
+        shape = RoundedCornerShape(13.dp),
+        color = SonHarfSurface.copy(alpha = .90f),
+        border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .13f)),
+    ) {
+        Column(Modifier.padding(horizontal = 6.dp, vertical = 9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(value, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 14.sp, maxLines = 1)
+            Text(label, color = SonHarfMuted, fontSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+    }
+}
+
+private fun friendlyCompetitionError(raw: String): String = when {
+    "club_name_or_tag_taken" in raw -> sh("Bu kulüp adı veya etiketi kullanılıyor.", "That club name or tag is already used.")
+    "already_in_club" in raw -> sh("Zaten bir kulüptesin.", "You are already in a club.")
+    "club_full" in raw -> sh("Kulüp dolu.", "The club is full.")
+    "owner_required" in raw -> sh("Bu işlem için kulüp sahibi olmalısın.", "Club owner permission is required.")
+    "transfer_owner_before_leaving" in raw -> sh("Ayrılmadan önce kulüp sahipliğini devret.", "Transfer club ownership before leaving.")
+    "reward_already_claimed" in raw -> sh("Bu kupa ödülünü zaten aldın.", "You already claimed this cup reward.")
+    "no_completed_tournament" in raw -> sh("Alınabilir geçmiş kupa ödülü yok.", "There is no previous cup reward to claim.")
+    "unauthorized" in raw || "not_authenticated" in raw -> sh("Oturumunu yenileyip tekrar dene.", "Refresh your session and try again.")
+    else -> sh("İşlem tamamlanamadı. Tekrar dene.", "The action could not be completed. Try again.")
+}

@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
 
-private enum class LightScreen { HOME, SON_HARF, KELIME_AVI, KELIME_SAVASI, LEAGUE, MARKET, TASKS, PROFILE }
+private enum class LightScreen { HOME, SON_HARF, KELIME_AVI, KELIME_SAVASI, COMPETITION, LEAGUE, MARKET, TASKS, PROFILE }
 
 private val LightBg = Color(0xFFF7F9FC)
 private val LightSurface = Color.White
@@ -102,6 +102,7 @@ fun LightWordThemeApp() {
                     onSonHarf = { gameKey += 1; screen = LightScreen.SON_HARF },
                     onKelimeAvi = { screen = LightScreen.KELIME_AVI },
                     onKelimeSavasi = { screen = LightScreen.KELIME_SAVASI },
+                    onCompetition = { screen = LightScreen.COMPETITION },
                     onLeague = { screen = LightScreen.LEAGUE },
                     onMarket = { screen = LightScreen.MARKET },
                     onTasks = { screen = LightScreen.TASKS },
@@ -112,6 +113,7 @@ fun LightWordThemeApp() {
                 }
                 LightScreen.KELIME_AVI -> DailyCipherScreen { screen = LightScreen.HOME }
                 LightScreen.KELIME_SAVASI -> TrackedBilBakalimStandaloneScreen { screen = LightScreen.HOME }
+                LightScreen.COMPETITION -> CompetitionHubScreen { screen = LightScreen.HOME }
                 LightScreen.LEAGUE -> LeaderboardExperienceScreen { screen = LightScreen.HOME }
                 LightScreen.MARKET -> EconomyShopScreen(onBack = { screen = LightScreen.HOME })
                 LightScreen.TASKS -> LightTasksScreen(backend)
@@ -161,6 +163,7 @@ private fun LightHomeScreen(
     onSonHarf: () -> Unit,
     onKelimeAvi: () -> Unit,
     onKelimeSavasi: () -> Unit,
+    onCompetition: () -> Unit,
     onLeague: () -> Unit,
     onMarket: () -> Unit,
     onTasks: () -> Unit,
@@ -209,15 +212,30 @@ private fun LightHomeScreen(
         }
 
         item {
+            val rating = profile?.rating ?: 1000
+            val league = ratingLeagueProgress(rating)
             Surface(shape = RoundedCornerShape(19.dp), color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
-                Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.EmojiEvents, null, tint = LightGold, modifier = Modifier.size(34.dp))
-                    Spacer(Modifier.width(11.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(growth?.leagueName ?: "BRONZ", color = LightText, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                        Text("Seviye " + (growth?.level ?: 1), color = LightMuted, fontSize = 10.sp)
+                Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.EmojiEvents, null, tint = LightGold, modifier = Modifier.size(34.dp))
+                        Spacer(Modifier.width(11.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(league.leagueName, color = LightText, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            Text(
+                                if (league.nextAt == null) "$rating rating • ${sh("En üst lig", "Top league")}"
+                                else "$rating rating • ${league.pointsToNext} ${sh("puan kaldı", "points left")}",
+                                color = LightMuted,
+                                fontSize = 10.sp,
+                            )
+                        }
+                        Text((growth?.currentWinStreak ?: 0).toString() + " 🔥", color = LightText, fontWeight = FontWeight.Black)
                     }
-                    Text((growth?.currentWinStreak ?: 0).toString() + " 🔥", color = LightText, fontWeight = FontWeight.Black)
+                    LinearProgressIndicator(
+                        progress = { league.progress },
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                        color = LightBlue,
+                        trackColor = LightSurface2,
+                    )
                 }
             }
         }
@@ -278,6 +296,9 @@ private fun LightHomeScreen(
         }
         item {
             LightGameCard(Icons.Rounded.Bolt, "Bil Bakalım", "Bilgi yarışmasında tahmin et, puanı kap.", "OYNA", LightGold, onKelimeSavasi)
+        }
+        item {
+            LightGameCard(Icons.Rounded.Groups, "Rekabet Merkezi", "Kulüpler, kulüp sohbeti ve ücretsiz Haftalık Kelime Kupası.", "GİR", LightBlue, onCompetition)
         }
         item {
             LightGameCard(Icons.Rounded.ShoppingCart, "Market", "VIP, Sezon Bileti, Son Coin ve Style ürünleri.", "AÇ", LightBlue, onMarket)
