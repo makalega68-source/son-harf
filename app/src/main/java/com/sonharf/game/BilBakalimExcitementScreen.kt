@@ -120,14 +120,14 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
             lastTitle = outcome.title
             roundMessage = buildString {
                 append("KAZANDIN • +${outcome.points}")
-                if (outcome.speedBonus > 0) append(" • Hız +${outcome.speedBonus}")
+                if (outcome.speedBonus > 0) append(sh(" • Hız +${outcome.speedBonus}", " • Speed +${outcome.speedBonus}"))
                 if (outcome.streakBonus > 0) append(" • Seri +${outcome.streakBonus}")
             }
         } else {
             SonHarfSoundFx.warning()
             rivalScore += rivalPoints
             matchStreak = 0
-            roundMessage = "Rakip daha yakındı • +$rivalPoints"
+            roundMessage = sh("Rakip daha yakındı • +$rivalPoints", "Rival was closer • +$rivalPoints")
         }
         phase = ExcitementPhase.RESULT
     }
@@ -175,11 +175,11 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
                 onClick = onBack,
                 contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
             ) {
-                Text("‹ OYUNLAR", color = BilCyan, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Text(sh("‹ OYUNLAR", "‹ GAMES"), color = BilCyan, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("BİL BAKALIM", color = BilText, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                Text(sh("BİL BAKALIM", "TRIVIA DUEL"), color = BilText, fontSize = 25.sp, fontWeight = FontWeight.Black)
                 Text(
                     sh("BİLGİ YARIŞMASI • EN YAKIN TAHMİN", "TRIVIA • CLOSEST GUESS"),
                     color = BilCyan,
@@ -226,7 +226,7 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
 
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             MetaChip("🔥 Seri", matchStreak.toString(), Modifier.weight(1f))
-            MetaChip("🧠 Ustalık", "%$mastery", Modifier.weight(1f))
+            MetaChip(sh("🧠 Ustalık", "🧠 Mastery"), "%$mastery", Modifier.weight(1f))
             MetaChip("🏆 Skor", "$playerScore-$rivalScore", Modifier.weight(1f))
         }
 
@@ -259,14 +259,14 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
                 Surface(shape = RoundedCornerShape(22.dp), color = BilPanel, border = BorderStroke(1.dp, if (isFinal) BilRed else if (isBoss) BilGold else BilCyan.copy(alpha = .30f))) {
                     Column(Modifier.fillMaxWidth().padding(17.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text("SORU $questionNo/10", fontWeight = FontWeight.Black, color = BilMuted, fontSize = 16.sp)
-                            Text("⏱ $seconds sn", fontWeight = FontWeight.Black, color = if (seconds <= 5) BilRed else BilText, fontSize = 16.sp)
+                            Text(sh("SORU $questionNo/10", "QUESTION $questionNo/10"), fontWeight = FontWeight.Black, color = BilMuted, fontSize = 16.sp)
+                            Text(sh("⏱ $seconds sn", "⏱ ${seconds}s"), fontWeight = FontWeight.Black, color = if (seconds <= 5) BilRed else BilText, fontSize = 16.sp)
                         }
-                        if (isBoss) Text("👑 BOSS SORUSU • +5 TABAN BONUS", color = BilCyan, fontWeight = FontWeight.Black)
-                        if (isFinal) Text("⚡ FİNAL SORUSU • x2", color = BilRed, fontWeight = FontWeight.Black)
+                        if (isBoss) Text(sh("👑 BOSS SORUSU • +5 TABAN BONUS", "👑 BOSS QUESTION • +5 BASE BONUS"), color = BilCyan, fontWeight = FontWeight.Black)
+                        if (isFinal) Text(sh("⚡ FİNAL SORUSU • x2", "⚡ FINAL QUESTION • x2"), color = BilRed, fontWeight = FontWeight.Black)
                         Text(q.category.uppercase(), color = BilCyan, fontSize = 12.sp, fontWeight = FontWeight.Black)
                         Text(q.question, color = BilText, fontSize = 20.sp, lineHeight = 28.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-                        hint?.let { Text("💡 Joker ipucu: $it", color = BilGreen, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) }
+                        hint?.let { Text(sh("💡 Joker ipucu: $it", "💡 Hint: $it"), color = BilGreen, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) }
                         OutlinedTextField(
                             value = input,
                             onValueChange = {
@@ -276,7 +276,7 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
                             },
                             modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).focusRequester(answerFocusRequester),
                             singleLine = true,
-                            label = { Text("Tahminin", fontSize = 12.sp) },
+                            label = { Text(sh("Tahminin", "Your guess"), fontSize = 12.sp) },
                             textStyle = LocalTextStyle.current.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
                             shape = RoundedCornerShape(15.dp),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
@@ -299,13 +299,13 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
                                 disabledContentColor = Color(0xFF8A94A3),
                             ),
                         ) {
-                            Text("CEVABI KİLİTLE", fontWeight = FontWeight.Black, fontSize = 16.sp)
+                            Text(sh("CEVABI KİLİTLE", "LOCK ANSWER"), fontWeight = FontWeight.Black, fontSize = 16.sp)
                         }
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             FilterChip(
                                 selected = risk,
                                 onClick = { risk = !risk },
-                                label = { Text(if (risk) "💣 RİSK x2 AÇIK" else "💣 RİSK x2", fontSize = 12.sp, maxLines = 1) },
+                                label = { Text(if (risk) sh("💣 RİSK x2 AÇIK", "💣 RISK x2 ON") else sh("💣 RİSK x2", "💣 RISK x2"), fontSize = 12.sp, maxLines = 1) },
                                 modifier = Modifier.weight(1f).height(48.dp),
                                 shape = RoundedCornerShape(14.dp),
                             )
@@ -320,19 +320,19 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
                                 shape = RoundedCornerShape(14.dp),
                             ) { Text(if (jokerUsed) "KULLANILDI" else "💡 JOKER", fontSize = 12.sp, maxLines = 1) }
                         }
-                        Text("Hızlı doğru cevap + seri = daha yüksek puan. Satın alınabilir güç yok.", color = BilMuted, fontSize = 10.sp, textAlign = TextAlign.Center)
+                        Text(sh("Hızlı doğru cevap + seri = daha yüksek puan. Satın alınabilir güç yok.", "Fast correct answers + streaks = higher score. No purchasable power."), color = BilMuted, fontSize = 10.sp, textAlign = TextAlign.Center)
                     }
                 }
             }
             ExcitementPhase.RESULT -> {
                 Surface(shape = RoundedCornerShape(22.dp), color = BilPanel, border = BorderStroke(1.dp, BilGreen.copy(alpha = .45f))) {
                     Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Text("DOĞRU CEVAP", color = BilMuted, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                        Text(sh("DOĞRU CEVAP", "CORRECT ANSWER"), color = BilMuted, fontSize = 10.sp, fontWeight = FontWeight.Black)
                         Text(q.displayAnswer, color = BilText, fontSize = 27.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                         Text(roundMessage, color = if (roundMessage.startsWith("KAZANDIN")) BilGreen else BilRed, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                         lastTitle?.let { Text("🎖 $it", color = BilCyan, fontWeight = FontWeight.Bold) }
-                        Text("Sen $playerScore • $rivalScore Rakip", color = BilText, fontWeight = FontWeight.Black)
-                        Button(onClick = { advance() }, modifier = Modifier.fillMaxWidth()) { Text(if (questionNo == 10) "MAÇ SONUCU" else "SONRAKİ SORU", fontWeight = FontWeight.Black) }
+                        Text(sh("Sen $playerScore • $rivalScore Rakip", "You $playerScore • $rivalScore Rival"), color = BilText, fontWeight = FontWeight.Black)
+                        Button(onClick = { advance() }, modifier = Modifier.fillMaxWidth()) { Text(if (questionNo == 10) sh("MAÇ SONUCU", "MATCH RESULT") else sh("SONRAKİ SORU", "NEXT QUESTION"), fontWeight = FontWeight.Black) }
                     }
                 }
             }
@@ -340,14 +340,14 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
                 val won = playerScore >= rivalScore
                 Surface(shape = RoundedCornerShape(24.dp), color = BilPanel, border = BorderStroke(1.dp, if (won) BilGreen else BilRed)) {
                     Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(if (won) "🏆 MAÇI KAZANDIN" else "⚔ RÖVANŞ ZAMANI", color = BilText, fontSize = 23.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                        Text(if (won) sh("🏆 MAÇI KAZANDIN", "🏆 YOU WON THE MATCH") else sh("⚔ RÖVANŞ ZAMANI", "⚔ REMATCH TIME"), color = BilText, fontSize = 23.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                         Text("$playerScore - $rivalScore", color = BilCyan, fontSize = 38.sp, fontWeight = FontWeight.Black)
                         Text(BilBakalimCompetitionEngine.performanceText(playerScore, rivalScore), color = BilMuted)
                         Text("🎁 ${BilBakalimCompetitionEngine.surpriseReward(wins)}", color = BilGreen, fontWeight = FontWeight.Bold)
-                        Text("🔥 En iyi seri: $bestStreak • $league $rating", color = BilText, fontWeight = FontWeight.Bold)
+                        Text(sh("🔥 En iyi seri: $bestStreak • $league $rating", "🔥 Best streak: $bestStreak • $league $rating"), color = BilText, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { resetMatch() }, modifier = Modifier.weight(1f)) { Text("RÖVANŞ", fontWeight = FontWeight.Black) }
-                            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text("OYUNLAR") }
+                            Button(onClick = { resetMatch() }, modifier = Modifier.weight(1f)) { Text(sh("RÖVANŞ", "REMATCH"), fontWeight = FontWeight.Black) }
+                            OutlinedButton(onClick = onBack, modifier = Modifier.weight(1f)) { Text(sh("OYUNLAR", "GAMES")) }
                         }
                     }
                 }
