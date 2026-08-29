@@ -28,11 +28,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.AchievementProgressDto
 import com.sonharf.game.data.CompetitiveSeasonDto
+import com.sonharf.game.data.CompetitiveSeasonHistoryDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.PersonalRecordsDto
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.getAchievements
+import com.sonharf.game.data.claimCompetitiveSeasonReward
 import com.sonharf.game.data.getCompetitiveSeason
+import com.sonharf.game.data.getCompetitiveSeasonHistory
 import com.sonharf.game.data.getPersonalRecords
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
@@ -135,6 +138,7 @@ fun ProfileExperienceV2Screen() {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var profile by remember { mutableStateOf<ProfileV2Dto?>(null) }
     var season by remember { mutableStateOf<CompetitiveSeasonDto?>(null) }
+    var seasonHistory by remember { mutableStateOf<List<CompetitiveSeasonHistoryDto>>(emptyList()) }
     var achievements by remember { mutableStateOf<List<AchievementProgressDto>>(emptyList()) }
     var records by remember { mutableStateOf<PersonalRecordsDto?>(null) }
     var avatarBytes by remember { mutableStateOf<ByteArray?>(null) }
@@ -142,6 +146,7 @@ fun ProfileExperienceV2Screen() {
     var photoEditor by remember { mutableStateOf(false) }
     var legacyIdentity by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    var seasonRewardBusyId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     suspend fun refresh() {
@@ -149,6 +154,7 @@ fun ProfileExperienceV2Screen() {
         profile = runCatching { loadProfileV2() }.getOrNull()
         avatarBytes = profile?.avatarPath?.let { runCatching { ProfilePhotoStorageV2.download(it) }.getOrNull() }
         season = runCatching { backend?.getCompetitiveSeason() }.getOrNull()
+        seasonHistory = runCatching { backend?.getCompetitiveSeasonHistory(12).orEmpty() }.getOrDefault(emptyList())
         achievements = runCatching { backend?.getAchievements().orEmpty() }.getOrDefault(emptyList())
         records = runCatching { backend?.getPersonalRecords() }.getOrNull()
         loading = false
@@ -374,12 +380,79 @@ fun ProfileExperienceV2Screen() {
                             ProfileMetricV2(s.losses.toString(), sh("Sezon M", "Season L"), Modifier.weight(1f))
                             ProfileMetricV2(s.peakRating.toString(), sh("Zirve", "Peak"), Modifier.weight(1f))
                         }
+                        Text(
+                            sh(
+                                "Sezon sonu ödülü için en az 5 gerçek PvP maçı gerekir.",
+                                "At least 5 real PvP matches are required for the season-end reward.",
+                            ),
+                            color = SonHarfMuted,
+                            fontSize = 9.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                         val honor = if (SonHarfUiState.isEnglish) s.latestHonorEn else s.latestHonorTr
                         if (!honor.isNullOrBlank()) {
                             Surface(shape = RoundedCornerShape(13.dp), color = SonHarfPurple.copy(alpha = .11f)) {
                                 Text("🏅 $honor", Modifier.fillMaxWidth().padding(9.dp), color = SonHarfPurple, fontWeight = FontWeight.Bold, fontSize = 11.sp, textAlign = TextAlign.Center)
                             }
                         }
+                    }
+                }
+            }
+        }
+
+
+        if (seasonHistory.isNotEmpty()) {
+            item {
+                Text(
+                    sh("SEZON GEÇMİŞİ", "SEASON HISTORY"),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    sh(
+                        "En az 5 PvP maçı ödül hakkı verir. Sıra ödülleri için sezonda en az 5 uygun oyuncu gerekir.",
+                        "At least 5 PvP matches unlock reward eligibility. Rank rewards require at least 5 eligible players in the season.",
+                    ),
+                    color = SonHarfMuted,
+                    fontSize = 9.sp,
+                )
+                Spacer(Modifier.height(10.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    seasonHistory.forEach { history ->
+                        CompetitiveSeasonHistoryCardV2(
+                            history = history,
+                            busy = seasonRewardBusyId == history.seasonId,
+                            onClaim = {
+                                val b = backend
+                                if (b == null) {
+                                    notice = sh("Çevrimiçi bağlantı gerekli.", "Online connection required.")
+                                } else scope.launch {
+                                    seasonRewardBusyId = history.seasonId
+                                    runCatching {
+                                        b.claimCompetitiveSeasonReward(history.seasonId)
+                                    }.onSuccess { result ->
+                                        SonHarfSoundFx.bonus()
+                                        notice = sh(
+                                            "Sezon ödülü: +${result.rewardCoins} Son Coin",
+                                            "Season reward: +${result.rewardCoins} Son Coin",
+                                        )
+                                        refresh()
+                                    }.onFailure { error ->
+                                        notice = when {
+                                            "season_reward_already_claimed" in error.message.orEmpty() ->
+                                                sh("Bu sezon ödülü zaten alındı.", "This season reward was already claimed.")
+                                            "season_reward_not_eligible" in error.message.orEmpty() ->
+                                                sh("Bu sezon için en az 5 PvP maçı gerekir.", "At least 5 PvP matches are required for this season.")
+                                            else ->
+                                                sh("Sezon ödülü alınamadı.", "Season reward could not be claimed.")
+                                        }
+                                    }
+                                    seasonRewardBusyId = null
+                                }
+                            },
+                        )
                     }
                 }
             }
@@ -574,6 +647,160 @@ private fun RecordTileV2(
                 textAlign = TextAlign.Center,
                 maxLines = 2,
             )
+        }
+    }
+}
+
+
+@Composable
+private fun CompetitiveSeasonHistoryCardV2(
+    history: CompetitiveSeasonHistoryDto,
+    busy: Boolean,
+    onClaim: () -> Unit,
+) {
+    val title = if (SonHarfUiState.isEnglish) history.nameEn else history.nameTr
+    val honor = if (SonHarfUiState.isEnglish) history.honorLabelEn else history.honorLabelTr
+    val rankText = if (history.finalRank > 0) "#${history.finalRank}" else "—"
+    val honorIcon = when (history.honorCode) {
+        "CHAMPION" -> "👑"
+        "PODIUM" -> "🏅"
+        "TOP10" -> "⭐"
+        else -> "🏆"
+    }
+
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(
+            1.dp,
+            when {
+                history.rewardEligible -> SonHarfGold.copy(alpha = .48f)
+                history.rewardClaimed -> SonHarfGreen.copy(alpha = .30f)
+                else -> SonHarfMuted.copy(alpha = .13f)
+            },
+        ),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(13.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    Modifier.size(42.dp),
+                    shape = RoundedCornerShape(13.dp),
+                    color = SonHarfGold.copy(alpha = .10f),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(honorIcon, fontSize = 21.sp)
+                    }
+                }
+                Spacer(Modifier.width(9.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(title, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                    Text(
+                        "${history.leagueName} • ${history.finalRating} rating",
+                        color = SonHarfMuted,
+                        fontSize = 9.sp,
+                    )
+                }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(rankText, color = SonHarfGold, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        "${history.eligiblePlayerCount} ${sh("uygun", "eligible")}",
+                        color = SonHarfMuted,
+                        fontSize = 8.sp,
+                    )
+                }
+            }
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                ProfileMetricV2(
+                    history.matches.toString(),
+                    sh("Maç", "Matches"),
+                    Modifier.weight(1f),
+                )
+                ProfileMetricV2(
+                    "${history.wins}-${history.losses}-${history.draws}",
+                    "W-L-D",
+                    Modifier.weight(1f),
+                )
+                ProfileMetricV2(
+                    history.peakRating.toString(),
+                    sh("Zirve", "Peak"),
+                    Modifier.weight(1f),
+                )
+            }
+
+            if (!honor.isNullOrBlank()) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = SonHarfPurple.copy(alpha = .10f),
+                ) {
+                    Text(
+                        "$honorIcon $honor",
+                        Modifier.fillMaxWidth().padding(8.dp),
+                        color = SonHarfPurple,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            }
+
+            when {
+                history.matches < 5 -> {
+                    Text(
+                        sh(
+                            "Ödül için 5 maç gerekir • ${history.matches}/5",
+                            "5 matches required for reward • ${history.matches}/5",
+                        ),
+                        color = SonHarfMuted,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                history.rewardClaimed -> {
+                    Text(
+                        sh(
+                            "✓ +${history.rewardCoins} Son Coin alındı",
+                            "✓ +${history.rewardCoins} Son Coin claimed",
+                        ),
+                        color = SonHarfGreen,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+                history.rewardEligible -> {
+                    Button(
+                        onClick = onClaim,
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold),
+                    ) {
+                        Text(
+                            if (busy)
+                                "…"
+                            else
+                                sh(
+                                    "+${history.rewardCoins} SON COIN AL",
+                                    "CLAIM +${history.rewardCoins} SON COIN",
+                                ),
+                            color = Color(0xFF2A210F),
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
+                }
+                else -> {
+                    Text(
+                        sh("Sezon ödülü kapalı.", "Season reward unavailable."),
+                        color = SonHarfMuted,
+                        fontSize = 9.sp,
+                    )
+                }
+            }
         }
     }
 }
