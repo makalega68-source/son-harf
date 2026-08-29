@@ -373,7 +373,7 @@ private fun ArenaIntroScreen(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back")) }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(sh("KELİME ARENASI", "WORD ARENA"), color = SonHarfText, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    Text(sh("KELİME DÜELLOSU", "WORD DUEL"), color = SonHarfText, fontSize = 24.sp, fontWeight = FontWeight.Black)
                     Text(sh("60 saniyelik eşzamanlı düello", "60-second simultaneous duel"), color = SonHarfMuted, fontSize = 10.sp)
                 }
                 Spacer(Modifier.size(48.dp))
@@ -530,7 +530,7 @@ private fun ArenaPlayScreen(
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onExit) { Icon(Icons.Rounded.ArrowBack, sh("Çık", "Exit")) }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(sh("KELİME ARENASI", "WORD ARENA"), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                Text(sh("KELİME DÜELLOSU", "WORD DUEL"), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 17.sp)
                 Text(sh("Benzersiz kelime finalde 2×", "Unique words score 2× at finish"), color = SonHarfGold, fontSize = 8.sp, fontWeight = FontWeight.Bold)
             }
             Spacer(Modifier.size(48.dp))
@@ -815,8 +815,8 @@ private fun ArenaResultScreen(
                 Spacer(Modifier.height(5.dp))
                 Text(
                     sh(
-                        "Rakibin 2 dakika içinde Rövanş derse aynı oyuncuyla yeni Arena açılır.",
-                        "If your rival accepts within 2 minutes, a new Arena opens with the same player.",
+                        "Rakibin 2 dakika içinde Rövanş derse aynı oyuncuyla yeni Düello açılır.",
+                        "If your rival accepts within 2 minutes, a new Duel opens with the same player.",
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     color = SonHarfMuted,
@@ -892,10 +892,10 @@ private fun friendlyArenaError(raw: String): String = when {
     "arena_letters_mismatch" in raw -> sh("Kelime yalnız verilen harflerden oluşmalı.", "Use only the provided letters.")
     "arena_invalid_word" in raw -> sh("Bu kelime sözlükte yok.", "That word is not in the dictionary.")
     "arena_duplicate_word" in raw -> sh("Bu kelimeyi zaten kullandın.", "You already used that word.")
-    "word_arena_match_active" in raw -> sh("Önce aktif Kelime Arenası maçını bitir.", "Finish your active Word Arena match first.")
+    "word_arena_match_active" in raw -> sh("Önce aktif Kelime Düellosu maçını bitir.", "Finish your active Word Duel match first.")
     "match_not_finished" in raw -> sh("Rövanş için maçın tamamlanması gerekir.", "The match must finish before a rematch.")
-    "arena_room_not_found" in raw -> sh("Arena odası bulunamadı.", "Arena room was not found.")
-    "blocked_relationship" in raw -> sh("Bu oyuncuyla Arena başlatılamıyor.", "An Arena cannot be started with this player.")
+    "arena_room_not_found" in raw -> sh("Düello odası bulunamadı.", "Duel room was not found.")
+    "blocked_relationship" in raw -> sh("Bu oyuncuyla Düello başlatılamıyor.", "A Duel cannot be started with this player.")
     "unauthorized" in raw || "not_authenticated" in raw -> sh("Oturumunu yenileyip tekrar dene.", "Refresh your session and try again.")
     else -> sh("İşlem tamamlanamadı. Tekrar dene.", "The action could not be completed. Try again.")
 }

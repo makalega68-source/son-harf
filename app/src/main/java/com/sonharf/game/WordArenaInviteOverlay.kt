@@ -90,7 +90,7 @@ fun WordArenaInviteOverlay() {
                 }
                 Column {
                     Text(
-                        sh("KELİME ARENASI DAVETİ", "WORD ARENA INVITE"),
+                        sh("KELİME DÜELLOSU DAVETİ", "WORD DUEL INVITE"),
                         color = SonHarfText,
                         fontWeight = FontWeight.Black,
                         fontSize = 19.sp,
@@ -108,8 +108,8 @@ fun WordArenaInviteOverlay() {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
                     sh(
-                        "Seni 60 saniyelik Kelime Arenası düellosuna davet ediyor.",
-                        "invited you to a 60-second Word Arena duel.",
+                        "Seni 60 saniyelik Kelime Düellosuna davet ediyor.",
+                        "invited you to a 60-second Word Duel.",
                     ),
                     color = SonHarfText,
                     fontSize = 14.sp,
@@ -140,7 +140,7 @@ fun WordArenaInviteOverlay() {
                                     FriendsQuickAccessState.open = false
                                     WordArenaNavigation.requestRoom(room)
                                 } else {
-                                    notice = sh("Arena odası açılamadı.", "Arena room could not be opened.")
+                                    notice = sh("Düello odası açılamadı.", "Duel room could not be opened.")
                                 }
                             }
                             .onFailure {
