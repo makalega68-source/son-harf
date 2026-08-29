@@ -892,7 +892,11 @@ private fun AdminCapacityRow(metric: AdminCapacityDto, onResolve: () -> Unit) {
         ) {
             Icon(Icons.Rounded.OpenInNew, null, tint = tone, modifier = Modifier.size(17.dp))
             Spacer(Modifier.width(6.dp))
-            Text("PROBLEMİ ÇÖZ / İLGİLİ SAYFAYI AÇ", color = tone, fontSize = 11.sp)
+            Text(
+                if (metric.metricKey == "github_rollback") "SON SAĞLAM SÜRÜME DÖN" else "PROBLEMİ ÇÖZ / İLGİLİ SAYFAYI AÇ",
+                color = tone,
+                fontSize = 11.sp,
+            )
         }
     }
 }
