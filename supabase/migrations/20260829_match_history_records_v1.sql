@@ -233,3 +233,17 @@ revoke all on function public.get_match_history_v1(integer) from public,anon;
 revoke all on function public.get_personal_records_v1() from public,anon;
 grant execute on function public.get_match_history_v1(integer) to authenticated;
 grant execute on function public.get_personal_records_v1() to authenticated;
+
+
+-- Read-path indexes for player-scoped history/record queries.
+create index if not exists game_words_player_created_idx
+  on public.game_words(player_id,created_at desc)
+  where player_id is not null;
+
+create index if not exists game_rooms_host_finished_user_idx
+  on public.game_rooms(host_id,finished_at desc)
+  where status='finished' and stats_applied and coalesce(is_bot,false)=false;
+
+create index if not exists game_rooms_guest_finished_user_idx
+  on public.game_rooms(guest_id,finished_at desc)
+  where status='finished' and stats_applied and coalesce(is_bot,false)=false;
