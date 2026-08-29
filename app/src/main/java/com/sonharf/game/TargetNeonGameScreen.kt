@@ -6,14 +6,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.*
@@ -94,9 +92,15 @@ fun TargetNeonGameScreen(
         "invalid_word" in raw -> "Bu kelime geçerli değil."
         "turn_expired" in raw -> "Süren doldu."
         "vip_required" in raw -> "Özel oda oluşturmak için aktif VIP üyeliği gerekli."
+        "team_arena_active" in raw || "team_arena_already_active" in raw ->
+            "Açık 2v2 lobin var. Takım Arenası'na dönüp lobiyi kapat."
+        "word_arena_match_active" in raw -> "Aktif Kelime Arenası maçını bitir."
+        "daily_arena_active" in raw -> "Aktif Resmî Koşuyu bitir."
         "player_already_in_game" in raw -> "Devam eden bir maçın varken yeni oda oluşturamazsın."
         "room_not_available" in raw -> "Oda bulunamadı veya artık müsait değil."
-        else -> "Bağlantı sorunu. Yeniden deneniyor."
+        "timeout" in raw.lowercase() || "unreachable" in raw.lowercase() || "connect" in raw.lowercase() ->
+            "Sunucuya ulaşılamadı. Yeniden deneniyor."
+        else -> "Düello şu anda başlatılamadı. Tekrar dene."
     }
 
     suspend fun ensureProfile(): ProfileDto {
@@ -173,7 +177,11 @@ fun TargetNeonGameScreen(
         runCatching { ensureProfile() }.onSuccess {
             val old = runCatching { activeRoom() }.getOrNull()
             if (old != null) { room = old; language = old.language; SonHarfUiState.language = old.language; observe(old) }
-        }.onFailure { notice = friendly(it.message.orEmpty()) }
+        }.onFailure {
+            // Passive profile refresh failures must not look like a connection outage
+            // before the player has taken any action.
+            notice = sh("Düelloya hazır", "Ready to duel")
+        }
         busy = false
     }
 
@@ -446,10 +454,9 @@ private fun TargetArena(
 
     BackHandler(enabled = room.status != "finished") { confirmForfeit = true }
 
-    LaunchedEffect(myTurn, busy, room.currentPlayerId, room.status) {
-        if (room.status !in listOf("playing", "final", "sudden_death")) return@LaunchedEffect
-        if (myTurn && !busy) {
-            delay(180)
+    LaunchedEffect(room.id, room.status, myTurn, busy) {
+        if (room.status in listOf("playing", "final", "sudden_death")) {
+            delay(140)
             runCatching { wordFocusRequester.requestFocus() }
             keyboard?.show()
         } else {
@@ -531,7 +538,7 @@ private fun TargetArena(
             Spacer(Modifier.height(18.dp))
             Button(
                 onClick = onRematch,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
+                modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = TGblue),
             ) {
@@ -555,8 +562,7 @@ private fun TargetArena(
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
             .imePadding()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 14.dp, vertical = 8.dp)
+            .padding(horizontal = 14.dp, vertical = 6.dp)
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -569,10 +575,19 @@ private fun TargetArena(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 11.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                    Text(playerName, color = TGblue, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
-                    Text("🏆 $myScore", color = TGtext, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text("$myRounds " + sh("tur", "round"), color = TGmuted, fontSize = 8.sp)
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    ProfilePhotoAvatarWithGender(
+                        avatarPath = playerAvatarPath,
+                        gender = playerGender,
+                        name = playerName,
+                        size = 38.dp,
+                        accent = TGblue,
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Column {
+                        Text(playerName, color = TGblue, fontWeight = FontWeight.Black, fontSize = 11.sp, maxLines = 1)
+                        Text("🏆 $myScore • $myRounds " + sh("tur", "round"), color = TGmuted, fontSize = 8.sp, maxLines = 1)
+                    }
                 }
                 Box(
                     Modifier
@@ -589,10 +604,19 @@ private fun TargetArena(
                         }
                     }
                 }
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                    Text(opponentName, color = TGpink, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
-                    Text("🏆 $oppScore", color = TGtext, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                    Text("$oppRounds " + sh("tur", "round"), color = TGmuted, fontSize = 8.sp)
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(opponentName, color = TGpink, fontWeight = FontWeight.Black, fontSize = 11.sp, maxLines = 1)
+                        Text("🏆 $oppScore • $oppRounds " + sh("tur", "round"), color = TGmuted, fontSize = 8.sp, maxLines = 1)
+                    }
+                    Spacer(Modifier.width(7.dp))
+                    ProfilePhotoAvatarWithGender(
+                        avatarPath = opponentAvatarPath,
+                        gender = opponentGender,
+                        name = opponentName,
+                        size = 38.dp,
+                        accent = TGpink,
+                    )
                 }
             }
         }
@@ -614,53 +638,59 @@ private fun TargetArena(
 
         val activeLetter = words.lastOrNull()?.normalizedWord?.lastOrNull()?.uppercaseChar()?.toString().orEmpty()
         Card(
+            modifier = Modifier.fillMaxWidth().weight(1f, fill = true),
             colors = CardDefaults.cardColors(containerColor = TGpanel),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(22.dp),
             border = BorderStroke(1.dp, Color(0xFFDDE5EE)),
         ) {
             Column(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 18.dp),
+                Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.Center,
             ) {
                 if (words.isEmpty()) {
                     Text(if (myTurn) sh("İLK KELİME", "FIRST WORD") else sh("RAKİP BAŞLIYOR", "RIVAL STARTS"), color = TGtext, fontSize = 30.sp, fontWeight = FontWeight.Black)
                     Text(sh("Kelime zincirini başlat", "Start the word chain"), color = TGmuted, fontSize = 11.sp)
                 } else {
-                    words.takeLast(3).forEachIndexed { index, w ->
-                        val upper = w.word.uppercase()
-                        val prefix = upper.dropLast(1)
-                        val last = upper.takeLast(1)
-                        Row(verticalAlignment = Alignment.Bottom) {
-                            Text(prefix, color = TGtext, fontSize = if (upper.length > 12) 24.sp else 32.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                            Text(last, color = TGblue, fontSize = if (upper.length > 12) 24.sp else 32.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
-                        }
-                        if (index != words.takeLast(3).lastIndex) {
-                            Text("↓", color = TGmuted.copy(alpha = .55f), fontSize = 18.sp)
-                        }
+                    // Only the current word stays in the arena. Older words remain
+                    // available from the Word Chain dialog without pushing the layout.
+                    val current = words.last()
+                    val upper = current.word.uppercase()
+                    val prefix = upper.dropLast(1)
+                    val last = upper.takeLast(1)
+                    Text(sh("SON KELİME", "CURRENT WORD"), color = TGmuted, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(prefix, color = TGtext, fontSize = if (upper.length > 12) 23.sp else 30.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                        Text(last, color = TGblue, fontSize = if (upper.length > 12) 23.sp else 30.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
                     }
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(8.dp))
                     if (activeLetter.isNotBlank()) {
                         Surface(
-                            shape = CircleShape,
+                            shape = RoundedCornerShape(18.dp),
                             color = TGblue.copy(alpha = .08f),
-                            border = BorderStroke(1.5.dp, TGblue.copy(alpha = .22f)),
-                            shadowElevation = 3.dp,
+                            border = BorderStroke(1.dp, TGblue.copy(alpha = .24f)),
+                            shadowElevation = 1.dp,
                         ) {
-                            Text(
-                                activeLetter,
-                                modifier = Modifier.padding(horizontal = 23.dp, vertical = 13.dp),
-                                color = TGblue,
-                                fontSize = 36.sp,
-                                fontWeight = FontWeight.Black,
-                            )
+                            Row(
+                                Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            ) {
+                                Column {
+                                    Text(sh("SON HARF", "LAST LETTER"), color = TGmuted, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                                    Text(sh("Sıradaki kelime bununla başlar", "Next word starts here"), color = TGmuted, fontSize = 7.sp)
+                                }
+                                Surface(shape = RoundedCornerShape(12.dp), color = TGblue) {
+                                    Text(
+                                        activeLetter,
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
+                                        color = Color.White,
+                                        fontSize = 27.sp,
+                                        fontWeight = FontWeight.Black,
+                                    )
+                                }
+                            }
                         }
-                        Text(
-                            activeLetter + sh(" ile başlayan kelime", " starting word"),
-                            color = TGmuted,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
                     }
                 }
             }
@@ -685,9 +715,10 @@ private fun TargetArena(
         OutlinedTextField(
             value = wordInput,
             onValueChange = onWordInput,
-            enabled = myTurn && !busy,
+            enabled = true,
+            readOnly = !myTurn || busy,
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).focusRequester(wordFocusRequester),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp).focusRequester(wordFocusRequester),
             textStyle = LocalTextStyle.current.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
             label = { Text(sh("Kelimen", "Your word"), fontSize = 12.sp) },
             placeholder = {
