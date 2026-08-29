@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
 
-private enum class LightScreen { HOME, SON_HARF, KELIME_AVI, KELIME_SAVASI, COMPETITION, LEAGUE, MARKET, TASKS, PROFILE }
+private enum class LightScreen { HOME, SON_HARF, KELIME_ARENASI, KELIME_AVI, KELIME_SAVASI, COMPETITION, LEAGUE, MARKET, TASKS, PROFILE }
 
 private val LightBg = Color(0xFFF7F9FC)
 private val LightSurface = Color.White
@@ -100,6 +100,7 @@ fun LightWordThemeApp() {
                 LightScreen.HOME -> LightHomeScreen(
                     backend,
                     onSonHarf = { gameKey += 1; screen = LightScreen.SON_HARF },
+                    onKelimeArenasi = { screen = LightScreen.KELIME_ARENASI },
                     onKelimeAvi = { screen = LightScreen.KELIME_AVI },
                     onKelimeSavasi = { screen = LightScreen.KELIME_SAVASI },
                     onCompetition = { screen = LightScreen.COMPETITION },
@@ -111,6 +112,7 @@ fun LightWordThemeApp() {
                 LightScreen.SON_HARF -> key(gameKey) {
                     TargetNeonGameScreen(autoStartMatchmaking = true)
                 }
+                LightScreen.KELIME_ARENASI -> WordArenaScreen { screen = LightScreen.HOME }
                 LightScreen.KELIME_AVI -> DailyCipherScreen { screen = LightScreen.HOME }
                 LightScreen.KELIME_SAVASI -> TrackedBilBakalimStandaloneScreen { screen = LightScreen.HOME }
                 LightScreen.COMPETITION -> CompetitionHubScreen { screen = LightScreen.HOME }
@@ -161,6 +163,7 @@ private fun LightBottomItem(icon: ImageVector, label: String, selected: Boolean,
 private fun LightHomeScreen(
     backend: OnlineGameBackend?,
     onSonHarf: () -> Unit,
+    onKelimeArenasi: () -> Unit,
     onKelimeAvi: () -> Unit,
     onKelimeSavasi: () -> Unit,
     onCompetition: () -> Unit,
@@ -284,6 +287,32 @@ private fun LightHomeScreen(
                         Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(28.dp))
                         Spacer(Modifier.width(8.dp))
                         Text("OYNA", fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
+
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth().clickable(onClick = onKelimeArenasi),
+                shape = RoundedCornerShape(22.dp),
+                color = Color.White,
+                border = BorderStroke(1.dp, LightBlue.copy(alpha = .28f)),
+                shadowElevation = 3.dp,
+            ) {
+                Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(Modifier.size(58.dp), shape = RoundedCornerShape(18.dp), color = LightBlue.copy(alpha = .11f)) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Bolt, null, tint = LightBlue, modifier = Modifier.size(34.dp))
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("Kelime Arenası", color = LightText, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                        Text("Aynı harfler • 60 saniye • Benzersiz kelime 2×", color = LightMuted, fontSize = 10.sp)
+                    }
+                    Surface(shape = RoundedCornerShape(12.dp), color = LightBlue) {
+                        Text("DÜELLO", Modifier.padding(horizontal = 12.dp, vertical = 9.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
