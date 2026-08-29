@@ -317,189 +317,232 @@ private fun LightHomeScreen(
         it.scope == "weekly" && !it.completed && it.modeKey != "route"
     } ?: unifiedMissions.firstOrNull { !it.claimed }
 
+    val rating = profile?.rating ?: 1000
+    val league = ratingLeagueProgress(rating)
+
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(13.dp),
     ) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("SON HARF", color = LightText, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                    Text("SON HARF", color = LightText, fontSize = 30.sp, fontWeight = FontWeight.Black)
                     Text("Kelimeyi Sürdür, Rakibini Geç", color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                 }
-                Surface(
-                    onClick = onProfile,
-                    shape = CircleShape,
-                    color = LightSurface,
-                    border = BorderStroke(1.dp, LightBorder),
-                ) {
-                    Box(Modifier.padding(2.dp), contentAlignment = Alignment.Center) {
-                        ProfilePhotoAvatar(
-                            avatarPath = profile?.avatarPath,
-                            name = profile?.displayName ?: "Oyuncu",
-                            size = 42.dp,
-                            visible = true,
-                            accent = LightBlue,
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            val rating = profile?.rating ?: 1000
-            val league = ratingLeagueProgress(rating)
-            Surface(shape = RoundedCornerShape(19.dp), color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
-                Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.EmojiEvents, null, tint = LightGold, modifier = Modifier.size(34.dp))
-                        Spacer(Modifier.width(11.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(league.leagueName, color = LightText, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                            Text(
-                                if (league.nextAt == null) "$rating rating • ${sh("En üst lig", "Top league")}"
-                                else "$rating rating • ${league.pointsToNext} ${sh("puan kaldı", "points left")}",
-                                color = LightMuted,
-                                fontSize = 10.sp,
-                            )
-                        }
-                        Text((growth?.currentWinStreak ?: 0).toString() + " 🔥", color = LightText, fontWeight = FontWeight.Black)
-                    }
-                    LinearProgressIndicator(
-                        progress = { league.progress },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                        color = LightBlue,
-                        trackColor = LightSurface2,
+                Box(Modifier.clickable { SonHarfSoundFx.tap(); onProfile() }) {
+                    ProfilePhotoAvatar(
+                        avatarPath = profile?.avatarPath,
+                        name = profile?.displayName ?: "Oyuncu",
+                        size = 46.dp,
+                        visible = true,
+                        accent = LightBlue,
                     )
                 }
             }
         }
 
-        item { UnifiedRouteCard(nextRoute, onRouteMode) }
-        item { WeeklyClubPodiumCard(topClubs) }
-        item { WeeklyPlayerPodiumCard(topPlayers, topPlayerProfiles) }
+        item {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.EmojiEvents, null, tint = LightGold, modifier = Modifier.size(26.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(league.leagueName, color = LightText, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                        Text(
+                            if (league.nextAt == null) "$rating rating • ${sh("En üst lig", "Top league")}"
+                            else "$rating rating • ${league.pointsToNext} ${sh("puan kaldı", "points left")}",
+                            color = LightMuted,
+                            fontSize = 10.sp,
+                        )
+                    }
+                    Text("${growth?.currentWinStreak ?: 0} 🔥", color = LightText, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                }
+                LinearProgressIndicator(
+                    progress = { league.progress },
+                    modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                    color = LightBlue,
+                    trackColor = Color(0xFFE8EEF6),
+                )
+            }
+        }
 
-        if (rival != null) {
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth().clickable { SonHarfSoundFx.tap(); onSonHarf() },
+                shape = RoundedCornerShape(26.dp),
+                color = LightBlue,
+                shadowElevation = 5.dp,
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("SON HARF DÜELLOSU", color = Color.White.copy(alpha = .76f), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                        Text("OYNA", color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.Black)
+                        Text("Son harften kelime üret • rakibini geç", color = Color.White.copy(alpha = .82f), fontSize = 10.sp)
+                    }
+                    Surface(shape = CircleShape, color = Color.White.copy(alpha = .16f)) {
+                        Icon(Icons.Rounded.PlayArrow, null, tint = Color.White, modifier = Modifier.padding(14.dp).size(30.dp))
+                    }
+                }
+            }
+        }
+
+        if (nextRoute != null) {
             item {
-                val r = rival!!
-                Surface(shape = RoundedCornerShape(19.dp), color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
+                val m = nextRoute
+                Surface(
+                    modifier = Modifier.fillMaxWidth().clickable(enabled = m.modeKey != "route") { onRouteMode(m.modeKey) },
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color(0xFFEAF3FF),
+                ) {
                     Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(Modifier.size(42.dp), shape = CircleShape, color = LightGold.copy(alpha = .12f)) {
-                            Box(contentAlignment = Alignment.Center) { Text("⚔", fontSize = 22.sp) }
+                        Surface(shape = CircleShape, color = LightBlue.copy(alpha = .12f)) {
+                            Icon(Icons.Rounded.TaskAlt, null, tint = LightBlue, modifier = Modifier.padding(9.dp).size(18.dp))
                         }
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("EZELİ RAKİP", color = LightGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                            Text(r.displayName, color = LightText, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                            Text("${r.matches} maç • Sen ${r.wins} - ${r.losses} Rakip", color = LightMuted, fontSize = 10.sp)
+                            Text("BUGÜNÜN ROTASI", color = LightBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Text(if (SonHarfUiState.isEnglish) m.titleEn else m.titleTr, color = LightText, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
-                        Text("${r.myPoints}:${r.theirPoints}", color = LightText, fontWeight = FontWeight.Black, fontSize = 17.sp)
+                        Text("+${m.rewardCoins} ◆", color = LightGold, fontSize = 11.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
         }
 
+        item { Text("OYUNLAR", color = LightMuted, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp) }
+
         item {
-            Surface(
-                shape = RoundedCornerShape(26.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, Color(0xFFD5E3F7)),
-                shadowElevation = 5.dp,
-            ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Text("Son Harf", color = LightText, fontWeight = FontWeight.Black, fontSize = 22.sp)
-                    Text("Son harften yeni kelime üret, rakibini geç.", color = LightMuted, fontSize = 11.sp, textAlign = TextAlign.Center)
-                    Button(
-                        onClick = { SonHarfSoundFx.tap(); onSonHarf() },
-                        modifier = Modifier.fillMaxWidth().height(64.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = LightBlue, contentColor = Color.White),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 5.dp, pressedElevation = 1.dp),
-                    ) {
-                        Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(28.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("OYNA", fontSize = 22.sp, fontWeight = FontWeight.Black)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HomeModeTile(Icons.Rounded.Bolt, "Kelime Arenası", "60 sn", LightBlue, Modifier.weight(1f), onKelimeArenasi)
+                HomeModeTile(Icons.Rounded.EmojiEvents, "Günlük Arena", "Bugün", LightGold, Modifier.weight(1f), onGunlukArena)
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HomeModeTile(Icons.Rounded.Groups, "Takım Arenası", "2v2", Color(0xFF6B4FD3), Modifier.weight(1f), onTakimArenasi)
+                HomeModeTile(Icons.Rounded.Bolt, "Bil Bakalım", "10 soru", Color(0xFFE85D75), Modifier.weight(1f), onKelimeSavasi)
+            }
+        }
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                HomeModeTile(Icons.Rounded.Search, "Kelime Avı", "Günlük", LightGreen, Modifier.weight(1f), onKelimeAvi)
+                HomeModeTile(Icons.Rounded.Groups, "Rekabet", "Kulüpler", Color(0xFF3557C8), Modifier.weight(1f), onCompetition)
+            }
+        }
+
+        if (topClubs.isNotEmpty() || topPlayers.isNotEmpty()) {
+            item {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("HAFTANIN ZİRVESİ", color = LightMuted, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        HomeWeeklyClubTile(topClubs.firstOrNull(), Modifier.weight(1f))
+                        HomeWeeklyPlayerTile(topPlayers.firstOrNull(), topPlayerProfiles, Modifier.weight(1f))
                     }
                 }
             }
         }
 
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth().clickable { SonHarfSoundFx.tap(); onKelimeArenasi() },
-                shape = RoundedCornerShape(22.dp),
-                color = Color.White,
-                border = BorderStroke(1.dp, LightBlue.copy(alpha = .28f)),
-                shadowElevation = 3.dp,
-            ) {
-                Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(Modifier.size(58.dp), shape = RoundedCornerShape(18.dp), color = LightBlue.copy(alpha = .11f)) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Rounded.Bolt, null, tint = LightBlue, modifier = Modifier.size(34.dp))
-                        }
-                    }
-                    Spacer(Modifier.width(12.dp))
+        rival?.let { r ->
+            item {
+                Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("⚔", fontSize = 22.sp)
+                    Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("Kelime Arenası", color = LightText, fontWeight = FontWeight.Black, fontSize = 18.sp)
-                        Text("Aynı harfler • 60 saniye • Benzersiz kelime 2×", color = LightMuted, fontSize = 10.sp)
+                        Text("EZELİ RAKİP", color = LightGold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        Text(r.displayName, color = LightText, fontSize = 13.sp, fontWeight = FontWeight.Black)
                     }
-                    Surface(shape = RoundedCornerShape(12.dp), color = LightBlue) {
-                        Text("DÜELLO", Modifier.padding(horizontal = 12.dp, vertical = 9.dp), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                    }
+                    Text("${r.myPoints}:${r.theirPoints}", color = LightText, fontSize = 17.sp, fontWeight = FontWeight.Black)
                 }
             }
-        }
-
-        item {
-            LightGameCard(
-                Icons.Rounded.Groups,
-                "Takım Arenası",
-                "2v2 • 4 arkadaş • ortak takım skoru • 60 saniye.",
-                "2v2",
-                LightBlue,
-                onTakimArenasi,
-            )
-        }
-
-        item {
-            LightGameCard(
-                Icons.Rounded.EmojiEvents,
-                "Günlük Arena",
-                "Herkes aynı harflerle yarışır • tek resmî deneme • günlük seri.",
-                "BUGÜN",
-                LightGold,
-                onGunlukArena,
-            )
-        }
-
-        item { Text("DİĞER OYUNLAR", color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Black) }
-
-        item {
-            LightGameCard(Icons.Rounded.Search, "Kelime Avı", "Günün kelimesini ipuçlarıyla bul.", "BAŞLA", LightGreen, onKelimeAvi)
-        }
-        item {
-            LightGameCard(Icons.Rounded.Bolt, "Bil Bakalım", "Bilgi yarışmasında tahmin et, puanı kap.", "OYNA", LightGold, onKelimeSavasi)
-        }
-        item {
-            LightGameCard(Icons.Rounded.Groups, "Rekabet Merkezi", "Kulüpler, kulüp sohbeti ve ücretsiz Haftalık Kelime Kupası.", "GİR", LightBlue, onCompetition)
-        }
-        item {
-            LightGameCard(Icons.Rounded.ShoppingCart, "Market", "VIP, Sezon Bileti, Son Coin ve Style ürünleri.", "AÇ", LightBlue, onMarket)
         }
 
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                LightShortcut(Icons.Rounded.EmojiEvents, "Lig", Modifier.weight(1f), onLeague)
-                LightShortcut(Icons.Rounded.TaskAlt, "Görevler", Modifier.weight(1f), onTasks)
-                LightShortcut(Icons.Rounded.Person, "Profil", Modifier.weight(1f), onProfile)
+                HomeQuickAction(Icons.Rounded.ShoppingCart, "Market", Modifier.weight(1f), onMarket)
+                HomeQuickAction(Icons.Rounded.TaskAlt, "Görevler", Modifier.weight(1f), onTasks)
+                HomeQuickAction(Icons.Rounded.EmojiEvents, "Lig", Modifier.weight(1f), onLeague)
             }
         }
-        item { Spacer(Modifier.height(8.dp)) }
+        item { Spacer(Modifier.height(6.dp)) }
+    }
+}
+
+@Composable
+private fun HomeModeTile(
+    icon: ImageVector,
+    title: String,
+    meta: String,
+    accent: Color,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier.height(112.dp).clickable { SonHarfSoundFx.tap(); onClick() },
+        shape = RoundedCornerShape(20.dp),
+        color = accent.copy(alpha = .10f),
+    ) {
+        Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(27.dp))
+            Column {
+                Text(title, color = LightText, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text(meta, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeWeeklyClubTile(club: ClubDirectoryRowDto?, modifier: Modifier) {
+    Surface(modifier = modifier.height(92.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFFFFF7E8)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text("🥇 KULÜP", color = LightGold, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            Text(club?.name ?: "Sıralama oluşuyor", color = LightText, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(club?.let { "${it.weeklyPoints} puan • ${it.memberCount} üye" } ?: "—", color = LightMuted, fontSize = 8.sp)
+        }
+    }
+}
+
+@Composable
+private fun HomeWeeklyPlayerTile(
+    player: WeeklyTournamentLeaderboardRowDto?,
+    profiles: Map<String, ProfileDto?>,
+    modifier: Modifier,
+) {
+    Surface(modifier = modifier.height(92.dp), shape = RoundedCornerShape(18.dp), color = Color(0xFFEEF4FF)) {
+        Row(Modifier.fillMaxSize().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (player != null) {
+                ProfilePhotoAvatar(
+                    avatarPath = profiles[player.userId]?.avatarPath,
+                    name = player.displayName,
+                    size = 34.dp,
+                    visible = true,
+                    accent = LightBlue,
+                )
+                Spacer(Modifier.width(7.dp))
+            }
+            Column(Modifier.weight(1f)) {
+                Text("🥇 OYUNCU", color = LightBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                Text(player?.displayName ?: "Sıralama oluşuyor", color = LightText, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text(player?.let { "${it.points} puan" } ?: "—", color = LightMuted, fontSize = 8.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeQuickAction(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
+    Column(
+        modifier.clickable { SonHarfSoundFx.tap(); onClick() }.padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Icon(icon, null, tint = LightBlue, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.height(4.dp))
+        Text(label, color = LightText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -547,7 +590,7 @@ private fun LightTasksScreen(
     val scope = rememberCoroutineScope()
     var goals by remember { mutableStateOf<List<GoalRowDto>>(emptyList()) }
     var unified by remember { mutableStateOf<List<UnifiedMissionDto>>(emptyList()) }
-    var busy by remember { mutableStateOf(false) }
+    var busyMissionId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("") }
 
     suspend fun reload() {
@@ -580,12 +623,13 @@ private fun LightTasksScreen(
             items(unified, key = { it.missionId }) { mission ->
                 UnifiedMissionCard(
                     mission = mission,
-                    busy = busy,
+                    busy = busyMissionId == mission.missionId,
                     onPlay = onPlayMode,
                     onClaim = {
                         val b = backend ?: return@UnifiedMissionCard
                         scope.launch {
-                            busy = true
+                            if (busyMissionId != null) return@launch
+                            busyMissionId = mission.missionId
                             runCatching { b.claimUnifiedMission(mission.missionId) }
                                 .onSuccess {
                                     SonHarfSoundFx.missionComplete()
@@ -596,7 +640,7 @@ private fun LightTasksScreen(
                                     notice = "Ödül şu anda alınamadı."
                                     SonHarfSoundFx.warning()
                                 }
-                            busy = false
+                            busyMissionId = null
                         }
                     },
                 )
