@@ -401,7 +401,7 @@ private fun ArenaIntroScreen(
                     Text(sh("AYNI HARFLER. AYNI SÜRE.", "SAME LETTERS. SAME TIME."), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 18.sp, textAlign = TextAlign.Center)
                     Text(
                         sh(
-                            "Rakibinle aynı harfleri alırsın. 60 saniyede olabildiğince çok geçerli kelime üret.",
+                            sh("Rakibinle aynı harfleri alırsın. 60 saniyede olabildiğince çok geçerli kelime üret.", "You and your rival get the same letters. Make as many valid words as possible in 60 seconds."),
                             "You and your opponent get the same letters. Build as many valid words as possible in 60 seconds.",
                         ),
                         color = SonHarfMuted,
@@ -815,7 +815,7 @@ private fun ArenaResultScreen(
                 Spacer(Modifier.height(5.dp))
                 Text(
                     sh(
-                        "Rakibin 2 dakika içinde Rövanş derse aynı oyuncuyla yeni Arena açılır.",
+                        sh("Rakibin 2 dakika içinde Rövanş derse aynı oyuncuyla yeni Arena açılır.", "If your rival accepts within 2 minutes, a new Arena opens with the same player."),
                         "If your rival accepts within 2 minutes, a new Arena opens with the same player.",
                     ),
                     modifier = Modifier.fillMaxWidth(),
