@@ -58,7 +58,8 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
     var losses by remember { mutableIntStateOf(prefs.getInt("losses", 0)) }
     var bestStreak by remember { mutableIntStateOf(prefs.getInt("best_streak", 0)) }
     var matchStreak by remember { mutableIntStateOf(0) }
-    var deck by remember { mutableStateOf(bilBakalimQuestions.shuffled().take(10)) }
+    val questionPool = if (SonHarfUiState.isEnglish) bilBakalimQuestionsEn else bilBakalimQuestions
+    var deck by remember(SonHarfUiState.language) { mutableStateOf(questionPool.shuffled().take(10)) }
     var index by remember { mutableIntStateOf(0) }
     var playerScore by remember { mutableIntStateOf(0) }
     var rivalScore by remember { mutableIntStateOf(0) }
@@ -76,7 +77,33 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
 
     val q = deck[index]
     val questionNo = index + 1
-    val league = BilBakalimCompetitionEngine.league(rating)
+    val league = when (BilBakalimCompetitionEngine.league(rating)) {
+        "BİLGE" -> sh("BİLGE", "SAGE")
+        "ELMAS" -> sh("ELMAS", "DIAMOND")
+        "ALTIN" -> sh("ALTIN", "GOLD")
+        "GÜMÜŞ" -> sh("GÜMÜŞ", "SILVER")
+        else -> sh("BRONZ", "BRONZE")
+    }
+    fun localizedTitle(title: String?): String? = when (title) {
+        "Final Ustası" -> sh("Final Ustası", "Final Master")
+        "Boss Avcısı" -> sh("Boss Avcısı", "Boss Hunter")
+        "Hız Ustası" -> sh("Hız Ustası", "Speed Master")
+        else -> title
+    }
+    fun localizedPerformance(): String = when (BilBakalimCompetitionEngine.performanceText(playerScore, rivalScore)) {
+        "Baskın galibiyet" -> sh("Baskın galibiyet", "Dominant win")
+        "Net galibiyet" -> sh("Net galibiyet", "Clear win")
+        "Kıl payı galibiyet" -> sh("Kıl payı galibiyet", "Narrow win")
+        "Başa baş" -> sh("Başa baş", "Neck and neck")
+        "Kıl payı mağlubiyet" -> sh("Kıl payı mağlubiyet", "Narrow loss")
+        else -> sh("Rövanş zamanı", "Time for a rematch")
+    }
+    fun localizedReward(): String = when (BilBakalimCompetitionEngine.surpriseReward(wins)) {
+        "Style Sandığı" -> sh("Style Sandığı", "Style Chest")
+        "Prestij Unvanı" -> sh("Prestij Unvanı", "Prestige Title")
+        "Son Coin Sandığı" -> sh("Son Coin Sandığı", "Son Coin Chest")
+        else -> "XP"
+    }
     val mastery = BilBakalimCompetitionEngine.categoryMastery(correctCount, playedCount)
     val isBoss = questionNo == 5
     val isFinal = questionNo == 10
@@ -92,7 +119,7 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
     }
 
     fun resetMatch() {
-        deck = bilBakalimQuestions.shuffled().take(10)
+        deck = (if (SonHarfUiState.isEnglish) bilBakalimQuestionsEn else bilBakalimQuestions).shuffled().take(10)
         index = 0; playerScore = 0; rivalScore = 0; matchStreak = 0; correctCount = 0; playedCount = 0; jokerUsed = false; finalApplied = false
         resetQuestion()
     }
@@ -117,11 +144,11 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
             matchStreak += 1
             bestStreak = max(bestStreak, matchStreak)
             correctCount += 1
-            lastTitle = outcome.title
+            lastTitle = localizedTitle(outcome.title)
             roundMessage = buildString {
-                append("KAZANDIN • +${outcome.points}")
+                append(sh("KAZANDIN • +${outcome.points}", "YOU WON • +${outcome.points}"))
                 if (outcome.speedBonus > 0) append(sh(" • Hız +${outcome.speedBonus}", " • Speed +${outcome.speedBonus}"))
-                if (outcome.streakBonus > 0) append(" • Seri +${outcome.streakBonus}")
+                if (outcome.streakBonus > 0) append(sh(" • Seri +${outcome.streakBonus}", " • Streak +${outcome.streakBonus}"))
             }
         } else {
             SonHarfSoundFx.warning()
@@ -342,8 +369,8 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
                     Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text(if (won) sh("🏆 MAÇI KAZANDIN", "🏆 YOU WON THE MATCH") else sh("⚔ RÖVANŞ ZAMANI", "⚔ REMATCH TIME"), color = BilText, fontSize = 23.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                         Text("$playerScore - $rivalScore", color = BilCyan, fontSize = 38.sp, fontWeight = FontWeight.Black)
-                        Text(BilBakalimCompetitionEngine.performanceText(playerScore, rivalScore), color = BilMuted)
-                        Text("🎁 ${BilBakalimCompetitionEngine.surpriseReward(wins)}", color = BilGreen, fontWeight = FontWeight.Bold)
+                        Text(localizedPerformance(), color = BilMuted)
+                        Text("🎁 ${localizedReward()}", color = BilGreen, fontWeight = FontWeight.Bold)
                         Text(sh("🔥 En iyi seri: $bestStreak • $league $rating", "🔥 Best streak: $bestStreak • $league $rating"), color = BilText, fontWeight = FontWeight.Bold)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             Button(onClick = { resetMatch() }, modifier = Modifier.weight(1f)) { Text(sh("RÖVANŞ", "REMATCH"), fontWeight = FontWeight.Black) }
