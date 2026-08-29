@@ -97,6 +97,34 @@ data class AdminCapacityDto(
 )
 
 @Serializable
+data class AdminPlayerSearchDto(
+    @SerialName("user_id") val userId: String,
+    val email: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("is_vip") val isVip: Boolean,
+    val diamonds: Int = 0,
+    val rating: Int = 0,
+    @SerialName("last_seen_at") val lastSeenAt: String? = null,
+    @SerialName("is_owner_account") val isOwnerAccount: Boolean = false,
+)
+
+suspend fun OnlineGameBackend.adminSearchPlayers(query: String): List<AdminPlayerSearchDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_search_players_v1",
+        buildJsonObject { put("p_query", query.trim()) },
+    ).decodeList()
+
+suspend fun OnlineGameBackend.adminSetPlayerVip(userId: String, enabled: Boolean) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_set_player_vip_v1",
+        buildJsonObject {
+            put("p_user_id", userId)
+            put("p_enabled", enabled)
+        },
+    )
+}
+
+@Serializable
 data class AdminGameControlDto(
     @SerialName("config_key") val configKey: String,
     val title: String,
