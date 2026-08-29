@@ -313,7 +313,7 @@ begin
     and r.status='finished'
     and coalesce(r.finished_at,r.created_at)>=v_week_ts;
 
-  v_done :=
+  w_done :=
     (case when w_duel>=3 then 1 else 0 end)+
     (case when w_word>=2 then 1 else 0 end)+
     (case when w_daily>=1 then 1 else 0 end)+
@@ -381,7 +381,7 @@ begin
     union all
     select 'weekly_route','weekly',v_week,
       'Haftalık Büyük Rota: tüm oyunları tamamla','Weekly Grand Route: complete every mode',
-      'route',6,v_done,35,190
+      'route',6,w_done,35,190
   )
   select
     m.id,m.sc,m.ps,m.tr,m.en,m.mk,m.tgt,m.prog,m.reward,
