@@ -212,15 +212,30 @@ private fun LightHomeScreen(
         }
 
         item {
+            val rating = profile?.rating ?: 1000
+            val league = ratingLeagueProgress(rating)
             Surface(shape = RoundedCornerShape(19.dp), color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
-                Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.EmojiEvents, null, tint = LightGold, modifier = Modifier.size(34.dp))
-                    Spacer(Modifier.width(11.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(growth?.leagueName ?: "BRONZ", color = LightText, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                        Text("Seviye " + (growth?.level ?: 1), color = LightMuted, fontSize = 10.sp)
+                Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.EmojiEvents, null, tint = LightGold, modifier = Modifier.size(34.dp))
+                        Spacer(Modifier.width(11.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(league.leagueName, color = LightText, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                            Text(
+                                if (league.nextAt == null) "$rating rating • ${sh("En üst lig", "Top league")}"
+                                else "$rating rating • ${league.pointsToNext} ${sh("puan kaldı", "points left")}",
+                                color = LightMuted,
+                                fontSize = 10.sp,
+                            )
+                        }
+                        Text((growth?.currentWinStreak ?: 0).toString() + " 🔥", color = LightText, fontWeight = FontWeight.Black)
                     }
-                    Text((growth?.currentWinStreak ?: 0).toString() + " 🔥", color = LightText, fontWeight = FontWeight.Black)
+                    LinearProgressIndicator(
+                        progress = { league.progress },
+                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                        color = LightBlue,
+                        trackColor = LightSurface2,
+                    )
                 }
             }
         }
