@@ -210,28 +210,22 @@ internal fun WordConquestGameScreen(onExit: () -> Unit) {
         }
     }
 
-    fun submitWord() {
+    fun submitPath(path: List<Int>) {
         if (phase != ConquestPhase.PLAYING || busy) return
-        val raw = input.trim()
+        val raw = selectionWord(boardChars, path).uppercase(tr)
         val norm = trNormConquest(raw)
-        val selectedNorm = selectionWord(boardChars, selection)
-
-        val path = when {
-            selection.size >= 3 && selectedNorm == norm -> selection
-            else -> findBoardPath(boardChars, norm)
-        }
 
         when {
-            norm.length < 3 -> {
-                notice = "En az 3 harf."
+            path.size < 3 -> {
+                notice = "En az 3 harf bağla."
+                selection = emptyList()
+                input = ""
                 SonHarfSoundFx.warning()
             }
             myWords.any { trNormConquest(it) == norm } -> {
                 notice = "Bu kelimeyi kullandın."
-                SonHarfSoundFx.warning()
-            }
-            path == null -> {
-                notice = "Harfler tahtada birbirine bağlanmıyor."
+                selection = emptyList()
+                input = ""
                 SonHarfSoundFx.warning()
             }
             else -> scope.launch {
@@ -248,13 +242,13 @@ internal fun WordConquestGameScreen(onExit: () -> Unit) {
                     owners = owners.toMutableList().also { next ->
                         path.forEach { next[it] = 1 }
                     }
-                    myWords = myWords + raw.uppercase(tr)
-                    input = ""
-                    selection = emptyList()
-                    notice = "FETHEDİLDİ"
+                    myWords = myWords + raw
+                    notice = "$raw • FETHEDİLDİ"
                     SonHarfSoundFx.wordAccepted()
                     SonHarfSoundFx.bonus()
                 }
+                input = ""
+                selection = emptyList()
                 busy = false
             }
         }
@@ -298,6 +292,30 @@ internal fun WordConquestGameScreen(onExit: () -> Unit) {
 
             CompetitionLeadStrip(myScore = myTiles, opponentScore = botTiles)
 
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = SonHarfGreen.copy(alpha = .09f),
+                border = BorderStroke(1.dp, SonHarfGreen.copy(alpha = .25f)),
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        "HARFLERİN ÜZERİNDE PARMAĞINI SÜRÜKLE",
+                        color = SonHarfGreen,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Text(
+                        "Kelimeyi tamamlayınca parmağını bırak.",
+                        color = SonHarfMuted,
+                        fontSize = 8.sp,
+                    )
+                }
+            }
+
             Box(
                 Modifier.fillMaxWidth().aspectRatio(1f).pointerInput(gameId, phase, boardChars) {
                     if (phase != ConquestPhase.PLAYING) return@pointerInput
@@ -309,23 +327,34 @@ internal fun WordConquestGameScreen(onExit: () -> Unit) {
                         return row * 5 + col
                     }
 
+                    var dragPath = emptyList<Int>()
                     detectDragGestures(
                         onDragStart = { offset ->
                             val index = indexAt(offset.x, offset.y)
-                            selection = listOf(index)
+                            dragPath = listOf(index)
+                            selection = dragPath
                             input = boardChars[index].toString().uppercase(tr)
                         },
                         onDrag = { change, _ ->
                             val index = indexAt(change.position.x, change.position.y)
-                            val last = selection.lastOrNull()
-                            if (last != null && index != last && index !in selection && adjacentBoardCells(last, index)) {
-                                selection = selection + index
-                                input = selectionWord(boardChars, selection).uppercase(tr)
+                            val last = dragPath.lastOrNull()
+                            if (last != null && index != last && index !in dragPath && adjacentBoardCells(last, index)) {
+                                dragPath = dragPath + index
+                                selection = dragPath
+                                input = selectionWord(boardChars, dragPath).uppercase(tr)
                                 SonHarfSoundFx.typingClick()
                             }
                         },
-                        onDragEnd = {},
-                        onDragCancel = {},
+                        onDragEnd = {
+                            val completedPath = dragPath
+                            dragPath = emptyList()
+                            submitPath(completedPath)
+                        },
+                        onDragCancel = {
+                            dragPath = emptyList()
+                            selection = emptyList()
+                            input = ""
+                        },
                     )
                 },
             ) {
@@ -390,20 +419,32 @@ internal fun WordConquestGameScreen(onExit: () -> Unit) {
                 }
             } else {
                 Surface(
-                    shape = RoundedCornerShape(13.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(15.dp),
                     color = Color.White,
-                    border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .18f)),
+                    border = BorderStroke(
+                        1.dp,
+                        if (selection.isNotEmpty()) SonHarfGreen.copy(alpha = .45f) else SonHarfMuted.copy(alpha = .18f),
+                    ),
                 ) {
-                    Row(Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         Text(
-                            input.ifBlank { "Sürükle veya yaz" },
+                            input.ifBlank { "Bir harften başla → sürükle" },
                             modifier = Modifier.weight(1f),
                             color = if (input.isBlank()) SonHarfMuted else SonHarfText,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
                         )
-                        TextButton(onClick = ::submitWord, enabled = phase == ConquestPhase.PLAYING && input.isNotBlank() && !busy) {
-                            Text("FETHET", fontWeight = FontWeight.Black, color = SonHarfGreen)
+                        if (input.isNotBlank()) {
+                            Text(
+                                input.length.toString() + " HARF",
+                                color = SonHarfGreen,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                            )
                         }
                     }
                 }
@@ -413,23 +454,11 @@ internal fun WordConquestGameScreen(onExit: () -> Unit) {
                         notice,
                         Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
-                        color = if (notice == "FETHEDİLDİ") SonHarfGreen else SonHarfPink,
-                        fontSize = 9.sp,
+                        color = if ("FETHEDİLDİ" in notice) SonHarfGreen else SonHarfPink,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                     )
                 }
-
-                EmbeddedWordKeyboard(
-                    value = input,
-                    language = SonHarfUiState.language,
-                    enabled = phase == ConquestPhase.PLAYING && !busy,
-                    maxLength = 10,
-                    onValueChange = {
-                        input = it
-                        selection = emptyList()
-                    },
-                    onSubmit = ::submitWord,
-                )
             }
         }
 

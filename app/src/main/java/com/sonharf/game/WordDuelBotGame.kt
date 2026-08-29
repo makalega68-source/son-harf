@@ -221,7 +221,7 @@ internal fun WordDuelBotScreen(
         )
     ) {
         Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp).padding(bottom = 154.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -323,15 +323,21 @@ internal fun WordDuelBotScreen(
                     DuelWordStrip("BOT", botWords.takeLast(3), SonHarfPink, Modifier.weight(1f))
                 }
 
-                EmbeddedWordKeyboard(
-                    value = input,
-                    language = SonHarfUiState.language,
-                    enabled = phase == BotDuelPhase.PLAYING && !busy,
-                    maxLength = 10,
-                    onValueChange = { input = it },
-                    onSubmit = ::submitWord,
-                )
             }
+        }
+
+        if (phase != BotDuelPhase.FINISHED) {
+            EmbeddedWordKeyboard(
+                value = input,
+                language = SonHarfUiState.language,
+                enabled = phase == BotDuelPhase.PLAYING && !busy,
+                maxLength = 10,
+                onValueChange = { input = it },
+                onSubmit = ::submitWord,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding(),
+            )
         }
 
         ModernCountdownOverlay(

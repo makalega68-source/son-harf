@@ -39,9 +39,10 @@ internal fun EmbeddedWordKeyboard(
         )
     } else {
         listOf(
-            listOf("Q","W","E","R","T","Y","U","I","O","P","Ğ","Ü"),
-            listOf("A","S","D","F","G","H","J","K","L","Ş","İ"),
-            listOf("Z","X","C","V","B","N","M","Ö","Ç"),
+            listOf("Q","W","E","R","T","Y","U","I","O","P"),
+            listOf("Ğ","Ü","A","S","D","F","G","H","J","K"),
+            listOf("L","Ş","İ","Z","X","C","V","B","N","M"),
+            listOf("Ö","Ç","⌫","✓"),
         )
     }
 
@@ -51,8 +52,8 @@ internal fun EmbeddedWordKeyboard(
         shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 5.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             rows.forEach { row ->
                 Row(
@@ -60,50 +61,39 @@ internal fun EmbeddedWordKeyboard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     row.forEach { key ->
-                        KeyboardKeyButton(
-                            label = key,
-                            enabled = enabled && value.length < maxLength,
-                            modifier = Modifier.weight(1f),
-                            onClick = {
-                                SonHarfSoundFx.typingClick()
-                                onValueChange((value + key).take(maxLength))
-                            },
-                        )
+                        when (key) {
+                            "⌫" -> KeyboardKeyButton(
+                                label = key,
+                                enabled = enabled && value.isNotEmpty(),
+                                modifier = Modifier.weight(1.6f),
+                                alt = true,
+                                onClick = {
+                                    SonHarfSoundFx.tap()
+                                    onValueChange(value.dropLast(1))
+                                },
+                            )
+                            "✓" -> KeyboardKeyButton(
+                                label = key,
+                                enabled = enabled && value.isNotBlank(),
+                                modifier = Modifier.weight(1.6f),
+                                action = true,
+                                onClick = {
+                                    SonHarfSoundFx.tap()
+                                    onSubmit()
+                                },
+                            )
+                            else -> KeyboardKeyButton(
+                                label = key,
+                                enabled = enabled && value.length < maxLength,
+                                modifier = Modifier.weight(1f),
+                                onClick = {
+                                    SonHarfSoundFx.typingClick()
+                                    onValueChange((value + key).take(maxLength))
+                                },
+                            )
+                        }
                     }
                 }
-            }
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                KeyboardKeyButton(
-                    label = "⌫",
-                    enabled = enabled && value.isNotEmpty(),
-                    modifier = Modifier.weight(1.35f),
-                    alt = true,
-                    onClick = {
-                        SonHarfSoundFx.tap()
-                        onValueChange(value.dropLast(1))
-                    },
-                )
-                KeyboardKeyButton(
-                    label = "BOŞLUK",
-                    enabled = false,
-                    modifier = Modifier.weight(3.1f),
-                    alt = true,
-                    onClick = {},
-                )
-                KeyboardKeyButton(
-                    label = "✓",
-                    enabled = enabled && value.isNotBlank(),
-                    modifier = Modifier.weight(1.55f),
-                    action = true,
-                    onClick = {
-                        SonHarfSoundFx.tap()
-                        onSubmit()
-                    },
-                )
             }
         }
     }
@@ -206,7 +196,7 @@ private fun KeyboardKeyButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(38.dp),
+        modifier = modifier.height(34.dp),
         contentPadding = PaddingValues(0.dp),
         shape = RoundedCornerShape(9.dp),
         colors = ButtonDefaults.buttonColors(
