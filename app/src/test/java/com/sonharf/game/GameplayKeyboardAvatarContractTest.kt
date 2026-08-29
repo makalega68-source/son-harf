@@ -18,6 +18,16 @@ class GameplayKeyboardAvatarContractTest {
     }
 
     @Test
+    fun bilBakalimKeepsFixedNumericKeyboardAndShowsBothAnswers() {
+        val source = projectFile("app/src/main/java/com/sonharf/game/BilBakalimExcitementScreen.kt").readText()
+
+        assertTrue(source.contains("EmbeddedNumberKeyboard("))
+        assertTrue(source.contains("SENİN CEVABIN"))
+        assertTrue(source.contains("RAKİBİN CEVABI"))
+        assertTrue(!source.contains("softwareKeyboard?.show()"))
+    }
+
+    @Test
     fun wordArenaKeepsKeyboardAndShowsBothPlayerPhotos() {
         val source = projectFile("app/src/main/java/com/sonharf/game/WordArenaScreen.kt").readText()
 
