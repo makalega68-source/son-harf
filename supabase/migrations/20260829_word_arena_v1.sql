@@ -535,7 +535,9 @@ declare
   r public.word_arena_rooms;
 begin
   if v_uid is null then raise exception 'unauthorized'; end if;
-  select * into r from public.word_arena_rooms where id=p_room_id;
+  select ar.* into r
+  from public.word_arena_rooms ar
+  where ar.id=p_room_id;
   if r.id is null then raise exception 'arena_room_not_found'; end if;
   if v_uid not in (r.host_id,r.guest_id) then raise exception 'arena_not_participant'; end if;
 
