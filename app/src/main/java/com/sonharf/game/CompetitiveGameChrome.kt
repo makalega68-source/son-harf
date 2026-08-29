@@ -64,7 +64,7 @@ internal fun CompetitionVsCard(
                                 if (isNotEmpty()) append(" • ")
                                 append("🔥${myStreak}")
                             }
-                        }.ifBlank { "SEN" },
+                        }.ifBlank { sh("SEN", "YOU") },
                         color = PortalMuted,
                         fontSize = 8.sp,
                         maxLines = 1,
@@ -82,7 +82,7 @@ internal fun CompetitionVsCard(
                                 if (isNotEmpty()) append(" • ")
                                 append("🔥${opponentStreak}")
                             }
-                        }.ifBlank { "RAKİP" },
+                        }.ifBlank { sh("RAKİP", "RIVAL") },
                         color = PortalMuted,
                         fontSize = 8.sp,
                         maxLines = 1,
@@ -121,12 +121,12 @@ internal fun CompetitionLeadStrip(
 
     LaunchedEffect(myScore, opponentScore) {
         if (leader != 0 && leader != previousLeader) {
-            announcement = if (leader > 0) "ÖNE GEÇTİN!" else "RAKİP ÖNE GEÇTİ!"
+            announcement = if (leader > 0) sh("ÖNE GEÇTİN!", "YOU TOOK THE LEAD!") else sh("RAKİP ÖNE GEÇTİ!", "RIVAL TOOK THE LEAD!")
             SonHarfSoundFx.leadChange()
             delay(1050)
             announcement = null
         } else if (leader == 0 && previousLeader != 0) {
-            announcement = "SKOR EŞİTLENDİ!"
+            announcement = sh("SKOR EŞİTLENDİ!", "SCORE TIED!")
             SonHarfSoundFx.scoreTick()
             delay(850)
             announcement = null
@@ -138,15 +138,15 @@ internal fun CompetitionLeadStrip(
     val progress = if (total <= 0) .5f else (myScore.coerceAtLeast(0).toFloat() / total).coerceIn(.06f, .94f)
     val diff = abs(myScore - opponentScore)
     val critical = when {
-        leader < 0 && diff <= 5 -> "Rakibi yakalamana ${diff.coerceAtLeast(1)} puan"
-        leader > 0 && diff <= 5 -> "Üstünlüğü koru • fark ${diff.coerceAtLeast(1)}"
-        leader == 0 -> "Şimdi öne geçme zamanı"
+        leader < 0 && diff <= 5 -> sh("Rakibi yakalamana ${diff.coerceAtLeast(1)} puan", "${diff.coerceAtLeast(1)} points to catch the rival")
+        leader > 0 && diff <= 5 -> sh("Üstünlüğü koru • fark ${diff.coerceAtLeast(1)}", "Hold the lead • gap ${diff.coerceAtLeast(1)}")
+        leader == 0 -> sh("Şimdi öne geçme zamanı", "Time to take the lead")
         else -> null
     }
 
     Column(modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("SEN  ${myScore}", color = PortalBlue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Text(sh("SEN  ${myScore}", "YOU  ${myScore}"), color = PortalBlue, fontSize = 10.sp, fontWeight = FontWeight.Black)
             Text(
                 when {
                     myStreak >= 2 -> "🔥 ${myStreak} seri"
@@ -158,7 +158,7 @@ internal fun CompetitionLeadStrip(
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
             )
-            Text("${opponentScore}  RAKİP", color = PortalRed, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Text(sh("${opponentScore}  RAKİP", "${opponentScore}  RIVAL"), color = PortalRed, fontSize = 10.sp, fontWeight = FontWeight.Black)
         }
         LinearProgressIndicator(
             progress = { progress },
@@ -216,7 +216,7 @@ internal fun CompetitionMatchIntro(
             shadowElevation = 5.dp,
         ) {
             Column(Modifier.fillMaxWidth().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("3  •  2  •  1  •  BAŞLA", color = PortalGold, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                Text(sh("3  •  2  •  1  •  BAŞLA", "3  •  2  •  1  •  START"), color = PortalGold, fontSize = 11.sp, fontWeight = FontWeight.Black)
                 CompetitionVsCard(
                     myName = myName,
                     opponentName = opponentName,
@@ -227,7 +227,7 @@ internal fun CompetitionMatchIntro(
                     myRating = myRating,
                     opponentRating = opponentRating,
                 )
-                Text("KELİMEYİ SÜRDÜR • RAKİBİNİ GEÇ", color = PortalMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Text(sh("KELİMEYİ SÜRDÜR • RAKİBİNİ GEÇ", "KEEP THE WORD GOING • BEAT YOUR RIVAL"), color = PortalMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -264,10 +264,10 @@ internal fun ModeEntryOverlay(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
-                    Text(if (competitive) "⚔  VS  ⚔" else "⚡  MEYDAN OKUMA", color = if (competitive) PortalGold else PortalBlue, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    Text(if (competitive) "⚔  VS  ⚔" else sh("⚡  MEYDAN OKUMA", "⚡  CHALLENGE"), color = if (competitive) PortalGold else PortalBlue, fontSize = 14.sp, fontWeight = FontWeight.Black)
                     Text(title, color = PortalText, fontSize = 23.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                     Text(subtitle, color = PortalMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                    Text("3  •  2  •  1  •  BAŞLA", color = PortalBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text(sh("3  •  2  •  1  •  BAŞLA", "3  •  2  •  1  •  START"), color = PortalBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
