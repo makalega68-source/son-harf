@@ -18,7 +18,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path=''
-as $$
+as $
 declare
   v_uid uuid:=auth.uid();
   old_room public.team_arena_rooms;
@@ -61,15 +61,68 @@ begin
     if existing_room.status='lobby'
        and existing_room.expires_at>clock_timestamp()
     then
+      for m in
+        select tm.user_id,tm.team
+        from public.team_arena_members tm
+        where tm.room_id=old_room.id
+          and tm.user_id<>v_uid
+        order by tm.team,tm.seat
+      loop
+        if not exists(
+          select 1
+          from public.team_arena_members current_member
+          where current_member.room_id=existing_room.id
+            and current_member.user_id=m.user_id
+        ) and not exists(
+          select 1
+          from public.team_arena_invites pending_invite
+          where pending_invite.room_id=existing_room.id
+            and pending_invite.receiver_id=m.user_id
+            and pending_invite.status='pending'
+            and pending_invite.expires_at>clock_timestamp()
+        ) then
+          update public.team_arena_invites stale
+          set status='expired',responded_at=clock_timestamp()
+          where stale.room_id=existing_room.id
+            and stale.receiver_id=m.user_id
+            and stale.status in ('pending','accepted');
+
+          perform private.invite_friend_to_team_arena_v1(
+            existing_room.id,
+            m.user_id,
+            m.team
+          );
+        end if;
+      end loop;
+
+      select count(*)::int into v_invited
+      from (
+        select old_member.user_id
+        from public.team_arena_members old_member
+        where old_member.room_id=old_room.id
+          and old_member.user_id<>v_uid
+          and (
+            exists(
+              select 1
+              from public.team_arena_members current_member
+              where current_member.room_id=existing_room.id
+                and current_member.user_id=old_member.user_id
+            )
+            or exists(
+              select 1
+              from public.team_arena_invites current_invite
+              where current_invite.room_id=existing_room.id
+                and current_invite.receiver_id=old_member.user_id
+                and current_invite.status='pending'
+                and current_invite.expires_at>clock_timestamp()
+            )
+          )
+      ) covered;
+
       return jsonb_build_object(
         'status','lobby',
         'room_id',existing_room.id,
-        'invited_count',(
-          select count(*)::int
-          from public.team_arena_invites i
-          where i.room_id=existing_room.id
-            and i.status in ('pending','accepted')
-        ),
+        'invited_count',v_invited,
         'reused',true
       );
     end if;
@@ -85,7 +138,7 @@ begin
   where id=new_room_id;
 
   for m in
-    select tm.user_id,tm.team,tm.seat
+    select tm.user_id,tm.team
     from public.team_arena_members tm
     where tm.room_id=old_room.id
       and tm.user_id<>v_uid
@@ -110,7 +163,7 @@ begin
     'reused',false
   );
 end
-$$;
+$;
 
 create or replace function public.create_team_arena_rematch_v1(
   p_room_id uuid
