@@ -352,13 +352,19 @@ fun TeamArenaScreen(
                 input = input,
                 busy = busy,
                 notice = notice,
-                onInput = { input = it.filter(Char::isLetter).take(10).uppercase() },
+                onInput = {
+                    val next = it.filter(Char::isLetter).take(10).uppercase()
+                    if (next.length > input.length) SonHarfSoundFx.typingClick()
+                    input = next
+                },
                 onSubmit = ::submitWord,
             )
 
             active.status == "finished" -> TeamArenaFinished(
                 room = active,
                 words = words,
+                members = members,
+                memberProfiles = memberProfiles,
                 myTeam = myTeam,
                 busy = busy,
                 notice = notice,
@@ -523,8 +529,8 @@ private fun TeamArenaLobby(
         item {
             TeamArenaNotice(
                 sh(
-                    "${room.memberCount}/4 oyuncu • ${room.readyCount}/4 hazır • Lobby kabul edilince diğer canlı modlar kilitlenir.",
-                    "${room.memberCount}/4 players • ${room.readyCount}/4 ready • Other live modes lock after joining.",
+                    "${room.memberCount}/4 oyuncu • ${room.readyCount}/4 hazır • Başka moda geçersen bekleyen lobi otomatik bırakılır.",
+                    "${room.memberCount}/4 players • ${room.readyCount}/4 ready • Switching modes automatically leaves a waiting lobby.",
                 )
             )
         }
@@ -776,6 +782,16 @@ private fun TeamArenaPlaying(
         }
 
         item {
+            val last = words.lastOrNull()
+            CompetitionLeadStrip(
+                myScore = myScore,
+                opponentScore = opponentScore,
+                myAction = last?.takeIf { it.team == myTeam }?.let { sh("${it.displayName} takımına puan kazandırdı.", "${it.displayName} scored for your team.") },
+                opponentAction = last?.takeIf { it.team != myTeam }?.let { sh("Rakip takım puan kazandı.", "Rival team scored.") },
+            )
+        }
+
+        item {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
@@ -845,6 +861,8 @@ private fun TeamArenaPlaying(
 private fun TeamArenaFinished(
     room: TeamArenaRoomDto,
     words: List<TeamArenaWordDto>,
+    members: List<TeamArenaMemberDto>,
+    memberProfiles: Map<String, ProfileDto?>,
     myTeam: Int,
     busy: Boolean,
     notice: String,
@@ -856,6 +874,9 @@ private fun TeamArenaFinished(
     val won = room.winnerTeam == myTeam
     val myScore = if (myTeam == 1) room.teamAScore else room.teamBScore
     val rivalScore = if (myTeam == 1) room.teamBScore else room.teamAScore
+    val mvp = words.groupBy { it.userId }
+        .maxByOrNull { (_, list) -> list.sumOf { it.basePoints } }
+        ?.let { (userId, list) -> Triple(userId, list.firstOrNull()?.displayName.orEmpty(), list.sumOf { it.basePoints }) }
 
     LaunchedEffect(room.roomId) {
         when {
@@ -901,6 +922,59 @@ private fun TeamArenaFinished(
                         fontSize = 9.sp,
                         textAlign = TextAlign.Center,
                     )
+                }
+            }
+        }
+
+        if (mvp != null) {
+            item {
+                val p = memberProfiles[mvp.first]
+                Surface(
+                    shape = RoundedCornerShape(17.dp),
+                    color = SonHarfGold.copy(alpha = .10f),
+                    border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .30f)),
+                ) {
+                    Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ProfilePhotoAvatar(
+                            avatarPath = p?.avatarPath,
+                            name = mvp.second,
+                            size = 42.dp,
+                            accent = SonHarfGold,
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(sh("MAÇIN MVP'Sİ", "MATCH MVP"), color = SonHarfGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text(mvp.second, color = SonHarfText, fontWeight = FontWeight.Black)
+                            Text("+${mvp.third} takım puanı", color = SonHarfMuted, fontSize = 9.sp)
+                        }
+                        Text("🏅", fontSize = 25.sp)
+                    }
+                }
+            }
+        }
+
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(1, 2).forEach { team ->
+                    Surface(
+                        Modifier.weight(1f),
+                        shape = RoundedCornerShape(15.dp),
+                        color = if (team == 1) SonHarfBlue.copy(alpha = .07f) else SonHarfGold.copy(alpha = .08f),
+                    ) {
+                        Column(Modifier.padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(if (team == 1) sh("TAKIM A", "TEAM A") else sh("TAKIM B", "TEAM B"), fontWeight = FontWeight.Black, fontSize = 9.sp)
+                            Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                members.filter { it.team == team }.forEach { member ->
+                                    ProfilePhotoAvatar(
+                                        avatarPath = memberProfiles[member.userId]?.avatarPath,
+                                        name = member.displayName,
+                                        size = 29.dp,
+                                        accent = if (team == 1) SonHarfBlue else SonHarfGold,
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
