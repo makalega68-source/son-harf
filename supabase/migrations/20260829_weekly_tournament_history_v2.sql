@@ -369,3 +369,18 @@ grant execute on function public.get_weekly_tournament_v1() to authenticated;
 grant execute on function public.get_weekly_tournament_leaderboard_v1(integer) to authenticated;
 grant execute on function public.claim_previous_weekly_tournament_reward_v1() to authenticated;
 grant execute on function public.get_weekly_tournament_history_v1(integer) to authenticated;
+
+
+-- Cover the history/reward access paths introduced by this migration.
+create index if not exists weekly_tournament_entries_user_idx
+  on public.weekly_tournament_entries(user_id,tournament_id);
+
+create index if not exists weekly_tournament_match_events_room_idx
+  on public.weekly_tournament_match_events(room_id)
+  where room_id is not null;
+
+create index if not exists weekly_tournament_match_events_user_idx
+  on public.weekly_tournament_match_events(user_id,tournament_id,created_at desc);
+
+create index if not exists weekly_tournament_reward_claims_user_idx
+  on public.weekly_tournament_reward_claims(user_id,tournament_id,claimed_at desc);
