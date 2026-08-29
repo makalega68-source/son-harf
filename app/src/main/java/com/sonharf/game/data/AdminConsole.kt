@@ -96,6 +96,27 @@ data class AdminCapacityDto(
     @SerialName("resolve_url") val resolveUrl: String = "",
 )
 
+@Serializable
+data class AdminGameControlDto(
+    @SerialName("config_key") val configKey: String,
+    val title: String,
+    val detail: String,
+    val enabled: Boolean,
+)
+
+suspend fun OnlineGameBackend.getAdminGameControls(): List<AdminGameControlDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_game_controls_v1").decodeList()
+
+suspend fun OnlineGameBackend.adminSetGameControl(key: String, enabled: Boolean) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_set_config",
+        buildJsonObject {
+            put("p_key", key)
+            put("p_value", enabled)
+        },
+    )
+}
+
 suspend fun OnlineGameBackend.getAdminOwnerAccounts(): List<AdminOwnerAccountDto> =
     SupabaseProvider.client.postgrest.rpc("admin_owner_accounts_v1").decodeList()
 
