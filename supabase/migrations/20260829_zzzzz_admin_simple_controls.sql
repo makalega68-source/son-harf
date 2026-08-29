@@ -104,6 +104,14 @@ begin
       0,0,0,'link',
       'APK/AAB derleme ve CI hatalarını doğrudan GitHub Actions ekranından kontrol et.',
       'https://github.com/makalega68-source/son-harf/actions'
+    ),
+    (
+      'github_rollback',
+      'Son Sağlam Sürüme Dön',
+      'info',
+      0,0,0,'link',
+      'Kod son başarılı ana sürüme döner. Oyuncu veritabanı geri sarılmaz veya silinmez. GitHub ek onay ister.',
+      'https://github.com/makalega68-source/son-harf/actions/workflows/rollback-last-green.yml'
     );
 end
 $$;
