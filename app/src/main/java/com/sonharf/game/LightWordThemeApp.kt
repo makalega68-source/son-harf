@@ -46,6 +46,8 @@ fun LightWordThemeApp() {
     val context = LocalContext.current
     var screen by remember { mutableStateOf(LightScreen.HOME) }
     var gameKey by remember { mutableIntStateOf(0) }
+    var arenaInitialRoomId by remember { mutableStateOf<String?>(null) }
+    val arenaRequest = WordArenaNavigation.request
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
     var lastHomeBack by remember { mutableLongStateOf(0L) }
@@ -56,6 +58,15 @@ fun LightWordThemeApp() {
     }
     LaunchedEffect(SonHarfUiState.homeRequest) {
         if (SonHarfUiState.homeRequest > 0) screen = LightScreen.HOME
+    }
+    LaunchedEffect(arenaRequest, authenticated) {
+        if (authenticated && arenaRequest > 0) {
+            val requestedRoom = WordArenaNavigation.roomId
+            if (!requestedRoom.isNullOrBlank()) {
+                arenaInitialRoomId = requestedRoom
+                screen = LightScreen.KELIME_ARENASI
+            }
+        }
     }
 
     BackHandler(enabled = authenticated) {
@@ -100,7 +111,11 @@ fun LightWordThemeApp() {
                 LightScreen.HOME -> LightHomeScreen(
                     backend,
                     onSonHarf = { gameKey += 1; screen = LightScreen.SON_HARF },
-                    onKelimeArenasi = { screen = LightScreen.KELIME_ARENASI },
+                    onKelimeArenasi = {
+                        arenaInitialRoomId = null
+                        WordArenaNavigation.clearRoom()
+                        screen = LightScreen.KELIME_ARENASI
+                    },
                     onKelimeAvi = { screen = LightScreen.KELIME_AVI },
                     onKelimeSavasi = { screen = LightScreen.KELIME_SAVASI },
                     onCompetition = { screen = LightScreen.COMPETITION },
@@ -112,7 +127,14 @@ fun LightWordThemeApp() {
                 LightScreen.SON_HARF -> key(gameKey) {
                     TargetNeonGameScreen(autoStartMatchmaking = true)
                 }
-                LightScreen.KELIME_ARENASI -> WordArenaScreen { screen = LightScreen.HOME }
+                LightScreen.KELIME_ARENASI -> WordArenaScreen(
+                    initialRoomId = arenaInitialRoomId,
+                    onExit = {
+                        arenaInitialRoomId = null
+                        WordArenaNavigation.clearRoom()
+                        screen = LightScreen.HOME
+                    },
+                )
                 LightScreen.KELIME_AVI -> DailyCipherScreen { screen = LightScreen.HOME }
                 LightScreen.KELIME_SAVASI -> TrackedBilBakalimStandaloneScreen { screen = LightScreen.HOME }
                 LightScreen.COMPETITION -> CompetitionHubScreen { screen = LightScreen.HOME }

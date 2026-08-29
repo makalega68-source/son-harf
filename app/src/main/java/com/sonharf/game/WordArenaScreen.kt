@@ -36,7 +36,10 @@ import java.time.Instant
 import kotlin.math.ceil
 
 @Composable
-fun WordArenaScreen(onExit: () -> Unit) {
+fun WordArenaScreen(
+    initialRoomId: String? = null,
+    onExit: () -> Unit,
+) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
@@ -51,6 +54,7 @@ fun WordArenaScreen(onExit: () -> Unit) {
     var input by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var rematchStatus by remember { mutableStateOf("idle") }
     var clockMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     suspend fun refreshRoom(id: String) {
@@ -68,6 +72,17 @@ fun WordArenaScreen(onExit: () -> Unit) {
         matchmaking = if (next.status == "finished") "finished" else "matched"
     }
 
+    suspend fun enterMatchedRoom(id: String) {
+        rematchStatus = "idle"
+        matchmaking = "matched"
+        roomId = id
+        room = null
+        words = emptyList()
+        opponentProfile = null
+        input = ""
+        refreshRoom(id)
+    }
+
     fun startMatchmaking() {
         val b = backend ?: return
         scope.launch {
@@ -76,8 +91,7 @@ fun WordArenaScreen(onExit: () -> Unit) {
             runCatching { b.joinWordArena(SonHarfUiState.language) }
                 .onSuccess { result ->
                     matchmaking = result.status
-                    roomId = result.roomId
-                    result.roomId?.let { refreshRoom(it) }
+                    result.roomId?.let { enterMatchedRoom(it) }
                 }
                 .onFailure { notice = friendlyArenaError(it.message.orEmpty()) }
             busy = false
@@ -85,10 +99,20 @@ fun WordArenaScreen(onExit: () -> Unit) {
     }
 
     fun leaveScreen() {
+        val finishedRoom = room?.takeIf { it.status == "finished" }?.id
         scope.launch {
             if (matchmaking == "waiting") runCatching { backend?.cancelWordArena() }
+            if (rematchStatus == "waiting" && finishedRoom != null) {
+                runCatching { backend?.cancelWordArenaRematch(finishedRoom) }
+            }
             onExit()
         }
+    }
+
+    LaunchedEffect(initialRoomId) {
+        val incomingRoom = initialRoomId?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
+        runCatching { enterMatchedRoom(incomingRoom) }
+            .onFailure { notice = friendlyArenaError(it.message.orEmpty()) }
     }
 
     BackHandler { leaveScreen() }
@@ -121,6 +145,32 @@ fun WordArenaScreen(onExit: () -> Unit) {
                 .onFailure { notice = friendlyArenaError(it.message.orEmpty()) }
             if (room?.status == "finished") break
             delay(550)
+        }
+    }
+
+    LaunchedEffect(rematchStatus, room?.id) {
+        val finishedRoom = room?.takeIf { it.status == "finished" }?.id ?: return@LaunchedEffect
+        if (rematchStatus != "waiting") return@LaunchedEffect
+        val b = backend ?: return@LaunchedEffect
+
+        while (rematchStatus == "waiting") {
+            delay(900)
+            runCatching { b.pollWordArenaRematch(finishedRoom) }
+                .onSuccess { result ->
+                    when {
+                        result.status == "matched" && !result.roomId.isNullOrBlank() -> {
+                            enterMatchedRoom(result.roomId)
+                        }
+                        result.status == "expired" -> {
+                            rematchStatus = "expired"
+                            notice = sh("Rövanş isteğinin süresi doldu.", "Rematch request expired.")
+                        }
+                    }
+                }
+                .onFailure {
+                    rematchStatus = "idle"
+                    notice = friendlyArenaError(it.message.orEmpty())
+                }
         }
     }
 
@@ -195,13 +245,46 @@ fun WordArenaScreen(onExit: () -> Unit) {
                 me = me,
                 myName = myProfile?.displayName ?: sh("Sen", "You"),
                 opponentName = opponentProfile?.displayName ?: sh("Rakip", "Opponent"),
-                onAgain = {
-                    room = null
-                    roomId = null
-                    words = emptyList()
-                    opponentProfile = null
-                    matchmaking = "idle"
-                    startMatchmaking()
+                rematchStatus = rematchStatus,
+                rematchBusy = busy,
+                onRematch = {
+                    scope.launch {
+                        busy = true
+                        notice = ""
+                        runCatching { backend?.requestWordArenaRematch(active.id) }
+                            .onSuccess { result ->
+                                when {
+                                    result?.status == "matched" && !result.roomId.isNullOrBlank() -> {
+                                        enterMatchedRoom(result.roomId)
+                                    }
+                                    result?.status == "waiting" -> {
+                                        rematchStatus = "waiting"
+                                        SonHarfSoundFx.softNotify()
+                                    }
+                                    else -> {
+                                        notice = sh("Rövanş başlatılamadı.", "Rematch could not be started.")
+                                    }
+                                }
+                            }
+                            .onFailure { notice = friendlyArenaError(it.message.orEmpty()) }
+                        busy = false
+                    }
+                },
+                onNewOpponent = {
+                    scope.launch {
+                        busy = true
+                        if (rematchStatus == "waiting") {
+                            runCatching { backend?.cancelWordArenaRematch(active.id) }
+                        }
+                        rematchStatus = "idle"
+                        room = null
+                        roomId = null
+                        words = emptyList()
+                        opponentProfile = null
+                        matchmaking = "idle"
+                        busy = false
+                        startMatchmaking()
+                    }
                 },
                 onExit = ::leaveScreen,
             )
@@ -556,7 +639,10 @@ private fun ArenaResultScreen(
     me: String?,
     myName: String,
     opponentName: String,
-    onAgain: () -> Unit,
+    rematchStatus: String,
+    rematchBusy: Boolean,
+    onRematch: () -> Unit,
+    onNewOpponent: () -> Unit,
     onExit: () -> Unit,
 ) {
     val host = room.hostId == me
@@ -628,16 +714,47 @@ private fun ArenaResultScreen(
 
         item {
             Button(
-                onClick = onAgain,
+                onClick = onRematch,
+                enabled = !rematchBusy && rematchStatus != "waiting",
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
                 shape = RoundedCornerShape(16.dp),
             ) {
-                Text(sh("TEKRAR OYNA", "PLAY AGAIN"), fontWeight = FontWeight.Black, fontSize = 17.sp)
+                Text(
+                    when {
+                        rematchBusy -> "…"
+                        rematchStatus == "waiting" -> sh("RAKİBİN BEKLENİYOR…", "WAITING FOR RIVAL…")
+                        else -> sh("↻ RÖVANŞ", "↻ REMATCH")
+                    },
+                    fontWeight = FontWeight.Black,
+                    fontSize = 17.sp,
+                )
+            }
+            if (rematchStatus == "waiting") {
+                Spacer(Modifier.height(5.dp))
+                Text(
+                    sh(
+                        "Rakibin 2 dakika içinde Rövanş derse aynı oyuncuyla yeni Arena açılır.",
+                        "If your rival accepts within 2 minutes, a new Arena opens with the same player.",
+                    ),
+                    modifier = Modifier.fillMaxWidth(),
+                    color = SonHarfMuted,
+                    fontSize = 9.sp,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
         item {
-            OutlinedButton(onClick = onExit, modifier = Modifier.fillMaxWidth()) {
+            OutlinedButton(
+                onClick = onNewOpponent,
+                enabled = !rematchBusy,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(sh("YENİ RAKİP BUL", "FIND NEW RIVAL"))
+            }
+        }
+        item {
+            TextButton(onClick = onExit, modifier = Modifier.fillMaxWidth()) {
                 Text(sh("ANA SAYFA", "HOME"))
             }
         }
@@ -691,6 +808,9 @@ private fun friendlyArenaError(raw: String): String = when {
     "arena_invalid_word" in raw -> sh("Bu kelime sözlükte yok.", "That word is not in the dictionary.")
     "arena_duplicate_word" in raw -> sh("Bu kelimeyi zaten kullandın.", "You already used that word.")
     "word_arena_match_active" in raw -> sh("Önce aktif Kelime Arenası maçını bitir.", "Finish your active Word Arena match first.")
+    "match_not_finished" in raw -> sh("Rövanş için maçın tamamlanması gerekir.", "The match must finish before a rematch.")
+    "arena_room_not_found" in raw -> sh("Arena odası bulunamadı.", "Arena room was not found.")
+    "blocked_relationship" in raw -> sh("Bu oyuncuyla Arena başlatılamıyor.", "An Arena cannot be started with this player.")
     "unauthorized" in raw || "not_authenticated" in raw -> sh("Oturumunu yenileyip tekrar dene.", "Refresh your session and try again.")
     else -> sh("İşlem tamamlanamadı. Tekrar dene.", "The action could not be completed. Try again.")
 }

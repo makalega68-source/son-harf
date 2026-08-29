@@ -92,6 +92,7 @@ class MainActivity : ComponentActivity() {
                     PrivateRoomWaitingLayer()
                     if (FriendsQuickAccessState.open) FriendsQuickAccessOverlay()
                     GameInviteOverlay()
+                    WordArenaInviteOverlay()
                     FriendRequestOverlay()
                 }
             }

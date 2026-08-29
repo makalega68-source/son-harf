@@ -42,6 +42,29 @@ data class WordArenaWordDto(
 )
 
 @Serializable
+data class WordArenaInviteDto(
+    @SerialName("invite_id") val inviteId: String,
+    @SerialName("sender_id") val senderId: String,
+    @SerialName("receiver_id") val receiverId: String,
+    val language: String = "tr",
+    @SerialName("expires_at") val expiresAt: String,
+    @SerialName("created_at") val createdAt: String? = null,
+)
+
+@Serializable
+data class WordArenaInviteCreatedDto(
+    @SerialName("invite_id") val inviteId: String,
+    @SerialName("receiver_id") val receiverId: String,
+    @SerialName("expires_at") val expiresAt: String,
+)
+
+@Serializable
+data class WordArenaActionDto(
+    val status: String = "idle",
+    @SerialName("room_id") val roomId: String? = null,
+)
+
+@Serializable
 data class WordArenaSubmitDto(
     val accepted: Boolean = false,
     val status: String = "playing",
@@ -86,4 +109,44 @@ suspend fun OnlineGameBackend.submitWordArena(roomId: String, word: String): Wor
             put("p_room_id", roomId)
             put("p_word", word.trim())
         },
+    ).decodeSingle()
+
+
+suspend fun OnlineGameBackend.inviteFriendToWordArena(friendId: String, language: String): WordArenaInviteCreatedDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "invite_friend_to_word_arena_v1",
+        buildJsonObject {
+            put("p_friend_id", friendId)
+            put("p_language", if (language.lowercase() == "en") "en" else "tr")
+        },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.getIncomingWordArenaInvites(): List<WordArenaInviteDto> =
+    SupabaseProvider.client.postgrest.rpc("get_incoming_word_arena_invites_v1").decodeList()
+
+suspend fun OnlineGameBackend.respondWordArenaInvite(inviteId: String, accept: Boolean): WordArenaActionDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "respond_word_arena_invite_v1",
+        buildJsonObject {
+            put("p_invite_id", inviteId)
+            put("p_accept", accept)
+        },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.requestWordArenaRematch(roomId: String): WordArenaActionDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "request_word_arena_rematch_v1",
+        buildJsonObject { put("p_room_id", roomId) },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.pollWordArenaRematch(roomId: String): WordArenaActionDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "poll_word_arena_rematch_v1",
+        buildJsonObject { put("p_room_id", roomId) },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.cancelWordArenaRematch(roomId: String): Boolean =
+    SupabaseProvider.client.postgrest.rpc(
+        "cancel_word_arena_rematch_v1",
+        buildJsonObject { put("p_room_id", roomId) },
     ).decodeSingle()

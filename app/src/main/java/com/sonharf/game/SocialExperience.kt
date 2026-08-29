@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.FriendshipDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.inviteFriendToWordArena
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
@@ -256,24 +257,63 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
                         }
                     }
 
-                    Button(
-                        onClick = {
-                            scope.launch {
-                                inviteBusy = true
-                                runCatching { backend.inviteFriend(friend.id, SonHarfUiState.language) }
-                                    .onSuccess { notice = sh("Düello daveti gönderildi.", "Duel invitation sent."); SonHarfSoundFx.softNotify() }
-                                    .onFailure { notice = sh("Davet gönderilemedi.", "Invitation could not be sent.") }
-                                inviteBusy = false
-                            }
-                        },
-                        enabled = friend.presenceStatus == "online" && !inviteBusy,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
-                        shape = RoundedCornerShape(14.dp),
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Text(if (inviteBusy) "…" else "⚔ ${sh("DÜELLOYA DAVET ET", "INVITE TO DUEL")}", fontWeight = FontWeight.Black)
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    inviteBusy = true
+                                    runCatching { backend.inviteFriend(friend.id, SonHarfUiState.language) }
+                                        .onSuccess {
+                                            notice = sh("Son Harf daveti gönderildi.", "Son Harf invite sent.")
+                                            SonHarfSoundFx.softNotify()
+                                        }
+                                        .onFailure { notice = sh("Davet gönderilemedi.", "Invitation could not be sent.") }
+                                    inviteBusy = false
+                                }
+                            },
+                            enabled = friend.presenceStatus == "online" && !inviteBusy,
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
+                            shape = RoundedCornerShape(14.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+                        ) {
+                            Text(if (inviteBusy) "…" else "⚔ ${sh("SON HARF", "SON HARF")}", fontWeight = FontWeight.Black, fontSize = 10.sp)
+                        }
+                        OutlinedButton(
+                            onClick = {
+                                scope.launch {
+                                    inviteBusy = true
+                                    runCatching { backend.inviteFriendToWordArena(friend.id, SonHarfUiState.language) }
+                                        .onSuccess {
+                                            notice = sh("Kelime Arenası daveti gönderildi.", "Word Arena invite sent.")
+                                            SonHarfSoundFx.softNotify()
+                                        }
+                                        .onFailure { notice = sh("Arena daveti gönderilemedi.", "Arena invite could not be sent.") }
+                                    inviteBusy = false
+                                }
+                            },
+                            enabled = friend.presenceStatus == "online" && !inviteBusy,
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .55f)),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 10.dp),
+                        ) {
+                            Text("⚡ ${sh("ARENA", "ARENA")}", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                        }
                     }
-                    if (friend.presenceStatus != "online") Text(sh("Düello daveti için arkadaşının çevrimiçi olması gerekir.", "Your friend must be online for a duel invitation."), color = SonHarfMuted, fontSize = 10.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+                    if (friend.presenceStatus != "online") Text(
+                        sh(
+                            "Canlı Son Harf veya Arena daveti için arkadaşının çevrimiçi olması gerekir.",
+                            "Your friend must be online for a live Son Harf or Arena invitation.",
+                        ),
+                        color = SonHarfMuted,
+                        fontSize = 10.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
                     if (notice.isNotBlank()) Text(notice, color = SonHarfGold, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
 
                     HorizontalDivider(color = SonHarfMuted.copy(alpha = .14f))
