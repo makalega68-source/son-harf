@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
 
-private enum class LightScreen { HOME, SON_HARF, KELIME_ARENASI, GUNLUK_ARENA, KELIME_AVI, KELIME_SAVASI, COMPETITION, LEAGUE, MARKET, TASKS, PROFILE }
+private enum class LightScreen { HOME, SON_HARF, KELIME_ARENASI, TAKIM_ARENASI, GUNLUK_ARENA, KELIME_AVI, KELIME_SAVASI, COMPETITION, LEAGUE, MARKET, TASKS, PROFILE }
 
 private val LightBg = Color(0xFFF7F9FC)
 private val LightSurface = Color.White
@@ -47,7 +47,9 @@ fun LightWordThemeApp() {
     var screen by remember { mutableStateOf(LightScreen.HOME) }
     var gameKey by remember { mutableIntStateOf(0) }
     var arenaInitialRoomId by remember { mutableStateOf<String?>(null) }
+    var teamArenaInitialRoomId by remember { mutableStateOf<String?>(null) }
     val arenaRequest = WordArenaNavigation.request
+    val teamArenaRequest = TeamArenaNavigation.request
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
     var lastHomeBack by remember { mutableLongStateOf(0L) }
@@ -65,6 +67,15 @@ fun LightWordThemeApp() {
             if (!requestedRoom.isNullOrBlank()) {
                 arenaInitialRoomId = requestedRoom
                 screen = LightScreen.KELIME_ARENASI
+            }
+        }
+    }
+    LaunchedEffect(teamArenaRequest, authenticated) {
+        if (authenticated && teamArenaRequest > 0) {
+            val requestedRoom = TeamArenaNavigation.roomId
+            if (!requestedRoom.isNullOrBlank()) {
+                teamArenaInitialRoomId = requestedRoom
+                screen = LightScreen.TAKIM_ARENASI
             }
         }
     }
@@ -116,6 +127,11 @@ fun LightWordThemeApp() {
                         WordArenaNavigation.clearRoom()
                         screen = LightScreen.KELIME_ARENASI
                     },
+                    onTakimArenasi = {
+                        teamArenaInitialRoomId = null
+                        TeamArenaNavigation.clearRoom()
+                        screen = LightScreen.TAKIM_ARENASI
+                    },
                     onGunlukArena = { screen = LightScreen.GUNLUK_ARENA },
                     onKelimeAvi = { screen = LightScreen.KELIME_AVI },
                     onKelimeSavasi = { screen = LightScreen.KELIME_SAVASI },
@@ -133,6 +149,14 @@ fun LightWordThemeApp() {
                     onExit = {
                         arenaInitialRoomId = null
                         WordArenaNavigation.clearRoom()
+                        screen = LightScreen.HOME
+                    },
+                )
+                LightScreen.TAKIM_ARENASI -> TeamArenaScreen(
+                    initialRoomId = teamArenaInitialRoomId,
+                    onExit = {
+                        teamArenaInitialRoomId = null
+                        TeamArenaNavigation.clearRoom()
                         screen = LightScreen.HOME
                     },
                 )
@@ -188,6 +212,7 @@ private fun LightHomeScreen(
     backend: OnlineGameBackend?,
     onSonHarf: () -> Unit,
     onKelimeArenasi: () -> Unit,
+    onTakimArenasi: () -> Unit,
     onGunlukArena: () -> Unit,
     onKelimeAvi: () -> Unit,
     onKelimeSavasi: () -> Unit,
@@ -341,6 +366,17 @@ private fun LightHomeScreen(
                     }
                 }
             }
+        }
+
+        item {
+            LightGameCard(
+                Icons.Rounded.Groups,
+                "Takım Arenası",
+                "2v2 • 4 arkadaş • ortak takım skoru • 60 saniye.",
+                "2v2",
+                LightBlue,
+                onTakimArenasi,
+            )
         }
 
         item {
