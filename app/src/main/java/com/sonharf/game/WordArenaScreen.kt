@@ -537,21 +537,8 @@ private fun ArenaPlayScreen(
     val opponentWordsNow = words.filter { it.userId != me }
     val playing = preStartSeconds <= 0 && secondsLeft > 0
     val danger = secondsLeft in 1..10
-    val inputFocusRequester = remember { FocusRequester() }
-    val softwareKeyboard = LocalSoftwareKeyboardController.current
-
-    LaunchedEffect(room.id, room.status, busy, preStartSeconds, secondsLeft) {
-        if (room.status == "playing") {
-            delay(120)
-            runCatching { inputFocusRequester.requestFocus() }
-            softwareKeyboard?.show()
-        } else {
-            softwareKeyboard?.hide()
-        }
-    }
-
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().padding(12.dp),
+        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -591,20 +578,22 @@ private fun ArenaPlayScreen(
         )
 
         if (preStartSeconds > 0) {
-            Surface(
-                Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = SonHarfGold.copy(alpha = .11f),
-                border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .35f)),
-            ) {
-                Text(
-                    sh("$preStartSeconds… HAZIR OL!", "$preStartSeconds… GET READY!"),
-                    Modifier.fillMaxWidth().padding(12.dp),
-                    textAlign = TextAlign.Center,
-                    color = SonHarfGold,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 17.sp,
-                )
+            Box(Modifier.fillMaxWidth().height(118.dp), contentAlignment = Alignment.Center) {
+                Surface(
+                    modifier = Modifier.size(92.dp),
+                    shape = CircleShape,
+                    color = SonHarfBlue,
+                    shadowElevation = 10.dp,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            preStartSeconds.coerceIn(1, 3).toString(),
+                            color = Color.White,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 42.sp,
+                        )
+                    }
+                }
             }
         }
 
@@ -661,29 +650,44 @@ private fun ArenaPlayScreen(
             Text(notice, Modifier.fillMaxWidth(), color = if ("+" in notice) SonHarfGreen else SonHarfPink, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 10.sp)
         }
 
-        OutlinedTextField(
-            value = input,
-            onValueChange = { value -> if (playing && !busy) onInput(value) },
-            enabled = true,
-            modifier = Modifier.fillMaxWidth().focusRequester(inputFocusRequester),
-            singleLine = true,
-            label = { Text(sh("Kelime", "Word")) },
-            placeholder = {
+        Surface(
+            shape = RoundedCornerShape(14.dp),
+            color = SonHarfSurface,
+            border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .18f)),
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text(
-                    when {
-                        preStartSeconds > 0 -> sh("Başlamayı bekle…", "Wait for start…")
-                        !playing -> sh("Süre doldu…", "Time is up…")
-                        else -> sh("Harflerden kelime üret…", "Build a word from the letters…")
-                    }
+                    input.ifBlank {
+                        when {
+                            preStartSeconds > 0 -> sh("Hazır ol", "Get ready")
+                            !playing -> sh("Süre doldu", "Time is up")
+                            else -> sh("Kelime yaz", "Type a word")
+                        }
+                    },
+                    modifier = Modifier.weight(1f),
+                    color = if (input.isBlank()) SonHarfMuted else SonHarfText,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.SemiBold,
                 )
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send, showKeyboardOnFocus = true),
-            keyboardActions = KeyboardActions(onSend = { onSubmit() }),
-            trailingIcon = {
-                IconButton(onClick = onSubmit, enabled = playing && !busy && input.isNotBlank()) {
-                    Text("➤", color = SonHarfBlue, fontSize = 21.sp)
+                TextButton(
+                    onClick = onSubmit,
+                    enabled = playing && !busy && input.isNotBlank(),
+                ) {
+                    Text(sh("GÖNDER", "SEND"), fontWeight = FontWeight.Black)
                 }
-            },
+            }
+        }
+
+        EmbeddedWordKeyboard(
+            value = input,
+            language = SonHarfUiState.language,
+            enabled = playing && !busy,
+            maxLength = 10,
+            onValueChange = onInput,
+            onSubmit = onSubmit,
         )
     }
 }
