@@ -543,9 +543,10 @@ begin
   select w.id,w.user_id,w.word,w.normalized_word,w.base_points,w.combo,w.created_at
   from public.word_arena_words w
   where w.room_id=p_room_id
+    and (r.status='finished' or w.user_id=v_uid)
   order by w.created_at,w.id;
 end
-$$;
+$;
 
 create or replace function public.submit_word_arena_v1(p_room_id uuid,p_word text)
 returns jsonb
