@@ -639,8 +639,8 @@ private fun TargetArena(
             opponentScore = oppScore,
             myStreak = if (host) room.hostStreak else room.guestStreak,
             opponentStreak = if (host) room.guestStreak else room.hostStreak,
-            myAction = if (room.lastActionPlayerId == me) sh("Hamlen skor tabelasına işlendi.", "Your move changed the scoreboard.") else null,
-            opponentAction = if (room.lastActionPlayerId != null && room.lastActionPlayerId != me) sh("Rakip hamle yaptı.", "Rival made a move.") else null,
+            myAction = if (room.lastEventPlayerId == me) sh("Hamlen skor tabelasına işlendi.", "Your move changed the scoreboard.") else null,
+            opponentAction = if (room.lastEventPlayerId != null && room.lastEventPlayerId != me) sh("Rakip hamle yaptı.", "Rival made a move.") else null,
         )
         Spacer(Modifier.height(7.dp))
         CompetitionMatchIntro(
