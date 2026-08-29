@@ -35,6 +35,25 @@ data class MasteryMilestoneDto(
 )
 
 @Serializable
+data class RivalHistoryDto(
+    @SerialName("opponent_id") val opponentId: String,
+    @SerialName("display_name") val displayName: String,
+    val matches: Int = 0,
+    val wins: Int = 0,
+    val losses: Int = 0,
+    val draws: Int = 0,
+    @SerialName("my_points") val myPoints: Int = 0,
+    @SerialName("their_points") val theirPoints: Int = 0,
+    @SerialName("classic_matches") val classicMatches: Int = 0,
+    @SerialName("arena_matches") val arenaMatches: Int = 0,
+    @SerialName("last_mode") val lastMode: String = "classic",
+    @SerialName("last_played_at") val lastPlayedAt: String? = null,
+    @SerialName("is_friend") val isFriend: Boolean = false,
+    @SerialName("presence_status") val presenceStatus: String = "offline",
+    @SerialName("can_challenge") val canChallenge: Boolean = false,
+)
+
+@Serializable
 data class ArchRivalDto(
     @SerialName("opponent_id") val opponentId: String,
     @SerialName("display_name") val displayName: String,
@@ -81,6 +100,12 @@ suspend fun OnlineGameBackend.claimMasteryReward(milestoneId: String): Int =
         "claim_mastery_reward_v1",
         buildJsonObject { put("p_milestone_id", milestoneId) },
     ).decodeSingle()
+
+suspend fun OnlineGameBackend.getRivalHistory(limit: Int = 20): List<RivalHistoryDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "get_rival_history_v1",
+        buildJsonObject { put("p_limit", limit.coerceIn(1, 50)) },
+    ).decodeList()
 
 suspend fun OnlineGameBackend.getArchRival(): ArchRivalDto? =
     SupabaseProvider.client.postgrest.rpc("get_arch_rival_v1").decodeList<ArchRivalDto>().firstOrNull()
