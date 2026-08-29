@@ -80,11 +80,12 @@ suspend fun OnlineGameBackend.getDailyArenaStatus(language: String): DailyArenaS
         buildJsonObject { put("p_language", if (language.lowercase() == "en") "en" else "tr") },
     ).decodeSingle()
 
-suspend fun OnlineGameBackend.startDailyArena(language: String): DailyArenaStartDto =
+suspend fun OnlineGameBackend.startDailyArena(language: String) {
     SupabaseProvider.client.postgrest.rpc(
         "start_daily_arena_v1",
         buildJsonObject { put("p_language", if (language.lowercase() == "en") "en" else "tr") },
-    ).decodeSingle()
+    )
+}
 
 suspend fun OnlineGameBackend.submitDailyArenaWord(runId: String, word: String): DailyArenaSubmitDto =
     SupabaseProvider.client.postgrest.rpc(
