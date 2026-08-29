@@ -248,6 +248,12 @@ fun WordArenaScreen(
                 me = me,
                 myName = myProfile?.displayName ?: sh("Sen", "You"),
                 opponentName = opponentProfile?.displayName ?: sh("Rakip", "Opponent"),
+                myAvatarPath = myProfile?.avatarPath,
+                myGender = myProfile?.gender,
+                myRating = myProfile?.rating,
+                opponentAvatarPath = opponentProfile?.avatarPath,
+                opponentGender = opponentProfile?.gender,
+                opponentRating = opponentProfile?.rating,
                 rematchStatus = rematchStatus,
                 rematchBusy = busy,
                 onRematch = {
@@ -302,10 +308,16 @@ fun WordArenaScreen(
                 myGender = myProfile?.gender,
                 opponentAvatarPath = opponentProfile?.avatarPath,
                 opponentGender = opponentProfile?.gender,
+                myRating = myProfile?.rating,
+                opponentRating = opponentProfile?.rating,
                 preStartSeconds = preStartSeconds,
                 secondsLeft = secondsLeft,
                 input = input,
-                onInput = { input = it.take(20) },
+                onInput = {
+                    val next = it.take(20)
+                    if (next.length > input.length) SonHarfSoundFx.typingClick()
+                    input = next
+                },
                 notice = notice,
                 busy = busy,
                 onSubmit = {
@@ -480,6 +492,8 @@ private fun ArenaPlayScreen(
     myGender: String?,
     opponentAvatarPath: String?,
     opponentGender: String?,
+    myRating: Int?,
+    opponentRating: Int?,
     preStartSeconds: Int,
     secondsLeft: Int,
     input: String,
@@ -493,6 +507,7 @@ private fun ArenaPlayScreen(
     val myScore = if (host) room.hostScore else room.guestScore
     val opponentScore = if (host) room.guestScore else room.hostScore
     val myWords = words.filter { it.userId == me }
+    val opponentWordsNow = words.filter { it.userId != me }
     val playing = preStartSeconds <= 0 && secondsLeft > 0
     val danger = secondsLeft in 1..10
     val inputFocusRequester = remember { FocusRequester() }
@@ -540,6 +555,13 @@ private fun ArenaPlayScreen(
             }
             ArenaScoreCard(opponentName, opponentScore, false, opponentAvatarPath, opponentGender, SonHarfPink, Modifier.weight(1f))
         }
+
+        CompetitionLeadStrip(
+            myScore = myScore,
+            opponentScore = opponentScore,
+            myAction = if (myWords.isNotEmpty()) sh("Sen ${myWords.size} kelime buldun.", "You found ${myWords.size} words.") else null,
+            opponentAction = if (opponentWordsNow.isNotEmpty()) sh("Rakip ${opponentWordsNow.size} kelime buldu.", "Rival found ${opponentWordsNow.size} words.") else null,
+        )
 
         if (preStartSeconds > 0) {
             Surface(
@@ -678,6 +700,12 @@ private fun ArenaResultScreen(
     me: String?,
     myName: String,
     opponentName: String,
+    myAvatarPath: String?,
+    myGender: String?,
+    myRating: Int?,
+    opponentAvatarPath: String?,
+    opponentGender: String?,
+    opponentRating: Int?,
     rematchStatus: String,
     rematchBusy: Boolean,
     onRematch: () -> Unit,
@@ -701,6 +729,20 @@ private fun ArenaResultScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
+            CompetitionVsCard(
+                myName = myName,
+                opponentName = opponentName,
+                myAvatarPath = myAvatarPath,
+                opponentAvatarPath = opponentAvatarPath,
+                myGender = myGender,
+                opponentGender = opponentGender,
+                myRating = myRating,
+                opponentRating = opponentRating,
+                centerText = "${myScore}–${opponentScore}",
+            )
+        }
+
+        item {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(if (draw) "🤝" else if (won) "🏆" else "⚔", fontSize = 48.sp)
                 Text(
@@ -711,7 +753,7 @@ private fun ArenaResultScreen(
                 )
                 Text("$myScore  —  $opponentScore", color = SonHarfBlue, fontSize = 28.sp, fontWeight = FontWeight.Black)
                 Text(
-                    if (draw) sh("+7 Son Coin", "+7 Son Coins") else if (won) sh("+12 Son Coin • +18 rating", "+12 Son Coins • +18 rating") else sh("+5 Son Coin • −12 rating", "+5 Son Coins • −12 rating"),
+                    if (draw) sh("Beraberlik • rating değişmez", "Draw • rating unchanged") else if (won) sh("Galibiyet ödülü ve rating sonucu işlendi", "Win reward and rating result applied") else sh("Maç ödülü ve rating sonucu işlendi", "Match reward and rating result applied"),
                     color = SonHarfGreen,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
