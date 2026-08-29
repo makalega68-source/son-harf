@@ -685,7 +685,7 @@ create or replace function public.prevent_game_room_during_word_arena_v1()
 returns trigger
 language plpgsql
 set search_path=public,pg_temp
-as $
+as $$
 begin
   if exists(
     select 1 from public.word_arena_rooms ar
