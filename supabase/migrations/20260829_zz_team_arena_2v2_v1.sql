@@ -307,15 +307,23 @@ begin
   where m.user_id=v_uid
     and (
       (tr.status='lobby' and tr.expires_at>clock_timestamp())
-      or (tr.status='playing' and tr.ends_at>clock_timestamp())
+      or tr.status='playing'
+      or (
+        tr.status='finished'
+        and coalesce(tr.finished_at,tr.ends_at,tr.created_at)>clock_timestamp()-interval '10 minutes'
+      )
     )
   order by
-    case tr.status when 'playing' then 0 else 1 end,
+    case tr.status when 'playing' then 0 when 'lobby' then 1 else 2 end,
     tr.created_at desc
   limit 1;
 
   if r.id is null then
     return jsonb_build_object('active',false);
+  end if;
+
+  if r.status='playing' and r.ends_at<=clock_timestamp() then
+    r:=private.finish_team_arena_internal_v1(r.id);
   end if;
 
   return jsonb_build_object(
