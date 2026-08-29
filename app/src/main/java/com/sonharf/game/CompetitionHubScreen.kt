@@ -704,7 +704,7 @@ private fun WeeklyTournamentTab() {
                                     "+${h.rewardCoins} Son Coin alınabilir",
                                     "+${h.rewardCoins} Son Coin available",
                                 )
-                                else -> sh("Ödül durumu kapalı.", "Reward unavailable."),
+                                else -> sh("Ödül durumu kapalı.", "Reward unavailable.")
                             },
                             color = when {
                                 h.rewardEligible -> SonHarfGold
