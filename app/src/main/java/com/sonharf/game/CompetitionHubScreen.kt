@@ -433,7 +433,26 @@ private fun CreateClubDialog(
         title = { Text(sh("KULÜP OLUŞTUR", "CREATE CLUB"), fontWeight = FontWeight.Black) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(sh("Kulüp kurmak ücretsizdir. En fazla 30 oyuncu.", "Creating a club is free. Maximum 30 players."), color = SonHarfGreen, fontSize = 10.sp)
+                Surface(
+                    color = SonHarfGold.copy(alpha = .10f),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .35f)),
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            sh("KULÜP KURMA BEDELİ: 1.000 SON COIN", "CLUB CREATION FEE: 1,000 SON COIN"),
+                            color = SonHarfGold,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Text(
+                            sh("Tek seferlik sosyal anti-spam bedeli. Maç gücü veya rating avantajı vermez.", "One-time social anti-spam fee. It gives no match power or rating advantage."),
+                            color = SonHarfMuted,
+                            fontSize = 8.sp,
+                        )
+                    }
+                }
+                Text(sh("En fazla 30 oyuncu.", "Maximum 30 players."), color = SonHarfMuted, fontSize = 9.sp)
                 OutlinedTextField(name, { name = it.take(24) }, label = { Text(sh("Kulüp adı", "Club name")) }, singleLine = true)
                 OutlinedTextField(tag, { tag = it.uppercase().filter { ch -> ch.isLetterOrDigit() }.take(6) }, label = { Text(sh("Etiket (2–6)", "Tag (2–6)")) }, singleLine = true)
                 OutlinedTextField(description, { description = it.take(180) }, label = { Text(sh("Açıklama", "Description")) }, maxLines = 3)
@@ -443,7 +462,7 @@ private fun CreateClubDialog(
             Button(
                 onClick = { onCreate(name, tag, description) },
                 enabled = !busy && name.trim().length >= 3 && tag.trim().length >= 2,
-            ) { Text(if (busy) "…" else sh("OLUŞTUR", "CREATE")) }
+            ) { Text(if (busy) "…" else sh("1.000 SC İLE OLUŞTUR", "CREATE FOR 1,000 SC")) }
         },
         dismissButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(sh("VAZGEÇ", "CANCEL")) } },
     )
@@ -1212,6 +1231,8 @@ private fun CompetitionMetric(value: String, label: String, modifier: Modifier) 
 }
 
 private fun friendlyCompetitionError(raw: String): String = when {
+    "insufficient_club_creation_balance" in raw ->
+        sh("Kulüp kurmak için 1.000 Son Coin gerekir.", "You need 1,000 Son Coin to create a club.")
     "club_name_or_tag_taken" in raw -> sh("Bu kulüp adı veya etiketi kullanılıyor.", "That club name or tag is already used.")
     "already_in_club" in raw -> sh("Zaten bir kulüptesin.", "You are already in a club.")
     "club_full" in raw -> sh("Kulüp dolu.", "The club is full.")
