@@ -1,17 +1,16 @@
-name: Rollback to Last Green
+name: Rollback to Last Stable
 
 on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: "Son başarılı ana sürüme dön. Oyuncu veritabanına dokunulmaz."
+        description: "Son cihaz testinde onaylanan STABLE sürüme dön. Oyuncu veritabanına dokunulmaz."
         required: true
         type: boolean
         default: false
 
 permissions:
   contents: write
-  actions: read
 
 concurrency:
   group: rollback-main
@@ -26,6 +25,7 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+          fetch-tags: true
 
       - uses: actions/setup-java@v5
         with:
@@ -41,32 +41,32 @@ jobs:
         with:
           gradle-version: "8.14.4"
 
-      - name: Find previous successful main build
+      - name: Find last approved stable tag
         id: target
-        env:
-          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          CURRENT="$(git rev-parse HEAD)"
-          TARGET="$(gh run list --workflow "Android CI" --branch main --status success --limit 20 --json headSha --jq '.[] | .headSha' | grep -v "^$CURRENT$" | head -n 1)"
-          if [ -z "$TARGET" ]; then
-            echo "::error::Önceki başarılı Android CI sürümü bulunamadı."
+          git fetch --tags --force
+          TAG="$(git tag --list 'stable-*' --sort=-creatordate | head -n 1)"
+          if [ -z "$TAG" ]; then
+            echo "::error::Onaylanmış STABLE sürüm etiketi bulunamadı. Önce cihazda çalışan bir sürümü stable olarak işaretle."
             exit 1
           fi
+          TARGET="$(git rev-list -n 1 "$TAG")"
           git cat-file -e "$TARGET^{commit}"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "sha=$TARGET" >> "$GITHUB_OUTPUT"
-          echo "Önceki başarılı sürüm: $TARGET"
+          echo "Son onaylanmış stable sürüm: $TAG ($TARGET)"
 
-      - name: Create recovery tag
+      - name: Create recovery tag for current code
         shell: bash
         run: |
           set -euo pipefail
           TAG="before-rollback-$(date -u +%Y%m%d-%H%M%S)"
-          git tag "$TAG" HEAD
+          git tag -a "$TAG" -m "Automatic recovery point before rollback" HEAD
           git push origin "$TAG"
 
-      - name: Restore code from last green commit
+      - name: Restore code from approved stable
         shell: bash
         run: |
           set -euo pipefail
@@ -85,19 +85,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          TAG="${{ steps.target.outputs.tag }}"
           TARGET="${{ steps.target.outputs.sha }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if git diff --cached --quiet; then
-            echo "Kod zaten hedef başarılı sürümle aynı."
+            echo "Kod zaten $TAG sürümüyle aynı."
             exit 0
           fi
-          git commit -m "Safe rollback to $TARGET [admin]"
+          git commit -m "Safe rollback to $TAG ($TARGET) [admin]"
           git push origin HEAD:main
 
       - name: Summary
         run: |
           echo "### Güvenli geri dönüş tamamlandı" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Hedef sürüm: ${{ steps.target.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Oyuncu veritabanına dokunulmadı." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Hedef: ${{ steps.target.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: ${{ steps.target.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Oyuncu veritabanı geri sarılmadı veya silinmedi." >> "$GITHUB_STEP_SUMMARY"
           echo "- Geri dönüşten önce mevcut kod için recovery tag oluşturuldu." >> "$GITHUB_STEP_SUMMARY"
