@@ -22,6 +22,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -295,6 +298,10 @@ fun WordArenaScreen(
                 me = me,
                 myName = myProfile?.displayName ?: sh("Sen", "You"),
                 opponentName = opponentProfile?.displayName ?: sh("Rakip", "Opponent"),
+                myAvatarPath = myProfile?.avatarPath,
+                myGender = myProfile?.gender,
+                opponentAvatarPath = opponentProfile?.avatarPath,
+                opponentGender = opponentProfile?.gender,
                 preStartSeconds = preStartSeconds,
                 secondsLeft = secondsLeft,
                 input = input,
@@ -469,6 +476,10 @@ private fun ArenaPlayScreen(
     me: String?,
     myName: String,
     opponentName: String,
+    myAvatarPath: String?,
+    myGender: String?,
+    opponentAvatarPath: String?,
+    opponentGender: String?,
     preStartSeconds: Int,
     secondsLeft: Int,
     input: String,
@@ -484,9 +495,19 @@ private fun ArenaPlayScreen(
     val myWords = words.filter { it.userId == me }
     val playing = preStartSeconds <= 0 && secondsLeft > 0
     val danger = secondsLeft in 1..10
+    val inputFocusRequester = remember { FocusRequester() }
+    val softwareKeyboard = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(room.id, busy, preStartSeconds, secondsLeft) {
+        if (room.status == "playing") {
+            delay(120)
+            runCatching { inputFocusRequester.requestFocus() }
+            softwareKeyboard?.show()
+        }
+    }
 
     Column(
-        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(12.dp),
+        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -499,9 +520,9 @@ private fun ArenaPlayScreen(
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ArenaScoreCard(myName, myScore, true, Modifier.weight(1f))
+            ArenaScoreCard(myName, myScore, true, myAvatarPath, myGender, SonHarfBlue, Modifier.weight(1f))
             Surface(
-                modifier = Modifier.size(76.dp),
+                modifier = Modifier.size(68.dp),
                 shape = CircleShape,
                 color = if (danger) SonHarfPink.copy(alpha = .14f) else SonHarfBlue.copy(alpha = .10f),
                 border = BorderStroke(2.dp, if (danger) SonHarfPink else SonHarfBlue),
@@ -515,7 +536,7 @@ private fun ArenaPlayScreen(
                     )
                 }
             }
-            ArenaScoreCard(opponentName, opponentScore, false, Modifier.weight(1f))
+            ArenaScoreCard(opponentName, opponentScore, false, opponentAvatarPath, opponentGender, SonHarfPink, Modifier.weight(1f))
         }
 
         if (preStartSeconds > 0) {
@@ -592,8 +613,9 @@ private fun ArenaPlayScreen(
         OutlinedTextField(
             value = input,
             onValueChange = onInput,
-            enabled = playing && !busy,
-            modifier = Modifier.fillMaxWidth(),
+            enabled = true,
+            readOnly = !playing || busy,
+            modifier = Modifier.fillMaxWidth().focusRequester(inputFocusRequester),
             singleLine = true,
             label = { Text(sh("Kelime", "Word")) },
             placeholder = {
@@ -605,7 +627,7 @@ private fun ArenaPlayScreen(
                     }
                 )
             },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send, showKeyboardOnFocus = true),
             keyboardActions = KeyboardActions(onSend = { onSubmit() }),
             trailingIcon = {
                 IconButton(onClick = onSubmit, enabled = playing && !busy && input.isNotBlank()) {
@@ -617,17 +639,33 @@ private fun ArenaPlayScreen(
 }
 
 @Composable
-private fun ArenaScoreCard(name: String, score: Int, mine: Boolean, modifier: Modifier) {
+private fun ArenaScoreCard(
+    name: String,
+    score: Int,
+    mine: Boolean,
+    avatarPath: String?,
+    gender: String?,
+    accent: Color,
+    modifier: Modifier,
+) {
     Surface(
         modifier,
         shape = RoundedCornerShape(16.dp),
         color = if (mine) SonHarfBlue.copy(alpha = .09f) else SonHarfSurface,
         border = BorderStroke(1.dp, if (mine) SonHarfBlue.copy(alpha = .35f) else SonHarfMuted.copy(alpha = .15f)),
     ) {
-        Column(Modifier.padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(name, color = SonHarfText, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-            Text("$score", color = if (mine) SonHarfBlue else SonHarfText, fontSize = 22.sp, fontWeight = FontWeight.Black)
-            Text(if (mine) sh("SEN", "YOU") else sh("RAKİP", "RIVAL"), color = SonHarfMuted, fontSize = 7.sp)
+        Column(Modifier.padding(7.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            ProfilePhotoAvatarWithGender(
+                avatarPath = avatarPath,
+                gender = gender,
+                name = name,
+                size = 34.dp,
+                accent = accent,
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(name, color = SonHarfText, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text("$score", color = if (mine) SonHarfBlue else SonHarfText, fontSize = 19.sp, fontWeight = FontWeight.Black)
+            Text(if (mine) sh("SEN", "YOU") else sh("RAKİP", "RIVAL"), color = SonHarfMuted, fontSize = 6.sp)
         }
     }
 }
@@ -801,6 +839,8 @@ private fun ArenaResultWordList(
 }
 
 private fun friendlyArenaError(raw: String): String = when {
+    "team_arena_active" in raw -> sh("Açık 2v2 lobin var. Takım Arenası'na dönüp lobiyi kapat.", "A 2v2 lobby is still open. Return to Team Arena and close it.")
+    "daily_arena_active" in raw -> sh("Önce aktif Resmî Koşuyu bitir.", "Finish your active Official Run first.")
     "player_already_in_game" in raw -> sh("Önce aktif Son Harf maçını bitir.", "Finish your active Son Harf match first.")
     "arena_not_started" in raw -> sh("Düello henüz başlamadı.", "The duel has not started yet.")
     "arena_word_length" in raw -> sh("Kelime 3–10 harf olmalı.", "Words must be 3–10 letters.")
