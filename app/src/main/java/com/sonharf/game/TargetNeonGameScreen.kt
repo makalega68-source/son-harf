@@ -446,10 +446,6 @@ private fun TargetArena(
     val oppRounds = if (host) room.guestRounds else room.hostRounds
     val myTurn = room.currentPlayerId == me && room.status in listOf("playing", "final", "sudden_death")
     var seconds by remember(room.turnDeadline) { mutableStateOf(45) }
-    val keyboard = LocalSoftwareKeyboardController.current
-    val density = LocalDensity.current
-    val imeVisible = WindowInsets.ime.getBottom(density) > 0
-    val wordFocusRequester = remember { FocusRequester() }
     var showChat by remember { mutableStateOf(false) }
     var showChain by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
@@ -460,16 +456,6 @@ private fun TargetArena(
     }
 
     BackHandler(enabled = room.status != "finished") { confirmForfeit = true }
-
-    LaunchedEffect(room.id, room.status, myTurn, busy) {
-        if (room.status in listOf("playing", "final", "sudden_death")) {
-            delay(140)
-            runCatching { wordFocusRequester.requestFocus() }
-            keyboard?.show()
-        } else {
-            keyboard?.hide()
-        }
-    }
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
         while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
@@ -569,8 +555,7 @@ private fun TargetArena(
         Modifier
             .fillMaxSize()
             .windowInsetsPadding(WindowInsets.safeDrawing)
-            .imePadding()
-            .padding(horizontal = 14.dp, vertical = 6.dp)
+            .padding(horizontal = 12.dp, vertical = 5.dp)
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
@@ -747,67 +732,55 @@ private fun TargetArena(
 
         OutlinedTextField(
             value = wordInput,
-            onValueChange = { value -> if (myTurn && !busy) onWordInput(value) },
+            onValueChange = {},
             enabled = true,
+            readOnly = true,
             singleLine = true,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp).focusRequester(wordFocusRequester),
+            modifier = Modifier.fillMaxWidth().height(52.dp),
             textStyle = LocalTextStyle.current.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
-            label = { Text(sh("Kelimen", "Your word"), fontSize = 12.sp) },
+            label = { Text(sh("Kelimen", "Your word"), fontSize = 11.sp) },
             placeholder = {
                 Text(
                     if (!myTurn) sh("Rakibin sırası…", "Rival's turn…")
                     else if (activeLetter.isBlank()) sh("İlk kelimeyi yaz…", "Type the first word…")
                     else activeLetter + sh(" ile başlayan kelime yaz", " — type a word"),
-                    fontSize = 14.sp,
+                    fontSize = 13.sp,
                 )
             },
-            shape = RoundedCornerShape(16.dp),
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Text,
-                imeAction = ImeAction.Send,
-                showKeyboardOnFocus = true,
-                hintLocales = LocaleList(Locale(if (room.language == "tr") "tr-TR" else "en-US")),
-            ),
-            keyboardActions = KeyboardActions(onSend = { if (myTurn && wordInput.isNotBlank() && !busy) onSubmit() }),
+            shape = RoundedCornerShape(15.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = TGcyan,
                 unfocusedBorderColor = Color(0xFFD5DEE9),
                 focusedTextColor = TGtext,
                 unfocusedTextColor = TGtext,
-                cursorColor = TGcyan,
+                cursorColor = Color.Transparent,
             ),
         )
-        Spacer(Modifier.height(7.dp))
-        Button(
-            onClick = { onSubmit() },
-            enabled = myTurn && wordInput.isNotBlank() && !busy,
-            modifier = Modifier.fillMaxWidth().height(50.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = TGblue,
-                contentColor = Color.White,
-                disabledContainerColor = Color(0xFFE2E7EE),
-                disabledContentColor = Color(0xFF8A94A3),
-            ),
-            shape = RoundedCornerShape(16.dp),
-        ) { Text(sh("GÖNDER", "SEND"), fontWeight = FontWeight.Black, fontSize = 17.sp) }
-        if (!imeVisible) {
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(
-                    onClick = { confirmForfeit = true },
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    border = BorderStroke(1.dp, TGpink),
-                    shape = RoundedCornerShape(14.dp),
-                ) { Text("⚑ PES ET", color = TGpink, fontSize = 11.sp, fontWeight = FontWeight.Bold) }
-                Surface(
-                    modifier = Modifier.weight(1f).heightIn(min = 46.dp),
-                    color = TGpanel2,
-                    shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color(0xFFD5DEE9)),
-                ) {
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
-                        Text(notice, color = TGmuted, fontSize = 10.sp, lineHeight = 13.sp, textAlign = TextAlign.Center, maxLines = 2)
-                    }
+        Spacer(Modifier.height(5.dp))
+        EmbeddedWordKeyboard(
+            value = wordInput,
+            language = room.language,
+            enabled = myTurn && !busy,
+            maxLength = 40,
+            onValueChange = { next -> onWordInput(next.filter(Char::isLetter).uppercase()) },
+            onSubmit = { if (myTurn && wordInput.isNotBlank() && !busy) onSubmit() },
+        )
+        Spacer(Modifier.height(5.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(
+                onClick = { confirmForfeit = true },
+                modifier = Modifier.weight(1f).height(40.dp),
+                border = BorderStroke(1.dp, TGpink),
+                shape = RoundedCornerShape(13.dp),
+            ) { Text("⚑ PES ET", color = TGpink, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+            Surface(
+                modifier = Modifier.weight(1f).height(40.dp),
+                color = TGpanel2,
+                shape = RoundedCornerShape(13.dp),
+                border = BorderStroke(1.dp, Color(0xFFD5DEE9)),
+            ) {
+                Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+                    Text(notice, color = TGmuted, fontSize = 9.sp, lineHeight = 11.sp, textAlign = TextAlign.Center, maxLines = 2)
                 }
             }
         }
