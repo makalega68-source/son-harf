@@ -36,6 +36,7 @@ data class ProfileDto(
     val diamonds: Int = 0,
     val wins: Int = 0,
     val losses: Int = 0,
+    val rating: Int = 1000,
 )
 
 @Serializable
