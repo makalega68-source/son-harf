@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.handleDeeplinks
 import kotlinx.coroutines.runBlocking
 
 internal val SonHarfBg: Color get() = Color(0xFFF7F9FC)
@@ -44,6 +46,26 @@ private val SonHarfTypography = Typography(
 enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
 
 class MainActivity : ComponentActivity() {
+    private fun handleAuthDeepLink(intent: Intent) {
+        if (!SupabaseProvider.configured || intent.data?.scheme != "sonharf") return
+        SupabaseProvider.client.handleDeeplinks(
+            intent = intent,
+            onSessionSuccess = { session ->
+                val verifiedEmail = session.user?.email.orEmpty()
+                if (verifiedEmail.isNotBlank()) {
+                    SonHarfPreferences.setRememberLogin(this, true, verifiedEmail)
+                }
+                runOnUiThread { recreate() }
+            },
+        )
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleAuthDeepLink(intent)
+    }
+
     override fun onStart() {
         super.onStart()
         SonHarfBackgroundMusic.start(this)
@@ -68,6 +90,7 @@ class MainActivity : ComponentActivity() {
         if (!BuildConfig.DEBUG && SupabaseProvider.configured && !SonHarfPreferences.rememberLogin(this)) {
             runBlocking { runCatching { SupabaseProvider.client.auth.signOut() } }
         }
+        handleAuthDeepLink(intent)
         setContent {
             MaterialTheme(
                 colorScheme = lightColorScheme(
