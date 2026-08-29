@@ -67,11 +67,14 @@ fun TeamArenaScreen(
             room = next
             val nextMembers = b.getTeamArenaMembers(id)
             members = nextMembers
-            val nextProfiles = mutableMapOf<String, ProfileDto?>()
+            val nextProfiles = memberProfiles.toMutableMap()
             for (member in nextMembers) {
-                nextProfiles[member.userId] = runCatching { b.getProfile(member.userId) }.getOrNull()
+                if (!nextProfiles.containsKey(member.userId)) {
+                    nextProfiles[member.userId] = runCatching { b.getProfile(member.userId) }.getOrNull()
+                }
             }
-            memberProfiles = nextProfiles
+            val activeIds = nextMembers.mapTo(mutableSetOf()) { it.userId }
+            memberProfiles = nextProfiles.filterKeys { it in activeIds }
             words = if (next.status in setOf("playing", "finished")) {
                 b.getTeamArenaWords(id)
             } else {
