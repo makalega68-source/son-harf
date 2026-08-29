@@ -183,6 +183,8 @@ private fun EconomyCatalogScreen() {
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(if (mine) sh("✓ SAHİPSİN", "✓ OWNED") else "◈ ${item.diamondPrice} SC", color = if (mine) SonHarfGreen else SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                        val buttonContainer = if (active) SonHarfGreen else SonHarfPurple
+                        val anotherItemBusy = busy != null && busy != item.id
                         Button(
                             onClick = {
                                 val b = backend
@@ -217,7 +219,11 @@ private fun EconomyCatalogScreen() {
                             },
                             enabled = busy == null && (!item.vipOnly || profile?.isVip == true),
                             shape = RoundedCornerShape(15.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = if (active) SonHarfGreen else SonHarfPurple),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = buttonContainer,
+                                disabledContainerColor = if (anotherItemBusy) buttonContainer else buttonContainer.copy(alpha = .55f),
+                                disabledContentColor = if (anotherItemBusy) Color.White else Color.White.copy(alpha = .72f),
+                            ),
                         ) {
                             Text(when { busy == item.id -> "…"; active -> sh("AKTİF", "EQUIPPED"); mine -> sh("KULLAN", "EQUIP"); else -> sh("SATIN AL", "BUY") }, fontWeight = FontWeight.Black)
                         }
