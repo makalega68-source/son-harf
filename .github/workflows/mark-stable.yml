@@ -1,0 +1,75 @@
+name: Mark Current Main Stable
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_device_test:
+        description: "Bu sürüm gerçek cihazda test edildi ve çalışıyor."
+        required: true
+        type: boolean
+        default: false
+      note:
+        description: "Kısa not (opsiyonel)"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mark-stable
+  cancel-in-progress: false
+
+jobs:
+  mark-stable:
+    if: ${{ inputs.confirm_device_test == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.14.4"
+
+      - name: Verify candidate
+        shell: bash
+        run: |
+          set -o pipefail
+          gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Create approved stable tag
+        env:
+          NOTE: ${{ inputs.note }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="stable-$(date -u +%Y%m%d-%H%M%S)"
+          SHA="$(git rev-parse HEAD)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          MESSAGE="Son Harf approved stable | commit=$SHA"
+          if [ -n "${NOTE:-}" ]; then MESSAGE="$MESSAGE | $NOTE"; fi
+          git tag -a "$TAG" -m "$MESSAGE" "$SHA"
+          git push origin "$TAG"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          echo "SHA=$SHA" >> "$GITHUB_ENV"
+
+      - name: Summary
+        run: |
+          echo "### ✅ Çalışan sürüm işaretlendi" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stable etiketi: `$TAG`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: `$SHA`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Bu etiket, güvenli rollback hedefidir." >> "$GITHUB_STEP_SUMMARY"
