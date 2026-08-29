@@ -62,7 +62,7 @@ fun LightWordThemeApp() {
                 WordArenaNavigation.clearRoom()
                 screen = LightScreen.KELIME_ARENASI
             }
-            "daily_cipher", "daily_arena", "semantic_path" -> screen = LightScreen.KELIME_AVI
+            "daily_cipher", "daily_arena", "semantic_path", "word_conquest" -> screen = LightScreen.KELIME_AVI
             else -> screen = LightScreen.TASKS
         }
     }
@@ -174,11 +174,6 @@ fun LightWordThemeApp() {
                             screen = LightScreen.HOME
                         },
                     )
-                    ModeEntryOverlay(
-                        key = "word-arena-${arenaRequest}-${arenaInitialRoomId.orEmpty()}",
-                        title = sh("KELİME DÜELLOSU", "WORD DUEL"),
-                        subtitle = sh("60 saniye • aynı harfler • canlı rakip", "60 seconds • same letters • live rival"),
-                    )
                 }
                 LightScreen.TAKIM_ARENASI -> Box(Modifier.fillMaxSize()) {
                     TeamArenaScreen(
@@ -204,12 +199,7 @@ fun LightWordThemeApp() {
                     )
                 }
                 LightScreen.KELIME_AVI -> Box(Modifier.fillMaxSize()) {
-                    SemanticPathGameScreen { screen = LightScreen.HOME }
-                    ModeEntryOverlay(
-                        key = "semantic-path",
-                        title = sh("KELİME YOLU", "WORD PATH"),
-                        subtitle = sh("Bağlantılı kelimeler • en kısa rota • altın yol", "Connected words • shortest route • golden path"),
-                    )
+                    WordConquestGameScreen { screen = LightScreen.HOME }
                 }
                 LightScreen.KELIME_SAVASI -> Box(Modifier.fillMaxSize()) {
                     TrackedBilBakalimStandaloneScreen { screen = LightScreen.HOME }
@@ -366,10 +356,10 @@ private fun LightHomeScreen(
 
         item {
             LightGameCard(
-                icon = Icons.Rounded.Route,
-                title = "KELİME YOLU",
-                subtitle = "Bağlantılı kelimelerle hedefe en kısa rotadan ulaş.",
-                buttonText = "YOLU BUL",
+                icon = Icons.Rounded.GridView,
+                title = "KELİME FETHİ",
+                subtitle = "Kelime bul, kareleri ele geçir.",
+                buttonText = "FETHET",
                 accent = LightGreen,
                 onClick = onKelimeAvi,
             )
