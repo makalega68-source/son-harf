@@ -69,6 +69,58 @@ data class AdminHealthDto(
     val detail: String,
 )
 
+@Serializable
+data class AdminOwnerAccountDto(
+    @SerialName("user_id") val userId: String,
+    val email: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("lifetime_vip") val lifetimeVip: Boolean = false,
+    @SerialName("unlimited_diamonds") val unlimitedDiamonds: Boolean = false,
+    @SerialName("unlimited_son_coin") val unlimitedSonCoin: Boolean = false,
+    val active: Boolean = false,
+    @SerialName("current_diamonds") val currentDiamonds: Int = 0,
+    val rating: Int = 0,
+    @SerialName("updated_at") val updatedAt: String? = null,
+)
+
+@Serializable
+data class AdminCapacityDto(
+    @SerialName("metric_key") val metricKey: String,
+    val title: String,
+    val status: String,
+    @SerialName("used_value") val usedValue: Long = 0,
+    @SerialName("limit_value") val limitValue: Long = 0,
+    @SerialName("percent_used") val percentUsed: Int = 0,
+    val unit: String = "",
+    val detail: String = "",
+    @SerialName("resolve_url") val resolveUrl: String = "",
+)
+
+suspend fun OnlineGameBackend.getAdminOwnerAccounts(): List<AdminOwnerAccountDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_owner_accounts_v1").decodeList()
+
+suspend fun OnlineGameBackend.adminSetOwnerAccount(
+    email: String,
+    lifetimeVip: Boolean,
+    unlimitedDiamonds: Boolean,
+    unlimitedSonCoin: Boolean,
+    active: Boolean,
+) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_set_owner_account_v1",
+        buildJsonObject {
+            put("p_email", email.trim())
+            put("p_lifetime_vip", lifetimeVip)
+            put("p_unlimited_diamonds", unlimitedDiamonds)
+            put("p_unlimited_son_coin", unlimitedSonCoin)
+            put("p_active", active)
+        },
+    )
+}
+
+suspend fun OnlineGameBackend.getAdminCapacity(): List<AdminCapacityDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_capacity_v1").decodeList()
+
 suspend fun OnlineGameBackend.getAdminDashboard(): AdminDashboardDto =
     SupabaseProvider.client.postgrest.rpc("admin_dashboard_v1").decodeSingle()
 
