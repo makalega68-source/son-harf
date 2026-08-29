@@ -57,12 +57,12 @@ fun LightWordThemeApp() {
 
     val openMode: (String) -> Unit = { mode ->
         when (mode) {
-            "duel", "word_arena" -> {
+            "duel", "word_arena", "team_arena", "bil_bakalim" -> {
                 arenaInitialRoomId = null
                 WordArenaNavigation.clearRoom()
                 screen = LightScreen.KELIME_ARENASI
             }
-            "daily_cipher", "semantic_path" -> screen = LightScreen.KELIME_AVI
+            "daily_cipher", "daily_arena", "semantic_path" -> screen = LightScreen.KELIME_AVI
             else -> screen = LightScreen.TASKS
         }
     }
