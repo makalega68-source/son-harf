@@ -114,6 +114,22 @@ alter table public.weekly_tournament_entries enable row level security;
 alter table public.weekly_tournament_match_events enable row level security;
 alter table public.weekly_tournament_reward_claims enable row level security;
 
+revoke all on public.clubs from anon;
+revoke all on public.club_members from anon;
+revoke all on public.club_messages from anon;
+revoke all on public.club_point_events from anon;
+revoke all on public.weekly_tournaments from anon;
+revoke all on public.weekly_tournament_entries from anon;
+revoke all on public.weekly_tournament_match_events from anon;
+revoke all on public.weekly_tournament_reward_claims from anon;
+
+grant select on public.clubs to authenticated;
+grant select on public.club_members to authenticated;
+grant select,insert,delete on public.club_messages to authenticated;
+grant select on public.weekly_tournaments to authenticated;
+grant select on public.weekly_tournament_entries to authenticated;
+grant select on public.weekly_tournament_reward_claims to authenticated;
+
 drop policy if exists clubs_read_authenticated on public.clubs;
 create policy clubs_read_authenticated on public.clubs for select to authenticated using (true);
 drop policy if exists club_members_read_authenticated on public.club_members;
@@ -606,7 +622,10 @@ grant execute on function public.transfer_club_owner_v1(uuid) to authenticated;
 grant execute on function public.get_club_directory_v1(integer) to authenticated;
 grant execute on function public.get_my_club_v1() to authenticated;
 grant execute on function public.get_club_members_v1(uuid) to authenticated;
-grant execute on function public.ensure_weekly_tournament_v1() to authenticated;
+revoke execute on function public.ensure_weekly_tournament_v1() from authenticated;
+revoke execute on function public.award_competition_points_v1() from public,anon,authenticated;
+revoke execute on function public.league_for_rating_v1(integer) from public,anon;
+grant execute on function public.league_for_rating_v1(integer) to authenticated;
 grant execute on function public.join_weekly_tournament_v1() to authenticated;
 grant execute on function public.get_weekly_tournament_v1() to authenticated;
 grant execute on function public.get_weekly_tournament_leaderboard_v1(integer) to authenticated;
