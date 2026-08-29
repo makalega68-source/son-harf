@@ -26,7 +26,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.AchievementProgressDto
+import com.sonharf.game.data.CompetitiveSeasonDto
+import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.getAchievements
+import com.sonharf.game.data.getCompetitiveSeason
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
@@ -125,7 +130,10 @@ private suspend fun completeLegacyIdentityV2(name: String, gender: String): Prof
 fun ProfileExperienceV2Screen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var profile by remember { mutableStateOf<ProfileV2Dto?>(null) }
+    var season by remember { mutableStateOf<CompetitiveSeasonDto?>(null) }
+    var achievements by remember { mutableStateOf<List<AchievementProgressDto>>(emptyList()) }
     var avatarBytes by remember { mutableStateOf<ByteArray?>(null) }
     var loading by remember { mutableStateOf(true) }
     var photoEditor by remember { mutableStateOf(false) }
@@ -137,6 +145,8 @@ fun ProfileExperienceV2Screen() {
         loading = true
         profile = runCatching { loadProfileV2() }.getOrNull()
         avatarBytes = profile?.avatarPath?.let { runCatching { ProfilePhotoStorageV2.download(it) }.getOrNull() }
+        season = runCatching { backend?.getCompetitiveSeason() }.getOrNull()
+        achievements = runCatching { backend?.getAchievements().orEmpty() }.getOrDefault(emptyList())
         loading = false
     }
 
@@ -224,15 +234,92 @@ fun ProfileExperienceV2Screen() {
             }
         }
 
+        season?.let { s ->
+            item {
+                val seasonLeague = ratingLeagueProgress(s.rating)
+                val daysLeft = runCatching {
+                    kotlin.math.ceil(
+                        ((java.time.Instant.parse(s.endsAt).toEpochMilli() - System.currentTimeMillis())
+                            .coerceAtLeast(0L)) / 86_400_000.0
+                    ).toInt()
+                }.getOrDefault(0)
+
+                Text(sh("REKABET SEZONU", "COMPETITIVE SEASON"), fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(10.dp))
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .34f)),
+                ) {
+                    Column(
+                        Modifier.fillMaxWidth().padding(15.dp),
+                        verticalArrangement = Arrangement.spacedBy(9.dp),
+                    ) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(if (SonHarfUiState.isEnglish) s.nameEn else s.nameTr, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                                Text(
+                                    if (s.seasonRank > 0)
+                                        sh("#${s.seasonRank} • ${s.playerCount} oyuncu", "#${s.seasonRank} • ${s.playerCount} players")
+                                    else
+                                        sh("İlk PvP maçınla sıralamaya gir", "Enter the ranking with your first PvP match"),
+                                    color = SonHarfMuted,
+                                    fontSize = 11.sp,
+                                )
+                            }
+                            Surface(shape = RoundedCornerShape(13.dp), color = SonHarfGold.copy(alpha = .13f)) {
+                                Text("${s.leagueName} • ${s.rating}", Modifier.padding(horizontal = 10.dp, vertical = 7.dp), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                            }
+                        }
+                        LinearProgressIndicator(
+                            progress = { seasonLeague.progress },
+                            modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape),
+                            color = SonHarfGold,
+                            trackColor = SonHarfSurface2,
+                        )
+                        Text(
+                            if (s.nextRating == null)
+                                sh("En üst sezon ligi • $daysLeft gün kaldı", "Top season league • $daysLeft days left")
+                            else
+                                sh("Sonraki lige ${s.pointsToNext} puan • $daysLeft gün kaldı", "${s.pointsToNext} points to next league • $daysLeft days left"),
+                            color = SonHarfMuted,
+                            fontSize = 10.sp,
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            ProfileMetricV2(s.wins.toString(), sh("Sezon G", "Season W"), Modifier.weight(1f))
+                            ProfileMetricV2(s.losses.toString(), sh("Sezon M", "Season L"), Modifier.weight(1f))
+                            ProfileMetricV2(s.peakRating.toString(), sh("Zirve", "Peak"), Modifier.weight(1f))
+                        }
+                        val honor = if (SonHarfUiState.isEnglish) s.latestHonorEn else s.latestHonorTr
+                        if (!honor.isNullOrBlank()) {
+                            Surface(shape = RoundedCornerShape(13.dp), color = SonHarfPurple.copy(alpha = .11f)) {
+                                Text("🏅 $honor", Modifier.fillMaxWidth().padding(9.dp), color = SonHarfPurple, fontWeight = FontWeight.Bold, fontSize = 11.sp, textAlign = TextAlign.Center)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         item {
-            Text(sh("BAŞARILARIM", "MY ACHIEVEMENTS"), fontSize = 18.sp, fontWeight = FontWeight.Black)
+            val unlockedCount = achievements.count { it.unlocked }
+            Text(sh("BAŞARILARIM", "MY ACHIEVEMENTS") + " $unlockedCount/${achievements.size}", fontSize = 18.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(10.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                AchievementLineV2("🏆", sh("10 Galibiyet", "10 Wins"), wins >= 10, "$wins / 10")
-                AchievementLineV2("🔥", sh("5 Kelimelik Seri", "5 Word Streak"), (p?.bestStreak ?: 0) >= 5, "${p?.bestStreak ?: 0} / 5")
-                AchievementLineV2("⚡", sh("Söz Fırtınası", "Word Storm"), (p?.wordStorms ?: 0) >= 1, "${p?.wordStorms ?: 0} / 1")
-                AchievementLineV2("⚔", sh("25 Düello", "25 Duels"), totalMatches >= 25, "$totalMatches / 25")
-                AchievementLineV2("⭐", sh("1200 Reyting", "1200 Rating"), (p?.rating ?: 1000) >= 1200, "${p?.rating ?: 1000} / 1200")
+            if (achievements.isEmpty()) {
+                Text(sh("Başarımlar yükleniyor…", "Loading achievements…"), color = SonHarfMuted, fontSize = 13.sp)
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    achievements.forEach { a ->
+                        AchievementLineV2(
+                            icon = a.icon,
+                            title = if (SonHarfUiState.isEnglish) a.titleEn else a.titleTr,
+                            unlocked = a.unlocked,
+                            progress = "${a.currentValue.coerceAtMost(a.target)} / ${a.target}",
+                            description = if (SonHarfUiState.isEnglish) a.descriptionEn else a.descriptionTr,
+                            rewardCoin = a.rewardCoin,
+                        )
+                    }
+                }
             }
         }
 
@@ -373,16 +460,31 @@ private fun ProfileMetricV2(value: String, label: String, modifier: Modifier) {
 }
 
 @Composable
-private fun AchievementLineV2(icon: String, title: String, unlocked: Boolean, progress: String) {
-    Surface(shape = RoundedCornerShape(16.dp), color = if (unlocked) SonHarfGold.copy(alpha = .13f) else SonHarfSurface2, border = BorderStroke(1.dp, if (unlocked) SonHarfGold.copy(alpha=.45f) else SonHarfMuted.copy(alpha=.12f))) {
+private fun AchievementLineV2(
+    icon: String,
+    title: String,
+    unlocked: Boolean,
+    progress: String,
+    description: String,
+    rewardCoin: Int,
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = if (unlocked) SonHarfGold.copy(alpha = .13f) else SonHarfSurface2,
+        border = BorderStroke(1.dp, if (unlocked) SonHarfGold.copy(alpha=.45f) else SonHarfMuted.copy(alpha=.12f)),
+    ) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(icon, fontSize = 25.sp)
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                Text(if (unlocked) sh("Tamamlandı", "Completed") else progress, color = if (unlocked) SonHarfGold else SonHarfMuted, fontSize = 13.sp)
+                Text(description, color = SonHarfMuted, fontSize = 11.sp)
+                Text(if (unlocked) sh("Tamamlandı", "Completed") else progress, color = if (unlocked) SonHarfGold else SonHarfMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
-            Text(if (unlocked) "✓" else "○", color = if (unlocked) SonHarfGreen else SonHarfMuted, fontSize = 22.sp, fontWeight = FontWeight.Black)
+            Column(horizontalAlignment = Alignment.End) {
+                Text(if (unlocked) "✓" else "○", color = if (unlocked) SonHarfGreen else SonHarfMuted, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                if (rewardCoin > 0) Text("+$rewardCoin SC", color = SonHarfGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            }
         }
     }
 }
