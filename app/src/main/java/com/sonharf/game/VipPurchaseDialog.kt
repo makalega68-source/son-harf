@@ -41,20 +41,20 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
             onPurchase = { purchase ->
                 val productId = purchase.products.firstOrNull()
                 if (productId.isNullOrBlank()) {
-                    notice = "Google Play ürün bilgisi eksik döndü."
+                    notice = sh("Google Play ürün bilgisi eksik döndü.", "Google Play returned incomplete product information.")
                     busy = false
                 } else {
                     scope.launch {
                         busy = true
                         runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
                             .onSuccess {
-                                notice = "Satın alma Google Play üzerinden doğrulandı. VIP hesabına işlendi."
+                                notice = sh("Satın alma Google Play üzerinden doğrulandı. VIP hesabına işlendi.", "Purchase verified through Google Play. VIP has been applied to your account.")
                                 onVerified()
                             }
                             .onFailure { error ->
                                 notice = when {
-                                    "google_play_not_configured" in error.message.orEmpty() -> "Ödeme doğrulama servisi henüz yayın anahtarıyla yapılandırılmadı. Ücretlendirme tamamlandıysa destek kaydı oluştur."
-                                    else -> "Ödeme alındı ancak sunucu doğrulaması tamamlanamadı. Tekrar dene; aynı satın alma ikinci kez ücretlendirilmez."
+                                    "google_play_not_configured" in error.message.orEmpty() -> sh("Ödeme doğrulama servisi henüz yayın anahtarıyla yapılandırılmadı. Ücretlendirme tamamlandıysa destek kaydı oluştur.", "The payment verification service is not configured with the production key yet. If you were charged, contact support.")
+                                    else -> sh("Ödeme alındı ancak sunucu doğrulaması tamamlanamadı. Tekrar dene; aynı satın alma ikinci kez ücretlendirilmez.", "Payment was received but server verification could not be completed. Try again; the same purchase will not be charged twice.")
                                 }
                             }
                         busy = false
@@ -144,19 +144,19 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                 Button(
                     onClick = {
                         if (activity == null) {
-                            notice = "Google Play ödeme ekranı bu cihazda açılamadı."
+                            notice = sh("Google Play ödeme ekranı bu cihazda açılamadı.", "The Google Play payment screen could not be opened on this device.")
                             return@Button
                         }
                         val product = selectedProduct
                         if (product == null) {
-                            notice = if (connected) "Seçilen VIP ürünü Google Play hesabında yayımlı değil veya bu kullanıcı için kullanılamıyor." else "Google Play bağlantısı hazırlanıyor."
+                            notice = if (connected) sh("Seçilen VIP ürünü Google Play hesabında yayımlı değil veya bu kullanıcı için kullanılamıyor.", "The selected VIP product is not published in Google Play or is unavailable for this user.") else sh("Google Play bağlantısı hazırlanıyor.", "Preparing the Google Play connection.")
                             return@Button
                         }
                         busy = true
                         val result = manager.launchProduct(activity, product)
                         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
                             busy = false
-                            notice = "Google Play ödeme ekranı açılamadı (${result.responseCode})."
+                            notice = sh("Google Play ödeme ekranı açılamadı (${result.responseCode}).", "The Google Play payment screen could not be opened (${result.responseCode}).")
                         }
                     },
                     enabled = !busy,
