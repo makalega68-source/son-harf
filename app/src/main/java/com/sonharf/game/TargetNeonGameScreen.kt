@@ -92,7 +92,7 @@ fun TargetNeonGameScreen(
         "turn_expired" in raw -> "Süren doldu."
         "vip_required" in raw -> "Özel oda oluşturmak için aktif VIP üyeliği gerekli."
         "team_arena_active" in raw || "team_arena_already_active" in raw ->
-            "Açık 2v2 lobin var. Takım Arenası'na dönüp lobiyi kapat."
+            "Takım Arenası maçın sürüyor. Önce 2v2 maçı bitir."
         "word_arena_match_active" in raw -> "Aktif Kelime Arenası maçını bitir."
         "daily_arena_active" in raw -> "Aktif Resmî Koşuyu bitir."
         "player_already_in_game" in raw -> "Devam eden bir maçın varken yeni oda oluşturamazsın."
