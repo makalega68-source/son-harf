@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.DailyCipherStatusDto
 import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.getDailyCipherStatus
 import com.sonharf.game.data.submitDailyCipherGuess
