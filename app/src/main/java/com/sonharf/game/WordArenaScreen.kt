@@ -99,8 +99,12 @@ fun WordArenaScreen(
     }
 
     fun leaveScreen() {
+        val finishedRoom = room?.takeIf { it.status == "finished" }?.id
         scope.launch {
             if (matchmaking == "waiting") runCatching { backend?.cancelWordArena() }
+            if (rematchStatus == "waiting" && finishedRoom != null) {
+                runCatching { backend?.cancelWordArenaRematch(finishedRoom) }
+            }
             onExit()
         }
     }
@@ -267,13 +271,20 @@ fun WordArenaScreen(
                     }
                 },
                 onNewOpponent = {
-                    rematchStatus = "idle"
-                    room = null
-                    roomId = null
-                    words = emptyList()
-                    opponentProfile = null
-                    matchmaking = "idle"
-                    startMatchmaking()
+                    scope.launch {
+                        busy = true
+                        if (rematchStatus == "waiting") {
+                            runCatching { backend?.cancelWordArenaRematch(active.id) }
+                        }
+                        rematchStatus = "idle"
+                        room = null
+                        roomId = null
+                        words = emptyList()
+                        opponentProfile = null
+                        matchmaking = "idle"
+                        busy = false
+                        startMatchmaking()
+                    }
                 },
                 onExit = ::leaveScreen,
             )
