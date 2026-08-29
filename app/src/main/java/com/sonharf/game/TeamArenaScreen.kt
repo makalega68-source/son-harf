@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Groups
@@ -18,9 +20,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,6 +49,7 @@ fun TeamArenaScreen(
     var roomId by remember(initialRoomId) { mutableStateOf(initialRoomId) }
     var room by remember { mutableStateOf<TeamArenaRoomDto?>(null) }
     var members by remember { mutableStateOf<List<TeamArenaMemberDto>>(emptyList()) }
+    var memberProfiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
     var words by remember { mutableStateOf<List<TeamArenaWordDto>>(emptyList()) }
     var friends by remember { mutableStateOf<List<SocialProfileDto>>(emptyList()) }
     var inviteTeam by remember { mutableStateOf<Int?>(null) }
@@ -58,7 +65,13 @@ fun TeamArenaScreen(
         runCatching {
             val next = b.getTeamArenaRoom(id)
             room = next
-            members = b.getTeamArenaMembers(id)
+            val nextMembers = b.getTeamArenaMembers(id)
+            members = nextMembers
+            val nextProfiles = mutableMapOf<String, ProfileDto?>()
+            for (member in nextMembers) {
+                nextProfiles[member.userId] = runCatching { b.getProfile(member.userId) }.getOrNull()
+            }
+            memberProfiles = nextProfiles
             words = if (next.status in setOf("playing", "finished")) {
                 b.getTeamArenaWords(id)
             } else {
@@ -145,6 +158,7 @@ fun TeamArenaScreen(
                     roomId = null
                     room = null
                     members = emptyList()
+                    memberProfiles = emptyMap()
                     words = emptyList()
                     onExit()
                 }
@@ -262,6 +276,7 @@ fun TeamArenaScreen(
             active.status == "lobby" -> TeamArenaLobby(
                 room = active,
                 members = members,
+                memberProfiles = memberProfiles,
                 me = me,
                 busy = busy,
                 notice = notice,
@@ -326,6 +341,7 @@ fun TeamArenaScreen(
             active.status == "playing" -> TeamArenaPlaying(
                 room = active,
                 members = members,
+                memberProfiles = memberProfiles,
                 words = words,
                 myTeam = myTeam,
                 prepSeconds = prepSeconds,
@@ -484,6 +500,7 @@ private fun TeamArenaIntro(
 private fun TeamArenaLobby(
     room: TeamArenaRoomDto,
     members: List<TeamArenaMemberDto>,
+    memberProfiles: Map<String, ProfileDto?>,
     me: String?,
     busy: Boolean,
     notice: String,
@@ -515,6 +532,7 @@ private fun TeamArenaLobby(
                     title = sh("TAKIM A", "TEAM A"),
                     team = 1,
                     members = members,
+                    memberProfiles = memberProfiles,
                     hostCanInvite = room.isHost,
                     onInvite = { onInvite(1) },
                     modifier = Modifier.weight(1f),
@@ -523,6 +541,7 @@ private fun TeamArenaLobby(
                     title = sh("TAKIM B", "TEAM B"),
                     team = 2,
                     members = members,
+                    memberProfiles = memberProfiles,
                     hostCanInvite = room.isHost,
                     onInvite = { onInvite(2) },
                     modifier = Modifier.weight(1f),
@@ -595,6 +614,7 @@ private fun TeamArenaTeamCard(
     title: String,
     team: Int,
     members: List<TeamArenaMemberDto>,
+    memberProfiles: Map<String, ProfileDto?>,
     hostCanInvite: Boolean,
     onInvite: () -> Unit,
     modifier: Modifier,
@@ -635,7 +655,13 @@ private fun TeamArenaTeamCard(
                             Text("＋", color = SonHarfMuted, fontSize = 20.sp)
                             Text(sh("Boş", "Empty"), color = SonHarfMuted, fontSize = 8.sp)
                         } else {
-                            Text(if (member.isHost) "👑" else if (member.ready) "✓" else "…", fontSize = 16.sp)
+                            ProfilePhotoAvatar(
+                                avatarPath = memberProfiles[member.userId]?.avatarPath,
+                                name = member.displayName,
+                                size = 34.dp,
+                                accent = if (team == 1) SonHarfBlue else SonHarfGold,
+                            )
+                            Text(if (member.isHost) "👑" else if (member.ready) "✓" else "…", fontSize = 12.sp)
                             Text(
                                 member.displayName,
                                 color = SonHarfText,
@@ -665,6 +691,7 @@ private fun TeamArenaTeamCard(
 private fun TeamArenaPlaying(
     room: TeamArenaRoomDto,
     members: List<TeamArenaMemberDto>,
+    memberProfiles: Map<String, ProfileDto?>,
     words: List<TeamArenaWordDto>,
     myTeam: Int,
     prepSeconds: Int,
@@ -678,9 +705,21 @@ private fun TeamArenaPlaying(
     val myScore = if (myTeam == 1) room.teamAScore else room.teamBScore
     val opponentScore = if (myTeam == 1) room.teamBScore else room.teamAScore
     val teammateNames = members.filter { it.team == myTeam }.joinToString(" + ") { it.displayName }
+    val inputFocusRequester = remember { FocusRequester() }
+    val softwareKeyboard = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(room.roomId, room.status, busy, prepSeconds, remainingSeconds) {
+        if (room.status == "playing") {
+            delay(120)
+            runCatching { inputFocusRequester.requestFocus() }
+            softwareKeyboard?.show()
+        } else {
+            softwareKeyboard?.hide()
+        }
+    }
 
     LazyColumn(
-        Modifier.fillMaxSize(),
+        Modifier.fillMaxSize().imePadding(),
         contentPadding = PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -701,6 +740,19 @@ private fun TeamArenaPlaying(
                         fontWeight = FontWeight.Black,
                         fontSize = 11.sp,
                     )
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        members.filter { it.team == myTeam }.forEach { member ->
+                            ProfilePhotoAvatar(
+                                avatarPath = memberProfiles[member.userId]?.avatarPath,
+                                name = member.displayName,
+                                size = 30.dp,
+                                accent = SonHarfBlue,
+                            )
+                        }
+                    }
                     Text(teammateNames, color = SonHarfMuted, fontSize = 9.sp)
                     Text(
                         if (prepSeconds > 0)
@@ -743,11 +795,18 @@ private fun TeamArenaPlaying(
         item {
             OutlinedTextField(
                 value = input,
-                onValueChange = onInput,
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !busy && prepSeconds == 0 && remainingSeconds > 0,
+                onValueChange = { value ->
+                    if (!busy && prepSeconds == 0 && remainingSeconds > 0) onInput(value)
+                },
+                modifier = Modifier.fillMaxWidth().focusRequester(inputFocusRequester),
+                enabled = true,
                 singleLine = true,
                 label = { Text(sh("3–10 harfli kelime", "3–10 letter word")) },
+                keyboardOptions = KeyboardOptions(
+                    imeAction = ImeAction.Send,
+                    showKeyboardOnFocus = true,
+                ),
+                keyboardActions = KeyboardActions(onSend = { onSubmit() }),
                 trailingIcon = {
                     TextButton(
                         onClick = onSubmit,
