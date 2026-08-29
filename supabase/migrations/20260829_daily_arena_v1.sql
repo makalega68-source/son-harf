@@ -678,3 +678,89 @@ grant execute on function public.submit_daily_arena_word_v1(uuid,text) to authen
 grant execute on function public.get_daily_arena_status_v1(text) to authenticated;
 grant execute on function public.get_daily_arena_words_v1(uuid) to authenticated;
 grant execute on function public.get_daily_arena_leaderboard_v1(text,integer) to authenticated;
+
+
+-- Prevent a timed Daily Arena run from overlapping other competitive modes.
+create or replace function public.prevent_queue_during_daily_arena_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path=''
+as $$
+begin
+  if new.status='waiting'
+     and exists(
+       select 1
+       from public.daily_arena_runs dar
+       where dar.user_id=new.user_id
+         and dar.status='playing'
+         and dar.ends_at>clock_timestamp()
+     )
+  then
+    raise exception 'daily_arena_active';
+  end if;
+
+  return new;
+end
+$$;
+
+create or replace function public.prevent_room_during_daily_arena_v1()
+returns trigger
+language plpgsql
+security definer
+set search_path=''
+as $$
+begin
+  if exists(
+    select 1
+    from public.daily_arena_runs dar
+    where dar.status='playing'
+      and dar.ends_at>clock_timestamp()
+      and (
+        dar.user_id=new.host_id
+        or (new.guest_id is not null and dar.user_id=new.guest_id)
+      )
+  ) then
+    raise exception 'daily_arena_active';
+  end if;
+
+  return new;
+end
+$$;
+
+drop trigger if exists trg_prevent_matchmaking_queue_during_daily_arena_v1
+  on public.matchmaking_queue;
+create trigger trg_prevent_matchmaking_queue_during_daily_arena_v1
+before insert or update of status
+on public.matchmaking_queue
+for each row
+execute function public.prevent_queue_during_daily_arena_v1();
+
+drop trigger if exists trg_prevent_word_arena_queue_during_daily_arena_v1
+  on public.word_arena_queue;
+create trigger trg_prevent_word_arena_queue_during_daily_arena_v1
+before insert or update of status
+on public.word_arena_queue
+for each row
+execute function public.prevent_queue_during_daily_arena_v1();
+
+drop trigger if exists trg_prevent_game_room_during_daily_arena_v1
+  on public.game_rooms;
+create trigger trg_prevent_game_room_during_daily_arena_v1
+before insert
+on public.game_rooms
+for each row
+execute function public.prevent_room_during_daily_arena_v1();
+
+drop trigger if exists trg_prevent_word_arena_room_during_daily_arena_v1
+  on public.word_arena_rooms;
+create trigger trg_prevent_word_arena_room_during_daily_arena_v1
+before insert
+on public.word_arena_rooms
+for each row
+execute function public.prevent_room_during_daily_arena_v1();
+
+revoke all on function public.prevent_queue_during_daily_arena_v1()
+  from public,anon,authenticated;
+revoke all on function public.prevent_room_during_daily_arena_v1()
+  from public,anon,authenticated;
