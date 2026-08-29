@@ -54,6 +54,26 @@ fun LightWordThemeApp() {
     var authenticated by remember { mutableStateOf(false) }
     var lastHomeBack by remember { mutableLongStateOf(0L) }
 
+    val openMode: (String) -> Unit = { mode ->
+        when (mode) {
+            "duel" -> { gameKey += 1; screen = LightScreen.SON_HARF }
+            "word_arena" -> {
+                arenaInitialRoomId = null
+                WordArenaNavigation.clearRoom()
+                screen = LightScreen.KELIME_ARENASI
+            }
+            "team_arena" -> {
+                teamArenaInitialRoomId = null
+                TeamArenaNavigation.clearRoom()
+                screen = LightScreen.TAKIM_ARENASI
+            }
+            "daily_arena" -> screen = LightScreen.GUNLUK_ARENA
+            "daily_cipher" -> screen = LightScreen.KELIME_AVI
+            "bil_bakalim" -> screen = LightScreen.KELIME_SAVASI
+            else -> screen = LightScreen.TASKS
+        }
+    }
+
     LaunchedEffect(Unit) {
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
         authChecked = true
@@ -140,6 +160,7 @@ fun LightWordThemeApp() {
                     onMarket = { screen = LightScreen.MARKET },
                     onTasks = { screen = LightScreen.TASKS },
                     onProfile = { screen = LightScreen.PROFILE },
+                    onRouteMode = openMode,
                 )
                 LightScreen.SON_HARF -> key(gameKey) {
                     TargetNeonGameScreen(autoStartMatchmaking = true)
@@ -166,7 +187,7 @@ fun LightWordThemeApp() {
                 LightScreen.COMPETITION -> CompetitionHubScreen { screen = LightScreen.HOME }
                 LightScreen.LEAGUE -> LeaderboardExperienceScreen { screen = LightScreen.HOME }
                 LightScreen.MARKET -> EconomyShopScreen(onBack = { screen = LightScreen.HOME })
-                LightScreen.TASKS -> LightTasksScreen(backend)
+                LightScreen.TASKS -> LightTasksScreen(backend, openMode)
                 LightScreen.PROFILE -> ProfileExperienceScreen(onBack = { screen = LightScreen.HOME })
             }
         }
@@ -221,18 +242,37 @@ private fun LightHomeScreen(
     onMarket: () -> Unit,
     onTasks: () -> Unit,
     onProfile: () -> Unit,
+    onRouteMode: (String) -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
     var rival by remember { mutableStateOf<ArchRivalDto?>(null) }
+    var topClubs by remember { mutableStateOf<List<ClubDirectoryRowDto>>(emptyList()) }
+    var topPlayers by remember { mutableStateOf<List<WeeklyTournamentLeaderboardRowDto>>(emptyList()) }
+    var topPlayerProfiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
+    var unifiedMissions by remember { mutableStateOf<List<UnifiedMissionDto>>(emptyList()) }
 
-    LaunchedEffect(backend) {
+    LaunchedEffect(backend, SonHarfUiState.homeRequest) {
         val b = backend ?: return@LaunchedEffect
         val me = b.currentUserId() ?: return@LaunchedEffect
         profile = runCatching { b.getProfile(me) }.getOrNull()
         growth = runCatching { b.getGrowthDashboard() }.getOrNull()
         rival = runCatching { b.getArchRival() }.getOrNull()
+        topClubs = runCatching { b.getClubDirectory(3) }.getOrDefault(emptyList())
+        topPlayers = runCatching { b.getWeeklyTournamentLeaderboard(3) }.getOrDefault(emptyList())
+        val profiles = mutableMapOf<String, ProfileDto?>()
+        topPlayers.forEach { row ->
+            profiles[row.userId] = runCatching { b.getProfile(row.userId) }.getOrNull()
+        }
+        topPlayerProfiles = profiles
+        unifiedMissions = runCatching { b.getUnifiedMissions() }.getOrDefault(emptyList())
     }
+
+    val nextRoute = unifiedMissions.firstOrNull {
+        it.scope == "daily" && !it.completed && it.modeKey != "route"
+    } ?: unifiedMissions.firstOrNull {
+        it.scope == "weekly" && !it.completed && it.modeKey != "route"
+    } ?: unifiedMissions.firstOrNull { !it.claimed }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -292,6 +332,10 @@ private fun LightHomeScreen(
                 }
             }
         }
+
+        item { UnifiedRouteCard(nextRoute, onRouteMode) }
+        item { WeeklyClubPodiumCard(topClubs) }
+        item { WeeklyPlayerPodiumCard(topPlayers, topPlayerProfiles) }
 
         if (rival != null) {
             item {
@@ -453,9 +497,22 @@ private fun LightShortcut(icon: ImageVector, label: String, modifier: Modifier, 
 }
 
 @Composable
-private fun LightTasksScreen(backend: OnlineGameBackend?) {
+private fun LightTasksScreen(
+    backend: OnlineGameBackend?,
+    onPlayMode: (String) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
     var goals by remember { mutableStateOf<List<GoalRowDto>>(emptyList()) }
-    LaunchedEffect(Unit) { goals = runCatching { backend?.getGoals().orEmpty() }.getOrDefault(emptyList()) }
+    var unified by remember { mutableStateOf<List<UnifiedMissionDto>>(emptyList()) }
+    var busy by remember { mutableStateOf(false) }
+    var notice by remember { mutableStateOf("") }
+
+    suspend fun reload() {
+        goals = runCatching { backend?.getGoals().orEmpty() }.getOrDefault(emptyList())
+        unified = runCatching { backend?.getUnifiedMissions().orEmpty() }.getOrDefault(emptyList())
+    }
+
+    LaunchedEffect(Unit) { reload() }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -464,7 +521,53 @@ private fun LightTasksScreen(backend: OnlineGameBackend?) {
     ) {
         item {
             Text("Görevler", color = LightText, fontSize = 25.sp, fontWeight = FontWeight.Black)
-            Text("Günlük ilerlemeni tek ekranda takip et.", color = LightMuted, fontSize = 10.sp)
+            Text("Tüm oyunlar aynı rotaya hizmet eder. Rotayı tamamla, hesabını ilerlet.", color = LightMuted, fontSize = 10.sp)
+        }
+
+        item {
+            Text("OYUN ROTASI", color = LightBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        }
+        if (unified.isEmpty()) {
+            item {
+                Surface(shape = RoundedCornerShape(18.dp), color = LightSurface, border = BorderStroke(1.dp, LightBorder)) {
+                    Text("Oyun rotası hazırlanıyor.", Modifier.fillMaxWidth().padding(16.dp), color = LightMuted)
+                }
+            }
+        } else {
+            items(unified, key = { it.missionId }) { mission ->
+                UnifiedMissionCard(
+                    mission = mission,
+                    busy = busy,
+                    onPlay = onPlayMode,
+                    onClaim = {
+                        val b = backend ?: return@UnifiedMissionCard
+                        scope.launch {
+                            busy = true
+                            runCatching { b.claimUnifiedMission(mission.missionId) }
+                                .onSuccess {
+                                    SonHarfSoundFx.missionComplete()
+                                    notice = "+${it.rewardCoins} Son Coin • Görev tamamlandı"
+                                    reload()
+                                }
+                                .onFailure {
+                                    notice = "Ödül şu anda alınamadı."
+                                    SonHarfSoundFx.warning()
+                                }
+                            busy = false
+                        }
+                    },
+                )
+            }
+        }
+
+        if (notice.isNotBlank()) {
+            item {
+                Text(notice, Modifier.fillMaxWidth(), color = if (notice.startsWith("+")) LightGreen else LightMuted, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+            }
+        }
+
+        item {
+            Text("DİĞER GÖREVLER", color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Black)
         }
         if (goals.isEmpty()) {
             item {
