@@ -144,3 +144,9 @@ suspend fun OnlineGameBackend.pollWordArenaRematch(roomId: String): WordArenaAct
         "poll_word_arena_rematch_v1",
         buildJsonObject { put("p_room_id", roomId) },
     ).decodeSingle()
+
+suspend fun OnlineGameBackend.cancelWordArenaRematch(roomId: String): Boolean =
+    SupabaseProvider.client.postgrest.rpc(
+        "cancel_word_arena_rematch_v1",
+        buildJsonObject { put("p_room_id", roomId) },
+    ).decodeSingle()
