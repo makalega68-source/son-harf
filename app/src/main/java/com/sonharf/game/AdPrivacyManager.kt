@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import android.app.Activity
 import android.content.Context
+import android.content.ContextWrapper
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -64,6 +65,12 @@ object AdPrivacyManager {
             refreshState(activity.applicationContext)
             onComplete(error == null)
         }
+    }
+
+    fun findActivity(context: Context): Activity? = when (context) {
+        is Activity -> context
+        is ContextWrapper -> findActivity(context.baseContext)
+        else -> null
     }
 
     private fun refreshState(context: Context) {
