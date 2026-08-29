@@ -190,7 +190,7 @@ internal fun UnifiedMissionCard(
                         enabled = !busy,
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 3.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PortalGreen),
-                    ) { Text("ÖDÜLÜ AL", fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                    ) { Text(if (busy) "…" else "ÖDÜLÜ AL", fontSize = 9.sp, fontWeight = FontWeight.Black) }
                     mission.modeKey != "route" -> TextButton(
                         onClick = { onPlay(mission.modeKey) },
                         enabled = !busy,
