@@ -35,6 +35,43 @@ data class MasteryMilestoneDto(
 )
 
 @Serializable
+data class MatchHistoryDto(
+    @SerialName("match_id") val matchId: String,
+    val mode: String,
+    @SerialName("opponent_id") val opponentId: String,
+    @SerialName("display_name") val displayName: String,
+    val result: String,
+    @SerialName("my_score") val myScore: Int = 0,
+    @SerialName("their_score") val theirScore: Int = 0,
+    @SerialName("rating_delta") val ratingDelta: Int = 0,
+    val language: String = "tr",
+    @SerialName("played_at") val playedAt: String,
+    @SerialName("is_friend") val isFriend: Boolean = false,
+    @SerialName("presence_status") val presenceStatus: String = "offline",
+    @SerialName("can_challenge") val canChallenge: Boolean = false,
+)
+
+@Serializable
+data class PersonalRecordsDto(
+    @SerialName("real_pvp_matches") val realPvpMatches: Int = 0,
+    @SerialName("real_pvp_wins") val realPvpWins: Int = 0,
+    @SerialName("real_pvp_losses") val realPvpLosses: Int = 0,
+    @SerialName("real_pvp_draws") val realPvpDraws: Int = 0,
+    @SerialName("classic_matches") val classicMatches: Int = 0,
+    @SerialName("arena_matches") val arenaMatches: Int = 0,
+    @SerialName("current_rating") val currentRating: Int = 1000,
+    @SerialName("best_streak") val bestStreak: Int = 0,
+    @SerialName("valid_words") val validWords: Int = 0,
+    @SerialName("longest_word") val longestWord: String = "",
+    @SerialName("longest_word_length") val longestWordLength: Int = 0,
+    @SerialName("best_classic_score") val bestClassicScore: Int = 0,
+    @SerialName("best_arena_score") val bestArenaScore: Int = 0,
+    @SerialName("biggest_win_margin") val biggestWinMargin: Int = 0,
+    @SerialName("favorite_rival_name") val favoriteRivalName: String = "",
+    @SerialName("favorite_rival_matches") val favoriteRivalMatches: Int = 0,
+)
+
+@Serializable
 data class RivalHistoryDto(
     @SerialName("opponent_id") val opponentId: String,
     @SerialName("display_name") val displayName: String,
@@ -100,6 +137,15 @@ suspend fun OnlineGameBackend.claimMasteryReward(milestoneId: String): Int =
         "claim_mastery_reward_v1",
         buildJsonObject { put("p_milestone_id", milestoneId) },
     ).decodeSingle()
+
+suspend fun OnlineGameBackend.getMatchHistory(limit: Int = 30): List<MatchHistoryDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "get_match_history_v1",
+        buildJsonObject { put("p_limit", limit.coerceIn(1, 100)) },
+    ).decodeList()
+
+suspend fun OnlineGameBackend.getPersonalRecords(): PersonalRecordsDto =
+    SupabaseProvider.client.postgrest.rpc("get_personal_records_v1").decodeSingle()
 
 suspend fun OnlineGameBackend.getRivalHistory(limit: Int = 20): List<RivalHistoryDto> =
     SupabaseProvider.client.postgrest.rpc(
