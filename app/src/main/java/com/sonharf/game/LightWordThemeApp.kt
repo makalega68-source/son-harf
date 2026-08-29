@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
 
-private enum class LightScreen { HOME, SON_HARF, KELIME_ARENASI, KELIME_AVI, KELIME_SAVASI, COMPETITION, LEAGUE, MARKET, TASKS, PROFILE }
+private enum class LightScreen { HOME, SON_HARF, KELIME_ARENASI, GUNLUK_ARENA, KELIME_AVI, KELIME_SAVASI, COMPETITION, LEAGUE, MARKET, TASKS, PROFILE }
 
 private val LightBg = Color(0xFFF7F9FC)
 private val LightSurface = Color.White
@@ -116,6 +116,7 @@ fun LightWordThemeApp() {
                         WordArenaNavigation.clearRoom()
                         screen = LightScreen.KELIME_ARENASI
                     },
+                    onGunlukArena = { screen = LightScreen.GUNLUK_ARENA },
                     onKelimeAvi = { screen = LightScreen.KELIME_AVI },
                     onKelimeSavasi = { screen = LightScreen.KELIME_SAVASI },
                     onCompetition = { screen = LightScreen.COMPETITION },
@@ -135,6 +136,7 @@ fun LightWordThemeApp() {
                         screen = LightScreen.HOME
                     },
                 )
+                LightScreen.GUNLUK_ARENA -> DailyArenaScreen { screen = LightScreen.HOME }
                 LightScreen.KELIME_AVI -> DailyCipherScreen { screen = LightScreen.HOME }
                 LightScreen.KELIME_SAVASI -> TrackedBilBakalimStandaloneScreen { screen = LightScreen.HOME }
                 LightScreen.COMPETITION -> CompetitionHubScreen { screen = LightScreen.HOME }
@@ -186,6 +188,7 @@ private fun LightHomeScreen(
     backend: OnlineGameBackend?,
     onSonHarf: () -> Unit,
     onKelimeArenasi: () -> Unit,
+    onGunlukArena: () -> Unit,
     onKelimeAvi: () -> Unit,
     onKelimeSavasi: () -> Unit,
     onCompetition: () -> Unit,
@@ -338,6 +341,17 @@ private fun LightHomeScreen(
                     }
                 }
             }
+        }
+
+        item {
+            LightGameCard(
+                Icons.Rounded.EmojiEvents,
+                "Günlük Arena",
+                "Herkes aynı harflerle yarışır • tek resmî deneme • günlük seri.",
+                "BUGÜN",
+                LightGold,
+                onGunlukArena,
+            )
         }
 
         item { Text("DİĞER OYUNLAR", color = LightMuted, fontSize = 11.sp, fontWeight = FontWeight.Black) }
