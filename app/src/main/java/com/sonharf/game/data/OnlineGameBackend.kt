@@ -151,7 +151,10 @@ object SupabaseProvider {
     val client: SupabaseClient by lazy {
         require(configured)
         createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY) {
-            install(Auth)
+            install(Auth) {
+                scheme = "sonharf"
+                host = "auth"
+            }
             install(Postgrest)
             install(Realtime)
         }
