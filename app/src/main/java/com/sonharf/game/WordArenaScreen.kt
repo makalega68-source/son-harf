@@ -59,6 +59,12 @@ fun WordArenaScreen(
     var busy by remember { mutableStateOf(false) }
     var rematchStatus by remember { mutableStateOf("idle") }
     var clockMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var botMode by remember { mutableStateOf(false) }
+
+    if (botMode) {
+        WordDuelBotScreen(onExit = { botMode = false })
+        return
+    }
 
     suspend fun refreshRoom(id: String) {
         val b = backend ?: return
@@ -232,12 +238,20 @@ fun WordArenaScreen(
                     }
                 },
                 onBack = ::leaveScreen,
+                onBot = {
+                    scope.launch {
+                        runCatching { backend?.cancelWordArena() }
+                        matchmaking = "idle"
+                        botMode = true
+                    }
+                },
                 busy = busy,
             )
 
             active == null -> ArenaIntroScreen(
                 onBack = ::leaveScreen,
                 onPlay = ::startMatchmaking,
+                onBot = { botMode = true },
                 busy = busy,
                 notice = notice,
             )
@@ -359,6 +373,7 @@ fun WordArenaScreen(
 private fun ArenaIntroScreen(
     onBack: () -> Unit,
     onPlay: () -> Unit,
+    onBot: () -> Unit,
     busy: Boolean,
     notice: String,
 ) {
@@ -430,13 +445,24 @@ private fun ArenaIntroScreen(
             Button(
                 onClick = onPlay,
                 enabled = !busy,
-                modifier = Modifier.fillMaxWidth().height(60.dp),
+                modifier = Modifier.fillMaxWidth().height(58.dp),
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
             ) {
-                Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(28.dp))
+                Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(26.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(if (busy) "…" else sh("RAKİP BUL", "FIND OPPONENT"), fontSize = 19.sp, fontWeight = FontWeight.Black)
+                Text(if (busy) "…" else sh("CANLI RAKİP", "LIVE RIVAL"), fontSize = 18.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        item {
+            OutlinedButton(
+                onClick = onBot,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.5.dp, SonHarfBlue.copy(alpha = .45f)),
+            ) {
+                Text(sh("BOTLA OYNA", "PLAY BOT"), color = SonHarfBlue, fontWeight = FontWeight.Black, fontSize = 16.sp)
             }
         }
     }
@@ -463,7 +489,7 @@ private fun ArenaRuleCard(icon: String, title: String, text: String) {
 }
 
 @Composable
-private fun ArenaWaitingScreen(onCancel: () -> Unit, onBack: () -> Unit, busy: Boolean) {
+private fun ArenaWaitingScreen(onCancel: () -> Unit, onBack: () -> Unit, onBot: () -> Unit, busy: Boolean) {
     Column(
         Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -474,9 +500,10 @@ private fun ArenaWaitingScreen(onCancel: () -> Unit, onBack: () -> Unit, busy: B
         Text(sh("RAKİP ARANIYOR", "FINDING OPPONENT"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
         Text(sh("Rating seviyene yakın oyuncu aranıyor.", "Looking for a player near your rating."), color = SonHarfMuted, fontSize = 11.sp)
         Spacer(Modifier.height(22.dp))
-        OutlinedButton(onClick = onCancel, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
-            Text(sh("ARAMAYI İPTAL ET", "CANCEL SEARCH"))
+        OutlinedButton(onClick = onBot, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+            Text(sh("BOTLA HEMEN OYNA", "PLAY BOT NOW"), fontWeight = FontWeight.Black)
         }
+        TextButton(onClick = onCancel, enabled = !busy) { Text(sh("ARAMAYI İPTAL ET", "CANCEL SEARCH")) }
         TextButton(onClick = onBack) { Text(sh("ANA SAYFAYA DÖN", "BACK HOME")) }
     }
 }
