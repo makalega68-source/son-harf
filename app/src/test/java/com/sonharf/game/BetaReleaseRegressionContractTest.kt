@@ -31,7 +31,9 @@ class BetaReleaseRegressionContractTest {
 
         assertTrue(cipher.contains("EmbeddedWordKeyboard("))
         assertFalse(cipher.contains("LocalSoftwareKeyboardController"))
-        assertTrue(wordArena.contains("inputFocusRequester.requestFocus()"))
+        assertTrue(wordArena.contains("EmbeddedWordKeyboard("))
+        assertFalse(wordArena.contains("LocalSoftwareKeyboardController"))
+        assertFalse(wordArena.contains("inputFocusRequester.requestFocus()"))
         assertTrue(dailyArena.contains("EmbeddedWordKeyboard("))
         assertFalse(dailyArena.contains("Modifier.fillMaxSize().imePadding()"))
         assertTrue(teamArena.contains("inputFocusRequester.requestFocus()"))
