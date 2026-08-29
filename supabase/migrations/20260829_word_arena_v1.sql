@@ -22,7 +22,7 @@ as $$
   )
   select coalesce(bool_and(wc.n<=coalesce(lc.n,0)),true)
   from wc left join lc using(ch)
-$$;
+$$$;
 
 revoke all on function public.arena_word_fits_letters_v1(text,text) from public,anon,authenticated;
 
@@ -143,7 +143,7 @@ begin
   v_idx:=1+floor(random()*array_length(v_sets,1))::int;
   return v_sets[v_idx];
 end
-$$;
+$$$;
 
 create or replace function public.finish_word_arena_internal_v1(p_room_id uuid)
 returns public.word_arena_rooms
@@ -322,7 +322,7 @@ begin
 
   return r;
 end
-$$;
+$$$;
 
 create or replace function public.join_word_arena_v1(p_language text default 'tr')
 returns jsonb
@@ -451,7 +451,7 @@ begin
 
   return jsonb_build_object('status','matched','room_id',v_room.id);
 end
-$$;
+$$$;
 
 create or replace function public.poll_word_arena_v1()
 returns jsonb
@@ -487,7 +487,7 @@ begin
 
   return jsonb_build_object('status',q.status);
 end
-$$;
+$$$;
 
 create or replace function public.cancel_word_arena_v1()
 returns void
@@ -503,7 +503,7 @@ begin
   where user_id=v_uid and status='waiting';
   update public.profiles set presence_status='online',last_seen_at=now() where id=v_uid;
 end
-$$;
+$$$;
 
 create or replace function public.get_word_arena_room_v1(p_room_id uuid)
 returns public.word_arena_rooms
@@ -524,7 +524,7 @@ begin
   end if;
   return r;
 end
-$$;
+$$$;
 
 create or replace function public.get_word_arena_words_v1(p_room_id uuid)
 returns table(
@@ -558,7 +558,7 @@ begin
     and (r.status='finished' or w.user_id=v_uid)
   order by w.created_at,w.id;
 end
-$;
+$$;
 
 create or replace function public.submit_word_arena_v1(p_room_id uuid,p_word text)
 returns jsonb
@@ -656,7 +656,7 @@ begin
     'provisional_score',v_score
   );
 end
-$$;
+$$$;
 
 create or replace function public.prevent_sonharf_queue_during_word_arena_v1()
 returns trigger
@@ -674,7 +674,7 @@ begin
   end if;
   return new;
 end
-$$;
+$$$;
 
 drop trigger if exists trg_prevent_sonharf_queue_during_word_arena_v1 on public.matchmaking_queue;
 create trigger trg_prevent_sonharf_queue_during_word_arena_v1
@@ -700,7 +700,7 @@ begin
   end if;
   return new;
 end
-$;
+$$;
 
 drop trigger if exists trg_prevent_game_room_during_word_arena_v1 on public.game_rooms;
 create trigger trg_prevent_game_room_during_word_arena_v1
