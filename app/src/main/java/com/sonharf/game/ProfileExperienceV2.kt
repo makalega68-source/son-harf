@@ -740,7 +740,7 @@ private fun CompetitiveSeasonHistoryCardV2(
                     color = SonHarfPurple.copy(alpha = .10f),
                 ) {
                     Text(
-                        "§honorIcon §honor",
+                        "$honorIcon $honor",
                         Modifier.fillMaxWidth().padding(8.dp),
                         color = SonHarfPurple,
                         fontWeight = FontWeight.Bold,
