@@ -15,14 +15,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.max
@@ -44,6 +48,10 @@ private val BilRed = Color(0xFFE64B55)
 internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val focus = LocalFocusManager.current
+    val softwareKeyboard = LocalSoftwareKeyboardController.current
+    val answerFocusRequester = remember { FocusRequester() }
+    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
+    var playerProfile by remember { mutableStateOf<ProfileDto?>(null) }
     val prefs = remember { context.getSharedPreferences("bil_bakalim_excitement", 0) }
     var rating by remember { mutableIntStateOf(prefs.getInt("rating", 1000)) }
     var wins by remember { mutableIntStateOf(prefs.getInt("wins", 0)) }
@@ -73,6 +81,12 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
     val isBoss = questionNo == 5
     val isFinal = questionNo == 10
 
+    LaunchedEffect(Unit) {
+        val b = backend ?: return@LaunchedEffect
+        val me = b.currentUserId() ?: return@LaunchedEffect
+        playerProfile = runCatching { b.getProfile(me) }.getOrNull()
+    }
+
     fun resetQuestion() {
         input = ""; seconds = 20; phase = ExcitementPhase.ANSWER; risk = false; hint = null; roundMessage = ""; lastTitle = null
     }
@@ -98,6 +112,7 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
         val rivalPoints = (10 + if (isBoss) 5 else 0) * roundMultiplier
         playedCount += 1
         if (outcome.won) {
+            SonHarfSoundFx.wordAccepted()
             playerScore += outcome.points
             matchStreak += 1
             bestStreak = max(bestStreak, matchStreak)
@@ -109,6 +124,7 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
                 if (outcome.streakBonus > 0) append(" • Seri +${outcome.streakBonus}")
             }
         } else {
+            SonHarfSoundFx.warning()
             rivalScore += rivalPoints
             matchStreak = 0
             roundMessage = "Rakip daha yakındı • +$rivalPoints"
@@ -118,8 +134,15 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
 
     LaunchedEffect(index, phase) {
         if (phase != ExcitementPhase.ANSWER) return@LaunchedEffect
+        delay(100)
+        runCatching { answerFocusRequester.requestFocus() }
+        softwareKeyboard?.show()
         seconds = 20
-        while (seconds > 0 && phase == ExcitementPhase.ANSWER) { delay(1000); seconds -= 1 }
+        while (seconds > 0 && phase == ExcitementPhase.ANSWER) {
+            delay(1000)
+            seconds -= 1
+            if (seconds in 1..5) SonHarfSoundFx.countdown()
+        }
         if (seconds <= 0 && phase == ExcitementPhase.ANSWER) submit(null)
     }
 
@@ -129,6 +152,13 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
         val won = playerScore >= rivalScore
         if (won) { wins += 1; rating += 18 } else { losses += 1; rating = (rating - 12).coerceAtLeast(700) }
         prefs.edit().putInt("rating", rating).putInt("wins", wins).putInt("losses", losses).putInt("best_streak", bestStreak).apply()
+        runCatching {
+            backend?.logUnifiedEvent(
+                "bil_bakalim_match_finished",
+                "score=$playerScore-$rivalScore;won=$won",
+            )
+        }
+        if (won) SonHarfSoundFx.victory() else SonHarfSoundFx.defeat()
     }
 
     BackHandler { onBack() }
@@ -169,11 +199,30 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
                     Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
+                    Text(sh("BİL LİGİ", "TRIVIA LEAGUE"), color = BilMuted, fontSize = 7.sp, fontWeight = FontWeight.Black)
                     Text(league, color = BilText, fontSize = 11.sp, fontWeight = FontWeight.Black)
                     Text("$rating", color = BilCyan, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
+
+        CompetitionVsCard(
+            myName = playerProfile?.displayName ?: sh("Sen", "You"),
+            opponentName = sh("Bil Rakibi", "Trivia Rival"),
+            myAvatarPath = playerProfile?.avatarPath,
+            opponentAvatarPath = null,
+            myGender = playerProfile?.gender,
+            myRating = playerProfile?.rating,
+            centerText = "$playerScore–$rivalScore",
+        )
+
+        CompetitionLeadStrip(
+            myScore = playerScore,
+            opponentScore = rivalScore,
+            myStreak = matchStreak,
+            myAction = if (roundMessage.startsWith("KAZANDIN")) sh("Soruyu sen aldın.", "You won the question.") else null,
+            opponentAction = if (roundMessage.startsWith("Rakip")) sh("Rakip soruyu aldı.", "Rival won the question.") else null,
+        )
 
         Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             MetaChip("🔥 Seri", matchStreak.toString(), Modifier.weight(1f))
@@ -220,8 +269,12 @@ internal fun BilBakalimExcitementScreen(onBack: () -> Unit) {
                         hint?.let { Text("💡 Joker ipucu: $it", color = BilGreen, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) }
                         OutlinedTextField(
                             value = input,
-                            onValueChange = { input = it.filter { c -> c.isDigit() || c == ',' || c == '.' || c == '-' } },
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp),
+                            onValueChange = {
+                                val next = it.filter { c -> c.isDigit() || c == ',' || c == '.' || c == '-' }
+                                if (next.length > input.length) SonHarfSoundFx.typingClick()
+                                input = next
+                            },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 60.dp).focusRequester(answerFocusRequester),
                             singleLine = true,
                             label = { Text("Tahminin", fontSize = 12.sp) },
                             textStyle = LocalTextStyle.current.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
