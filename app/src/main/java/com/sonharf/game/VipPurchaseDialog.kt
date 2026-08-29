@@ -1,11 +1,6 @@
 package com.sonharf.game
 
 import android.app.Activity
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,7 +10,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -79,11 +73,7 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
         onDispose { manager.close() }
     }
 
-    val transition = rememberInfiniteTransition(label = "vipPulse")
-    val pulse by transition.animateFloat(.96f, 1.07f, infiniteRepeatable(tween(950), RepeatMode.Reverse), label = "vipScale")
-    val glow by transition.animateFloat(.18f, .54f, infiniteRepeatable(tween(1350), RepeatMode.Reverse), label = "vipGlow")
-    val sparkle by transition.animateFloat(.40f, 1f, infiniteRepeatable(tween(820), RepeatMode.Reverse), label = "vipSparkle")
-    val panelBase = if (SonHarfUiState.darkMode) Color(0xFF100C06) else Color(0xFFFFFCF3)
+    val panelBase = if (SonHarfUiState.darkMode) Color(0xFF11100D) else Color(0xFFFFFDF8)
     val selectedId = if (yearly) ProductCatalog.VIP_YEARLY else ProductCatalog.VIP_MONTHLY
     val selectedProduct = products[selectedId]
 
@@ -97,9 +87,9 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                 Modifier.fillMaxWidth().background(
                     Brush.verticalGradient(
                         listOf(
-                            SonHarfGold.copy(alpha = .22f + glow / 5f),
+                            SonHarfGold.copy(alpha = .15f),
                             panelBase,
-                            SonHarfPurple.copy(alpha = .10f),
+                            SonHarfPurple.copy(alpha = .055f),
                         )
                     ),
                     RoundedCornerShape(28.dp),
@@ -108,47 +98,47 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 Box(Modifier.fillMaxWidth()) {
-                    Text("✦", color = SonHarfGold.copy(alpha = sparkle), fontSize = 23.sp, modifier = Modifier.align(Alignment.TopStart))
-                    Text("✧", color = SonHarfGold.copy(alpha = .35f + glow), fontSize = 18.sp, modifier = Modifier.align(Alignment.TopEnd))
+                    Text("✦", color = SonHarfGold.copy(alpha = .72f), fontSize = 18.sp, modifier = Modifier.align(Alignment.TopStart))
+                    Text("✧", color = SonHarfGold.copy(alpha = .52f), fontSize = 16.sp, modifier = Modifier.align(Alignment.TopEnd))
                     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(
-                            Modifier.size(88.dp).scale(pulse).background(
+                            Modifier.size(68.dp).background(
                                 Brush.radialGradient(listOf(Color(0xFFFFEDB1), SonHarfGold.copy(alpha = .34f))), CircleShape,
                             ), contentAlignment = Alignment.Center,
-                        ) { Text("♛", color = Color(0xFF8C5700), fontSize = 48.sp, fontWeight = FontWeight.Black) }
+                        ) { Text("♛", color = Color(0xFF8C5700), fontSize = 36.sp, fontWeight = FontWeight.Black) }
                         Spacer(Modifier.height(7.dp))
                         Surface(color = SonHarfGold.copy(alpha = .14f), shape = RoundedCornerShape(99.dp), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .45f))) {
-                            Text("PREMIUM ÜYELİK", Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = SonHarfGold, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                            Text(sh("PREMIUM ÜYELİK", "PREMIUM MEMBERSHIP"), Modifier.padding(horizontal = 12.dp, vertical = 4.dp), color = SonHarfGold, fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
                         }
                         Spacer(Modifier.height(5.dp))
                         Text("SON HARF VIP", fontSize = 28.sp, fontWeight = FontWeight.Black, color = SonHarfText)
-                        Text("Oyunun en ayrıcalıklı tarafına geç.", color = SonHarfMuted, fontSize = 10.sp, textAlign = TextAlign.Center)
+                        Text(sh("Daha temiz, daha kişisel Son Harf deneyimi.", "A cleaner, more personal Son Harf experience."), color = SonHarfMuted, fontSize = 10.sp, textAlign = TextAlign.Center)
                     }
                 }
 
                 Surface(
-                    color = SonHarfGold.copy(alpha = .08f + glow / 8f),
+                    color = SonHarfGold.copy(alpha = .07f),
                     shape = RoundedCornerShape(20.dp),
                     border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .50f)),
                 ) {
                     Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            VipBenefit("◈", "400 SON COIN", "Her ay", Modifier.weight(1f))
-                            VipBenefit("♛", "ÖZEL ODA", "VIP erişim", Modifier.weight(1f))
+                            VipBenefit("◈", "400 SON COIN", sh("Her ay", "Monthly"), Modifier.weight(1f))
+                            VipBenefit("♛", sh("ÖZEL ODA", "PRIVATE ROOM"), sh("VIP erişim", "VIP access"), Modifier.weight(1f))
                         }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                            VipBenefit("✦", "STYLE", "Premium görünüm", Modifier.weight(1f))
-                            VipBenefit("↗", "İSTATİSTİK", "Gelişmiş", Modifier.weight(1f))
+                            VipBenefit("✦", "STYLE", sh("Premium görünüm", "Premium looks"), Modifier.weight(1f))
+                            VipBenefit("↗", sh("İSTATİSTİK", "STATS"), sh("Gelişmiş", "Advanced"), Modifier.weight(1f))
                         }
                         Surface(color = SonHarfSurface.copy(alpha = .72f), shape = RoundedCornerShape(13.dp)) {
-                            Text("✓ Reklamsız deneyim  •  ✓ VIP profil dokunuşları", Modifier.fillMaxWidth().padding(9.dp), color = SonHarfText, fontSize = 8.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                            Text(sh("✓ Reklamsız deneyim • ✓ VIP profil dokunuşları • rekabet gücü yok", "✓ Ad-free • ✓ VIP profile touches • no competitive power"), Modifier.fillMaxWidth().padding(9.dp), color = SonHarfText, fontSize = 8.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                         }
                     }
                 }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    VipPlanCard("AYLIK", subscriptionPrice(products[ProductCatalog.VIP_MONTHLY]) ?: "Play fiyatı", !yearly, false, Modifier.weight(1f)) { yearly = false }
-                    VipPlanCard("YILLIK", subscriptionPrice(products[ProductCatalog.VIP_YEARLY]) ?: "Play fiyatı", yearly, true, Modifier.weight(1f)) { yearly = true }
+                    VipPlanCard(sh("AYLIK", "MONTHLY"), subscriptionPrice(products[ProductCatalog.VIP_MONTHLY]) ?: sh("Play fiyatı", "Play price"), !yearly, false, Modifier.weight(1f)) { yearly = false }
+                    VipPlanCard(sh("YILLIK", "YEARLY"), subscriptionPrice(products[ProductCatalog.VIP_YEARLY]) ?: sh("Play fiyatı", "Play price"), yearly, true, Modifier.weight(1f)) { yearly = true }
                 }
 
                 Button(
@@ -173,15 +163,15 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF302000)),
                     shape = RoundedCornerShape(18.dp),
-                ) { Text(if (busy) "DOĞRULANIYOR…" else if (yearly) "YILLIK VIP İLE DEVAM  ✦" else "AYLIK VIP İLE DEVAM  ✦", fontWeight = FontWeight.Black) }
+                ) { Text(if (busy) sh("DOĞRULANIYOR…", "VERIFYING…") else if (yearly) sh("YILLIK VIP İLE DEVAM", "CONTINUE WITH YEARLY VIP") else sh("AYLIK VIP İLE DEVAM", "CONTINUE WITH MONTHLY VIP"), fontWeight = FontWeight.Black) }
 
-                Text("Google Play ile güvenli ödeme • Sunucu doğrulaması • İstediğin zaman iptal", color = SonHarfMuted, fontSize = 8.sp, textAlign = TextAlign.Center)
+                Text(sh("Google Play ile güvenli ödeme • Sunucu doğrulaması • İstediğin zaman iptal", "Secure Google Play billing • Server verification • Cancel anytime"), color = SonHarfMuted, fontSize = 8.sp, textAlign = TextAlign.Center)
                 if (notice.isNotBlank()) {
                     Surface(color = SonHarfSurface.copy(alpha = .76f), shape = RoundedCornerShape(12.dp)) {
                         Text(notice, Modifier.fillMaxWidth().padding(9.dp), color = SonHarfMuted, fontSize = 8.sp, textAlign = TextAlign.Center)
                     }
                 }
-                TextButton(onClick = onDismiss, enabled = !busy) { Text("ŞİMDİ DEĞİL", color = SonHarfMuted, fontWeight = FontWeight.Bold) }
+                TextButton(onClick = onDismiss, enabled = !busy) { Text(sh("ŞİMDİ DEĞİL", "NOT NOW"), color = SonHarfMuted, fontWeight = FontWeight.Bold) }
             }
         },
         confirmButton = {},
@@ -218,7 +208,7 @@ private fun VipPlanCard(title: String, subtitle: String, selected: Boolean, best
         shape = RoundedCornerShape(17.dp),
     ) {
         Column(Modifier.fillMaxWidth().padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            if (best) Text("EN AVANTAJLI", color = SonHarfGold, fontSize = 6.sp, fontWeight = FontWeight.Black, letterSpacing = .5.sp)
+            if (best) Text(sh("EN AVANTAJLI", "BEST VALUE"), color = SonHarfGold, fontSize = 6.sp, fontWeight = FontWeight.Black, letterSpacing = .5.sp)
             Text(title, fontWeight = FontWeight.Black, color = if (selected) SonHarfGold else SonHarfText, fontSize = 13.sp)
             Text(subtitle, color = SonHarfMuted, fontSize = 7.sp, textAlign = TextAlign.Center)
         }
