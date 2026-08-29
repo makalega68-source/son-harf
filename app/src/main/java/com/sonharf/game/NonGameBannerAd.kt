@@ -17,7 +17,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
-import com.google.android.gms.ads.MobileAds
 
 /**
  * Thin banner used only by non-game navigation surfaces.
@@ -26,13 +25,15 @@ import com.google.android.gms.ads.MobileAds
 @Composable
 fun SonHarfTopAdBanner(modifier: Modifier = Modifier) {
     val context = LocalContext.current
+    val adsAllowed = AdPrivacyManager.adsAllowed
+    if (!adsAllowed) return
+
     val adUnitId = BuildConfig.ADMOB_BANNER_AD_UNIT_ID.ifBlank {
         if (BuildConfig.DEBUG) "ca-app-pub-3940256099942544/6300978111" else ""
     }
     if (adUnitId.isBlank()) return
 
     val adView = remember(context, adUnitId) {
-        MobileAds.initialize(context.applicationContext) {}
         AdView(context).apply {
             setAdSize(AdSize.BANNER)
             this.adUnitId = adUnitId
