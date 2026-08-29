@@ -764,3 +764,153 @@ revoke all on function public.prevent_queue_during_daily_arena_v1()
   from public,anon,authenticated;
 revoke all on function public.prevent_room_during_daily_arena_v1()
   from public,anon,authenticated;
+
+
+-- Move privileged Daily Arena code out of the exposed public schema.
+create schema if not exists private;
+revoke all on schema private from public,anon,authenticated;
+grant usage on schema private to authenticated;
+
+alter function public.ensure_daily_arena_challenge_v1(text) set schema private;
+alter function public.daily_arena_streaks_v1(uuid) set schema private;
+alter function public.finish_daily_arena_run_internal_v1(uuid) set schema private;
+alter function public.start_daily_arena_v1(text) set schema private;
+alter function public.submit_daily_arena_word_v1(uuid,text) set schema private;
+alter function public.get_daily_arena_status_v1(text) set schema private;
+alter function public.get_daily_arena_words_v1(uuid) set schema private;
+alter function public.get_daily_arena_leaderboard_v1(text,integer) set schema private;
+alter function public.prevent_queue_during_daily_arena_v1() set schema private;
+alter function public.prevent_room_during_daily_arena_v1() set schema private;
+
+create or replace function public.ensure_daily_arena_challenge_v1(p_language text)
+returns public.daily_arena_challenges
+language sql
+security invoker
+set search_path=''
+as $$
+  select private.ensure_daily_arena_challenge_v1(p_language);
+$$;
+
+create or replace function public.daily_arena_streaks_v1(p_user_id uuid)
+returns table(current_streak integer,best_streak integer)
+language sql
+security invoker
+set search_path=''
+as $$
+  select * from private.daily_arena_streaks_v1(p_user_id);
+$$;
+
+create or replace function public.finish_daily_arena_run_internal_v1(p_run_id uuid)
+returns public.daily_arena_runs
+language sql
+security invoker
+set search_path=''
+as $$
+  select private.finish_daily_arena_run_internal_v1(p_run_id);
+$$;
+
+create or replace function public.start_daily_arena_v1(p_language text default 'tr')
+returns jsonb
+language sql
+security invoker
+set search_path=''
+as $$
+  select private.start_daily_arena_v1(p_language);
+$$;
+
+create or replace function public.submit_daily_arena_word_v1(p_run_id uuid,p_word text)
+returns jsonb
+language sql
+security invoker
+set search_path=''
+as $$
+  select private.submit_daily_arena_word_v1(p_run_id,p_word);
+$$;
+
+create or replace function public.get_daily_arena_status_v1(p_language text default 'tr')
+returns table(
+  challenge_date date,
+  language text,
+  run_id uuid,
+  status text,
+  letters text,
+  starts_at timestamptz,
+  ends_at timestamptz,
+  score integer,
+  word_count integer,
+  longest_word text,
+  best_combo integer,
+  reward_coins integer,
+  current_streak integer,
+  best_streak integer,
+  my_rank bigint,
+  player_count bigint
+)
+language sql
+security invoker
+set search_path=''
+as $$
+  select * from private.get_daily_arena_status_v1(p_language);
+$$;
+
+create or replace function public.get_daily_arena_words_v1(p_run_id uuid)
+returns table(
+  word text,
+  normalized_word text,
+  base_points integer,
+  combo integer,
+  created_at timestamptz
+)
+language sql
+security invoker
+set search_path=''
+as $$
+  select * from private.get_daily_arena_words_v1(p_run_id);
+$$;
+
+create or replace function public.get_daily_arena_leaderboard_v1(
+  p_language text default 'tr',
+  p_limit integer default 50
+)
+returns table(
+  user_id uuid,
+  display_name text,
+  score integer,
+  word_count integer,
+  best_combo integer,
+  longest_word text,
+  rank bigint,
+  is_me boolean
+)
+language sql
+security invoker
+set search_path=''
+as $$
+  select * from private.get_daily_arena_leaderboard_v1(p_language,p_limit);
+$$;
+
+revoke all on function public.ensure_daily_arena_challenge_v1(text)
+  from public,anon,authenticated;
+revoke all on function public.daily_arena_streaks_v1(uuid)
+  from public,anon,authenticated;
+revoke all on function public.finish_daily_arena_run_internal_v1(uuid)
+  from public,anon,authenticated;
+
+revoke all on function public.start_daily_arena_v1(text) from public,anon;
+revoke all on function public.submit_daily_arena_word_v1(uuid,text) from public,anon;
+revoke all on function public.get_daily_arena_status_v1(text) from public,anon;
+revoke all on function public.get_daily_arena_words_v1(uuid) from public,anon;
+revoke all on function public.get_daily_arena_leaderboard_v1(text,integer) from public,anon;
+
+grant execute on function public.start_daily_arena_v1(text) to authenticated;
+grant execute on function public.submit_daily_arena_word_v1(uuid,text) to authenticated;
+grant execute on function public.get_daily_arena_status_v1(text) to authenticated;
+grant execute on function public.get_daily_arena_words_v1(uuid) to authenticated;
+grant execute on function public.get_daily_arena_leaderboard_v1(text,integer) to authenticated;
+
+revoke all on all functions in schema private from public,anon,authenticated;
+grant execute on function private.start_daily_arena_v1(text) to authenticated;
+grant execute on function private.submit_daily_arena_word_v1(uuid,text) to authenticated;
+grant execute on function private.get_daily_arena_status_v1(text) to authenticated;
+grant execute on function private.get_daily_arena_words_v1(uuid) to authenticated;
+grant execute on function private.get_daily_arena_leaderboard_v1(text,integer) to authenticated;
