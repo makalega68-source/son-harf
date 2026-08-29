@@ -22,11 +22,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.CompetitiveSeasonDto
 import com.sonharf.game.data.LeaderboardV2Row
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.getCompetitiveSeason
 import com.sonharf.game.data.getLeaderboardV2
+import com.sonharf.game.data.getSeasonLeaderboard
 
 @Composable
 fun LeaderboardExperienceScreen(onBack: () -> Unit) {
@@ -36,6 +39,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
     var rows by remember { mutableStateOf<List<LeaderboardV2Row>>(emptyList()) }
     var profiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
     var myProfile by remember { mutableStateOf<ProfileDto?>(null) }
+    var seasonInfo by remember { mutableStateOf<CompetitiveSeasonDto?>(null) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
     val me = backend?.currentUserId()
@@ -46,7 +50,25 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
         loading = true
         error = false
         myProfile = me?.let { runCatching { b.getProfile(it) }.getOrNull() }
-        runCatching { b.getLeaderboardV2(language, period, 50) }
+        seasonInfo = if (period == "season") runCatching { b.getCompetitiveSeason() }.getOrNull() else null
+        runCatching {
+            if (period == "season") {
+                b.getSeasonLeaderboard(50).map { s ->
+                    LeaderboardV2Row(
+                        userId = s.userId,
+                        displayName = s.displayName,
+                        wins = s.wins,
+                        losses = s.losses,
+                        matches = s.matches,
+                        winRate = s.winRate,
+                        rating = s.rating,
+                        leagueName = s.leagueName,
+                    )
+                }
+            } else {
+                b.getLeaderboardV2(language, period, 50)
+            }
+        }
             .onSuccess { loaded ->
                 rows = loaded
                 val loadedProfiles = linkedMapOf<String, ProfileDto?>()
@@ -62,7 +84,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
 
     val myIndex = rows.indexOfFirst { it.userId == me }
     val myRow = rows.getOrNull(myIndex)
-    val currentRating = myRow?.rating ?: myProfile?.rating ?: 1000
+    val currentRating = if (period == "season") (seasonInfo?.rating ?: myRow?.rating ?: 1000) else (myRow?.rating ?: myProfile?.rating ?: 1000)
     val leagueProgress = ratingLeagueProgress(currentRating)
     val league = leagueProgress.leagueName
 
@@ -82,7 +104,13 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                 ) { Text("‹", fontSize = 28.sp, color = SonHarfCyan) }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(sh("LİGLER", "LEAGUES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 22.sp)
-                    Text(sh("Oyuncu sıralaması", "Player ranking"), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(
+                        if (period == "season")
+                            (if (SonHarfUiState.isEnglish) seasonInfo?.nameEn else seasonInfo?.nameTr) ?: sh("Rekabet sezonu", "Competitive season")
+                        else sh("Oyuncu sıralaması", "Player ranking"),
+                        color = SonHarfMuted,
+                        fontSize = 9.sp,
+                    )
                 }
                 Spacer(Modifier.size(42.dp))
             }
@@ -104,7 +132,12 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     NeonLeagueShield()
                     Text(if (SonHarfUiState.isEnglish) "$league LEAGUE" else "$league LİGİ", color = SonHarfCyan, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     Text(
-                        if (myIndex >= 0) sh("SIRALAMAN: ${myIndex + 1}", "YOUR RANK: ${myIndex + 1}") else sh("Bu dönemde henüz sıran yok", "No rank this period yet"),
+                        if (period == "season" && (seasonInfo?.seasonRank ?: 0) > 0)
+                            sh("SEZON SIRAN: #${seasonInfo?.seasonRank}", "SEASON RANK: #${seasonInfo?.seasonRank}")
+                        else if (myIndex >= 0)
+                            sh("SIRALAMAN: ${myIndex + 1}", "YOUR RANK: ${myIndex + 1}")
+                        else
+                            sh("Bu dönemde henüz sıran yok", "No rank this period yet"),
                         color = SonHarfText,
                         fontWeight = FontWeight.Bold,
                         fontSize = 11.sp,
@@ -130,16 +163,23 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
             }
         }
 
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                FilterChip(selected = language == "tr", onClick = { language = "tr" }, label = { Text("🇹🇷 TR", fontWeight = FontWeight.Bold) }, modifier = Modifier.weight(1f))
-                FilterChip(selected = language == "en", onClick = { language = "en" }, label = { Text("🇬🇧 EN", fontWeight = FontWeight.Bold) }, modifier = Modifier.weight(1f))
+        if (period != "season") {
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    FilterChip(selected = language == "tr", onClick = { language = "tr" }, label = { Text("🇹🇷 TR", fontWeight = FontWeight.Bold) }, modifier = Modifier.weight(1f))
+                    FilterChip(selected = language == "en", onClick = { language = "en" }, label = { Text("🇬🇧 EN", fontWeight = FontWeight.Bold) }, modifier = Modifier.weight(1f))
+                }
             }
         }
 
         item {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(SonHarfSurface2).padding(4.dp)) {
-                listOf("week" to sh("BU HAFTA", "THIS WEEK"), "month" to sh("BU AY", "THIS MONTH"), "total" to sh("TOPLAM", "TOTAL")).forEach { (key, title) ->
+                listOf(
+                    "season" to sh("SEZON", "SEASON"),
+                    "week" to sh("HAFTA", "WEEK"),
+                    "month" to sh("AY", "MONTH"),
+                    "total" to sh("TOPLAM", "TOTAL"),
+                ).forEach { (key, title) ->
                     val selected = period == key
                     Button(
                         onClick = { period = key },
