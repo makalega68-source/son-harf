@@ -285,9 +285,14 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                                                                 "Başka dildeki Günlük Arena koşun sürüyor.",
                                                                 "Your Daily Arena run in another language is active.",
                                                             )
+                                                        "team_arena_active" in e.message.orEmpty() ->
+                                                            sh(
+                                                                "Açık 2v2 lobin var. Takım Arenası'na dönüp lobiyi kapat.",
+                                                                "A 2v2 lobby is still open. Return to Team Arena and close it.",
+                                                            )
                                                         else -> sh(
-                                                            "Koşu başlatılamadı.",
-                                                            "Run could not be started.",
+                                                            "Koşu başlatılamadı. Tekrar dene.",
+                                                            "Run could not be started. Try again.",
                                                         )
                                                     }
                                                 }
