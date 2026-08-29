@@ -46,6 +46,41 @@ data class SeasonLeaderboardRowDto(
 )
 
 @Serializable
+data class CompetitiveSeasonHistoryDto(
+    @SerialName("season_id") val seasonId: String,
+    @SerialName("name_tr") val nameTr: String,
+    @SerialName("name_en") val nameEn: String,
+    @SerialName("starts_at") val startsAt: String,
+    @SerialName("ends_at") val endsAt: String,
+    @SerialName("final_rating") val finalRating: Int = 1000,
+    @SerialName("peak_rating") val peakRating: Int = 1000,
+    @SerialName("league_name") val leagueName: String = "BRONZ",
+    @SerialName("final_rank") val finalRank: Long = 0,
+    @SerialName("eligible_player_count") val eligiblePlayerCount: Long = 0,
+    val matches: Int = 0,
+    val wins: Int = 0,
+    val losses: Int = 0,
+    val draws: Int = 0,
+    @SerialName("valid_words") val validWords: Int = 0,
+    @SerialName("honor_code") val honorCode: String? = null,
+    @SerialName("honor_label_tr") val honorLabelTr: String? = null,
+    @SerialName("honor_label_en") val honorLabelEn: String? = null,
+    @SerialName("reward_coins") val rewardCoins: Int = 0,
+    @SerialName("reward_claimed") val rewardClaimed: Boolean = false,
+    @SerialName("reward_eligible") val rewardEligible: Boolean = false,
+)
+
+@Serializable
+data class CompetitiveSeasonRewardClaimDto(
+    val success: Boolean = false,
+    @SerialName("season_id") val seasonId: String = "",
+    val rank: Int = 0,
+    @SerialName("eligible_players") val eligiblePlayers: Int = 0,
+    @SerialName("reward_coins") val rewardCoins: Int = 0,
+    val balance: Int = 0,
+)
+
+@Serializable
 data class AchievementProgressDto(
     val code: String,
     val icon: String,
@@ -68,6 +103,18 @@ suspend fun OnlineGameBackend.getSeasonLeaderboard(limit: Int = 50): List<Season
         "get_season_leaderboard_v1",
         buildJsonObject { put("p_limit", limit.coerceIn(1, 100)) },
     ).decodeList()
+
+suspend fun OnlineGameBackend.getCompetitiveSeasonHistory(limit: Int = 12): List<CompetitiveSeasonHistoryDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "get_competitive_season_history_v1",
+        buildJsonObject { put("p_limit", limit.coerceIn(1, 36)) },
+    ).decodeList()
+
+suspend fun OnlineGameBackend.claimCompetitiveSeasonReward(seasonId: String): CompetitiveSeasonRewardClaimDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "claim_competitive_season_reward_v1",
+        buildJsonObject { put("p_season_id", seasonId) },
+    ).decodeSingle()
 
 suspend fun OnlineGameBackend.getAchievements(): List<AchievementProgressDto> =
     SupabaseProvider.client.postgrest.rpc("get_achievements_v1").decodeList()
