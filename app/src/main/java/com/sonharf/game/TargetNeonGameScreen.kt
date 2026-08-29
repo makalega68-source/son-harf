@@ -92,7 +92,7 @@ fun TargetNeonGameScreen(
         "turn_expired" in raw -> "Süren doldu."
         "vip_required" in raw -> "Özel oda oluşturmak için aktif VIP üyeliği gerekli."
         "team_arena_active" in raw || "team_arena_already_active" in raw ->
-            "Açık 2v2 lobin var. Takım Arenası'na dönüp lobiyi kapat."
+            "Takım Arenası maçın sürüyor. Önce 2v2 maçı bitir."
         "word_arena_match_active" in raw -> "Aktif Kelime Arenası maçını bitir."
         "daily_arena_active" in raw -> "Aktif Resmî Koşuyu bitir."
         "player_already_in_game" in raw -> "Devam eden bir maçın varken yeni oda oluşturamazsın."
@@ -125,6 +125,7 @@ fun TargetNeonGameScreen(
 
     fun observe(r: GameRoomDto) {
         roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); matchJob?.cancel(); matching = false
+        notice = sh("Düello başladı", "Duel started")
         scope.launch { refreshOpponent(r) }
         roomJob = scope.launch { backend.observeRoom(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { room = it; refreshOpponent(it) } }
         wordsJob = scope.launch { backend.observeWords(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { words = it } }
@@ -243,10 +244,16 @@ fun TargetNeonGameScreen(
                 opponentAvatarPath = opponentProfile?.avatarPath,
                 opponentGender = opponentProfile?.gender,
                 opponentAvatarVisible = true,
+                myRating = profile?.rating,
+                opponentRating = opponentProfile?.rating,
                 words = words,
                 chatMessages = chatMessages,
                 wordInput = wordInput,
-                onWordInput = { wordInput = it.take(40) },
+                onWordInput = {
+                    val next = it.take(40)
+                    if (next.length > wordInput.length) SonHarfSoundFx.typingClick()
+                    wordInput = next
+                },
                 notice = notice,
                 busy = busy,
                 onSubmit = {
@@ -417,6 +424,8 @@ private fun TargetArena(
     opponentAvatarPath: String?,
     opponentGender: String?,
     opponentAvatarVisible: Boolean,
+    myRating: Int?,
+    opponentRating: Int?,
     words: List<GameWordDto>,
     chatMessages: List<ChatMessageDto>,
     wordInput: String,
@@ -478,6 +487,7 @@ private fun TargetArena(
     if (room.status == "finished") {
         BackHandler { onExit() }
         val won = room.winnerId == me
+        val draw = room.winnerId == null
         Column(
             Modifier
                 .fillMaxSize()
@@ -492,7 +502,7 @@ private fun TargetArena(
             }
             Spacer(Modifier.height(10.dp))
             Text(
-                if (won) sh("ZAFER", "VICTORY") else sh("MAÇ TAMAMLANDI", "MATCH COMPLETE"),
+                if (draw) sh("BERABERE", "DRAW") else if (won) sh("ZAFER", "VICTORY") else sh("MAÇ TAMAMLANDI", "MATCH COMPLETE"),
                 color = if (won) TGgold else TGtext,
                 fontWeight = FontWeight.Black,
                 fontSize = if (won) 42.sp else 30.sp,
@@ -516,15 +526,16 @@ private fun TargetArena(
                 Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(sh("Senin maç puanın", "Your match score"), color = TGmuted, fontSize = 11.sp)
-                        Text("+$myScore", color = TGgreen, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                        Text("$myScore", color = TGgreen, fontSize = 18.sp, fontWeight = FontWeight.Black)
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(sh("Rakip maç puanı", "Rival match score"), color = TGmuted, fontSize = 11.sp)
-                        Text("+$oppScore", color = TGpink, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        Text("$oppScore", color = TGpink, fontSize = 16.sp, fontWeight = FontWeight.Black)
                     }
                     HorizontalDivider(color = Color(0xFFE7ECF2))
                     Text(
-                        sh("Lig ve rating ilerlemen hesabına işlendi.", "League and rating progress was applied to your account."),
+                        if (draw) sh("Beraberlikte rating değişmez.", "Rating does not change on a draw.")
+                        else sh("Lig ve rating sonucu hesabına işlendi.", "League and rating result was applied to your account."),
                         color = TGmuted,
                         fontSize = 10.sp,
                         textAlign = TextAlign.Center,
@@ -622,7 +633,28 @@ private fun TargetArena(
             }
         }
 
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(7.dp))
+        CompetitionLeadStrip(
+            myScore = myScore,
+            opponentScore = oppScore,
+            myStreak = if (host) room.hostStreak else room.guestStreak,
+            opponentStreak = if (host) room.guestStreak else room.hostStreak,
+            myAction = if (room.lastEventPlayerId == me) sh("Hamlen skor tabelasına işlendi.", "Your move changed the scoreboard.") else null,
+            opponentAction = if (room.lastEventPlayerId != null && room.lastEventPlayerId != me) sh("Rakip hamle yaptı.", "Rival made a move.") else null,
+        )
+        Spacer(Modifier.height(7.dp))
+        CompetitionMatchIntro(
+            key = room.id,
+            myName = playerName,
+            opponentName = opponentName,
+            myAvatarPath = playerAvatarPath,
+            opponentAvatarPath = opponentAvatarPath,
+            myGender = playerGender,
+            opponentGender = opponentGender,
+            myRating = myRating,
+            opponentRating = opponentRating,
+        )
+        Spacer(Modifier.height(7.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text("TUR ${room.roundNo}/3", color = TGmuted, fontWeight = FontWeight.Black, fontSize = 10.sp)
             Surface(shape = RoundedCornerShape(99.dp), color = (if (myTurn) TGblue else TGpink).copy(alpha = .08f)) {

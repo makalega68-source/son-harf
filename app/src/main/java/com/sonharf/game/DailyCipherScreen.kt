@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.DailyCipherStatusDto
 import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.getDailyCipherStatus
 import com.sonharf.game.data.submitDailyCipherGuess
@@ -51,6 +52,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var status by remember { mutableStateOf<DailyCipherStatusDto?>(null) }
+    var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var guess by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
@@ -72,6 +74,9 @@ fun DailyCipherScreen(onBack: () -> Unit) {
 
     LaunchedEffect(Unit) {
         reload()
+        val b = backend
+        val me = b?.currentUserId()
+        if (b != null && me != null) profile = runCatching { b.getProfile(me) }.getOrNull()
         runCatching { backend?.logEvent("daily_cipher_open", SonHarfUiState.language) }
     }
 
@@ -99,6 +104,11 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                 .onSuccess {
                     status = it
                     guess = ""
+                    when {
+                        it.won -> SonHarfSoundFx.victory()
+                        it.finished -> SonHarfSoundFx.softNotify()
+                        else -> SonHarfSoundFx.scoreTick()
+                    }
                     notice = when {
                         it.won -> sh("Şifre çözüldü! +${it.rewardCoins} Son Coin", "Cipher solved! +${it.rewardCoins} Son Coin")
                         it.finished -> sh("Bugünkü hakların tamamlandı.", "Today's attempts are complete.")
@@ -106,6 +116,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                     }
                 }
                 .onFailure { error ->
+                    SonHarfSoundFx.warning()
                     notice = when {
                         "guess_already_used" in error.message.orEmpty() -> sh("Bu kelimeyi zaten denedin.", "You already tried that word.")
                         "invalid_five_letter_word" in error.message.orEmpty() -> sh("Geçerli 5 harf gir.", "Enter five valid letters.")
@@ -136,6 +147,18 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                     }
                 }
                 Text("1×", color = CipherGold, fontWeight = FontWeight.Black)
+            }
+
+            if (!imeVisible) {
+                CompetitionVsCard(
+                    myName = profile?.displayName ?: sh("Sen", "You"),
+                    opponentName = sh("Günün Şifresi", "Daily Cipher"),
+                    myAvatarPath = profile?.avatarPath,
+                    opponentAvatarPath = null,
+                    myGender = profile?.gender,
+                    myRating = profile?.rating,
+                    centerText = "VS",
+                )
             }
 
             CipherHowToCard(compact = imeVisible)
