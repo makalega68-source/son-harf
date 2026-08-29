@@ -241,35 +241,22 @@ internal fun ModeEntryOverlay(
     subtitle: String,
     competitive: Boolean = true,
 ) {
+    var value by remember(key) { mutableIntStateOf(3) }
     var visible by remember(key) { mutableStateOf(true) }
+
     LaunchedEffect(key) {
+        value = 3
+        visible = true
+        repeat(3) {
+            SonHarfSoundFx.countdown()
+            delay(560)
+            value -= 1
+        }
+        value = 0
         SonHarfSoundFx.softNotify()
-        delay(980)
+        delay(360)
         visible = false
     }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        AnimatedVisibility(
-            visible = visible,
-            enter = fadeIn() + scaleIn(initialScale = .84f),
-            exit = fadeOut() + scaleOut(targetScale = 1.08f),
-        ) {
-            Surface(
-                shape = RoundedCornerShape(28.dp),
-                color = Color(0xF8FFFFFF),
-                border = BorderStroke(2.dp, if (competitive) PortalGold.copy(alpha = .55f) else PortalBlue.copy(alpha = .45f)),
-                shadowElevation = 12.dp,
-            ) {
-                Column(
-                    Modifier.widthIn(min = 250.dp, max = 330.dp).padding(horizontal = 22.dp, vertical = 20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(7.dp),
-                ) {
-                    Text(if (competitive) "⚔  VS  ⚔" else "⚡  MEYDAN OKUMA", color = if (competitive) PortalGold else PortalBlue, fontSize = 14.sp, fontWeight = FontWeight.Black)
-                    Text(title, color = PortalText, fontSize = 23.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-                    Text(subtitle, color = PortalMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                    Text("3  •  2  •  1  •  BAŞLA", color = PortalBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                }
-            }
-        }
-    }
+
+    ModernCountdownOverlay(value = value, visible = visible)
 }
