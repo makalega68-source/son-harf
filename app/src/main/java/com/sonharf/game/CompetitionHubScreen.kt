@@ -93,6 +93,7 @@ private fun ClubCompetitionTab() {
     var myClub by remember { mutableStateOf<MyClubDto?>(null) }
     var directory by remember { mutableStateOf<List<ClubDirectoryRowDto>>(emptyList()) }
     var members by remember { mutableStateOf<List<ClubMemberDto>>(emptyList()) }
+    var memberProfiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
     var messages by remember { mutableStateOf<List<ClubMessageDto>>(emptyList()) }
     var clubMissions by remember { mutableStateOf<List<ClubWeeklyMissionDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
@@ -110,12 +111,22 @@ private fun ClubCompetitionTab() {
                 myClub = club
                 if (club == null) {
                     members = emptyList()
+                    memberProfiles = emptyMap()
                     messages = emptyList()
                     clubMissions = emptyList()
                     directory = runCatching { b.getClubDirectory(50) }.getOrDefault(emptyList())
                 } else {
                     directory = emptyList()
-                    members = runCatching { b.getClubMembers(club.clubId) }.getOrDefault(emptyList())
+                    val nextMembers = runCatching { b.getClubMembers(club.clubId) }.getOrDefault(emptyList())
+                    members = nextMembers
+                    val nextProfiles = memberProfiles.toMutableMap()
+                    for (member in nextMembers) {
+                        if (!nextProfiles.containsKey(member.userId)) {
+                            nextProfiles[member.userId] = runCatching { b.getProfile(member.userId) }.getOrNull()
+                        }
+                    }
+                    val activeMemberIds = nextMembers.mapTo(mutableSetOf()) { it.userId }
+                    memberProfiles = nextProfiles.filterKeys { it in activeMemberIds }
                     messages = runCatching { b.getClubMessages(club.clubId) }.getOrDefault(emptyList())
                     clubMissions = runCatching { b.getClubWeeklyMissions() }.getOrDefault(emptyList())
                 }
@@ -281,10 +292,19 @@ private fun ClubCompetitionTab() {
             items(members, key = { it.userId }) { member ->
                 Surface(shape = RoundedCornerShape(14.dp), color = SonHarfSurface, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .13f))) {
                     Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(when (member.role) { "owner" -> "👑"; "moderator" -> "🛡"; else -> "●" }, fontSize = 16.sp)
+                        ProfilePhotoAvatar(
+                            avatarPath = memberProfiles[member.userId]?.avatarPath,
+                            name = member.displayName,
+                            size = 36.dp,
+                            accent = if (member.role == "owner") SonHarfGold else SonHarfBlue,
+                        )
                         Spacer(Modifier.width(8.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(member.displayName, color = SonHarfText, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(member.displayName, color = SonHarfText, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.width(5.dp))
+                                Text(when (member.role) { "owner" -> "👑"; "moderator" -> "🛡"; else -> "" }, fontSize = 11.sp)
+                            }
                             Text("${member.leagueName} • ${member.rating} rating", color = SonHarfMuted, fontSize = 9.sp)
                         }
                         Text("+${member.weeklyPoints}", color = SonHarfGreen, fontWeight = FontWeight.Black, fontSize = 12.sp)
@@ -474,6 +494,7 @@ private fun WeeklyTournamentTab() {
     val scope = rememberCoroutineScope()
     var tournament by remember { mutableStateOf<WeeklyTournamentDto?>(null) }
     var leaderboard by remember { mutableStateOf<List<WeeklyTournamentLeaderboardRowDto>>(emptyList()) }
+    var leaderboardProfiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
     var history by remember { mutableStateOf<List<WeeklyTournamentHistoryDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
@@ -484,7 +505,16 @@ private fun WeeklyTournamentTab() {
         loading = true
         runCatching {
             tournament = b.getWeeklyTournament()
-            leaderboard = b.getWeeklyTournamentLeaderboard(50)
+            val nextLeaderboard = b.getWeeklyTournamentLeaderboard(50)
+            leaderboard = nextLeaderboard
+            val nextProfiles = leaderboardProfiles.toMutableMap()
+            for (row in nextLeaderboard) {
+                if (!nextProfiles.containsKey(row.userId)) {
+                    nextProfiles[row.userId] = runCatching { b.getProfile(row.userId) }.getOrNull()
+                }
+            }
+            val activeLeaderboardIds = nextLeaderboard.mapTo(mutableSetOf()) { it.userId }
+            leaderboardProfiles = nextProfiles.filterKeys { it in activeLeaderboardIds }
             history = b.getWeeklyTournamentHistory(12)
         }.onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
         loading = false
@@ -634,6 +664,13 @@ private fun WeeklyTournamentTab() {
                         textAlign = TextAlign.Center,
                         fontWeight = FontWeight.Black,
                     )
+                    ProfilePhotoAvatar(
+                        avatarPath = leaderboardProfiles[row.userId]?.avatarPath,
+                        name = row.displayName,
+                        size = 34.dp,
+                        accent = SonHarfGold,
+                    )
+                    Spacer(Modifier.width(8.dp))
                     Column(Modifier.weight(1f)) {
                         Text(row.displayName, color = SonHarfText, fontWeight = FontWeight.Bold, maxLines = 1)
                         Text("${row.leagueName} • ${row.rating} rating • ${row.wins}W/${row.losses}L", color = SonHarfMuted, fontSize = 9.sp)
@@ -748,6 +785,7 @@ private fun RivalHistoryTab() {
     val scope = rememberCoroutineScope()
     var rivals by remember { mutableStateOf<List<RivalHistoryDto>>(emptyList()) }
     var matchHistory by remember { mutableStateOf<List<MatchHistoryDto>>(emptyList()) }
+    var playerProfiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
     var loading by remember { mutableStateOf(true) }
     var busyOpponent by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("") }
@@ -756,8 +794,18 @@ private fun RivalHistoryTab() {
         val b = backend ?: return
         if (showLoading) loading = true
         runCatching {
-            rivals = b.getRivalHistory(30)
-            matchHistory = b.getMatchHistory(30)
+            val nextRivals = b.getRivalHistory(30)
+            val nextMatches = b.getMatchHistory(30)
+            rivals = nextRivals
+            matchHistory = nextMatches
+            val nextProfiles = playerProfiles.toMutableMap()
+            val activeIds = (nextRivals.map { it.opponentId } + nextMatches.map { it.opponentId }).toSet()
+            for (userId in activeIds) {
+                if (!nextProfiles.containsKey(userId)) {
+                    nextProfiles[userId] = runCatching { b.getProfile(userId) }.getOrNull()
+                }
+            }
+            playerProfiles = nextProfiles.filterKeys { it in activeIds }
         }.onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
         if (showLoading) loading = false
     }
@@ -836,15 +884,12 @@ private fun RivalHistoryTab() {
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(
-                            Modifier.size(44.dp),
-                            shape = CircleShape,
-                            color = if (rival.canChallenge) SonHarfBlue.copy(alpha = .10f) else SonHarfSurface2,
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(if (rival.lastMode == "arena") "⚡" else "⚔", fontSize = 21.sp)
-                            }
-                        }
+                        ProfilePhotoAvatar(
+                            avatarPath = playerProfiles[rival.opponentId]?.avatarPath,
+                            name = rival.displayName,
+                            size = 42.dp,
+                            accent = if (rival.canChallenge) SonHarfBlue else SonHarfMuted,
+                        )
                         Spacer(Modifier.width(9.dp))
                         Column(Modifier.weight(1f)) {
                             Text(rival.displayName, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 15.sp)
@@ -1022,15 +1067,12 @@ private fun RivalHistoryTab() {
                         Modifier.fillMaxWidth().padding(11.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Surface(
-                            Modifier.size(40.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            color = resultColor.copy(alpha = .09f),
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(if (match.mode == "arena") "⚡" else "⚔", fontSize = 19.sp)
-                            }
-                        }
+                        ProfilePhotoAvatar(
+                            avatarPath = playerProfiles[match.opponentId]?.avatarPath,
+                            name = match.displayName,
+                            size = 38.dp,
+                            accent = resultColor,
+                        )
                         Spacer(Modifier.width(9.dp))
                         Column(Modifier.weight(1f)) {
                             Text(match.displayName, color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 13.sp)
