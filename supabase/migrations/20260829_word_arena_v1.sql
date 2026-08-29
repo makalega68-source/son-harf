@@ -669,9 +669,36 @@ create trigger trg_prevent_sonharf_queue_during_word_arena_v1
 before insert or update of status on public.matchmaking_queue
 for each row execute function public.prevent_sonharf_queue_during_word_arena_v1();
 
+create or replace function public.prevent_game_room_during_word_arena_v1()
+returns trigger
+language plpgsql
+set search_path=public,pg_temp
+as $
+begin
+  if exists(
+    select 1 from public.word_arena_rooms ar
+    where ar.status='playing'
+      and ar.ends_at>now()
+      and (
+        ar.host_id in (new.host_id,new.guest_id)
+        or ar.guest_id in (new.host_id,new.guest_id)
+      )
+  ) then
+    raise exception 'word_arena_match_active';
+  end if;
+  return new;
+end
+$;
+
+drop trigger if exists trg_prevent_game_room_during_word_arena_v1 on public.game_rooms;
+create trigger trg_prevent_game_room_during_word_arena_v1
+before insert on public.game_rooms
+for each row execute function public.prevent_game_room_during_word_arena_v1();
+
 revoke all on function public.word_arena_letter_set_v1(text) from public,anon,authenticated;
 revoke all on function public.finish_word_arena_internal_v1(uuid) from public,anon,authenticated;
 revoke all on function public.prevent_sonharf_queue_during_word_arena_v1() from public,anon,authenticated;
+revoke all on function public.prevent_game_room_during_word_arena_v1() from public,anon,authenticated;
 
 revoke all on function public.join_word_arena_v1(text) from public,anon;
 revoke all on function public.poll_word_arena_v1() from public,anon;
