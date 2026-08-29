@@ -13,6 +13,11 @@ object SonHarfSoundFx {
     fun setEnabled(value: Boolean) { enabled = value }
 
     fun tap() = click(18, 0.18, 0.42)
+    fun typingClick() = click(11, 0.075, 0.34)
+    fun scoreTick() = click(13, 0.10, 0.44)
+    fun leadChange() { click(15, 0.11, 0.48); delayedClick(34, 12, 0.09, 0.55) }
+    fun missionComplete() { click(16, 0.12, 0.48); delayedClick(38, 14, 0.11, 0.56); delayedClick(70, 12, 0.09, 0.62) }
+    fun rematchReady() { click(16, 0.10, 0.43); delayedClick(46, 13, 0.09, 0.52) }
     fun softNotify() { click(20, 0.16, 0.48); delayedClick(55, 17, 0.13, 0.52) }
     fun wordAccepted() { click(17, 0.15, 0.50); delayedClick(42, 14, 0.11, 0.56) }
     fun warning() = click(24, 0.16, 0.30)
