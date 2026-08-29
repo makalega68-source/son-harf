@@ -34,6 +34,7 @@ fun GameInviteOverlay() {
     var sender by remember { mutableStateOf<ProfileDto?>(null) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
+    var notifiedInviteId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -42,15 +43,34 @@ fun GameInviteOverlay() {
                 if (next != null) {
                     invite = next
                     sender = runCatching { backend.getProfile(next.senderId) }.getOrNull()
-                    SonHarfSoundFx.softNotify()
-                    SonHarfPreferences.hapticTap(context)
                 }
             }
             delay(2500)
         }
     }
 
+    val modalKind = GameInviteModalKind.CLASSIC
+    val activeModal = GameInviteModalCoordinator.activeKind
+
+    LaunchedEffect(invite?.id) {
+        GameInviteModalCoordinator.setPending(modalKind, invite != null)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { GameInviteModalCoordinator.clear(modalKind) }
+    }
+
+    LaunchedEffect(activeModal, invite?.id) {
+        val key = invite?.id
+        if (activeModal == modalKind && key != null && notifiedInviteId != key) {
+            SonHarfSoundFx.softNotify()
+            SonHarfPreferences.hapticTap(context)
+            notifiedInviteId = key
+        }
+    }
+
     val current = invite ?: return
+    if (activeModal != modalKind) return
     AlertDialog(
         onDismissRequest = { },
         containerColor = SonHarfSurface,

@@ -35,6 +35,7 @@ fun TeamArenaInviteOverlay() {
     var sender by remember { mutableStateOf<ProfileDto?>(null) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
+    var notifiedInviteId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -43,15 +44,34 @@ fun TeamArenaInviteOverlay() {
                 if (next != null) {
                     invite = next
                     sender = runCatching { backend.getProfile(next.senderId) }.getOrNull()
-                    SonHarfSoundFx.softNotify()
-                    SonHarfPreferences.hapticTap(context)
                 }
             }
             delay(2500)
         }
     }
 
+    val modalKind = GameInviteModalKind.TEAM_ARENA
+    val activeModal = GameInviteModalCoordinator.activeKind
+
+    LaunchedEffect(invite?.inviteId) {
+        GameInviteModalCoordinator.setPending(modalKind, invite != null)
+    }
+
+    DisposableEffect(Unit) {
+        onDispose { GameInviteModalCoordinator.clear(modalKind) }
+    }
+
+    LaunchedEffect(activeModal, invite?.inviteId) {
+        val key = invite?.inviteId
+        if (activeModal == modalKind && key != null && notifiedInviteId != key) {
+            SonHarfSoundFx.softNotify()
+            SonHarfPreferences.hapticTap(context)
+            notifiedInviteId = key
+        }
+    }
+
     val current = invite ?: return
+    if (activeModal != modalKind) return
 
     AlertDialog(
         onDismissRequest = { },
