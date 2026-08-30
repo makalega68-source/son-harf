@@ -113,12 +113,6 @@ class MainActivity : ComponentActivity() {
             ) {
                 Box(Modifier.fillMaxSize()) {
                     GamePortalApp()
-                    PrivateRoomWaitingLayer()
-                    if (FriendsQuickAccessState.open) FriendsQuickAccessOverlay()
-                    GameInviteOverlay()
-                    WordArenaInviteOverlay()
-                    TeamArenaInviteOverlay()
-                    FriendRequestOverlay()
                 }
             }
         }
