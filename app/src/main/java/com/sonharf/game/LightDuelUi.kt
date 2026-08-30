@@ -528,29 +528,26 @@ internal fun LightDuelArena(
 
                 Spacer(Modifier.weight(.18f))
 
-                Box(
-                    Modifier
-                        .size(160.dp)
-                        .clip(CircleShape)
-                        .background(
-                            Brush.sweepGradient(
-                                listOf(LBlue, Color(0xFF7E6AE6), LGold, LBlue2, LBlue)
-                            )
-                        )
-                        .padding(4.dp),
-                    contentAlignment = Alignment.Center,
+                Column(
+                    modifier = Modifier
+                        .height(160.dp)
+                        .fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
                 ) {
-                    Box(
-                        Modifier.fillMaxSize().clip(CircleShape).background(
-                            Brush.radialGradient(listOf(Color.White, Color(0xFFF5F8FC)))
-                        ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(sh("SON HARF", "LAST LETTER"), color = LMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                            Text(required, color = LText, fontSize = 72.sp, lineHeight = 74.sp, fontWeight = FontWeight.Black)
-                        }
-                    }
+                    Text(
+                        sh("SON HARF", "LAST LETTER"),
+                        color = LMuted,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        required,
+                        color = LText,
+                        fontSize = 78.sp,
+                        lineHeight = 80.sp,
+                        fontWeight = FontWeight.Black,
+                    )
                 }
 
                 Spacer(Modifier.height(8.dp))
@@ -938,17 +935,32 @@ private fun LightLobbyAction(
     onClick: () -> Unit,
 ) {
     Card(
-        modifier = modifier.height(92.dp).clickable(onClick = onClick),
+        modifier = modifier.height(104.dp).clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(1.dp, LBorder),
     ) {
-        Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
             Text(icon, fontSize = 22.sp)
-            Column {
-                Text(title, color = LText, fontWeight = FontWeight.Black, fontSize = 12.sp)
-                Text(subtitle, color = LBlue, fontSize = 9.sp)
-            }
+            Spacer(Modifier.height(7.dp))
+            Text(
+                title,
+                color = LText,
+                fontWeight = FontWeight.Black,
+                fontSize = 12.sp,
+                maxLines = 1,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                subtitle,
+                color = Color(0xFF4F6F95),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
         }
     }
 }
