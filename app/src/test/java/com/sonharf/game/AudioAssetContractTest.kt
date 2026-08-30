@@ -23,8 +23,12 @@ class AudioAssetContractTest {
             .filter { it.isFile && it.extension.lowercase() in audioExtensions }
             .sortedBy { it.name }
 
-        assertEquals(listOf("warm_beginnings.mp3"), audioFiles.map { it.name })
-        assertTrue("Warm Beginnings audio looks empty", audioFiles.single().length() > 1_000_000L)
+        val musicFiles = audioFiles.filterNot { it.name.startsWith("sfx_") }
+        val sfxFiles = audioFiles.filter { it.name.startsWith("sfx_") }
+
+        assertEquals(listOf("warm_beginnings.mp3"), musicFiles.map { it.name })
+        assertTrue("Warm Beginnings audio looks empty", musicFiles.single().length() > 1_000_000L)
+        assertTrue("Game SFX must use WAV resources", sfxFiles.all { it.extension.equals("wav", ignoreCase = true) })
     }
 
     @Test

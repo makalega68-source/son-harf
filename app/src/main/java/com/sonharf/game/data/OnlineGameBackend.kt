@@ -111,6 +111,7 @@ data class TriviaRoundDto(
     @SerialName("bonus_points") val bonusPoints: Int,
     @SerialName("question_id") val questionId: Long,
     @SerialName("reveal_at") val revealAt: String,
+    @SerialName("answer_deadline") val answerDeadline: String? = null,
     @SerialName("winner_id") val winnerId: String? = null,
     @SerialName("resolved_at") val resolvedAt: String? = null,
     @SerialName("bot_attempted") val botAttempted: Boolean = false,
@@ -209,6 +210,12 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
         supabase.postgrest.rpc(
             "answer_trivia_v3",
             buildJsonObject { put("p_round_id", roundId); put("p_answer_index", answerIndex) },
+        ).decodeSingle()
+
+    suspend fun claimTriviaTimeout(roundId: String): GameRoomDto =
+        supabase.postgrest.rpc(
+            "claim_estimate_timeout_v1",
+            buildJsonObject { put("p_round_id", roundId) },
         ).decodeSingle()
 
     suspend fun heartbeatRoom(roomId: String): GameRoomDto =
