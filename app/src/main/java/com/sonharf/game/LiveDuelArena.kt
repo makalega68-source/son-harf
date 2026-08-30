@@ -200,13 +200,13 @@ internal fun LiveDuelArena(
         ) {
             val h = maxHeight
             val gap = 5.dp
-            val topH = h * .115f
-            val arenaH = h * .335f
-            val statusH = h * .043f
-            val actionH = h * .058f
-            val bonusH = h * .115f
-            val inputH = h * .058f
-            val keyboardH = h * .225f
+            val topH = h * .125f
+            val arenaH = h * .360f
+            val statusH = h * .040f
+            val actionH = h * .060f
+            val bonusH = h * .120f
+            val inputH = h * .060f
+            val keyboardH = h * .205f
 
             Column(Modifier.fillMaxSize()) {
                 Row(
@@ -224,10 +224,10 @@ internal fun LiveDuelArena(
                         gender = playerGender,
                         rating = playerRating,
                         score = myScore,
-                        rounds = myRounds,
                         accent = LiveBlue,
                         active = myTurn,
                         bot = false,
+                        avatarOnRight = false,
                     )
                     LiveTimer(
                         modifier = Modifier
@@ -250,10 +250,10 @@ internal fun LiveDuelArena(
                         gender = opponentGender,
                         rating = opponentRating,
                         score = oppScore,
-                        rounds = oppRounds,
                         accent = LiveRed,
                         active = !myTurn && liveWordPhase,
                         bot = room.isBot,
+                        avatarOnRight = true,
                     )
                 }
 
@@ -355,10 +355,10 @@ private fun LivePlayerCard(
     gender: String?,
     rating: Int,
     score: Int,
-    rounds: Int,
     accent: Color,
     active: Boolean,
     bot: Boolean,
+    avatarOnRight: Boolean,
 ) {
     Box(modifier, contentAlignment = Alignment.Center) {
         Image(
@@ -367,48 +367,41 @@ private fun LivePlayerCard(
             modifier = Modifier.fillMaxSize(),
             contentScale = ContentScale.FillBounds,
         )
-        Row(
-            Modifier
-                .fillMaxSize()
-                .padding(horizontal = 8.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+
+        val avatar: @Composable () -> Unit = {
             Box(
                 modifier = Modifier
-                    .fillMaxHeight(.78f)
+                    .fillMaxHeight(.80f)
                     .aspectRatio(1f),
                 contentAlignment = Alignment.Center,
             ) {
                 if (bot) {
-                    Box(
-                        Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .background(
-                                Brush.radialGradient(
-                                    listOf(accent.copy(alpha = .34f), Color(0xFF210A1D))
-                                )
-                            ),
-                        contentAlignment = Alignment.Center,
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        shape = CircleShape,
+                        color = Color(0xFF0B1530),
+                        border = BorderStroke(2.dp, accent.copy(alpha = .86f)),
                     ) {
-                        Text("🤖", fontSize = 27.sp)
+                        Box(contentAlignment = Alignment.Center) {
+                            Text("BOT", color = LiveWhite, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        }
                     }
                 } else {
                     ProfilePhotoAvatarWithGender(
                         avatarPath = avatarPath,
                         gender = gender,
                         name = name,
-                        size = 52.dp,
+                        size = 58.dp,
                         accent = accent,
                     )
                 }
                 Surface(
                     modifier = Modifier
-                        .align(Alignment.BottomStart)
+                        .align(if (avatarOnRight) Alignment.BottomEnd else Alignment.BottomStart)
                         .size(22.dp),
                     shape = CircleShape,
                     color = accent,
-                    border = BorderStroke(1.dp, Color.White.copy(alpha = .55f)),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = .60f)),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
@@ -420,29 +413,32 @@ private fun LivePlayerCard(
                     }
                 }
             }
+        }
 
-            Spacer(Modifier.width(7.dp))
-
+        val info: @Composable (Modifier) -> Unit = { infoModifier ->
             Column(
-                Modifier.weight(1f),
+                infoModifier,
                 verticalArrangement = Arrangement.Center,
+                horizontalAlignment = if (avatarOnRight) Alignment.End else Alignment.Start,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = if (avatarOnRight) Arrangement.End else Arrangement.Start,
+                ) {
                     Text(
                         name,
-                        modifier = Modifier.weight(1f),
                         color = LiveWhite,
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                         maxLines = 1,
                     )
+                    if (bot) {
+                        Spacer(Modifier.width(4.dp))
+                        Text("BOT", color = LiveRed, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                    }
                     if (active) {
-                        Box(
-                            Modifier
-                                .size(7.dp)
-                                .clip(CircleShape)
-                                .background(accent)
-                        )
+                        Spacer(Modifier.width(5.dp))
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(accent))
                     }
                 }
                 Text(
@@ -452,23 +448,30 @@ private fun LivePlayerCard(
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                 )
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text(
-                        score.toString(),
-                        color = LiveWhite,
-                        fontSize = 26.sp,
-                        lineHeight = 26.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                    Spacer(Modifier.width(5.dp))
-                    Text(
-                        "${rounds}R",
-                        color = LiveMuted,
-                        fontSize = 7.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 3.dp),
-                    )
-                }
+                Text(
+                    score.toString(),
+                    color = LiveWhite,
+                    fontSize = 30.sp,
+                    lineHeight = 30.sp,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+        }
+
+        Row(
+            Modifier
+                .fillMaxSize()
+                .padding(horizontal = 9.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (!avatarOnRight) {
+                avatar()
+                Spacer(Modifier.width(8.dp))
+                info(Modifier.weight(1f))
+            } else {
+                info(Modifier.weight(1f))
+                Spacer(Modifier.width(8.dp))
+                avatar()
             }
         }
     }
@@ -528,6 +531,8 @@ private fun LiveMainArena(
             val w = maxWidth
             val h = maxHeight
 
+            val displayWordCount = room.roundWordCount.coerceIn(0, 10)
+
             Column(
                 Modifier
                     .offset(x = w * .035f, y = h * .035f)
@@ -566,7 +571,7 @@ private fun LiveMainArena(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 Text(sh("KELİME SAYISI", "WORD COUNT"), color = LiveMuted, fontSize = 7.sp, fontWeight = FontWeight.Black)
-                Text("${room.roundWordCount}/10", color = LiveWhite, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text("$displayWordCount/10", color = LiveWhite, fontSize = 18.sp, fontWeight = FontWeight.Black)
             }
 
             Row(
@@ -578,10 +583,10 @@ private fun LiveMainArena(
                 repeat(10) { i ->
                     Box(
                         Modifier
-                            .size(if (i < room.roundWordCount) 6.dp else 5.dp)
+                            .size(if (i < displayWordCount) 6.dp else 5.dp)
                             .clip(CircleShape)
                             .background(
-                                if (i < room.roundWordCount) {
+                                if (i < displayWordCount) {
                                     if (i % 3 == 0) LivePurple else LiveBlue
                                 } else Color(0xFF26314B)
                             )
@@ -593,7 +598,7 @@ private fun LiveMainArena(
                 Modifier
                     .align(Alignment.Center)
                     .offset(y = -(h * .015f))
-                    .size(w * .47f)
+                    .size(w * .52f)
                     .graphicsLayer {
                         scaleX = if (myTurn) corePulse else 1f
                         scaleY = if (myTurn) corePulse else 1f
@@ -607,7 +612,7 @@ private fun LiveMainArena(
                     contentScale = ContentScale.Fit,
                 )
                 Column(
-                    modifier = Modifier.fillMaxWidth(.62f),
+                    modifier = Modifier.fillMaxWidth(.66f),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Text(
@@ -619,8 +624,8 @@ private fun LiveMainArena(
                     Text(
                         required,
                         color = LiveWhite,
-                        fontSize = 54.sp,
-                        lineHeight = 58.sp,
+                        fontSize = 60.sp,
+                        lineHeight = 62.sp,
                         fontWeight = FontWeight.Black,
                     )
                     Text(
@@ -649,9 +654,9 @@ private fun LiveMainArena(
             val recent = words.takeLast(5)
             LazyRow(
                 modifier = Modifier
-                    .offset(x = w * .035f, y = h * .825f)
+                    .offset(x = w * .035f, y = h * .815f)
                     .width(w * .93f)
-                    .height(h * .12f),
+                    .height(h * .145f),
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -659,7 +664,7 @@ private fun LiveMainArena(
                     LiveWordChip(
                         text = item.word.trim().ifBlank { item.normalizedWord.trim() }.uppercase(),
                         highlighted = index == recent.lastIndex,
-                        modifier = Modifier.widthIn(min = 62.dp, max = 92.dp).fillMaxHeight(.88f),
+                        modifier = Modifier.widthIn(min = 68.dp, max = 98.dp).fillMaxHeight(.90f),
                     )
                 }
                 item {
@@ -667,7 +672,7 @@ private fun LiveMainArena(
                         text = required,
                         highlighted = false,
                         purple = true,
-                        modifier = Modifier.width(62.dp).fillMaxHeight(.88f),
+                        modifier = Modifier.width(68.dp).fillMaxHeight(.90f),
                     )
                 }
             }
@@ -976,8 +981,8 @@ private fun LiveGameKeyboard(
         border = BorderStroke(1.dp, LiveBlue.copy(alpha = .30f)),
     ) {
         Column(
-            Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(3.dp),
+            Modifier.fillMaxSize().padding(horizontal = 3.dp, vertical = 3.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             rows.forEachIndexed { rowIndex, row ->
                 Row(
@@ -985,11 +990,11 @@ private fun LiveGameKeyboard(
                         .fillMaxWidth()
                         .weight(1f)
                         .padding(horizontal = when (rowIndex) {
-                            1 -> 10.dp
-                            2 -> 28.dp
+                            1 -> 8.dp
+                            2 -> 22.dp
                             else -> 0.dp
                         }),
-                    horizontalArrangement = Arrangement.spacedBy(2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(1.dp),
                 ) {
                     row.forEach { key ->
                         LiveKey(
@@ -1006,7 +1011,7 @@ private fun LiveGameKeyboard(
             }
 
             Row(
-                Modifier.fillMaxWidth().weight(1.08f).padding(horizontal = 18.dp),
+                Modifier.fillMaxWidth().weight(1.12f).padding(horizontal = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(5.dp),
             ) {
                 LiveSpecialKey(
