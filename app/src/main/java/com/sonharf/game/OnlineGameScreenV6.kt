@@ -97,7 +97,11 @@ fun OnlineGameScreenV6() {
     suspend fun activeRoom(): GameRoomDto? {
         val me = backend.currentUserId() ?: return null
         return SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
-            .filter { (it.hostId == me || it.guestId == me) && it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused") }
+            .filter {
+                (it.hostId == me || it.guestId == me) &&
+                    it.status in listOf("playing", "quiz", "final", "sudden_death", "paused") &&
+                    (it.isBot || it.guestId != null)
+            }
             .maxByOrNull { it.validWordCount }
     }
     suspend fun refreshQuiz(r: GameRoomDto) {
