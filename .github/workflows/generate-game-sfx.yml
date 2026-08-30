@@ -1,0 +1,33 @@
+name: Generate Game SFX
+
+on:
+  push:
+    branches:
+      - visual-audio-polish-20260830
+    paths:
+      - scripts/generate_game_sfx.py
+      - .github/workflows/generate-game-sfx.yml
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: visual-audio-polish-20260830
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Generate WAV effects
+        run: python scripts/generate_game_sfx.py
+      - name: Commit generated audio
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/res/raw/sfx_*.wav
+          git diff --cached --quiet && exit 0
+          git commit -m "Generate premium game sound effects"
+          git push origin HEAD:visual-audio-polish-20260830
