@@ -322,12 +322,14 @@ internal fun WordSiegeGameScreen(onExit: () -> Unit) {
 
     fun finishIfNeeded() {
         if (botHp <= 0 || myHp <= 0 || round > 15) {
+            val blueTerritory = territory.count { it == 1 }
+            val redTerritory = territory.count { it == 2 }
             turn = SiegeTurn.FINISHED
             notice = when {
                 botHp <= 0 -> "RAKİP KALE YIKILDI!"
                 myHp <= 0 -> "KALEN YIKILDI!"
-                round > 15 && myTerritory > botTerritory -> "ALAN ÜSTÜNLÜĞÜYLE KAZANDIN!"
-                round > 15 && myTerritory < botTerritory -> "BOT ALAN ÜSTÜNLÜĞÜYLE KAZANDI."
+                round > 15 && blueTerritory > redTerritory -> "ALAN ÜSTÜNLÜĞÜYLE KAZANDIN!"
+                round > 15 && blueTerritory < redTerritory -> "BOT ALAN ÜSTÜNLÜĞÜYLE KAZANDI."
                 myHp > botHp -> "KUŞATMAYI KAZANDIN!"
                 myHp < botHp -> "BOT KAZANDI."
                 else -> "BERABERE."
