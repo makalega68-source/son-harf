@@ -3,7 +3,7 @@ name: Import Live Duel Assets
 on:
   push:
     branches:
-      - live-duel-system-rebuild-20260830
+      - approved-preview-integration-20260830
     paths:
       - .github/workflows/import-live-duel-assets.yml
 
@@ -16,24 +16,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: live-duel-system-rebuild-20260830
+          ref: approved-preview-integration-20260830
       - name: Download Higgsfield UI assets
         run: |
           mkdir -p app/src/main/res/drawable-nodpi
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_a008be08-3070-4ed6-aed5-7f6cccb6f6e5.png' -o app/src/main/res/drawable-nodpi/duel_arena_bg.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_539fb18c-6c65-4a8f-b3e2-d477abdbac18.png' -o app/src/main/res/drawable-nodpi/hud_player_blue.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_51a479ae-b543-42a6-ab58-2950af4491c8.png' -o app/src/main/res/drawable-nodpi/hud_opponent_red.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_596b130b-f1fa-453d-8375-9800b464ffc7.png' -o app/src/main/res/drawable-nodpi/duel_energy_core.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_c18834eb-4cf3-47e3-b98a-5bce8b33cea0.png' -o app/src/main/res/drawable-nodpi/duel_bonus_panel.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_c966f035-f6b6-443a-b742-28e75d2b439b.png' -o app/src/main/res/drawable-nodpi/duel_input_panel.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_35c613e2-8d1f-49af-9194-f9c574ae9ab4.png' -o app/src/main/res/drawable-nodpi/duel_keycap_blue.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_7cda6e9e-cdc3-4e4a-b013-267af8b7eb95.png' -o app/src/main/res/drawable-nodpi/duel_button_red.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_c1725232-4cd9-4703-9daf-efb8aeb3097d.png' -o app/src/main/res/drawable-nodpi/duel_button_blue.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_363b5b7b-cd06-4b30-8754-3e87113c72c5.png' -o app/src/main/res/drawable-nodpi/duel_button_gold.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135458_0aa43442-9c0b-4f77-85df-04917e7496a2.png' -o app/src/main/res/drawable-nodpi/duel_main_frame.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135457_318a0547-08b6-4b44-aa8e-844b4c1e2656.png' -o app/src/main/res/drawable-nodpi/duel_timer_ring.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135458_c01df302-bf55-420f-ab8a-5c75a9e6b0ce.png' -o app/src/main/res/drawable-nodpi/duel_word_chip_blue.png
-          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135457_e8ac2587-367f-4104-9302-8ee6fa43b5c3.png' -o app/src/main/res/drawable-nodpi/duel_word_chip_gold.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_143854_c2182e6e-de7f-45e4-9d52-fac5be057151.png' -o app/src/main/res/drawable-nodpi/duel_arena_bg.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_143626_1b057731-3228-440d-99aa-61ea68cef2e2.png' -o app/src/main/res/drawable-nodpi/hud_player_blue.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_143838_bea7d08c-ee80-4a1f-8201-f3d42a47a9f2.png' -o app/src/main/res/drawable-nodpi/hud_opponent_red.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_143714_7951eaa4-2536-431a-a415-a1e762a86d3c.png' -o app/src/main/res/drawable-nodpi/duel_energy_core.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_143715_b1e98d50-e3d8-4ed9-9265-f2ae2f3f524c.png' -o app/src/main/res/drawable-nodpi/duel_bonus_panel.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_143838_0af976fd-32d0-40d0-9f59-862498481c1b.png' -o app/src/main/res/drawable-nodpi/duel_input_panel.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_143854_20bf5c00-43bc-4d81-a285-2eb94c33f8a4.png' -o app/src/main/res/drawable-nodpi/duel_keycap_blue.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_143854_90f3712b-3e3c-443b-a4cd-b7c5d1d0040f.png' -o app/src/main/res/drawable-nodpi/duel_button_red.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_143854_3f214dc6-4759-418f-a7e2-6b3436f46931.png' -o app/src/main/res/drawable-nodpi/duel_button_blue.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_144122_116f999b-6d16-40db-bf77-237b0e51d7f3.png' -o app/src/main/res/drawable-nodpi/duel_button_gold.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_143838_be5099b5-9d6d-4588-97d2-e3e30ace2ec3.png' -o app/src/main/res/drawable-nodpi/duel_main_frame.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_143714_0a7ad5f2-fa06-472b-b4f5-ecca144054c7.png' -o app/src/main/res/drawable-nodpi/duel_timer_ring.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_144253_f47fcb11-c683-41ee-8787-910b038cfc92.png' -o app/src/main/res/drawable-nodpi/duel_word_chip_blue.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_144253_4035fc0c-f1d7-40c1-a20a-573d78a25ccd.png' -o app/src/main/res/drawable-nodpi/duel_word_chip_gold.png
           file app/src/main/res/drawable-nodpi/*.png
       - name: Commit assets
         run: |
@@ -41,5 +41,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add app/src/main/res/drawable-nodpi/
           git diff --cached --quiet && exit 0
-          git commit -m "Import Higgsfield live duel UI assets"
-          git push origin HEAD:live-duel-system-rebuild-20260830
+          git commit -m "Import approved preview UI assets"
+          git push origin HEAD:approved-preview-integration-20260830
