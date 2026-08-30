@@ -62,7 +62,7 @@ fun LightWordThemeApp() {
                 WordArenaNavigation.clearRoom()
                 screen = LightScreen.KELIME_ARENASI
             }
-            "daily_cipher", "daily_arena", "semantic_path", "word_conquest" -> screen = LightScreen.KELIME_AVI
+            "daily_cipher", "daily_arena", "semantic_path", "word_conquest", "word_siege" -> screen = LightScreen.KELIME_AVI
             else -> screen = LightScreen.TASKS
         }
     }
@@ -199,7 +199,7 @@ fun LightWordThemeApp() {
                     )
                 }
                 LightScreen.KELIME_AVI -> Box(Modifier.fillMaxSize()) {
-                    WordConquestGameScreen { screen = LightScreen.HOME }
+                    WordSiegeGameScreen { screen = LightScreen.HOME }
                 }
                 LightScreen.KELIME_SAVASI -> Box(Modifier.fillMaxSize()) {
                     TrackedBilBakalimStandaloneScreen { screen = LightScreen.HOME }
@@ -356,11 +356,11 @@ private fun LightHomeScreen(
 
         item {
             LightGameCard(
-                icon = Icons.Rounded.GridView,
-                title = "KELİME FETHİ",
-                subtitle = "Kelime bul, kareleri ele geçir.",
-                buttonText = "FETHET",
-                accent = LightGreen,
+                icon = Icons.Rounded.Shield,
+                title = "KELİME KUŞATMASI",
+                subtitle = "Kelime kur, rakibin kalesini yık.",
+                buttonText = "KUŞAT",
+                accent = LightGold,
                 onClick = onKelimeAvi,
             )
         }
