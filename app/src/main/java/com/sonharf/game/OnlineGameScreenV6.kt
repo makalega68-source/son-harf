@@ -73,12 +73,13 @@ fun OnlineGameScreenV6() {
         "vip_required" in raw -> sh("Özel oda açmak için VIP gerekli.", "VIP is required to create a private room.")
         else -> sh("Bağlantı sorunu. Yeniden deneniyor.", "Connection problem. Retrying.")
     }
-    fun failedEvent(e: String?) = e in setOf("word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "turn_expired")
+    fun failedEvent(e: String?) = e in setOf("word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "ends_with_soft_g", "turn_expired")
     fun eventMessage(e: String?) = when (e) {
         "word_already_used" -> sh("Bu kelime daha önce kullanıldı.", "This word has already been used.")
         "wrong_start_letter" -> sh("Kelime son harfle başlamalı.", "The word must start with the last letter.")
         "not_in_dictionary" -> sh("Bu kelime sözlükte bulunamadı.", "This word was not found in the dictionary.")
         "invalid_word" -> sh("Bu kelime geçerli değil.", "This word is not valid.")
+        "ends_with_soft_g" -> sh("Ğ ile biten kelimeler kullanılamaz.", "Words ending with Ğ cannot be used.")
         "turn_expired" -> sh("Süren doldu. −1 puan.", "Your time expired. −1 point.")
         else -> sh("Hamle işlenemedi.", "The move could not be processed.")
     }
@@ -127,7 +128,7 @@ fun OnlineGameScreenV6() {
     val active = room
     if (active == null) {
         AuroraDuelLobby(
-            playerName = profile?.displayName ?: sh("Oyuncu", "Player"), language = language, matching = matching, notice = notice,
+            playerName = profile?.displayName ?: sh("Oyuncu", "Player"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility == "visible" }, playerGender = profile?.gender, language = language, matching = matching, notice = notice,
             showPrivate = showPrivate, showFriends = showFriends, privateCode = privateCode, friends = friends, invites = invites,
             onLanguage = { language = it; SonHarfSoundFx.tap() },
             onPrivateCode = { privateCode = it.filter(Char::isLetterOrDigit).uppercase().take(6) },
@@ -171,8 +172,9 @@ fun OnlineGameScreenV6() {
             }
         }
         AuroraArena(
-            room = active, me = me, playerName = profile?.displayName ?: sh("Sen", "You"),
+            room = active, me = me, playerName = profile?.displayName ?: sh("Sen", "You"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility == "visible" }, playerGender = profile?.gender,
             opponentName = if (active.isBot) "${active.botName ?: if (active.language == "en") "WordBot" else "KelimeBot"} BOT" else opponentProfile?.displayName ?: sh("Rakip", "Opponent"),
+            opponentAvatarPath = if (active.isBot) null else opponentProfile?.avatarPath?.takeIf { opponentProfile?.avatarVisibility == "visible" }, opponentGender = if (active.isBot) null else opponentProfile?.gender,
             words = words, wordInput = wordInput, onWordInput = { wordInput = it.take(40) }, notice = notice, busy = busy,
             triviaRound = triviaRound, triviaQuestion = triviaQuestion,
             onSubmit = {
@@ -200,7 +202,7 @@ fun OnlineGameScreenV6() {
 
 @Composable
 private fun AuroraDuelLobby(
-    playerName: String, language: String, matching: Boolean, notice: String, showPrivate: Boolean, showFriends: Boolean,
+    playerName: String, playerAvatarPath: String?, playerGender: String?, language: String, matching: Boolean, notice: String, showPrivate: Boolean, showFriends: Boolean,
     privateCode: String, friends: List<Pair<FriendshipDto, ProfileDto>>, invites: List<GameInviteDto>, onLanguage: (String) -> Unit,
     onPrivateCode: (String) -> Unit, onRandom: () -> Unit, onCancel: () -> Unit, onPrivate: () -> Unit, onFriends: () -> Unit,
     onCreate: () -> Unit, onJoin: () -> Unit, onInvite: (String) -> Unit, onInviteResponse: (String, Boolean) -> Unit
@@ -286,21 +288,13 @@ private fun AuroraDuelLobby(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Surface(
-                        modifier = Modifier.size(44.dp),
-                        shape = CircleShape,
-                        color = gameBlue.copy(alpha = .14f),
-                        border = BorderStroke(1.dp, gameBlue.copy(alpha = .55f)),
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                playerName.take(1).uppercase(),
-                                color = gameText,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                        }
-                    }
+                    ProfilePhotoAvatarWithGender(
+                        avatarPath = playerAvatarPath,
+                        gender = playerGender,
+                        name = playerName,
+                        size = 44.dp,
+                        accent = gameBlue,
+                    )
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(playerName, color = gameText, fontSize = 16.sp, fontWeight = FontWeight.Black)
@@ -690,7 +684,7 @@ private fun GameLobbyAction(
 
 @Composable
 private fun AuroraArena(
-    room: GameRoomDto, me: String?, playerName: String, opponentName: String, words: List<GameWordDto>, wordInput: String,
+    room: GameRoomDto, me: String?, playerName: String, playerAvatarPath: String?, playerGender: String?, opponentName: String, opponentAvatarPath: String?, opponentGender: String?, words: List<GameWordDto>, wordInput: String,
     onWordInput: (String) -> Unit, notice: String, busy: Boolean, triviaRound: TriviaRoundDto?, triviaQuestion: TriviaQuestionDto?,
     onSubmit: () -> Unit, onTimeout: () -> Unit, onTrivia: (Int) -> Unit, onChat: () -> Unit, onForfeit: () -> Unit,
     onExit: () -> Unit, onRematch: () -> Unit
@@ -853,7 +847,7 @@ private fun AuroraArena(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AuroraPlayerCard(playerName, myScore, myRounds, myTurn, myAccent, Modifier.weight(1f))
+            AuroraPlayerCard(playerName, playerAvatarPath, playerGender, myScore, myRounds, myTurn, myAccent, Modifier.weight(1f))
 
             Surface(
                 modifier = Modifier
@@ -877,7 +871,7 @@ private fun AuroraArena(
                 }
             }
 
-            AuroraPlayerCard(opponentName, oppScore, oppRounds, !myTurn && liveWordPhase, opponentAccent, Modifier.weight(1f))
+            AuroraPlayerCard(opponentName, opponentAvatarPath, opponentGender, oppScore, oppRounds, !myTurn && liveWordPhase, opponentAccent, Modifier.weight(1f))
         }
 
         Surface(
@@ -1031,16 +1025,18 @@ private fun AuroraArena(
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 items(words.takeLast(12)) { w ->
                                     Surface(
-                                        shape = RoundedCornerShape(11.dp),
-                                        color = arenaPanel2,
-                                        border = BorderStroke(1.dp, Color.White.copy(alpha = .08f)),
+                                        modifier = Modifier.heightIn(min = 34.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = Color(0xFF101633),
+                                        border = BorderStroke(1.dp, arenaCyan.copy(alpha = .30f)),
                                     ) {
                                         Text(
-                                            w.word.uppercase(),
+                                            w.word.trim().ifBlank { w.normalizedWord.trim() }.uppercase(),
                                             Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                            color = arenaText,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 9.sp,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 10.sp,
+                                            maxLines = 1,
                                         )
                                     }
                                 }
@@ -1185,7 +1181,7 @@ private fun ArenaActionButton(
 }
 
 @Composable
-private fun AuroraPlayerCard(name: String, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier) {
+private fun AuroraPlayerCard(name: String, avatarPath: String?, gender: String?, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier) {
     Card(
         modifier = modifier.height(78.dp),
         colors = CardDefaults.cardColors(containerColor = if (active) accent.copy(alpha = .16f) else Color(0xFF121B2E)),
@@ -1197,16 +1193,13 @@ private fun AuroraPlayerCard(name: String, score: Int, rounds: Int, active: Bool
             Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
-                modifier = Modifier.size(38.dp),
-                shape = CircleShape,
-                color = accent.copy(alpha = .20f),
-                border = BorderStroke(1.dp, accent.copy(alpha = .35f)),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(name.take(1).uppercase(), color = Color(0xFFF5F7FF), fontWeight = FontWeight.Black, fontSize = 18.sp)
-                }
-            }
+            ProfilePhotoAvatarWithGender(
+                avatarPath = avatarPath,
+                gender = gender,
+                name = name,
+                size = 40.dp,
+                accent = accent,
+            )
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(
