@@ -45,6 +45,7 @@ data class GameRoomDto(
     val code: String,
     @SerialName("host_id") val hostId: String,
     @SerialName("guest_id") val guestId: String? = null,
+    @SerialName("created_at") val createdAt: String = "",
     val status: String,
     val language: String = "tr",
     @SerialName("host_score") val hostScore: Int = 0,
