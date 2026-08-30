@@ -34,7 +34,6 @@ object SonHarfSoundFx {
             R.raw.sfx_bonus,
             R.raw.sfx_warning,
             R.raw.sfx_heartbeat,
-            R.raw.sfx_explosion,
             R.raw.sfx_victory,
             R.raw.sfx_defeat,
         ).forEach { resId ->
@@ -64,7 +63,7 @@ object SonHarfSoundFx {
     fun defeat() = play(R.raw.sfx_defeat, .34f)
     fun countdown() { /* countdown uses heartbeat/haptic only; no beep */ }
     fun heartbeat() = play(R.raw.sfx_heartbeat, .24f)
-    fun explosion() = play(R.raw.sfx_explosion, .52f)
+    fun explosion() { /* intentionally disabled */ }
     fun fireworks() = play(R.raw.sfx_victory, .28f)
 
     private fun play(resId: Int, volume: Float, rate: Float = 1f) {
