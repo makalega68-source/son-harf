@@ -30,6 +30,10 @@ jobs:
           curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_7cda6e9e-cdc3-4e4a-b013-267af8b7eb95.png' -o app/src/main/res/drawable-nodpi/duel_button_red.png
           curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_c1725232-4cd9-4703-9daf-efb8aeb3097d.png' -o app/src/main/res/drawable-nodpi/duel_button_blue.png
           curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_363b5b7b-cd06-4b30-8754-3e87113c72c5.png' -o app/src/main/res/drawable-nodpi/duel_button_gold.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135458_0aa43442-9c0b-4f77-85df-04917e7496a2.png' -o app/src/main/res/drawable-nodpi/duel_main_frame.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135457_318a0547-08b6-4b44-aa8e-844b4c1e2656.png' -o app/src/main/res/drawable-nodpi/duel_timer_ring.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135458_c01df302-bf55-420f-ab8a-5c75a9e6b0ce.png' -o app/src/main/res/drawable-nodpi/duel_word_chip_blue.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135457_e8ac2587-367f-4104-9302-8ee6fa43b5c3.png' -o app/src/main/res/drawable-nodpi/duel_word_chip_gold.png
           file app/src/main/res/drawable-nodpi/*.png
       - name: Commit assets
         run: |
