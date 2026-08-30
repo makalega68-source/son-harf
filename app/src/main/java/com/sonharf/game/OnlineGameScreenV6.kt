@@ -8,8 +8,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -17,9 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -276,112 +272,466 @@ private fun AuroraArena(
     val oppScore = if (host) room.guestScore else room.hostScore
     val myRounds = if (host) room.hostRounds else room.guestRounds
     val oppRounds = if (host) room.guestRounds else room.hostRounds
-    val myTurn = room.currentPlayerId == me && room.status in listOf("playing", "final", "sudden_death")
+    val liveWordPhase = room.status in listOf("playing", "final", "sudden_death")
+    val myTurn = room.currentPlayerId == me && liveWordPhase
     val last = words.lastOrNull()?.normalizedWord
     val required = last?.lastOrNull()?.uppercaseChar()?.toString() ?: "•"
     var seconds by remember(room.turnDeadline) { mutableStateOf(45) }
-    val focus = LocalFocusManager.current
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
-        while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
-            seconds = runCatching { (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0) }.getOrDefault(45)
-            if (seconds <= 0) { onTimeout(); break }
+        while (room.turnDeadline != null && liveWordPhase) {
+            seconds = runCatching {
+                (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0)
+            }.getOrDefault(45)
+            if (seconds <= 0) {
+                onTimeout()
+                break
+            }
             if (seconds in 1..5) SonHarfSoundFx.countdown()
             delay(1000)
         }
     }
 
+    val arenaBgTop = Color(0xFF07101F)
+    val arenaBgBottom = Color(0xFF11172B)
+    val arenaPanel = Color(0xFF121B2E)
+    val arenaPanel2 = Color(0xFF19243A)
+    val arenaText = Color(0xFFF5F7FF)
+    val arenaMuted = Color(0xFF95A4BE)
+    val timerAccent = when {
+        seconds <= 5 -> SonHarfPink
+        seconds <= 15 -> SonHarfGold
+        else -> SonHarfCyan
+    }
+    val myAccent = SonHarfCyan
+    val opponentAccent = SonHarfPink
+
     if (room.status == "finished") {
+        val draw = room.winnerId == null
         val won = room.winnerId == me
-        Box(Modifier.fillMaxSize().padding(18.dp), contentAlignment = Alignment.Center) {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, if (won) SonHarfGold.copy(alpha = .5f) else SonHarfPink.copy(alpha = .35f))) {
-                Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(sh("MAÇ SONUCU", "MATCH RESULT"), fontWeight = FontWeight.Black)
-                    Text(if (won) sh("KAZANAN", "WINNER") else sh("MAÇ BİTTİ", "MATCH OVER"), color = if (won) SonHarfCyan else SonHarfMuted, fontSize = 14.sp)
-                    Text(if (won) playerName else opponentName, fontSize = 34.sp, fontWeight = FontWeight.Black, color = if (won) SonHarfCyan else SonHarfPink)
-                    Row(verticalAlignment = Alignment.CenterVertically) { Text("$myRounds", fontSize = 42.sp, fontWeight = FontWeight.Black); Text("  -  ", color = SonHarfMuted); Text("$oppRounds", fontSize = 42.sp, fontWeight = FontWeight.Black) }
-                    Button(onClick = onRematch, modifier = Modifier.fillMaxWidth().height(54.dp), shape = RoundedCornerShape(18.dp)) { Text(sh("TEKRAR OYNA", "PLAY AGAIN"), fontWeight = FontWeight.Black) }
-                    OutlinedButton(onClick = onExit, modifier = Modifier.fillMaxWidth().height(50.dp)) { Text(sh("LOBİYE DÖN", "BACK TO LOBBY")) }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Brush.verticalGradient(listOf(arenaBgTop, arenaBgBottom)))
+                .statusBarsPadding()
+                .navigationBarsPadding()
+                .padding(18.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = arenaPanel),
+                shape = RoundedCornerShape(30.dp),
+                border = BorderStroke(
+                    1.dp,
+                    when {
+                        draw -> SonHarfGold.copy(alpha = .55f)
+                        won -> myAccent.copy(alpha = .65f)
+                        else -> opponentAccent.copy(alpha = .55f)
+                    },
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 10.dp),
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(15.dp),
+                ) {
+                    Text(sh("MAÇ SONUCU", "MATCH RESULT"), color = arenaMuted, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                    Text(
+                        when {
+                            draw -> sh("BERABERE", "DRAW")
+                            won -> sh("ZAFER", "VICTORY")
+                            else -> sh("MAÇ BİTTİ", "MATCH OVER")
+                        },
+                        color = when {
+                            draw -> SonHarfGold
+                            won -> myAccent
+                            else -> opponentAccent
+                        },
+                        fontSize = 30.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Text(
+                        if (draw) "$playerName  •  $opponentName" else if (won) playerName else opponentName,
+                        color = arenaText,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("$myRounds", color = myAccent, fontSize = 46.sp, fontWeight = FontWeight.Black)
+                        Text("   :   ", color = arenaMuted, fontSize = 22.sp)
+                        Text("$oppRounds", color = opponentAccent, fontSize = 46.sp, fontWeight = FontWeight.Black)
+                    }
+                    Button(
+                        onClick = onRematch,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = myAccent),
+                    ) {
+                        Text(sh("RÖVANŞ  ⚡", "REMATCH  ⚡"), fontWeight = FontWeight.Black)
+                    }
+                    OutlinedButton(
+                        onClick = onExit,
+                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        border = BorderStroke(1.dp, arenaMuted.copy(alpha = .45f)),
+                    ) {
+                        Text(sh("LOBİYE DÖN", "BACK TO LOBBY"), color = arenaText)
+                    }
                 }
             }
         }
         return
     }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp).imePadding(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-            AuroraPlayerCard(playerName, myScore, myRounds, myTurn, SonHarfCyan, Modifier.weight(1f))
-            Box(Modifier.size(70.dp).clip(CircleShape).background(Brush.sweepGradient(listOf(SonHarfCyan, SonHarfGold, SonHarfPink, SonHarfCyan))).padding(3.dp), contentAlignment = Alignment.Center) {
-                Box(Modifier.fillMaxSize().clip(CircleShape).background(SonHarfSurface), contentAlignment = Alignment.Center) { Column(horizontalAlignment = Alignment.CenterHorizontally) { Text("$seconds", fontSize = 25.sp, fontWeight = FontWeight.Black); Text(sh("sn", "sec"), fontSize = 8.sp, color = SonHarfMuted) } }
-            }
-            AuroraPlayerCard(opponentName, oppScore, oppRounds, !myTurn, SonHarfPink, Modifier.weight(1f))
-        }
+    Column(
+        Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(arenaBgTop, arenaBgBottom)))
+            .statusBarsPadding(),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            AuroraPlayerCard(playerName, myScore, myRounds, myTurn, myAccent, Modifier.weight(1f))
 
-        Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .12f))) {
-            Column(Modifier.fillMaxWidth().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (room.status == "sudden_death") sh("ANİ ÖLÜM", "SUDDEN DEATH") else "ROUND ${room.roundNo}/3", fontWeight = FontWeight.Black, fontSize = 12.sp)
-                    Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { repeat(10) { i -> Box(Modifier.size(if (i == room.roundWordCount.coerceAtMost(9)) 7.dp else 5.dp).clip(CircleShape).background(if (i < room.roundWordCount) SonHarfCyan else SonHarfSurface2)) } }
-                    Text("${room.roundWordCount}/10", fontWeight = FontWeight.Black, fontSize = 11.sp)
-                }
-                Text(if (myTurn) sh("SIRA SENDE", "YOUR TURN") else if (room.isBot && room.botTurn) sh("BOT DÜŞÜNÜYOR", "BOT IS THINKING") else sh("RAKİBİN SIRASI", "OPPONENT'S TURN"), color = if (myTurn) SonHarfCyan else SonHarfMuted, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                Box(Modifier.size(158.dp).clip(CircleShape).background(Brush.sweepGradient(listOf(SonHarfCyan, SonHarfPurple, SonHarfPink, SonHarfCyan))).padding(4.dp), contentAlignment = Alignment.Center) {
-                    Box(Modifier.fillMaxSize().clip(CircleShape).background(Brush.radialGradient(listOf(SonHarfSurface2, SonHarfSurface))), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(sh("SON HARF", "LAST LETTER"), color = SonHarfMuted, fontSize = 9.sp); Text(required, fontSize = 72.sp, fontWeight = FontWeight.Black) }
+            Surface(
+                modifier = Modifier.size(72.dp),
+                shape = CircleShape,
+                color = arenaPanel,
+                border = BorderStroke(3.dp, timerAccent),
+                shadowElevation = 8.dp,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("$seconds", color = arenaText, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                        Text(sh("SN", "SEC"), color = timerAccent, fontSize = 8.sp, fontWeight = FontWeight.Black)
                     }
                 }
-                Text(if (last == null) sh("İlk kelimeyi sen başlat.", "Start with the first word.") else sh("$required ile başlayan bir kelime yaz", "Enter a word starting with $required"), color = SonHarfMuted, fontSize = 11.sp)
             }
+
+            AuroraPlayerCard(opponentName, oppScore, oppRounds, !myTurn && liveWordPhase, opponentAccent, Modifier.weight(1f))
         }
 
-        if (words.isNotEmpty()) {
-            Column {
-                Text(sh("KELİME ZİNCİRİ", "WORD CHAIN"), color = SonHarfMuted, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.height(5.dp))
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    items(words.takeLast(18)) { w -> Surface(shape = RoundedCornerShape(12.dp), color = SonHarfSurface2, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .12f))) { Text(w.word.uppercase(), Modifier.padding(horizontal = 11.dp, vertical = 7.dp), fontWeight = FontWeight.Bold, fontSize = 10.sp) } }
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(horizontal = 10.dp),
+            shape = RoundedCornerShape(28.dp),
+            color = arenaPanel,
+            border = BorderStroke(1.dp, if (myTurn) myAccent.copy(alpha = .55f) else Color.White.copy(alpha = .08f)),
+            shadowElevation = 8.dp,
+        ) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.radialGradient(
+                            listOf(
+                                if (myTurn) myAccent.copy(alpha = .12f) else opponentAccent.copy(alpha = .06f),
+                                Color.Transparent,
+                            ),
+                        )
+                    )
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+            ) {
+                Column(
+                    Modifier.fillMaxSize(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (room.status == "sudden_death") opponentAccent.copy(alpha = .18f) else arenaPanel2,
+                        ) {
+                            Text(
+                                if (room.status == "sudden_death") sh("ANİ ÖLÜM", "SUDDEN DEATH") else "ROUND ${room.roundNo}/3",
+                                Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                color = if (room.status == "sudden_death") opponentAccent else arenaText,
+                                fontWeight = FontWeight.Black,
+                                fontSize = 11.sp,
+                            )
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            repeat(10) { i ->
+                                Box(
+                                    Modifier
+                                        .size(if (i < room.roundWordCount) 7.dp else 5.dp)
+                                        .clip(CircleShape)
+                                        .background(if (i < room.roundWordCount) myAccent else arenaMuted.copy(alpha = .18f))
+                                )
+                            }
+                        }
+
+                        Text(
+                            "${room.roundWordCount}/10",
+                            color = arenaText,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 12.sp,
+                        )
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(
+                        when {
+                            myTurn -> sh("SIRA SENDE  ⚡", "YOUR TURN  ⚡")
+                            room.isBot && room.botTurn -> sh("BOT DÜŞÜNÜYOR…", "BOT IS THINKING…")
+                            else -> sh("RAKİBİN HAMLESİ", "OPPONENT'S MOVE")
+                        },
+                        color = if (myTurn) myAccent else arenaMuted,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+
+                    Spacer(Modifier.weight(.25f))
+
+                    Surface(
+                        modifier = Modifier.size(142.dp),
+                        shape = CircleShape,
+                        color = arenaPanel2,
+                        border = BorderStroke(4.dp, Brush.sweepGradient(listOf(myAccent, SonHarfPurple, opponentAccent, SonHarfGold, myAccent))),
+                        shadowElevation = 12.dp,
+                    ) {
+                        Box(
+                            Modifier.background(
+                                Brush.radialGradient(
+                                    listOf(
+                                        Color(0xFF263553),
+                                        arenaPanel2,
+                                        Color(0xFF10192C),
+                                    )
+                                )
+                            ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(sh("SON HARF", "LAST LETTER"), color = arenaMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Text(required, color = arenaText, fontSize = 70.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Text(
+                        if (last == null) sh("İlk kelimeyi sen başlat.", "Start with the first word.")
+                        else sh("$required ile başlayan kelimeyi kur", "Build a word starting with $required"),
+                        color = arenaMuted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+
+                    Spacer(Modifier.weight(.2f))
+
+                    if (words.isNotEmpty()) {
+                        Column(Modifier.fillMaxWidth()) {
+                            Text(
+                                sh("KELİME ZİNCİRİ", "WORD CHAIN"),
+                                color = arenaMuted,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                            Spacer(Modifier.height(5.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                items(words.takeLast(12)) { w ->
+                                    Surface(
+                                        shape = RoundedCornerShape(11.dp),
+                                        color = arenaPanel2,
+                                        border = BorderStroke(1.dp, Color.White.copy(alpha = .08f)),
+                                    ) {
+                                        Text(
+                                            w.word.uppercase(),
+                                            Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                            color = arenaText,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 9.sp,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        val warningNotice = notice.startsWith("Bu ") || notice.startsWith("This ") || notice.contains("doldu") || notice.contains("expired")
-        Surface(color = if (warningNotice) SonHarfPink.copy(alpha = .16f) else SonHarfSurface, shape = RoundedCornerShape(12.dp)) {
-            Text(notice, Modifier.fillMaxWidth().padding(8.dp), color = if (warningNotice) SonHarfPink else SonHarfMuted, fontSize = 10.sp, textAlign = TextAlign.Center)
+        val warningNotice =
+            notice.startsWith("Bu ") || notice.startsWith("This ") || notice.contains("doldu") ||
+                notice.contains("expired") || notice.contains("sorunu") || notice.contains("problem")
+
+        Surface(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = if (warningNotice) opponentAccent.copy(alpha = .13f) else Color.White.copy(alpha = .05f),
+            border = BorderStroke(1.dp, if (warningNotice) opponentAccent.copy(alpha = .28f) else Color.White.copy(alpha = .05f)),
+        ) {
+            Text(
+                notice,
+                Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
+                color = if (warningNotice) Color(0xFFFFA9B6) else arenaMuted,
+                fontSize = 9.sp,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+            )
         }
 
         if (room.status == "quiz" && triviaRound != null && triviaQuestion != null) {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfPurple.copy(alpha = .12f)), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .45f))) {
-                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("⭐ BONUS +${triviaRound.bonusPoints}", color = SonHarfGold, fontWeight = FontWeight.Black)
-                    Text(triviaQuestion.question, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    listOf(triviaQuestion.optionA, triviaQuestion.optionB, triviaQuestion.optionC, triviaQuestion.optionD).forEachIndexed { i, s -> OutlinedButton(onClick = { onTrivia(i) }, modifier = Modifier.fillMaxWidth().heightIn(min = 36.dp)) { Text(s, fontSize = 10.sp) } }
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
+                colors = CardDefaults.cardColors(containerColor = SonHarfPurple.copy(alpha = .22f)),
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .55f)),
+            ) {
+                Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("★ BONUS +${triviaRound.bonusPoints}", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                    Text(triviaQuestion.question, color = arenaText, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    val options = listOf(triviaQuestion.optionA, triviaQuestion.optionB, triviaQuestion.optionC, triviaQuestion.optionD)
+                    options.chunked(2).forEachIndexed { rowIndex, pair ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            pair.forEachIndexed { colIndex, option ->
+                                OutlinedButton(
+                                    onClick = { onTrivia(rowIndex * 2 + colIndex) },
+                                    modifier = Modifier.weight(1f).heightIn(min = 34.dp),
+                                    border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .65f)),
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
+                                ) {
+                                    Text(option, color = arenaText, fontSize = 9.sp, maxLines = 2)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                ArenaActionButton(sh("⚑ PES ET", "⚑ FORFEIT"), opponentAccent, Modifier.weight(1f), onForfeit)
+                ArenaActionButton(sh("● SOHBET", "● CHAT"), myAccent, Modifier.weight(1f), onChat)
+                ArenaActionButton("★ BONUS", SonHarfGold, Modifier.weight(1f)) { }
+            }
+
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(18.dp),
+                color = Color.White.copy(alpha = .08f),
+                border = BorderStroke(1.dp, if (myTurn) myAccent.copy(alpha = .7f) else Color.White.copy(alpha = .12f)),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().height(50.dp).padding(start = 14.dp, end = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        if (wordInput.isBlank()) {
+                            if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Sıranı bekle…", "Wait for your turn…")
+                        } else wordInput,
+                        color = if (wordInput.isBlank()) arenaMuted else arenaText,
+                        fontSize = if (wordInput.isBlank()) 14.sp else 19.sp,
+                        fontWeight = if (wordInput.isBlank()) FontWeight.Medium else FontWeight.Black,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                    )
+                    Button(
+                        onClick = onSubmit,
+                        enabled = myTurn && wordInput.isNotBlank() && !busy,
+                        modifier = Modifier.height(40.dp),
+                        shape = RoundedCornerShape(13.dp),
+                        contentPadding = PaddingValues(horizontal = 15.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = myAccent,
+                            disabledContainerColor = arenaMuted.copy(alpha = .18f),
+                        ),
+                    ) {
+                        Text("➤", fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    }
                 }
             }
         }
 
-        Spacer(Modifier.weight(1f))
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = wordInput, onValueChange = onWordInput, enabled = myTurn && !busy, singleLine = true, modifier = Modifier.weight(1f),
-                placeholder = { Text(if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Rakibin sırası…", "Opponent's turn…")) }, shape = RoundedCornerShape(24.dp),
-                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send), keyboardActions = KeyboardActions(onSend = { if (myTurn && wordInput.isNotBlank() && !busy) { focus.clearFocus(); onSubmit() } })
-            )
-            Button(onClick = { focus.clearFocus(); onSubmit() }, enabled = myTurn && wordInput.isNotBlank() && !busy, modifier = Modifier.size(56.dp), shape = CircleShape, contentPadding = PaddingValues(0.dp), colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue)) { Text("➤", fontSize = 22.sp) }
-        }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            OutlinedButton(onClick = onForfeit, modifier = Modifier.weight(1f).height(42.dp), border = BorderStroke(1.dp, SonHarfPink.copy(alpha = .55f))) { Text(sh("⚑ PES ET", "⚑ FORFEIT"), color = SonHarfPink, fontSize = 10.sp) }
-            OutlinedButton(onClick = onChat, modifier = Modifier.weight(1f).height(42.dp), border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .45f))) { Text(sh("● SOHBET", "● CHAT"), color = SonHarfCyan, fontSize = 10.sp) }
-            OutlinedButton(onClick = {}, modifier = Modifier.weight(1f).height(42.dp), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .45f))) { Text("★ BONUS", color = SonHarfGold, fontSize = 10.sp) }
-        }
+        EmbeddedWordKeyboard(
+            value = wordInput,
+            language = room.language,
+            enabled = myTurn && !busy && room.status != "quiz",
+            maxLength = 40,
+            onValueChange = onWordInput,
+            onSubmit = onSubmit,
+            modifier = Modifier.navigationBarsPadding(),
+        )
     }
 }
 
-@Composable private fun AuroraPlayerCard(name: String, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier) {
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = if (active) accent.copy(alpha = .11f) else SonHarfSurface), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (active) accent.copy(alpha = .5f) else SonHarfMuted.copy(alpha = .12f))) {
-        Row(Modifier.padding(9.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(34.dp).clip(CircleShape).background(accent.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Text(name.take(1).uppercase(), fontWeight = FontWeight.Black) }
-            Spacer(Modifier.width(7.dp))
-            Column { Text(name, maxLines = 1, fontSize = 9.sp, color = if (active) accent else SonHarfMuted); Text(score.toString(), fontSize = 22.sp, fontWeight = FontWeight.Black); Text("$rounds round", color = SonHarfMuted, fontSize = 7.sp) }
+@Composable
+private fun ArenaActionButton(
+    label: String,
+    accent: Color,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(36.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = .48f)),
+        shape = RoundedCornerShape(13.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = accent),
+        contentPadding = PaddingValues(horizontal = 4.dp),
+    ) {
+        Text(label, fontSize = 9.sp, fontWeight = FontWeight.Black, maxLines = 1)
+    }
+}
+
+@Composable
+private fun AuroraPlayerCard(name: String, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier) {
+    Card(
+        modifier = modifier.height(78.dp),
+        colors = CardDefaults.cardColors(containerColor = if (active) accent.copy(alpha = .16f) else Color(0xFF121B2E)),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, if (active) accent.copy(alpha = .70f) else Color.White.copy(alpha = .08f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (active) 7.dp else 2.dp),
+    ) {
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                modifier = Modifier.size(38.dp),
+                shape = CircleShape,
+                color = accent.copy(alpha = .20f),
+                border = BorderStroke(1.dp, accent.copy(alpha = .35f)),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(name.take(1).uppercase(), color = Color(0xFFF5F7FF), fontWeight = FontWeight.Black, fontSize = 18.sp)
+                }
+            }
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    name,
+                    maxLines = 1,
+                    color = if (active) Color(0xFFF5F7FF) else Color(0xFF95A4BE),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(score.toString(), color = Color(0xFFF5F7FF), fontSize = 24.sp, fontWeight = FontWeight.Black)
+                Text(
+                    "$rounds ${sh("round", "round")}",
+                    color = Color(0xFF95A4BE),
+                    fontSize = 7.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+            if (active) {
+                Box(Modifier.size(7.dp).clip(CircleShape).background(accent))
+            }
         }
     }
 }
