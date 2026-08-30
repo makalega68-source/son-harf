@@ -9,7 +9,6 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -21,7 +20,7 @@ fun CompleteProfileScreen(
     onBack: (() -> Unit)? = null,
 ) {
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
-    Column(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg)))) {
+    Column(Modifier.fillMaxSize().background(SonHarfBg)) {
         if (onBack != null) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp),

@@ -14,7 +14,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -79,7 +78,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
             }
             .onFailure { rows = emptyList(); profiles = emptyMap(); error = true }
         loading = false
-        runCatching { b.logEvent("leaderboard_neon_open", "$language:$period") }
+        runCatching { b.logEvent("leaderboard_open", "$language:$period") }
     }
 
     val myIndex = rows.indexOfFirst { it.userId == me }
@@ -89,7 +88,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
     val league = leagueProgress.leagueName
 
     LazyColumn(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))),
+        Modifier.fillMaxSize().background(SonHarfBg),
         contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(11.dp),
     ) {
@@ -103,7 +102,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f)),
                 ) { Text("‹", fontSize = 28.sp, color = SonHarfCyan) }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(sh("LİGLER", "LEAGUES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 22.sp)
+                    Text(sh("LİGLER", "LEAGUES"), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 22.sp)
                     Text(
                         if (period == "season")
                             (if (SonHarfUiState.isEnglish) seasonInfo?.nameEn else seasonInfo?.nameTr) ?: sh("Rekabet sezonu", "Competitive season")
@@ -118,18 +117,16 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
 
         item {
             Card(
-                colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF3FF)),
                 shape = RoundedCornerShape(26.dp),
                 border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .24f)),
             ) {
                 Column(
-                    Modifier.fillMaxWidth().background(
-                        Brush.radialGradient(listOf(SonHarfCyan.copy(alpha = .18f), SonHarfSurface2, SonHarfSurface))
-                    ).padding(18.dp),
+                    Modifier.fillMaxWidth().padding(18.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    NeonLeagueShield()
+                    LeagueShield()
                     Text(if (SonHarfUiState.isEnglish) "$league LEAGUE" else "$league LİGİ", color = SonHarfCyan, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     Text(
                         if (period == "season" && (seasonInfo?.seasonRank ?: 0) > 0)
@@ -145,7 +142,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     LinearProgressIndicator(
                         progress = { leagueProgress.progress },
                         modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                        color = SonHarfPurple,
+                        color = SonHarfBlue,
                         trackColor = SonHarfMuted.copy(alpha = .16f),
                     )
                     Text(
@@ -217,8 +214,8 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                         avatarPath = profiles[row.userId]?.avatarPath,
                         name = row.displayName,
                         size = 36.dp,
-                        visible = true,
-                        accent = if (mine) SonHarfBlue else Color(0xFF6B4FD3),
+                        visible = profiles[row.userId]?.avatarVisibility != "hidden",
+                        accent = if (profiles[row.userId]?.isVip == true) SonHarfGold else SonHarfBlue,
                     )
                     Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f)) {
@@ -244,7 +241,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
 }
 
 @Composable
-private fun NeonLeagueShield() {
+private fun LeagueShield() {
     Box(Modifier.size(126.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
             val cx = size.width / 2f
@@ -259,7 +256,7 @@ private fun NeonLeagueShield() {
                 lineTo(size.width * .16f, size.height * .28f)
                 close()
             }
-            drawPath(outer, brush = Brush.linearGradient(listOf(Color(0xFF8DE1FA), SonHarfBlue, Color(0xFF157FB0))))
+            drawPath(outer, color = Color(0xFF1769E0))
             drawPath(outer, color = SonHarfCyan.copy(alpha = .65f), style = Stroke(width = 3f))
             val gem = Path().apply {
                 moveTo(cx, size.height*.31f)
@@ -268,11 +265,10 @@ private fun NeonLeagueShield() {
                 lineTo(size.width*.30f, size.height*.48f)
                 close()
             }
-            drawPath(gem, brush = Brush.linearGradient(listOf(Color(0xFF7FE2FA), SonHarfBlue, SonHarfCyan)))
+            drawPath(gem, color = Color(0xFF5BA1F7))
             drawLine(SonHarfGold, Offset(size.width*.10f,size.height*.36f), Offset(size.width*.01f,size.height*.24f), strokeWidth=5f)
             drawLine(SonHarfGold, Offset(size.width*.90f,size.height*.36f), Offset(size.width*.99f,size.height*.24f), strokeWidth=5f)
         }
         Text("◆", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black)
     }
 }
-

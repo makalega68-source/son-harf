@@ -2,6 +2,7 @@ package com.sonharf.game
 
 data class RatingLeagueProgress(
     val leagueName: String,
+    val nextLeagueName: String,
     val floor: Int,
     val nextAt: Int?,
     val progress: Float,
@@ -34,9 +35,18 @@ fun ratingLeagueProgress(rating: Int): RatingLeagueProgress {
         "ELMAS" -> 1800
         else -> null
     }
+    val nextLeague = when (league) {
+        "BRONZ" -> "GÜMÜŞ"
+        "GÜMÜŞ" -> "ALTIN"
+        "ALTIN" -> "PLATİN"
+        "PLATİN" -> "ELMAS"
+        "ELMAS" -> "EFSANE"
+        else -> "EFSANE"
+    }
     val progress = if (next == null) 1f else ((safe-floor).toFloat()/(next-floor).coerceAtLeast(1)).coerceIn(0f,1f)
     return RatingLeagueProgress(
         leagueName = league,
+        nextLeagueName = nextLeague,
         floor = floor,
         nextAt = next,
         progress = progress,

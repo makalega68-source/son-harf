@@ -137,8 +137,8 @@ internal fun ProfilePhotoAvatar(
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     var gender by remember(avatarPath) { mutableStateOf<String?>(null) }
-    LaunchedEffect(avatarPath) {
-        bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+    LaunchedEffect(avatarPath, visible) {
+        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
         gender = ProfilePhotoRuntime.genderForAvatar(avatarPath)
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
@@ -168,10 +168,11 @@ internal fun ProfilePhotoAvatarWithGender(
     name: String,
     size: Dp,
     accent: Color = SonHarfCyan,
+    visible: Boolean = true,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(avatarPath) {
-        bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+    LaunchedEffect(avatarPath, visible) {
+        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {

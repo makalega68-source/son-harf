@@ -6,13 +6,13 @@ import android.media.MediaPlayer
 /**
  * Single background-music runtime for Son Harf.
  *
- * Only Warm Beginnings is used. It loops across the app and follows the existing sound preference.
+ * Only Warm Beginnings is used. It loops across the app and follows the music preference.
  */
 internal object SonHarfBackgroundMusic {
     private var player: MediaPlayer? = null
 
     fun start(context: Context) {
-        if (!SonHarfPreferences.soundEnabled(context)) {
+        if (!SonHarfPreferences.musicEnabled(context)) {
             pause()
             return
         }
