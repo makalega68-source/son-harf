@@ -21,6 +21,7 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.FriendshipDto
@@ -374,9 +375,10 @@ internal fun LightDuelArena(
     val myTurn = room.currentPlayerId == me && liveWordPhase
     val lastItem = words.lastOrNull()
     val last = lastItem?.normalizedWord?.trim().orEmpty()
-    val required = last.lastOrNull()?.uppercaseChar()?.toString() ?: "•"
+    val required = last.takeLast(1).takeIf { it.isNotBlank() }
+        ?.let { gameUppercase(it, room.language) } ?: "•"
 
-    val shownLastWord = feedbackWord ?: last.uppercase()
+    val shownLastWord = feedbackWord ?: gameUppercase(last, room.language)
     val shownLastWordColor = when {
         feedbackWord != null && feedbackCorrect == false -> LRed
         shownLastWord.isNotBlank() -> LGreen
@@ -584,6 +586,7 @@ internal fun LightDuelArena(
         LightVipWordHistory(
             isVip = isVip,
             words = words,
+            language = room.language,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
 
@@ -649,13 +652,13 @@ private fun LightPlayerCard(
         elevation = CardDefaults.cardElevation(defaultElevation = if (active) 3.dp else 1.dp),
     ) {
         Row(
-            Modifier.fillMaxSize().padding(horizontal = 9.dp, vertical = 9.dp),
+            Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (bot) {
                 Box(
                     Modifier
-                        .size(64.dp, 74.dp)
+                        .size(56.dp, 74.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(accent.copy(alpha = .10f)),
                     contentAlignment = Alignment.Center,
@@ -667,12 +670,12 @@ private fun LightPlayerCard(
                     avatarPath = avatarPath,
                     gender = gender,
                     name = name,
-                    width = 64.dp,
+                    width = 56.dp,
                     height = 74.dp,
                     accent = accent,
                 )
             }
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                 Text(
                     name,
@@ -684,9 +687,12 @@ private fun LightPlayerCard(
                 Text(
                     score.toString(),
                     color = LText,
-                    fontSize = 28.sp,
-                    lineHeight = 30.sp,
+                    fontSize = duelScoreFontSize(score).sp,
+                    lineHeight = 29.sp,
                     fontWeight = FontWeight.Black,
+                    maxLines = 1,
+                    softWrap = false,
+                    overflow = TextOverflow.Clip,
                 )
                 Text(
                     "🏆 $rating",
@@ -704,6 +710,7 @@ private fun LightPlayerCard(
 private fun LightVipWordHistory(
     isVip: Boolean,
     words: List<GameWordDto>,
+    language: String,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -758,7 +765,10 @@ private fun LightVipWordHistory(
                                 border = BorderStroke(1.dp, LBlue.copy(alpha = .18f)),
                             ) {
                                 Text(
-                                    word.word.trim().ifBlank { word.normalizedWord.trim() }.uppercase(),
+                                    gameUppercase(
+                                        word.word.trim().ifBlank { word.normalizedWord.trim() },
+                                        language,
+                                    ),
                                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                     color = LText,
                                     fontSize = 9.sp,
