@@ -122,12 +122,29 @@ fun OnlineGameScreenV6() {
                     room = it
                     refreshQuiz(it)
                     refreshOpponent(it)
-                    if (notice.contains("Bağlantı sorunu", true) || notice.contains("Connection problem", true)) {
-                        notice = sh("Bağlantı aktif.", "Connection restored.")
+                    if (
+                        notice.contains("Bağlantı sorunu", true) ||
+                        notice.contains("Connection problem", true) ||
+                        notice.contains("İşlem tekrar deneniyor", true) ||
+                        notice.contains("Retrying the action", true)
+                    ) {
+                        notice = sh("Bağlantı aktif.", "Connection active.")
                     }
                 }
         }
-        wordsJob = scope.launch { backend.observeWords(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { words = it } }
+        wordsJob = scope.launch {
+            backend.observeWords(r.id)
+                .catch { notice = friendly(it.message.orEmpty()) }
+                .collect {
+                    words = it
+                    if (
+                        notice.contains("İşlem tekrar deneniyor", true) ||
+                        notice.contains("Retrying the action", true)
+                    ) {
+                        notice = sh("Bağlantı aktif.", "Connection active.")
+                    }
+                }
+        }
         if (!r.isBot) chatJob = scope.launch { backend.observeChat(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { chat = it } }
     }
 
@@ -220,6 +237,7 @@ fun OnlineGameScreenV6() {
             },
             onTimeout = { scope.launch { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it } } },
             onTrivia = { estimate -> scope.launch { val q = triviaRound ?: return@launch; runCatching { backend.answerTrivia(q.id, estimate) }.onSuccess { room = it; refreshQuiz(it) }.onFailure { notice = friendly(it.message.orEmpty()) } } },
+            onTriviaTimeout = { scope.launch { val q = triviaRound ?: return@launch; runCatching { backend.claimTriviaTimeout(q.id) }.onSuccess { room = it; refreshQuiz(it) }.onFailure { notice = friendly(it.message.orEmpty()) } } },
             onChat = { showChat = true },
             onForfeit = { scope.launch { runCatching { backend.forfeit(active.id) }.onSuccess { room = it } } },
             onExit = { roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); room = null; words = emptyList(); chat = emptyList(); notice = sh("Yeni düelloya hazırsın.", "You are ready for a new duel.") },
