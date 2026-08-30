@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -160,6 +161,66 @@ internal fun ProfilePhotoAvatar(
     }
 }
 
+
+@Composable
+internal fun ProfilePhotoRectangleWithGender(
+    avatarPath: String?,
+    gender: String?,
+    name: String,
+    width: Dp = 62.dp,
+    height: Dp = 72.dp,
+    accent: Color = SonHarfCyan,
+) {
+    var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
+    LaunchedEffect(avatarPath) {
+        bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+    }
+    val bitmap = remember(bytes) {
+        bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() }
+    }
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        Modifier.size(width + 5.dp, height + 5.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            Modifier
+                .size(width, height)
+                .clip(shape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color.White, accent.copy(alpha = .85f), Color.White)
+                    )
+                )
+                .padding(2.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap.asImageBitmap(),
+                    null,
+                    Modifier.fillMaxSize().clip(shape),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Box(
+                    Modifier.fillMaxSize().clip(shape).background(Color.White),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        name.take(1).uppercase(),
+                        color = Color(0xFF16324A),
+                        fontWeight = FontWeight.Black,
+                        fontSize = (height.value * .30f).sp,
+                    )
+                }
+            }
+        }
+        Box(Modifier.align(Alignment.BottomEnd)) {
+            FramelessGenderSymbol(gender, minOf(width, height))
+        }
+    }
+}
 @Composable
 internal fun ProfilePhotoAvatarWithGender(
     avatarPath: String?,
