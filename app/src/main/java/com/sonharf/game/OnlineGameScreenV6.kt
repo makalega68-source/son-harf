@@ -719,19 +719,45 @@ private fun AuroraArena(
         }
     }
 
-    val arenaBgTop = Color(0xFF07101F)
-    val arenaBgBottom = Color(0xFF11172B)
-    val arenaPanel = Color(0xFF121B2E)
-    val arenaPanel2 = Color(0xFF19243A)
-    val arenaText = Color(0xFFF5F7FF)
-    val arenaMuted = Color(0xFF95A4BE)
+    val arenaBgTop = Color(0xFF050713)
+    val arenaBgBottom = Color(0xFF080B1A)
+    val arenaPanel = Color(0xFF0B1024)
+    val arenaPanel2 = Color(0xFF141C3A)
+    val arenaText = Color(0xFFF7F8FF)
+    val arenaMuted = Color(0xFF9AA6C1)
+    val arenaBlue = Color(0xFF2188FF)
+    val arenaViolet = Color(0xFF8A5CFF)
+    val arenaMagenta = Color(0xFFE347FF)
+    val arenaGold = Color(0xFFFFB31A)
+    val arenaCyan = Color(0xFF31D3FF)
+    val arenaPink = Color(0xFFFF4F87)
     val timerAccent = when {
-        seconds <= 5 -> SonHarfPink
-        seconds <= 15 -> SonHarfGold
-        else -> SonHarfCyan
+        seconds <= 5 -> arenaPink
+        seconds <= 15 -> arenaGold
+        else -> arenaCyan
     }
-    val myAccent = SonHarfCyan
-    val opponentAccent = SonHarfPink
+    val myAccent = arenaBlue
+    val opponentAccent = arenaPink
+
+    val arenaMotion = rememberInfiniteTransition(label = "arena-motion")
+    val corePulse by arenaMotion.animateFloat(
+        initialValue = .98f,
+        targetValue = 1.035f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(850, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "core-pulse",
+    )
+    val urgentPulse by arenaMotion.animateFloat(
+        initialValue = .92f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(420, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "urgent-pulse",
+    )
 
     if (room.status == "finished") {
         val draw = room.winnerId == null
@@ -739,7 +765,11 @@ private fun AuroraArena(
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(arenaBgTop, arenaBgBottom)))
+                .background(
+                Brush.verticalGradient(
+                    listOf(arenaBgTop, Color(0xFF0B0B22), arenaBgBottom)
+                )
+            )
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(18.dp),
@@ -825,7 +855,14 @@ private fun AuroraArena(
             AuroraPlayerCard(playerName, myScore, myRounds, myTurn, myAccent, Modifier.weight(1f))
 
             Surface(
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier
+                    .size(72.dp)
+                    .graphicsLayer {
+                        if (seconds <= 5) {
+                            scaleX = urgentPulse
+                            scaleY = urgentPulse
+                        }
+                    },
                 shape = CircleShape,
                 color = arenaPanel,
                 border = BorderStroke(3.dp, timerAccent),
@@ -858,7 +895,8 @@ private fun AuroraArena(
                     .background(
                         Brush.radialGradient(
                             listOf(
-                                if (myTurn) myAccent.copy(alpha = .12f) else opponentAccent.copy(alpha = .06f),
+                                if (myTurn) arenaMagenta.copy(alpha = .16f) else opponentAccent.copy(alpha = .08f),
+                                arenaBlue.copy(alpha = .05f),
                                 Color.Transparent,
                             ),
                         )
@@ -893,7 +931,11 @@ private fun AuroraArena(
                                     Modifier
                                         .size(if (i < room.roundWordCount) 7.dp else 5.dp)
                                         .clip(CircleShape)
-                                        .background(if (i < room.roundWordCount) myAccent else arenaMuted.copy(alpha = .18f))
+                                        .background(
+                                            if (i < room.roundWordCount) {
+                                                if (i % 2 == 0) arenaBlue else arenaViolet
+                                            } else arenaMuted.copy(alpha = .16f)
+                                        )
                                 )
                             }
                         }
@@ -922,19 +964,36 @@ private fun AuroraArena(
                     Spacer(Modifier.weight(.25f))
 
                     Surface(
-                        modifier = Modifier.size(142.dp),
+                        modifier = Modifier
+                            .size(148.dp)
+                            .graphicsLayer {
+                                scaleX = if (myTurn) corePulse else 1f
+                                scaleY = if (myTurn) corePulse else 1f
+                            },
                         shape = CircleShape,
                         color = arenaPanel2,
-                        border = BorderStroke(4.dp, Brush.sweepGradient(listOf(myAccent, SonHarfPurple, opponentAccent, SonHarfGold, myAccent))),
+                        border = BorderStroke(
+                            4.dp,
+                            Brush.sweepGradient(
+                                listOf(
+                                    arenaBlue,
+                                    arenaViolet,
+                                    arenaMagenta,
+                                    arenaGold,
+                                    arenaCyan,
+                                    arenaBlue,
+                                )
+                            ),
+                        ),
                         shadowElevation = 12.dp,
                     ) {
                         Box(
                             Modifier.background(
                                 Brush.radialGradient(
                                     listOf(
-                                        Color(0xFF263553),
-                                        arenaPanel2,
-                                        Color(0xFF10192C),
+                                        Color(0xFF253160),
+                                        Color(0xFF131A39),
+                                        Color(0xFF090C1E),
                                     )
                                 )
                             ),
@@ -998,8 +1057,11 @@ private fun AuroraArena(
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
             shape = RoundedCornerShape(12.dp),
-            color = if (warningNotice) opponentAccent.copy(alpha = .13f) else Color.White.copy(alpha = .05f),
-            border = BorderStroke(1.dp, if (warningNotice) opponentAccent.copy(alpha = .28f) else Color.White.copy(alpha = .05f)),
+            color = if (warningNotice) opponentAccent.copy(alpha = .13f) else arenaPanel2.copy(alpha = .72f),
+            border = BorderStroke(
+                1.dp,
+                if (warningNotice) opponentAccent.copy(alpha = .32f) else arenaViolet.copy(alpha = .18f),
+            ),
         ) {
             Text(
                 notice,
@@ -1045,14 +1107,17 @@ private fun AuroraArena(
             ) {
                 ArenaActionButton(sh("⚑ PES ET", "⚑ FORFEIT"), opponentAccent, Modifier.weight(1f), onForfeit)
                 ArenaActionButton(sh("● SOHBET", "● CHAT"), myAccent, Modifier.weight(1f), onChat)
-                ArenaActionButton("★ BONUS", SonHarfGold, Modifier.weight(1f)) { }
+                ArenaActionButton("★ BONUS", arenaGold, Modifier.weight(1f)) { }
             }
 
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
                 shape = RoundedCornerShape(18.dp),
-                color = Color.White.copy(alpha = .08f),
-                border = BorderStroke(1.dp, if (myTurn) myAccent.copy(alpha = .7f) else Color.White.copy(alpha = .12f)),
+                color = Color(0xFF0D1430),
+                border = BorderStroke(
+                    1.dp,
+                    if (myTurn) arenaBlue.copy(alpha = .80f) else arenaViolet.copy(alpha = .22f),
+                ),
             ) {
                 Row(
                     Modifier.fillMaxWidth().height(50.dp).padding(start = 14.dp, end = 5.dp),
@@ -1075,7 +1140,8 @@ private fun AuroraArena(
                         shape = RoundedCornerShape(13.dp),
                         contentPadding = PaddingValues(horizontal = 15.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = myAccent,
+                            containerColor = arenaGold,
+                            contentColor = Color(0xFF241300),
                             disabledContainerColor = arenaMuted.copy(alpha = .18f),
                         ),
                     ) {
