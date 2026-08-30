@@ -64,7 +64,7 @@ fun FinalProfileScreen() {
             Card(
                 colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
                 shape = RoundedCornerShape(26.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = .05f)),
+                border = BorderStroke(1.dp, MainUi.Border),
             ) {
                 Column(
                     Modifier.fillMaxWidth().padding(20.dp),
@@ -75,7 +75,7 @@ fun FinalProfileScreen() {
                         avatarPath = profile?.avatarPath,
                         name = profile?.displayName ?: "Oyuncu",
                         size = 112.dp,
-                        visible = true,
+                        visible = profile?.avatarVisibility != "hidden",
                         accent = SonHarfCyan,
                     )
                     Text(profile?.displayName ?: "OYUNCU PROFİLİ", fontSize = 20.sp, fontWeight = FontWeight.Black)
@@ -109,13 +109,13 @@ fun FinalProfileScreen() {
                         SonHarfPreferences.setSoundEnabled(context, it)
                         if (it) SonHarfSoundFx.tap()
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = .06f))
+                    HorizontalDivider(color = MainUi.Border)
                     SettingSwitch("Titreşim", "Kısa ve hafif dokunsal geri bildirim", vibration) {
                         vibration = it
                         SonHarfPreferences.setVibrationEnabled(context, it)
                         if (it) SonHarfPreferences.hapticTap(context)
                     }
-                    HorizontalDivider(color = Color.White.copy(alpha = .06f))
+                    HorizontalDivider(color = MainUi.Border)
                     SettingSwitch("Bildirimler", "Oyun daveti ve eşleşme bildirimlerine izin ver", notifications) {
                         notifications = it
                         SonHarfPreferences.setNotificationsEnabled(context, it)
@@ -171,7 +171,7 @@ fun FinalProfileScreen() {
                                 avatarPath = row.profile.avatarPath,
                                 name = row.profile.displayName,
                                 size = 34.dp,
-                                visible = true,
+                                visible = row.profile.avatarVisibility != "hidden",
                                 accent = if (row.profile.id == profile?.id) SonHarfCyan else SonHarfPurple,
                             )
                             Text(
@@ -197,18 +197,18 @@ fun FinalProfileScreen() {
         }
 
         item {
-            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFF2A1116)), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, Color(0xFF7A2634))) {
+            Card(colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3F4)), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, Color(0xFFF2C8CE))) {
                 Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text("HESAP YÖNETİMİ", color = Color(0xFFFF8394), fontWeight = FontWeight.Black, fontSize = 12.sp)
+                    Text("HESAP YÖNETİMİ", color = MainUi.Red, fontWeight = FontWeight.Black, fontSize = 12.sp)
                     Text("Hesabını silersen üyeliğin ve hesabına bağlı oyun verileri kalıcı olarak silinir. Bu işlem geri alınamaz.", color = SonHarfMuted, fontSize = 11.sp, lineHeight = 18.sp)
                     OutlinedButton(
                         onClick = { showDeleteDialog = true; deleteNotice = null },
                         enabled = !deleteBusy,
                         modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF8394)),
-                        border = BorderStroke(1.dp, Color(0xFF7A2634)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MainUi.Red),
+                        border = BorderStroke(1.dp, Color(0xFFF2C8CE)),
                     ) { Text("HESABIMI SİL", fontWeight = FontWeight.Black) }
-                    if (!deleteNotice.isNullOrBlank()) Text(deleteNotice!!, color = Color(0xFFFFB4BE), fontSize = 10.sp)
+                    if (!deleteNotice.isNullOrBlank()) Text(deleteNotice!!, color = MainUi.Red, fontSize = 10.sp)
                 }
             }
         }

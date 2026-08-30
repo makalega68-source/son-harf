@@ -35,11 +35,7 @@ fun EconomyShopScreen(
     onBack: (() -> Unit)? = null,
 ) {
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 1)) }
-    Column(
-        Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))
-        )
-    ) {
+    Column(Modifier.fillMaxSize().background(SonHarfBg)) {
         if (onBack != null) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 5.dp),
@@ -113,19 +109,17 @@ private fun EconomyCatalogScreen() {
     fun isEquipped(item: ShopItemDto): Boolean = when (item.kind) {
         "profile_frame" -> equipped?.profileFrameId == item.id
         "name_style" -> equipped?.nameStyleId == item.id
-        "game_theme" -> equipped?.gameThemeId == item.id
-        "keyboard_theme" -> equipped?.keyboardThemeId == item.id
         "victory_effect" -> equipped?.victoryEffectId == item.id
         "emoji_pack" -> equipped?.emojiPackId == item.id
         else -> false
     }
 
-    val supportedKinds = setOf("profile_frame", "name_style", "game_theme", "victory_effect", "emoji_pack")
+    val supportedKinds = setOf("profile_frame", "name_style", "victory_effect", "emoji_pack")
     val filtered = items.filter { it.kind in supportedKinds }.filter { item ->
         when (category) {
             1 -> item.kind in setOf("profile_frame", "name_style")
-            2 -> item.kind == "game_theme"
-            3 -> item.kind in setOf("victory_effect", "emoji_pack")
+            2 -> item.kind == "emoji_pack"
+            3 -> item.kind == "victory_effect"
             else -> true
         }
     }
@@ -143,13 +137,9 @@ private fun EconomyCatalogScreen() {
             }
         }
 
-        item { AnimatedVipShopCard(profile?.isVip == true) { showVip = true } }
-        item { SeasonPassPurchaseCard { scope.launch { reload() } } }
-        item { GooglePlayProductsCard { scope.launch { reload() } } }
-
         item {
             ScrollableTabRow(selectedTabIndex = category, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
-                listOf(sh("TÜMÜ", "ALL"), sh("PROFİL", "PROFILE"), sh("TEMA", "THEME"), sh("EFEKT", "EFFECTS")).forEachIndexed { index, label ->
+                listOf(sh("TÜMÜ", "ALL"), sh("PROFİL", "PROFILE"), sh("İFADE", "EMOTES"), sh("EFEKT", "EFFECTS")).forEachIndexed { index, label ->
                     Tab(selected = category == index, onClick = { category = index }, text = { Text(label, color = if (category == index) SonHarfCyan else SonHarfMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold) })
                 }
             }
@@ -232,6 +222,11 @@ private fun EconomyCatalogScreen() {
             }
         }
 
+        item { MainSectionTitle(sh("VIP VE SON COIN", "VIP & SON COIN")) }
+        item { AnimatedVipShopCard(profile?.isVip == true) { showVip = true } }
+        item { SeasonPassPurchaseCard { scope.launch { reload() } } }
+        item { GooglePlayProductsCard { scope.launch { reload() } } }
+
         if (!notice.isNullOrBlank()) item {
             Surface(color = SonHarfSurface2, shape = RoundedCornerShape(15.dp)) { Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfText, fontSize = 10.sp, textAlign = TextAlign.Center) }
         }
@@ -242,17 +237,14 @@ private fun EconomyCatalogScreen() {
 
 @Composable
 private fun AnimatedVipShopCard(active: Boolean, onClick: () -> Unit) {
-    val transition = rememberInfiniteTransition(label = "shopVip")
-    val pulse by transition.animateFloat(.96f, 1.06f, infiniteRepeatable(tween(900), RepeatMode.Reverse), label = "shopVipScale")
-    val glow by transition.animateFloat(.12f, .34f, infiniteRepeatable(tween(1200), RepeatMode.Reverse), label = "shopVipGlow")
-    Card(onClick = onClick, colors = CardDefaults.cardColors(containerColor = SonHarfGold.copy(alpha = .08f + glow / 5f)), shape = RoundedCornerShape(25.dp), border = BorderStroke(1.5.dp, SonHarfGold.copy(alpha = .58f))) {
+    Card(onClick = onClick, colors = CardDefaults.cardColors(containerColor = MainUi.BlueSoft), shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .25f))) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Box(Modifier.size(48.dp).scale(pulse).background(SonHarfGold.copy(alpha = glow), CircleShape), contentAlignment = Alignment.Center) { Text("♛", color = SonHarfGold, fontSize = 30.sp, fontWeight = FontWeight.Black) }
-                    Column { Text("PREMIUM", color = SonHarfGold, fontSize = 24.sp, fontWeight = FontWeight.Black); Text(sh("Reklamsız + özel Style", "Ad-free + exclusive Style"), color = SonHarfMuted, fontSize = 9.sp) }
+                    Box(Modifier.size(48.dp).background(Color.White, CircleShape), contentAlignment = Alignment.Center) { Text("♛", color = SonHarfGold, fontSize = 28.sp, fontWeight = FontWeight.Black) }
+                    Column { Text("VIP", color = MainUi.Blue, fontSize = 24.sp, fontWeight = FontWeight.Black); Text(sh("Reklamsız + özel Style", "Ad-free + exclusive Style"), color = SonHarfMuted, fontSize = 9.sp) }
                 }
-                Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) SonHarfGreen else SonHarfGold, fontWeight = FontWeight.Black)
+                Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) SonHarfGreen else MainUi.Blue, fontWeight = FontWeight.Black)
             }
             Text(sh("Özel oda • özel Style • gelişmiş istatistik • reklamsız deneyim • aylık 400 Son Coin", "Private rooms • exclusive Style • advanced stats • no ads • 400 Son Coin monthly"), color = SonHarfText, fontSize = 10.sp)
             Text(sh("Premium maç gücü, süre veya lig avantajı vermez.", "Premium never gives match power, time or league advantages."), color = SonHarfGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
@@ -275,8 +267,6 @@ private fun CosmeticPreview(item: ShopItemDto) {
                     }
                 }
                 "name_style" -> Text("Oyuncu-10DD", color = SonHarfCyan, fontSize = 25.sp, fontWeight = FontWeight.Black)
-                "game_theme" -> Box(Modifier.fillMaxSize().background(Brush.horizontalGradient(listOf(SonHarfPurple.copy(alpha = .35f), SonHarfCyan.copy(alpha = .28f), SonHarfGold.copy(alpha = .20f))), RoundedCornerShape(14.dp)), contentAlignment = Alignment.Center) { Text("AURORA ARENA", fontWeight = FontWeight.Black, color = SonHarfText) }
-                "keyboard_theme" -> Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) { listOf("S","O","N","H","A","R","F").forEach { k -> Surface(color = LetharaPalette.PanelStrong, shape = RoundedCornerShape(7.dp), border = BorderStroke(1.5.dp, LetharaPalette.Cyan)) { Text(k, Modifier.padding(horizontal = 8.dp, vertical = 10.dp), color = LetharaPalette.Cyan, fontWeight = FontWeight.Black) } } }
                 "victory_effect" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) { Text("✦", color = SonHarfCyan, fontSize = 30.sp); Text("♛", color = SonHarfGold, fontSize = 50.sp, fontWeight = FontWeight.Black, modifier = Modifier.scale(pulse)); Text("✦", color = SonHarfPink, fontSize = 30.sp) }
                 "emoji_pack" -> Text("👑  ⚡  😎  🔥  ◈", fontSize = 30.sp)
                 else -> Text("◇", fontSize = 44.sp, color = SonHarfCyan)

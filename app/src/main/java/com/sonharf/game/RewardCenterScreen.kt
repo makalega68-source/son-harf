@@ -108,7 +108,7 @@ fun RewardCenterScreen() {
                             notice = when (rewardType) {
                                 "diamonds" -> sh("+${claim?.diamondsAwarded ?: 10} Son Coin hesabına eklendi.", "+${claim?.diamondsAwarded ?: 10} Son Coin added.")
                                 "chest" -> sh("1 ödül sandığı kazandın.", "You earned 1 reward chest.")
-                                else -> sh("24 saatlik premium kozmetik denemen başladı.", "Your 24-hour premium cosmetic trial has started.")
+                                else -> sh("24 saatlik VIP Style denemen başladı.", "Your 24-hour VIP Style trial has started.")
                             }
                             reload()
                         }
@@ -140,7 +140,7 @@ fun RewardCenterScreen() {
         item {
             RewardAdCard(
                 icon = "◈", title = sh("SON COIN", "DIAMONDS"),
-                description = sh("Her tamamlanan reklam +10 Son Coin verir. Son Coinları Mağaza'daki kozmetiklerde kullan.", "Each completed ad gives +10 diamonds. Spend Son Coin on Style items in the Shop."),
+                description = sh("Her tamamlanan reklam +10 Son Coin verir. Son Coin'lerini mağazadaki Style ürünlerinde kullan.", "Each completed ad gives +10 Son Coin. Spend it on Style items in the Shop."),
                 progress = "${s?.diamondAdsUsed ?: 0}/${s?.diamondAdsLimit ?: 3}",
                 button = sh("REKLAM İZLE  +10", "WATCH AD  +10"),
                 enabled = adReady && (s?.diamondAdsUsed ?: 0) < (s?.diamondAdsLimit ?: 3) && busy == null,
@@ -193,7 +193,7 @@ fun RewardCenterScreen() {
         item {
             RewardAdCard(
                 icon = "✨", title = sh("PREMIUM DENEME", "PREMIUM TRIAL"),
-                description = sh("Günde 1 reklamla rastgele bir VIP kozmetiğini 24 saat deneyebilirsin.", "Watch 1 ad per day to try a random VIP cosmetic for 24 hours."),
+                description = sh("Günde 1 reklamla rastgele bir VIP Style ürününü 24 saat deneyebilirsin.", "Watch 1 ad per day to try a random VIP Style item for 24 hours."),
                 progress = "${s?.trialAdsUsed ?: 0}/${s?.trialAdsLimit ?: 1}",
                 button = sh("24 SAAT DENEME", "24-HOUR TRIAL"),
                 enabled = adReady && (s?.trialAdsUsed ?: 0) < (s?.trialAdsLimit ?: 1) && busy == null,
@@ -206,7 +206,7 @@ fun RewardCenterScreen() {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(sh("AKTİF DENEME", "ACTIVE TRIAL"), color = SonHarfPurple, fontWeight = FontWeight.Black)
                     Text(if (SonHarfUiState.isEnglish) trialItem?.nameEn ?: s.trialItemId else trialItem?.nameTr ?: s.trialItemId, fontWeight = FontWeight.Bold)
-                    Text(sh("Bu premium kozmetiği 24 saat boyunca kullanabilirsin. Süre dolunca, ürünü satın almadıysan otomatik olarak çıkarılır.", "You can use this premium cosmetic for 24 hours. When the trial expires, it is automatically unequipped unless you own it."), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(sh("Bu VIP Style ürününü 24 saat boyunca kullanabilirsin. Süre dolunca, ürüne sahip değilsen otomatik olarak çıkarılır.", "You can use this VIP Style item for 24 hours. It is automatically unequipped when the trial ends unless you own it."), color = SonHarfMuted, fontSize = 9.sp)
                     Text(s.trialExpiresAt.orEmpty(), color = SonHarfMuted, fontSize = 8.sp)
                     Button(
                         onClick = {
@@ -218,7 +218,7 @@ fun RewardCenterScreen() {
                             scope.launch {
                                 busy = "equip_trial"
                                 runCatching { b.equipRewardTrial() }
-                                    .onSuccess { notice = sh("Deneme kozmetiği etkinleştirildi.", "Trial cosmetic equipped."); reload() }
+                                    .onSuccess { notice = sh("Deneme Style ürünü etkinleştirildi.", "Trial Style item equipped."); reload() }
                                     .onFailure { notice = sh("Deneme artık aktif değil.", "The trial is no longer active."); reload() }
                                 busy = null
                             }

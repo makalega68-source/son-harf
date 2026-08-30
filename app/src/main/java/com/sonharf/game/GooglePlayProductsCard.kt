@@ -60,7 +60,6 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                                     ProductCatalog.COINS_3500 -> sh("3500 Son Coin hesabına eklendi.", "3500 Son Coins added to your account.")
                                     ProductCatalog.COINS_8000 -> sh("8000 Son Coin hesabına eklendi.", "8000 Son Coins added to your account.")
                                     ProductCatalog.STARTER_STYLE_PACK -> sh("Başlangıç Style Paketi hesabına eklendi.", "Starter Style Pack added to your account.")
-                                    ProductCatalog.THEME_NEON -> sh("Neon Tema hesabına eklendi.", "Neon Theme added to your account.")
                                     else -> sh("Satın alma doğrulandı.", "Purchase verified.")
                                 }
                                 onPurchased()
@@ -143,13 +142,6 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 product = products[ProductCatalog.STARTER_STYLE_PACK],
                 busy = busy == ProductCatalog.STARTER_STYLE_PACK,
             ) { buy(ProductCatalog.STARTER_STYLE_PACK) }
-
-            PlayProductRow(
-                title = sh("Neon Tema", "Neon Theme"),
-                subtitle = sh("Kalıcı Style tema kilidi", "Permanent Style theme unlock"),
-                product = products[ProductCatalog.THEME_NEON],
-                busy = busy == ProductCatalog.THEME_NEON,
-            ) { buy(ProductCatalog.THEME_NEON) }
 
             if (notice.isNotBlank()) Text(notice, color = SonHarfMuted, fontSize = 9.sp)
         }

@@ -16,6 +16,7 @@ import kotlinx.serialization.json.put
 object SonHarfPreferences {
     private const val FILE = "son_harf_preferences"
     private const val SOUND = "sound_enabled"
+    private const val MUSIC = "music_enabled"
     private const val VIBRATION = "vibration_enabled"
     private const val NOTIFICATIONS = "notifications_enabled"
     private const val GAME_INVITE_NOTIFICATIONS = "game_invite_notifications_enabled"
@@ -32,6 +33,7 @@ object SonHarfPreferences {
     private const val DISMISSED_MATCH_SUMMARY_ID = "dismissed_match_summary_id"
 
     fun soundEnabled(context: Context): Boolean = prefs(context).getBoolean(SOUND, true)
+    fun musicEnabled(context: Context): Boolean = prefs(context).getBoolean(MUSIC, soundEnabled(context))
     fun vibrationEnabled(context: Context): Boolean = prefs(context).getBoolean(VIBRATION, true)
     fun darkModeEnabled(context: Context): Boolean = false
     fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"
@@ -48,6 +50,9 @@ object SonHarfPreferences {
     fun setSoundEnabled(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(SOUND, value).apply()
         SonHarfSoundFx.setEnabled(value)
+    }
+    fun setMusicEnabled(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(MUSIC, value).apply()
         SonHarfBackgroundMusic.setEnabled(context, value)
     }
     fun setVibrationEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(VIBRATION, value).apply()
@@ -126,9 +131,8 @@ object SonHarfPreferences {
     }
 
     fun syncSound(context: Context) {
-        val enabled = soundEnabled(context)
-        SonHarfSoundFx.setEnabled(enabled)
-        SonHarfBackgroundMusic.setEnabled(context, enabled)
+        SonHarfSoundFx.setEnabled(soundEnabled(context))
+        SonHarfBackgroundMusic.setEnabled(context, musicEnabled(context))
     }
     fun syncUi(context: Context) {
         SonHarfUiState.darkMode = false

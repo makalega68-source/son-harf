@@ -11,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -27,12 +26,13 @@ import com.sonharf.game.billing.PlayPurchaseVerification
 import com.sonharf.game.billing.ProductCatalog
 import kotlinx.coroutines.launch
 
-private val VipNavy = Color(0xFF111827)
-private val VipNavy2 = Color(0xFF192235)
-private val VipGold = Color(0xFFFFB31A)
-private val VipText = Color(0xFFF8FAFC)
-private val VipMuted = Color(0xFFAAB4C4)
-private val VipGreen = Color(0xFF35C47C)
+private val VipNavy = Color.White
+private val VipNavy2 = Color(0xFFF0F4F8)
+private val VipGold = Color(0xFFF3A81A)
+private val VipBlue = Color(0xFF1769E0)
+private val VipText = Color(0xFF182235)
+private val VipMuted = Color(0xFF718096)
+private val VipGreen = Color(0xFF22A85A)
 
 @Composable
 fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
@@ -104,34 +104,27 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                 .widthIn(max = 430.dp),
             shape = RoundedCornerShape(28.dp),
             color = VipNavy,
-            shadowElevation = 20.dp,
+            border = BorderStroke(1.dp, Color(0xFFDDE5EE)),
+            shadowElevation = 12.dp,
         ) {
             Column {
                 Box(
                     Modifier
                         .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    Color(0xFFFFD76A),
-                                    VipGold,
-                                    Color(0xFFFF9F12),
-                                )
-                            )
-                        )
+                        .background(Color(0xFFEAF3FF))
                         .padding(horizontal = 18.dp, vertical = 16.dp),
                 ) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = Color.White.copy(alpha = .22f)) {
-                            Text("♛", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color(0xFF4A2B00), fontSize = 27.sp, fontWeight = FontWeight.Black)
+                        Surface(shape = CircleShape, color = Color.White) {
+                            Text("♛", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = VipGold, fontSize = 27.sp, fontWeight = FontWeight.Black)
                         }
                         Spacer(Modifier.width(11.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("SON HARF VIP", color = Color(0xFF2C1A00), fontSize = 23.sp, fontWeight = FontWeight.Black)
-                            Text(sh("Daha temiz. Daha kişisel.", "Cleaner. More personal."), color = Color(0xFF5A3900), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("SON HARF VIP", color = VipBlue, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                            Text(sh("Daha temiz. Daha kişisel.", "Cleaner. More personal."), color = VipMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                         TextButton(onClick = onDismiss, enabled = !busy) {
-                            Text("✕", color = Color(0xFF2C1A00), fontSize = 18.sp, fontWeight = FontWeight.Black)
+                            Text("✕", color = VipText, fontSize = 18.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -211,10 +204,10 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().height(56.dp),
                         shape = RoundedCornerShape(16.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = VipGold,
-                            contentColor = Color(0xFF2C1A00),
-                            disabledContainerColor = VipGold.copy(alpha = .45f),
-                            disabledContentColor = Color(0xFF2C1A00).copy(alpha = .6f),
+                            containerColor = VipBlue,
+                            contentColor = Color.White,
+                            disabledContainerColor = VipBlue.copy(alpha = .45f),
+                            disabledContentColor = Color.White.copy(alpha = .7f),
                         ),
                     ) {
                         Text(
@@ -283,8 +276,8 @@ private fun VipModernPlan(
     Surface(
         modifier = modifier.clickable(onClick = onClick),
         shape = RoundedCornerShape(16.dp),
-        color = if (selected) VipGold.copy(alpha = .14f) else VipNavy2,
-        border = BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) VipGold else Color.White.copy(alpha = .08f)),
+        color = if (selected) Color(0xFFEAF3FF) else VipNavy2,
+        border = BorderStroke(if (selected) 1.5.dp else 1.dp, if (selected) VipBlue else Color(0xFFDDE5EE)),
     ) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 11.dp),
@@ -292,11 +285,11 @@ private fun VipModernPlan(
             verticalArrangement = Arrangement.spacedBy(3.dp),
         ) {
             if (badge != null) {
-                Text(badge, color = VipGold, fontSize = 6.sp, fontWeight = FontWeight.Black)
+                Text(badge, color = VipBlue, fontSize = 6.sp, fontWeight = FontWeight.Black)
             } else {
                 Spacer(Modifier.height(7.dp))
             }
-            Text(title, color = if (selected) VipGold else VipText, fontSize = 12.sp, fontWeight = FontWeight.Black)
+            Text(title, color = if (selected) VipBlue else VipText, fontSize = 12.sp, fontWeight = FontWeight.Black)
             Text(price, color = VipMuted, fontSize = 8.sp, textAlign = TextAlign.Center)
         }
     }

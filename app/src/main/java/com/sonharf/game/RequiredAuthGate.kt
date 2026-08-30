@@ -574,7 +574,7 @@ private fun EmailVerificationCard(
                 textAlign = TextAlign.Center,
             )
             Text(
-                "Maildeki doğrulama bağlantısına dokunduğunda Kelime Tahtı otomatik açılır. Bağlantı çalışmazsa e-postadaki 6 haneli kodu gir.",
+                "Maildeki doğrulama bağlantısına dokunduğunda Son Harf otomatik açılır. Bağlantı çalışmazsa e-postadaki 6 haneli kodu gir.",
                 color = Color(0xFF607596),
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,

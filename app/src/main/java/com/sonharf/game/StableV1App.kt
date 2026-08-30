@@ -55,6 +55,6 @@ fun StableV1App() {
             .fillMaxSize()
             .background(SonHarfBg),
     ) {
-        OnlineGameScreenV6()
+        SonHarfMainApp(onSignedOut = { authenticated = false })
     }
 }
