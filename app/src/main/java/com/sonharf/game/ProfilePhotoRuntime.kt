@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -188,6 +189,64 @@ internal fun ProfilePhotoAvatarWithGender(
         }
         Box(Modifier.align(Alignment.BottomEnd)) {
             FramelessGenderSymbol(gender, size)
+        }
+    }
+}
+
+@Composable
+internal fun ProfilePhotoAvatarRectWithGender(
+    avatarPath: String?,
+    gender: String?,
+    name: String,
+    width: Dp,
+    height: Dp,
+    accent: Color = SonHarfCyan,
+) {
+    var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
+    LaunchedEffect(avatarPath) {
+        bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+    }
+    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+    val shape = RoundedCornerShape(14.dp)
+    Box(
+        Modifier.size(width, height + 4.dp),
+        contentAlignment = Alignment.TopCenter,
+    ) {
+        Box(
+            Modifier
+                .size(width, height)
+                .clip(shape)
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color.White, accent.copy(alpha = .86f), Color(0xFF57C7F3), Color.White)
+                    )
+                )
+                .padding(3.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (bitmap != null) {
+                Image(
+                    bitmap.asImageBitmap(),
+                    null,
+                    Modifier.fillMaxSize().clip(shape),
+                    contentScale = ContentScale.Crop,
+                )
+            } else {
+                Box(
+                    Modifier.fillMaxSize().clip(shape).background(Color.White),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        name.take(1).uppercase(),
+                        color = Color(0xFF16324A),
+                        fontWeight = FontWeight.Black,
+                        fontSize = (height.value * .32f).coerceAtLeast(14f).sp,
+                    )
+                }
+            }
+        }
+        Box(Modifier.align(Alignment.BottomEnd)) {
+            FramelessGenderSymbol(gender, height)
         }
     }
 }
