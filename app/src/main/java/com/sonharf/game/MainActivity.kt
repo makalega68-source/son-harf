@@ -78,11 +78,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         SonHarfBackgroundMusic.release()
+        SonHarfSoundFx.release()
         super.onDestroy()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        SonHarfSoundFx.init(this)
         SonHarfPreferences.syncSound(this)
         SonHarfPreferences.syncUi(this)
         WordMeaningRuntime.init(this)
