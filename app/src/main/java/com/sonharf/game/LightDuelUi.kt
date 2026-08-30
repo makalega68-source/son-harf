@@ -46,6 +46,7 @@ private val LBorder = Color(0xFFDDE5EE)
 private val LRed = Color(0xFFE24D6B)
 private val LGold = Color(0xFFF3A81A)
 private val LPurple = Color(0xFF7658D6)
+private val LGreen = Color(0xFF22A85A)
 
 @Composable
 internal fun LightDuelLobby(
@@ -345,6 +346,9 @@ internal fun LightDuelArena(
     opponentGender: String?,
     opponentRating: Int,
     words: List<GameWordDto>,
+    isVip: Boolean,
+    feedbackWord: String?,
+    feedbackCorrect: Boolean?,
     wordInput: String,
     onWordInput: (String) -> Unit,
     notice: String,
@@ -368,8 +372,25 @@ internal fun LightDuelArena(
     val liveWordPhase = room.status in listOf("playing", "final", "sudden_death")
     val quizActive = room.status == "quiz" && triviaRound != null && triviaQuestion != null
     val myTurn = room.currentPlayerId == me && liveWordPhase
-    val last = words.lastOrNull()?.normalizedWord?.trim().orEmpty()
+    val lastItem = words.lastOrNull()
+    val last = lastItem?.normalizedWord?.trim().orEmpty()
     val required = last.lastOrNull()?.uppercaseChar()?.toString() ?: "•"
+    var acceptedFlashId by remember { mutableStateOf<Long?>(null) }
+
+    LaunchedEffect(lastItem?.id) {
+        val id = lastItem?.id ?: return@LaunchedEffect
+        acceptedFlashId = id
+        delay(1200)
+        if (acceptedFlashId == id) acceptedFlashId = null
+    }
+
+    val shownLastWord = feedbackWord ?: last.uppercase()
+    val shownLastWordColor = when {
+        feedbackWord != null && feedbackCorrect == false -> LRed
+        feedbackWord != null && feedbackCorrect == true -> LGreen
+        feedbackWord == null && lastItem != null && acceptedFlashId == lastItem.id -> LGreen
+        else -> LBlue
+    }
 
     if (room.status == "waiting") {
         LightWaitingRoom(room.code, playerName, onExit)
@@ -530,7 +551,7 @@ internal fun LightDuelArena(
 
                 Column(
                     modifier = Modifier
-                        .height(160.dp)
+                        .height(170.dp)
                         .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
@@ -544,50 +565,36 @@ internal fun LightDuelArena(
                     Text(
                         required,
                         color = LText,
-                        fontSize = 78.sp,
-                        lineHeight = 80.sp,
+                        fontSize = 62.sp,
+                        lineHeight = 64.sp,
                         fontWeight = FontWeight.Black,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        shownLastWord.ifBlank { sh("İLK KELİMEYİ YAZ", "ENTER FIRST WORD") },
+                        color = shownLastWordColor,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        if (last.isBlank()) sh("İlk kelimeyi sen başlat.", "Start with the first word.")
+                        else sh("$required ile başlayan bir kelime yaz", "Enter a word starting with $required"),
+                        color = LMuted,
+                        fontSize = 10.sp,
                     )
                 }
 
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    if (last.isBlank()) sh("İlk kelimeyi sen başlat.", "Start with the first word.")
-                    else sh("$required ile başlayan bir kelime yaz", "Enter a word starting with $required"),
-                    color = LMuted,
-                    fontSize = 11.sp,
-                )
-
-                Spacer(Modifier.weight(.14f))
-
-                if (words.isNotEmpty()) {
-                    Column(Modifier.fillMaxWidth()) {
-                        Text(sh("KELİME ZİNCİRİ", "WORD CHAIN"), color = LMuted, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.height(5.dp))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(words.takeLast(12)) { w ->
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = LCard2,
-                                    border = BorderStroke(1.dp, LBorder),
-                                ) {
-                                    Text(
-                                        w.word.trim().ifBlank { w.normalizedWord.trim() }.uppercase(),
-                                        Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                                        color = LText,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
+                Spacer(Modifier.weight(.20f))
             }
         }
 
-        LightNotice(notice = notice, modifier = Modifier.padding(horizontal = 12.dp))
+        LightVipWordHistory(
+            isVip = isVip,
+            words = words,
+            modifier = Modifier.padding(horizontal = 12.dp),
+        )
 
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -641,35 +648,136 @@ private fun LightPlayerCard(
     modifier: Modifier,
 ) {
     Card(
-        modifier = modifier.height(92.dp),
-        colors = CardDefaults.cardColors(containerColor = if (active) accent.copy(alpha = .10f) else Color.White),
+        modifier = modifier.height(106.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, if (active) accent.copy(alpha = .55f) else LBorder),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(
+            width = if (active) 3.dp else 1.dp,
+            color = if (active) LGreen else LBorder,
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (active) 3.dp else 1.dp),
     ) {
         Row(
-            Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 9.dp),
+            Modifier.fillMaxSize().padding(horizontal = 9.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (bot) {
                 Box(
-                    Modifier.size(50.dp).clip(CircleShape).background(accent.copy(alpha = .12f)),
+                    Modifier
+                        .size(64.dp, 74.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(accent.copy(alpha = .10f)),
                     contentAlignment = Alignment.Center,
-                ) { Text("BOT", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                ) {
+                    Text("BOT", color = accent, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                }
             } else {
-                ProfilePhotoAvatarWithGender(
+                ProfilePhotoAvatarRectWithGender(
                     avatarPath = avatarPath,
                     gender = gender,
                     name = name,
-                    size = 50.dp,
+                    width = 64.dp,
+                    height = 74.dp,
                     accent = accent,
                 )
             }
             Spacer(Modifier.width(8.dp))
-            Column(Modifier.weight(1f)) {
-                Text(name, color = LText, maxLines = 1, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                Text(score.toString(), color = LText, fontSize = 28.sp, fontWeight = FontWeight.Black)
-                Text("🏆 $rating", color = LGold, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                Text(
+                    name,
+                    color = LText,
+                    maxLines = 1,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    score.toString(),
+                    color = LText,
+                    fontSize = 28.sp,
+                    lineHeight = 30.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    "🏆 $rating",
+                    color = LGold,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LightVipWordHistory(
+    isVip: Boolean,
+    words: List<GameWordDto>,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth().height(58.dp),
+        shape = RoundedCornerShape(15.dp),
+        color = Color.White,
+        border = BorderStroke(1.dp, if (isVip) LBlue.copy(alpha = .28f) else LBorder),
+    ) {
+        if (!isVip) {
+            Box(
+                Modifier.fillMaxSize().padding(horizontal = 14.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    sh(
+                        "🔒 Son kelimeleri sadece VIP üyeler görebilir.",
+                        "🔒 Only VIP members can see the latest words.",
+                    ),
+                    color = LMuted,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        } else {
+            Row(
+                Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "VIP",
+                    color = LGold,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Spacer(Modifier.width(8.dp))
+                if (words.isEmpty()) {
+                    Text(
+                        sh("Henüz kelime yok.", "No words yet."),
+                        color = LMuted,
+                        fontSize = 10.sp,
+                    )
+                } else {
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        items(words.takeLast(6)) { word ->
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = LBlueSoft,
+                                border = BorderStroke(1.dp, LBlue.copy(alpha = .18f)),
+                            ) {
+                                Text(
+                                    word.word.trim().ifBlank { word.normalizedWord.trim() }.uppercase(),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    color = LText,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
