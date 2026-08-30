@@ -31,6 +31,8 @@ internal fun EmbeddedWordKeyboard(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Game-owned keyboard: the Android system IME never needs to open during a match.
+    // Turkish layout mirrors the familiar Turkish-Q ordering and remains fixed on screen.
     val rows = if (language.lowercase() == "en") {
         listOf(
             listOf("Q","W","E","R","T","Y","U","I","O","P"),
@@ -39,61 +41,81 @@ internal fun EmbeddedWordKeyboard(
         )
     } else {
         listOf(
-            listOf("Q","W","E","R","T","Y","U","I","O","P"),
-            listOf("Ğ","Ü","A","S","D","F","G","H","J","K"),
-            listOf("L","Ş","İ","Z","X","C","V","B","N","M"),
-            listOf("Ö","Ç","⌫","✓"),
+            listOf("Q","W","E","R","T","Y","U","I","O","P","Ğ","Ü"),
+            listOf("A","S","D","F","G","H","J","K","L","Ş","İ"),
+            listOf("Z","X","C","V","B","N","M","Ö","Ç"),
         )
     }
 
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = KeyboardBg,
-        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = .06f)),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 5.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
-            rows.forEach { row ->
+            rows.forEachIndexed { index, row ->
                 Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = when {
+                            index == 1 -> 7.dp
+                            index == 2 -> 17.dp
+                            else -> 0.dp
+                        }),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
                     row.forEach { key ->
-                        when (key) {
-                            "⌫" -> KeyboardKeyButton(
-                                label = key,
-                                enabled = enabled && value.isNotEmpty(),
-                                modifier = Modifier.weight(1.6f),
-                                alt = true,
-                                onClick = {
-                                    SonHarfSoundFx.tap()
-                                    onValueChange(value.dropLast(1))
-                                },
-                            )
-                            "✓" -> KeyboardKeyButton(
-                                label = key,
-                                enabled = enabled && value.isNotBlank(),
-                                modifier = Modifier.weight(1.6f),
-                                action = true,
-                                onClick = {
-                                    SonHarfSoundFx.tap()
-                                    onSubmit()
-                                },
-                            )
-                            else -> KeyboardKeyButton(
-                                label = key,
-                                enabled = enabled && value.length < maxLength,
-                                modifier = Modifier.weight(1f),
-                                onClick = {
-                                    SonHarfSoundFx.typingClick()
-                                    onValueChange((value + key).take(maxLength))
-                                },
-                            )
-                        }
+                        KeyboardKeyButton(
+                            label = key,
+                            enabled = enabled && value.length < maxLength,
+                            modifier = Modifier.weight(1f),
+                            onClick = {
+                                SonHarfSoundFx.typingClick()
+                                onValueChange((value + key).take(maxLength))
+                            },
+                        )
                     }
                 }
+            }
+
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 17.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                KeyboardKeyButton(
+                    label = "⌫",
+                    enabled = enabled && value.isNotEmpty(),
+                    modifier = Modifier.weight(1f),
+                    alt = true,
+                    onClick = {
+                        SonHarfSoundFx.tap()
+                        onValueChange(value.dropLast(1))
+                    },
+                )
+                KeyboardKeyButton(
+                    label = "TEMİZLE",
+                    enabled = enabled && value.isNotEmpty(),
+                    modifier = Modifier.weight(1.35f),
+                    alt = true,
+                    onClick = {
+                        SonHarfSoundFx.tap()
+                        onValueChange("")
+                    },
+                )
+                KeyboardKeyButton(
+                    label = "GÖNDER  ➤",
+                    enabled = enabled && value.isNotBlank(),
+                    modifier = Modifier.weight(2.15f),
+                    action = true,
+                    onClick = {
+                        SonHarfSoundFx.tap()
+                        onSubmit()
+                    },
+                )
             }
         }
     }
@@ -196,7 +218,7 @@ private fun KeyboardKeyButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(34.dp),
+        modifier = modifier.height(38.dp),
         contentPadding = PaddingValues(0.dp),
         shape = RoundedCornerShape(9.dp),
         colors = ButtonDefaults.buttonColors(
@@ -214,7 +236,7 @@ private fun KeyboardKeyButton(
     ) {
         Text(
             label,
-            fontSize = if (label.length > 2) 8.sp else 16.sp,
+            fontSize = if (label.length > 4) 10.sp else 15.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
         )
