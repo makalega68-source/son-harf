@@ -128,7 +128,7 @@ fun OnlineGameScreenV6() {
     val active = room
     if (active == null) {
         AuroraDuelLobby(
-            playerName = profile?.displayName ?: sh("Oyuncu", "Player"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility == "visible" }, playerGender = profile?.gender, language = language, matching = matching, notice = notice,
+            playerName = profile?.displayName ?: sh("Oyuncu", "Player"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility != "hidden" }, playerGender = profile?.gender, language = language, matching = matching, notice = notice,
             showPrivate = showPrivate, showFriends = showFriends, privateCode = privateCode, friends = friends, invites = invites,
             onLanguage = { language = it; SonHarfSoundFx.tap() },
             onPrivateCode = { privateCode = it.filter(Char::isLetterOrDigit).uppercase().take(6) },
@@ -172,9 +172,9 @@ fun OnlineGameScreenV6() {
             }
         }
         AuroraArena(
-            room = active, me = me, playerName = profile?.displayName ?: sh("Sen", "You"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility == "visible" }, playerGender = profile?.gender,
+            room = active, me = me, playerName = profile?.displayName ?: sh("Sen", "You"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility != "hidden" }, playerGender = profile?.gender,
             opponentName = if (active.isBot) "${active.botName ?: if (active.language == "en") "WordBot" else "KelimeBot"} BOT" else opponentProfile?.displayName ?: sh("Rakip", "Opponent"),
-            opponentAvatarPath = if (active.isBot) null else opponentProfile?.avatarPath?.takeIf { opponentProfile?.avatarVisibility == "visible" }, opponentGender = if (active.isBot) null else opponentProfile?.gender,
+            opponentAvatarPath = if (active.isBot) null else opponentProfile?.avatarPath?.takeIf { opponentProfile?.avatarVisibility != "hidden" }, opponentGender = if (active.isBot) null else opponentProfile?.gender,
             words = words, wordInput = wordInput, onWordInput = { wordInput = it.take(40) }, notice = notice, busy = busy,
             triviaRound = triviaRound, triviaQuestion = triviaQuestion,
             onSubmit = {
