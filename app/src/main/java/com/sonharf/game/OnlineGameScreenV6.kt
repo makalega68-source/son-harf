@@ -18,6 +18,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -69,6 +71,7 @@ fun OnlineGameScreenV6() {
         "wrong_start_letter" in raw -> sh("Kelime son harfle başlamalı.", "The word must start with the last letter.")
         "not_in_dictionary" in raw -> sh("Bu kelime sözlükte bulunamadı.", "This word was not found in the dictionary.")
         "invalid_word" in raw -> sh("Bu kelime geçerli değil.", "This word is not valid.")
+        "ends_with_soft_g" in raw -> sh("Ğ ile biten kelimeler kullanılamaz.", "Words ending with Ğ cannot be used.")
         "turn_expired" in raw -> sh("Süren doldu. −1 puan.", "Your time expired. −1 point.")
         "vip_required" in raw -> sh("Özel oda açmak için VIP gerekli.", "VIP is required to create a private room.")
         else -> sh("Bağlantı sorunu. Yeniden deneniyor.", "Connection problem. Retrying.")
@@ -698,18 +701,25 @@ private fun AuroraArena(
     val myTurn = room.currentPlayerId == me && liveWordPhase
     val last = words.lastOrNull()?.normalizedWord
     val required = last?.lastOrNull()?.uppercaseChar()?.toString() ?: "•"
-    var seconds by remember(room.turnDeadline) { mutableStateOf(45) }
+    var seconds by remember(room.turnDeadline) { mutableStateOf(7) }
+    val haptics = LocalHapticFeedback.current
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
         while (room.turnDeadline != null && liveWordPhase) {
             seconds = runCatching {
                 (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0)
-            }.getOrDefault(45)
+            }.getOrDefault(7)
             if (seconds <= 0) {
+                SonHarfSoundFx.warning()
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 onTimeout()
                 break
             }
             if (seconds in 1..5) SonHarfSoundFx.countdown()
+            if (seconds in 1..3) {
+                SonHarfSoundFx.heartbeat()
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            }
             delay(1000)
         }
     }
