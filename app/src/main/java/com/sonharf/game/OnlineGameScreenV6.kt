@@ -54,6 +54,8 @@ fun OnlineGameScreenV6() {
     var chatInput by remember { mutableStateOf("") }
     var privateCode by remember { mutableStateOf("") }
     var notice by remember { mutableStateOf(sh("Hazır", "Ready")) }
+    var feedbackWord by remember { mutableStateOf<String?>(null) }
+    var feedbackCorrect by remember { mutableStateOf<Boolean?>(null) }
     var busy by remember { mutableStateOf(false) }
     var matching by remember { mutableStateOf(false) }
     var showPrivate by remember { mutableStateOf(false) }
@@ -225,17 +227,53 @@ fun OnlineGameScreenV6() {
             room = active, me = me, playerName = profile?.displayName ?: sh("Sen", "You"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility != "hidden" }, playerGender = profile?.gender, playerRating = profile?.rating ?: 1000,
             opponentName = if (active.isBot) "${active.botName ?: if (active.language == "en") "WordBot" else "KelimeBot"} BOT" else opponentProfile?.displayName ?: sh("Rakip", "Opponent"),
             opponentAvatarPath = if (active.isBot) null else opponentProfile?.avatarPath?.takeIf { opponentProfile?.avatarVisibility != "hidden" }, opponentGender = if (active.isBot) null else opponentProfile?.gender, opponentRating = if (active.isBot) 1000 else opponentProfile?.rating ?: 1000,
-            words = words, wordInput = wordInput, onWordInput = { wordInput = it.take(40) }, notice = notice, busy = busy,
-            triviaRound = triviaRound, triviaQuestion = triviaQuestion,
+            words = words,
+            isVip = profile?.isVip == true,
+            feedbackWord = feedbackWord,
+            feedbackCorrect = feedbackCorrect,
+            wordInput = wordInput,
+            onWordInput = { wordInput = it.take(40) },
+            notice = notice,
+            busy = busy,
+            triviaRound = triviaRound,
+            triviaQuestion = triviaQuestion,
             onSubmit = {
                 scope.launch {
-                    val submitted = wordInput.trim(); if (submitted.isBlank()) return@launch
-                    wordInput = ""; busy = true; SonHarfSoundFx.tap()
-                    runCatching { backend.submitWord(active.id, submitted) }.onSuccess { result ->
-                        room = result
-                        if (failedEvent(result.lastEvent) && result.lastEventPlayerId == me) { notice = eventMessage(result.lastEvent); SonHarfSoundFx.warning() }
-                        else { notice = sh("Kelime kabul edildi: ${submitted.uppercase()}", "Word accepted: ${submitted.uppercase()}"); SonHarfSoundFx.wordAccepted() }
-                    }.onFailure { notice = friendly(it.message.orEmpty()); SonHarfSoundFx.warning() }
+                    val submitted = wordInput.trim()
+                    if (submitted.isBlank()) return@launch
+                    val shownWord = submitted.uppercase()
+                    wordInput = ""
+                    busy = true
+                    SonHarfSoundFx.tap()
+                    runCatching { backend.submitWord(active.id, submitted) }
+                        .onSuccess { result ->
+                            room = result
+                            if (failedEvent(result.lastEvent) && result.lastEventPlayerId == me) {
+                                feedbackWord = shownWord
+                                feedbackCorrect = false
+                                notice = eventMessage(result.lastEvent)
+                                SonHarfSoundFx.warning()
+                            } else {
+                                feedbackWord = shownWord
+                                feedbackCorrect = true
+                                notice = sh("Kelime kabul edildi: $shownWord", "Word accepted: $shownWord")
+                                SonHarfSoundFx.wordAccepted()
+                            }
+                        }
+                        .onFailure {
+                            feedbackWord = shownWord
+                            feedbackCorrect = false
+                            notice = friendly(it.message.orEmpty())
+                            SonHarfSoundFx.warning()
+                        }
+                    val captured = shownWord
+                    scope.launch {
+                        delay(1400)
+                        if (feedbackWord == captured) {
+                            feedbackWord = null
+                            feedbackCorrect = null
+                        }
+                    }
                     busy = false
                 }
             },
