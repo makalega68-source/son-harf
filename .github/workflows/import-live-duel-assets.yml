@@ -1,0 +1,36 @@
+name: Import Live Duel Assets
+
+on:
+  push:
+    branches:
+      - live-duel-system-rebuild-20260830
+    paths:
+      - .github/workflows/import-live-duel-assets.yml
+
+permissions:
+  contents: write
+
+jobs:
+  import-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: live-duel-system-rebuild-20260830
+      - name: Download Higgsfield UI assets
+        run: |
+          mkdir -p app/src/main/res/drawable-nodpi
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_a008be08-3070-4ed6-aed5-7f6cccb6f6e5.png' -o app/src/main/res/drawable-nodpi/duel_arena_bg.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_539fb18c-6c65-4a8f-b3e2-d477abdbac18.png' -o app/src/main/res/drawable-nodpi/hud_player_blue.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_51a479ae-b543-42a6-ab58-2950af4491c8.png' -o app/src/main/res/drawable-nodpi/hud_opponent_red.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_596b130b-f1fa-453d-8375-9800b464ffc7.png' -o app/src/main/res/drawable-nodpi/duel_energy_core.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_c18834eb-4cf3-47e3-b98a-5bce8b33cea0.png' -o app/src/main/res/drawable-nodpi/duel_bonus_panel.png
+          file app/src/main/res/drawable-nodpi/*.png
+      - name: Commit assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/res/drawable-nodpi/
+          git diff --cached --quiet && exit 0
+          git commit -m "Import Higgsfield live duel UI assets"
+          git push origin HEAD:live-duel-system-rebuild-20260830
