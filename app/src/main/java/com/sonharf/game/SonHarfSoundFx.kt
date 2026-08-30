@@ -33,7 +33,6 @@ object SonHarfSoundFx {
             R.raw.sfx_soft_notify,
             R.raw.sfx_bonus,
             R.raw.sfx_warning,
-            R.raw.sfx_countdown,
             R.raw.sfx_heartbeat,
             R.raw.sfx_explosion,
             R.raw.sfx_victory,
@@ -51,22 +50,22 @@ object SonHarfSoundFx {
 
     fun setEnabled(value: Boolean) { enabled = value }
 
-    fun tap() = play(R.raw.sfx_ui_tap, .42f)
-    fun typingClick() = play(R.raw.sfx_key_click, .32f)
-    fun scoreTick() = play(R.raw.sfx_ui_tap, .34f, 1.08f)
-    fun leadChange() = play(R.raw.sfx_word_accepted, .55f, 1.04f)
-    fun missionComplete() = play(R.raw.sfx_bonus, .62f)
-    fun rematchReady() = play(R.raw.sfx_soft_notify, .46f)
-    fun softNotify() = play(R.raw.sfx_soft_notify, .42f)
-    fun wordAccepted() = play(R.raw.sfx_word_accepted, .62f)
-    fun warning() = play(R.raw.sfx_warning, .50f)
-    fun bonus() = play(R.raw.sfx_bonus, .62f)
-    fun victory() = play(R.raw.sfx_victory, .68f)
-    fun defeat() = play(R.raw.sfx_defeat, .56f)
-    fun countdown() = play(R.raw.sfx_countdown, .34f)
-    fun heartbeat() = play(R.raw.sfx_heartbeat, .42f)
-    fun explosion() = play(R.raw.sfx_explosion, .72f)
-    fun fireworks() = play(R.raw.sfx_victory, .48f)
+    fun tap() = play(R.raw.sfx_ui_tap, .18f)
+    fun typingClick() = play(R.raw.sfx_key_click, .12f)
+    fun scoreTick() = play(R.raw.sfx_ui_tap, .16f, 1.02f)
+    fun leadChange() = play(R.raw.sfx_word_accepted, .28f, 1.02f)
+    fun missionComplete() = play(R.raw.sfx_bonus, .34f)
+    fun rematchReady() = play(R.raw.sfx_soft_notify, .22f)
+    fun softNotify() = play(R.raw.sfx_soft_notify, .20f)
+    fun wordAccepted() = play(R.raw.sfx_word_accepted, .30f)
+    fun warning() = play(R.raw.sfx_ui_tap, .16f, .92f)
+    fun bonus() = play(R.raw.sfx_bonus, .32f)
+    fun victory() = play(R.raw.sfx_victory, .42f)
+    fun defeat() = play(R.raw.sfx_defeat, .34f)
+    fun countdown() { /* countdown uses heartbeat/haptic only; no beep */ }
+    fun heartbeat() = play(R.raw.sfx_heartbeat, .24f)
+    fun explosion() = play(R.raw.sfx_explosion, .52f)
+    fun fireworks() = play(R.raw.sfx_victory, .28f)
 
     private fun play(resId: Int, volume: Float, rate: Float = 1f) {
         if (!enabled) return

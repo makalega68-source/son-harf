@@ -1,0 +1,45 @@
+name: Import Live Duel Assets
+
+on:
+  push:
+    branches:
+      - live-duel-system-rebuild-20260830
+    paths:
+      - .github/workflows/import-live-duel-assets.yml
+
+permissions:
+  contents: write
+
+jobs:
+  import-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: live-duel-system-rebuild-20260830
+      - name: Download Higgsfield UI assets
+        run: |
+          mkdir -p app/src/main/res/drawable-nodpi
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_a008be08-3070-4ed6-aed5-7f6cccb6f6e5.png' -o app/src/main/res/drawable-nodpi/duel_arena_bg.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_539fb18c-6c65-4a8f-b3e2-d477abdbac18.png' -o app/src/main/res/drawable-nodpi/hud_player_blue.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_51a479ae-b543-42a6-ab58-2950af4491c8.png' -o app/src/main/res/drawable-nodpi/hud_opponent_red.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_596b130b-f1fa-453d-8375-9800b464ffc7.png' -o app/src/main/res/drawable-nodpi/duel_energy_core.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135051_c18834eb-4cf3-47e3-b98a-5bce8b33cea0.png' -o app/src/main/res/drawable-nodpi/duel_bonus_panel.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_c966f035-f6b6-443a-b742-28e75d2b439b.png' -o app/src/main/res/drawable-nodpi/duel_input_panel.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_35c613e2-8d1f-49af-9194-f9c574ae9ab4.png' -o app/src/main/res/drawable-nodpi/duel_keycap_blue.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_7cda6e9e-cdc3-4e4a-b013-267af8b7eb95.png' -o app/src/main/res/drawable-nodpi/duel_button_red.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_c1725232-4cd9-4703-9daf-efb8aeb3097d.png' -o app/src/main/res/drawable-nodpi/duel_button_blue.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135233_363b5b7b-cd06-4b30-8754-3e87113c72c5.png' -o app/src/main/res/drawable-nodpi/duel_button_gold.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135458_0aa43442-9c0b-4f77-85df-04917e7496a2.png' -o app/src/main/res/drawable-nodpi/duel_main_frame.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135457_318a0547-08b6-4b44-aa8e-844b4c1e2656.png' -o app/src/main/res/drawable-nodpi/duel_timer_ring.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135458_c01df302-bf55-420f-ab8a-5c75a9e6b0ce.png' -o app/src/main/res/drawable-nodpi/duel_word_chip_blue.png
+          curl -L --fail --retry 3 'https://d8j0ntlcm91z4.cloudfront.net/user_3IF9zXlHgFrus43xyiNWubj7Vka/hf_20260830_135457_e8ac2587-367f-4104-9302-8ee6fa43b5c3.png' -o app/src/main/res/drawable-nodpi/duel_word_chip_gold.png
+          file app/src/main/res/drawable-nodpi/*.png
+      - name: Commit assets
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/res/drawable-nodpi/
+          git diff --cached --quiet && exit 0
+          git commit -m "Import Higgsfield live duel UI assets"
+          git push origin HEAD:live-duel-system-rebuild-20260830

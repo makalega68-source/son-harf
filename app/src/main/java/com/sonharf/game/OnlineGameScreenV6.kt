@@ -97,8 +97,12 @@ fun OnlineGameScreenV6() {
     suspend fun activeRoom(): GameRoomDto? {
         val me = backend.currentUserId() ?: return null
         return SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
-            .filter { (it.hostId == me || it.guestId == me) && it.status in listOf("waiting", "playing", "quiz", "final", "sudden_death", "paused") }
-            .maxByOrNull { it.validWordCount }
+            .filter {
+                (it.hostId == me || it.guestId == me) &&
+                    it.status in listOf("playing", "quiz", "final", "sudden_death", "paused") &&
+                    (it.isBot || it.guestId != null)
+            }
+            .maxByOrNull { runCatching { Instant.parse(it.createdAt) }.getOrDefault(Instant.EPOCH) }
     }
     suspend fun refreshQuiz(r: GameRoomDto) {
         if (r.status == "quiz") {
@@ -217,7 +221,7 @@ fun OnlineGameScreenV6() {
                     .onFailure { notice = friendly(it.message.orEmpty()) }
             }
         }
-        ReferenceDuelArena(
+        LiveDuelArena(
             room = active, me = me, playerName = profile?.displayName ?: sh("Sen", "You"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility != "hidden" }, playerGender = profile?.gender, playerRating = profile?.rating ?: 1000,
             opponentName = if (active.isBot) "${active.botName ?: if (active.language == "en") "WordBot" else "KelimeBot"} BOT" else opponentProfile?.displayName ?: sh("Rakip", "Opponent"),
             opponentAvatarPath = if (active.isBot) null else opponentProfile?.avatarPath?.takeIf { opponentProfile?.avatarVisibility != "hidden" }, opponentGender = if (active.isBot) null else opponentProfile?.gender, opponentRating = if (active.isBot) 1000 else opponentProfile?.rating ?: 1000,
