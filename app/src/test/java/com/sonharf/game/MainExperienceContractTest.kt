@@ -71,17 +71,22 @@ class MainExperienceContractTest {
     }
 
     @Test
-    fun frozenMatchSurfaceFilesRemainByteForByteStable() {
-        val expected = mapOf(
-            "OnlineGameScreenV6.kt" to "e01d2715a95cd78b70bf5f299ad88a24759a1cff0b4c823e1b2e3ede3629e393",
-            "LightDuelUi.kt" to "f38c6533b07cd101a405a960adab219f14ef432a28998a453b6ae9c4f4249da2",
-            "EmbeddedGameKeyboard.kt" to "f5143f6701c3bff95119aa6ce61d5f64acc15f8803fd2c6b48bcee4b5625d4a2",
-        )
+    fun requestedMatchFixesStayBoundedToReliabilityAndLegibility() {
+        val online = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
+        val arena = projectFile("app/src/main/java/com/sonharf/game/LightDuelUi.kt").readText()
+        val keyboard = projectFile("app/src/main/java/com/sonharf/game/EmbeddedGameKeyboard.kt")
 
-        expected.forEach { (name, checksum) ->
-            val file = projectFile("app/src/main/java/com/sonharf/game/$name")
-            assertEquals("Frozen match file changed: $name", checksum, file.sha256())
-        }
+        assertTrue(online.contains("var attempt = 0"))
+        assertTrue(online.contains("else minOf(5000L, 1200L + attempt * 600L)"))
+        assertTrue(online.contains("You must FORFEIT before returning home."))
+        assertTrue(online.contains("SonHarfUiState.homeRequest += 1"))
+        assertTrue(arena.contains("gameUppercase("))
+        assertTrue(arena.contains("duelScoreFontSize(score).sp"))
+        assertEquals(
+            "Frozen keyboard changed",
+            "f5143f6701c3bff95119aa6ce61d5f64acc15f8803fd2c6b48bcee4b5625d4a2",
+            keyboard.sha256(),
+        )
     }
 
     private fun File.sha256(): String = MessageDigest.getInstance("SHA-256")

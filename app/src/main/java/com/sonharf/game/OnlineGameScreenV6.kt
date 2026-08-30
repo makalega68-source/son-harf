@@ -1,5 +1,7 @@
 package com.sonharf.game
 
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
@@ -21,6 +23,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -41,6 +44,7 @@ fun OnlineGameScreenV6() {
         return
     }
     val backend = remember { OnlineGameBackend() }
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var opponentProfile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -146,7 +150,10 @@ fun OnlineGameScreenV6() {
                     words = it
                     val latest = it.lastOrNull()
                     if (latest != null && latest.id != previousLastId) {
-                        feedbackWord = latest.word.trim().ifBlank { latest.normalizedWord.trim() }.uppercase()
+                        feedbackWord = gameUppercase(
+                            latest.word.trim().ifBlank { latest.normalizedWord.trim() },
+                            room?.language ?: language,
+                        )
                         feedbackCorrect = true
                     }
                     if (
@@ -208,12 +215,44 @@ fun OnlineGameScreenV6() {
         )
     } else {
         val me = backend.currentUserId()
+        val matchInProgress = active.status in listOf("playing", "quiz", "final", "sudden_death", "paused")
+        BackHandler(enabled = matchInProgress) {
+            val message = sh(
+                "Ana ekrana dönmek için önce PES ET'e basmalısın.",
+                "You must FORFEIT before returning home.",
+            )
+            notice = message
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
         LaunchedEffect(active.currentPlayerId, active.validWordCount, active.roundNo) { wordInput = "" }
         LaunchedEffect(active.id) { while (true) { if (!active.isBot && active.status != "waiting") runCatching { backend.heartbeatRoom(active.id) }.onSuccess { room = it }; delay(5000) } }
-        LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount) {
+        LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount, active.roundNo) {
             if (active.isBot && active.botTurn && active.status in listOf("playing", "final", "sudden_death")) {
-                delay(1600L + (active.validWordCount % 4) * 350L)
-                runCatching { backend.botTakeTurn(active.id) }.onSuccess { room = it }.onFailure { notice = friendly(it.message.orEmpty()) }
+                var attempt = 0
+                while (true) {
+                    val latest = room ?: return@LaunchedEffect
+                    if (
+                        latest.id != active.id ||
+                        !latest.isBot ||
+                        !latest.botTurn ||
+                        latest.status !in listOf("playing", "final", "sudden_death")
+                    ) return@LaunchedEffect
+
+                    delay(
+                        if (attempt == 0) 1600L + (active.validWordCount % 4) * 350L
+                        else minOf(5000L, 1200L + attempt * 600L)
+                    )
+                    val result = runCatching { backend.botTakeTurn(active.id) }
+                    result.onSuccess {
+                        room = it
+                        if (!it.botTurn || it.status !in listOf("playing", "final", "sudden_death")) {
+                            return@LaunchedEffect
+                        }
+                    }.onFailure {
+                        notice = friendly(it.message.orEmpty())
+                    }
+                    attempt += 1
+                }
             }
         }
         LaunchedEffect(active.status, triviaRound?.id, triviaRound?.resolvedAt) {
@@ -247,7 +286,7 @@ fun OnlineGameScreenV6() {
                 scope.launch {
                     val submitted = wordInput.trim()
                     if (submitted.isBlank()) return@launch
-                    val shownWord = submitted.uppercase()
+                    val shownWord = gameUppercase(submitted, active.language)
                     wordInput = ""
                     busy = true
                     SonHarfSoundFx.tap()
@@ -275,11 +314,54 @@ fun OnlineGameScreenV6() {
                     busy = false
                 }
             },
-            onTimeout = { scope.launch { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it } } },
+            onTimeout = {
+                scope.launch {
+                    val expectedDeadline = active.turnDeadline
+                    val expectedPlayer = active.currentPlayerId
+                    val expectedBotTurn = active.botTurn
+                    while (true) {
+                        val latest = room ?: return@launch
+                        if (
+                            latest.id != active.id ||
+                            latest.turnDeadline != expectedDeadline ||
+                            latest.status !in listOf("playing", "final", "sudden_death")
+                        ) return@launch
+
+                        runCatching { backend.claimTurnTimeout(active.id) }
+                            .onSuccess {
+                                room = it
+                                if (
+                                    it.turnDeadline != expectedDeadline ||
+                                    it.currentPlayerId != expectedPlayer ||
+                                    it.botTurn != expectedBotTurn ||
+                                    it.status != active.status
+                                ) return@launch
+                            }
+                            .onFailure { notice = friendly(it.message.orEmpty()) }
+                        delay(1200L)
+                    }
+                }
+            },
             onTrivia = { estimate -> scope.launch { val q = triviaRound ?: return@launch; runCatching { backend.answerTrivia(q.id, estimate) }.onSuccess { room = it; refreshQuiz(it) }.onFailure { notice = friendly(it.message.orEmpty()) } } },
             onTriviaTimeout = { scope.launch { val q = triviaRound ?: return@launch; runCatching { backend.claimTriviaTimeout(q.id) }.onSuccess { room = it; refreshQuiz(it) }.onFailure { notice = friendly(it.message.orEmpty()) } } },
             onChat = { showChat = true },
-            onForfeit = { scope.launch { runCatching { backend.forfeit(active.id) }.onSuccess { room = it } } },
+            onForfeit = {
+                scope.launch {
+                    busy = true
+                    runCatching { backend.forfeit(active.id) }
+                        .onSuccess {
+                            room = it
+                            roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel()
+                            SonHarfUiState.homeRequest += 1
+                        }
+                        .onFailure {
+                            val message = friendly(it.message.orEmpty())
+                            notice = message
+                            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                        }
+                    busy = false
+                }
+            },
             onExit = { roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); room = null; words = emptyList(); chat = emptyList(); notice = sh("Yeni düelloya hazırsın.", "You are ready for a new duel.") },
             onRematch = { scope.launch { runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }.onSuccess { room = it; words = emptyList(); chat = emptyList(); if (it.id != active.id) observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) } } }
         )
@@ -784,7 +866,7 @@ private fun AuroraArena(
     val liveWordPhase = room.status in listOf("playing", "final", "sudden_death")
     val myTurn = room.currentPlayerId == me && liveWordPhase
     val last = words.lastOrNull()?.normalizedWord
-    val required = last?.lastOrNull()?.uppercaseChar()?.toString() ?: "•"
+    val required = last?.takeLast(1)?.let { gameUppercase(it, room.language) } ?: "•"
     var seconds by remember(room.turnDeadline) { mutableStateOf(7) }
     val haptics = LocalHapticFeedback.current
 
@@ -1155,7 +1237,10 @@ private fun AuroraArena(
                                         border = BorderStroke(1.dp, arenaCyan.copy(alpha = .30f)),
                                     ) {
                                         Text(
-                                            w.word.trim().ifBlank { w.normalizedWord.trim() }.uppercase(),
+                                            gameUppercase(
+                                                w.word.trim().ifBlank { w.normalizedWord.trim() },
+                                                room.language,
+                                            ),
                                             Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                             color = Color.White,
                                             fontWeight = FontWeight.Black,
