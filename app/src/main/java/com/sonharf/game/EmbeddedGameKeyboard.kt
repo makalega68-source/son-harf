@@ -26,6 +26,7 @@ internal fun EmbeddedWordKeyboard(
     value: String,
     language: String,
     enabled: Boolean,
+    submitEnabled: Boolean = enabled,
     maxLength: Int = 20,
     onValueChange: (String) -> Unit,
     onSubmit: () -> Unit,
@@ -108,7 +109,7 @@ internal fun EmbeddedWordKeyboard(
                 )
                 KeyboardKeyButton(
                     label = "GÖNDER  ➤",
-                    enabled = enabled && value.isNotBlank(),
+                    enabled = submitEnabled && value.isNotBlank(),
                     modifier = Modifier.weight(2.15f),
                     action = true,
                     onClick = {
