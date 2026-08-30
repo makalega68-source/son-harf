@@ -340,27 +340,51 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     fun observeRoom(id: String, intervalMs: Long = 700): Flow<GameRoomDto> = flow {
         var previous: GameRoomDto? = null
         while (currentCoroutineContext().isActive) {
-            val next = getRoom(id)
-            if (next != previous) { emit(next); previous = next }
-            delay(intervalMs)
+            val result = runCatching { getRoom(id) }
+            if (result.isSuccess) {
+                val next = result.getOrThrow()
+                if (next != previous) {
+                    emit(next)
+                    previous = next
+                }
+                delay(intervalMs)
+            } else {
+                delay(1200)
+            }
         }
     }
 
     fun observeWords(id: String, intervalMs: Long = 700): Flow<List<GameWordDto>> = flow {
         var previous = emptyList<GameWordDto>()
         while (currentCoroutineContext().isActive) {
-            val next = getWords(id)
-            if (next != previous) { emit(next); previous = next }
-            delay(intervalMs)
+            val result = runCatching { getWords(id) }
+            if (result.isSuccess) {
+                val next = result.getOrThrow()
+                if (next != previous) {
+                    emit(next)
+                    previous = next
+                }
+                delay(intervalMs)
+            } else {
+                delay(1200)
+            }
         }
     }
 
     fun observeChat(id: String, intervalMs: Long = 900): Flow<List<ChatMessageDto>> = flow {
         var previous = emptyList<ChatMessageDto>()
         while (currentCoroutineContext().isActive) {
-            val next = getChat(id)
-            if (next != previous) { emit(next); previous = next }
-            delay(intervalMs)
+            val result = runCatching { getChat(id) }
+            if (result.isSuccess) {
+                val next = result.getOrThrow()
+                if (next != previous) {
+                    emit(next)
+                    previous = next
+                }
+                delay(intervalMs)
+            } else {
+                delay(1400)
+            }
         }
     }
 }

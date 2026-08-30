@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,9 +16,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -69,16 +73,18 @@ fun OnlineGameScreenV6() {
         "wrong_start_letter" in raw -> sh("Kelime son harfle başlamalı.", "The word must start with the last letter.")
         "not_in_dictionary" in raw -> sh("Bu kelime sözlükte bulunamadı.", "This word was not found in the dictionary.")
         "invalid_word" in raw -> sh("Bu kelime geçerli değil.", "This word is not valid.")
+        "ends_with_soft_g" in raw -> sh("Ğ ile biten kelimeler kullanılamaz.", "Words ending with Ğ cannot be used.")
         "turn_expired" in raw -> sh("Süren doldu. −1 puan.", "Your time expired. −1 point.")
         "vip_required" in raw -> sh("Özel oda açmak için VIP gerekli.", "VIP is required to create a private room.")
         else -> sh("Bağlantı sorunu. Yeniden deneniyor.", "Connection problem. Retrying.")
     }
-    fun failedEvent(e: String?) = e in setOf("word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "turn_expired")
+    fun failedEvent(e: String?) = e in setOf("word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "ends_with_soft_g", "turn_expired")
     fun eventMessage(e: String?) = when (e) {
         "word_already_used" -> sh("Bu kelime daha önce kullanıldı.", "This word has already been used.")
         "wrong_start_letter" -> sh("Kelime son harfle başlamalı.", "The word must start with the last letter.")
         "not_in_dictionary" -> sh("Bu kelime sözlükte bulunamadı.", "This word was not found in the dictionary.")
         "invalid_word" -> sh("Bu kelime geçerli değil.", "This word is not valid.")
+        "ends_with_soft_g" -> sh("Ğ ile biten kelimeler kullanılamaz.", "Words ending with Ğ cannot be used.")
         "turn_expired" -> sh("Süren doldu. −1 puan.", "Your time expired. −1 point.")
         else -> sh("Hamle işlenemedi.", "The move could not be processed.")
     }
@@ -127,7 +133,7 @@ fun OnlineGameScreenV6() {
     val active = room
     if (active == null) {
         AuroraDuelLobby(
-            playerName = profile?.displayName ?: sh("Oyuncu", "Player"), language = language, matching = matching, notice = notice,
+            playerName = profile?.displayName ?: sh("Oyuncu", "Player"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility != "hidden" }, playerGender = profile?.gender, language = language, matching = matching, notice = notice,
             showPrivate = showPrivate, showFriends = showFriends, privateCode = privateCode, friends = friends, invites = invites,
             onLanguage = { language = it; SonHarfSoundFx.tap() },
             onPrivateCode = { privateCode = it.filter(Char::isLetterOrDigit).uppercase().take(6) },
@@ -171,8 +177,9 @@ fun OnlineGameScreenV6() {
             }
         }
         AuroraArena(
-            room = active, me = me, playerName = profile?.displayName ?: sh("Sen", "You"),
+            room = active, me = me, playerName = profile?.displayName ?: sh("Sen", "You"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility != "hidden" }, playerGender = profile?.gender, playerRating = profile?.rating ?: 1000,
             opponentName = if (active.isBot) "${active.botName ?: if (active.language == "en") "WordBot" else "KelimeBot"} BOT" else opponentProfile?.displayName ?: sh("Rakip", "Opponent"),
+            opponentAvatarPath = if (active.isBot) null else opponentProfile?.avatarPath?.takeIf { opponentProfile?.avatarVisibility != "hidden" }, opponentGender = if (active.isBot) null else opponentProfile?.gender, opponentRating = if (active.isBot) 1000 else opponentProfile?.rating ?: 1000,
             words = words, wordInput = wordInput, onWordInput = { wordInput = it.take(40) }, notice = notice, busy = busy,
             triviaRound = triviaRound, triviaQuestion = triviaQuestion,
             onSubmit = {
@@ -200,7 +207,7 @@ fun OnlineGameScreenV6() {
 
 @Composable
 private fun AuroraDuelLobby(
-    playerName: String, language: String, matching: Boolean, notice: String, showPrivate: Boolean, showFriends: Boolean,
+    playerName: String, playerAvatarPath: String?, playerGender: String?, language: String, matching: Boolean, notice: String, showPrivate: Boolean, showFriends: Boolean,
     privateCode: String, friends: List<Pair<FriendshipDto, ProfileDto>>, invites: List<GameInviteDto>, onLanguage: (String) -> Unit,
     onPrivateCode: (String) -> Unit, onRandom: () -> Unit, onCancel: () -> Unit, onPrivate: () -> Unit, onFriends: () -> Unit,
     onCreate: () -> Unit, onJoin: () -> Unit, onInvite: (String) -> Unit, onInviteResponse: (String, Boolean) -> Unit
@@ -286,21 +293,13 @@ private fun AuroraDuelLobby(
                     Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Surface(
-                        modifier = Modifier.size(44.dp),
-                        shape = CircleShape,
-                        color = gameBlue.copy(alpha = .14f),
-                        border = BorderStroke(1.dp, gameBlue.copy(alpha = .55f)),
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                playerName.take(1).uppercase(),
-                                color = gameText,
-                                fontSize = 20.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                        }
-                    }
+                    ProfilePhotoAvatarWithGender(
+                        avatarPath = playerAvatarPath,
+                        gender = playerGender,
+                        name = playerName,
+                        size = 44.dp,
+                        accent = gameBlue,
+                    )
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(playerName, color = gameText, fontSize = 16.sp, fontWeight = FontWeight.Black)
@@ -690,7 +689,7 @@ private fun GameLobbyAction(
 
 @Composable
 private fun AuroraArena(
-    room: GameRoomDto, me: String?, playerName: String, opponentName: String, words: List<GameWordDto>, wordInput: String,
+    room: GameRoomDto, me: String?, playerName: String, playerAvatarPath: String?, playerGender: String?, playerRating: Int, opponentName: String, opponentAvatarPath: String?, opponentGender: String?, opponentRating: Int, words: List<GameWordDto>, wordInput: String,
     onWordInput: (String) -> Unit, notice: String, busy: Boolean, triviaRound: TriviaRoundDto?, triviaQuestion: TriviaQuestionDto?,
     onSubmit: () -> Unit, onTimeout: () -> Unit, onTrivia: (Int) -> Unit, onChat: () -> Unit, onForfeit: () -> Unit,
     onExit: () -> Unit, onRematch: () -> Unit
@@ -704,18 +703,25 @@ private fun AuroraArena(
     val myTurn = room.currentPlayerId == me && liveWordPhase
     val last = words.lastOrNull()?.normalizedWord
     val required = last?.lastOrNull()?.uppercaseChar()?.toString() ?: "•"
-    var seconds by remember(room.turnDeadline) { mutableStateOf(45) }
+    var seconds by remember(room.turnDeadline) { mutableStateOf(7) }
+    val haptics = LocalHapticFeedback.current
 
     LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
         while (room.turnDeadline != null && liveWordPhase) {
             seconds = runCatching {
                 (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0)
-            }.getOrDefault(45)
+            }.getOrDefault(7)
             if (seconds <= 0) {
+                SonHarfSoundFx.warning()
+                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                 onTimeout()
                 break
             }
             if (seconds in 1..5) SonHarfSoundFx.countdown()
+            if (seconds in 1..3) {
+                SonHarfSoundFx.heartbeat()
+                haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+            }
             delay(1000)
         }
     }
@@ -853,31 +859,56 @@ private fun AuroraArena(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AuroraPlayerCard(playerName, myScore, myRounds, myTurn, myAccent, Modifier.weight(1f))
+            AuroraPlayerCard(playerName, playerAvatarPath, playerGender, playerRating, myScore, myRounds, myTurn, myAccent, Modifier.weight(1f))
 
-            Surface(
+            Box(
                 modifier = Modifier
-                    .size(72.dp)
+                    .size(82.dp)
                     .graphicsLayer {
                         if (seconds <= 5) {
                             scaleX = urgentPulse
                             scaleY = urgentPulse
                         }
                     },
-                shape = CircleShape,
-                color = arenaPanel,
-                border = BorderStroke(3.dp, timerAccent),
-                shadowElevation = 8.dp,
+                contentAlignment = Alignment.Center,
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("$seconds", color = arenaText, fontSize = 28.sp, fontWeight = FontWeight.Black)
-                        Text(sh("SN", "SEC"), color = timerAccent, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clip(CircleShape)
+                        .background(
+                            Brush.sweepGradient(
+                                listOf(arenaBlue, arenaCyan, arenaViolet, arenaPink, arenaGold, arenaBlue)
+                            )
+                        )
+                        .padding(4.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .clip(CircleShape)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(Color(0xFF172344), Color(0xFF080C1C))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text("$seconds", color = arenaText, fontSize = 29.sp, fontWeight = FontWeight.Black)
+                            Text(sh("SN", "SEC"), color = timerAccent, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
+                Text(
+                    "💣",
+                    modifier = Modifier.align(Alignment.TopCenter).offset(y = (-9).dp),
+                    fontSize = 18.sp,
+                )
             }
 
-            AuroraPlayerCard(opponentName, oppScore, oppRounds, !myTurn && liveWordPhase, opponentAccent, Modifier.weight(1f))
+            AuroraPlayerCard(opponentName, opponentAvatarPath, opponentGender, opponentRating, oppScore, oppRounds, !myTurn && liveWordPhase, opponentAccent, Modifier.weight(1f))
         }
 
         Surface(
@@ -904,6 +935,11 @@ private fun AuroraArena(
                     )
                     .padding(horizontal = 16.dp, vertical = 12.dp),
             ) {
+                ArenaEnergyBackdrop(
+                    primary = arenaBlue,
+                    secondary = arenaMagenta,
+                    pulse = corePulse,
+                )
                 Column(
                     Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
@@ -1031,16 +1067,18 @@ private fun AuroraArena(
                             LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 items(words.takeLast(12)) { w ->
                                     Surface(
-                                        shape = RoundedCornerShape(11.dp),
-                                        color = arenaPanel2,
-                                        border = BorderStroke(1.dp, Color.White.copy(alpha = .08f)),
+                                        modifier = Modifier.heightIn(min = 34.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = Color(0xFF101633),
+                                        border = BorderStroke(1.dp, arenaCyan.copy(alpha = .30f)),
                                     ) {
                                         Text(
-                                            w.word.uppercase(),
+                                            w.word.trim().ifBlank { w.normalizedWord.trim() }.uppercase(),
                                             Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                            color = arenaText,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 9.sp,
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 10.sp,
+                                            maxLines = 1,
                                         )
                                     }
                                 }
@@ -1185,48 +1223,129 @@ private fun ArenaActionButton(
 }
 
 @Composable
-private fun AuroraPlayerCard(name: String, score: Int, rounds: Int, active: Boolean, accent: Color, modifier: Modifier) {
-    Card(
-        modifier = modifier.height(78.dp),
-        colors = CardDefaults.cardColors(containerColor = if (active) accent.copy(alpha = .16f) else Color(0xFF121B2E)),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, if (active) accent.copy(alpha = .70f) else Color.White.copy(alpha = .08f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (active) 7.dp else 2.dp),
+private fun AuroraPlayerCard(
+    name: String,
+    avatarPath: String?,
+    gender: String?,
+    rating: Int,
+    score: Int,
+    rounds: Int,
+    active: Boolean,
+    accent: Color,
+    modifier: Modifier,
+) {
+    Surface(
+        modifier = modifier.height(86.dp),
+        color = Color.Transparent,
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(1.dp, if (active) accent.copy(alpha = .86f) else accent.copy(alpha = .30f)),
+        shadowElevation = if (active) 9.dp else 3.dp,
     ) {
         Row(
-            Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp),
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(
+                            accent.copy(alpha = if (active) .24f else .10f),
+                            Color(0xFF0A1024),
+                            Color(0xFF0A1024),
+                        )
+                    )
+                )
+                .padding(horizontal = 9.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
-                modifier = Modifier.size(38.dp),
-                shape = CircleShape,
-                color = accent.copy(alpha = .20f),
-                border = BorderStroke(1.dp, accent.copy(alpha = .35f)),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(name.take(1).uppercase(), color = Color(0xFFF5F7FF), fontWeight = FontWeight.Black, fontSize = 18.sp)
+            if (avatarPath == null && name.contains("BOT", ignoreCase = true)) {
+                Box(
+                    Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(accent.copy(alpha = .20f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("🤖", fontSize = 25.sp)
                 }
+            } else {
+                ProfilePhotoAvatarWithGender(
+                    avatarPath = avatarPath,
+                    gender = gender,
+                    name = name,
+                    size = 48.dp,
+                    accent = accent,
+                )
             }
+
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        name,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        color = Color(0xFFF7F8FF),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    if (active) {
+                        Box(Modifier.size(7.dp).clip(CircleShape).background(accent))
+                    }
+                }
                 Text(
-                    name,
-                    maxLines = 1,
-                    color = if (active) Color(0xFFF5F7FF) else Color(0xFF95A4BE),
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
+                    score.toString(),
+                    color = Color.White,
+                    fontSize = 27.sp,
+                    fontWeight = FontWeight.Black,
                 )
-                Text(score.toString(), color = Color(0xFFF5F7FF), fontSize = 24.sp, fontWeight = FontWeight.Black)
-                Text(
-                    "$rounds ${sh("round", "round")}",
-                    color = Color(0xFF95A4BE),
-                    fontSize = 7.sp,
-                    fontWeight = FontWeight.Medium,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("🏆", fontSize = 8.sp)
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        rating.toString(),
+                        color = Color(0xFFFFC247),
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        "$rounds R",
+                        color = Color(0xFF95A4BE),
+                        fontSize = 7.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
-            if (active) {
-                Box(Modifier.size(7.dp).clip(CircleShape).background(accent))
-            }
+        }
+    }
+}
+
+@Composable
+private fun ArenaEnergyBackdrop(
+    primary: Color,
+    secondary: Color,
+    pulse: Float,
+) {
+    Canvas(Modifier.fillMaxSize()) {
+        val center = Offset(size.width * .5f, size.height * .48f)
+        repeat(26) { i ->
+            val fx = ((i * 37) % 101) / 100f
+            val fy = ((i * 61 + 17) % 97) / 96f
+            val radius = if (i % 4 == 0) 2.1f else 1.15f
+            drawCircle(
+                color = if (i % 3 == 0) secondary.copy(alpha = .18f * pulse) else primary.copy(alpha = .16f * pulse),
+                radius = radius,
+                center = Offset(size.width * fx, size.height * fy),
+            )
+        }
+        repeat(7) { i ->
+            val x = size.width * (.08f + i * .14f)
+            val target = Offset(x, if (i % 2 == 0) size.height * .18f else size.height * .82f)
+            drawLine(
+                color = if (i % 2 == 0) primary.copy(alpha = .09f * pulse) else secondary.copy(alpha = .08f * pulse),
+                start = center,
+                end = target,
+                strokeWidth = 1.2f,
+            )
         }
     }
 }
