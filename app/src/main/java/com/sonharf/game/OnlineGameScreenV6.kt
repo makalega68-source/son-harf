@@ -102,7 +102,7 @@ fun OnlineGameScreenV6() {
                     it.status in listOf("playing", "quiz", "final", "sudden_death", "paused") &&
                     (it.isBot || it.guestId != null)
             }
-            .maxByOrNull { it.validWordCount }
+            .maxByOrNull { runCatching { Instant.parse(it.createdAt) }.getOrDefault(Instant.EPOCH) }
     }
     suspend fun refreshQuiz(r: GameRoomDto) {
         if (r.status == "quiz") {
