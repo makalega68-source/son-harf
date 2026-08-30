@@ -331,8 +331,13 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
         supabase.from("trivia_rounds")
             .select { filter { eq("room_id", id) } }
             .decodeList<TriviaRoundDto>()
-            .filter { it.resolvedAt == null }
-            .maxByOrNull { it.milestone }
+            .maxByOrNull { it.revealAt }
+
+    suspend fun finishTriviaResult(roundId: String): GameRoomDto =
+        supabase.postgrest.rpc(
+            "finish_bilbakalim_result_v1",
+            buildJsonObject { put("p_round_id", roundId) },
+        ).decodeSingle()
 
     suspend fun getTriviaQuestion(id: Long): TriviaQuestionDto =
         supabase.from("trivia_questions").select { filter { eq("id", id) } }.decodeSingle()
