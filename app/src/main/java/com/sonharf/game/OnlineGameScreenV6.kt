@@ -633,7 +633,7 @@ private fun AuroraArena(
                 ) {
                     Text(
                         if (wordInput.isBlank()) {
-                            if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Sıranı bekle…", "Wait for your turn…")
+                            if (myTurn) sh("Kelimenizi yazın…", "Type your word…") else sh("Kelimeyi hazırlayabilirsin…", "You can prepare a word…")
                         } else wordInput,
                         color = if (wordInput.isBlank()) arenaMuted else arenaText,
                         fontSize = if (wordInput.isBlank()) 14.sp else 19.sp,
@@ -661,7 +661,8 @@ private fun AuroraArena(
         EmbeddedWordKeyboard(
             value = wordInput,
             language = room.language,
-            enabled = myTurn && !busy && room.status != "quiz",
+            enabled = !busy && room.status != "quiz",
+            submitEnabled = myTurn && !busy && room.status != "quiz",
             maxLength = 40,
             onValueChange = onWordInput,
             onSubmit = onSubmit,
