@@ -288,6 +288,7 @@ internal fun WordSiegeGameScreen(onExit: () -> Unit) {
     var selected by remember(gameId) { mutableStateOf<List<Int>>(emptyList()) }
     var notice by remember(gameId) { mutableStateOf("Harfleri seç ve bölgeyi kuşat.") }
     var attackBanner by remember(gameId) { mutableStateOf<String?>(null) }
+    var attackSequence by remember(gameId) { mutableIntStateOf(0) }
     var attackIsMine by remember(gameId) { mutableStateOf(true) }
     var crit by remember(gameId) { mutableStateOf(false) }
     var busy by remember(gameId) { mutableStateOf(false) }
@@ -312,8 +313,8 @@ internal fun WordSiegeGameScreen(onExit: () -> Unit) {
         }
     }
 
-    LaunchedEffect(attackBanner) {
-        if (attackBanner != null) {
+    LaunchedEffect(attackSequence) {
+        if (attackSequence > 0) {
             delay(1150)
             attackBanner = null
         }
@@ -325,10 +326,10 @@ internal fun WordSiegeGameScreen(onExit: () -> Unit) {
             notice = when {
                 botHp <= 0 -> "RAKİP KALE YIKILDI!"
                 myHp <= 0 -> "KALEN YIKILDI!"
+                round > 15 && myTerritory > botTerritory -> "ALAN ÜSTÜNLÜĞÜYLE KAZANDIN!"
+                round > 15 && myTerritory < botTerritory -> "BOT ALAN ÜSTÜNLÜĞÜYLE KAZANDI."
                 myHp > botHp -> "KUŞATMAYI KAZANDIN!"
                 myHp < botHp -> "BOT KAZANDI."
-                myTerritory > botTerritory -> "ALAN ÜSTÜNLÜĞÜYLE KAZANDIN!"
-                myTerritory < botTerritory -> "BOT ALAN ÜSTÜNLÜĞÜYLE KAZANDI."
                 else -> "BERABERE."
             }
         }
@@ -384,6 +385,7 @@ internal fun WordSiegeGameScreen(onExit: () -> Unit) {
 
             botCastleHit += 1
             attackBanner = if (impact.critical) "KRİTİK!  -$damage HP" else "-$damage HP"
+            attackSequence += 1
             attackIsMine = true
             crit = impact.critical
             notice = "${normalized.uppercase(tr)} oynandı!  +${lastCaptured.size} kare ele geçirildi"
@@ -434,6 +436,7 @@ internal fun WordSiegeGameScreen(onExit: () -> Unit) {
 
         myCastleHit += 1
         attackBanner = if (impact.critical) "KRİTİK!  -$damage HP" else "-$damage HP"
+        attackSequence += 1
         attackIsMine = false
         crit = impact.critical
         notice = "BOT: ${botWord.uppercase(tr)}  •  +${lastCaptured.size} kare"
