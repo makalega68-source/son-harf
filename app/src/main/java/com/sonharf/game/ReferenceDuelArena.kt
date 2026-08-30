@@ -69,6 +69,7 @@ internal fun ReferenceDuelArena(
     onSubmit: () -> Unit,
     onTimeout: () -> Unit,
     onTrivia: (Int) -> Unit,
+    onTriviaTimeout: () -> Unit,
     onChat: () -> Unit,
     onForfeit: () -> Unit,
     onExit: () -> Unit,
@@ -80,27 +81,36 @@ internal fun ReferenceDuelArena(
     val myRounds = if (host) room.hostRounds else room.guestRounds
     val oppRounds = if (host) room.guestRounds else room.hostRounds
     val liveWordPhase = room.status in listOf("playing", "final", "sudden_death")
+    val activeQuiz = room.status == "quiz" && triviaRound != null && triviaQuestion != null
     val myTurn = room.currentPlayerId == me && liveWordPhase
     val last = words.lastOrNull()?.normalizedWord?.trim().orEmpty()
     val required = last.lastOrNull()?.uppercaseChar()?.toString() ?: "•"
 
-    var seconds by remember(room.turnDeadline) { mutableIntStateOf(7) }
+    var seconds by remember(room.turnDeadline, triviaRound?.answerDeadline, room.status) {
+        mutableIntStateOf(if (activeQuiz) 20 else 7)
+    }
     val haptics = LocalHapticFeedback.current
 
-    LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
-        while (room.turnDeadline != null && liveWordPhase) {
+    LaunchedEffect(room.turnDeadline, triviaRound?.answerDeadline, room.currentPlayerId, room.status) {
+        val deadline = if (activeQuiz) triviaRound?.answerDeadline else room.turnDeadline
+        if (deadline == null) return@LaunchedEffect
+        while (true) {
             seconds = runCatching {
-                (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond)
+                (Instant.parse(deadline).epochSecond - Instant.now().epochSecond)
                     .toInt().coerceAtLeast(0)
-            }.getOrDefault(7)
+            }.getOrDefault(if (activeQuiz) 20 else 7)
             if (seconds <= 0) {
-                SonHarfSoundFx.warning()
-                haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                onTimeout()
+                if (activeQuiz) {
+                    onTriviaTimeout()
+                } else {
+                    SonHarfSoundFx.explosion()
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onTimeout()
+                }
                 break
             }
-            if (seconds in 1..5) SonHarfSoundFx.countdown()
-            if (seconds in 1..3) {
+            if (!activeQuiz && seconds in 1..5) SonHarfSoundFx.countdown()
+            if (!activeQuiz && seconds in 1..3) {
                 SonHarfSoundFx.heartbeat()
                 haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
             }
@@ -156,19 +166,27 @@ internal fun ReferenceDuelArena(
 
             Box(
                 Modifier
-                    .offset(x = w * .166f, y = h * .018f)
-                    .width(w * .215f)
-                    .height(h * .094f)
+                    .offset(x = w * .145f, y = h * .015f)
+                    .width(w * .245f)
+                    .height(h * .105f)
                     .clip(RoundedCornerShape(10.dp))
                     .background(Brush.horizontalGradient(listOf(Color(0xFF03112D), Color(0xFF02091A))))
             )
             Box(
                 Modifier
-                    .offset(x = w * .614f, y = h * .018f)
-                    .width(w * .205f)
-                    .height(h * .094f)
+                    .offset(x = w * .590f, y = h * .015f)
+                    .width(w * .250f)
+                    .height(h * .105f)
                     .clip(RoundedCornerShape(10.dp))
                     .background(Brush.horizontalGradient(listOf(Color(0xFF090719), Color(0xFF170718))))
+            )
+
+            Box(
+                Modifier
+                    .offset(x = w * .018f, y = h * .016f)
+                    .size(w * .150f)
+                    .clip(CircleShape)
+                    .background(Color(0xFF03102A))
             )
 
             Box(
@@ -192,6 +210,13 @@ internal fun ReferenceDuelArena(
             }
 
             if (!room.isBot) {
+                Box(
+                    Modifier
+                        .offset(x = w * .816f, y = h * .016f)
+                        .size(w * .150f)
+                        .clip(CircleShape)
+                        .background(Color(0xFF170718))
+                )
                 Box(
                     Modifier
                         .offset(x = w * .827f, y = h * .021f)
@@ -298,7 +323,11 @@ internal fun ReferenceDuelArena(
                     )
                     Text(
                         sh("SN", "SEC"),
-                        color = if (seconds <= 3) RefRed else RefCyan,
+                        color = when {
+                            activeQuiz -> RefGold
+                            seconds <= 3 -> RefRed
+                            else -> RefCyan
+                        },
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
                     )
@@ -306,24 +335,42 @@ internal fun ReferenceDuelArena(
             }
 
             ReferenceMask(
-                modifier = Modifier.offset(x = w * .066f, y = h * .147f).size(w * .13f, h * .050f)
+                modifier = Modifier.offset(x = w * .030f, y = h * .136f).size(w * .185f, h * .064f)
+            )
+            Text(
+                sh("ROUND", "ROUND"),
+                modifier = Modifier.offset(x = w * .060f, y = h * .145f).width(w * .125f),
+                color = RefMuted,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
             )
             Text(
                 "${room.roundNo}/3",
-                modifier = Modifier.offset(x = w * .082f, y = h * .162f),
+                modifier = Modifier.offset(x = w * .060f, y = h * .162f).width(w * .125f),
                 color = RefWhite,
-                fontSize = 20.sp,
+                fontSize = 19.sp,
                 fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
             )
             ReferenceMask(
-                modifier = Modifier.offset(x = w * .708f, y = h * .147f).size(w * .17f, h * .050f)
+                modifier = Modifier.offset(x = w * .780f, y = h * .136f).size(w * .190f, h * .064f)
+            )
+            Text(
+                sh("KELİME SAYISI", "WORD COUNT"),
+                modifier = Modifier.offset(x = w * .790f, y = h * .145f).width(w * .165f),
+                color = RefMuted,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
             )
             Text(
                 "${room.roundWordCount}/10",
-                modifier = Modifier.offset(x = w * .748f, y = h * .162f),
+                modifier = Modifier.offset(x = w * .790f, y = h * .162f).width(w * .165f),
                 color = RefWhite,
-                fontSize = 20.sp,
+                fontSize = 19.sp,
                 fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
             )
 
             ReferenceMask(
@@ -331,6 +378,7 @@ internal fun ReferenceDuelArena(
             )
             Text(
                 when {
+                    activeQuiz -> sh("BONUS DÜELLOSU", "BONUS DUEL")
                     myTurn -> sh("SIRA SENDE", "YOUR TURN")
                     room.isBot && room.botTurn -> sh("BOT DÜŞÜNÜYOR", "BOT THINKING")
                     else -> sh("RAKİBİN HAMLESİ", "OPPONENT'S MOVE")
@@ -338,7 +386,11 @@ internal fun ReferenceDuelArena(
                 modifier = Modifier
                     .offset(x = w * .27f, y = h * .141f)
                     .width(w * .47f),
-                color = if (myTurn) RefCyan else RefRed,
+                color = when {
+                    activeQuiz -> RefGold
+                    myTurn -> RefCyan
+                    else -> RefRed
+                },
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Black,
                 textAlign = TextAlign.Center,
@@ -385,13 +437,13 @@ internal fun ReferenceDuelArena(
                     Text(
                         sh("SON HARF", "LAST LETTER"),
                         color = RefMuted,
-                        fontSize = 12.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Text(
                         required,
                         color = RefWhite,
-                        fontSize = 88.sp,
+                        fontSize = 58.sp,
                         fontWeight = FontWeight.Black,
                     )
                     Text(
@@ -401,8 +453,8 @@ internal fun ReferenceDuelArena(
                             sh("$required ile başlayan\nkelimeyi kur!", "Build a word\nstarting with $required!")
                         },
                         color = RefWhite,
-                        fontSize = 11.sp,
-                        lineHeight = 13.sp,
+                        fontSize = 10.sp,
+                        lineHeight = 12.sp,
                         textAlign = TextAlign.Center,
                     )
                 }
@@ -485,7 +537,6 @@ internal fun ReferenceDuelArena(
                     .height(h * .099f)
                     .background(Color(0xFF10072F).copy(alpha = .97f))
             )
-            val activeQuiz = room.status == "quiz" && triviaRound != null && triviaQuestion != null
             val bonusPoints = triviaRound?.bonusPoints ?: 3
             Text(
                 "BONUS +$bonusPoints",
