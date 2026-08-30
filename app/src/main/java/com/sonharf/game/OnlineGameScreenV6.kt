@@ -1,7 +1,9 @@
 package com.sonharf.game
 
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -15,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -202,59 +205,484 @@ private fun AuroraDuelLobby(
     onPrivateCode: (String) -> Unit, onRandom: () -> Unit, onCancel: () -> Unit, onPrivate: () -> Unit, onFriends: () -> Unit,
     onCreate: () -> Unit, onJoin: () -> Unit, onInvite: (String) -> Unit, onInviteResponse: (String, Boolean) -> Unit
 ) {
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        item {
-            Text(sh("DÜELLO", "DUEL"), fontSize = 24.sp, fontWeight = FontWeight.Black)
-        }
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .12f))) {
-                Box(Modifier.fillMaxWidth().height(330.dp).background(Brush.radialGradient(listOf(SonHarfPurple.copy(alpha = .28f), SonHarfSurface2, SonHarfSurface))), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(225.dp).clip(CircleShape).background(Brush.sweepGradient(listOf(SonHarfPurple, SonHarfCyan, SonHarfPink, SonHarfPurple))).padding(3.dp), contentAlignment = Alignment.Center) {
-                        Box(Modifier.fillMaxSize().clip(CircleShape).background(SonHarfSurface), contentAlignment = Alignment.Center) {
+    val gameBg = Color(0xFF050713)
+    val gamePanel = Color(0xFF0C1022)
+    val gamePanel2 = Color(0xFF121936)
+    val gameText = Color(0xFFF7F8FF)
+    val gameMuted = Color(0xFF9AA6C1)
+    val gameBlue = Color(0xFF2188FF)
+    val gameViolet = Color(0xFF8A5CFF)
+    val gameMagenta = Color(0xFFE347FF)
+    val gameGold = Color(0xFFFFB31A)
+    val gameCyan = Color(0xFF31D3FF)
+    val gamePink = Color(0xFFFF4F87)
+
+    val infinite = rememberInfiniteTransition(label = "duel-lobby")
+    val pulse by infinite.animateFloat(
+        initialValue = .97f,
+        targetValue = 1.035f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "pulse",
+    )
+    val ringAlpha by infinite.animateFloat(
+        initialValue = .55f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "ring-alpha",
+    )
+
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF050713),
+                        Color(0xFF090B1B),
+                        Color(0xFF060817),
+                    )
+                )
+            )
+            .statusBarsPadding(),
+    ) {
+        Box(
+            Modifier
+                .size(360.dp)
+                .align(Alignment.TopCenter)
+                .offset(y = 70.dp)
+                .background(
+                    Brush.radialGradient(
+                        listOf(gameMagenta.copy(alpha = .16f), Color.Transparent)
+                    ),
+                    CircleShape,
+                )
+        )
+        Box(
+            Modifier
+                .size(320.dp)
+                .align(Alignment.CenterEnd)
+                .offset(x = 150.dp, y = 110.dp)
+                .background(
+                    Brush.radialGradient(
+                        listOf(gameBlue.copy(alpha = .14f), Color.Transparent)
+                    ),
+                    CircleShape,
+                )
+        )
+
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            item {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Surface(
+                        modifier = Modifier.size(44.dp),
+                        shape = CircleShape,
+                        color = gameBlue.copy(alpha = .14f),
+                        border = BorderStroke(1.dp, gameBlue.copy(alpha = .55f)),
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                playerName.take(1).uppercase(),
+                                color = gameText,
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(playerName, color = gameText, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        Text(sh("Hazır oyuncu", "Ready player"), color = gameMuted, fontSize = 9.sp)
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = gamePanel2,
+                        border = BorderStroke(1.dp, gameGold.copy(alpha = .34f)),
+                    ) {
+                        Row(
+                            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text("🏆", fontSize = 15.sp)
+                            Spacer(Modifier.width(5.dp))
+                            Text(sh("DÜELLO", "DUEL"), color = gameGold, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+            }
+
+            item {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(350.dp)
+                        .clip(RoundedCornerShape(30.dp))
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0xFF11152D),
+                                    Color(0xFF090C1C),
+                                )
+                            )
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        Modifier
+                            .size(310.dp)
+                            .background(
+                                Brush.radialGradient(
+                                    listOf(
+                                        gameViolet.copy(alpha = .17f),
+                                        gameBlue.copy(alpha = .07f),
+                                        Color.Transparent,
+                                    )
+                                ),
+                                CircleShape,
+                            )
+                    )
+                    Box(
+                        Modifier
+                            .size(240.dp)
+                            .graphicsLayer {
+                                scaleX = if (matching) pulse else 1f
+                                scaleY = if (matching) pulse else 1f
+                            }
+                            .clip(CircleShape)
+                            .background(
+                                Brush.sweepGradient(
+                                    listOf(
+                                        gameBlue.copy(alpha = ringAlpha),
+                                        gameMagenta.copy(alpha = ringAlpha),
+                                        gameGold.copy(alpha = ringAlpha),
+                                        gameCyan.copy(alpha = ringAlpha),
+                                        gameBlue.copy(alpha = ringAlpha),
+                                    )
+                                )
+                            )
+                            .padding(4.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape)
+                                .background(
+                                    Brush.radialGradient(
+                                        listOf(
+                                            Color(0xFF17213E),
+                                            Color(0xFF090D1F),
+                                            Color(0xFF060816),
+                                        )
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                if (matching) CircularProgressIndicator(Modifier.size(38.dp), strokeWidth = 3.dp, color = SonHarfCyan)
-                                Spacer(Modifier.height(12.dp))
-                                Text(if (matching) sh("RAKİP\nARANIYOR", "SEARCHING\nOPPONENT") else sh("DÜELLOYA\nHAZIR", "READY\nTO DUEL"), textAlign = TextAlign.Center, fontWeight = FontWeight.Black, fontSize = 22.sp)
-                                Text(if (matching) sh("Gerçek oyuncu • sonra BOT", "Real player • then BOT") else sh("Rakibini bul ve başla", "Find your opponent and start"), color = SonHarfMuted, fontSize = 9.sp)
+                                if (matching) {
+                                    CircularProgressIndicator(
+                                        Modifier.size(34.dp),
+                                        strokeWidth = 3.dp,
+                                        color = gameGold,
+                                        trackColor = gamePanel2,
+                                    )
+                                    Spacer(Modifier.height(10.dp))
+                                } else {
+                                    Text(
+                                        "SON",
+                                        color = Color(0xFFC7D5FF),
+                                        fontSize = 25.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 2.sp,
+                                    )
+                                    Text(
+                                        "HARF",
+                                        color = gameGold,
+                                        fontSize = 44.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 1.sp,
+                                    )
+                                    Text(
+                                        sh("DÜELLO", "DUEL"),
+                                        color = gameViolet,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Black,
+                                        letterSpacing = 5.sp,
+                                    )
+                                    Spacer(Modifier.height(10.dp))
+                                }
+                                Text(
+                                    if (matching) sh("RAKİP ARANIYOR", "SEARCHING OPPONENT")
+                                    else sh("DÜELLOYA HAZIR", "READY TO DUEL"),
+                                    color = gameText,
+                                    textAlign = TextAlign.Center,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = if (matching) 20.sp else 14.sp,
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    if (matching) sh("Önce gerçek oyuncu, sonra BOT", "Real player first, then BOT")
+                                    else sh("Kelimeyi sürdür, rakibini geç", "Continue the word, beat your rival"),
+                                    color = gameMuted,
+                                    fontSize = 9.sp,
+                                    textAlign = TextAlign.Center,
+                                )
                             }
                         }
                     }
                 }
             }
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(selected = language == "tr", onClick = { onLanguage("tr") }, label = { Text("🇹🇷 TÜRKÇE") }, modifier = Modifier.weight(1f))
-                FilterChip(selected = language == "en", onClick = { onLanguage("en") }, label = { Text("🇬🇧 ENGLISH") }, modifier = Modifier.weight(1f))
-            }
-        }
-        item {
-            if (matching) Button(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(56.dp), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF641A35)), shape = RoundedCornerShape(18.dp)) { Text(sh("✕  İPTAL", "✕  CANCEL"), fontWeight = FontWeight.Black) }
-            else Button(onClick = onRandom, modifier = Modifier.fillMaxWidth().height(60.dp), colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF1A1100)), shape = RoundedCornerShape(20.dp)) { Text(sh("DÜELLOYA GİR  ⚡", "ENTER DUEL  ⚡"), fontWeight = FontWeight.Black, fontSize = 18.sp) }
-        }
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                OutlinedButton(onClick = onFriends, modifier = Modifier.weight(1f).height(50.dp), border = BorderStroke(1.dp, SonHarfGreen.copy(alpha = .55f))) { Text(sh("👥 ARKADAŞ", "👥 FRIENDS")) }
-                OutlinedButton(onClick = onPrivate, modifier = Modifier.weight(1f).height(50.dp), border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .55f))) { Text(sh("♛ ÖZEL ODA", "♛ PRIVATE ROOM")) }
-            }
-        }
-        item { Text(notice, color = SonHarfMuted, fontSize = 11.sp, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth()) }
-        if (showPrivate) item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(18.dp)) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text(sh("ÖZEL ODA", "PRIVATE ROOM"), color = SonHarfPurple, fontWeight = FontWeight.Black)
-                    Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) { Text(sh("VIP ODA OLUŞTUR", "CREATE VIP ROOM")) }
-                    OutlinedTextField(privateCode, onPrivateCode, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text(sh("6 haneli oda kodu", "6-character room code")) })
-                    OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6, modifier = Modifier.fillMaxWidth()) { Text(sh("ODA KODUYLA KATIL", "JOIN WITH ROOM CODE")) }
+
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    GameLanguagePill(
+                        selected = language == "tr",
+                        label = "🇹🇷  TÜRKÇE",
+                        accent = gameViolet,
+                        modifier = Modifier.weight(1f),
+                    ) { onLanguage("tr") }
+                    GameLanguagePill(
+                        selected = language == "en",
+                        label = "🇬🇧  ENGLISH",
+                        accent = gameBlue,
+                        modifier = Modifier.weight(1f),
+                    ) { onLanguage("en") }
                 }
             }
-        }
-        if (showFriends) item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(18.dp)) {
-                Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    invites.forEach { i -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text(sh("Maç daveti", "Game invite")); Row { TextButton(onClick = { onInviteResponse(i.id, true) }) { Text(sh("Kabul", "Accept")) }; TextButton(onClick = { onInviteResponse(i.id, false) }) { Text(sh("Reddet", "Decline")) } } } }
-                    friends.forEach { (_, p) -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) { Text(p.displayName); Button(onClick = { onInvite(p.id) }, enabled = p.presenceStatus == "online") { Text(sh("Davet", "Invite")) } } }
+
+            item {
+                if (matching) {
+                    Button(
+                        onClick = onCancel,
+                        modifier = Modifier.fillMaxWidth().height(64.dp),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = gamePink.copy(alpha = .20f),
+                            contentColor = gamePink,
+                        ),
+                        border = BorderStroke(1.dp, gamePink.copy(alpha = .55f)),
+                    ) {
+                        Text(sh("✕  EŞLEŞMEYİ İPTAL ET", "✕  CANCEL MATCHMAKING"), fontWeight = FontWeight.Black)
+                    }
+                } else {
+                    Button(
+                        onClick = onRandom,
+                        modifier = Modifier.fillMaxWidth().height(68.dp),
+                        shape = RoundedCornerShape(22.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = gameGold,
+                            contentColor = Color(0xFF241300),
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp, pressedElevation = 2.dp),
+                    ) {
+                        Text(
+                            sh("⚡  DÜELLOYA GİR", "⚡  ENTER DUEL"),
+                            fontWeight = FontWeight.Black,
+                            fontSize = 19.sp,
+                        )
+                    }
                 }
+            }
+
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    GameLobbyAction(
+                        icon = "👥",
+                        title = sh("ARKADAŞ", "FRIENDS"),
+                        subtitle = sh("Davet et", "Invite"),
+                        accent = gameCyan,
+                        modifier = Modifier.weight(1f),
+                        onClick = onFriends,
+                    )
+                    GameLobbyAction(
+                        icon = "♛",
+                        title = sh("ÖZEL ODA", "PRIVATE ROOM"),
+                        subtitle = sh("Kodla gir", "Join by code"),
+                        accent = gameViolet,
+                        modifier = Modifier.weight(1f),
+                        onClick = onPrivate,
+                    )
+                }
+            }
+
+            item {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = gamePanel.copy(alpha = .92f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = .06f)),
+                ) {
+                    Text(
+                        notice,
+                        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                        color = gameMuted,
+                        fontSize = 10.sp,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                    )
+                }
+            }
+
+            if (showPrivate) item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = gamePanel),
+                    shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(1.dp, gameViolet.copy(alpha = .42f)),
+                ) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Text(sh("♛  ÖZEL ODA", "♛  PRIVATE ROOM"), color = gameViolet, fontWeight = FontWeight.Black)
+                        Button(
+                            onClick = onCreate,
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = gameViolet),
+                        ) {
+                            Text(sh("VIP ODA OLUŞTUR", "CREATE VIP ROOM"), fontWeight = FontWeight.Black)
+                        }
+                        OutlinedTextField(
+                            privateCode,
+                            onPrivateCode,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            placeholder = { Text(sh("6 haneli oda kodu", "6-character room code"), color = gameMuted) },
+                            textStyle = LocalTextStyle.current.copy(color = gameText, fontWeight = FontWeight.Bold),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = gameCyan,
+                                unfocusedBorderColor = gameMuted.copy(alpha = .35f),
+                                cursorColor = gameCyan,
+                                focusedContainerColor = gamePanel2,
+                                unfocusedContainerColor = gamePanel2,
+                            ),
+                        )
+                        OutlinedButton(
+                            onClick = onJoin,
+                            enabled = privateCode.length == 6,
+                            modifier = Modifier.fillMaxWidth(),
+                            border = BorderStroke(1.dp, gameCyan.copy(alpha = .6f)),
+                        ) {
+                            Text(sh("ODA KODUYLA KATIL", "JOIN WITH ROOM CODE"), color = gameCyan)
+                        }
+                    }
+                }
+            }
+
+            if (showFriends) item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = gamePanel),
+                    shape = RoundedCornerShape(22.dp),
+                    border = BorderStroke(1.dp, gameCyan.copy(alpha = .36f)),
+                ) {
+                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(sh("👥  ARKADAŞLAR", "👥  FRIENDS"), color = gameCyan, fontWeight = FontWeight.Black)
+                        invites.forEach { i ->
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(sh("Maç daveti", "Game invite"), color = gameText)
+                                Row {
+                                    TextButton(onClick = { onInviteResponse(i.id, true) }) { Text(sh("Kabul", "Accept"), color = gameCyan) }
+                                    TextButton(onClick = { onInviteResponse(i.id, false) }) { Text(sh("Reddet", "Decline"), color = gamePink) }
+                                }
+                            }
+                        }
+                        friends.forEach { (_, p) ->
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Column {
+                                    Text(p.displayName, color = gameText, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        if (p.presenceStatus == "online") sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"),
+                                        color = if (p.presenceStatus == "online") gameCyan else gameMuted,
+                                        fontSize = 9.sp,
+                                    )
+                                }
+                                Button(
+                                    onClick = { onInvite(p.id) },
+                                    enabled = p.presenceStatus == "online",
+                                    colors = ButtonDefaults.buttonColors(containerColor = gameBlue),
+                                ) {
+                                    Text(sh("Davet", "Invite"))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(Modifier.height(10.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun GameLanguagePill(
+    selected: Boolean,
+    label: String,
+    accent: Color,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier
+            .height(50.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(16.dp),
+        color = if (selected) accent.copy(alpha = .18f) else Color(0xFF0C1022),
+        border = BorderStroke(1.dp, if (selected) accent.copy(alpha = .75f) else Color.White.copy(alpha = .10f)),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                label,
+                color = if (selected) Color.White else Color(0xFF9AA6C1),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black,
+            )
+        }
+    }
+}
+
+@Composable
+private fun GameLobbyAction(
+    icon: String,
+    title: String,
+    subtitle: String,
+    accent: Color,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier
+            .height(92.dp)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(20.dp),
+        color = Color(0xFF0C1022),
+        border = BorderStroke(1.dp, accent.copy(alpha = .40f)),
+        shadowElevation = 4.dp,
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(icon, fontSize = 22.sp)
+            Column {
+                Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                Text(subtitle, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -292,19 +720,45 @@ private fun AuroraArena(
         }
     }
 
-    val arenaBgTop = Color(0xFF07101F)
-    val arenaBgBottom = Color(0xFF11172B)
-    val arenaPanel = Color(0xFF121B2E)
-    val arenaPanel2 = Color(0xFF19243A)
-    val arenaText = Color(0xFFF5F7FF)
-    val arenaMuted = Color(0xFF95A4BE)
+    val arenaBgTop = Color(0xFF050713)
+    val arenaBgBottom = Color(0xFF080B1A)
+    val arenaPanel = Color(0xFF0B1024)
+    val arenaPanel2 = Color(0xFF141C3A)
+    val arenaText = Color(0xFFF7F8FF)
+    val arenaMuted = Color(0xFF9AA6C1)
+    val arenaBlue = Color(0xFF2188FF)
+    val arenaViolet = Color(0xFF8A5CFF)
+    val arenaMagenta = Color(0xFFE347FF)
+    val arenaGold = Color(0xFFFFB31A)
+    val arenaCyan = Color(0xFF31D3FF)
+    val arenaPink = Color(0xFFFF4F87)
     val timerAccent = when {
-        seconds <= 5 -> SonHarfPink
-        seconds <= 15 -> SonHarfGold
-        else -> SonHarfCyan
+        seconds <= 5 -> arenaPink
+        seconds <= 15 -> arenaGold
+        else -> arenaCyan
     }
-    val myAccent = SonHarfCyan
-    val opponentAccent = SonHarfPink
+    val myAccent = arenaBlue
+    val opponentAccent = arenaPink
+
+    val arenaMotion = rememberInfiniteTransition(label = "arena-motion")
+    val corePulse by arenaMotion.animateFloat(
+        initialValue = .98f,
+        targetValue = 1.035f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(850, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "core-pulse",
+    )
+    val urgentPulse by arenaMotion.animateFloat(
+        initialValue = .92f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(420, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "urgent-pulse",
+    )
 
     if (room.status == "finished") {
         val draw = room.winnerId == null
@@ -312,7 +766,11 @@ private fun AuroraArena(
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(arenaBgTop, arenaBgBottom)))
+                .background(
+                Brush.verticalGradient(
+                    listOf(arenaBgTop, Color(0xFF0B0B22), arenaBgBottom)
+                )
+            )
                 .statusBarsPadding()
                 .navigationBarsPadding()
                 .padding(18.dp),
@@ -398,7 +856,14 @@ private fun AuroraArena(
             AuroraPlayerCard(playerName, myScore, myRounds, myTurn, myAccent, Modifier.weight(1f))
 
             Surface(
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier
+                    .size(72.dp)
+                    .graphicsLayer {
+                        if (seconds <= 5) {
+                            scaleX = urgentPulse
+                            scaleY = urgentPulse
+                        }
+                    },
                 shape = CircleShape,
                 color = arenaPanel,
                 border = BorderStroke(3.dp, timerAccent),
@@ -431,7 +896,8 @@ private fun AuroraArena(
                     .background(
                         Brush.radialGradient(
                             listOf(
-                                if (myTurn) myAccent.copy(alpha = .12f) else opponentAccent.copy(alpha = .06f),
+                                if (myTurn) arenaMagenta.copy(alpha = .16f) else opponentAccent.copy(alpha = .08f),
+                                arenaBlue.copy(alpha = .05f),
                                 Color.Transparent,
                             ),
                         )
@@ -466,7 +932,11 @@ private fun AuroraArena(
                                     Modifier
                                         .size(if (i < room.roundWordCount) 7.dp else 5.dp)
                                         .clip(CircleShape)
-                                        .background(if (i < room.roundWordCount) myAccent else arenaMuted.copy(alpha = .18f))
+                                        .background(
+                                            if (i < room.roundWordCount) {
+                                                if (i % 2 == 0) arenaBlue else arenaViolet
+                                            } else arenaMuted.copy(alpha = .16f)
+                                        )
                                 )
                             }
                         }
@@ -495,19 +965,36 @@ private fun AuroraArena(
                     Spacer(Modifier.weight(.25f))
 
                     Surface(
-                        modifier = Modifier.size(142.dp),
+                        modifier = Modifier
+                            .size(148.dp)
+                            .graphicsLayer {
+                                scaleX = if (myTurn) corePulse else 1f
+                                scaleY = if (myTurn) corePulse else 1f
+                            },
                         shape = CircleShape,
                         color = arenaPanel2,
-                        border = BorderStroke(4.dp, Brush.sweepGradient(listOf(myAccent, SonHarfPurple, opponentAccent, SonHarfGold, myAccent))),
+                        border = BorderStroke(
+                            4.dp,
+                            Brush.sweepGradient(
+                                listOf(
+                                    arenaBlue,
+                                    arenaViolet,
+                                    arenaMagenta,
+                                    arenaGold,
+                                    arenaCyan,
+                                    arenaBlue,
+                                )
+                            ),
+                        ),
                         shadowElevation = 12.dp,
                     ) {
                         Box(
                             Modifier.background(
                                 Brush.radialGradient(
                                     listOf(
-                                        Color(0xFF263553),
-                                        arenaPanel2,
-                                        Color(0xFF10192C),
+                                        Color(0xFF253160),
+                                        Color(0xFF131A39),
+                                        Color(0xFF090C1E),
                                     )
                                 )
                             ),
@@ -571,8 +1058,11 @@ private fun AuroraArena(
         Surface(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
             shape = RoundedCornerShape(12.dp),
-            color = if (warningNotice) opponentAccent.copy(alpha = .13f) else Color.White.copy(alpha = .05f),
-            border = BorderStroke(1.dp, if (warningNotice) opponentAccent.copy(alpha = .28f) else Color.White.copy(alpha = .05f)),
+            color = if (warningNotice) opponentAccent.copy(alpha = .13f) else arenaPanel2.copy(alpha = .72f),
+            border = BorderStroke(
+                1.dp,
+                if (warningNotice) opponentAccent.copy(alpha = .32f) else arenaViolet.copy(alpha = .18f),
+            ),
         ) {
             Text(
                 notice,
@@ -618,14 +1108,17 @@ private fun AuroraArena(
             ) {
                 ArenaActionButton(sh("⚑ PES ET", "⚑ FORFEIT"), opponentAccent, Modifier.weight(1f), onForfeit)
                 ArenaActionButton(sh("● SOHBET", "● CHAT"), myAccent, Modifier.weight(1f), onChat)
-                ArenaActionButton("★ BONUS", SonHarfGold, Modifier.weight(1f)) { }
+                ArenaActionButton("★ BONUS", arenaGold, Modifier.weight(1f)) { }
             }
 
             Surface(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
                 shape = RoundedCornerShape(18.dp),
-                color = Color.White.copy(alpha = .08f),
-                border = BorderStroke(1.dp, if (myTurn) myAccent.copy(alpha = .7f) else Color.White.copy(alpha = .12f)),
+                color = Color(0xFF0D1430),
+                border = BorderStroke(
+                    1.dp,
+                    if (myTurn) arenaBlue.copy(alpha = .80f) else arenaViolet.copy(alpha = .22f),
+                ),
             ) {
                 Row(
                     Modifier.fillMaxWidth().height(50.dp).padding(start = 14.dp, end = 5.dp),
@@ -648,7 +1141,8 @@ private fun AuroraArena(
                         shape = RoundedCornerShape(13.dp),
                         contentPadding = PaddingValues(horizontal = 15.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = myAccent,
+                            containerColor = arenaGold,
+                            contentColor = Color(0xFF241300),
                             disabledContainerColor = arenaMuted.copy(alpha = .18f),
                         ),
                     ) {
