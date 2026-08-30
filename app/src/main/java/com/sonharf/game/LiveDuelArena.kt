@@ -89,6 +89,15 @@ internal fun LiveDuelArena(
     val lastWord = words.lastOrNull()?.normalizedWord?.trim().orEmpty()
     val required = lastWord.lastOrNull()?.uppercaseChar()?.toString() ?: "•"
 
+    if (room.status == "waiting") {
+        LiveWaitingRoom(
+            roomCode = room.code,
+            playerName = playerName,
+            onExit = onExit,
+        )
+        return
+    }
+
     if (room.status == "finished") {
         LiveResultScreen(
             won = room.winnerId == me,
@@ -1093,6 +1102,55 @@ private fun LiveSpecialKey(
             fontWeight = FontWeight.Black,
             maxLines = 1,
         )
+    }
+}
+
+@Composable
+private fun LiveWaitingRoom(
+    roomCode: String,
+    playerName: String,
+    onExit: () -> Unit,
+) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .background(LiveDark)
+            .statusBarsPadding()
+            .navigationBarsPadding(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Image(
+            painter = painterResource(R.drawable.duel_arena_bg),
+            contentDescription = null,
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop,
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(.88f),
+            shape = RoundedCornerShape(28.dp),
+            color = LivePanel.copy(alpha = .96f),
+            border = BorderStroke(2.dp, LivePurple),
+            shadowElevation = 14.dp,
+        ) {
+            Column(
+                Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(14.dp),
+            ) {
+                Text(playerName, color = LiveWhite, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text(sh("RAKİP BEKLENİYOR", "WAITING FOR OPPONENT"), color = LiveCyan, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                Text(sh("ODA KODU", "ROOM CODE"), color = LiveMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(roomCode, color = LiveGold, fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = 5.sp)
+                CircularProgressIndicator(color = LiveCyan, trackColor = Color.White.copy(alpha = .08f))
+                LiveImageButton(
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    asset = R.drawable.duel_button_red,
+                    label = sh("ODADAN ÇIK", "LEAVE ROOM"),
+                    enabled = true,
+                    onClick = onExit,
+                )
+            }
+        }
     }
 }
 
