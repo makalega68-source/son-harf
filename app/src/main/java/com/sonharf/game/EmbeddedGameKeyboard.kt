@@ -15,11 +15,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val KeyboardBg = Color(0xFF1F2027)
-private val KeyboardKey = Color(0xFF3A3B44)
-private val KeyboardKeyAlt = Color(0xFF55586B)
-private val KeyboardText = Color(0xFFF4F6FB)
-private val KeyboardAction = Color(0xFF1769E0)
+private val KeyboardBg = Color(0xFF070A18)
+private val KeyboardKey = Color(0xFF121833)
+private val KeyboardKeyAlt = Color(0xFF1C2347)
+private val KeyboardText = Color(0xFFF7F8FF)
+private val KeyboardAction = Color(0xFFFFB31A)
+private val KeyboardBlue = Color(0xFF2188FF)
+private val KeyboardViolet = Color(0xFF8A5CFF)
 
 @Composable
 internal fun EmbeddedWordKeyboard(
@@ -52,7 +54,7 @@ internal fun EmbeddedWordKeyboard(
         modifier = modifier.fillMaxWidth(),
         color = KeyboardBg,
         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-        border = BorderStroke(1.dp, Color.White.copy(alpha = .06f)),
+        border = BorderStroke(1.dp, KeyboardViolet.copy(alpha = .30f)),
     ) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp),
@@ -221,19 +223,26 @@ private fun KeyboardKeyButton(
         enabled = enabled,
         modifier = modifier.height(38.dp),
         contentPadding = PaddingValues(0.dp),
-        shape = RoundedCornerShape(9.dp),
+        shape = RoundedCornerShape(11.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = when {
                 action -> KeyboardAction
                 alt -> KeyboardKeyAlt
                 else -> KeyboardKey
             },
-            contentColor = KeyboardText,
-            disabledContainerColor = if (alt) KeyboardKeyAlt.copy(alpha = .45f) else KeyboardKey.copy(alpha = .45f),
-            disabledContentColor = KeyboardText.copy(alpha = .48f),
+            contentColor = if (action) Color(0xFF241300) else KeyboardText,
+            disabledContainerColor = if (alt) KeyboardKeyAlt.copy(alpha = .55f) else KeyboardKey.copy(alpha = .55f),
+            disabledContentColor = KeyboardText.copy(alpha = .42f),
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp, pressedElevation = 0.dp),
-        border = BorderStroke(0.5.dp, Color.White.copy(alpha = .05f)),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp),
+        border = BorderStroke(
+            1.dp,
+            when {
+                action -> KeyboardAction.copy(alpha = .82f)
+                alt -> KeyboardBlue.copy(alpha = .32f)
+                else -> KeyboardViolet.copy(alpha = .24f)
+            },
+        ),
     ) {
         Text(
             label,
