@@ -586,9 +586,6 @@ internal fun LightDuelArena(
                 )
 
                 Spacer(Modifier.weight(.14f))
-
-                Spacer(Modifier.weight(.14f))
-                }
             }
         }
 
