@@ -140,7 +140,7 @@ fun FinalProfileScreen() {
                     blocked.forEach { p ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                ProfilePhotoAvatar(p.avatarPath, p.displayName, 34.dp, visible = true, accent = SonHarfCyan)
+                                ProfilePhotoAvatar(p.avatarPath, p.displayName, 34.dp, visible = p.avatarVisibility != "hidden", accent = SonHarfCyan)
                                 Text(p.displayName, fontWeight = FontWeight.SemiBold)
                             }
                             TextButton(onClick = {

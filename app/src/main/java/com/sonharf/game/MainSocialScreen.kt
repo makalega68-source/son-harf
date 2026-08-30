@@ -265,7 +265,7 @@ internal fun MainSocialScreen(
                     val relation = friendships.firstOrNull { it.userId == player.id || it.friendId == player.id }
                     Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = if (player.isVip) MainUi.Gold else MainUi.Blue)
+                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = if (player.isVip) MainUi.Gold else MainUi.Blue, visible = player.avatarVisibility != "hidden")
                             Spacer(Modifier.width(9.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(player.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -304,7 +304,7 @@ internal fun MainSocialScreen(
                 items(requests, key = { it.second.id }) { (_, player) ->
                     Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .28f))) {
                         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = MainUi.Blue)
+                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = MainUi.Blue, visible = player.avatarVisibility != "hidden")
                             Spacer(Modifier.width(9.dp))
                             Text(player.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f), maxLines = 1)
                             IconButton(
@@ -509,7 +509,7 @@ private fun MainFriendCard(
     Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, if (online) MainUi.Green.copy(alpha = .28f) else MainUi.Border)) {
         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
             Box {
-                ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 48.dp, accent = if (friend.isVip) MainUi.Gold else MainUi.Blue)
+                ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 48.dp, accent = if (friend.isVip) MainUi.Gold else MainUi.Blue, visible = friend.avatarVisibility != "hidden")
                 Box(
                     Modifier.align(Alignment.BottomEnd).size(12.dp).clip(CircleShape).background(if (online) MainUi.Green else MainUi.Muted),
                 )

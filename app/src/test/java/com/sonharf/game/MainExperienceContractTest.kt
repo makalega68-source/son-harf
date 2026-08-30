@@ -63,6 +63,14 @@ class MainExperienceContractTest {
     }
 
     @Test
+    fun profilePhotoVisibilityIsActuallyEnforced() {
+        val avatar = projectFile("app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt").readText()
+
+        assertTrue(avatar.contains("visible && !avatarPath.isNullOrBlank()"))
+        assertTrue(avatar.contains("visible: Boolean = true"))
+    }
+
+    @Test
     fun frozenMatchSurfaceFilesRemainByteForByteStable() {
         val expected = mapOf(
             "OnlineGameScreenV6.kt" to "e01d2715a95cd78b70bf5f299ad88a24759a1cff0b4c823e1b2e3ede3629e393",
