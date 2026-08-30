@@ -375,20 +375,11 @@ internal fun LightDuelArena(
     val lastItem = words.lastOrNull()
     val last = lastItem?.normalizedWord?.trim().orEmpty()
     val required = last.lastOrNull()?.uppercaseChar()?.toString() ?: "•"
-    var acceptedFlashId by remember { mutableStateOf<Long?>(null) }
-
-    LaunchedEffect(lastItem?.id) {
-        val id = lastItem?.id ?: return@LaunchedEffect
-        acceptedFlashId = id
-        delay(1200)
-        if (acceptedFlashId == id) acceptedFlashId = null
-    }
 
     val shownLastWord = feedbackWord ?: last.uppercase()
     val shownLastWordColor = when {
         feedbackWord != null && feedbackCorrect == false -> LRed
-        feedbackWord != null && feedbackCorrect == true -> LGreen
-        feedbackWord == null && lastItem != null && acceptedFlashId == lastItem.id -> LGreen
+        shownLastWord.isNotBlank() -> LGreen
         else -> LBlue
     }
 

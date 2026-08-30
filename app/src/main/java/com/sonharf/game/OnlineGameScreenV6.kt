@@ -142,7 +142,13 @@ fun OnlineGameScreenV6() {
             backend.observeWords(r.id)
                 .catch { notice = friendly(it.message.orEmpty()) }
                 .collect {
+                    val previousLastId = words.lastOrNull()?.id
                     words = it
+                    val latest = it.lastOrNull()
+                    if (latest != null && latest.id != previousLastId) {
+                        feedbackWord = latest.word.trim().ifBlank { latest.normalizedWord.trim() }.uppercase()
+                        feedbackCorrect = true
+                    }
                     if (
                         notice.contains("İşlem tekrar deneniyor", true) ||
                         notice.contains("Retrying the action", true)
@@ -266,14 +272,6 @@ fun OnlineGameScreenV6() {
                             notice = friendly(it.message.orEmpty())
                             SonHarfSoundFx.warning()
                         }
-                    val captured = shownWord
-                    scope.launch {
-                        delay(1400)
-                        if (feedbackWord == captured) {
-                            feedbackWord = null
-                            feedbackCorrect = null
-                        }
-                    }
                     busy = false
                 }
             },
