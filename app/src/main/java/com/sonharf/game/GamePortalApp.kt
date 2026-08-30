@@ -1,12 +1,11 @@
 package com.sonharf.game
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 
+// Legacy-compatible shared palette.
+// These constants stay because older source files still compile against them,
+// even though those screens are not part of the active V1 navigation path.
 internal val PortalBg = Color(0xFFF7F9FC)
 internal val PortalCard = Color.White
 internal val PortalText = Color(0xFF182235)
@@ -17,18 +16,13 @@ internal val PortalGreen = Color(0xFF22B95F)
 internal val PortalRed = Color(0xFFE64B55)
 
 /**
- * Active Son Harf shell.
- * The product is word-game focused with simple navigation and a light UI.
+ * Active Son Harf V1 shell.
+ *
+ * The legacy/experimental screens remain available in source control as
+ * rollback material, but the shipped V1 path is intentionally focused on the
+ * verified core duel flow.
  */
 @Composable
 fun GamePortalApp() {
-    val context = LocalContext.current
-
-    androidx.compose.runtime.LaunchedEffect(Unit) {
-        RemoteExperience.refresh(context.applicationContext)
-    }
-
-    Box(Modifier.fillMaxSize()) {
-        LightWordThemeApp()
-    }
+    StableV1App()
 }
