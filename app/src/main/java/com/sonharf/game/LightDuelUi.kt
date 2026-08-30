@@ -587,29 +587,7 @@ internal fun LightDuelArena(
 
                 Spacer(Modifier.weight(.14f))
 
-                if (words.isNotEmpty()) {
-                    Column(Modifier.fillMaxWidth()) {
-                        Text(sh("KELİME ZİNCİRİ", "WORD CHAIN"), color = LMuted, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.height(5.dp))
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(words.takeLast(12)) { w ->
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = LCard2,
-                                    border = BorderStroke(1.dp, LBorder),
-                                ) {
-                                    Text(
-                                        w.word.trim().ifBlank { w.normalizedWord.trim() }.uppercase(),
-                                        Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                                        color = LText,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 1,
-                                    )
-                                }
-                            }
-                        }
-                    }
+                Spacer(Modifier.weight(.14f))
                 }
             }
         }
