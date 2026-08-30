@@ -305,6 +305,20 @@ internal fun WordSiegeGameScreen(onExit: () -> Unit) {
         myProfile = runCatching { backend.getProfile(id) }.getOrNull()
     }
 
+    LaunchedEffect(lastCaptured) {
+        if (lastCaptured.isNotEmpty()) {
+            delay(950)
+            lastCaptured = emptyList()
+        }
+    }
+
+    LaunchedEffect(attackBanner) {
+        if (attackBanner != null) {
+            delay(1150)
+            attackBanner = null
+        }
+    }
+
     fun finishIfNeeded() {
         if (botHp <= 0 || myHp <= 0 || round > 15) {
             turn = SiegeTurn.FINISHED
@@ -678,6 +692,12 @@ private fun SiegePlayerCard(
                     Text(hp.toString(), color = accent, fontSize = 21.sp, fontWeight = FontWeight.Black)
                     Text(" HP", color = SonHarfText, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
+                LinearProgressIndicator(
+                    progress = { (hp.coerceIn(0, 100) / 100f) },
+                    modifier = Modifier.fillMaxWidth().height(4.dp).clip(CircleShape),
+                    color = accent,
+                    trackColor = accent.copy(alpha = .15f),
+                )
                 if (shield > 0) Text("Kalkan +$shield", color = SonHarfBlue, fontSize = 7.sp, fontWeight = FontWeight.Bold)
             }
             Image(
@@ -782,9 +802,10 @@ private fun SiegeBoard(
                                 Brush.linearGradient(listOf(Color(0xFFDCEFD2), Color(0xFFBFDCAE)))
                             }
                         }
-                        val border = when (owner) {
-                            1 -> Color(0xFF8DCBFF)
-                            2 -> Color(0xFFFFA3B1)
+                        val border = when {
+                            index in lastCaptured -> Color(0xFFFFD45B)
+                            owner == 1 -> Color(0xFF8DCBFF)
+                            owner == 2 -> Color(0xFFFFA3B1)
                             else -> Color(0xFF9DB6A1)
                         }
 
