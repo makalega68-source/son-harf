@@ -180,7 +180,7 @@ internal fun ProfilePhotoAvatar(
     var gender by remember(avatarPath) { mutableStateOf<String?>(null) }
     val isBot = avatarPath?.startsWith("bot:") == true
     LaunchedEffect(avatarPath, visible) {
-        bytes = if (visible && !isBot && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+        bytes = if (isBot) null else if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
         gender = ProfilePhotoRuntime.genderForAvatar(avatarPath)
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
@@ -195,7 +195,7 @@ internal fun ProfilePhotoAvatar(
             contentAlignment = Alignment.Center,
         ) {
             when {
-                isBot && visible -> BotAvatar(avatarPath!!, Modifier.fillMaxSize().clip(CircleShape))
+                isBot && visible -> BotAvatar(requireNotNull(avatarPath), Modifier.fillMaxSize().clip(CircleShape))
                 bitmap != null -> Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
                 else -> Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
                     Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (size.value * .38f).sp)
@@ -241,7 +241,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     val isBot = avatarPath?.startsWith("bot:") == true
     LaunchedEffect(avatarPath, visible) {
-        bytes = if (visible && !isBot && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+        bytes = if (isBot) null else if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     val shape = RoundedCornerShape(14.dp)
@@ -256,7 +256,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
             contentAlignment = Alignment.Center,
         ) {
             when {
-                isBot && visible -> BotAvatar(avatarPath!!, Modifier.fillMaxSize().clip(shape))
+                isBot && visible -> BotAvatar(requireNotNull(avatarPath), Modifier.fillMaxSize().clip(shape))
                 bitmap != null -> Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(shape), contentScale = ContentScale.Crop)
                 else -> Box(Modifier.fillMaxSize().clip(shape).background(Color.White), contentAlignment = Alignment.Center) {
                     Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (height.value * .32f).coerceAtLeast(14f).sp)
