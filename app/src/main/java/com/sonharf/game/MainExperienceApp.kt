@@ -46,6 +46,7 @@ internal object MainUi {
 private enum class MainDestination {
     HOME,
     GAME,
+    WORD_SIEGE,
     LEAGUE,
     SOCIAL,
     STYLE,
@@ -121,6 +122,7 @@ fun SonHarfMainApp(onSignedOut: () -> Unit) {
                 MainDestination.HOME -> MainHomeScreen(
                     backend = backend,
                     onPlay = { destination = MainDestination.GAME },
+                    onWordSiege = { destination = MainDestination.WORD_SIEGE },
                     onLeague = { destination = MainDestination.LEAGUE },
                     onSocial = { destination = MainDestination.SOCIAL },
                     onStyle = { destination = MainDestination.STYLE },
@@ -130,6 +132,9 @@ fun SonHarfMainApp(onSignedOut: () -> Unit) {
                     onSettings = { destination = MainDestination.SETTINGS },
                 )
                 MainDestination.GAME -> OnlineGameScreenV6()
+                MainDestination.WORD_SIEGE -> WordSiegeExperienceScreen {
+                    destination = MainDestination.HOME
+                }
                 MainDestination.LEAGUE -> LeaderboardExperienceScreen { destination = MainDestination.HOME }
                 MainDestination.SOCIAL -> MainSocialScreen(
                     backend = backend,
@@ -220,6 +225,7 @@ private fun MainBottomNavigation(
 private fun MainHomeScreen(
     backend: OnlineGameBackend,
     onPlay: () -> Unit,
+    onWordSiege: () -> Unit,
     onLeague: () -> Unit,
     onSocial: () -> Unit,
     onStyle: () -> Unit,
@@ -360,23 +366,29 @@ private fun MainHomeScreen(
         }
 
         item {
-            Button(
-                onClick = {
-                    SonHarfSoundFx.tap()
-                    onPlay()
-                },
-                modifier = Modifier.fillMaxWidth().height(108.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 5.dp, pressedElevation = 1.dp),
-            ) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                        Text(sh("OYNA", "PLAY"), fontSize = 34.sp, fontWeight = FontWeight.Black, letterSpacing = 1.4.sp)
-                        Text(sh("Rakibini bul ve düelloya başla", "Find a rival and start the duel"), fontSize = 12.sp, color = Color.White.copy(alpha = .82f))
-                    }
-                    Icon(Icons.Rounded.ArrowForward, null, modifier = Modifier.size(42.dp), tint = Color.White.copy(alpha = .75f))
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MainGameModeCard(
+                    title = "SON HARF " + sh("OYNA", "PLAY"),
+                    subtitle = sh("Anlık kelime düellosu", "Live word duel"),
+                    icon = Icons.Rounded.Bolt,
+                    accent = MainUi.Blue,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        SonHarfSoundFx.tap()
+                        onPlay()
+                    },
+                )
+                MainGameModeCard(
+                    title = sh("KELİME KUŞATMASI OYNA", "PLAY WORD SIEGE"),
+                    subtitle = sh("Süresiz 1v1 alan oyunu", "Untimed 1v1 territory game"),
+                    icon = Icons.Rounded.GridOn,
+                    accent = MainUi.Purple,
+                    modifier = Modifier.weight(1f),
+                    onClick = {
+                        SonHarfSoundFx.tap()
+                        onWordSiege()
+                    },
+                )
             }
         }
 
@@ -540,6 +552,49 @@ private fun MainHomeScreen(
             }
         }
         item { Spacer(Modifier.height(4.dp)) }
+    }
+}
+
+@Composable
+private fun MainGameModeCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier.height(124.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = accent,
+        shadowElevation = 5.dp,
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Icon(icon, null, tint = Color.White.copy(alpha = .88f), modifier = Modifier.size(28.dp))
+            Column {
+                Text(
+                    title,
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    subtitle,
+                    color = Color.White.copy(alpha = .78f),
+                    fontSize = 9.sp,
+                    lineHeight = 11.sp,
+                    maxLines = 2,
+                )
+            }
+        }
     }
 }
 
