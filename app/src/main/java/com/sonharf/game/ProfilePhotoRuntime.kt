@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -46,6 +47,7 @@ internal object ProfilePhotoRuntime {
     private val genderCache = LinkedHashMap<String, String?>()
 
     suspend fun load(path: String): ByteArray? {
+        if (path.startsWith("bot:")) return null
         if (path.isBlank() || !SupabaseProvider.configured) return null
         synchronized(cache) { cache[path] }?.let { return it }
         val session = SupabaseProvider.client.auth.currentSessionOrNull() ?: return null
@@ -65,6 +67,8 @@ internal object ProfilePhotoRuntime {
     }
 
     suspend fun genderForAvatar(path: String?): String? {
+        if (path?.startsWith("bot:female") == true) return "female"
+        if (path?.startsWith("bot:male") == true) return "male"
         if (path.isNullOrBlank() || !SupabaseProvider.configured) return null
         val ownerId = path.substringBefore('/').takeIf { it.isNotBlank() } ?: return null
         synchronized(genderCache) { if (genderCache.containsKey(ownerId)) return genderCache[ownerId] }
@@ -112,6 +116,11 @@ private fun genderVisual(gender: String?): GenderVisual? = when (gender?.trim()?
 }
 
 private fun profileFrameVisual(frameId: String?, fallbackAccent: Color): ProfileFrameVisual = when {
+    frameId?.contains("black_gold") == true -> ProfileFrameVisual(Color(0xFF17191F), Color(0xFFD6A84B), "✦", 4.dp)
+    frameId?.contains("royal_gold") == true -> ProfileFrameVisual(Color(0xFFD29B2B), Color(0xFFFFE5A3), "♛", 4.dp)
+    frameId?.contains("crystal") == true -> ProfileFrameVisual(Color(0xFFBCEBFF), Color(0xFF708BFF), "◇", 4.dp)
+    frameId?.contains("purple_prestige") == true -> ProfileFrameVisual(Color(0xFF5E3AB8), Color(0xFFC0A2FF), "✦", 4.dp)
+    frameId?.contains("ice") == true -> ProfileFrameVisual(Color(0xFF61B9E8), Color(0xFFD9F5FF), "❄", 4.dp)
     frameId?.contains("gold") == true || frameId?.contains("vip") == true -> ProfileFrameVisual(
         primary = Color(0xFFF4B928), secondary = Color(0xFFFFE59B), marker = "VIP", outerPadding = 4.dp,
     )
@@ -154,6 +163,12 @@ private fun ProfileFrameMarker(marker: String?, size: Dp) {
 }
 
 @Composable
+private fun BotAvatar(path: String, modifier: Modifier) {
+    val res = if (path == "bot:female") R.drawable.bot_avatar_female_higgsfield else R.drawable.bot_avatar_male_higgsfield
+    Image(painterResource(res), null, modifier, contentScale = ContentScale.Crop)
+}
+
+@Composable
 internal fun ProfilePhotoAvatar(
     avatarPath: String?,
     name: String,
@@ -163,8 +178,9 @@ internal fun ProfilePhotoAvatar(
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     var gender by remember(avatarPath) { mutableStateOf<String?>(null) }
+    val isBot = avatarPath?.startsWith("bot:") == true
     LaunchedEffect(avatarPath, visible) {
-        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+        bytes = if (visible && !isBot && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
         gender = ProfilePhotoRuntime.genderForAvatar(avatarPath)
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
@@ -178,10 +194,10 @@ internal fun ProfilePhotoAvatar(
                 .padding(frame.outerPadding),
             contentAlignment = Alignment.Center,
         ) {
-            if (bitmap != null) {
-                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-            } else {
-                Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+            when {
+                isBot && visible -> BotAvatar(avatarPath!!, Modifier.fillMaxSize().clip(CircleShape))
+                bitmap != null -> Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                else -> Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
                     Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (size.value * .38f).sp)
                 }
             }
@@ -223,8 +239,9 @@ internal fun ProfilePhotoAvatarRectWithGender(
     visible: Boolean = true,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
+    val isBot = avatarPath?.startsWith("bot:") == true
     LaunchedEffect(avatarPath, visible) {
-        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+        bytes = if (visible && !isBot && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     val shape = RoundedCornerShape(14.dp)
@@ -238,10 +255,10 @@ internal fun ProfilePhotoAvatarRectWithGender(
                 .padding(frame.outerPadding),
             contentAlignment = Alignment.Center,
         ) {
-            if (bitmap != null) {
-                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(shape), contentScale = ContentScale.Crop)
-            } else {
-                Box(Modifier.fillMaxSize().clip(shape).background(Color.White), contentAlignment = Alignment.Center) {
+            when {
+                isBot && visible -> BotAvatar(avatarPath!!, Modifier.fillMaxSize().clip(shape))
+                bitmap != null -> Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(shape), contentScale = ContentScale.Crop)
+                else -> Box(Modifier.fillMaxSize().clip(shape).background(Color.White), contentAlignment = Alignment.Center) {
                     Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (height.value * .32f).coerceAtLeast(14f).sp)
                 }
             }
