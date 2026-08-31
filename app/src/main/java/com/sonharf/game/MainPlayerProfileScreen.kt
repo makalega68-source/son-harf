@@ -27,6 +27,7 @@ import kotlinx.coroutines.coroutineScope
 internal fun MainPlayerProfileScreen(
     backend: OnlineGameBackend,
     onEdit: () -> Unit,
+    onAppearance: () -> Unit,
     onVip: () -> Unit,
     onSettings: () -> Unit,
     onSocial: () -> Unit,
@@ -38,6 +39,7 @@ internal fun MainPlayerProfileScreen(
     var records by remember { mutableStateOf<PersonalRecordsDto?>(null) }
     var achievements by remember { mutableStateOf<List<AchievementProgressDto>>(emptyList()) }
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
+    var equipped by remember { mutableStateOf<EquippedCosmeticsDto?>(null) }
     var loading by remember { mutableStateOf(true) }
 
     suspend fun reload() = coroutineScope {
@@ -50,6 +52,7 @@ internal fun MainPlayerProfileScreen(
         val recordsTask = async { runCatching { backend.getPersonalRecords() }.getOrNull() }
         val achievementsTask = async { runCatching { backend.getAchievements() }.getOrDefault(emptyList()) }
         val friendsTask = async { runCatching { backend.getFriends() }.getOrDefault(emptyList()) }
+        val equippedTask = async { runCatching { backend.getEquippedCosmetics() }.getOrNull() }
         profile = profileTask.await()
         growth = growthTask.await()
         meta = metaTask.await()
@@ -57,6 +60,8 @@ internal fun MainPlayerProfileScreen(
         records = recordsTask.await()
         achievements = achievementsTask.await()
         friends = friendsTask.await()
+        equipped = equippedTask.await()
+        SonHarfCosmetics.apply(equipped)
         loading = false
     }
 
@@ -71,9 +76,8 @@ internal fun MainPlayerProfileScreen(
     val rating = season?.rating ?: p?.rating ?: 1000
     val league = ratingLeagueProgress(rating)
     val onlineFriends = friends.count { (_, friend) -> friend.presenceStatus == "online" }
-    val xpProgress = g?.let {
-        (it.levelProgress.toFloat() / it.levelTarget.coerceAtLeast(1)).coerceIn(0f, 1f)
-    } ?: 0f
+    val xpProgress = g?.let { (it.levelProgress.toFloat() / it.levelTarget.coerceAtLeast(1)).coerceIn(0f, 1f) } ?: 0f
+    val frameAccent = if (equipped?.profileFrameId != null) SonHarfCosmetics.profileAccent else if (p?.isVip == true) MainUi.Gold else MainUi.Blue
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -90,9 +94,7 @@ internal fun MainPlayerProfileScreen(
             )
         }
 
-        if (loading) {
-            item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = MainUi.Blue, trackColor = MainUi.BlueSoft) }
-        }
+        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = MainUi.Blue, trackColor = MainUi.BlueSoft) }
 
         item {
             Surface(
@@ -112,7 +114,7 @@ internal fun MainPlayerProfileScreen(
                             gender = p?.gender,
                             name = p?.displayName ?: sh("Oyuncu", "Player"),
                             size = 106.dp,
-                            accent = if (p?.isVip == true) MainUi.Gold else MainUi.Blue,
+                            accent = frameAccent,
                         )
                         Surface(
                             modifier = Modifier.size(37.dp).clickable(onClick = onEdit),
@@ -149,19 +151,25 @@ internal fun MainPlayerProfileScreen(
                             }
                         }
                     }
-                    TextButton(onClick = onEdit) {
-                        Text(sh("PROFİLİ DÜZENLE", "EDIT PROFILE"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    if (equipped?.profileFrameId != null) {
+                        Text(sh("Aktif çerçeve: ${equipped?.profileFrameId}", "Active frame: ${equipped?.profileFrameId}"), color = MainUi.Muted, fontSize = 8.sp)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = onEdit) {
+                            Text(sh("PROFİLİ DÜZENLE", "EDIT PROFILE"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                        }
+                        TextButton(onClick = onAppearance) {
+                            Icon(Icons.Rounded.Palette, null, tint = MainUi.Blue, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(sh("GÖRÜNÜMÜMÜ DÜZENLE", "EDIT APPEARANCE"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                        }
                     }
                 }
             }
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = MainUi.BlueSoft,
-            ) {
+            Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = MainUi.BlueSoft) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("${sh("SEVİYE", "LEVEL")} ${g?.level ?: 1}", color = MainUi.Blue, fontSize = 11.sp, fontWeight = FontWeight.Black)
@@ -173,11 +181,7 @@ internal fun MainPlayerProfileScreen(
                         color = MainUi.Blue,
                         trackColor = Color.White,
                     )
-                    Text(
-                        "${g?.levelProgress ?: 0}/${g?.levelTarget ?: 500} ${sh("sonraki seviyeye", "to next level")}",
-                        color = MainUi.Muted,
-                        fontSize = 9.sp,
-                    )
+                    Text("${g?.levelProgress ?: 0}/${g?.levelTarget ?: 500} ${sh("sonraki seviyeye", "to next level")}", color = MainUi.Muted, fontSize = 9.sp)
                 }
             }
         }
@@ -199,12 +203,7 @@ internal fun MainPlayerProfileScreen(
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = MainUi.Surface,
-                border = BorderStroke(1.dp, MainUi.Border),
-            ) {
+            Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                 Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                     MainInlineStat("${g?.currentWinStreak ?: 0}", sh("Mevcut seri", "Current streak"), Color(0xFFF97316))
                     VerticalDivider(Modifier.height(42.dp), color = MainUi.Border)
@@ -219,11 +218,7 @@ internal fun MainPlayerProfileScreen(
             item {
                 MainSectionTitle(sh("KİŞİSEL REKORLAR", "PERSONAL RECORDS"))
                 Spacer(Modifier.height(8.dp))
-                Surface(
-                    shape = RoundedCornerShape(20.dp),
-                    color = MainUi.Surface,
-                    border = BorderStroke(1.dp, MainUi.Border),
-                ) {
+                Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         MainRecordLine("🔤", sh("En uzun kelime", "Longest word"), r.longestWord.ifBlank { "—" }.uppercase(), "${r.longestWordLength} ${sh("harf", "letters")}")
                         MainRecordLine("⚡", sh("En iyi skor", "Best score"), r.bestClassicScore.toString(), sh("Son Harf düellosu", "Son Harf duel"))
@@ -234,18 +229,9 @@ internal fun MainPlayerProfileScreen(
         }
 
         item {
-            MainSectionTitle(
-                sh("ARKADAŞLAR", "FRIENDS"),
-                sh("TÜMÜNÜ GÖR", "VIEW ALL"),
-                onSocial,
-            )
+            MainSectionTitle(sh("ARKADAŞLAR", "FRIENDS"), sh("TÜMÜNÜ GÖR", "VIEW ALL"), onSocial)
             Spacer(Modifier.height(8.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onSocial),
-                shape = RoundedCornerShape(18.dp),
-                color = MainUi.Surface,
-                border = BorderStroke(1.dp, MainUi.Border),
-            ) {
+            Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onSocial), shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                 Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     Surface(shape = CircleShape, color = MainUi.BlueSoft) {
                         Icon(Icons.Rounded.Groups, null, tint = MainUi.Blue, modifier = Modifier.padding(9.dp).size(21.dp))
@@ -268,27 +254,17 @@ internal fun MainPlayerProfileScreen(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     achievements.take(4).forEach { achievement ->
-                        val progress = (achievement.currentValue.toFloat() / achievement.target.coerceAtLeast(1)).coerceIn(0f, 1f)
-                        Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = MainUi.Surface,
-                            border = BorderStroke(1.dp, if (achievement.unlocked) MainUi.Gold.copy(alpha = .45f) else MainUi.Border),
-                        ) {
+                        val achievementProgress = (achievement.currentValue.toFloat() / achievement.target.coerceAtLeast(1)).coerceIn(0f, 1f)
+                        Surface(shape = RoundedCornerShape(16.dp), color = MainUi.Surface, border = BorderStroke(1.dp, if (achievement.unlocked) MainUi.Gold.copy(alpha = .45f) else MainUi.Border)) {
                             Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(achievement.icon, fontSize = 20.sp)
                                     Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        if (SonHarfUiState.isEnglish) achievement.titleEn else achievement.titleTr,
-                                        color = MainUi.Text,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.weight(1f),
-                                    )
+                                    Text(if (SonHarfUiState.isEnglish) achievement.titleEn else achievement.titleTr, color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                                     Text(if (achievement.unlocked) "✓" else "${achievement.currentValue}/${achievement.target}", color = if (achievement.unlocked) MainUi.Green else MainUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                 }
                                 LinearProgressIndicator(
-                                    progress = { progress },
+                                    progress = { achievementProgress },
                                     modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
                                     color = if (achievement.unlocked) MainUi.Gold else MainUi.Blue,
                                     trackColor = MainUi.SurfaceSoft,
@@ -302,22 +278,12 @@ internal fun MainPlayerProfileScreen(
 
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                OutlinedButton(
-                    onClick = onVip,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(15.dp),
-                    border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f)),
-                ) {
+                OutlinedButton(onClick = onVip, modifier = Modifier.weight(1f), shape = RoundedCornerShape(15.dp), border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f))) {
                     Icon(Icons.Rounded.WorkspacePremium, null, tint = MainUi.Gold, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(5.dp))
                     Text("VIP", color = MainUi.Text, fontWeight = FontWeight.Black)
                 }
-                OutlinedButton(
-                    onClick = onSettings,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(15.dp),
-                    border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .35f)),
-                ) {
+                OutlinedButton(onClick = onSettings, modifier = Modifier.weight(1f), shape = RoundedCornerShape(15.dp), border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .35f))) {
                     Icon(Icons.Rounded.Settings, null, tint = MainUi.Blue, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(5.dp))
                     Text(sh("AYARLAR", "SETTINGS"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 10.sp)
