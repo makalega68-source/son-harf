@@ -99,7 +99,7 @@ internal object WordSiegePracticeEngine {
         var primary: String? = null
         var score = 0
         val captured = linkedSetOf<Int>()
-        var board = state.board.toMutableList()
+        val board = state.board.toMutableList()
 
         fun acceptWord(cells: List<Int>) {
             if (cells.size < 2) return
@@ -284,7 +284,7 @@ internal object WordSiegePracticeEngine {
     private fun finish(state: WordSiegePracticeState, reason: String, forcedWinner: Int? = null): WordSiegePracticeState {
         val winner = forcedWinner ?: when {
             state.playerWordScore + state.playerArea > state.botWordScore + state.botArea -> 1
-            state.botWordScore + state.botArea > state.playerWordScore + state.botArea -> 2
+            state.botWordScore + state.botArea > state.playerWordScore + state.playerArea -> 2
             state.playerArea > state.botArea -> 1
             state.botArea > state.playerArea -> 2
             else -> null
@@ -323,7 +323,5 @@ internal object WordSiegePracticeEngine {
         "TERİM", "METİN", "SİLİ", "LİSTE", "LİMAN", "KİLİT", "KİRA", "KİRAZ", "KİTAP",
     )
 
-    private val practiceDictionary = botWords.toSet() + setOf(
-        "ARAÇ", "TAM", "AT",
-    )
+    private val practiceDictionary = botWords.toSet() + setOf("ARAÇ", "TAM", "AT")
 }
