@@ -356,6 +356,7 @@ internal fun LightDuelArena(
     busy: Boolean,
     triviaRound: TriviaRoundDto?,
     triviaQuestion: TriviaQuestionDto?,
+    triviaSelection: Long?,
     onSubmit: () -> Unit,
     onTimeout: () -> Unit,
     onTrivia: (Int) -> Unit,
@@ -404,8 +405,21 @@ internal fun LightDuelArena(
         return
     }
 
-    val deadline = if (quizActive) triviaRound?.answerDeadline else room.turnDeadline
-    var seconds by remember(deadline, room.status) { mutableIntStateOf(if (quizActive) 20 else 7) }
+    val triviaResolved = quizActive && triviaRound?.resolvedAt != null
+    val deadline = when {
+        triviaResolved -> triviaRound?.resultUntil
+        quizActive -> triviaRound?.answerDeadline
+        else -> room.turnDeadline
+    }
+    var seconds by remember(deadline, room.status, triviaResolved) {
+        mutableIntStateOf(
+            when {
+                deadline == null && !quizActive -> 0
+                triviaResolved -> 5
+                else -> 10
+            }
+        )
+    }
     val haptics = LocalHapticFeedback.current
 
     LaunchedEffect(deadline, room.currentPlayerId, room.status) {
@@ -415,7 +429,7 @@ internal fun LightDuelArena(
             val remaining = endMs - Instant.now().toEpochMilli()
             if (remaining <= 0L) {
                 seconds = 0
-                if (quizActive) onTriviaTimeout() else {
+                if (quizActive && !triviaResolved) onTriviaTimeout() else if (!quizActive) {
                     SonHarfSoundFx.explosion()
                     haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     onTimeout()
@@ -600,9 +614,11 @@ internal fun LightDuelArena(
         }
 
         if (quizActive) {
+            val activeTrivia = requireNotNull(triviaRound)
             LightBonusCard(
-                round = requireNotNull(triviaRound),
+                round = activeTrivia,
                 question = requireNotNull(triviaQuestion),
+                myAnswer = (if (host) activeTrivia.hostAnswer else activeTrivia.guestAnswer) ?: triviaSelection,
                 onTrivia = onTrivia,
                 modifier = Modifier.padding(horizontal = 12.dp),
             )
@@ -788,9 +804,13 @@ private fun LightVipWordHistory(
 private fun LightBonusCard(
     round: TriviaRoundDto,
     question: TriviaQuestionDto,
+    myAnswer: Long?,
     onTrivia: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val selectedAnswer = myAnswer
+    val resolved = round.resolvedAt != null
+
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F2FF)),
@@ -804,22 +824,72 @@ private fun LightBonusCard(
             options.chunked(2).forEach { pair ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     pair.forEach { raw ->
+                        val answerValue = raw.toLongOrNull()
+                        val selected = answerValue != null && selectedAnswer == answerValue
+                        val correct = resolved && answerValue != null && round.correctAnswer == answerValue
+                        val containerColor = when {
+                            correct -> LGreen.copy(alpha = .14f)
+                            resolved && selected -> LRed.copy(alpha = .13f)
+                            selected -> LBlue.copy(alpha = .11f)
+                            else -> Color.Transparent
+                        }
+                        val optionColor = when {
+                            correct -> LGreen
+                            resolved && selected -> LRed
+                            selected -> LBlue
+                            else -> LText
+                        }
                         OutlinedButton(
                             onClick = {
-                                raw.toLongOrNull()
-                                    ?.coerceIn(0, Int.MAX_VALUE.toLong())
-                                    ?.toInt()
-                                    ?.let(onTrivia)
+                                answerValue
+                                    ?.takeIf { it in 0L..Int.MAX_VALUE.toLong() }
+                                    ?.let {
+                                        onTrivia(it.toInt())
+                                    }
                             },
-                            enabled = raw.toLongOrNull() != null,
+                            enabled = answerValue != null && selectedAnswer == null && !resolved,
                             modifier = Modifier.weight(1f).heightIn(min = 34.dp),
-                            border = BorderStroke(1.dp, LPurple.copy(alpha = .45f)),
+                            border = BorderStroke(
+                                if (selected || correct) 2.dp else 1.dp,
+                                when {
+                                    correct -> LGreen
+                                    resolved && selected -> LRed
+                                    selected -> LBlue
+                                    else -> LPurple.copy(alpha = .45f)
+                                },
+                            ),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                containerColor = containerColor,
+                                disabledContainerColor = containerColor,
+                                contentColor = optionColor,
+                                disabledContentColor = optionColor,
+                            ),
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
                         ) {
-                            Text(raw, color = LText, fontSize = 9.sp, maxLines = 1)
+                            Text(raw, color = optionColor, fontSize = 9.sp, fontWeight = if (selected || correct) FontWeight.Black else FontWeight.Medium, maxLines = 1)
                         }
                     }
                 }
+            }
+            when {
+                resolved && selectedAnswer == round.correctAnswer -> Text(
+                    sh("Doğru cevap!", "Correct answer!"),
+                    color = LGreen,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                resolved -> Text(
+                    sh("Doğru cevap: ${round.correctAnswer ?: "—"}", "Correct answer: ${round.correctAnswer ?: "—"}"),
+                    color = LText,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                selectedAnswer != null -> Text(
+                    sh("Cevabın alındı, sonuç bekleniyor…", "Answer received, waiting for result…"),
+                    color = LBlue,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
             }
         }
     }

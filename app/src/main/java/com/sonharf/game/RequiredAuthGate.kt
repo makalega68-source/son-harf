@@ -61,15 +61,22 @@ private suspend fun lockIdentity(name: String, gender: String): AuthIdentityProf
 fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val rememberedCredential = remember {
+        if (SonHarfPreferences.rememberLogin(context)) RememberedCredentialVault.load(context) else null
+    }
     var register by remember { mutableStateOf(true) }
     var displayName by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
-    var email by remember { mutableStateOf(SonHarfPreferences.rememberedEmail(context)) }
-    var password by remember { mutableStateOf("") }
+    var email by remember {
+        mutableStateOf(rememberedCredential?.email ?: SonHarfPreferences.rememberedEmail(context))
+    }
+    var password by remember { mutableStateOf(rememberedCredential?.password.orEmpty()) }
     var password2 by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
     var showPassword2 by remember { mutableStateOf(false) }
-    var rememberMe by remember { mutableStateOf(SonHarfPreferences.rememberLogin(context)) }
+    var rememberMe by remember {
+        mutableStateOf(SonHarfPreferences.rememberLogin(context) || rememberedCredential != null)
+    }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var success by remember { mutableStateOf(false) }
@@ -357,7 +364,16 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                         } else {
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Checkbox(checked = rememberMe, onCheckedChange = { rememberMe = it })
+                                    Checkbox(
+                                        checked = rememberMe,
+                                        onCheckedChange = {
+                                            rememberMe = it
+                                            if (!it) {
+                                                RememberedCredentialVault.clear(context)
+                                                SonHarfPreferences.setRememberLogin(context, false)
+                                            }
+                                        },
+                                    )
                                     Text(sh("Bu cihazda beni hatırla", "Remember me on this device"), color = authColors.onSurface, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
                                 }
                             }
@@ -491,6 +507,11 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                             }
                                             SonHarfPreferences.clearPendingRegistration(context, email)
                                             SonHarfPreferences.setRememberLogin(context, rememberMe, email)
+                                            if (rememberMe) {
+                                                RememberedCredentialVault.save(context, email, password)
+                                            } else {
+                                                RememberedCredentialVault.clear(context)
+                                            }
                                         }.onSuccess { onAuthenticated() }.onFailure { notice = friendly(it.message.orEmpty()) }
                                     }
                                     busy = false
