@@ -1,0 +1,92 @@
+name: Runtime Theme Private Room Patch
+
+on:
+  push:
+    branches:
+      - feat/premium-style-private-room-bot-ui-20260831
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[runtime-patch]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/premium-style-private-room-bot-ui-20260831
+          fetch-depth: 0
+      - name: Apply scoped runtime theme and IME patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          main = Path('app/src/main/java/com/sonharf/game/MainExperienceApp.kt')
+          s = main.read_text()
+          old = '''internal object MainUi {
+              val Background = Color(0xFFF7F9FC)
+              val Surface = Color.White
+              val SurfaceSoft = Color(0xFFF0F4F8)
+              val Text = Color(0xFF182235)
+              val Muted = Color(0xFF718096)
+              val Blue = Color(0xFF1769E0)
+              val BlueDeep = Color(0xFF0D56C9)
+              val BlueSoft = Color(0xFFEAF3FF)
+              val Border = Color(0xFFDDE5EE)
+              val Green = Color(0xFF22A85A)
+              val Gold = Color(0xFFF3A81A)
+              val Red = Color(0xFFD83A48)
+              val Purple = Color(0xFF6B4FD3)
+          }'''
+          new = '''internal object MainUi {
+              val Background: Color get() = SonHarfCosmetics.gamePalette.background
+              val Surface: Color get() = SonHarfCosmetics.gamePalette.surface
+              val SurfaceSoft: Color get() = SonHarfCosmetics.gamePalette.surfaceSoft
+              val Text: Color get() = SonHarfCosmetics.gamePalette.text
+              val Muted: Color get() = SonHarfCosmetics.gamePalette.muted
+              val Blue: Color get() = SonHarfCosmetics.gamePalette.accent
+              val BlueDeep: Color get() = SonHarfCosmetics.gamePalette.accent
+              val BlueSoft: Color get() = SonHarfCosmetics.gamePalette.accent.copy(alpha = .10f)
+              val Border: Color get() = SonHarfCosmetics.gamePalette.border
+              val Green = Color(0xFF22A85A)
+              val Gold = Color(0xFFF3A81A)
+              val Red = Color(0xFFD83A48)
+              val Purple: Color get() = SonHarfCosmetics.gamePalette.secondary
+          }'''
+          if old not in s:
+              raise SystemExit('MainUi source block did not match expected validated head')
+          s = s.replace(old, new, 1)
+          s = s.replace('NavigationBar(containerColor = Color.White, tonalElevation = 0.dp, modifier = Modifier.fillMaxWidth())', 'NavigationBar(containerColor = MainUi.Surface, tonalElevation = 0.dp, modifier = Modifier.fillMaxWidth())', 1)
+          main.write_text(s)
+
+          duel = Path('app/src/main/java/com/sonharf/game/LightDuelUi.kt')
+          d = duel.read_text()
+          replacements = {
+              'private val LCard = Color.White': 'private val LCard: Color get() = SonHarfCosmetics.gamePalette.surface',
+              'private val LCard2 = Color(0xFFF0F4F8)': 'private val LCard2: Color get() = SonHarfCosmetics.gamePalette.surfaceSoft',
+              'private val LText = Color(0xFF182235)': 'private val LText: Color get() = SonHarfCosmetics.gamePalette.text',
+              'private val LMuted = Color(0xFF718096)': 'private val LMuted: Color get() = SonHarfCosmetics.gamePalette.muted',
+              'private val LBorder = Color(0xFFDDE5EE)': 'private val LBorder: Color get() = SonHarfCosmetics.gamePalette.border',
+              'Brush.verticalGradient(listOf(Color.White, LBg, LBg.copy(alpha = .72f)))': 'Brush.verticalGradient(listOf(LCard, LBg, LBg.copy(alpha = .72f)))',
+          }
+          for before, after in replacements.items():
+              if before not in d:
+                  raise SystemExit(f'LightDuel source did not match: {before}')
+              d = d.replace(before, after, 1)
+          lobby_marker = 'LazyColumn(\n            Modifier.fillMaxSize(),\n            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),'
+          lobby_replacement = 'LazyColumn(\n            Modifier.fillMaxSize().navigationBarsPadding().imePadding(),\n            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),'
+          if lobby_marker not in d:
+              raise SystemExit('LightDuel lobby LazyColumn marker not found')
+          d = d.replace(lobby_marker, lobby_replacement, 1)
+          duel.write_text(d)
+
+          test = Path('app/src/test/java/com/sonharf/game/PremiumThemePrivateRoomContractTest.kt')
+          test.write_text('''package com.sonharf.game\n\nimport java.io.File\nimport org.junit.Assert.assertFalse\nimport org.junit.Assert.assertTrue\nimport org.junit.Test\n\nclass PremiumThemePrivateRoomContractTest {\n    private fun source(name: String) = File("src/main/java/com/sonharf/game/$name").readText()\n\n    @Test fun mainUiUsesEquippedRuntimePalette() {\n        val src = source("MainExperienceApp.kt")\n        assertTrue(src.contains("val Background: Color get() = SonHarfCosmetics.gamePalette.background"))\n        assertTrue(src.contains("val Surface: Color get() = SonHarfCosmetics.gamePalette.surface"))\n        assertTrue(src.contains("val Text: Color get() = SonHarfCosmetics.gamePalette.text"))\n        assertTrue(src.contains("val Border: Color get() = SonHarfCosmetics.gamePalette.border"))\n        assertTrue(src.contains("NavigationBar(containerColor = MainUi.Surface"))\n        assertFalse(src.contains("NavigationBar(containerColor = Color.White"))\n    }\n\n    @Test fun duelLobbyIsImeAndNavigationBarSafe() {\n        val src = source("LightDuelUi.kt")\n        assertTrue(src.contains("Modifier.fillMaxSize().navigationBarsPadding().imePadding()"))\n        assertTrue(src.contains("private val LCard: Color get() = SonHarfCosmetics.gamePalette.surface"))\n        assertTrue(src.contains("private val LText: Color get() = SonHarfCosmetics.gamePalette.text"))\n        assertTrue(src.contains("private val LBorder: Color get() = SonHarfCosmetics.gamePalette.border"))\n    }\n}\n''')
+      - name: Commit scoped patch
+        run: |
+          git config user.name "sonharf-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/MainExperienceApp.kt app/src/main/java/com/sonharf/game/LightDuelUi.kt app/src/test/java/com/sonharf/game/PremiumThemePrivateRoomContractTest.kt
+          git commit -m "fix: runtime midnight theme and private room IME [runtime-patch]"
+          git push origin HEAD:feat/premium-style-private-room-bot-ui-20260831
