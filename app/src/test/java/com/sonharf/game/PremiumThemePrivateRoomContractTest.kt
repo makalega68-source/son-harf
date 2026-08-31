@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+// Regression guard for runtime Style palettes and keyboard-safe private-room controls.
 class PremiumThemePrivateRoomContractTest {
     private fun source(name: String) = File("src/main/java/com/sonharf/game/$name").readText()
 
