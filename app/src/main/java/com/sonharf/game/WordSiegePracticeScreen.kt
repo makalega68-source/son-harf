@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -80,43 +81,31 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
             val validated = mutableSetOf<String>()
             var invalidWord: String? = null
             for (word in candidate.formedWords.distinct()) {
-                var dictionaryError: Throwable? = null
                 var allowed: Boolean? = null
                 repeat(2) { attempt ->
                     if (allowed != null) return@repeat
-                    runCatching { validateWordSiegeDictionaryWord(word, "tr") }
-                        .onSuccess { allowed = it }
-                        .onFailure { dictionaryError = it }
+                    runCatching { validateWordSiegeDictionaryWord(word, "tr") }.onSuccess { allowed = it }
                     if (allowed == null && attempt == 0) delay(220)
                 }
                 if (allowed == null) {
                     notice = sh("Ana sözlüğe ulaşılamadı. Bağlantını kontrol edip tekrar dene.", "Could not reach the main dictionary. Check your connection and try again.")
-                    SonHarfSoundFx.warning()
-                    busy = false
-                    return@launch
+                    SonHarfSoundFx.warning(); busy = false; return@launch
                 }
-                if (allowed == false) {
-                    invalidWord = word
-                    break
-                }
+                if (allowed == false) { invalidWord = word; break }
                 validated += word
             }
             if (invalidWord != null) {
                 notice = sh("$invalidWord ana sözlükte bulunamadı.", "$invalidWord was not found in the main dictionary.")
-                SonHarfSoundFx.warning()
-                busy = false
-                return@launch
+                SonHarfSoundFx.warning(); busy = false; return@launch
             }
             runCatching {
                 WordSiegePracticeEngine.applyMove(state, 1, placements, horizontal) { it in validated }
             }.onSuccess { (next, move) ->
                 state = next
                 notice = sh("${move.formedWords.joinToString(" + ")} ✓  • +${move.wordScore} puan", "${move.formedWords.joinToString(" + ")} ✓  • +${move.wordScore} points")
-                clearSelection()
-                SonHarfSoundFx.wordAccepted()
+                clearSelection(); SonHarfSoundFx.wordAccepted()
             }.onFailure {
-                notice = wordSiegeFriendlyError(it.message.orEmpty())
-                SonHarfSoundFx.warning()
+                notice = wordSiegeFriendlyError(it.message.orEmpty()); SonHarfSoundFx.warning()
             }
             busy = false
         }
@@ -132,26 +121,36 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     LaunchedEffect(state.currentOwner, state.moveCount, state.status) {
         if (state.status != "playing" || state.currentOwner != 2) return@LaunchedEffect
         botThinking = true
-        val planned = WordSiegePracticeEngine.bestBotMove(state, botDifficulty)
-        delay(TrainingBotSupport.reactionDelayMs(botDifficulty, planned?.placements?.size ?: 1))
-        if (planned == null) {
-            state = WordSiegePracticeEngine.pass(state, 2)
-            notice = sh("$botName pas verdi. Sıra sende.", "$botName passed. Your turn.")
-        } else {
-            val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements, planned.horizontal)
-            state = next
-            notice = sh("$botName ${move.primaryWord} oynadı • +${move.wordScore}", "$botName played ${move.primaryWord} • +${move.wordScore}")
-            SonHarfSoundFx.scoreTick()
-        }
+        runCatching { WordSiegeBotPlanner.plan(state, botDifficulty) }
+            .onSuccess { plan ->
+                Log.d("WordSiegeBot", "lexicon=${plan.lexiconCount} structural=${plan.structuralCandidateCount} valid=${plan.validCandidateCount}")
+                delay(TrainingBotSupport.reactionDelayMs(botDifficulty, plan.move?.placements?.size ?: 1))
+                val planned = plan.move
+                if (planned == null) {
+                    check(plan.validCandidateCount == 0) { "word_siege_bot_missing_move_with_valid_candidates" }
+                    state = WordSiegePracticeEngine.pass(state, 2)
+                    notice = sh("$botName geçerli hamle bulamadı ve pas verdi. Sıra sende.", "$botName found no valid move and passed. Your turn.")
+                } else {
+                    val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements, planned.horizontal) { true }
+                    state = next
+                    notice = sh("$botName ${move.primaryWord} oynadı • +${move.wordScore}", "$botName played ${move.primaryWord} • +${move.wordScore}")
+                    SonHarfSoundFx.scoreTick()
+                }
+            }
+            .onFailure { error ->
+                Log.e("WordSiegeBot", "Bot plan/move failed; PASS suppressed", error)
+                notice = sh("Bot hamlesi işlenemedi; hata PAS olarak gizlenmedi. Tekrar deneyin.", "Bot move failed; the error was not hidden as a PASS. Please retry.")
+                SonHarfSoundFx.warning()
+            }
         botThinking = false
     }
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
         BoxWithConstraints(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 6.dp),
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 5.dp),
         ) {
             val compact = maxHeight < 720.dp || maxWidth < 380.dp
-            val gap = if (compact) 4.dp else 7.dp
+            val gap = if (compact) 3.dp else 6.dp
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(gap)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onExit, modifier = Modifier.size(if (compact) 38.dp else 42.dp)) {
@@ -159,20 +158,20 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     }
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = if (compact) 16.sp else 18.sp, fontWeight = FontWeight.Black)
-                        Text(sh("ANTRENMAN MAÇI • RATING/LİG ETKİSİ YOK", "TRAINING MATCH • NO RATING/LEAGUE EFFECT"), color = MainUi.Blue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        Text(sh("ANTRENMAN MAÇI • RATING/LİG ETKİSİ YOK", "TRAINING MATCH • NO RATING/LEAGUE EFFECT"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black)
                     }
                     IconButton(onClick = ::startAgain, modifier = Modifier.size(if (compact) 38.dp else 42.dp)) {
                         Icon(Icons.Rounded.Refresh, sh("Yeni oyun", "New game"), tint = MainUi.Blue)
                     }
                 }
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
                     PracticePlayerCard(
                         name = meProfile?.displayName ?: sh("SEN", "YOU"), avatarPath = meProfile?.avatarPath, gender = meProfile?.gender,
                         score = state.playerWordScore, area = state.playerArea, active = state.currentOwner == 1, accent = MainUi.Blue, modifier = Modifier.weight(1f),
                     )
                     PracticePlayerCard(
-                        name = botName, avatarPath = null, gender = null, score = state.botWordScore, area = state.botArea,
+                        name = botName, avatarPath = TrainingBotSupport.botAvatarPath(botName), gender = TrainingBotSupport.botGender(botName), score = state.botWordScore, area = state.botArea,
                         active = state.currentOwner == 2, accent = SiegePurple, modifier = Modifier.weight(1f),
                     )
                 }
@@ -181,7 +180,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     Modifier.fillMaxWidth(),
                     color = if (state.currentOwner == 1) SiegeBlueSoft else SiegePurpleSoft,
                     shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(1.dp, (if (state.currentOwner == 1) MainUi.Blue else SiegePurple).copy(alpha = .22f)),
+                    border = BorderStroke(1.dp, (if (state.currentOwner == 1) MainUi.Blue else SiegePurple).copy(alpha = .28f)),
                 ) {
                     Row(Modifier.padding(horizontal = 10.dp, vertical = if (compact) 5.dp else 7.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (botThinking || busy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = if (botThinking) SiegePurple else MainUi.Blue)
@@ -191,7 +190,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                             if (state.status != "playing") sh("MAÇ BİTTİ", "MATCH FINISHED")
                             else if (state.currentOwner == 1) sh("SIRA SENDE • Harf seç, tahtaya bırak, OYNA", "YOUR TURN • Pick a tile, place it, PLAY")
                             else sh("$botName düşünüyor…", "$botName is thinking…"),
-                            color = MainUi.Text, fontSize = if (compact) 10.sp else 11.sp, fontWeight = FontWeight.Black, maxLines = 1,
+                            color = MainUi.Text, fontSize = if (compact) 11.sp else 12.sp, fontWeight = FontWeight.Black, maxLines = 1,
                         )
                     }
                 }
@@ -205,55 +204,51 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                         onCellClick = { index ->
                             val placedRack = placements[index]
                             if (placedRack != null) {
-                                placements = placements - index
-                                selectedRackIndex = placedRack
+                                placements = placements - index; selectedRackIndex = placedRack
                             } else if (state.board[index].letter == null) {
                                 val rackIndex = selectedRackIndex ?: return@PracticeBoard
-                                placements = placements.filterValues { it != rackIndex } + (index to rackIndex)
-                                selectedRackIndex = null
+                                placements = placements.filterValues { it != rackIndex } + (index to rackIndex); selectedRackIndex = null
                             }
                         },
                     )
                 }
 
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"), color = MainUi.Muted, fontSize = 10.sp)
+                    Text(sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"), color = MainUi.Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
                     Spacer(Modifier.weight(1f))
-                    Text(sh("Yön otomatik", "Direction automatic"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(sh("Yön otomatik", "Direction automatic"), color = MainUi.Green, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
 
                 PracticeRack(
-                    rack = state.playerRack,
-                    placements = placements,
-                    selected = selectedRackIndex,
+                    rack = state.playerRack, placements = placements, selected = selectedRackIndex,
                     enabled = state.currentOwner == 1 && state.status == "playing" && !busy,
-                    onSelect = { rackIndex -> selectedRackIndex = if (selectedRackIndex == rackIndex) null else rackIndex },
+                    onSelect = { selectedRackIndex = if (selectedRackIndex == it) null else it },
                 )
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     OutlinedButton(onClick = { showPass = true }, modifier = Modifier.weight(1f), enabled = state.currentOwner == 1 && state.status == "playing" && !busy) {
-                        Text(sh("PAS", "PASS"), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        Text(sh("PAS", "PASS"), fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }
                     OutlinedButton(onClick = { showExchange = true; exchangeSelection = emptySet() }, modifier = Modifier.weight(1f), enabled = state.currentOwner == 1 && state.status == "playing" && !busy && placements.isEmpty()) {
-                        Text(sh("DEĞİŞTİR", "EXCHANGE"), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        Text(sh("DEĞİŞTİR", "EXCHANGE"), fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }
                     Button(onClick = ::submitPlayerMove, modifier = Modifier.weight(1.15f), enabled = state.currentOwner == 1 && state.status == "playing" && placements.isNotEmpty() && !busy) {
-                        Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }
                 }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                     TextButton(onClick = { showForfeit = true }, modifier = Modifier.weight(1f), enabled = state.status == "playing") {
-                        Icon(Icons.Rounded.Flag, null, Modifier.size(15.dp)); Spacer(Modifier.width(4.dp)); Text(sh("PES ET", "FORFEIT"), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Rounded.Flag, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(sh("PES ET", "FORFEIT"), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                     TextButton(onClick = { showChatInfo = true }, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Rounded.ChatBubbleOutline, null, Modifier.size(15.dp)); Spacer(Modifier.width(4.dp)); Text(sh("SOHBET", "CHAT"), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Rounded.ChatBubbleOutline, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text(sh("SOHBET", "CHAT"), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
                 notice?.let {
                     Surface(Modifier.fillMaxWidth(), color = SiegePurpleSoft, shape = RoundedCornerShape(10.dp)) {
-                        Text(it, Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = MainUi.Text, fontSize = if (compact) 9.sp else 10.sp, maxLines = 2)
+                        Text(it, Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = MainUi.Text, fontSize = if (compact) 10.sp else 11.sp, maxLines = 2)
                     }
                 }
             }
@@ -261,16 +256,14 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     }
 
     if (showPass) AlertDialog(
-        onDismissRequest = { showPass = false },
-        title = { Text(sh("Pas ver?", "Pass?")) },
+        onDismissRequest = { showPass = false }, title = { Text(sh("Pas ver?", "Pass?")) },
         text = { Text(sh("Sıra bota geçecek.", "The turn will pass to the bot.")) },
         confirmButton = { TextButton(onClick = { state = WordSiegePracticeEngine.pass(state, 1); clearSelection(); showPass = false }) { Text(sh("PAS", "PASS")) } },
         dismissButton = { TextButton(onClick = { showPass = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
     )
 
     if (showForfeit) AlertDialog(
-        onDismissRequest = { showForfeit = false },
-        title = { Text(sh("Pes etmek istiyor musun?", "Forfeit?")) },
+        onDismissRequest = { showForfeit = false }, title = { Text(sh("Pes etmek istiyor musun?", "Forfeit?")) },
         text = { Text(sh("Alıştırma maçı hemen sona erer.", "The practice match will end immediately.")) },
         confirmButton = { TextButton(onClick = { state = WordSiegePracticeEngine.forfeit(state, 1); clearSelection(); showForfeit = false }) { Text(sh("PES ET", "FORFEIT"), color = MainUi.Red) } },
         dismissButton = { TextButton(onClick = { showForfeit = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
@@ -282,31 +275,21 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(sh("Değiştirmek istediğin harfleri aşağıdan seç. Torbada ${state.bag.length} harf var.", "Select the tiles to exchange below. The bag has ${state.bag.length} tiles."))
-                ExchangeRackSelector(
-                    rack = state.playerRack,
-                    selected = exchangeSelection,
-                    onToggle = { index -> exchangeSelection = if (index in exchangeSelection) exchangeSelection - index else exchangeSelection + index },
-                )
-                if (exchangeSelection.isNotEmpty()) Text(sh("${exchangeSelection.size} harf seçildi", "${exchangeSelection.size} tiles selected"), color = MainUi.Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                ExchangeRackSelector(state.playerRack, exchangeSelection) { index -> exchangeSelection = if (index in exchangeSelection) exchangeSelection - index else exchangeSelection + index }
+                if (exchangeSelection.isNotEmpty()) Text(sh("${exchangeSelection.size} harf seçildi", "${exchangeSelection.size} tiles selected"), color = MainUi.Blue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
         },
-        confirmButton = {
-            TextButton(
-                onClick = {
-                    runCatching { WordSiegePracticeEngine.exchange(state, 1, exchangeSelection) }
-                        .onSuccess { state = it; clearSelection(); notice = sh("Harfler değiştirildi.", "Tiles exchanged.") }
-                        .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
-                    showExchange = false
-                },
-                enabled = exchangeSelection.isNotEmpty(),
-            ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), fontWeight = FontWeight.Black) }
-        },
+        confirmButton = { TextButton(onClick = {
+            runCatching { WordSiegePracticeEngine.exchange(state, 1, exchangeSelection) }
+                .onSuccess { state = it; clearSelection(); notice = sh("Harfler değiştirildi.", "Tiles exchanged.") }
+                .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
+            showExchange = false
+        }, enabled = exchangeSelection.isNotEmpty()) { Text(sh("DEĞİŞTİR", "EXCHANGE"), fontWeight = FontWeight.Black) } },
         dismissButton = { TextButton(onClick = { showExchange = false; exchangeSelection = emptySet() }) { Text(sh("VAZGEÇ", "CANCEL")) } },
     )
 
     if (showChatInfo) AlertDialog(
-        onDismissRequest = { showChatInfo = false },
-        title = { Text(sh("Sohbet", "Chat")) },
+        onDismissRequest = { showChatInfo = false }, title = { Text(sh("Sohbet", "Chat")) },
         text = { Text(sh("Bot alıştırmasında sohbet kapalıdır. Çevrimiçi Kelime Kuşatması maçında SOHBET butonu gerçek maç sohbetini açar.", "Chat is disabled in bot practice. In an online Word Siege match, CHAT opens the real match chat.")) },
         confirmButton = { TextButton(onClick = { showChatInfo = false }) { Text(sh("TAMAM", "OK")) } },
     )
@@ -320,12 +303,11 @@ private fun ExchangeRackSelector(rack: String, selected: Set<Int>, onToggle: (In
             Surface(
                 modifier = Modifier.weight(1f).aspectRatio(.82f).clickable { onToggle(index) },
                 color = if (active) Color(0xFFFFE2A1) else MainUi.SurfaceSoft,
-                shape = RoundedCornerShape(9.dp),
-                border = BorderStroke(if (active) 2.dp else 1.dp, if (active) MainUi.Gold else MainUi.Border),
+                shape = RoundedCornerShape(9.dp), border = BorderStroke(if (active) 2.dp else 1.dp, if (active) MainUi.Gold else MainUi.Border),
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(char.toString(), color = MainUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                    Text(WordSiegePracticeEngine.tileValue(char).toString(), modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp), color = MainUi.Muted, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                    Text(char.toString(), color = MainUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text(WordSiegePracticeEngine.tileValue(char).toString(), modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp), color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -334,34 +316,17 @@ private fun ExchangeRackSelector(rack: String, selected: Set<Int>, onToggle: (In
 
 @Composable
 private fun PracticePlayerCard(
-    name: String,
-    avatarPath: String?,
-    gender: String?,
-    score: Int,
-    area: Int,
-    active: Boolean,
-    accent: Color,
-    modifier: Modifier = Modifier,
+    name: String, avatarPath: String?, gender: String?, score: Int, area: Int, active: Boolean,
+    accent: Color, modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier,
-        color = Color.White,
-        shape = RoundedCornerShape(15.dp),
-        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) accent else MainUi.Border),
-    ) {
+    Surface(modifier = modifier, color = MainUi.Surface, shape = RoundedCornerShape(15.dp), border = BorderStroke(if (active) 2.dp else 1.dp, if (active) accent else MainUi.Border)) {
         Row(Modifier.padding(7.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (avatarPath != null) {
-                ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, width = 56.dp, height = 74.dp, accent = accent)
-            } else {
-                Surface(Modifier.size(56.dp, 74.dp), shape = RoundedCornerShape(14.dp), color = accent.copy(alpha = .10f)) {
-                    Box(contentAlignment = Alignment.Center) { Text(name.take(3), color = accent, fontWeight = FontWeight.Black, fontSize = 12.sp) }
-                }
-            }
+            ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, width = 56.dp, height = 74.dp, accent = accent)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
-                Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 12.sp, maxLines = 1)
+                Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
                 Text("$score", color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 21.sp)
-                Text(sh("Alan $area", "Area $area"), color = MainUi.Muted, fontSize = 9.sp)
+                Text(sh("Alan $area", "Area $area"), color = MainUi.Muted, fontSize = 10.sp)
             }
         }
     }
@@ -369,16 +334,12 @@ private fun PracticePlayerCard(
 
 @Composable
 private fun PracticeBoard(
-    state: WordSiegePracticeState,
-    placements: Map<Int, Int>,
-    selectedRackIndex: Int?,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
-    onCellClick: (Int) -> Unit,
+    state: WordSiegePracticeState, placements: Map<Int, Int>, selectedRackIndex: Int?, enabled: Boolean,
+    modifier: Modifier = Modifier, onCellClick: (Int) -> Unit,
 ) {
     val rack = state.playerRack
-    Surface(modifier, color = Color.White, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, MainUi.Border)) {
-        Column(Modifier.fillMaxSize().padding(3.dp)) {
+    Surface(modifier, color = MainUi.Surface, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.2.dp, MainUi.Border)) {
+        Column(Modifier.fillMaxSize().padding(2.dp)) {
             repeat(9) { row ->
                 Row(Modifier.weight(1f).fillMaxWidth()) {
                     repeat(9) { column ->
@@ -402,15 +363,16 @@ private fun PracticeBoard(
                         val border by animateColorAsState(targetBorder, tween(220), label = "practice-owner-border-$index")
                         val shape = RoundedCornerShape(5.dp)
                         Box(
-                            Modifier.weight(1f).fillMaxHeight().padding(1.dp).background(fill, shape)
-                                .border(if (owner == 0) .7.dp else 1.2.dp, border, shape)
-                                .then(if (enabled) Modifier.clickable { onCellClick(index) } else Modifier),
-                            contentAlignment = Alignment.Center,
+                            Modifier.weight(1f).fillMaxHeight().padding(.65.dp).background(fill, shape)
+                                .border(if (owner == 0) 1.dp else 1.45.dp, border, shape)
+                                .then(if (enabled) Modifier.clickable { onCellClick(index) } else Modifier), contentAlignment = Alignment.Center,
                         ) {
                             if (letter != null) {
-                                Text(letter, color = Color(0xFF111827), fontWeight = FontWeight.Black, fontSize = 17.sp)
-                                if (owner != 0 && tempRack == null) Box(Modifier.align(Alignment.TopEnd).padding(2.dp).size(4.dp).background(border, androidx.compose.foundation.shape.CircleShape))
-                            } else if (cell.bonus != null) Text(cell.bonus, color = if (cell.bonus.endsWith("K")) SiegePurple else MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 7.sp)
+                                Text(letter, color = Color(0xFF101216), fontWeight = FontWeight.Black, fontSize = 18.sp)
+                                if (owner != 0 && tempRack == null) Box(Modifier.align(Alignment.TopEnd).padding(2.dp).size(5.dp).background(border, androidx.compose.foundation.shape.CircleShape))
+                            } else if (cell.bonus != null) {
+                                Text(cell.bonus, color = if (cell.bonus.endsWith("K")) SiegePurple else MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 8.sp)
+                            }
                             if (tempRack != null && tempRack == selectedRackIndex) Box(Modifier.fillMaxSize().padding(1.dp).background(MainUi.Blue.copy(alpha = .08f), shape))
                         }
                     }
@@ -421,13 +383,7 @@ private fun PracticeBoard(
 }
 
 @Composable
-private fun PracticeRack(
-    rack: String,
-    placements: Map<Int, Int>,
-    selected: Int?,
-    enabled: Boolean,
-    onSelect: (Int) -> Unit,
-) {
+private fun PracticeRack(rack: String, placements: Map<Int, Int>, selected: Int?, enabled: Boolean, onSelect: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         rack.forEachIndexed { index, char ->
             val used = index in placements.values
@@ -435,18 +391,11 @@ private fun PracticeRack(
             Surface(
                 modifier = Modifier.weight(1f).aspectRatio(.78f).then(if (enabled && !used) Modifier.clickable { onSelect(index) } else Modifier),
                 color = when { used -> MainUi.SurfaceSoft; active -> Color(0xFFFFF0C9); else -> Color(0xFFFFE8B4) },
-                shape = RoundedCornerShape(9.dp),
-                border = BorderStroke(if (active) 2.dp else 1.dp, if (active) MainUi.Gold else MainUi.Gold.copy(alpha = .55f)),
+                shape = RoundedCornerShape(9.dp), border = BorderStroke(if (active) 2.dp else 1.dp, if (active) MainUi.Gold else MainUi.Gold.copy(alpha = .55f)),
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(char.toString(), color = if (used) MainUi.Muted.copy(alpha = .45f) else MainUi.Text, fontWeight = FontWeight.Black, fontSize = 20.sp)
-                    Text(
-                        WordSiegePracticeEngine.tileValue(char).toString(),
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
-                        color = if (used) MainUi.Muted.copy(alpha = .30f) else MainUi.Muted,
-                        fontSize = 7.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    Text(char.toString(), color = if (used) MainUi.Muted.copy(alpha = .45f) else MainUi.Text, fontWeight = FontWeight.Black, fontSize = 21.sp)
+                    Text(WordSiegePracticeEngine.tileValue(char).toString(), modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp), color = if (used) MainUi.Muted.copy(alpha = .30f) else MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
