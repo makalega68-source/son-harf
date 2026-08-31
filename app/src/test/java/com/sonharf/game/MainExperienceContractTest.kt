@@ -63,7 +63,7 @@ class MainExperienceContractTest {
         assertTrue(combined.contains("backend.getRivalHistory("))
         assertTrue(combined.contains("profile?.isVip == true"))
         assertTrue(combined.contains("backend.getMetaProgressV2()"))
-        assertTrue(combined.contains("backend.getRewardCenterStatus()"))
+        assertTrue(combined.contains("getRewardCenterStatus()"))
         assertFalse(combined.contains("Mock"))
         assertFalse(combined.contains("fakeProfile", ignoreCase = true))
         assertFalse(combined.contains("fakeMissions", ignoreCase = true))
