@@ -38,14 +38,14 @@ import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
 private val LBg: Color get() = SonHarfCosmetics.gamePalette.background
-private val LCard = Color.White
-private val LCard2 = Color(0xFFF0F4F8)
-private val LText = Color(0xFF182235)
-private val LMuted = Color(0xFF718096)
+private val LCard: Color get() = SonHarfCosmetics.gamePalette.surface
+private val LCard2: Color get() = SonHarfCosmetics.gamePalette.surfaceSoft
+private val LText: Color get() = SonHarfCosmetics.gamePalette.text
+private val LMuted: Color get() = SonHarfCosmetics.gamePalette.muted
 private val LBlue: Color get() = SonHarfCosmetics.gamePalette.accent
 private val LBlueSoft: Color get() = SonHarfCosmetics.gamePalette.accent.copy(alpha = .10f)
 private val LBlue2: Color get() = SonHarfCosmetics.gamePalette.secondary
-private val LBorder = Color(0xFFDDE5EE)
+private val LBorder: Color get() = SonHarfCosmetics.gamePalette.border
 private val LRed = Color(0xFFE24D6B)
 private val LGold = Color(0xFFF3A81A)
 private val LPurple: Color get() = SonHarfCosmetics.gamePalette.secondary
@@ -76,10 +76,10 @@ internal fun LightDuelLobby(
     onInviteResponse: (String, Boolean) -> Unit,
 ) {
     Box(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, LBg, LBg.copy(alpha = .72f)))).statusBarsPadding()
+        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(LCard, LBg, LBg.copy(alpha = .72f)))).statusBarsPadding()
     ) {
         LazyColumn(
-            Modifier.fillMaxSize(),
+            Modifier.fillMaxSize().navigationBarsPadding().imePadding(),
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {

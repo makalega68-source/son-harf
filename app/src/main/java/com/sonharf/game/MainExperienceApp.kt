@@ -30,19 +30,19 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 internal object MainUi {
-    val Background = Color(0xFFF7F9FC)
-    val Surface = Color.White
-    val SurfaceSoft = Color(0xFFF0F4F8)
-    val Text = Color(0xFF182235)
-    val Muted = Color(0xFF718096)
-    val Blue = Color(0xFF1769E0)
-    val BlueDeep = Color(0xFF0D56C9)
-    val BlueSoft = Color(0xFFEAF3FF)
-    val Border = Color(0xFFDDE5EE)
+    val Background: Color get() = SonHarfCosmetics.gamePalette.background
+    val Surface: Color get() = SonHarfCosmetics.gamePalette.surface
+    val SurfaceSoft: Color get() = SonHarfCosmetics.gamePalette.surfaceSoft
+    val Text: Color get() = SonHarfCosmetics.gamePalette.text
+    val Muted: Color get() = SonHarfCosmetics.gamePalette.muted
+    val Blue: Color get() = SonHarfCosmetics.gamePalette.accent
+    val BlueDeep: Color get() = SonHarfCosmetics.gamePalette.accent
+    val BlueSoft: Color get() = SonHarfCosmetics.gamePalette.accent.copy(alpha = .10f)
+    val Border: Color get() = SonHarfCosmetics.gamePalette.border
     val Green = Color(0xFF22A85A)
     val Gold = Color(0xFFF3A81A)
     val Red = Color(0xFFD83A48)
-    val Purple = Color(0xFF6B4FD3)
+    val Purple: Color get() = SonHarfCosmetics.gamePalette.secondary
 }
 
 private enum class MainDestination {
@@ -141,7 +141,7 @@ private fun MainBottomNavigation(
     onStyle: () -> Unit,
     onProfile: () -> Unit,
 ) {
-    NavigationBar(containerColor = Color.White, tonalElevation = 0.dp, modifier = Modifier.fillMaxWidth()) {
+    NavigationBar(containerColor = MainUi.Surface, tonalElevation = 0.dp, modifier = Modifier.fillMaxWidth()) {
         listOf(
             Triple(MainDestination.HOME, Icons.Rounded.Home, sh("Ana Sayfa", "Home")) to onHome,
             Triple(MainDestination.LEAGUE, Icons.Rounded.EmojiEvents, sh("Lig", "League")) to onLeague,
