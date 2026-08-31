@@ -1,0 +1,21 @@
+name: Fix training bot difficulty source
+on:
+  push:
+    branches: [feat/training-bots-ownership-20260831]
+    paths: [.github/workflows/fix-training-bot-difficulty.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/training-bots-ownership-20260831
+      - run: python3 scripts/fix_training_bot_difficulty.py
+      - run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add app/src/main/java/com/sonharf/game/data/OnlineGameBackend.kt app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          git commit -m "fix(training): source bot difficulty from profile"
+          git push origin HEAD:feat/training-bots-ownership-20260831
