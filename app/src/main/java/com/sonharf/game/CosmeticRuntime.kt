@@ -44,6 +44,10 @@ object SonHarfCosmetics {
 
     fun frameAccent(id: String?): Color = when {
         id == null -> SonHarfMuted
+        "black_gold" in id -> Color(0xFFD6A84B)
+        "royal_gold" in id -> Color(0xFFE6B84B)
+        "crystal" in id -> Color(0xFF79B7FF)
+        "purple_prestige" in id -> Color(0xFF8D67E8)
         "gold" in id -> SonHarfGold
         "neon" in id -> SonHarfCyan
         "starter" in id || "founder" in id || "light" in id -> SonHarfPurple
@@ -59,10 +63,22 @@ object SonHarfCosmetics {
             nameStyleId?.contains("cyan") == true -> SonHarfCyan
             nameStyleId?.contains("gold") == true -> SonHarfGold
             nameStyleId?.contains("black") == true -> Color(0xFF111827)
-            else -> SonHarfText
+            else -> if (isMidnight) Color(0xFFF5F7FF) else SonHarfText
         }
 
     fun keyboardPaletteFor(id: String?): SonHarfKeyboardPalette = when {
+        id?.contains("premium_white") == true -> SonHarfKeyboardPalette(
+            background = Color(0xFFF1F4F8), key = Color.White, keyAlt = Color(0xFFE4EAF1),
+            text = Color(0xFF172033), action = Color(0xFF1769E0), accent = Color(0xFF68758C),
+        )
+        id?.contains("crystal") == true -> SonHarfKeyboardPalette(
+            background = Color(0xFFEAF5FF), key = Color(0xFFF8FCFF), keyAlt = Color(0xFFDCEBFA),
+            text = Color(0xFF15283D), action = Color(0xFF397FD4), accent = Color(0xFF7D6BE8),
+        )
+        id?.contains("midnight") == true -> SonHarfKeyboardPalette(
+            background = Color(0xFF050713), key = Color(0xFF11172A), keyAlt = Color(0xFF1A233B),
+            text = Color(0xFFF5F7FF), action = Color(0xFF2188FF), accent = Color(0xFF8A5CFF),
+        )
         id?.contains("neon") == true -> SonHarfKeyboardPalette(
             background = Color(0xFF050818), key = Color(0xFF111A35), keyAlt = Color(0xFF17264A),
             text = Color(0xFFF6FBFF), action = Color(0xFF25D9FF), accent = Color(0xFF9B5CFF),
@@ -103,6 +119,7 @@ object SonHarfCosmetics {
     }
 
     val gamePalette: SonHarfGamePalette get() = gamePaletteFor(gameThemeId)
+    val isMidnight: Boolean get() = gameThemeId?.contains("midnight") == true
     val keyboardIsNeon: Boolean get() = keyboardThemeId?.contains("neon") == true
     val auroraTheme: Boolean get() = gameThemeId?.contains("aurora") == true
     val crownVictory: Boolean get() = victoryEffectId == "victory_crown"
