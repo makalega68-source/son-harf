@@ -1,12 +1,12 @@
 -- Paket 3 targeted validation regression tests.
--- Intended for a local/reset Supabase database; test transaction rolls back all fixtures.
+-- Self-contained fixtures; the transaction rolls back all auth/profile/game data.
 
 begin;
 
 do $$
 declare
-  p1 uuid;
-  p2 uuid;
+  p1 uuid := gen_random_uuid();
+  p2 uuid := gen_random_uuid();
   g uuid;
   b jsonb;
   before_game jsonb;
@@ -14,11 +14,13 @@ declare
   before_moves bigint;
   after_moves bigint;
 begin
-  select id into p1 from public.profiles order by created_at limit 1;
-  select id into p2 from public.profiles where id <> p1 order by created_at limit 1;
-  if p1 is null or p2 is null then
-    raise exception 'word_siege_tests_require_two_profiles';
-  end if;
+  insert into auth.users(id, aud, role, email, created_at, updated_at)
+  values
+    (p1, 'authenticated', 'authenticated', 'word-siege-test-1@example.invalid', now(), now()),
+    (p2, 'authenticated', 'authenticated', 'word-siege-test-2@example.invalid', now(), now());
+  insert into public.profiles(id, display_name)
+  values (p1, 'WS Test One'), (p2, 'WS Test Two');
+
   perform set_config('request.jwt.claim.sub', p1::text, true);
 
   -- 1) ARA + Ç = ARAÇ -> kabul.
