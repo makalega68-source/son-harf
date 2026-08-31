@@ -1,7 +1,5 @@
 package com.sonharf.game
 
-import kotlin.math.max
-import kotlin.math.min
 import kotlin.random.Random
 
 internal enum class TrainingBotDifficulty { EASY, MEDIUM, HARD }
@@ -13,15 +11,16 @@ internal object TrainingBotSupport {
     const val OWN_FILL_ARGB: Long = 0xFFA8DDB5
     const val OPPONENT_FILL_ARGB: Long = 0xFFF1AAAA
     const val NEUTRAL_FILL_ARGB: Long = 0xFFF4F6F8
-    const val OWN_BORDER_ARGB: Long = 0xFF4E9B66
-    const val OPPONENT_BORDER_ARGB: Long = 0xFFC86666
+    const val OWN_BORDER_ARGB: Long = 0xFF3F8B59
+    const val OPPONENT_BORDER_ARGB: Long = 0xFFB95353
 
-    val turkishBotNames = listOf(
-        "Elif", "Zeynep", "Ece", "Defne", "Duru", "İrem", "Selin", "Ceren", "Melis", "Yağmur",
-        "Ada", "İlayda", "Buse", "Nehir", "Aslı", "Sude", "Derin", "Naz", "Gökçe", "Merve",
-        "Emir", "Mert", "Kerem", "Arda", "Eren", "Can", "Berk", "Kaan", "Onur", "Barış",
-        "Deniz", "Atlas", "Yiğit", "Ozan", "Umut", "Tolga", "Burak", "Alp", "Doruk", "Cem",
+    private val femaleBotNames = listOf(
+        "Elif", "Zeynep", "Defne", "Ece", "Duru", "İrem", "Selin", "Melis",
     )
+    private val maleBotNames = listOf(
+        "Mert", "Emir", "Kerem", "Arda", "Eren", "Can", "Kaan", "Berk",
+    )
+    val turkishBotNames = femaleBotNames + maleBotNames
 
     fun ownershipRelation(owner: Int, myOwner: Int): WordSiegeOwnershipRelation = when {
         owner == 0 -> WordSiegeOwnershipRelation.NEUTRAL
@@ -33,6 +32,10 @@ internal object TrainingBotSupport {
         val candidates = turkishBotNames.filterNot { it == previous }
         return candidates[random.nextInt(candidates.size)]
     }
+
+    fun botGender(name: String): String = if (name in femaleBotNames) "female" else "male"
+
+    fun botAvatarPath(name: String): String = if (name in femaleBotNames) "bot:female" else "bot:male"
 
     fun reactionDelayMs(
         difficulty: TrainingBotDifficulty,
