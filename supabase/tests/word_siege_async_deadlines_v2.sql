@@ -1,6 +1,9 @@
 begin;
 
 -- Async 12/72-hour lifecycle regression. Everything is rolled back.
+-- Isolate matchmaking from any real waiting game while keeping live data untouched after rollback.
+update public.word_siege_games set status='cancelled' where status='waiting';
+
 insert into auth.users(id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at)
 values
  ('a1200000-0000-4000-8000-000000000001','authenticated','authenticated','async12-a@example.test','',now(),now(),now()),
@@ -83,9 +86,10 @@ select public.pass_word_siege_turn_v1((select id from public.word_siege_games wh
 reset role;
 
 do $$
-declare g public.word_siege_games; first_finished timestamptz;
+declare g public.word_siege_games; first_finished timestamptz; gid uuid;
 begin
   select * into g from public.word_siege_games where player_one_id='a1200000-0000-4000-8000-000000000001' and turn_duration_hours=12;
+  gid := g.id;
   if g.status <> 'finished' then raise exception 'async_timeout_status_failed'; end if;
   if g.winner_id <> 'a1200000-0000-4000-8000-000000000001' then raise exception 'async_timeout_winner_failed'; end if;
   if g.loser_id <> 'a1200000-0000-4000-8000-000000000002' then raise exception 'async_timeout_loser_failed'; end if;
@@ -93,8 +97,8 @@ begin
   if g.current_player_id is not null or g.turn_deadline is not null then raise exception 'async_timeout_turn_not_cleared'; end if;
   if g.consecutive_passes <> 1 then raise exception 'async_late_pass_was_applied'; end if;
   first_finished := g.finished_at;
-  perform private.word_siege_finalize_timeout_v2(g.id);
-  select * into g from public.word_siege_games where id=g.id;
+  perform private.word_siege_finalize_timeout_v2(gid);
+  select * into g from public.word_siege_games where id=gid;
   if g.finished_at is distinct from first_finished then raise exception 'async_timeout_not_idempotent'; end if;
 end $$;
 
@@ -112,7 +116,8 @@ begin
   if abs(extract(epoch from (g.turn_deadline-g.turn_started_at))-259200) > 2 then raise exception 'async_72_deadline_failed'; end if;
 end $$;
 
--- Non-participants cannot refresh/mutate another player's match.
+-- A non-participant cannot see or refresh another player's match. RLS may deliberately
+-- collapse this to not_found instead of revealing that the game exists.
 select set_config('request.jwt.claim.sub','a1200000-0000-4000-8000-000000000003',true);
 set local role authenticated;
 do $$
@@ -121,7 +126,7 @@ begin
     perform public.refresh_word_siege_game_v2((select id from public.word_siege_games where player_one_id='a7200000-0000-4000-8000-000000000001' and turn_duration_hours=72));
     raise exception 'async_nonparticipant_refresh_was_allowed';
   exception when others then
-    if position('word_siege_not_participant' in sqlerrm)=0 then raise; end if;
+    if position('word_siege_not_participant' in sqlerrm)=0 and position('word_siege_not_found' in sqlerrm)=0 then raise; end if;
   end;
 end $$;
 reset role;
