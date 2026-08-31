@@ -31,9 +31,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
-private val SiegePurple = MainUi.Purple
-private val SiegePurpleSoft = Color(0xFFF0ECFF)
-private val SiegeBlueSoft = MainUi.BlueSoft
+internal val SiegePurple = MainUi.Purple
+internal val SiegePurpleSoft = Color(0xFFF0ECFF)
+internal val SiegeBlueSoft = MainUi.BlueSoft
 private val SiegeTile = Color(0xFFFFE3A5)
 private val SiegeTileBorder = Color(0xFFD99818)
 
