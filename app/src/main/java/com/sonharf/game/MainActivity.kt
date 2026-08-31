@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -19,16 +20,16 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
 import kotlinx.coroutines.runBlocking
 
-internal val SonHarfBg: Color get() = Color(0xFFF7F9FC)
-internal val SonHarfSurface: Color get() = Color.White
-internal val SonHarfSurface2: Color get() = Color(0xFFF0F4F8)
-internal val SonHarfPurple = Color(0xFF6B4FD3)
-internal val SonHarfCyan = Color(0xFF1769E0)
-internal val SonHarfBlue = Color(0xFF1769E0)
+internal val SonHarfBg: Color get() = SonHarfCosmetics.gamePalette.background
+internal val SonHarfSurface: Color get() = SonHarfCosmetics.gamePalette.surface
+internal val SonHarfSurface2: Color get() = SonHarfCosmetics.gamePalette.surfaceSoft
+internal val SonHarfPurple: Color get() = SonHarfCosmetics.gamePalette.secondary
+internal val SonHarfCyan: Color get() = SonHarfCosmetics.gamePalette.accent
+internal val SonHarfBlue: Color get() = SonHarfCosmetics.gamePalette.accent
 internal val SonHarfGold = Color(0xFFF3A81A)
 internal val SonHarfGreen = Color(0xFF22B95F)
-internal val SonHarfText: Color get() = Color(0xFF182235)
-internal val SonHarfMuted: Color get() = Color(0xFF718096)
+internal val SonHarfText: Color get() = SonHarfCosmetics.gamePalette.text
+internal val SonHarfMuted: Color get() = SonHarfCosmetics.gamePalette.muted
 internal val SonHarfPink = Color(0xFFE95B72)
 
 private val SonHarfTypography = Typography(
@@ -95,22 +96,44 @@ class MainActivity : ComponentActivity() {
         }
         handleAuthDeepLink(intent)
         setContent {
-            MaterialTheme(
-                colorScheme = lightColorScheme(
-                    primary = SonHarfBlue,
-                    secondary = SonHarfCyan,
+            val palette = SonHarfCosmetics.gamePalette
+            val colorScheme = if (SonHarfCosmetics.isMidnight) {
+                darkColorScheme(
+                    primary = palette.accent,
+                    secondary = palette.secondary,
                     tertiary = SonHarfGreen,
-                    background = SonHarfBg,
-                    surface = SonHarfSurface,
-                    surfaceVariant = SonHarfSurface2,
+                    background = palette.background,
+                    surface = palette.surface,
+                    surfaceVariant = palette.surfaceSoft,
                     onPrimary = Color.White,
                     onSecondary = Color.White,
                     onTertiary = Color.White,
-                    onBackground = SonHarfText,
-                    onSurface = SonHarfText,
-                    onSurfaceVariant = SonHarfText,
+                    onBackground = palette.text,
+                    onSurface = palette.text,
+                    onSurfaceVariant = palette.text,
+                    outline = palette.border,
+                    error = Color(0xFFFF6B78),
+                )
+            } else {
+                lightColorScheme(
+                    primary = palette.accent,
+                    secondary = palette.secondary,
+                    tertiary = SonHarfGreen,
+                    background = palette.background,
+                    surface = palette.surface,
+                    surfaceVariant = palette.surfaceSoft,
+                    onPrimary = Color.White,
+                    onSecondary = Color.White,
+                    onTertiary = Color.White,
+                    onBackground = palette.text,
+                    onSurface = palette.text,
+                    onSurfaceVariant = palette.text,
+                    outline = palette.border,
                     error = Color(0xFFD83A48),
-                ),
+                )
+            }
+            MaterialTheme(
+                colorScheme = colorScheme,
                 typography = SonHarfTypography,
             ) {
                 Box(Modifier.fillMaxSize()) {
