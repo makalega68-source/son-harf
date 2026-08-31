@@ -52,6 +52,9 @@ private enum class MainDestination {
     STYLE,
     PROFILE,
     TASKS,
+    SEASON,
+    REWARDS,
+    PROFILE_STYLE,
     VIP,
     SETTINGS,
     PROFILE_DETAILS,
@@ -81,10 +84,13 @@ fun SonHarfMainApp(onSignedOut: () -> Unit) {
     BackHandler(enabled = destination != MainDestination.HOME) {
         destination = when (destination) {
             MainDestination.PROFILE_DETAILS,
+            MainDestination.PROFILE_STYLE,
             MainDestination.ACCOUNT,
             MainDestination.SETTINGS,
             MainDestination.VIP -> MainDestination.PROFILE
-            MainDestination.DAILY_CHALLENGE -> MainDestination.TASKS
+            MainDestination.DAILY_CHALLENGE,
+            MainDestination.SEASON,
+            MainDestination.REWARDS -> MainDestination.TASKS
             else -> MainDestination.HOME
         }
     }
@@ -128,22 +134,20 @@ fun SonHarfMainApp(onSignedOut: () -> Unit) {
                     onStyle = { destination = MainDestination.STYLE },
                     onProfile = { destination = MainDestination.PROFILE },
                     onTasks = { destination = MainDestination.TASKS },
+                    onSeason = { destination = MainDestination.SEASON },
+                    onRewards = { destination = MainDestination.REWARDS },
                     onVip = { destination = MainDestination.VIP },
                     onSettings = { destination = MainDestination.SETTINGS },
                 )
                 MainDestination.GAME -> OnlineGameScreenV6()
-                MainDestination.WORD_SIEGE -> WordSiegeExperienceScreen {
-                    destination = MainDestination.HOME
-                }
+                MainDestination.WORD_SIEGE -> WordSiegeExperienceScreen { destination = MainDestination.HOME }
                 MainDestination.LEAGUE -> LeaderboardExperienceScreen { destination = MainDestination.HOME }
-                MainDestination.SOCIAL -> MainSocialScreen(
-                    backend = backend,
-                    onPlay = { destination = MainDestination.GAME },
-                )
-                MainDestination.STYLE -> EconomyShopScreen()
+                MainDestination.SOCIAL -> MainSocialScreen(backend = backend, onPlay = { destination = MainDestination.GAME })
+                MainDestination.STYLE -> EconomyShopScreen(onOpenProfileAppearance = { destination = MainDestination.PROFILE_STYLE })
                 MainDestination.PROFILE -> MainPlayerProfileScreen(
                     backend = backend,
                     onEdit = { destination = MainDestination.PROFILE_DETAILS },
+                    onAppearance = { destination = MainDestination.PROFILE_STYLE },
                     onVip = { destination = MainDestination.VIP },
                     onSettings = { destination = MainDestination.SETTINGS },
                     onSocial = { destination = MainDestination.SOCIAL },
@@ -154,27 +158,19 @@ fun SonHarfMainApp(onSignedOut: () -> Unit) {
                     onPlay = { destination = MainDestination.GAME },
                     onDailyChallenge = { destination = MainDestination.DAILY_CHALLENGE },
                 )
-                MainDestination.VIP -> MainVipScreen(
-                    backend = backend,
-                    onBack = { destination = MainDestination.PROFILE },
-                )
+                MainDestination.SEASON -> SeasonCenterScreen(backend = backend, onBack = { destination = MainDestination.HOME })
+                MainDestination.REWARDS -> RewardCenterScreen(onOpenTasks = { destination = MainDestination.TASKS })
+                MainDestination.PROFILE_STYLE -> ProfileStyleInventoryScreen(backend = backend, onBack = { destination = MainDestination.PROFILE })
+                MainDestination.VIP -> MainVipScreen(backend = backend, onBack = { destination = MainDestination.PROFILE })
                 MainDestination.SETTINGS -> MainSettingsScreen(
                     backend = backend,
                     onBack = { destination = MainDestination.PROFILE },
                     onAccount = { destination = MainDestination.ACCOUNT },
                     onSignedOut = onSignedOut,
                 )
-                MainDestination.PROFILE_DETAILS -> CompleteProfileScreen(
-                    initialTab = 0,
-                    onBack = { destination = MainDestination.PROFILE },
-                )
-                MainDestination.ACCOUNT -> CompleteProfileScreen(
-                    initialTab = 1,
-                    onBack = { destination = MainDestination.SETTINGS },
-                )
-                MainDestination.DAILY_CHALLENGE -> DailyCipherScreen {
-                    destination = MainDestination.TASKS
-                }
+                MainDestination.PROFILE_DETAILS -> CompleteProfileScreen(initialTab = 0, onBack = { destination = MainDestination.PROFILE })
+                MainDestination.ACCOUNT -> CompleteProfileScreen(initialTab = 1, onBack = { destination = MainDestination.SETTINGS })
+                MainDestination.DAILY_CHALLENGE -> DailyCipherScreen { destination = MainDestination.TASKS }
             }
         }
     }
@@ -189,11 +185,7 @@ private fun MainBottomNavigation(
     onStyle: () -> Unit,
     onProfile: () -> Unit,
 ) {
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 0.dp,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
+    NavigationBar(containerColor = Color.White, tonalElevation = 0.dp, modifier = Modifier.fillMaxWidth()) {
         listOf(
             Triple(MainDestination.HOME, Icons.Rounded.Home, sh("Ana Sayfa", "Home")) to onHome,
             Triple(MainDestination.LEAGUE, Icons.Rounded.EmojiEvents, sh("Lig", "League")) to onLeague,
@@ -203,10 +195,7 @@ private fun MainBottomNavigation(
         ).forEach { (item, action) ->
             NavigationBarItem(
                 selected = destination == item.first,
-                onClick = {
-                    SonHarfSoundFx.tap()
-                    action()
-                },
+                onClick = { SonHarfSoundFx.tap(); action() },
                 icon = { Icon(item.second, contentDescription = item.third) },
                 label = { Text(item.third, fontSize = 9.sp, maxLines = 1) },
                 colors = NavigationBarItemDefaults.colors(
@@ -231,6 +220,8 @@ private fun MainHomeScreen(
     onStyle: () -> Unit,
     onProfile: () -> Unit,
     onTasks: () -> Unit,
+    onSeason: () -> Unit,
+    onRewards: () -> Unit,
     onVip: () -> Unit,
     onSettings: () -> Unit,
 ) {
@@ -240,6 +231,7 @@ private fun MainHomeScreen(
     var meta by remember { mutableStateOf<MetaProgressV2Dto?>(null) }
     var missions by remember { mutableStateOf<List<UnifiedMissionDto>>(emptyList()) }
     var rival by remember { mutableStateOf<ArchRivalDto?>(null) }
+    var equipped by remember { mutableStateOf<EquippedCosmeticsDto?>(null) }
     var loading by remember { mutableStateOf(true) }
     var dailyBusy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -252,11 +244,14 @@ private fun MainHomeScreen(
         val metaTask = async { runCatching { backend.getMetaProgressV2() }.getOrNull() }
         val missionTask = async { runCatching { backend.getUnifiedMissions() }.getOrDefault(emptyList()) }
         val rivalTask = async { runCatching { backend.getArchRival() }.getOrNull() }
+        val equippedTask = async { runCatching { backend.getEquippedCosmetics() }.getOrNull() }
         profile = profileTask.await()
         growth = growthTask.await()
         meta = metaTask.await()
         missions = missionTask.await()
         rival = rivalTask.await()
+        equipped = equippedTask.await()
+        SonHarfCosmetics.apply(equipped)
         loading = false
     }
 
@@ -265,11 +260,11 @@ private fun MainHomeScreen(
     val p = profile
     val g = growth
     val league = ratingLeagueProgress(p?.rating ?: 1000)
-    val mission = missions.firstOrNull { it.scope == "daily" && !it.claimed }
-        ?: missions.firstOrNull { !it.claimed }
-    val xpProgress = g?.let {
-        (it.levelProgress.toFloat() / it.levelTarget.coerceAtLeast(1)).coerceIn(0f, 1f)
-    } ?: 0f
+    val mission = missions.firstOrNull { it.scope == "daily" && !it.claimed } ?: missions.firstOrNull { !it.claimed }
+    val xpProgress = g?.let { (it.levelProgress.toFloat() / it.levelTarget.coerceAtLeast(1)).coerceIn(0f, 1f) } ?: 0f
+    val seasonProgress = ((meta?.seasonProgress ?: 0).toFloat() / (meta?.seasonTarget ?: 300).coerceAtLeast(1)).coerceIn(0f, 1f)
+    val seasonRemaining = ((meta?.seasonTarget ?: 300) - (meta?.seasonProgress ?: 0)).coerceAtLeast(0)
+    val frameAccent = if (equipped?.profileFrameId != null) SonHarfCosmetics.profileAccent else if (p?.isVip == true) MainUi.Gold else MainUi.Blue
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -279,33 +274,17 @@ private fun MainHomeScreen(
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    SonHarfBrandLogo(
-                        modifier = Modifier.width(150.dp),
-                        size = 66.dp,
-                    )
-                    Text(
-                        sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"),
-                        color = MainUi.Muted,
-                        fontSize = 11.sp,
-                    )
+                    SonHarfBrandLogo(modifier = Modifier.width(150.dp), size = 66.dp)
+                    Text(sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"), color = MainUi.Muted, fontSize = 11.sp)
                 }
-                IconButton(onClick = onSettings) {
-                    Icon(Icons.Rounded.Settings, contentDescription = sh("Ayarlar", "Settings"), tint = MainUi.Text)
-                }
+                IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, contentDescription = sh("Ayarlar", "Settings"), tint = MainUi.Text) }
             }
         }
 
-        if (loading) {
-            item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = MainUi.Blue, trackColor = MainUi.BlueSoft) }
-        }
+        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = MainUi.Blue, trackColor = MainUi.BlueSoft) }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onProfile),
-                shape = RoundedCornerShape(22.dp),
-                color = MainUi.Surface,
-                border = BorderStroke(1.dp, MainUi.Border),
-            ) {
+            Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onProfile), shape = RoundedCornerShape(22.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ProfilePhotoAvatarWithGender(
@@ -313,7 +292,7 @@ private fun MainHomeScreen(
                             gender = p?.gender,
                             name = p?.displayName ?: sh("Oyuncu", "Player"),
                             size = 56.dp,
-                            accent = if (p?.isVip == true) MainUi.Gold else MainUi.Blue,
+                            accent = frameAccent,
                         )
                         Spacer(Modifier.width(11.dp))
                         Column(Modifier.weight(1f)) {
@@ -333,36 +312,16 @@ private fun MainHomeScreen(
                                     }
                                 }
                             }
-                            Text(
-                                "${sh("Seviye", "Level")} ${g?.level ?: 1} • ${meta?.selectedTitle ?: g?.nextTitle.orEmpty()}",
-                                color = MainUi.Muted,
-                                fontSize = 10.sp,
-                                maxLines = 1,
-                            )
+                            Text("${sh("Seviye", "Level")} ${g?.level ?: 1} • ${meta?.selectedTitle ?: g?.nextTitle.orEmpty()}", color = MainUi.Muted, fontSize = 10.sp, maxLines = 1)
                         }
-                        Surface(shape = RoundedCornerShape(99.dp), color = MainUi.BlueSoft) {
-                            Text(
-                                "◈ ${p?.diamonds ?: 0}",
-                                Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                                color = MainUi.Blue,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
-                            )
+                        Surface(shape = RoundedCornerShape(99.dp), color = MainUi.Gold.copy(alpha = .13f)) {
+                            Text("◈ ${p?.diamonds ?: 0}", Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = MainUi.Gold, fontSize = 11.sp, fontWeight = FontWeight.Black)
                         }
                     }
-                    LinearProgressIndicator(
-                        progress = { xpProgress },
-                        modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                        color = MainUi.Blue,
-                        trackColor = MainUi.SurfaceSoft,
-                    )
+                    LinearProgressIndicator(progress = { xpProgress }, modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape), color = MainUi.Blue, trackColor = MainUi.SurfaceSoft)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("${g?.xp ?: 0} XP", color = MainUi.Muted, fontSize = 9.sp)
-                        Text(
-                            "${g?.levelProgress ?: 0}/${g?.levelTarget ?: 500}",
-                            color = MainUi.Muted,
-                            fontSize = 9.sp,
-                        )
+                        Text("${g?.levelProgress ?: 0}/${g?.levelTarget ?: 500}", color = MainUi.Muted, fontSize = 9.sp)
                     }
                 }
             }
@@ -376,10 +335,7 @@ private fun MainHomeScreen(
                     icon = Icons.Rounded.Bolt,
                     accent = MainUi.Blue,
                     modifier = Modifier.weight(1f),
-                    onClick = {
-                        SonHarfSoundFx.tap()
-                        onPlay()
-                    },
+                    onClick = { SonHarfSoundFx.tap(); onPlay() },
                 )
                 MainGameModeCard(
                     title = sh("KELİME KUŞATMASI OYNA", "PLAY WORD SIEGE"),
@@ -387,42 +343,20 @@ private fun MainHomeScreen(
                     icon = Icons.Rounded.GridOn,
                     accent = MainUi.Purple,
                     modifier = Modifier.weight(1f),
-                    onClick = {
-                        SonHarfSoundFx.tap()
-                        onWordSiege()
-                    },
+                    onClick = { SonHarfSoundFx.tap(); onWordSiege() },
                 )
             }
         }
 
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MainCompactStat(
-                    icon = Icons.Rounded.EmojiEvents,
-                    value = league.leagueName,
-                    label = "${p?.rating ?: 1000} rating",
-                    accent = MainUi.Gold,
-                    modifier = Modifier.weight(1f),
-                    onClick = onLeague,
-                )
-                MainCompactStat(
-                    icon = Icons.Rounded.LocalFireDepartment,
-                    value = "${g?.currentWinStreak ?: 0}",
-                    label = sh("Galibiyet serisi", "Win streak"),
-                    accent = Color(0xFFF97316),
-                    modifier = Modifier.weight(1f),
-                    onClick = onTasks,
-                )
+                MainCompactStat(Icons.Rounded.EmojiEvents, league.leagueName, "${p?.rating ?: 1000} rating", MainUi.Gold, Modifier.weight(1f), onLeague)
+                MainCompactStat(Icons.Rounded.LocalFireDepartment, "${g?.currentWinStreak ?: 0}", sh("Galibiyet serisi", "Win streak"), Color(0xFFF97316), Modifier.weight(1f), onTasks)
             }
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onTasks),
-                shape = RoundedCornerShape(20.dp),
-                color = MainUi.Surface,
-                border = BorderStroke(1.dp, MainUi.Border),
-            ) {
+            Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onTasks), shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Surface(shape = CircleShape, color = MainUi.Green.copy(alpha = .10f)) {
@@ -432,19 +366,13 @@ private fun MainHomeScreen(
                         Column(Modifier.weight(1f)) {
                             Text(sh("GÜNLÜK GÖREV", "DAILY MISSION"), color = MainUi.Green, fontSize = 9.sp, fontWeight = FontWeight.Black)
                             Text(
-                                mission?.let { if (SonHarfUiState.isEnglish) it.titleEn else it.titleTr }
-                                    ?: sh("Bugünün görevleri tamamlandı", "Today's missions are complete"),
+                                mission?.let { if (SonHarfUiState.isEnglish) it.titleEn else it.titleTr } ?: sh("Bugünün görevleri tamamlandı", "Today's missions are complete"),
                                 color = MainUi.Text,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                             )
                         }
-                        Text(
-                            mission?.let { "+${it.rewardCoins} SC" } ?: "✓",
-                            color = if (mission == null) MainUi.Green else MainUi.Gold,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black,
-                        )
+                        Text(mission?.let { "+${it.rewardCoins} SC" } ?: "✓", color = if (mission == null) MainUi.Green else MainUi.Gold, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     }
                     if (mission != null) {
                         LinearProgressIndicator(
@@ -460,18 +388,13 @@ private fun MainHomeScreen(
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = MainUi.BlueSoft,
-            ) {
+            Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onSeason), shape = RoundedCornerShape(20.dp), color = MainUi.BlueSoft) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Column(Modifier.weight(1f)) {
-                            Text(sh("YAKIN HEDEF", "NEARBY GOAL"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text(sh("SEZON YAKIN HEDEFİ", "SEASON NEARBY GOAL"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black)
                             Text(
-                                if (league.nextAt == null) sh("Efsane ligindesin", "You are in the top league")
-                                else sh("${league.pointsToNext} puan sonra ${league.nextLeagueName}", "${league.pointsToNext} points to ${league.nextLeagueName}"),
+                                sh("Sezon ${(meta?.seasonLevel ?: 1) + 1}'e $seasonRemaining XP kaldı", "$seasonRemaining XP to Season ${(meta?.seasonLevel ?: 1) + 1}"),
                                 color = MainUi.Text,
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Black,
@@ -479,15 +402,10 @@ private fun MainHomeScreen(
                         }
                         Text("${meta?.dailyPlayStreak ?: 0} 🔥", color = MainUi.Text, fontWeight = FontWeight.Black)
                     }
-                    LinearProgressIndicator(
-                        progress = { league.progress },
-                        modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape),
-                        color = MainUi.Blue,
-                        trackColor = Color.White,
-                    )
+                    LinearProgressIndicator(progress = { seasonProgress }, modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape), color = MainUi.Blue, trackColor = Color.White)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(sh("Günlük seri", "Daily streak"), color = MainUi.Muted, fontSize = 9.sp)
-                        Text(sh("Bir maç daha", "One more match"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text(meta?.seasonName ?: sh("Aktif sezon", "Active season"), color = MainUi.Muted, fontSize = 9.sp)
+                        Text(sh("SEZONU AÇ", "OPEN SEASON"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -501,8 +419,7 @@ private fun MainHomeScreen(
                         scope.launch {
                             dailyBusy = true
                             val reward = runCatching { backend.claimDailyCheckin() }.getOrDefault(0)
-                            notice = if (reward > 0) sh("+$reward Son Coin hesabına eklendi.", "+$reward Son Coins added.")
-                            else sh("Bugünün ödülü daha önce alındı.", "Today's reward was already claimed.")
+                            notice = if (reward > 0) sh("+$reward Son Coin hesabına eklendi.", "+$reward Son Coins added.") else sh("Bugünün ödülü daha önce alındı.", "Today's reward was already claimed.")
                             reload()
                             dailyBusy = false
                         }
@@ -521,12 +438,7 @@ private fun MainHomeScreen(
 
         rival?.let { arch ->
             item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = onSocial),
-                    shape = RoundedCornerShape(18.dp),
-                    color = MainUi.Surface,
-                    border = BorderStroke(1.dp, MainUi.Border),
-                ) {
+                Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onSocial), shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                     Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text("⚔", fontSize = 24.sp)
                         Spacer(Modifier.width(9.dp))
@@ -543,17 +455,20 @@ private fun MainHomeScreen(
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MainHomeShortcut(Icons.Rounded.TaskAlt, sh("Görevler", "Missions"), Modifier.weight(1f), onTasks)
-                MainHomeShortcut(Icons.Rounded.Groups, sh("Sosyal", "Social"), Modifier.weight(1f), onSocial)
+                MainHomeShortcut(Icons.Rounded.CalendarMonth, sh("Sezon", "Season"), Modifier.weight(1f), onSeason)
+                MainHomeShortcut(Icons.Rounded.CardGiftcard, sh("Ödüller", "Rewards"), Modifier.weight(1f), onRewards)
                 MainHomeShortcut(Icons.Rounded.Checkroom, "Style", Modifier.weight(1f), onStyle)
+            }
+        }
+
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MainHomeShortcut(Icons.Rounded.Groups, sh("Sosyal", "Social"), Modifier.weight(1f), onSocial)
                 MainHomeShortcut(Icons.Rounded.WorkspacePremium, "VIP", Modifier.weight(1f), onVip)
             }
         }
 
-        notice?.let { message ->
-            item {
-                Text(message, Modifier.fillMaxWidth(), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-            }
-        }
+        notice?.let { message -> item { Text(message, Modifier.fillMaxWidth(), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Bold) } }
         item { Spacer(Modifier.height(4.dp)) }
     }
 }
@@ -567,35 +482,13 @@ private fun MainGameModeCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Surface(
-        modifier = modifier.height(124.dp).clickable(onClick = onClick),
-        shape = RoundedCornerShape(22.dp),
-        color = accent,
-        shadowElevation = 5.dp,
-    ) {
-        Column(
-            Modifier.fillMaxSize().padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
+    Surface(modifier = modifier.height(124.dp).clickable(onClick = onClick), shape = RoundedCornerShape(22.dp), color = accent, shadowElevation = 5.dp) {
+        Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Icon(icon, null, tint = Color.White.copy(alpha = .88f), modifier = Modifier.size(28.dp))
             Column {
-                Text(
-                    title,
-                    color = Color.White,
-                    fontSize = 16.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.Black,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                Text(title, color = Color.White, fontSize = 16.sp, lineHeight = 18.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(3.dp))
-                Text(
-                    subtitle,
-                    color = Color.White.copy(alpha = .78f),
-                    fontSize = 9.sp,
-                    lineHeight = 11.sp,
-                    maxLines = 2,
-                )
+                Text(subtitle, color = Color.White.copy(alpha = .78f), fontSize = 9.sp, lineHeight = 11.sp, maxLines = 2)
             }
         }
     }
@@ -610,12 +503,7 @@ private fun MainCompactStat(
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
-    Surface(
-        modifier = modifier.height(84.dp).clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = MainUi.Surface,
-        border = BorderStroke(1.dp, MainUi.Border),
-    ) {
+    Surface(modifier = modifier.height(84.dp).clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
         Row(Modifier.fillMaxSize().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = RoundedCornerShape(13.dp), color = accent.copy(alpha = .10f)) {
                 Icon(icon, null, tint = accent, modifier = Modifier.padding(9.dp).size(22.dp))
@@ -631,12 +519,7 @@ private fun MainCompactStat(
 
 @Composable
 private fun MainHomeShortcut(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
-    Surface(
-        modifier = modifier.height(70.dp).clickable(onClick = onClick),
-        shape = RoundedCornerShape(17.dp),
-        color = MainUi.Surface,
-        border = BorderStroke(1.dp, MainUi.Border),
-    ) {
+    Surface(modifier = modifier.height(70.dp).clickable(onClick = onClick), shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Icon(icon, null, tint = MainUi.Blue, modifier = Modifier.size(21.dp))
             Spacer(Modifier.height(4.dp))
@@ -654,39 +537,24 @@ internal fun MainScreenHeader(
     actionDescription: String = "",
     onAction: (() -> Unit)? = null,
 ) {
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = MainUi.Text)
-            }
+            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = MainUi.Text) }
         }
         Column(Modifier.weight(1f)) {
             Text(title, color = MainUi.Text, fontSize = 24.sp, fontWeight = FontWeight.Black)
             Text(subtitle, color = MainUi.Muted, fontSize = 10.sp)
         }
         if (actionIcon != null && onAction != null) {
-            IconButton(onClick = onAction) {
-                Icon(actionIcon, contentDescription = actionDescription, tint = MainUi.Text)
-            }
+            IconButton(onClick = onAction) { Icon(actionIcon, contentDescription = actionDescription, tint = MainUi.Text) }
         }
     }
 }
 
 @Composable
 internal fun MainMetricCard(value: String, label: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = MainUi.Surface,
-        border = BorderStroke(1.dp, MainUi.Border),
-    ) {
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, color = MainUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black, maxLines = 1)
             Text(label, color = MainUi.Muted, fontSize = 8.5.sp, maxLines = 1)
         }

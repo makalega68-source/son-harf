@@ -11,10 +11,11 @@ class ShopButtonStateContractTest {
     fun onlyBusyShopItemLooksBusy() {
         val source = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
 
-        assertTrue(source.contains("val anotherItemBusy = busy != null && busy != item.id"))
-        assertTrue(source.contains("disabledContainerColor = if (anotherItemBusy) buttonContainer"))
-        assertTrue(source.contains("busy == item.id ->"))
+        assertTrue(source.contains("var busy by remember { mutableStateOf<String?>(null) }"))
+        assertTrue(source.contains("busy = item.id"))
+        assertTrue(source.contains("busy == item.id -> \"…\""))
         assertTrue(source.contains("enabled = busy == null"))
+        assertTrue(source.contains("busy = null"))
     }
 
     private fun projectFile(path: String): File {
