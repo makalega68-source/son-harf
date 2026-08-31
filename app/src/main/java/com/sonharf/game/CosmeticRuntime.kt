@@ -6,7 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 import com.sonharf.game.data.EquippedCosmeticsDto
 
-internal data class SonHarfKeyboardPalette(
+data class SonHarfKeyboardPalette(
     val background: Color,
     val key: Color,
     val keyAlt: Color,
@@ -15,7 +15,7 @@ internal data class SonHarfKeyboardPalette(
     val accent: Color,
 )
 
-internal data class SonHarfGamePalette(
+data class SonHarfGamePalette(
     val background: Color,
     val surface: Color,
     val surfaceSoft: Color,
