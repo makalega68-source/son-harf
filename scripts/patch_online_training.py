@@ -1,14 +1,19 @@
 from pathlib import Path
 p = Path('app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt')
 t = p.read_text()
-old = '                        delay(1600L + (active.validWordCount % 4) * 350L)\n                        room = backend.botTakeTurn(active.id)'
-new = '''                        val difficulty = when (active.botDifficulty.lowercase()) {
-                            "easy" -> TrainingBotDifficulty.EASY
-                            "hard" -> TrainingBotDifficulty.HARD
-                            else -> TrainingBotDifficulty.MEDIUM
-                        }
-                        delay(TrainingBotSupport.reactionDelayMs(difficulty, (active.validWordCount % 6) + 1))
-                        room = backend.botTakeTurn(active.id)'''
+old = '''                    delay(
+                        if (attempt == 0) 1600L + (active.validWordCount % 4) * 350L
+                        else minOf(5000L, 1200L + attempt * 600L)
+                    )'''
+new = '''                    val difficulty = when (active.botDifficulty.lowercase()) {
+                        "easy" -> TrainingBotDifficulty.EASY
+                        "hard" -> TrainingBotDifficulty.HARD
+                        else -> TrainingBotDifficulty.MEDIUM
+                    }
+                    delay(
+                        if (attempt == 0) TrainingBotSupport.reactionDelayMs(difficulty, (active.validWordCount % 6) + 1)
+                        else minOf(5000L, 1200L + attempt * 600L)
+                    )'''
 if t.count(old) != 1: raise SystemExit('delay target mismatch')
 t = t.replace(old, new, 1)
 old = '            AuroraPlayerCard(opponentName, opponentAvatarPath, opponentGender, opponentRating, oppScore, oppRounds, !myTurn && liveWordPhase, opponentAccent, Modifier.weight(1f))\n        }\n\n        Surface('
