@@ -1,0 +1,38 @@
+from pathlib import Path
+p = Path('app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt')
+t = p.read_text()
+old = '                        delay(1600L + (active.validWordCount % 4) * 350L)\n                        room = backend.botTakeTurn(active.id)'
+new = '''                        val difficulty = when (active.botDifficulty.lowercase()) {
+                            "easy" -> TrainingBotDifficulty.EASY
+                            "hard" -> TrainingBotDifficulty.HARD
+                            else -> TrainingBotDifficulty.MEDIUM
+                        }
+                        delay(TrainingBotSupport.reactionDelayMs(difficulty, (active.validWordCount % 6) + 1))
+                        room = backend.botTakeTurn(active.id)'''
+if t.count(old) != 1: raise SystemExit('delay target mismatch')
+t = t.replace(old, new, 1)
+old = '            AuroraPlayerCard(opponentName, opponentAvatarPath, opponentGender, opponentRating, oppScore, oppRounds, !myTurn && liveWordPhase, opponentAccent, Modifier.weight(1f))\n        }\n\n        Surface('
+new = '''            AuroraPlayerCard(opponentName, opponentAvatarPath, opponentGender, opponentRating, oppScore, oppRounds, !myTurn && liveWordPhase, opponentAccent, Modifier.weight(1f))
+        }
+
+        if (room.isBot) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = arenaGold.copy(alpha = .10f),
+                border = BorderStroke(1.dp, arenaGold.copy(alpha = .28f)),
+            ) {
+                Text(
+                    sh("ANTRENMAN MAÇI • Rating ve lig puanını etkilemez.", "TRAINING MATCH • Does not affect rating or league points."),
+                    Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    color = arenaGold,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center,
+                )
+            }
+        }
+
+        Surface('''
+if t.count(old) != 1: raise SystemExit('banner target mismatch')
+p.write_text(t.replace(old, new, 1))
