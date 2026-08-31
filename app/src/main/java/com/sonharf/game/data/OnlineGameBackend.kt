@@ -37,6 +37,7 @@ data class ProfileDto(
     val wins: Int = 0,
     val losses: Int = 0,
     val rating: Int = 1000,
+    @SerialName("bot_difficulty") val botDifficulty: String = "normal",
 )
 
 @Serializable
@@ -68,7 +69,6 @@ data class GameRoomDto(
     @SerialName("guest_rematch") val guestRematch: Boolean = false,
     @SerialName("is_bot") val isBot: Boolean = false,
     @SerialName("bot_name") val botName: String? = null,
-    @SerialName("bot_difficulty") val botDifficulty: String = "normal",
     @SerialName("bot_turn") val botTurn: Boolean = false,
     @SerialName("disconnected_player_id") val disconnectedPlayerId: String? = null,
     @SerialName("reconnect_deadline") val reconnectDeadline: String? = null,

@@ -251,7 +251,7 @@ fun OnlineGameScreenV6() {
                         latest.status !in listOf("playing", "final", "sudden_death")
                     ) return@LaunchedEffect
 
-                    val difficulty = when (active.botDifficulty.lowercase()) {
+                    val difficulty = when (profile?.botDifficulty?.lowercase()) {
                         "easy" -> TrainingBotDifficulty.EASY
                         "hard" -> TrainingBotDifficulty.HARD
                         else -> TrainingBotDifficulty.MEDIUM
