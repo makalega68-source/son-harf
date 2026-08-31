@@ -15,9 +15,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -272,12 +274,23 @@ private fun MainHomeScreen(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    SonHarfBrandLogo(modifier = Modifier.width(150.dp), size = 66.dp)
-                    Text(sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"), color = MainUi.Muted, fontSize = 11.sp)
+            Box(Modifier.fillMaxWidth().height(108.dp)) {
+                Column(
+                    modifier = Modifier.align(Alignment.Center),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    SonHarfBrandLogo(modifier = Modifier.width(220.dp), size = 82.dp)
+                    Text(
+                        sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"),
+                        color = MainUi.Muted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                    )
                 }
-                IconButton(onClick = onSettings) { Icon(Icons.Rounded.Settings, contentDescription = sh("Ayarlar", "Settings"), tint = MainUi.Text) }
+                IconButton(onClick = onSettings, modifier = Modifier.align(Alignment.TopEnd)) {
+                    Icon(Icons.Rounded.Settings, contentDescription = sh("Ayarlar", "Settings"), tint = MainUi.Text)
+                }
             }
         }
 
@@ -330,16 +343,18 @@ private fun MainHomeScreen(
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 MainGameModeCard(
-                    title = "SON HARF " + sh("OYNA", "PLAY"),
-                    subtitle = sh("Anlık kelime düellosu", "Live word duel"),
+                    title = "SON HARF",
+                    subtitle = sh("Anlık 1v1 kelime düellosu", "Live 1v1 word duel"),
+                    badge = sh("ANLIK", "LIVE"),
                     icon = Icons.Rounded.Bolt,
                     accent = MainUi.Blue,
                     modifier = Modifier.weight(1f),
                     onClick = { SonHarfSoundFx.tap(); onPlay() },
                 )
                 MainGameModeCard(
-                    title = sh("KELİME KUŞATMASI OYNA", "PLAY WORD SIEGE"),
-                    subtitle = sh("Süresiz 1v1 alan oyunu", "Untimed 1v1 territory game"),
+                    title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                    subtitle = sh("Tahta üzerinde 1v1 alan savaşı", "1v1 territory battle on the board"),
+                    badge = "1v1",
                     icon = Icons.Rounded.GridOn,
                     accent = MainUi.Purple,
                     modifier = Modifier.weight(1f),
@@ -477,18 +492,55 @@ private fun MainHomeScreen(
 private fun MainGameModeCard(
     title: String,
     subtitle: String,
+    badge: String,
     icon: ImageVector,
     accent: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Surface(modifier = modifier.height(124.dp).clickable(onClick = onClick), shape = RoundedCornerShape(22.dp), color = accent, shadowElevation = 5.dp) {
-        Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Icon(icon, null, tint = Color.White.copy(alpha = .88f), modifier = Modifier.size(28.dp))
-            Column {
-                Text(title, color = Color.White, fontSize = 16.sp, lineHeight = 18.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(3.dp))
-                Text(subtitle, color = Color.White.copy(alpha = .78f), fontSize = 9.sp, lineHeight = 11.sp, maxLines = 2)
+    Surface(
+        modifier = modifier.height(142.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(24.dp),
+        color = Color.Transparent,
+        shadowElevation = 7.dp,
+    ) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.linearGradient(
+                        listOf(accent, accent.copy(alpha = .90f), accent.copy(alpha = .78f)),
+                    ),
+                )
+                .padding(14.dp),
+        ) {
+            Surface(
+                modifier = Modifier.align(Alignment.TopStart).size(44.dp),
+                shape = RoundedCornerShape(15.dp),
+                color = Color.White.copy(alpha = .16f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = .18f)),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(icon, null, tint = Color.White, modifier = Modifier.size(25.dp))
+                }
+            }
+            Surface(
+                modifier = Modifier.align(Alignment.TopEnd),
+                shape = RoundedCornerShape(99.dp),
+                color = Color.White.copy(alpha = .16f),
+            ) {
+                Text(badge, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 7.5.sp, fontWeight = FontWeight.Black)
+            }
+            Column(Modifier.align(Alignment.BottomStart).padding(end = 30.dp)) {
+                Text(title, color = Color.White, fontSize = 17.sp, lineHeight = 18.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(4.dp))
+                Text(subtitle, color = Color.White.copy(alpha = .82f), fontSize = 9.sp, lineHeight = 11.sp, maxLines = 2)
+                Spacer(Modifier.height(7.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(sh("OYNA", "PLAY"), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.width(4.dp))
+                    Icon(Icons.Rounded.ArrowForward, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                }
             }
         }
     }
