@@ -59,7 +59,6 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     var showPass by remember { mutableStateOf(false) }
     var showExchange by remember { mutableStateOf(false) }
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
-    var horizontal by remember { mutableStateOf(true) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     var practiceActive by remember { mutableStateOf(false) }
@@ -210,7 +209,6 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     moves = moves,
                     placements = placements,
                     selectedRackIndex = selectedRackIndex,
-                    horizontal = horizontal,
                     busy = busy,
                     notice = notice,
                     onBack = {
@@ -236,17 +234,24 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                         if (pendingCell != null) placements = placements - pendingCell
                         selectedRackIndex = if (selectedRackIndex == rackIndex) null else rackIndex
                     },
-                    onHorizontal = { horizontal = it },
                     onSubmit = {
                         if (placements.isEmpty()) {
                             notice = sh("Önce raftan harf seçip tahtaya yerleştir.", "Place at least one rack tile on the board.")
                         } else {
-                            runGameAction {
-                                backend.submitWordSiegeMove(
-                                    game.id,
-                                    placements.entries.sortedBy { it.key }.map { WordSiegePlacement(it.key, it.value) },
-                                    horizontal,
+                            val direction = detectWordSiegeDirection(game.board, placements.keys)
+                            if (direction == null) {
+                                notice = sh(
+                                    "Yeni taşlar aynı satırda veya aynı sütunda olmalı.",
+                                    "New tiles must be in one row or one column.",
                                 )
+                            } else {
+                                runGameAction {
+                                    backend.submitWordSiegeMove(
+                                        game.id,
+                                        placements.entries.sortedBy { it.key }.map { WordSiegePlacement(it.key, it.value) },
+                                        direction == WordSiegeDirection.HORIZONTAL,
+                                    )
+                                }
                             }
                         }
                     },
@@ -594,13 +599,11 @@ private fun WordSiegeMatch(
     moves: List<WordSiegeMoveDto>,
     placements: Map<Int, Int>,
     selectedRackIndex: Int?,
-    horizontal: Boolean,
     busy: Boolean,
     notice: String?,
     onBack: () -> Unit,
     onBoardCell: (Int) -> Unit,
     onRackTile: (Int) -> Unit,
-    onHorizontal: (Boolean) -> Unit,
     onSubmit: () -> Unit,
     onPass: () -> Unit,
     onExchange: () -> Unit,
@@ -848,46 +851,9 @@ private fun WordSiegeMatch(
                 if (game.status == "playing") {
                     Row(
                         Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(if (tight) 4.dp else 6.dp),
                     ) {
-                        FilterChip(
-                            selected = horizontal,
-                            onClick = { onHorizontal(true) },
-                            enabled = canAct,
-                            modifier = Modifier.height(if (tight) 30.dp else 32.dp),
-                            label = {
-                                Text(
-                                    sh("YATAY", "HORIZONTAL"),
-                                    fontSize = if (tight) 8.sp else 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                            },
-                            leadingIcon = { Icon(Icons.Rounded.SwapHoriz, null, Modifier.size(if (tight) 14.dp else 15.dp)) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = SiegeBlueSoft,
-                                selectedLabelColor = MainUi.Blue,
-                            ),
-                        )
-                        FilterChip(
-                            selected = !horizontal,
-                            onClick = { onHorizontal(false) },
-                            enabled = canAct,
-                            modifier = Modifier.height(if (tight) 30.dp else 32.dp),
-                            label = {
-                                Text(
-                                    sh("DİKEY", "VERTICAL"),
-                                    fontSize = if (tight) 8.sp else 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                            },
-                            leadingIcon = { Icon(Icons.Rounded.SwapVert, null, Modifier.size(if (tight) 14.dp else 15.dp)) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = SiegePurpleSoft,
-                                selectedLabelColor = SiegePurple,
-                            ),
-                        )
-                        Spacer(Modifier.weight(1f))
                         Text(
                             sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"),
                             color = MainUi.Muted,
