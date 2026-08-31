@@ -5,11 +5,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
-import androidx.compose.material.icons.rounded.Checkroom
-import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,13 +30,8 @@ fun EconomyShopScreen(
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 1)) }
     Column(Modifier.fillMaxSize().background(MainUi.Background)) {
         if (onBack != null) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = MainUi.Text)
-                }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = MainUi.Text) }
                 Column {
                     Text(sh("Style ve Ödüller", "Style & Rewards"), color = MainUi.Text, fontSize = 21.sp, fontWeight = FontWeight.Black)
                     Text(sh("Satın al • kazan • profilden uygula", "Buy • earn • apply from Profile"), color = MainUi.Muted, fontSize = 9.sp)
@@ -84,25 +78,21 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
             items = b.getShopItems()
             owned = b.getInventory()
             SonHarfCosmetics.apply(b.getEquippedCosmetics())
-        }.onFailure {
-            notice = sh("Mağaza verileri yüklenemedi.", "Shop data could not be loaded.")
-        }
+        }.onFailure { notice = sh("Mağaza verileri yüklenemedi.", "Shop data could not be loaded.") }
         loading = false
     }
 
     LaunchedEffect(Unit) { reload() }
 
     val supportedKinds = setOf("profile_frame", "name_style", "game_theme", "keyboard_theme", "victory_effect", "emoji_pack", "mascot")
-    val filtered = items
-        .filter { it.kind in supportedKinds && it.id != "theme_neon" }
-        .filter { item ->
-            when (category) {
-                1 -> item.kind in setOf("profile_frame", "name_style")
-                2 -> item.kind == "emoji_pack"
-                3 -> item.kind in setOf("victory_effect", "game_theme", "keyboard_theme")
-                else -> true
-            }
+    val filtered = items.filter { it.kind in supportedKinds && it.id != "theme_neon" }.filter { item ->
+        when (category) {
+            1 -> item.kind in setOf("profile_frame", "name_style")
+            2 -> item.kind == "emoji_pack"
+            3 -> item.kind in setOf("victory_effect", "game_theme", "keyboard_theme")
+            else -> true
         }
+    }
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -124,11 +114,9 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
         item {
             ScrollableTabRow(selectedTabIndex = category, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
                 listOf(sh("TÜMÜ", "ALL"), sh("PROFİL", "PROFILE"), sh("İFADE", "EMOTES"), sh("DİĞER", "OTHER")).forEachIndexed { index, label ->
-                    Tab(
-                        selected = category == index,
-                        onClick = { category = index },
-                        text = { Text(label, color = if (category == index) MainUi.Blue else MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold) },
-                    )
+                    Tab(selected = category == index, onClick = { category = index }, text = {
+                        Text(label, color = if (category == index) MainUi.Blue else MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    })
                 }
             }
         }
@@ -163,10 +151,8 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
             ) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(modifier = Modifier.size(48.dp), shape = RoundedCornerShape(14.dp), color = MainUi.SurfaceSoft) {
-                            Box(contentAlignment = Alignment.Center) { Text(styleShopIcon(item.kind), fontSize = 21.sp) }
-                        }
-                        Spacer(Modifier.width(10.dp))
+                        StyleItemVisual(item)
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.weight(1f))
@@ -190,9 +176,7 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
                             onClick = {
                                 if (mine) {
                                     onOpenProfileAppearance?.invoke()
-                                    if (onOpenProfileAppearance == null) {
-                                        notice = sh("Bu öğeyi Profil > Görünümümü düzenle bölümünden uygulayabilirsin.", "Apply this item from Profile > Edit appearance.")
-                                    }
+                                    if (onOpenProfileAppearance == null) notice = sh("Bu öğeyi Profil > Görünümümü düzenle bölümünden uygulayabilirsin.", "Apply this item from Profile > Edit appearance.")
                                     return@Button
                                 }
                                 val b = backend ?: return@Button
@@ -220,19 +204,8 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
                             shape = RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                         ) {
-                            Text(
-                                when {
-                                    busy == item.id -> "…"
-                                    mine -> sh("PROFİLDE UYGULA", "APPLY IN PROFILE")
-                                    else -> sh("SATIN AL", "BUY")
-                                },
-                                fontSize = 8.5.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                            if (mine) {
-                                Spacer(Modifier.width(3.dp))
-                                Icon(Icons.Rounded.ChevronRight, null, Modifier.size(14.dp))
-                            }
+                            Text(when { busy == item.id -> "…"; mine -> sh("PROFİLDE UYGULA", "APPLY IN PROFILE"); else -> sh("SATIN AL", "BUY") }, fontSize = 8.5.sp, fontWeight = FontWeight.Black)
+                            if (mine) { Spacer(Modifier.width(3.dp)); Icon(Icons.Rounded.ChevronRight, null, Modifier.size(14.dp)) }
                         }
                     }
                 }
@@ -247,9 +220,7 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
             Surface(color = MainUi.SurfaceSoft, shape = RoundedCornerShape(16.dp)) {
                 Text(
                     sh("Son Coin yalnızca Style ve güç vermeyen kişiselleştirme için kullanılır. Satın alımlar puan, süre, rating, lig veya joker avantajı vermez.", "Son Coin is only for Style and non-power personalization. Purchases never grant score, time, rating, league or joker advantages."),
-                    Modifier.fillMaxWidth().padding(12.dp),
-                    color = MainUi.Muted,
-                    fontSize = 9.sp,
+                    Modifier.fillMaxWidth().padding(12.dp), color = MainUi.Muted, fontSize = 9.sp,
                 )
             }
         }
@@ -263,13 +234,50 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
     }
 }
 
-private fun styleShopIcon(kind: String): String = when (kind) {
-    "profile_frame" -> "◯"
-    "name_style" -> "Aa"
-    "emoji_pack" -> "☺"
-    "victory_effect" -> "✦"
-    "keyboard_theme" -> "⌨"
-    "game_theme" -> "▦"
-    "mascot" -> "●"
-    else -> "◆"
+@Composable
+private fun StyleItemVisual(item: ShopItemDto) {
+    val accent = when (item.kind) {
+        "profile_frame" -> MainUi.Blue
+        "name_style" -> MainUi.Purple
+        "emoji_pack" -> MainUi.Gold
+        "victory_effect" -> Color(0xFFF97316)
+        "keyboard_theme" -> MainUi.Green
+        "game_theme" -> MainUi.Purple
+        "mascot" -> Color(0xFF22A6A1)
+        else -> MainUi.Blue
+    }
+    Surface(
+        modifier = Modifier.size(76.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = accent.copy(alpha = .09f),
+        border = BorderStroke(1.dp, accent.copy(alpha = .20f)),
+    ) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            when (item.kind) {
+                "profile_frame" -> {
+                    Box(contentAlignment = Alignment.Center) {
+                        Surface(Modifier.size(52.dp, 62.dp), shape = RoundedCornerShape(16.dp), color = Color.White, border = BorderStroke(3.dp, accent)) {}
+                        Icon(Icons.Rounded.Person, null, tint = MainUi.Text.copy(alpha = .78f), modifier = Modifier.size(30.dp))
+                        Icon(Icons.Rounded.AutoAwesome, null, tint = MainUi.Gold, modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(18.dp))
+                    }
+                }
+                "name_style" -> Text("Aa", color = accent, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                "emoji_pack" -> Text("😎✨", fontSize = 24.sp)
+                "victory_effect" -> Icon(Icons.Rounded.AutoAwesome, null, tint = accent, modifier = Modifier.size(40.dp))
+                "keyboard_theme" -> {
+                    Column(Modifier.width(52.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        repeat(3) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) { repeat(4) { Surface(Modifier.weight(1f).height(10.dp), shape = RoundedCornerShape(3.dp), color = accent.copy(alpha = .75f)) {} } } }
+                    }
+                }
+                "game_theme" -> Icon(Icons.Rounded.GridOn, null, tint = accent, modifier = Modifier.size(40.dp))
+                "mascot" -> {
+                    Box(contentAlignment = Alignment.Center) {
+                        Surface(Modifier.size(48.dp), shape = CircleShape, color = accent.copy(alpha = .23f)) {}
+                        Icon(Icons.Rounded.Pets, null, tint = accent, modifier = Modifier.size(34.dp))
+                    }
+                }
+                else -> Icon(Icons.Rounded.Diamond, null, tint = accent, modifier = Modifier.size(36.dp))
+            }
+        }
+    }
 }
