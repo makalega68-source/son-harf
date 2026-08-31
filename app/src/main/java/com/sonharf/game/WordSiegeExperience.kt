@@ -37,32 +37,42 @@ internal val SiegeBlueSoft = MainUi.BlueSoft
 private val SiegeTile = Color(0xFFFFE3A5)
 private val SiegeTileBorder = Color(0xFFD99818)
 
-private enum class SiegeListSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FINISHED }
+private enum class WordSiegeHubTab { ACTIVE, FINISHED, INVITES }
+private enum class WordSiegeInfoDialog { MOVES, PROFILE, RULES, SOUND, REPORT }
 
 @Composable
 internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     val scope = rememberCoroutineScope()
     val me = remember { backend.currentUserId() }
+
     var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
     var profiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
     var selectedGameId by remember { mutableStateOf<String?>(null) }
     var currentGame by remember { mutableStateOf<WordSiegeGameDto?>(null) }
     var moves by remember { mutableStateOf<List<WordSiegeMoveDto>>(emptyList()) }
     var messages by remember { mutableStateOf<List<WordSiegeMessageDto>>(emptyList()) }
-    var notice by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
+    var openingGame by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    var notice by remember { mutableStateOf<String?>(null) }
+    var hubTab by remember { mutableStateOf(WordSiegeHubTab.ACTIVE) }
+    var showDurationPicker by remember { mutableStateOf(false) }
+    var practiceActive by remember { mutableStateOf(false) }
+
+    var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
+    var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
+    var rackOrder by remember { mutableStateOf<List<Int>>(emptyList()) }
+    var preview by remember { mutableStateOf<WordSiegeMovePreviewDto?>(null) }
     var showChat by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
+    var showMenu by remember { mutableStateOf(false) }
+    var infoDialog by remember { mutableStateOf<WordSiegeInfoDialog?>(null) }
     var showForfeit by remember { mutableStateOf(false) }
     var showPass by remember { mutableStateOf(false) }
     var showExchange by remember { mutableStateOf(false) }
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
-    var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
-    var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
-    var movePreview by remember { mutableStateOf<WordSiegeMovePreviewDto?>(null) }
-    var practiceActive by remember { mutableStateOf(false) }
+    var clockTick by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     if (practiceActive) {
         WordSiegePracticeScreen(onExit = { practiceActive = false })
@@ -84,12 +94,17 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             .onSuccess { next ->
                 games = next
                 loadProfiles(next.flatMap { listOf(it.playerOneId, it.playerTwoId) })
-                selectedGameId?.let { id ->
-                    if (next.none { it.id == id }) selectedGameId = null
-                }
             }
             .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
         if (showProgress) loading = false
+    }
+
+    fun resetTransientMoveState(game: WordSiegeGameDto? = currentGame) {
+        placements = emptyMap()
+        preview = null
+        selectedRackIndex = null
+        exchangeSelection = emptySet()
+        rackOrder = List(game?.rackForAsync(me)?.length ?: 0) { it }
     }
 
     fun applyGame(next: WordSiegeGameDto) {
@@ -97,23 +112,32 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         games = (games.filterNot { it.id == next.id } + next)
             .filterNot { it.status == "cancelled" }
             .sortedByDescending { it.updatedAt.ifBlank { it.createdAt } }
-        placements = emptyMap()
-        movePreview = null
-        selectedRackIndex = null
-        exchangeSelection = emptySet()
+        resetTransientMoveState(next)
     }
 
-    fun runGameAction(
-        successNotice: String? = null,
-        action: suspend () -> WordSiegeGameDto,
-    ) {
+    fun leaveMatchScreen() {
+        selectedGameId = null
+        currentGame = null
+        moves = emptyList()
+        messages = emptyList()
+        showMenu = false
+        showChat = false
+        infoDialog = null
+        resetTransientMoveState(null)
+        scope.launch { refreshGames() }
+    }
+
+    fun runGameAction(successNotice: String? = null, action: suspend () -> WordSiegeGameDto) {
         if (busy) return
         scope.launch {
             busy = true
             runCatching { action() }
                 .onSuccess { next ->
                     applyGame(next)
-                    notice = successNotice
+                    notice = successNotice ?: if (next.finishReason == "timeout") {
+                        if (next.winnerId == me) sh("Rakibin süresi doldu. Maçı kazandın.", "Your rival ran out of time. You won.")
+                        else sh("Hamle süren dolduğu için maç sonuçlandı.", "The match ended because your turn time expired.")
+                    } else null
                     refreshGames()
                 }
                 .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
@@ -121,16 +145,29 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         }
     }
 
-    BackHandler {
-        if (selectedGameId != null) {
-            selectedGameId = null
-            currentGame = null
-            placements = emptyMap()
-            movePreview = null
-            selectedRackIndex = null
-        } else {
-            onExit()
+    fun openFreshGame(gameId: String) {
+        if (openingGame) return
+        openingGame = true
+        scope.launch {
+            runCatching { backend.getWordSiegeGame(gameId) }
+                .onSuccess { fresh ->
+                    currentGame = fresh
+                    selectedGameId = fresh.id
+                    loadProfiles(listOf(fresh.playerOneId, fresh.playerTwoId))
+                    moves = runCatching { backend.getWordSiegeMoves(fresh.id) }.getOrDefault(emptyList())
+                    resetTransientMoveState(fresh)
+                    notice = if (fresh.finishReason == "timeout") {
+                        if (fresh.winnerId == me) sh("Rakibin süresi doldu.", "Your rival ran out of time.")
+                        else sh("Hamle süren dolduğu için maç bitti.", "The match ended because your turn time expired.")
+                    } else null
+                }
+                .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
+            openingGame = false
         }
+    }
+
+    BackHandler {
+        if (selectedGameId != null) leaveMatchScreen() else onExit()
     }
 
     LaunchedEffect(Unit) {
@@ -141,26 +178,27 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         }
     }
 
+    LaunchedEffect(Unit) {
+        while (currentCoroutineContext().isActive) {
+            clockTick = System.currentTimeMillis()
+            delay(1_000)
+        }
+    }
+
     LaunchedEffect(selectedGameId, showChat) {
         val gameId = selectedGameId ?: return@LaunchedEffect
         while (currentCoroutineContext().isActive) {
             runCatching { backend.getWordSiegeGame(gameId) }
                 .onSuccess { next ->
-                    val turnChanged = currentGame?.moveCount != next.moveCount ||
-                        currentGame?.currentPlayerId != next.currentPlayerId
+                    val old = currentGame
+                    val turnChanged = old?.moveCount != next.moveCount || old?.currentPlayerId != next.currentPlayerId || old?.status != next.status
                     currentGame = next
                     loadProfiles(listOf(next.playerOneId, next.playerTwoId))
-                    if (turnChanged) {
-                        placements = emptyMap()
-                        movePreview = null
-                        selectedRackIndex = null
-                    }
+                    if (turnChanged) resetTransientMoveState(next)
                 }
                 .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
             moves = runCatching { backend.getWordSiegeMoves(gameId) }.getOrDefault(moves)
-            if (showChat) {
-                messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
-            }
+            if (showChat) messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
             delay(2_500)
         }
     }
@@ -168,230 +206,158 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     LaunchedEffect(currentGame?.id, currentGame?.moveCount, currentGame?.currentPlayerId, placements) {
         val game = currentGame
         if (game == null || game.status != "playing" || game.currentPlayerId != me || placements.isEmpty()) {
-            movePreview = null
+            preview = null
             return@LaunchedEffect
         }
-        val direction = detectWordSiegeDirection(game.board, placements.keys)
-        if (direction == null) {
-            movePreview = null
+        val direction = detectWordSiegeDirection(game.board, placements.keys) ?: run {
+            preview = null
             return@LaunchedEffect
         }
-        delay(120L)
+        delay(120)
         val request = placements.entries.sortedBy { it.key }.map { WordSiegePlacement(it.key, it.value) }
-        movePreview = runCatching {
-            backend.previewWordSiegeMove(
-                game.id,
-                request,
-                direction == WordSiegeDirection.HORIZONTAL,
-            )
+        preview = runCatching {
+            backend.previewWordSiegeMove(game.id, request, direction == WordSiegeDirection.HORIZONTAL)
         }.getOrNull()?.takeIf { it.valid }
     }
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
-        if (selectedGameId == null) {
-            WordSiegeGamesList(
+        when {
+            selectedGameId == null -> WordSiegeAsyncHub(
                 games = games,
                 profiles = profiles,
                 me = me,
+                tab = hubTab,
                 loading = loading,
-                busy = busy,
+                busy = busy || openingGame,
                 notice = notice,
+                clockTick = clockTick,
+                onTab = { hubTab = it },
                 onBack = onExit,
                 onRefresh = { scope.launch { refreshGames(showProgress = true) } },
+                onNewGame = { showDurationPicker = true },
                 onPractice = { practiceActive = true },
-                onNewGame = {
-                    if (busy) return@WordSiegeGamesList
-                    busy = true
-                    scope.launch {
-                        runCatching { backend.findOrCreateWordSiegeGame(if (SonHarfUiState.isEnglish) "en" else "tr") }
-                            .onSuccess { next ->
-                                applyGame(next)
-                                selectedGameId = next.id
-                                notice = if (next.status == "waiting") {
-                                    sh("Rakip aranıyor. Oyun açık kalmak zorunda değil.", "Looking for a rival. You may leave this screen.")
-                                } else null
-                            }
-                            .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
-                        busy = false
+                onOpen = { openFreshGame(it.id) },
+                onCancelWaiting = { game ->
+                    runGameAction(sh("Eşleşme araması iptal edildi.", "Match search cancelled.")) {
+                        backend.cancelWordSiegeWaiting(game.id)
                     }
                 },
-                onOpen = { game ->
-                    currentGame = game
-                    selectedGameId = game.id
-                    movePreview = null
-                    notice = null
+            )
+            currentGame == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = MainUi.Blue)
+            }
+            else -> WordSiegeAsyncMatch(
+                game = requireNotNull(currentGame),
+                me = me,
+                profiles = profiles,
+                moves = moves,
+                placements = placements,
+                preview = preview,
+                selectedRackIndex = selectedRackIndex,
+                rackOrder = rackOrder,
+                busy = busy,
+                notice = notice,
+                clockTick = clockTick,
+                showMenu = showMenu,
+                onMenuChange = { showMenu = it },
+                onExitMatch = ::leaveMatchScreen,
+                onRackTile = { index ->
+                    val game = currentGame ?: return@WordSiegeAsyncMatch
+                    if (game.status == "playing" && game.currentPlayerId == me && !busy && index !in placements.values) {
+                        selectedRackIndex = if (selectedRackIndex == index) null else index
+                    }
+                },
+                onBoardCell = { boardIndex ->
+                    val game = currentGame ?: return@WordSiegeAsyncMatch
+                    if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegeAsyncMatch
+                    if (placements.containsKey(boardIndex)) {
+                        val rackIndex = placements.getValue(boardIndex)
+                        placements = placements - boardIndex
+                        selectedRackIndex = rackIndex
+                    } else if (game.board.getOrNull(boardIndex)?.letter == null) {
+                        val rackIndex = selectedRackIndex ?: return@WordSiegeAsyncMatch
+                        if (rackIndex !in placements.values) {
+                            placements = placements + (boardIndex to rackIndex)
+                            selectedRackIndex = null
+                        }
+                    }
+                },
+                onUndo = { resetTransientMoveState(currentGame) },
+                onShuffle = {
+                    if (placements.isEmpty()) rackOrder = rackOrder.shuffled()
+                    else notice = sh("Karıştırmadan önce geçici harfleri geri al.", "Undo temporary tiles before shuffling.")
+                },
+                onChat = {
+                    showChat = true
+                    scope.launch { messages = runCatching { backend.getWordSiegeMessages(requireNotNull(currentGame).id) }.getOrDefault(messages) }
+                },
+                onSubmit = {
+                    val game = currentGame ?: return@WordSiegeAsyncMatch
+                    if (placements.isEmpty()) return@WordSiegeAsyncMatch
+                    val direction = detectWordSiegeDirection(game.board, placements.keys)
+                    if (direction == null) {
+                        notice = sh("Yeni harfler tek bir satır veya sütunda olmalı.", "New tiles must be in one row or column.")
+                    } else {
+                        val request = placements.entries.sortedBy { it.key }.map { WordSiegePlacement(it.key, it.value) }
+                        runGameAction {
+                            backend.submitWordSiegeMove(game.id, request, direction == WordSiegeDirection.HORIZONTAL)
+                        }
+                    }
+                },
+                onHistory = { infoDialog = WordSiegeInfoDialog.MOVES },
+                onProfile = { infoDialog = WordSiegeInfoDialog.PROFILE },
+                onRules = { infoDialog = WordSiegeInfoDialog.RULES },
+                onSound = { infoDialog = WordSiegeInfoDialog.SOUND },
+                onReport = { infoDialog = WordSiegeInfoDialog.REPORT },
+                onPass = { showPass = true },
+                onExchange = { showExchange = true; exchangeSelection = emptySet() },
+                onForfeit = { showForfeit = true },
+                onCancelWaiting = {
+                    val game = currentGame ?: return@WordSiegeAsyncMatch
+                    runGameAction(sh("Eşleşme araması iptal edildi.", "Match search cancelled.")) { backend.cancelWordSiegeWaiting(game.id) }
+                    leaveMatchScreen()
                 },
             )
-        } else {
-            val game = currentGame
-            if (game == null) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = MainUi.Blue)
-                }
-            } else {
-                WordSiegeMatch(
-                    game = game,
-                    me = me,
-                    profiles = profiles,
-                    moves = moves,
-                    placements = placements,
-                    preview = movePreview,
-                    selectedRackIndex = selectedRackIndex,
-                    busy = busy,
-                    notice = notice,
-                    onBack = {
-                        selectedGameId = null
-                        currentGame = null
-                        movePreview = null
-                    },
-                    onBoardCell = { boardIndex ->
-                        if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegeMatch
-                        if (placements.containsKey(boardIndex)) {
-                            val rackIndex = placements.getValue(boardIndex)
-                            placements = placements - boardIndex
-                            selectedRackIndex = rackIndex
-                        } else if (game.board.getOrNull(boardIndex)?.letter == null) {
-                            val rackIndex = selectedRackIndex ?: return@WordSiegeMatch
-                            if (rackIndex !in placements.values) {
-                                placements = placements + (boardIndex to rackIndex)
-                                selectedRackIndex = null
-                            }
-                        }
-                    },
-                    onRackTile = { rackIndex ->
-                        val pendingCell = placements.entries.firstOrNull { it.value == rackIndex }?.key
-                        if (pendingCell != null) placements = placements - pendingCell
-                        selectedRackIndex = if (selectedRackIndex == rackIndex) null else rackIndex
-                    },
-                    onSubmit = {
-                        if (placements.isEmpty()) {
-                            notice = sh("Önce raftan harf seçip tahtaya yerleştir.", "Place at least one rack tile on the board.")
-                        } else {
-                            val direction = detectWordSiegeDirection(game.board, placements.keys)
-                            if (direction == null) {
-                                notice = sh(
-                                    "Yeni taşlar aynı satırda veya aynı sütunda olmalı.",
-                                    "New tiles must be in one row or one column.",
-                                )
-                            } else {
-                                runGameAction {
-                                    backend.submitWordSiegeMove(
-                                        game.id,
-                                        placements.entries.sortedBy { it.key }.map { WordSiegePlacement(it.key, it.value) },
-                                        direction == WordSiegeDirection.HORIZONTAL,
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    onPass = { showPass = true },
-                    onExchange = {
-                        exchangeSelection = emptySet()
-                        showExchange = true
-                    },
-                    onChat = {
-                        showChat = true
-                        scope.launch {
-                            messages = runCatching { backend.getWordSiegeMessages(game.id) }.getOrDefault(emptyList())
-                        }
-                    },
-                    onForfeit = { showForfeit = true },
-                    onCancelWaiting = {
-                        runGameAction(sh("Rakip arama iptal edildi.", "Opponent search cancelled.")) {
-                            backend.cancelWordSiegeWaiting(game.id)
-                        }
-                        selectedGameId = null
-                        currentGame = null
-                        movePreview = null
-                    },
-                )
-            }
         }
     }
 
-    if (showPass && currentGame != null) {
-        WordSiegeConfirmDialog(
-            title = sh("Turu geç?", "Pass this turn?"),
-            body = sh("Pas hakkın turunu bitirir. İki oyuncu art arda pas verirse oyun biter.", "Passing ends your turn. Two consecutive passes end the game."),
-            confirm = sh("PAS VER", "PASS"),
-            accent = MainUi.Gold,
-            onDismiss = { showPass = false },
-            onConfirm = {
-                showPass = false
-                val gameId = currentGame?.id ?: return@WordSiegeConfirmDialog
-                runGameAction { backend.passWordSiegeTurn(gameId) }
-            },
-        )
-    }
-
-    if (showForfeit && currentGame != null) {
-        WordSiegeConfirmDialog(
-            title = sh("Pes etmek istiyor musun?", "Do you want to forfeit?"),
-            body = sh("Bu oyun rakibinin galibiyetiyle hemen biter.", "The game ends immediately with your rival as winner."),
-            confirm = sh("PES ET", "FORFEIT"),
-            accent = MainUi.Red,
-            onDismiss = { showForfeit = false },
-            onConfirm = {
-                showForfeit = false
-                val gameId = currentGame?.id ?: return@WordSiegeConfirmDialog
-                runGameAction { backend.forfeitWordSiegeGame(gameId) }
-            },
-        )
-    }
-
-    if (showExchange && currentGame != null) {
-        val game = requireNotNull(currentGame)
-        val rack = game.rackFor(me)
+    if (showDurationPicker) {
         AlertDialog(
-            onDismissRequest = { showExchange = false },
-            title = { Text(sh("HARF DEĞİŞTİR", "EXCHANGE TILES"), fontWeight = FontWeight.Black) },
+            onDismissRequest = { showDurationPicker = false },
+            title = { Text(sh("Tur süresini seç", "Choose turn time"), fontWeight = FontWeight.Black) },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        sh("Değiştireceğin harfleri seç. Bu işlem turunu bitirir.", "Choose tiles to exchange. This ends your turn."),
-                        color = MainUi.Muted,
-                        fontSize = 13.sp,
-                    )
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        rack.forEachIndexed { index, letter ->
-                            WordSiegeRackTile(
-                                letter = letter,
-                                selected = index in exchangeSelection,
-                                used = false,
-                                enabled = !busy,
-                                modifier = Modifier.weight(1f),
-                                onClick = {
-                                    exchangeSelection = if (index in exchangeSelection) {
-                                        exchangeSelection - index
-                                    } else exchangeSelection + index
-                                },
-                            )
-                        }
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(sh("Bu süre toplam maç süresi değil; sıra sana geldiğinde hamle yapmak için sahip olduğun süredir.", "This is not total match time; it is how long you have to move when it is your turn."), color = MainUi.Muted, fontSize = 12.sp)
+                    listOf(12, 72).forEach { hours ->
+                        Button(
+                            onClick = {
+                                showDurationPicker = false
+                                busy = true
+                                scope.launch {
+                                    runCatching { backend.findOrCreateWordSiegeGame(if (SonHarfUiState.isEnglish) "en" else "tr", hours) }
+                                        .onSuccess { next ->
+                                            applyGame(next)
+                                            selectedGameId = next.id
+                                            loadProfiles(listOf(next.playerOneId, next.playerTwoId))
+                                            notice = if (next.status == "waiting") sh("$hours saatlik havuzda rakip aranıyor. Ekrandan çıkabilirsin; oyun korunur.", "Finding a rival in the ${hours}h pool. You may leave; the game is preserved.") else null
+                                        }
+                                        .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
+                                    busy = false
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (hours == 12) MainUi.Blue else SiegePurple),
+                        ) { Text("$hours ${sh("SAAT", "HOURS")}", fontWeight = FontWeight.Black) }
                     }
-                    Text(
-                        sh("Torba: ${game.bag.length} harf", "Bag: ${game.bag.length} tiles"),
-                        color = MainUi.Muted,
-                        fontSize = 11.sp,
-                    )
                 }
             },
-            confirmButton = {
-                TextButton(
-                    enabled = exchangeSelection.isNotEmpty() && exchangeSelection.size <= game.bag.length && !busy,
-                    onClick = {
-                        val selected = exchangeSelection
-                        showExchange = false
-                        runGameAction { backend.exchangeWordSiegeTiles(game.id, selected) }
-                    },
-                ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontWeight = FontWeight.Black) }
-            },
-            dismissButton = { TextButton(onClick = { showExchange = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showDurationPicker = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
         )
     }
 
-    if (showChat && currentGame != null) {
-        val gameId = requireNotNull(currentGame).id
-        WordSiegeChatDialog(
+    if (showChat) {
+        WordSiegeAsyncChatDialog(
             messages = messages,
             me = me,
             input = chatInput,
@@ -399,14 +365,15 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             onInput = { chatInput = it.take(300) },
             onDismiss = { showChat = false },
             onSend = {
-                if (chatInput.isBlank() || busy) return@WordSiegeChatDialog
-                val outgoing = chatInput
-                busy = true
+                val game = currentGame ?: return@WordSiegeAsyncChatDialog
+                val body = chatInput.trim()
+                if (body.isBlank()) return@WordSiegeAsyncChatDialog
                 scope.launch {
-                    runCatching { backend.sendWordSiegeMessage(gameId, outgoing) }
+                    busy = true
+                    runCatching { backend.sendWordSiegeMessage(game.id, body) }
                         .onSuccess {
                             chatInput = ""
-                            messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
+                            messages = runCatching { backend.getWordSiegeMessages(game.id) }.getOrDefault(messages)
                         }
                         .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
                     busy = false
@@ -414,215 +381,272 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             },
         )
     }
-}
 
-@Composable
-private fun WordSiegeGamesList(
-    games: List<WordSiegeGameDto>,
-    profiles: Map<String, ProfileDto>,
-    me: String?,
-    loading: Boolean,
-    busy: Boolean,
-    notice: String?,
-    onBack: () -> Unit,
-    onRefresh: () -> Unit,
-    onPractice: () -> Unit,
-    onNewGame: () -> Unit,
-    onOpen: (WordSiegeGameDto) -> Unit,
-) {
-    val grouped = games.groupBy { it.listSection(me) }
-    LazyColumn(
-        Modifier.fillMaxSize().statusBarsPadding(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
-                }
-                Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                    Text(
-                        sh("Süre yok • 1v1 • En fazla 10 devam eden oyun", "No timer • 1v1 • Up to 10 ongoing games"),
-                        color = MainUi.Muted,
-                        fontSize = 10.sp,
-                    )
-                }
-                IconButton(onClick = onRefresh, enabled = !loading) {
-                    Icon(Icons.Rounded.Refresh, sh("Yenile", "Refresh"), tint = MainUi.Blue)
-                }
-            }
-        }
+    if (showForfeit) {
+        WordSiegeAsyncConfirmDialog(
+            title = sh("Teslim olmak istiyor musun?", "Forfeit this match?"),
+            body = sh("Teslim Ol maçı kesin olarak bitirir ve rakibine galibiyet verir. Sadece ekrandan çıkmak için Oyundan Çık kullan.", "Forfeit permanently ends the match and gives your rival the win. Use Exit Game only to leave the screen."),
+            confirm = sh("TESLİM OL", "FORFEIT"),
+            accent = MainUi.Red,
+            onDismiss = { showForfeit = false },
+            onConfirm = {
+                showForfeit = false
+                val game = currentGame ?: return@WordSiegeAsyncConfirmDialog
+                runGameAction { backend.forfeitWordSiegeGame(game.id) }
+            },
+        )
+    }
 
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(
-                    sh("OYUN SEÇ", "CHOOSE A GAME"),
-                    color = MainUi.Gold,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = .8.sp,
-                )
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    WordSiegeModeCard(
-                        title = sh("RAKİP BUL", "FIND RIVAL"),
-                        subtitle = sh("Çevrimiçi 1v1", "Online 1v1"),
-                        icon = Icons.Rounded.Groups,
-                        color = SiegePurple,
-                        enabled = !busy,
-                        modifier = Modifier.weight(1f),
-                        onClick = onNewGame,
-                        loading = busy,
-                    )
-                    WordSiegeModeCard(
-                        title = sh("BOT İLE\nALIŞTIR", "PRACTICE\nWITH BOT"),
-                        subtitle = sh("Hemen başla", "Start now"),
-                        icon = Icons.Rounded.SmartToy,
-                        color = MainUi.Blue,
-                        enabled = true,
-                        modifier = Modifier.weight(1f),
-                        onClick = onPractice,
-                    )
-                }
-            }
-        }
+    if (showPass) {
+        WordSiegeAsyncConfirmDialog(
+            title = sh("Hamleni pas geç?", "Pass your turn?"),
+            body = sh("Sıra rakibine geçer ve rakibin yeni 12/72 saatlik cevap süresi başlar.", "The turn passes to your rival and their new 12/72-hour response window begins."),
+            confirm = sh("PAS", "PASS"),
+            accent = MainUi.Blue,
+            onDismiss = { showPass = false },
+            onConfirm = {
+                showPass = false
+                val game = currentGame ?: return@WordSiegeAsyncConfirmDialog
+                runGameAction { backend.passWordSiegeTurn(game.id) }
+            },
+        )
+    }
 
-        if (loading && games.isEmpty()) {
-            item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SiegePurple, trackColor = SiegePurpleSoft) }
-        }
-        notice?.let { message -> item { WordSiegeNotice(message) } }
-
-        if (!loading && games.isEmpty()) {
-            item {
-                Surface(
-                    color = SiegePurpleSoft,
-                    shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, SiegePurple.copy(alpha = .2f)),
-                ) {
-                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = Color.White) {
-                            Icon(Icons.Rounded.TipsAndUpdates, null, Modifier.padding(9.dp).size(21.dp), tint = SiegePurple)
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text(sh("İlk kuşatmanı kur", "Build your first siege"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
-                            Text(
-                                sh("Bonuslar sadece yeni harfte çalışır; rakibin karesini kelimene katarsan alan sana geçer.", "Bonuses work on new tiles; use a rival tile in your word to capture its territory."),
-                                color = MainUi.Muted,
-                                fontSize = 10.sp,
+    if (showExchange) {
+        val game = currentGame
+        val rack = game?.rackForAsync(me).orEmpty()
+        AlertDialog(
+            onDismissRequest = { showExchange = false },
+            title = { Text(sh("Harf Değiştir", "Exchange Tiles"), fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(sh("Değiştirmek istediğin harfleri seç. Bu işlem hamle sayılır ve sıra rakibine geçer.", "Select tiles to exchange. This counts as a turn and passes play to your rival."), color = MainUi.Muted)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        rack.forEachIndexed { index, letter ->
+                            FilterChip(
+                                selected = index in exchangeSelection,
+                                onClick = { exchangeSelection = if (index in exchangeSelection) exchangeSelection - index else exchangeSelection + index },
+                                label = { Text(letter.toString()) },
+                                modifier = Modifier.weight(1f),
                             )
                         }
                     }
                 }
-            }
-        }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = exchangeSelection.isNotEmpty() && !busy,
+                    onClick = {
+                        showExchange = false
+                        val target = game ?: return@TextButton
+                        val selected = exchangeSelection
+                        runGameAction { backend.exchangeWordSiegeTiles(target.id, selected) }
+                    },
+                ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontWeight = FontWeight.Black) }
+            },
+            dismissButton = { TextButton(onClick = { showExchange = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
+        )
+    }
 
-        SiegeListSection.entries.forEach { section ->
-            val sectionGames = grouped[section].orEmpty()
-            if (sectionGames.isNotEmpty()) {
-                item {
-                    Text(
-                        section.label(),
-                        color = section.color(),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = .8.sp,
-                    )
-                }
-                items(sectionGames, key = { it.id }) { game ->
-                    WordSiegeGameCard(game, profiles, me) { onOpen(game) }
-                }
-            }
-        }
-        item { Spacer(Modifier.height(12.dp)) }
+    infoDialog?.let { dialog ->
+        WordSiegeAsyncInfoDialog(
+            dialog = dialog,
+            game = currentGame,
+            moves = moves,
+            opponent = currentGame?.opponentIdAsync(me)?.let(profiles::get),
+            onDismiss = { infoDialog = null },
+        )
     }
 }
 
 @Composable
-private fun WordSiegeModeCard(
-    title: String,
-    subtitle: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
-    loading: Boolean = false,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = modifier.height(112.dp).clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
-        color = color,
-        shadowElevation = 2.dp,
-    ) {
-        Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Icon(icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
-                if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-                else Icon(Icons.Rounded.ArrowForward, null, tint = Color.White.copy(alpha = .82f), modifier = Modifier.size(18.dp))
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp, lineHeight = 15.sp)
-                Text(subtitle, color = Color.White.copy(alpha = .78f), fontWeight = FontWeight.SemiBold, fontSize = 9.sp)
-            }
-        }
-    }
-}
-
-@Composable
-private fun WordSiegeGameCard(
-    game: WordSiegeGameDto,
+private fun WordSiegeAsyncHub(
+    games: List<WordSiegeGameDto>,
     profiles: Map<String, ProfileDto>,
     me: String?,
-    onClick: () -> Unit,
+    tab: WordSiegeHubTab,
+    loading: Boolean,
+    busy: Boolean,
+    notice: String?,
+    clockTick: Long,
+    onTab: (WordSiegeHubTab) -> Unit,
+    onBack: () -> Unit,
+    onRefresh: () -> Unit,
+    onNewGame: () -> Unit,
+    onPractice: () -> Unit,
+    onOpen: (WordSiegeGameDto) -> Unit,
+    onCancelWaiting: (WordSiegeGameDto) -> Unit,
 ) {
-    val opponentId = game.opponentId(me)
-    val opponent = opponentId?.let(profiles::get)
-    val myOwner = game.ownerFor(me)
-    val myTotal = if (myOwner == 1) game.playerOneWordScore + game.playerOneArea else game.playerTwoWordScore + game.playerTwoArea
-    val rivalTotal = if (myOwner == 1) game.playerTwoWordScore + game.playerTwoArea else game.playerOneWordScore + game.playerOneArea
-    Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = MainUi.Surface,
-        border = BorderStroke(1.dp, MainUi.Border),
-    ) {
-        Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-            ProfilePhotoAvatarWithGender(
-                avatarPath = opponent?.avatarPath,
-                gender = opponent?.gender,
-                name = opponent?.displayName ?: sh("Rakip", "Rival"),
-                size = 44.dp,
-                accent = SiegePurple,
-                visible = opponent?.avatarVisibility != "hidden",
-            )
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(
-                    opponent?.displayName ?: if (game.status == "waiting") sh("Rakip aranıyor", "Finding a rival") else sh("Rakip", "Rival"),
-                    color = MainUi.Text,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Black,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(game.cardStatus(me), color = game.listSection(me).color(), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                if (game.status != "waiting") {
-                    Text(
-                        sh("Sen $myTotal • Rakip $rivalTotal • ${game.moveCount} tur", "You $myTotal • Rival $rivalTotal • ${game.moveCount} turns"),
-                        color = MainUi.Muted,
-                        fontSize = 9.sp,
-                    )
+    val active = games.filter { it.status == "waiting" || it.status == "playing" }
+    val finished = games.filter { it.status == "finished" }
+    val yourTurn = active.count { it.status == "playing" && it.currentPlayerId == me }
+    val shown = when (tab) {
+        WordSiegeHubTab.ACTIVE -> active
+        WordSiegeHubTab.FINISHED -> finished
+        WordSiegeHubTab.INVITES -> emptyList()
+    }
+
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text) }
+            Column(Modifier.weight(1f)) {
+                Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                Text(sh("12/72 saatlik asenkron alan oyunu", "12/72-hour asynchronous territory game"), color = MainUi.Muted, fontSize = 9.sp)
+            }
+            IconButton(onClick = onRefresh, enabled = !loading) { Icon(Icons.Rounded.Refresh, sh("Yenile", "Refresh"), tint = MainUi.Blue) }
+        }
+
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = onNewGame,
+                        enabled = !busy,
+                        modifier = Modifier.weight(1.5f).height(54.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                        shape = RoundedCornerShape(16.dp),
+                    ) {
+                        Icon(Icons.Rounded.Add, null)
+                        Spacer(Modifier.width(5.dp))
+                        Text(sh("OYNA / YENİ OYUN", "PLAY / NEW GAME"), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    }
+                    OutlinedButton(onClick = onPractice, modifier = Modifier.weight(1f).height(54.dp), shape = RoundedCornerShape(16.dp)) {
+                        Icon(Icons.Rounded.School, null, tint = SiegePurple)
+                        Spacer(Modifier.width(4.dp))
+                        Text(sh("ALIŞTIR", "PRACTICE"), color = SiegePurple, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    }
                 }
             }
-            Icon(Icons.Rounded.ChevronRight, null, tint = MainUi.Muted)
+
+            item {
+                Surface(Modifier.fillMaxWidth(), color = MainUi.Surface, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, MainUi.Border)) {
+                    Row(Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text(sh("OYUNLARIM (${active.size})", "MY GAMES (${active.size})"), color = MainUi.Text, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                            Text(if (yourTurn > 0) sh("$yourTurn maçta sıra sende", "Your turn in $yourTurn matches") else sh("Şu an bekleyen hamlen yok", "No moves waiting for you"), color = if (yourTurn > 0) MainUi.Blue else MainUi.Muted, fontSize = 9.sp, fontWeight = if (yourTurn > 0) FontWeight.Bold else FontWeight.Normal)
+                        }
+                        if (yourTurn > 0) Badge(containerColor = MainUi.Red) { Text(yourTurn.toString()) }
+                    }
+                }
+            }
+
+            item {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    WordSiegeHubTab.entries.forEach { item ->
+                        val label = when (item) {
+                            WordSiegeHubTab.ACTIVE -> sh("AKTİF", "ACTIVE")
+                            WordSiegeHubTab.FINISHED -> sh("BİTEN", "FINISHED")
+                            WordSiegeHubTab.INVITES -> sh("DAVETLER", "INVITES")
+                        }
+                        FilterChip(selected = tab == item, onClick = { onTab(item) }, label = { Text(label, fontSize = 9.sp, fontWeight = FontWeight.Bold) }, modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+
+            if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = MainUi.Blue, trackColor = MainUi.BlueSoft) }
+
+            if (tab == WordSiegeHubTab.INVITES) {
+                item {
+                    WordSiegeNotice(sh("Davet sistemi bu sürümde yeni bir paralel altyapı kurmadan boş bırakıldı. Rastgele oyun 12 ve 72 saat havuzlarında çalışır.", "Invites are intentionally left empty in this version rather than creating a parallel system. Random play uses separate 12h and 72h pools."))
+                }
+            } else if (!loading && shown.isEmpty()) {
+                item {
+                    Surface(Modifier.fillMaxWidth(), color = MainUi.Surface, shape = RoundedCornerShape(18.dp)) {
+                        Text(
+                            if (tab == WordSiegeHubTab.ACTIVE) sh("Aktif oyunun yok. Yeni bir 12 veya 72 saatlik oyun açabilirsin.", "No active games. Start a new 12h or 72h game.") else sh("Henüz biten oyun yok.", "No finished games yet."),
+                            Modifier.padding(20.dp), color = MainUi.Muted, textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            }
+
+            items(shown, key = { it.id }) { game ->
+                WordSiegeAsyncGameCard(
+                    game = game,
+                    me = me,
+                    opponent = game.opponentIdAsync(me)?.let(profiles::get),
+                    clockTick = clockTick,
+                    onOpen = { onOpen(game) },
+                    onCancelWaiting = { onCancelWaiting(game) },
+                )
+            }
+
+            notice?.let { item { WordSiegeNotice(it) } }
+            item { Spacer(Modifier.height(14.dp)) }
         }
     }
 }
 
 @Composable
-private fun WordSiegeMatch(
+private fun WordSiegeAsyncGameCard(
+    game: WordSiegeGameDto,
+    me: String?,
+    opponent: ProfileDto?,
+    clockTick: Long,
+    onOpen: () -> Unit,
+    onCancelWaiting: () -> Unit,
+) {
+    val myOwner = game.ownerForAsync(me)
+    val myScore = game.scoreForAsync(myOwner) + game.areaForAsync(myOwner)
+    val rivalOwner = if (myOwner == 1) 2 else 1
+    val rivalScore = game.scoreForAsync(rivalOwner) + game.areaForAsync(rivalOwner)
+    val waiting = game.status == "waiting"
+    val myTurn = game.status == "playing" && game.currentPlayerId == me
+    val remaining = wordSiegeRemainingText(game.turnDeadline, clockTick)
+
+    Surface(Modifier.fillMaxWidth(), color = MainUi.Surface, shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, if (myTurn) MainUi.Blue.copy(alpha = .45f) else MainUi.Border)) {
+        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ProfilePhotoAvatarWithGender(
+                    avatarPath = opponent?.avatarPath,
+                    gender = opponent?.gender,
+                    name = opponent?.displayName ?: if (waiting) sh("Rakip aranıyor", "Finding rival") else sh("Rakip", "Rival"),
+                    size = 42.dp,
+                    accent = if (myTurn) MainUi.Blue else SiegePurple,
+                    visible = opponent?.avatarVisibility != "hidden",
+                )
+                Spacer(Modifier.width(9.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(opponent?.displayName ?: if (waiting) sh("Rakip aranıyor", "Finding rival") else sh("Rakip", "Rival"), color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                    Text("$myScore - $rivalScore", color = MainUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                }
+                Surface(color = if (game.turnDurationHours == 12) MainUi.BlueSoft else SiegePurpleSoft, shape = RoundedCornerShape(9.dp)) {
+                    Text("${game.turnDurationHours} ${sh("SAAT", "H")}", Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = if (game.turnDurationHours == 12) MainUi.Blue else SiegePurple, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                }
+            }
+
+            when {
+                waiting -> Text(sh("EŞLEŞME BEKLENİYOR • Bu ekrandan çıkabilirsin", "WAITING TO MATCH • You may leave this screen"), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                game.status == "finished" -> Text(game.finishedLabel(me), color = if (game.winnerId == me) MainUi.Green else MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                myTurn -> {
+                    Text(sh("SIRA SENDE", "YOUR TURN"), color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Kalan: $remaining", "Remaining: $remaining"), color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                }
+                else -> {
+                    Text(sh("RAKİP BEKLENİYOR", "WAITING FOR RIVAL"), color = SiegePurple, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Kalan: $remaining", "Remaining: $remaining"), color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                }
+            }
+
+            Text(sh("Son hamle: ${wordSiegeRelativeTime(game.lastMoveAt ?: game.createdAt, clockTick)}", "Last move: ${wordSiegeRelativeTime(game.lastMoveAt ?: game.createdAt, clockTick)}"), color = MainUi.Muted, fontSize = 8.sp)
+
+            if (waiting) {
+                OutlinedButton(onClick = onCancelWaiting, Modifier.fillMaxWidth(), border = BorderStroke(1.dp, MainUi.Red)) { Text(sh("ARAMAYI İPTAL ET", "CANCEL SEARCH"), color = MainUi.Red, fontWeight = FontWeight.Bold) }
+            } else {
+                Button(onClick = onOpen, Modifier.fillMaxWidth(), colors = ButtonDefaults.buttonColors(containerColor = if (game.status == "finished") MainUi.Text else MainUi.Blue)) {
+                    Text(if (game.status == "finished") sh("SONUCU GÖR", "VIEW RESULT") else sh("DEVAM ET", "CONTINUE"), fontWeight = FontWeight.Black)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WordSiegeAsyncMatch(
     game: WordSiegeGameDto,
     me: String?,
     profiles: Map<String, ProfileDto>,
@@ -630,440 +654,315 @@ private fun WordSiegeMatch(
     placements: Map<Int, Int>,
     preview: WordSiegeMovePreviewDto?,
     selectedRackIndex: Int?,
+    rackOrder: List<Int>,
     busy: Boolean,
     notice: String?,
-    onBack: () -> Unit,
-    onBoardCell: (Int) -> Unit,
+    clockTick: Long,
+    showMenu: Boolean,
+    onMenuChange: (Boolean) -> Unit,
+    onExitMatch: () -> Unit,
     onRackTile: (Int) -> Unit,
+    onBoardCell: (Int) -> Unit,
+    onUndo: () -> Unit,
+    onShuffle: () -> Unit,
+    onChat: () -> Unit,
     onSubmit: () -> Unit,
+    onHistory: () -> Unit,
+    onProfile: () -> Unit,
+    onRules: () -> Unit,
+    onSound: () -> Unit,
+    onReport: () -> Unit,
     onPass: () -> Unit,
     onExchange: () -> Unit,
-    onChat: () -> Unit,
     onForfeit: () -> Unit,
     onCancelWaiting: () -> Unit,
 ) {
-    val mine = me?.let(profiles::get)
-    val opponent = game.opponentId(me)?.let(profiles::get)
-    val myOwner = game.ownerFor(me)
-    val myTurn = game.status == "playing" && game.currentPlayerId == me
-    val rack = game.rackFor(me)
-    val canAct = myTurn && !busy
-    val vip = mine?.isVip == true
+    val rack = game.rackForAsync(me)
+    val owner = game.ownerForAsync(me)
+    val canAct = game.status == "playing" && game.currentPlayerId == me && !busy
+    val meProfile = me?.let(profiles::get)
+    val opponent = game.opponentIdAsync(me)?.let(profiles::get)
+    val myScore = game.scoreForAsync(owner) + game.areaForAsync(owner)
+    val otherOwner = if (owner == 1) 2 else 1
+    val rivalScore = game.scoreForAsync(otherOwner) + game.areaForAsync(otherOwner)
+    val deadline = wordSiegeRemainingText(game.turnDeadline, clockTick)
+    val vip = meProfile?.isVip == true
 
-    BoxWithConstraints(
-        Modifier
-            .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(horizontal = 8.dp, vertical = 4.dp),
-    ) {
-        val compact = maxHeight < 720.dp || maxWidth < 380.dp
-        val tight = maxHeight < 620.dp || maxWidth < 340.dp
-        val gap = when {
-            tight -> 3.dp
-            compact -> 4.dp
-            else -> 6.dp
-        }
-        val headerHeight = when {
-            tight -> 38.dp
-            compact -> 42.dp
-            else -> 46.dp
-        }
-        val playerHeight = when {
-            tight -> 48.dp
-            compact -> 52.dp
-            else -> 58.dp
-        }
-        val utilityHeight = if (tight) 32.dp else 36.dp
-        val rackHeight = when {
-            tight -> 38.dp
-            compact -> 42.dp
-            else -> 46.dp
-        }
-        val actionHeight = when {
-            tight -> 38.dp
-            compact -> 42.dp
-            else -> 44.dp
-        }
-
-        Column(
-            Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.spacedBy(gap),
-        ) {
-            Row(
-                Modifier.fillMaxWidth().height(headerHeight),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onBack, modifier = Modifier.size(if (tight) 32.dp else 36.dp)) {
-                    Icon(
-                        Icons.Rounded.ArrowBack,
-                        sh("Oyunlar", "Games"),
-                        tint = MainUi.Text,
-                        modifier = Modifier.size(if (tight) 19.dp else 21.dp),
-                    )
-                }
-                Spacer(Modifier.width(if (tight) 2.dp else 4.dp))
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                    Text(
-                        sh("KELİME KUŞATMASI", "WORD SIEGE"),
-                        color = MainUi.Text,
-                        fontSize = if (tight) 15.sp else 17.sp,
-                        lineHeight = if (tight) 17.sp else 19.sp,
-                        fontWeight = FontWeight.Black,
-                        maxLines = 1,
-                    )
-                    Text(
-                        if (game.status == "playing") {
-                            if (myTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")
-                        } else game.statusLabel(me),
-                        color = if (myTurn) MainUi.Blue else SiegePurple,
-                        fontSize = if (tight) 8.sp else 9.sp,
-                        lineHeight = if (tight) 9.sp else 10.sp,
-                        fontWeight = FontWeight.Black,
-                        maxLines = 1,
-                    )
-                }
-                Surface(shape = RoundedCornerShape(99.dp), color = SiegePurpleSoft) {
-                    Text(
-                        sh("SÜRE YOK", "NO TIMER"),
-                        Modifier.padding(
-                            horizontal = if (tight) 6.dp else 8.dp,
-                            vertical = if (tight) 4.dp else 5.dp,
-                        ),
-                        color = SiegePurple,
-                        fontSize = if (tight) 7.sp else 8.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                }
-            }
-
-            Row(
-                Modifier.fillMaxWidth().height(playerHeight),
-                horizontalArrangement = Arrangement.spacedBy(if (tight) 5.dp else 7.dp),
-            ) {
-                WordSiegePlayerCard(
-                    profile = mine,
-                    fallbackName = sh("Sen", "You"),
-                    wordScore = game.scoreFor(myOwner),
-                    area = game.areaFor(myOwner),
-                    accent = MainUi.Blue,
-                    active = game.currentPlayerId == me,
-                    compact = compact,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
-                )
-                WordSiegePlayerCard(
-                    profile = opponent,
-                    fallbackName = if (game.status == "waiting") sh("Rakip aranıyor", "Finding rival") else sh("Rakip", "Rival"),
-                    wordScore = game.scoreFor(if (myOwner == 1) 2 else 1),
-                    area = game.areaFor(if (myOwner == 1) 2 else 1),
-                    accent = SiegePurple,
-                    active = game.currentPlayerId == game.opponentId(me),
-                    compact = compact,
-                    modifier = Modifier.weight(1f).fillMaxHeight(),
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 4.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = onExitMatch) { Icon(Icons.Rounded.ArrowBack, sh("Oyundan Çık", "Exit Game"), tint = MainUi.Text) }
+            Column(Modifier.weight(1f)) {
+                Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                Text(
+                    when {
+                        game.status == "waiting" -> sh("Rakip aranıyor", "Finding a rival")
+                        game.status == "finished" -> game.finishedLabel(me)
+                        game.currentPlayerId == me -> sh("SIRA SENDE • $deadline", "YOUR TURN • $deadline")
+                        else -> sh("RAKİPTE • $deadline", "RIVAL'S TURN • $deadline")
+                    },
+                    color = if (game.currentPlayerId == me) MainUi.Blue else MainUi.Muted,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
                 )
             }
+            Surface(color = if (game.turnDurationHours == 12) MainUi.BlueSoft else SiegePurpleSoft, shape = RoundedCornerShape(9.dp)) {
+                Text("${game.turnDurationHours}H", Modifier.padding(horizontal = 7.dp, vertical = 5.dp), color = if (game.turnDurationHours == 12) MainUi.Blue else SiegePurple, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            }
+            Box {
+                IconButton(onClick = { onMenuChange(true) }) { Icon(Icons.Rounded.MoreVert, sh("Menü", "Menu"), tint = MainUi.Text) }
+                DropdownMenu(expanded = showMenu, onDismissRequest = { onMenuChange(false) }) {
+                    WordSiegeMenuItem(Icons.Rounded.History, sh("Hamleler / Hamle Geçmişi", "Moves / Move History")) { onMenuChange(false); onHistory() }
+                    WordSiegeMenuItem(Icons.Rounded.Person, sh("Rakip Profili", "Rival Profile")) { onMenuChange(false); onProfile() }
+                    WordSiegeMenuItem(Icons.Rounded.HelpOutline, sh("Nasıl Oynanır / Kurallar", "How to Play / Rules")) { onMenuChange(false); onRules() }
+                    WordSiegeMenuItem(Icons.Rounded.VolumeUp, sh("Ses ve Müzik", "Sound & Music")) { onMenuChange(false); onSound() }
+                    WordSiegeMenuItem(Icons.Rounded.Flag, sh("Şikâyet Et", "Report")) { onMenuChange(false); onReport() }
+                    if (game.status == "playing") {
+                        HorizontalDivider()
+                        WordSiegeMenuItem(Icons.Rounded.SkipNext, sh("Pas", "Pass"), enabled = canAct) { onMenuChange(false); onPass() }
+                        WordSiegeMenuItem(Icons.Rounded.SwapHoriz, sh("Harf Değiştir", "Exchange Tiles"), enabled = canAct && game.bag.isNotEmpty()) { onMenuChange(false); onExchange() }
+                        WordSiegeMenuItem(Icons.Rounded.OutlinedFlag, sh("Teslim Ol", "Forfeit"), color = MainUi.Red) { onMenuChange(false); onForfeit() }
+                    }
+                    if (game.status == "waiting") {
+                        WordSiegeMenuItem(Icons.Rounded.Close, sh("Eşleşmeyi İptal Et", "Cancel Match Search"), color = MainUi.Red) { onMenuChange(false); onCancelWaiting() }
+                    }
+                    HorizontalDivider()
+                    WordSiegeMenuItem(Icons.Rounded.Logout, sh("Oyundan Çık", "Exit Game")) { onMenuChange(false); onExitMatch() }
+                }
+            }
+        }
 
-            if (game.status == "waiting") {
-                Box(
-                    Modifier.fillMaxWidth().weight(1f),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Surface(
-                        color = MainUi.Surface,
-                        shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, MainUi.Border),
-                    ) {
-                        Column(
-                            Modifier.fillMaxWidth().padding(if (tight) 14.dp else 18.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(if (tight) 7.dp else 10.dp),
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(if (tight) 28.dp else 34.dp),
-                                color = SiegePurple,
-                                strokeWidth = 3.dp,
-                            )
-                            Text(
-                                sh("RAKİP ARANIYOR", "FINDING A RIVAL"),
-                                color = MainUi.Text,
-                                fontSize = if (tight) 13.sp else 15.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                            Text(
-                                sh(
-                                    "Beklerken çıkabilirsin. Rakip bulunduğunda oyun listende görünür.",
-                                    "You can leave while waiting. The match will stay in your game list.",
-                                ),
-                                color = MainUi.Muted,
-                                fontSize = if (tight) 9.sp else 10.sp,
-                                textAlign = TextAlign.Center,
-                            )
-                            OutlinedButton(
-                                onClick = onCancelWaiting,
-                                enabled = !busy,
-                                border = BorderStroke(1.dp, MainUi.Red),
-                                modifier = Modifier.height(if (tight) 34.dp else 38.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp),
-                            ) {
-                                Text(
-                                    sh("ARAMAYI İPTAL ET", "CANCEL SEARCH"),
-                                    color = MainUi.Red,
-                                    fontSize = if (tight) 9.sp else 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                )
-                            }
-                        }
+        if (game.status == "waiting") {
+            Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Surface(color = MainUi.Surface, shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, MainUi.Border)) {
+                    Column(Modifier.padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CircularProgressIndicator(color = SiegePurple)
+                        Text(sh("${game.turnDurationHours} saatlik rakip aranıyor", "Finding a ${game.turnDurationHours}-hour rival"), color = MainUi.Text, fontWeight = FontWeight.Black)
+                        Text(sh("Uygulamadan veya bu ekrandan çıkabilirsin. Eşleşme backend'de korunur.", "You may leave the app or this screen. Matchmaking is preserved on the backend."), color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+                        OutlinedButton(onClick = onExitMatch) { Text(sh("OYUNLARIMA DÖN", "BACK TO MY GAMES")) }
                     }
                 }
-                notice?.let {
-                    Text(
-                        it,
-                        color = MainUi.Text,
-                        fontSize = if (tight) 8.sp else 9.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                }
-            } else {
-                BoxWithConstraints(
-                    Modifier.fillMaxWidth().weight(1f),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    val boardSize = minOf(maxWidth, maxHeight)
-                    WordSiegeBoard(
-                        board = game.board,
-                        rack = rack,
-                        placements = placements,
-                        previewCells = if (vip) preview?.previewCells?.toSet().orEmpty() else emptySet(),
-                        myOwner = myOwner,
+            }
+            return@Column
+        }
+
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            WordSiegeCompactPlayer(meProfile, sh("Sen", "You"), myScore, owner == 1, game.currentPlayerId == me, Modifier.weight(1f))
+            WordSiegeCompactPlayer(opponent, sh("Rakip", "Rival"), rivalScore, otherOwner == 1, game.currentPlayerId != me && game.status == "playing", Modifier.weight(1f))
+        }
+
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val size = minOf(maxWidth, maxHeight)
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                WordSiegeBoard(
+                    board = game.board,
+                    rack = rack,
+                    placements = placements,
+                    previewCells = preview?.previewCells?.toSet().orEmpty(),
+                    myOwner = owner,
+                    enabled = canAct,
+                    onCell = onBoardCell,
+                    modifier = Modifier.size(size),
+                )
+            }
+        }
+
+        if (game.status == "finished") {
+            WordSiegeAsyncFinishedCard(game, me, moves, vip)
+        } else {
+            WordSiegeMoveAnalysisBar(preview, placements.isNotEmpty(), vip, game, moves, me, tight = true)
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                val order = if (rackOrder.size == rack.length) rackOrder else List(rack.length) { it }
+                order.forEach { originalIndex ->
+                    val letter = rack.getOrNull(originalIndex) ?: return@forEach
+                    WordSiegeRackTile(
+                        letter = letter,
+                        selected = selectedRackIndex == originalIndex,
+                        used = originalIndex in placements.values,
                         enabled = canAct,
-                        onCell = onBoardCell,
-                        modifier = Modifier.size(boardSize),
+                        modifier = Modifier.weight(1f),
+                        tileHeight = 42.dp,
+                        onClick = { onRackTile(originalIndex) },
                     )
                 }
+                repeat((7 - rack.length).coerceAtLeast(0)) { Spacer(Modifier.weight(1f).height(42.dp)) }
+            }
 
-                Row(
-                    Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(if (tight) 5.dp else 7.dp),
-                ) {
-                    OutlinedButton(
-                        onClick = onChat,
-                        enabled = game.playerTwoId != null,
-                        modifier = Modifier.weight(1f).height(utilityHeight),
-                        border = BorderStroke(1.dp, MainUi.Blue),
-                        contentPadding = PaddingValues(horizontal = 4.dp),
-                    ) {
-                        Icon(Icons.Rounded.Chat, null, Modifier.size(if (tight) 14.dp else 15.dp), tint = MainUi.Blue)
-                        Spacer(Modifier.width(3.dp))
-                        Text(
-                            sh("SOHBET", "CHAT"),
-                            color = MainUi.Blue,
-                            fontSize = if (tight) 8.sp else 9.sp,
-                            fontWeight = FontWeight.Black,
-                        )
-                    }
-                    OutlinedButton(
-                        onClick = onForfeit,
-                        enabled = game.status == "playing" && !busy,
-                        modifier = Modifier.weight(1f).height(utilityHeight),
-                        border = BorderStroke(1.dp, MainUi.Red),
-                        contentPadding = PaddingValues(horizontal = 4.dp),
-                    ) {
-                        Icon(Icons.Rounded.Flag, null, Modifier.size(if (tight) 14.dp else 15.dp), tint = MainUi.Red)
-                        Spacer(Modifier.width(3.dp))
-                        Text(
-                            sh("PES ET", "FORFEIT"),
-                            color = MainUi.Red,
-                            fontSize = if (tight) 8.sp else 9.sp,
-                            fontWeight = FontWeight.Black,
-                        )
-                    }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                OutlinedButton(onClick = onUndo, enabled = canAct && placements.isNotEmpty(), modifier = Modifier.weight(1f).height(42.dp), contentPadding = PaddingValues(2.dp)) {
+                    Icon(Icons.Rounded.Undo, null, Modifier.size(15.dp)); Spacer(Modifier.width(2.dp)); Text(sh("GERİ AL", "UNDO"), fontSize = 8.sp, fontWeight = FontWeight.Black)
                 }
-
-                if (game.status == "playing") {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"),
-                            color = MainUi.Muted,
-                            fontSize = if (tight) 8.sp else 9.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-
-                    WordSiegeMoveAnalysisBar(
-                        preview = preview,
-                        placementsPresent = placements.isNotEmpty(),
-                        vip = vip,
-                        game = game,
-                        moves = moves,
-                        me = me,
-                        tight = tight,
-                    )
-
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(if (tight) 3.dp else 4.dp),
-                    ) {
-                        rack.forEachIndexed { index, letter ->
-                            WordSiegeRackTile(
-                                letter = letter,
-                                selected = selectedRackIndex == index,
-                                used = index in placements.values,
-                                enabled = canAct,
-                                modifier = Modifier.weight(1f),
-                                tileHeight = rackHeight,
-                                onClick = { onRackTile(index) },
-                            )
-                        }
-                        repeat((7 - rack.length).coerceAtLeast(0)) {
-                            Spacer(Modifier.weight(1f).height(rackHeight))
-                        }
-                    }
-
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(if (tight) 4.dp else 6.dp),
-                    ) {
-                        OutlinedButton(
-                            onClick = onPass,
-                            enabled = canAct,
-                            modifier = Modifier.weight(1f).height(actionHeight),
-                            contentPadding = PaddingValues(horizontal = 2.dp),
-                        ) {
-                            Text(sh("PAS", "PASS"), fontSize = if (tight) 9.sp else 10.sp, fontWeight = FontWeight.Black)
-                        }
-                        OutlinedButton(
-                            onClick = onExchange,
-                            enabled = canAct && game.bag.isNotEmpty(),
-                            modifier = Modifier.weight(1.15f).height(actionHeight),
-                            border = BorderStroke(1.dp, SiegePurple),
-                            contentPadding = PaddingValues(horizontal = 2.dp),
-                        ) {
-                            Text(
-                                sh("DEĞİŞTİR", "EXCHANGE"),
-                                color = SiegePurple,
-                                fontSize = if (tight) 8.sp else 9.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                        }
-                        Button(
-                            onClick = onSubmit,
-                            enabled = canAct && placements.isNotEmpty(),
-                            modifier = Modifier.weight(1.45f).height(actionHeight),
-                            colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                        ) {
-                            if (busy) {
-                                CircularProgressIndicator(
-                                    Modifier.size(15.dp),
-                                    color = Color.White,
-                                    strokeWidth = 2.dp,
-                                )
-                            } else {
-                                Text(sh("OYNA", "PLAY"), fontSize = if (tight) 10.sp else 11.sp, fontWeight = FontWeight.Black)
-                            }
-                        }
-                    }
-                } else {
-                    WordSiegeFinishedCard(game, me, moves, vip)
+                OutlinedButton(onClick = onShuffle, enabled = canAct && rack.length > 1, modifier = Modifier.weight(1f).height(42.dp), contentPadding = PaddingValues(2.dp)) {
+                    Icon(Icons.Rounded.Shuffle, null, Modifier.size(15.dp)); Spacer(Modifier.width(2.dp)); Text(sh("KARIŞTIR", "SHUFFLE"), fontSize = 8.sp, fontWeight = FontWeight.Black)
                 }
-
-                notice?.let {
-                    Text(
-                        it,
-                        color = MainUi.Text,
-                        fontSize = if (tight) 8.sp else 9.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
+                OutlinedButton(onClick = onChat, enabled = game.playerTwoId != null, modifier = Modifier.weight(1f).height(42.dp), contentPadding = PaddingValues(2.dp)) {
+                    Icon(Icons.Rounded.Chat, null, Modifier.size(15.dp)); Spacer(Modifier.width(2.dp)); Text(sh("SOHBET", "CHAT"), fontSize = 8.sp, fontWeight = FontWeight.Black)
                 }
-
-                if (!tight) {
-                    moves.lastOrNull()?.let { lastMove ->
-                        Text(
-                            sh(
-                                "Son hamle: ${lastMove.formedWords.joinToString(" + ")} • +${lastMove.wordScore} kelime • ${lastMove.capturedCells} alan",
-                                "Last move: ${lastMove.formedWords.joinToString(" + ")} • +${lastMove.wordScore} word • ${lastMove.capturedCells} territory",
-                            ),
-                            color = MainUi.Muted,
-                            fontSize = 8.sp,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    }
+                Button(onClick = onSubmit, enabled = canAct && placements.isNotEmpty(), modifier = Modifier.weight(1.35f).height(42.dp), colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                    if (busy) CircularProgressIndicator(Modifier.size(15.dp), color = Color.White, strokeWidth = 2.dp)
+                    else Text(sh("OYNA", "PLAY"), fontSize = 10.sp, fontWeight = FontWeight.Black)
                 }
+            }
+        }
+
+        notice?.let { Text(it, Modifier.fillMaxWidth(), color = MainUi.Text, fontSize = 8.5.sp, maxLines = 2, overflow = TextOverflow.Ellipsis) }
+    }
+}
+
+@Composable
+private fun WordSiegeMenuItem(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, enabled: Boolean = true, color: Color = MainUi.Text, onClick: () -> Unit) {
+    DropdownMenuItem(text = { Text(text, color = if (enabled) color else MainUi.Muted, fontSize = 12.sp) }, leadingIcon = { Icon(icon, null, tint = if (enabled) color else MainUi.Muted) }, enabled = enabled, onClick = onClick)
+}
+
+@Composable
+private fun WordSiegeCompactPlayer(profile: ProfileDto?, fallback: String, score: Int, blue: Boolean, active: Boolean, modifier: Modifier) {
+    val accent = if (blue) MainUi.Blue else SiegePurple
+    Surface(modifier, color = if (active) accent.copy(alpha = .08f) else MainUi.Surface, shape = RoundedCornerShape(14.dp), border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) accent else MainUi.Border)) {
+        Row(Modifier.fillMaxWidth().padding(7.dp), verticalAlignment = Alignment.CenterVertically) {
+            ProfilePhotoAvatarWithGender(profile?.avatarPath, profile?.gender, profile?.displayName ?: fallback, 30.dp, accent, visible = profile?.avatarVisibility != "hidden")
+            Spacer(Modifier.width(6.dp))
+            Column(Modifier.weight(1f)) {
+                Text(profile?.displayName ?: fallback, color = MainUi.Text, fontSize = 9.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(score.toString(), color = accent, fontSize = 15.sp, fontWeight = FontWeight.Black)
             }
         }
     }
 }
 
 @Composable
-private fun WordSiegePlayerCard(
-    profile: ProfileDto?,
-    fallbackName: String,
-    wordScore: Int,
-    area: Int,
-    accent: Color,
-    active: Boolean,
-    modifier: Modifier = Modifier,
-    compact: Boolean = false,
-) {
-    val avatarSize = if (compact) 28.dp else 34.dp
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(if (compact) 13.dp else 15.dp),
-        color = if (active) accent.copy(alpha = .08f) else MainUi.Surface,
-        border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) accent else MainUi.Border),
-    ) {
-        Row(
-            Modifier.fillMaxSize().padding(horizontal = if (compact) 6.dp else 8.dp, vertical = if (compact) 4.dp else 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ProfilePhotoAvatarWithGender(
-                avatarPath = profile?.avatarPath,
-                gender = profile?.gender,
-                name = profile?.displayName ?: fallbackName,
-                size = avatarSize,
-                accent = accent,
-                visible = profile?.avatarVisibility != "hidden",
-            )
-            Spacer(Modifier.width(if (compact) 5.dp else 6.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                Text(
-                    profile?.displayName ?: fallbackName,
-                    color = MainUi.Text,
-                    fontSize = if (compact) 9.sp else 10.sp,
-                    lineHeight = if (compact) 10.sp else 11.sp,
-                    fontWeight = FontWeight.Black,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    "${wordScore + area}",
-                    color = accent,
-                    fontSize = if (compact) 15.sp else 17.sp,
-                    lineHeight = if (compact) 16.sp else 18.sp,
-                    fontWeight = FontWeight.Black,
-                )
-                Text(
-                    sh("Kelime $wordScore • Alan $area", "Word $wordScore • Area $area"),
-                    color = MainUi.Muted,
-                    fontSize = if (compact) 6.sp else 7.sp,
-                    lineHeight = if (compact) 7.sp else 8.sp,
-                    maxLines = 1,
-                )
+private fun WordSiegeAsyncFinishedCard(game: WordSiegeGameDto, me: String?, moves: List<WordSiegeMoveDto>, vip: Boolean) {
+    val won = game.winnerId == me
+    val draw = game.winnerId == null
+    val accent = when { draw -> MainUi.Gold; won -> MainUi.Green; else -> MainUi.Red }
+    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Surface(Modifier.fillMaxWidth(), color = accent.copy(alpha = .08f), shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, accent.copy(alpha = .35f))) {
+            Column(Modifier.fillMaxWidth().padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(game.finishedLabel(me), color = accent, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                if (game.finishReason == "timeout") Text(sh("Süre aşımı", "Timeout"), color = MainUi.Muted, fontSize = 8.sp)
             }
         }
+        if (vip) WordSiegeVipFinishedAnalysis(game, moves, me)
     }
 }
+
+@Composable
+private fun WordSiegeAsyncInfoDialog(dialog: WordSiegeInfoDialog, game: WordSiegeGameDto?, moves: List<WordSiegeMoveDto>, opponent: ProfileDto?, onDismiss: () -> Unit) {
+    val title = when (dialog) {
+        WordSiegeInfoDialog.MOVES -> sh("HAMLE GEÇMİŞİ", "MOVE HISTORY")
+        WordSiegeInfoDialog.PROFILE -> sh("RAKİP PROFİLİ", "RIVAL PROFILE")
+        WordSiegeInfoDialog.RULES -> sh("NASIL OYNANIR", "HOW TO PLAY")
+        WordSiegeInfoDialog.SOUND -> sh("SES VE MÜZİK", "SOUND & MUSIC")
+        WordSiegeInfoDialog.REPORT -> sh("ŞİKÂYET ET", "REPORT")
+    }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Black) },
+        text = {
+            when (dialog) {
+                WordSiegeInfoDialog.MOVES -> LazyColumn(Modifier.heightIn(max = 360.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    if (moves.isEmpty()) item { Text(sh("Henüz hamle yok.", "No moves yet."), color = MainUi.Muted) }
+                    items(moves.asReversed(), key = { it.id }) { move ->
+                        Surface(color = MainUi.SurfaceSoft, shape = RoundedCornerShape(10.dp)) {
+                            Column(Modifier.fillMaxWidth().padding(8.dp)) {
+                                Text(move.formedWords.joinToString(" + ").ifBlank { move.primaryWord }, color = MainUi.Text, fontWeight = FontWeight.Bold)
+                                Text("+${move.wordScore} • ${sh("alan", "territory")} ${move.capturedCells} • ${wordSiegeRelativeTime(move.createdAt, System.currentTimeMillis())}", color = MainUi.Muted, fontSize = 9.sp)
+                            }
+                        }
+                    }
+                }
+                WordSiegeInfoDialog.PROFILE -> Column(verticalArrangement = Arrangement.spacedBy(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    ProfilePhotoAvatarWithGender(opponent?.avatarPath, opponent?.gender, opponent?.displayName ?: sh("Rakip", "Rival"), 64.dp, SiegePurple, visible = opponent?.avatarVisibility != "hidden")
+                    Text(opponent?.displayName ?: sh("Rakip", "Rival"), color = MainUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text("${opponent?.rating ?: 1000} rating", color = MainUi.Muted)
+                }
+                WordSiegeInfoDialog.RULES -> Text(sh("Harflerini tahtaya yerleştir. Yeni harfler aynı satır veya sütunda olmalı; oluşan bütün yatay/dikey kelimeler geçerli olmalı. Mevcut harfleri kullanabilir ve rakip alanını kelimene katarak ele geçirebilirsin. Sıra sana geçtiğinde ${game?.turnDurationHours ?: 12} saat içinde hamle, pas veya değişim yapmalısın; süre dolarsa sunucu maçı otomatik kaybettirir.", "Place rack tiles on the board. New tiles must share one row or column and every horizontal/vertical word formed must be valid. You may reuse existing tiles and capture rival territory through your word. When your turn starts you have ${game?.turnDurationHours ?: 12} hours to play, pass or exchange; the server awards a timeout loss when the deadline expires."), color = MainUi.Text)
+                WordSiegeInfoDialog.SOUND -> Text(sh("Ses ve müzik tercihleri uygulamanın Ayarlar bölümünden yönetilir. Maçtan çıkmak bu tercihleri veya aktif oyunu değiştirmez.", "Sound and music preferences are managed from app Settings. Leaving the match does not change them or the active game."), color = MainUi.Text)
+                WordSiegeInfoDialog.REPORT -> Text(sh("Bu sürümde ayrı bir Kelime Kuşatması şikâyet backend'i bulunmuyor. Yanlış bir güvenlik kaydı oluşturmamak için yeni paralel moderation tablosu eklenmedi. Mevcut destek/şikâyet kanalı kullanılmalıdır.", "There is no dedicated Word Siege report backend in this version. A parallel moderation table was not invented; use the existing support/report channel."), color = MainUi.Text)
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(sh("KAPAT", "CLOSE")) } },
+    )
+}
+
+@Composable
+private fun WordSiegeAsyncConfirmDialog(title: String, body: String, confirm: String, accent: Color, onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, fontWeight = FontWeight.Black) },
+        text = { Text(body, color = MainUi.Muted) },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(confirm, color = accent, fontWeight = FontWeight.Black) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(sh("VAZGEÇ", "CANCEL")) } },
+    )
+}
+
+@Composable
+private fun WordSiegeAsyncChatDialog(messages: List<WordSiegeMessageDto>, me: String?, input: String, busy: Boolean, onInput: (String) -> Unit, onDismiss: () -> Unit, onSend: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(sh("SOHBET", "CHAT"), fontWeight = FontWeight.Black) },
+        text = {
+            Column(Modifier.heightIn(min = 220.dp, max = 430.dp)) {
+                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (messages.isEmpty()) item { Text(sh("Henüz mesaj yok.", "No messages yet."), color = MainUi.Muted) }
+                    items(messages.takeLast(40), key = { it.id }) { message ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = if (message.senderId == me) Arrangement.End else Arrangement.Start) {
+                            Surface(color = if (message.senderId == me) SiegeBlueSoft else SiegePurpleSoft, shape = RoundedCornerShape(12.dp)) {
+                                Text(message.body, Modifier.padding(9.dp), color = MainUi.Text, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                OutlinedTextField(value = input, onValueChange = onInput, modifier = Modifier.fillMaxWidth(), singleLine = true, enabled = !busy, placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) }, trailingIcon = { IconButton(onClick = onSend, enabled = input.isNotBlank() && !busy) { Icon(Icons.Rounded.Send, sh("Gönder", "Send"), tint = MainUi.Blue) } })
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(sh("KAPAT", "CLOSE")) } },
+    )
+}
+
+private fun WordSiegeGameDto.ownerForAsync(userId: String?): Int = if (userId == playerOneId) 1 else 2
+private fun WordSiegeGameDto.opponentIdAsync(userId: String?): String? = if (userId == playerOneId) playerTwoId else playerOneId
+private fun WordSiegeGameDto.rackForAsync(userId: String?): String = if (userId == playerOneId) playerOneRack else playerTwoRack.orEmpty()
+private fun WordSiegeGameDto.scoreForAsync(owner: Int): Int = if (owner == 1) playerOneWordScore else playerTwoWordScore
+private fun WordSiegeGameDto.areaForAsync(owner: Int): Int = if (owner == 1) playerOneArea else playerTwoArea
+
+@Composable
+private fun WordSiegeGameDto.finishedLabel(me: String?): String = when {
+    status != "finished" -> sh("Devam ediyor", "In progress")
+    finishReason == "timeout" && winnerId == me -> sh("SÜRE AŞIMI • KAZANDIN", "TIMEOUT • YOU WON")
+    finishReason == "timeout" -> sh("SÜRE AŞIMI • MAĞLUBİYET", "TIMEOUT • DEFEAT")
+    finishReason == "forfeit" && winnerId == me -> sh("RAKİP TESLİM OLDU • KAZANDIN", "RIVAL FORFEITED • YOU WON")
+    finishReason == "forfeit" -> sh("TESLİM OLDUN", "YOU FORFEITED")
+    winnerId == null -> sh("BERABERE", "DRAW")
+    winnerId == me -> sh("KAZANDIN", "YOU WON")
+    else -> sh("MAĞLUBİYET", "DEFEAT")
+}
+
+private fun wordSiegeRemainingText(deadline: String?, clockTick: Long): String {
+    if (deadline.isNullOrBlank()) return "—"
+    val remaining = runCatching { Duration.between(Instant.ofEpochMilli(clockTick), Instant.parse(deadline)) }.getOrNull() ?: return "—"
+    if (remaining.isNegative || remaining.isZero) return "00:00:00"
+    val seconds = remaining.seconds
+    val days = seconds / 86_400
+    val hours = (seconds % 86_400) / 3_600
+    val minutes = (seconds % 3_600) / 60
+    val secs = seconds % 60
+    return if (days > 0) "%dd %02d:%02d:%02d".format(days, hours, minutes, secs) else "%02d:%02d:%02d".format(hours, minutes, secs)
+}
+
+private fun wordSiegeRelativeTime(timestamp: String?, clockTick: Long): String {
+    if (timestamp.isNullOrBlank()) return "—"
+    val duration = runCatching { Duration.between(Instant.parse(timestamp), Instant.ofEpochMilli(clockTick)) }.getOrNull() ?: return "—"
+    val seconds = duration.seconds.coerceAtLeast(0)
+    return when {
+        seconds < 60 -> shPlain("az önce", "just now")
+        seconds < 3_600 -> shPlain("${seconds / 60} dk önce", "${seconds / 60}m ago")
+        seconds < 86_400 -> shPlain("${seconds / 3_600} sa önce", "${seconds / 3_600}h ago")
+        else -> shPlain("${seconds / 86_400} gün önce", "${seconds / 86_400}d ago")
+    }
+}
+
+private fun shPlain(tr: String, en: String): String = if (SonHarfUiState.isEnglish) en else tr
 
 @Composable
 internal fun WordSiegeBoard(
@@ -1076,15 +975,10 @@ internal fun WordSiegeBoard(
     onCell: (Int) -> Unit,
     modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
-    Surface(
-        modifier = modifier,
-        color = Color(0xFFE7EDF5),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, MainUi.Border),
-    ) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(3.dp)) {
-            val cellSize = maxWidth / 9
-            Column {
+    Surface(modifier = modifier, color = Color(0xFFE7EDF5), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, MainUi.Border)) {
+        BoxWithConstraints(Modifier.fillMaxSize().padding(3.dp)) {
+            val cellSize = minOf(maxWidth, maxHeight) / 9
+            Column(Modifier.align(Alignment.Center)) {
                 repeat(9) { row ->
                     Row {
                         repeat(9) { column ->
@@ -1108,16 +1002,7 @@ internal fun WordSiegeBoard(
 }
 
 @Composable
-private fun WordSiegeBoardCell(
-    cell: WordSiegeCellDto,
-    pendingLetter: Char?,
-    pending: Boolean,
-    previewArea: Boolean,
-    myOwner: Int,
-    enabled: Boolean,
-    size: Dp,
-    onClick: () -> Unit,
-) {
+private fun WordSiegeBoardCell(cell: WordSiegeCellDto, pendingLetter: Char?, pending: Boolean, previewArea: Boolean, myOwner: Int, enabled: Boolean, size: Dp, onClick: () -> Unit) {
     val owner = if (pending) myOwner else cell.owner
     val territory = when (owner) {
         1 -> MainUi.Blue.copy(alpha = if (pending) .30f else .17f)
@@ -1132,50 +1017,14 @@ private fun WordSiegeBoardCell(
         else -> MainUi.Border
     }
     val letter = pendingLetter?.toString() ?: cell.letter
-    Box(
-        Modifier
-            .size(size)
-            .padding(1.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(
-                when {
-                    previewArea && !pending -> MainUi.Green.copy(alpha = .12f)
-                    letter != null -> territory
-                    else -> MainUi.Surface
-                },
-            )
-            .clickable(enabled = enabled && (cell.letter == null || pending), onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) {
-        Surface(
-            modifier = Modifier.fillMaxSize(),
-            color = when {
-                pending -> SiegeTile.copy(alpha = .92f)
-                previewArea -> MainUi.Green.copy(alpha = .08f)
-                else -> Color.Transparent
-            },
-            shape = RoundedCornerShape(4.dp),
-            border = BorderStroke(if (pending || previewArea) 1.5.dp else .7.dp, border),
-        ) {
+    Box(Modifier.size(size).padding(1.dp).clip(RoundedCornerShape(4.dp)).background(when { previewArea && !pending -> MainUi.Green.copy(alpha = .12f); letter != null -> territory; else -> MainUi.Surface }).clickable(enabled = enabled && (cell.letter == null || pending), onClick = onClick), contentAlignment = Alignment.Center) {
+        Surface(Modifier.fillMaxSize(), color = when { pending -> SiegeTile.copy(alpha = .92f); previewArea -> MainUi.Green.copy(alpha = .08f); else -> Color.Transparent }, shape = RoundedCornerShape(4.dp), border = BorderStroke(if (pending || previewArea) 1.5.dp else .7.dp, border)) {
             Box(contentAlignment = Alignment.Center) {
                 if (letter != null) {
                     Text(letter, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black)
-                    Text(
-                        wordSiegeLetterValue(letter),
-                        color = MainUi.Muted,
-                        fontSize = 5.sp,
-                        modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp),
-                    )
+                    Text(wordSiegeLetterValue(letter), color = MainUi.Muted, fontSize = 5.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp))
                 } else if (!cell.bonusUsed && cell.bonus != null) {
-                    Text(
-                        cell.bonus,
-                        color = when (cell.bonus) {
-                            "2H", "3H" -> MainUi.Blue
-                            else -> SiegePurple
-                        },
-                        fontSize = 7.sp,
-                        fontWeight = FontWeight.Black,
-                    )
+                    Text(cell.bonus, color = if (cell.bonus in setOf("2H", "3H")) MainUi.Blue else SiegePurple, fontSize = 7.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -1183,219 +1032,20 @@ private fun WordSiegeBoardCell(
 }
 
 @Composable
-internal fun WordSiegeRackTile(
-    letter: Char,
-    selected: Boolean,
-    used: Boolean,
-    enabled: Boolean,
-    modifier: Modifier = Modifier,
-    tileHeight: Dp = 48.dp,
-    onClick: () -> Unit,
-) {
-    Surface(
-        modifier = modifier.height(tileHeight).clickable(enabled = enabled, onClick = onClick),
-        color = when {
-            used -> MainUi.SurfaceSoft
-            selected -> SiegeTile
-            else -> Color(0xFFFFF1C9)
-        },
-        shape = RoundedCornerShape(9.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MainUi.Blue else SiegeTileBorder.copy(alpha = .7f)),
-        shadowElevation = if (selected) 3.dp else 0.dp,
-    ) {
+internal fun WordSiegeRackTile(letter: Char, selected: Boolean, used: Boolean, enabled: Boolean, modifier: Modifier = Modifier, tileHeight: Dp = 48.dp, onClick: () -> Unit) {
+    Surface(modifier = modifier.height(tileHeight).clickable(enabled = enabled, onClick = onClick), color = when { used -> MainUi.SurfaceSoft; selected -> SiegeTile; else -> Color(0xFFFFF1C9) }, shape = RoundedCornerShape(9.dp), border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MainUi.Blue else SiegeTileBorder.copy(alpha = .7f)), shadowElevation = if (selected) 3.dp else 0.dp) {
         Box(contentAlignment = Alignment.Center) {
             Text(letter.toString(), color = if (used) MainUi.Muted.copy(alpha = .45f) else MainUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
-            Text(
-                wordSiegeLetterValue(letter.toString()),
-                color = MainUi.Muted,
-                fontSize = 7.sp,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
-            )
+            Text(wordSiegeLetterValue(letter.toString()), color = MainUi.Muted, fontSize = 7.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp))
         }
-    }
-}
-
-@Composable
-private fun WordSiegeFinishedCard(
-    game: WordSiegeGameDto,
-    me: String?,
-    moves: List<WordSiegeMoveDto>,
-    vip: Boolean,
-) {
-    val won = game.winnerId == me
-    val draw = game.winnerId == null
-    val accent = when { draw -> MainUi.Gold; won -> MainUi.Green; else -> MainUi.Red }
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            color = accent.copy(alpha = .08f),
-            border = BorderStroke(1.dp, accent.copy(alpha = .45f)),
-        ) {
-            Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
-                    color = accent,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Black,
-                )
-                Text(
-                    sh("Sonuç = kelime puanı + sahip olunan alan", "Result = word score + owned territory"),
-                    color = MainUi.Muted,
-                    fontSize = 10.sp,
-                )
-            }
-        }
-        if (vip) WordSiegeVipFinishedAnalysis(game, moves, me)
     }
 }
 
 @Composable
 internal fun WordSiegeNotice(message: String) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(13.dp),
-        color = SiegePurpleSoft,
-        border = BorderStroke(1.dp, SiegePurple.copy(alpha = .25f)),
-    ) {
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), color = SiegePurpleSoft, border = BorderStroke(1.dp, SiegePurple.copy(alpha = .25f))) {
         Text(message, Modifier.padding(horizontal = 12.dp, vertical = 9.dp), color = MainUi.Text, fontSize = 11.sp)
     }
-}
-
-@Composable
-private fun WordSiegeConfirmDialog(
-    title: String,
-    body: String,
-    confirm: String,
-    accent: Color,
-    onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(title, fontWeight = FontWeight.Black) },
-        text = { Text(body, color = MainUi.Muted) },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(confirm, color = accent, fontWeight = FontWeight.Black) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(sh("VAZGEÇ", "CANCEL")) } },
-    )
-}
-
-@Composable
-private fun WordSiegeChatDialog(
-    messages: List<WordSiegeMessageDto>,
-    me: String?,
-    input: String,
-    busy: Boolean,
-    onInput: (String) -> Unit,
-    onDismiss: () -> Unit,
-    onSend: () -> Unit,
-) {
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(sh("SOHBET", "CHAT"), fontWeight = FontWeight.Black) },
-        text = {
-            Column(Modifier.heightIn(min = 220.dp, max = 430.dp)) {
-                if (messages.isEmpty()) {
-                    Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Text(sh("Henüz mesaj yok.", "No messages yet."), color = MainUi.Muted, fontSize = 12.sp)
-                    }
-                } else {
-                    LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(messages.takeLast(40), key = { it.id }) { message ->
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = if (message.senderId == me) Arrangement.End else Arrangement.Start,
-                            ) {
-                                Surface(
-                                    color = if (message.senderId == me) SiegeBlueSoft else SiegePurpleSoft,
-                                    shape = RoundedCornerShape(12.dp),
-                                ) {
-                                    Text(message.body, Modifier.padding(9.dp), color = MainUi.Text, fontSize = 11.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-                Spacer(Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = input,
-                    onValueChange = onInput,
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    enabled = !busy,
-                    placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) },
-                    trailingIcon = {
-                        IconButton(onClick = onSend, enabled = input.isNotBlank() && !busy) {
-                            Icon(Icons.Rounded.Send, sh("Gönder", "Send"), tint = MainUi.Blue)
-                        }
-                    },
-                )
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(sh("KAPAT", "CLOSE")) } },
-    )
-}
-
-private fun WordSiegeGameDto.ownerFor(userId: String?): Int = if (userId == playerOneId) 1 else 2
-
-private fun WordSiegeGameDto.opponentId(userId: String?): String? =
-    if (userId == playerOneId) playerTwoId else playerOneId
-
-private fun WordSiegeGameDto.rackFor(userId: String?): String =
-    if (userId == playerOneId) playerOneRack else playerTwoRack.orEmpty()
-
-private fun WordSiegeGameDto.scoreFor(owner: Int): Int =
-    if (owner == 1) playerOneWordScore else playerTwoWordScore
-
-private fun WordSiegeGameDto.areaFor(owner: Int): Int =
-    if (owner == 1) playerOneArea else playerTwoArea
-
-private fun WordSiegeGameDto.listSection(me: String?): SiegeListSection = when {
-    status == "waiting" -> SiegeListSection.WAITING
-    status == "finished" -> SiegeListSection.FINISHED
-    isSleeping() -> SiegeListSection.SLEEPING
-    currentPlayerId == me -> SiegeListSection.YOUR_TURN
-    else -> SiegeListSection.OPPONENT
-}
-
-private fun WordSiegeGameDto.isSleeping(): Boolean {
-    val stamp = lastMoveAt ?: createdAt
-    return runCatching { Duration.between(Instant.parse(stamp), Instant.now()).toDays() >= 7 }.getOrDefault(false)
-}
-
-@Composable
-private fun SiegeListSection.label(): String = when (this) {
-    SiegeListSection.WAITING -> sh("RAKİP ARANIYOR", "FINDING A RIVAL")
-    SiegeListSection.YOUR_TURN -> sh("SIRA SENDE", "YOUR TURN")
-    SiegeListSection.OPPONENT -> sh("RAKİPTE", "RIVAL'S TURN")
-    SiegeListSection.SLEEPING -> sh("UYUYAN OYUNLAR", "SLEEPING GAMES")
-    SiegeListSection.FINISHED -> sh("BİTEN OYUNLAR", "FINISHED GAMES")
-}
-
-private fun SiegeListSection.color(): Color = when (this) {
-    SiegeListSection.WAITING -> MainUi.Gold
-    SiegeListSection.YOUR_TURN -> MainUi.Blue
-    SiegeListSection.OPPONENT -> SiegePurple
-    SiegeListSection.SLEEPING -> MainUi.Muted
-    SiegeListSection.FINISHED -> MainUi.Green
-}
-
-@Composable
-private fun WordSiegeGameDto.cardStatus(me: String?): String = when (listSection(me)) {
-    SiegeListSection.WAITING -> sh("Eşleşme bekliyor", "Waiting to match")
-    SiegeListSection.YOUR_TURN -> sh("Hamleni yap", "Make your move")
-    SiegeListSection.OPPONENT -> sh("Rakibin hamlesi bekleniyor", "Waiting for your rival")
-    SiegeListSection.SLEEPING -> sh("İstediğinde devam et", "Resume whenever you want")
-    SiegeListSection.FINISHED -> statusLabel(me)
-}
-
-@Composable
-private fun WordSiegeGameDto.statusLabel(me: String?): String = when {
-    status == "cancelled" -> sh("İptal edildi", "Cancelled")
-    status != "finished" -> sh("Devam ediyor", "In progress")
-    winnerId == null -> sh("Berabere", "Draw")
-    winnerId == me -> sh("Kazandın", "You won")
-    else -> sh("Rakip kazandı", "Rival won")
 }
 
 private fun wordSiegeLetterValue(letter: String): String = when (letter) {
@@ -1411,25 +1061,24 @@ private fun wordSiegeLetterValue(letter: String): String = when (letter) {
 }
 
 internal fun wordSiegeFriendlyError(raw: String): String {
-    val invalidWord = raw.substringAfter("word_siege_invalid_word:", "")
-        .substringBefore(' ')
-        .substringBefore('"')
-        .trim(' ', '.', ',', ':')
+    val invalidWord = raw.substringAfter("word_siege_invalid_word:", "").substringBefore(' ').substringBefore('"').trim(' ', '.', ',', ':')
     return when {
-        invalidWord.isNotBlank() -> sh("$invalidWord sözlükte bulunamadı.", "$invalidWord is not in the dictionary.")
-        "word_siege_active_limit" in raw -> sh("Aynı anda en fazla 10 devam eden oyunun olabilir.", "You can have at most 10 ongoing games.")
-        "word_siege_not_your_turn" in raw -> sh("Şu anda sıra rakibinde.", "It is your rival's turn.")
-        "word_siege_first_word_must_cover_center" in raw -> sh("İlk kelime ortadaki 2K karesinden geçmeli.", "The first word must cover the center 2W cell.")
-        "word_siege_move_must_connect" in raw -> sh("Yeni kelime tahtadaki harflerden birine bağlanmalı.", "The new word must connect to the board.")
-        "word_siege_gap_between_tiles" in raw -> sh("Harflerin arasında boş kare bırakamazsın.", "You cannot leave a gap between tiles.")
-        "word_siege_not_in_one_row" in raw -> sh("Harfleri aynı yatay sıraya yerleştir.", "Place tiles in one horizontal row.")
-        "word_siege_not_in_one_column" in raw -> sh("Harfleri aynı dikey sütuna yerleştir.", "Place tiles in one vertical column.")
-        "word_siege_cell_occupied" in raw -> sh("Bu karede zaten bir harf var.", "That cell already has a tile.")
-        "word_siege_not_enough_tiles" in raw -> sh("Torbada bu değişim için yeterli harf yok.", "The bag does not have enough tiles for this exchange.")
-        "word_siege_word_required" in raw -> sh("En az iki harfli geçerli bir kelime oluşturmalısın.", "You must form a valid word of at least two letters.")
-        "word_siege_not_playing" in raw -> sh("Bu oyun artık aktif değil.", "This game is no longer active.")
-        "chat" in raw.lowercase() && "suspend" in raw.lowercase() -> sh("Sohbet erişimin geçici olarak kapalı.", "Your chat access is temporarily suspended.")
-        raw.isBlank() -> sh("Bağlantı kurulamadı. Tekrar dene.", "Could not connect. Try again.")
-        else -> sh("İşlem tamamlanamadı. Bağlantını kontrol edip tekrar dene.", "Could not complete the action. Check your connection and try again.")
+        invalidWord.isNotBlank() -> shPlain("$invalidWord sözlükte bulunamadı.", "$invalidWord is not in the dictionary.")
+        "word_siege_active_limit" in raw -> shPlain("Aynı anda en fazla 10 devam eden oyunun olabilir.", "You can have at most 10 ongoing games.")
+        "word_siege_invalid_turn_duration" in raw -> shPlain("Oyun süresi 12 veya 72 saat olmalı.", "Turn time must be 12 or 72 hours.")
+        "word_siege_not_your_turn" in raw -> shPlain("Şu anda sıra rakibinde.", "It is your rival's turn.")
+        "word_siege_first_word_must_cover_center" in raw -> shPlain("İlk kelime ortadaki 2K karesinden geçmeli.", "The first word must cover the center 2W cell.")
+        "word_siege_move_must_connect" in raw -> shPlain("Yeni kelime tahtadaki harflerden birine bağlanmalı.", "The new word must connect to the board.")
+        "word_siege_gap_between_tiles" in raw -> shPlain("Harflerin arasında boş kare bırakamazsın.", "You cannot leave a gap between tiles.")
+        "word_siege_not_in_one_row" in raw -> shPlain("Harfleri aynı yatay sıraya yerleştir.", "Place tiles in one horizontal row.")
+        "word_siege_not_in_one_column" in raw -> shPlain("Harfleri aynı dikey sütuna yerleştir.", "Place tiles in one vertical column.")
+        "word_siege_cell_occupied" in raw -> shPlain("Bu karede zaten bir harf var.", "That cell already has a tile.")
+        "word_siege_not_enough_tiles" in raw -> shPlain("Torbada bu değişim için yeterli harf yok.", "The bag does not have enough tiles for this exchange.")
+        "word_siege_word_required" in raw -> shPlain("En az iki harfli geçerli bir kelime oluşturmalısın.", "You must form a valid word of at least two letters.")
+        "word_siege_not_playing" in raw -> shPlain("Bu oyun artık aktif değil. Oyunlarım listesini yenile.", "This game is no longer active. Refresh My Games.")
+        "word_siege_not_participant" in raw -> shPlain("Bu oyuna erişim yetkin yok.", "You do not have access to this game.")
+        "chat" in raw.lowercase() && "suspend" in raw.lowercase() -> shPlain("Sohbet erişimin geçici olarak kapalı.", "Your chat access is temporarily suspended.")
+        raw.isBlank() -> shPlain("Bağlantı kurulamadı. Tekrar dene.", "Could not connect. Try again.")
+        else -> shPlain("İşlem tamamlanamadı. Bağlantını kontrol edip tekrar dene.", "Could not complete the action. Check your connection and try again.")
     }
 }
