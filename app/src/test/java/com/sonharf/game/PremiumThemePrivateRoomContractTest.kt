@@ -25,5 +25,7 @@ class PremiumThemePrivateRoomContractTest {
         assertTrue(src.contains("private val LCard: Color get() = SonHarfCosmetics.gamePalette.surface"))
         assertTrue(src.contains("private val LText: Color get() = SonHarfCosmetics.gamePalette.text"))
         assertTrue(src.contains("private val LBorder: Color get() = SonHarfCosmetics.gamePalette.border"))
+        assertFalse(src.contains("containerColor = Color.White"))
+        assertFalse(src.contains("Brush.verticalGradient(listOf(Color.White"))
     }
 }

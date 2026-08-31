@@ -100,14 +100,14 @@ internal fun LightDuelLobby(
             item {
                 Card(colors = CardDefaults.cardColors(containerColor = LCard), shape = RoundedCornerShape(30.dp), border = BorderStroke(1.dp, LBorder), elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)) {
                     Box(
-                        Modifier.fillMaxWidth().height(335.dp).background(Brush.radialGradient(listOf(LBlueSoft, Color.White, Color(0xFFF8FAFD)))),
+                        Modifier.fillMaxWidth().height(335.dp).background(Brush.radialGradient(listOf(LBlueSoft, LCard, LBg))),
                         contentAlignment = Alignment.Center,
                     ) {
                         Box(
                             Modifier.size(225.dp).clip(CircleShape).background(Brush.sweepGradient(listOf(LBlue, LPurple, LGold, LBlue2, LBlue))).padding(4.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+                            Box(Modifier.fillMaxSize().clip(CircleShape).background(LCard), contentAlignment = Alignment.Center) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     if (matching) {
                                         CircularProgressIndicator(Modifier.size(34.dp), color = LBlue, strokeWidth = 3.dp)
@@ -166,7 +166,7 @@ internal fun LightDuelLobby(
                         OutlinedTextField(
                             value = privateCode, onValueChange = onPrivateCode, modifier = Modifier.fillMaxWidth(), singleLine = true,
                             placeholder = { Text(sh("6 haneli oda kodu", "6-character room code")) },
-                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = LBlue, unfocusedBorderColor = LBorder, focusedContainerColor = Color.White, unfocusedContainerColor = Color.White),
+                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = LBlue, unfocusedBorderColor = LBorder, focusedContainerColor = LCard, unfocusedContainerColor = LCard),
                         )
                         OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6, modifier = Modifier.fillMaxWidth(), border = BorderStroke(1.dp, LBlue.copy(alpha = .5f))) { Text(sh("ODA KODUYLA KATIL", "JOIN WITH ROOM CODE"), color = LBlue) }
                     }
@@ -271,12 +271,12 @@ internal fun LightDuelArena(
     }
 
     Column(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, LBg, LBg.copy(alpha = .72f)))).statusBarsPadding(),
+        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(LCard, LBg, LBg.copy(alpha = .72f)))).statusBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             LightPlayerCard(playerName, playerAvatarPath, playerGender, playerRating, myScore, myTurn, LBlue, false, Modifier.weight(1f))
-            Surface(modifier = Modifier.size(78.dp), shape = CircleShape, color = Color.White, border = BorderStroke(3.dp, if (seconds <= 3 && !quizActive) LRed else LBlue), shadowElevation = 2.dp) {
+            Surface(modifier = Modifier.size(78.dp), shape = CircleShape, color = LCard, border = BorderStroke(3.dp, if (seconds <= 3 && !quizActive) LRed else LBlue), shadowElevation = 2.dp) {
                 Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Text(seconds.toString(), color = LText, fontSize = 30.sp, fontWeight = FontWeight.Black)
                     Text(if (quizActive) "BONUS" else sh("sn", "sec"), color = if (quizActive) LGold else LBlue, fontSize = 8.sp, fontWeight = FontWeight.Bold)
@@ -339,7 +339,7 @@ internal fun LightDuelArena(
 
 @Composable
 private fun LightPlayerCard(name: String, avatarPath: String?, gender: String?, rating: Int, score: Int, active: Boolean, accent: Color, bot: Boolean, modifier: Modifier) {
-    Card(modifier = modifier.height(106.dp), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(22.dp), border = BorderStroke(if (active) 3.dp else 1.dp, if (active) LGreen else LBorder), elevation = CardDefaults.cardElevation(defaultElevation = if (active) 3.dp else 1.dp)) {
+    Card(modifier = modifier.height(106.dp), colors = CardDefaults.cardColors(containerColor = LCard), shape = RoundedCornerShape(22.dp), border = BorderStroke(if (active) 3.dp else 1.dp, if (active) LGreen else LBorder), elevation = CardDefaults.cardElevation(defaultElevation = if (active) 3.dp else 1.dp)) {
         Row(Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
             if (bot) {
                 Box(Modifier.size(56.dp, 74.dp).clip(RoundedCornerShape(14.dp)).background(accent.copy(alpha = .10f)), contentAlignment = Alignment.Center) { Text("BOT", color = accent, fontSize = 12.sp, fontWeight = FontWeight.Black) }
@@ -358,7 +358,7 @@ private fun LightPlayerCard(name: String, avatarPath: String?, gender: String?, 
 
 @Composable
 private fun LightVipWordHistory(isVip: Boolean, words: List<GameWordDto>, language: String, modifier: Modifier = Modifier) {
-    Surface(modifier = modifier.fillMaxWidth().height(58.dp), shape = RoundedCornerShape(15.dp), color = Color.White, border = BorderStroke(1.dp, if (isVip) LBlue.copy(alpha = .28f) else LBorder)) {
+    Surface(modifier = modifier.fillMaxWidth().height(58.dp), shape = RoundedCornerShape(15.dp), color = LCard, border = BorderStroke(1.dp, if (isVip) LBlue.copy(alpha = .28f) else LBorder)) {
         if (!isVip) {
             Box(Modifier.fillMaxSize().padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                 Text(sh("🔒 Son kelimeleri sadece VIP üyeler görebilir.", "🔒 Only VIP members can see the latest words."), color = LMuted, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
@@ -498,7 +498,7 @@ private fun BilBakalimResultRow(name: String, answer: Long?, distance: Long?, ac
 
 @Composable
 private fun LightInputBar(value: String, myTurn: Boolean, busy: Boolean, quiz: Boolean, onSubmit: () -> Unit, modifier: Modifier = Modifier) {
-    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = Color.White, border = BorderStroke(1.5.dp, if (myTurn && !quiz) LBlue else LBorder)) {
+    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = LCard, border = BorderStroke(1.5.dp, if (myTurn && !quiz) LBlue else LBorder)) {
         Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 15.dp, end = 5.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 when { value.isNotBlank() -> value; quiz -> sh("Bonus turu devam ediyor…", "Bonus round in progress…"); myTurn -> sh("Kelimenizi yazın…", "Type your word…"); else -> sh("Kelimeyi hazırlayabilirsin…", "Prepare your word…") },
@@ -513,14 +513,14 @@ private fun LightInputBar(value: String, myTurn: Boolean, busy: Boolean, quiz: B
 
 @Composable
 private fun LightChoicePill(selected: Boolean, text: String, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier = modifier.height(52.dp).clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), color = if (selected) LBlueSoft else Color.White, border = BorderStroke(1.dp, if (selected) LBlue.copy(alpha = .5f) else LBorder)) {
+    Surface(modifier = modifier.height(52.dp).clickable(onClick = onClick), shape = RoundedCornerShape(16.dp), color = if (selected) LBlueSoft else LCard, border = BorderStroke(1.dp, if (selected) LBlue.copy(alpha = .5f) else LBorder)) {
         Box(contentAlignment = Alignment.Center) { Text(text, color = if (selected) LBlue else LText, fontWeight = FontWeight.Black, fontSize = 12.sp) }
     }
 }
 
 @Composable
 private fun LightLobbyAction(title: String, subtitle: String, icon: String, modifier: Modifier, onClick: () -> Unit) {
-    Card(modifier = modifier.height(104.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, LBorder)) {
+    Card(modifier = modifier.height(104.dp).clickable(onClick = onClick), colors = CardDefaults.cardColors(containerColor = LCard), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, LBorder)) {
         Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 10.dp), verticalArrangement = Arrangement.Center) {
             Text(icon, fontSize = 22.sp); Spacer(Modifier.height(7.dp)); Text(title, color = LText, fontWeight = FontWeight.Black, fontSize = 12.sp, maxLines = 1); Spacer(Modifier.height(2.dp)); Text(subtitle, color = Color(0xFF4F6F95), fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
         }
@@ -529,7 +529,7 @@ private fun LightLobbyAction(title: String, subtitle: String, icon: String, modi
 
 @Composable
 private fun LightActionButton(label: String, accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    OutlinedButton(onClick = onClick, modifier = modifier.height(38.dp), shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, accent.copy(alpha = .45f)), colors = ButtonDefaults.outlinedButtonColors(containerColor = Color.White, contentColor = accent), contentPadding = PaddingValues(horizontal = 4.dp)) {
+    OutlinedButton(onClick = onClick, modifier = modifier.height(38.dp), shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, accent.copy(alpha = .45f)), colors = ButtonDefaults.outlinedButtonColors(containerColor = LCard, contentColor = accent), contentPadding = PaddingValues(horizontal = 4.dp)) {
         Text(label, fontSize = 9.sp, fontWeight = FontWeight.Black, maxLines = 1)
     }
 }
@@ -537,7 +537,7 @@ private fun LightActionButton(label: String, accent: Color, modifier: Modifier, 
 @Composable
 private fun LightNotice(notice: String, modifier: Modifier = Modifier) {
     val error = notice.contains("sorun", true) || notice.contains("problem", true) || notice.contains("geçerli", true) || notice.contains("invalid", true) || notice.contains("doldu", true) || notice.contains("expired", true)
-    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), color = if (error) Color(0xFFFFF1F4) else Color.White, border = BorderStroke(1.dp, if (error) LRed.copy(alpha = .25f) else LBorder)) {
+    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp), color = if (error) LRed.copy(alpha = .10f) else LCard, border = BorderStroke(1.dp, if (error) LRed.copy(alpha = .25f) else LBorder)) {
         Text(notice, Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp), color = if (error) LRed else LMuted, fontSize = 10.sp, textAlign = TextAlign.Center, maxLines = 2)
     }
 }
@@ -545,7 +545,7 @@ private fun LightNotice(notice: String, modifier: Modifier = Modifier) {
 @Composable
 private fun LightWaitingRoom(code: String, playerName: String, onExit: () -> Unit) {
     Box(Modifier.fillMaxSize().background(LBg).statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
-        Card(modifier = Modifier.fillMaxWidth(.88f), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(26.dp), border = BorderStroke(1.dp, LBorder)) {
+        Card(modifier = Modifier.fillMaxWidth(.88f), colors = CardDefaults.cardColors(containerColor = LCard), shape = RoundedCornerShape(26.dp), border = BorderStroke(1.dp, LBorder)) {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text(playerName, color = LText, fontSize = 18.sp, fontWeight = FontWeight.Black)
                 Text(sh("RAKİP BEKLENİYOR", "WAITING FOR OPPONENT"), color = LBlue, fontWeight = FontWeight.Black)
@@ -561,7 +561,7 @@ private fun LightWaitingRoom(code: String, playerName: String, onExit: () -> Uni
 @Composable
 private fun LightResult(won: Boolean, draw: Boolean, playerName: String, opponentName: String, myRounds: Int, oppRounds: Int, onRematch: () -> Unit, onExit: () -> Unit) {
     Box(Modifier.fillMaxSize().background(LBg).statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
-        Card(modifier = Modifier.fillMaxWidth(.88f), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, if (draw) LGold.copy(alpha = .45f) else if (won) LBlue.copy(alpha = .45f) else LRed.copy(alpha = .35f))) {
+        Card(modifier = Modifier.fillMaxWidth(.88f), colors = CardDefaults.cardColors(containerColor = LCard), shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, if (draw) LGold.copy(alpha = .45f) else if (won) LBlue.copy(alpha = .45f) else LRed.copy(alpha = .35f))) {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(15.dp)) {
                 Text(if (draw) sh("BERABERE", "DRAW") else if (won) sh("ZAFER", "VICTORY") else sh("MAÇ BİTTİ", "MATCH OVER"), color = if (draw) LGold else if (won) LBlue else LRed, fontSize = 28.sp, fontWeight = FontWeight.Black)
                 Text("$playerName  $myRounds : $oppRounds  $opponentName", color = LText, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
