@@ -279,7 +279,10 @@ private fun MainHomeScreen(
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("SON HARF", color = MainUi.Text, fontSize = 28.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                    SonHarfBrandLogo(
+                        modifier = Modifier.width(150.dp),
+                        size = 66.dp,
+                    )
                     Text(
                         sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"),
                         color = MainUi.Muted,
