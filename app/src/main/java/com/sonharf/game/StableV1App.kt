@@ -7,10 +7,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AdminPanelSettings
 import androidx.compose.material.icons.rounded.HelpOutline
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,7 +25,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.getAdminAccess
 
 /**
  * V1 stabilization shell.
@@ -37,6 +42,8 @@ fun StableV1App() {
     val context = LocalContext.current
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
+    var adminAuthorized by remember { mutableStateOf(false) }
+    var showAdminPanel by remember { mutableStateOf(false) }
     var tutorial by remember { mutableStateOf<FirstPlayerTutorialKind?>(null) }
     var automaticTutorial by remember { mutableStateOf(false) }
     var showHelpChooser by remember { mutableStateOf(false) }
@@ -47,6 +54,13 @@ fun StableV1App() {
     }
 
     LaunchedEffect(authenticated) {
+        adminAuthorized = if (authenticated && SupabaseProvider.configured) {
+            runCatching { OnlineGameBackend().getAdminAccess().authorized }.getOrDefault(false)
+        } else {
+            false
+        }
+        if (!adminAuthorized) showAdminPanel = false
+
         if (!authenticated) return@LaunchedEffect
         when {
             shouldAutoShowTutorial(SonHarfPreferences.sonHarfTutorialCompleted(context)) -> {
@@ -105,29 +119,55 @@ fun StableV1App() {
             .fillMaxSize()
             .background(SonHarfBg),
     ) {
-        SonHarfMainApp(onSignedOut = {
-            tutorial = null
-            showHelpChooser = false
-            automaticTutorial = false
-            authenticated = false
-        })
+        if (showAdminPanel && adminAuthorized) {
+            AdminConsoleScreen(onBack = { showAdminPanel = false })
+        } else {
+            SonHarfMainApp(onSignedOut = {
+                tutorial = null
+                showHelpChooser = false
+                showAdminPanel = false
+                adminAuthorized = false
+                automaticTutorial = false
+                authenticated = false
+            })
 
-        if (tutorial == null) {
-            FloatingActionButton(
-                onClick = { showHelpChooser = true },
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .statusBarsPadding()
-                    .padding(top = 6.dp, end = 8.dp)
-                    .size(42.dp),
-                containerColor = MainUi.Surface,
-                contentColor = MainUi.Blue,
-            ) {
-                Icon(
-                    Icons.Rounded.HelpOutline,
-                    contentDescription = sh("Nasıl Oynanır?", "How to Play?"),
-                    modifier = Modifier.size(22.dp),
-                )
+            if (tutorial == null) {
+                FloatingActionButton(
+                    onClick = { showHelpChooser = true },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .statusBarsPadding()
+                        .padding(top = 6.dp, end = 8.dp)
+                        .size(42.dp),
+                    containerColor = MainUi.Surface,
+                    contentColor = MainUi.Blue,
+                ) {
+                    Icon(
+                        Icons.Rounded.HelpOutline,
+                        contentDescription = sh("Nasıl Oynanır?", "How to Play?"),
+                        modifier = Modifier.size(22.dp),
+                    )
+                }
+
+                if (adminAuthorized) {
+                    ExtendedFloatingActionButton(
+                        onClick = { showAdminPanel = true },
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .statusBarsPadding()
+                            .padding(top = 6.dp, start = 8.dp),
+                        containerColor = MainUi.Text,
+                        contentColor = MainUi.Surface,
+                        icon = {
+                            Icon(
+                                Icons.Rounded.AdminPanelSettings,
+                                contentDescription = null,
+                                modifier = Modifier.size(19.dp),
+                            )
+                        },
+                        text = { Text(sh("Admin Paneli", "Admin Panel")) },
+                    )
+                }
             }
         }
     }
@@ -140,7 +180,7 @@ fun StableV1App() {
         )
     }
 
-    if (showHelpChooser && tutorial == null) {
+    if (showHelpChooser && tutorial == null && !showAdminPanel) {
         TutorialHelpChooser(
             onDismiss = { showHelpChooser = false },
             onSonHarf = {
