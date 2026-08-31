@@ -118,12 +118,7 @@ private fun FramelessGenderSymbol(gender: String?, size: Dp) {
         color = visual.color,
         fontWeight = FontWeight.Black,
         fontSize = (size.value * .31f).coerceAtLeast(13f).sp,
-        style = TextStyle(
-            shadow = Shadow(
-                color = visual.color.copy(alpha = .28f),
-                blurRadius = (size.value * .12f).coerceAtLeast(3f),
-            )
-        ),
+        style = TextStyle(shadow = Shadow(color = visual.color.copy(alpha = .28f), blurRadius = (size.value * .12f).coerceAtLeast(3f))),
     )
 }
 
@@ -155,12 +150,15 @@ internal fun ProfilePhotoAvatar(
                 }
             }
         }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, size)
-        }
+        Box(Modifier.align(Alignment.BottomEnd)) { FramelessGenderSymbol(gender, size) }
     }
 }
 
+/**
+ * Unified player portrait. The duel arena established the 56x74 rounded portrait as the
+ * game-wide identity shape; all call sites using the gender-aware avatar now share that
+ * aspect ratio and never shrink below the arena portrait.
+ */
 @Composable
 internal fun ProfilePhotoAvatarWithGender(
     avatarPath: String?,
@@ -170,28 +168,16 @@ internal fun ProfilePhotoAvatarWithGender(
     accent: Color = SonHarfCyan,
     visible: Boolean = true,
 ) {
-    var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(avatarPath, visible) {
-        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
-    }
-    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
-    Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
-        Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (bitmap != null) {
-                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-            } else {
-                Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-                    Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (size.value * .38f).sp)
-                }
-            }
-        }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, size)
-        }
-    }
+    val width = if (size < 56.dp) 56.dp else size
+    ProfilePhotoAvatarRectWithGender(
+        avatarPath = avatarPath,
+        gender = gender,
+        name = name,
+        width = width,
+        height = width * (74f / 56f),
+        accent = accent,
+        visible = visible,
+    )
 }
 
 @Composable
@@ -202,52 +188,31 @@ internal fun ProfilePhotoAvatarRectWithGender(
     width: Dp,
     height: Dp,
     accent: Color = SonHarfCyan,
+    visible: Boolean = true,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(avatarPath) {
-        bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+    LaunchedEffect(avatarPath, visible) {
+        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     val shape = RoundedCornerShape(14.dp)
-    Box(
-        Modifier.size(width, height + 4.dp),
-        contentAlignment = Alignment.TopCenter,
-    ) {
+    Box(Modifier.size(width, height + 4.dp), contentAlignment = Alignment.TopCenter) {
         Box(
             Modifier
                 .size(width, height)
                 .clip(shape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color.White, accent.copy(alpha = .86f), Color(0xFF57C7F3), Color.White)
-                    )
-                )
+                .background(Brush.linearGradient(listOf(Color.White, accent.copy(alpha = .86f), Color(0xFF57C7F3), Color.White)))
                 .padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (bitmap != null) {
-                Image(
-                    bitmap.asImageBitmap(),
-                    null,
-                    Modifier.fillMaxSize().clip(shape),
-                    contentScale = ContentScale.Crop,
-                )
+                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(shape), contentScale = ContentScale.Crop)
             } else {
-                Box(
-                    Modifier.fillMaxSize().clip(shape).background(Color.White),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        name.take(1).uppercase(),
-                        color = Color(0xFF16324A),
-                        fontWeight = FontWeight.Black,
-                        fontSize = (height.value * .32f).coerceAtLeast(14f).sp,
-                    )
+                Box(Modifier.fillMaxSize().clip(shape).background(Color.White), contentAlignment = Alignment.Center) {
+                    Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (height.value * .32f).coerceAtLeast(14f).sp)
                 }
             }
         }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, height)
-        }
+        Box(Modifier.align(Alignment.BottomEnd)) { FramelessGenderSymbol(gender, height) }
     }
 }
