@@ -1,0 +1,21 @@
+name: Bil Bakalim numeric scoped patch
+on:
+  push:
+    branches: [feat/bil-bakalim-estimate-20260831]
+    paths: [.github/workflows/bilbakalim-numeric-patch.yml]
+permissions:
+  contents: write
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/bil-bakalim-estimate-20260831
+      - run: python3 scripts/patch_bilbakalim_numeric_ui.py
+      - run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add app/src/main/java/com/sonharf/game/LightDuelUi.kt app/src/main/java/com/sonharf/game/data/OnlineGameBackend.kt
+          git commit -m "feat(bilbakalim): replace choices with numeric estimate UI"
+          git push origin HEAD:feat/bil-bakalim-estimate-20260831
