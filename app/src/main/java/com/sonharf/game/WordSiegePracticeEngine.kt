@@ -34,11 +34,9 @@ internal data class WordSiegePracticeMove(
 
 internal class WordSiegePracticeError(val code: String) : IllegalArgumentException(code)
 
-/** Local, connection-free practice rules. Online matches still validate against the server dictionary. */
 internal object WordSiegePracticeEngine {
     private val trLocale = Locale.forLanguageTag("tr-TR")
 
-    // Deliberately friendly opening racks make the first practice game immediately playable.
     fun newGame(): WordSiegePracticeState = WordSiegePracticeState(
         board = List(81) { index ->
             WordSiegeCellDto(
@@ -64,13 +62,15 @@ internal object WordSiegePracticeEngine {
         owner: Int,
         placements: Map<Int, Int>,
         horizontal: Boolean,
-    ): WordSiegePracticeMove = applyMove(state, owner, placements, horizontal).second
+        wordValidator: (String) -> Boolean = ::isPracticeWord,
+    ): WordSiegePracticeMove = applyMove(state, owner, placements, horizontal, wordValidator).second
 
     fun applyMove(
         state: WordSiegePracticeState,
         owner: Int,
         placements: Map<Int, Int>,
         horizontal: Boolean,
+        wordValidator: (String) -> Boolean = ::isPracticeWord,
     ): Pair<WordSiegePracticeState, WordSiegePracticeMove> {
         requireActiveTurn(state, owner)
         if (placements.size !in 1..7) fail("word_siege_invalid_placements")
@@ -104,7 +104,7 @@ internal object WordSiegePracticeEngine {
         fun acceptWord(cells: List<Int>) {
             if (cells.size < 2) return
             val word = cells.joinToString("") { letterAt(it)?.toString().orEmpty() }
-            if (!isPracticeWord(word)) fail("word_siege_invalid_word:$word")
+            if (!wordValidator(word)) fail("word_siege_invalid_word:$word")
             words += word
             if (primary == null) primary = word
             score += scoreWord(state.board, placements, rack, cells)
@@ -284,7 +284,7 @@ internal object WordSiegePracticeEngine {
     private fun finish(state: WordSiegePracticeState, reason: String, forcedWinner: Int? = null): WordSiegePracticeState {
         val winner = forcedWinner ?: when {
             state.playerWordScore + state.playerArea > state.botWordScore + state.botArea -> 1
-            state.botWordScore + state.botArea > state.playerWordScore + state.playerArea -> 2
+            state.botWordScore + state.botArea > state.playerWordScore + state.botArea -> 2
             state.playerArea > state.botArea -> 1
             state.botArea > state.playerArea -> 2
             else -> null
