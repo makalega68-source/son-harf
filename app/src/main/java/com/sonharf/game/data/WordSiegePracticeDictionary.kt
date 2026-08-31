@@ -17,3 +17,19 @@ internal suspend fun validateWordSiegeDictionaryWord(
         },
     ).decodeAs<Boolean>()
 }
+
+internal suspend fun fetchWordSiegeBotLexicon(
+    availableLetters: String,
+    language: String = "tr",
+    limit: Int = 900,
+): List<String> {
+    if (!SupabaseProvider.configured) return emptyList()
+    return SupabaseProvider.client.postgrest.rpc(
+        "word_siege_bot_lexicon_v1",
+        buildJsonObject {
+            put("p_letters", availableLetters)
+            put("p_language", language)
+            put("p_limit", limit.coerceIn(50, 1200))
+        },
+    ).decodeList<String>()
+}
