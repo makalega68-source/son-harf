@@ -113,9 +113,23 @@ data class TriviaRoundDto(
     @SerialName("question_id") val questionId: Long,
     @SerialName("reveal_at") val revealAt: String,
     @SerialName("answer_deadline") val answerDeadline: String? = null,
+    @SerialName("result_until") val resultUntil: String? = null,
+    @SerialName("host_answer") val hostAnswer: Long? = null,
+    @SerialName("guest_answer") val guestAnswer: Long? = null,
+    @SerialName("bot_answer") val botAnswer: Long? = null,
+    @SerialName("correct_answer") val correctAnswer: Long? = null,
+    @SerialName("winner_side") val winnerSide: String? = null,
     @SerialName("winner_id") val winnerId: String? = null,
     @SerialName("resolved_at") val resolvedAt: String? = null,
     @SerialName("bot_attempted") val botAttempted: Boolean = false,
+)
+
+@Serializable
+data class TriviaAnswerDto(
+    @SerialName("round_id") val roundId: String,
+    @SerialName("player_id") val playerId: String,
+    @SerialName("answer_index") val answerIndex: Long,
+    @SerialName("is_correct") val isCorrect: Boolean = false,
 )
 
 @Serializable
@@ -340,6 +354,19 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
             .select { filter { eq("room_id", id) } }
             .decodeList<TriviaRoundDto>()
             .maxByOrNull { it.revealAt }
+
+    suspend fun getMyTriviaAnswer(roundId: String): TriviaAnswerDto? {
+        val me = currentUserId() ?: return null
+        return supabase.from("trivia_answers")
+            .select {
+                filter {
+                    eq("round_id", roundId)
+                    eq("player_id", me)
+                }
+            }
+            .decodeList<TriviaAnswerDto>()
+            .firstOrNull()
+    }
 
     suspend fun finishTriviaResult(roundId: String): GameRoomDto =
         supabase.postgrest.rpc(

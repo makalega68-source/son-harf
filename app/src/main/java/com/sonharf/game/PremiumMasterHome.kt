@@ -90,7 +90,10 @@ internal fun PremiumMasterHome(
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("SON HARF", color = ArenaHomeText, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                    SonHarfBrandLogo(
+                        modifier = Modifier.width(150.dp),
+                        size = 66.dp,
+                    )
                     Text(
                         sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"),
                         color = ArenaHomeMuted,

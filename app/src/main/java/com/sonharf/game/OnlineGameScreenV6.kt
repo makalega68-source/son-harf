@@ -54,6 +54,7 @@ fun OnlineGameScreenV6() {
     var chat by remember { mutableStateOf<List<ChatMessageDto>>(emptyList()) }
     var triviaRound by remember { mutableStateOf<TriviaRoundDto?>(null) }
     var triviaQuestion by remember { mutableStateOf<TriviaQuestionDto?>(null) }
+    var triviaSelection by remember { mutableStateOf<Pair<String, Long>?>(null) }
     var wordInput by remember { mutableStateOf("") }
     var chatInput by remember { mutableStateOf("") }
     var privateCode by remember { mutableStateOf("") }
@@ -82,6 +83,9 @@ fun OnlineGameScreenV6() {
         "ends_with_soft_g" in raw -> sh("Ğ ile biten kelimeler kullanılamaz.", "Words ending with Ğ cannot be used.")
         "turn_expired" in raw -> sh("Süren doldu. −1 puan.", "Your time expired. −1 point.")
         "vip_required" in raw -> sh("Özel oda açmak için VIP gerekli.", "VIP is required to create a private room.")
+        "maintenance_mode" in raw -> sh("Oyun kısa süreli bakımda. Lütfen biraz sonra tekrar dene.", "The game is under brief maintenance. Please try again shortly.")
+        "matchmaking_disabled" in raw -> sh("Eşleşme geçici olarak kapalı.", "Matchmaking is temporarily disabled.")
+        "chat_disabled" in raw -> sh("Maç sohbeti geçici olarak kapalı.", "Match chat is temporarily disabled.")
         else -> sh("İşlem tekrar deneniyor.", "Retrying the action.")
     }
     fun failedEvent(e: String?) = e in setOf("word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "ends_with_soft_g", "turn_expired")
@@ -112,9 +116,18 @@ fun OnlineGameScreenV6() {
     }
     suspend fun refreshQuiz(r: GameRoomDto) {
         if (r.status == "quiz") {
-            triviaRound = backend.getActiveTriviaRound(r.id)
-            triviaQuestion = triviaRound?.let { backend.getTriviaQuestion(it.questionId) }
-        } else { triviaRound = null; triviaQuestion = null }
+            val round = backend.getActiveTriviaRound(r.id)
+            triviaRound = round
+            triviaQuestion = round?.let { backend.getTriviaQuestion(it.questionId) }
+            if (round != null && triviaSelection?.first != round.id) {
+                triviaSelection = backend.getMyTriviaAnswer(round.id)
+                    ?.let { round.id to it.answerIndex }
+            }
+        } else {
+            triviaRound = null
+            triviaQuestion = null
+            triviaSelection = null
+        }
     }
     suspend fun refreshOpponent(r: GameRoomDto) {
         if (r.isBot) { opponentProfile = null; return }
@@ -258,14 +271,36 @@ fun OnlineGameScreenV6() {
         LaunchedEffect(active.status, triviaRound?.id, triviaRound?.resolvedAt) {
             val q = triviaRound
             if (active.status == "quiz" && q?.resolvedAt != null) {
-                delay(5200)
-                runCatching { backend.finishTriviaResult(q.id) }
-                    .onSuccess {
-                        room = it
-                        refreshQuiz(it)
-                        notice = sh("Bonus tamamlandı. Düello devam ediyor.", "Bonus complete. Duel resumed.")
+                while (true) {
+                    val latestRoom = room ?: return@LaunchedEffect
+                    val latestRound = triviaRound ?: return@LaunchedEffect
+                    if (
+                        latestRoom.id != active.id ||
+                        latestRoom.status != "quiz" ||
+                        latestRound.id != q.id ||
+                        latestRound.resolvedAt == null
+                    ) return@LaunchedEffect
+
+                    val resultAt = latestRound.resultUntil
+                        ?.let { runCatching { Instant.parse(it).toEpochMilli() }.getOrNull() }
+                    val waitMs = resultAt?.minus(Instant.now().toEpochMilli()) ?: 0L
+                    if (waitMs > 0L) {
+                        delay(minOf(1500L, waitMs + 80L))
+                        continue
                     }
-                    .onFailure { notice = friendly(it.message.orEmpty()) }
+
+                    runCatching { backend.finishTriviaResult(q.id) }
+                        .onSuccess {
+                            room = it
+                            refreshQuiz(it)
+                            if (it.status != "quiz") {
+                                notice = sh("Bonus tamamlandı. Düello devam ediyor.", "Bonus complete. Duel resumed.")
+                                return@LaunchedEffect
+                            }
+                        }
+                        .onFailure { notice = friendly(it.message.orEmpty()) }
+                    delay(700L)
+                }
             }
         }
         LightDuelArena(
@@ -282,6 +317,7 @@ fun OnlineGameScreenV6() {
             busy = busy,
             triviaRound = triviaRound,
             triviaQuestion = triviaQuestion,
+            triviaSelection = triviaSelection?.takeIf { it.first == triviaRound?.id }?.second,
             onSubmit = {
                 scope.launch {
                     val submitted = wordInput.trim()
@@ -342,8 +378,44 @@ fun OnlineGameScreenV6() {
                     }
                 }
             },
-            onTrivia = { estimate -> scope.launch { val q = triviaRound ?: return@launch; runCatching { backend.answerTrivia(q.id, estimate) }.onSuccess { room = it; refreshQuiz(it) }.onFailure { notice = friendly(it.message.orEmpty()) } } },
-            onTriviaTimeout = { scope.launch { val q = triviaRound ?: return@launch; runCatching { backend.claimTriviaTimeout(q.id) }.onSuccess { room = it; refreshQuiz(it) }.onFailure { notice = friendly(it.message.orEmpty()) } } },
+            onTrivia = { estimate ->
+                val q = triviaRound
+                if (q != null && q.resolvedAt == null && triviaSelection?.first != q.id) {
+                    triviaSelection = q.id to estimate.toLong()
+                    scope.launch {
+                        runCatching { backend.answerTrivia(q.id, estimate) }
+                            .onSuccess { room = it; refreshQuiz(it) }
+                            .onFailure {
+                                triviaSelection = null
+                                notice = friendly(it.message.orEmpty())
+                            }
+                    }
+                }
+            },
+            onTriviaTimeout = {
+                scope.launch {
+                    val expectedRound = triviaRound?.id ?: return@launch
+                    while (true) {
+                        val latestRoom = room ?: return@launch
+                        val latestRound = triviaRound ?: return@launch
+                        if (
+                            latestRoom.id != active.id ||
+                            latestRoom.status != "quiz" ||
+                            latestRound.id != expectedRound ||
+                            latestRound.resolvedAt != null
+                        ) return@launch
+
+                        runCatching { backend.claimTriviaTimeout(expectedRound) }
+                            .onSuccess {
+                                room = it
+                                refreshQuiz(it)
+                                if (triviaRound?.resolvedAt != null || it.status != "quiz") return@launch
+                            }
+                            .onFailure { notice = friendly(it.message.orEmpty()) }
+                        delay(700L)
+                    }
+                }
+            },
             onChat = { showChat = true },
             onForfeit = {
                 scope.launch {
@@ -365,7 +437,13 @@ fun OnlineGameScreenV6() {
             onExit = { roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); room = null; words = emptyList(); chat = emptyList(); notice = sh("Yeni düelloya hazırsın.", "You are ready for a new duel.") },
             onRematch = { scope.launch { runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }.onSuccess { room = it; words = emptyList(); chat = emptyList(); if (it.id != active.id) observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) } } }
         )
-        if (showChat && !active.isBot) AuroraChatDialog(chat, me, chatInput, { chatInput = it.take(300) }, { showChat = false }) { scope.launch { runCatching { backend.sendChat(active.id, chatInput) }.onSuccess { chatInput = "" } } }
+        if (showChat && !active.isBot) AuroraChatDialog(chat, me, chatInput, { chatInput = it.take(300) }, { showChat = false }) {
+            scope.launch {
+                runCatching { backend.sendChat(active.id, chatInput) }
+                    .onSuccess { chatInput = "" }
+                    .onFailure { notice = friendly(it.message.orEmpty()) }
+            }
+        }
     }
 }
 
