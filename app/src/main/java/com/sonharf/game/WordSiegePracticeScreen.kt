@@ -1,8 +1,11 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -28,6 +32,8 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     var meProfile by remember { mutableStateOf<ProfileDto?>(null) }
     var state by remember { mutableStateOf(WordSiegePracticeEngine.newGame()) }
+    var botName by rememberSaveable { mutableStateOf(TrainingBotSupport.chooseBotName()) }
+    val botDifficulty = TrainingBotDifficulty.MEDIUM
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
     var notice by remember { mutableStateOf(sh("İlk hamle ortadaki 2K karesinden geçmeli.", "Your first move must cover the center 2W cell.")) }
@@ -47,6 +53,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
     fun startAgain() {
         state = WordSiegePracticeEngine.newGame()
+        botName = TrainingBotSupport.chooseBotName(botName)
         notice = sh("Yeni harfler dağıtıldı. İlk hamle ortadaki 2K karesinden geçmeli.", "New tiles dealt. Your first move must cover the center 2W cell.")
         clearSelection()
     }
@@ -125,15 +132,15 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     LaunchedEffect(state.currentOwner, state.moveCount, state.status) {
         if (state.status != "playing" || state.currentOwner != 2) return@LaunchedEffect
         botThinking = true
-        delay(650)
-        val planned = WordSiegePracticeEngine.bestBotMove(state)
+        val planned = WordSiegePracticeEngine.bestBotMove(state, botDifficulty)
+        delay(TrainingBotSupport.reactionDelayMs(botDifficulty, planned?.placements?.size ?: 1))
         if (planned == null) {
             state = WordSiegePracticeEngine.pass(state, 2)
-            notice = sh("Bot pas verdi. Sıra sende.", "Bot passed. Your turn.")
+            notice = sh("$botName pas verdi. Sıra sende.", "$botName passed. Your turn.")
         } else {
             val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements, planned.horizontal)
             state = next
-            notice = sh("Bot ${move.primaryWord} oynadı • +${move.wordScore}", "Bot played ${move.primaryWord} • +${move.wordScore}")
+            notice = sh("$botName ${move.primaryWord} oynadı • +${move.wordScore}", "$botName played ${move.primaryWord} • +${move.wordScore}")
             SonHarfSoundFx.scoreTick()
         }
         botThinking = false
@@ -152,7 +159,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     }
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = if (compact) 16.sp else 18.sp, fontWeight = FontWeight.Black)
-                        Text(sh("BOT ALIŞTIRMASI • ANA SÖZLÜK", "BOT PRACTICE • MAIN DICTIONARY"), color = MainUi.Blue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        Text(sh("ANTRENMAN MAÇI • RATING/LİG ETKİSİ YOK", "TRAINING MATCH • NO RATING/LEAGUE EFFECT"), color = MainUi.Blue, fontSize = 8.sp, fontWeight = FontWeight.Black)
                     }
                     IconButton(onClick = ::startAgain, modifier = Modifier.size(if (compact) 38.dp else 42.dp)) {
                         Icon(Icons.Rounded.Refresh, sh("Yeni oyun", "New game"), tint = MainUi.Blue)
@@ -165,7 +172,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                         score = state.playerWordScore, area = state.playerArea, active = state.currentOwner == 1, accent = MainUi.Blue, modifier = Modifier.weight(1f),
                     )
                     PracticePlayerCard(
-                        name = "BOT", avatarPath = null, gender = null, score = state.botWordScore, area = state.botArea,
+                        name = botName, avatarPath = null, gender = null, score = state.botWordScore, area = state.botArea,
                         active = state.currentOwner == 2, accent = SiegePurple, modifier = Modifier.weight(1f),
                     )
                 }
@@ -183,7 +190,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                         Text(
                             if (state.status != "playing") sh("MAÇ BİTTİ", "MATCH FINISHED")
                             else if (state.currentOwner == 1) sh("SIRA SENDE • Harf seç, tahtaya bırak, OYNA", "YOUR TURN • Pick a tile, place it, PLAY")
-                            else sh("BOT DÜŞÜNÜYOR…", "BOT IS THINKING…"),
+                            else sh("$botName düşünüyor…", "$botName is thinking…"),
                             color = MainUi.Text, fontSize = if (compact) 10.sp else 11.sp, fontWeight = FontWeight.Black, maxLines = 1,
                         )
                     }
@@ -380,18 +387,31 @@ private fun PracticeBoard(
                         val tempRack = placements[index]
                         val letter = tempRack?.let { rack.getOrNull(it)?.toString() } ?: cell.letter
                         val owner = if (tempRack != null) 1 else cell.owner
-                        val fill = when (owner) {
-                            1 -> MainUi.Blue.copy(alpha = if (tempRack != null) .25f else .16f)
-                            2 -> SiegePurple.copy(alpha = .18f)
-                            else -> if (cell.bonus != null) MainUi.BlueSoft else Color(0xFFF9FBFD)
+                        val relation = TrainingBotSupport.ownershipRelation(owner, 1)
+                        val targetFill = when (relation) {
+                            WordSiegeOwnershipRelation.SELF -> Color(TrainingBotSupport.OWN_FILL_ARGB)
+                            WordSiegeOwnershipRelation.OPPONENT -> Color(TrainingBotSupport.OPPONENT_FILL_ARGB)
+                            WordSiegeOwnershipRelation.NEUTRAL -> if (cell.bonus != null) MainUi.BlueSoft else Color(TrainingBotSupport.NEUTRAL_FILL_ARGB)
                         }
+                        val targetBorder = when (relation) {
+                            WordSiegeOwnershipRelation.SELF -> Color(TrainingBotSupport.OWN_BORDER_ARGB)
+                            WordSiegeOwnershipRelation.OPPONENT -> Color(TrainingBotSupport.OPPONENT_BORDER_ARGB)
+                            WordSiegeOwnershipRelation.NEUTRAL -> MainUi.Border
+                        }
+                        val fill by animateColorAsState(targetFill, tween(220), label = "practice-owner-fill-$index")
+                        val border by animateColorAsState(targetBorder, tween(220), label = "practice-owner-border-$index")
+                        val shape = RoundedCornerShape(5.dp)
                         Box(
-                            Modifier.weight(1f).fillMaxHeight().padding(1.dp).background(fill, RoundedCornerShape(5.dp)).then(if (enabled) Modifier.clickable { onCellClick(index) } else Modifier),
+                            Modifier.weight(1f).fillMaxHeight().padding(1.dp).background(fill, shape)
+                                .border(if (owner == 0) .7.dp else 1.2.dp, border, shape)
+                                .then(if (enabled) Modifier.clickable { onCellClick(index) } else Modifier),
                             contentAlignment = Alignment.Center,
                         ) {
-                            if (letter != null) Text(letter, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 17.sp)
-                            else if (cell.bonus != null) Text(cell.bonus, color = if (cell.bonus.endsWith("K")) SiegePurple else MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 7.sp)
-                            if (tempRack != null && tempRack == selectedRackIndex) Box(Modifier.fillMaxSize().padding(1.dp).background(MainUi.Blue.copy(alpha = .08f), RoundedCornerShape(5.dp)))
+                            if (letter != null) {
+                                Text(letter, color = Color(0xFF111827), fontWeight = FontWeight.Black, fontSize = 17.sp)
+                                if (owner != 0 && tempRack == null) Box(Modifier.align(Alignment.TopEnd).padding(2.dp).size(4.dp).background(border, androidx.compose.foundation.shape.CircleShape))
+                            } else if (cell.bonus != null) Text(cell.bonus, color = if (cell.bonus.endsWith("K")) SiegePurple else MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 7.sp)
+                            if (tempRack != null && tempRack == selectedRackIndex) Box(Modifier.fillMaxSize().padding(1.dp).background(MainUi.Blue.copy(alpha = .08f), shape))
                         }
                     }
                 }
