@@ -7,6 +7,15 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 @Serializable
+data class AdminAccessDto(
+    val authorized: Boolean = false,
+    @SerialName("admin_role") val adminRole: String = "",
+    @SerialName("lifetime_vip") val lifetimeVip: Boolean = false,
+    @SerialName("unlimited_diamonds") val unlimitedDiamonds: Boolean = false,
+    @SerialName("unlimited_son_coin") val unlimitedSonCoin: Boolean = false,
+)
+
+@Serializable
 data class AdminDashboardDto(
     @SerialName("total_users") val totalUsers: Long = 0,
     @SerialName("active_now") val activeNow: Long = 0,
@@ -45,7 +54,6 @@ data class AdminTopStoreItemDto(
     @SerialName("item_name") val itemName: String,
     @SerialName("acquisition_count") val acquisitionCount: Long = 0,
 )
-
 
 @Serializable
 data class AdminMonthlyRevenueDto(
@@ -107,6 +115,9 @@ data class AdminPlayerSearchDto(
     @SerialName("last_seen_at") val lastSeenAt: String? = null,
     @SerialName("is_owner_account") val isOwnerAccount: Boolean = false,
 )
+
+suspend fun OnlineGameBackend.getAdminAccess(): AdminAccessDto =
+    SupabaseProvider.client.postgrest.rpc("admin_access_v1").decodeSingle()
 
 suspend fun OnlineGameBackend.adminSearchPlayers(query: String): List<AdminPlayerSearchDto> =
     SupabaseProvider.client.postgrest.rpc(
@@ -220,7 +231,6 @@ suspend fun OnlineGameBackend.adminGrantTestProduct(productId: String) {
         buildJsonObject { put("p_product_id", productId) },
     )
 }
-
 
 suspend fun OnlineGameBackend.getAdminMonthlyRevenue(): List<AdminMonthlyRevenueDto> =
     SupabaseProvider.client.postgrest.rpc("admin_monthly_revenue_v1").decodeList()
