@@ -4,9 +4,9 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.put
 
 @Serializable
@@ -26,6 +26,10 @@ data class WordSiegeGameDto(
     val language: String = "tr",
     @SerialName("current_player_id") val currentPlayerId: String? = null,
     @SerialName("winner_id") val winnerId: String? = null,
+    @SerialName("loser_id") val loserId: String? = null,
+    @SerialName("turn_duration_hours") val turnDurationHours: Int = 12,
+    @SerialName("turn_started_at") val turnStartedAt: String? = null,
+    @SerialName("turn_deadline") val turnDeadline: String? = null,
     val board: List<WordSiegeCellDto> = emptyList(),
     val bag: String = "",
     @SerialName("player_one_rack") val playerOneRack: String = "",
@@ -114,22 +118,30 @@ private fun wordSiegePlacementsJson(placements: List<WordSiegePlacement>) = buil
 }
 
 suspend fun OnlineGameBackend.getWordSiegeGames(): List<WordSiegeGameDto> =
-    SupabaseProvider.client.from("word_siege_games")
-        .select()
+    SupabaseProvider.client.postgrest.rpc("refresh_my_word_siege_games_v2")
         .decodeList<WordSiegeGameDto>()
         .filterNot { it.status == "cancelled" }
         .sortedByDescending { it.updatedAt.ifBlank { it.createdAt } }
 
 suspend fun OnlineGameBackend.getWordSiegeGame(gameId: String): WordSiegeGameDto =
-    SupabaseProvider.client.from("word_siege_games")
-        .select { filter { eq("id", gameId) } }
-        .decodeSingle()
-
-suspend fun OnlineGameBackend.findOrCreateWordSiegeGame(language: String): WordSiegeGameDto =
     SupabaseProvider.client.postgrest.rpc(
-        "find_or_create_word_siege_game_v1",
-        buildJsonObject { put("p_language", if (language.lowercase() == "en") "en" else "tr") },
+        "refresh_word_siege_game_v2",
+        buildJsonObject { put("p_game_id", gameId) },
     ).decodeSingle()
+
+suspend fun OnlineGameBackend.findOrCreateWordSiegeGame(
+    language: String,
+    turnDurationHours: Int = 12,
+): WordSiegeGameDto {
+    require(turnDurationHours == 12 || turnDurationHours == 72)
+    return SupabaseProvider.client.postgrest.rpc(
+        "find_or_create_word_siege_game_v2",
+        buildJsonObject {
+            put("p_language", if (language.lowercase() == "en") "en" else "tr")
+            put("p_turn_duration_hours", turnDurationHours)
+        },
+    ).decodeSingle()
+}
 
 suspend fun OnlineGameBackend.cancelWordSiegeWaiting(gameId: String): WordSiegeGameDto =
     SupabaseProvider.client.postgrest.rpc(
