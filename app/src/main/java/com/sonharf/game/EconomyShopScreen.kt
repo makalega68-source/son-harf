@@ -93,14 +93,16 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
     LaunchedEffect(Unit) { reload() }
 
     val supportedKinds = setOf("profile_frame", "name_style", "game_theme", "keyboard_theme", "victory_effect", "emoji_pack", "mascot")
-    val filtered = items.filter { it.kind in supportedKinds }.filter { item ->
-        when (category) {
-            1 -> item.kind in setOf("profile_frame", "name_style")
-            2 -> item.kind == "emoji_pack"
-            3 -> item.kind in setOf("victory_effect", "game_theme", "keyboard_theme")
-            else -> true
+    val filtered = items
+        .filter { it.kind in supportedKinds && it.id != "theme_neon" }
+        .filter { item ->
+            when (category) {
+                1 -> item.kind in setOf("profile_frame", "name_style")
+                2 -> item.kind == "emoji_pack"
+                3 -> item.kind in setOf("victory_effect", "game_theme", "keyboard_theme")
+                else -> true
+            }
         }
-    }
 
     LazyColumn(
         Modifier.fillMaxSize(),
