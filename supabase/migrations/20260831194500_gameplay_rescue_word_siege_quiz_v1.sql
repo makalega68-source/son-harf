@@ -7,7 +7,7 @@ set search_path = public, private, pg_temp
 as $$
   select case
     when auth.uid() is null then false
-    else private.word_siege_word_allowed_v1(coalesce(p_language,'tr'), coalesce(p_word,''))
+    else private.word_siege_word_allowed_v1(coalesce(p_word,''), coalesce(p_language,'tr'))
   end;
 $$;
 revoke all on function public.validate_word_siege_word_v1(text,text) from public, anon;
