@@ -62,6 +62,12 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     var horizontal by remember { mutableStateOf(true) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
+    var practiceActive by remember { mutableStateOf(false) }
+
+    if (practiceActive) {
+        WordSiegePracticeScreen(onExit = { practiceActive = false })
+        return
+    }
 
     suspend fun loadProfiles(ids: Collection<String?>) {
         val missing = ids.filterNotNull().distinct().filterNot(profiles::containsKey)
@@ -167,6 +173,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                 notice = notice,
                 onBack = onExit,
                 onRefresh = { scope.launch { refreshGames(showProgress = true) } },
+                onPractice = { practiceActive = true },
                 onNewGame = {
                     if (busy) return@WordSiegeGamesList
                     busy = true
@@ -384,17 +391,18 @@ private fun WordSiegeGamesList(
     notice: String?,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
+    onPractice: () -> Unit,
     onNewGame: () -> Unit,
     onOpen: (WordSiegeGameDto) -> Unit,
 ) {
     val grouped = games.groupBy { it.listSection(me) }
     LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        Modifier.fillMaxSize().statusBarsPadding(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) {
                     Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                 }
@@ -413,21 +421,35 @@ private fun WordSiegeGamesList(
         }
 
         item {
-            Button(
-                onClick = onNewGame,
-                enabled = !busy,
-                modifier = Modifier.fillMaxWidth().height(72.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SiegePurple),
-            ) {
-                Icon(Icons.Rounded.Add, null)
-                Spacer(Modifier.width(9.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(sh("YENİ OYUN BAŞLAT", "START A NEW GAME"), fontWeight = FontWeight.Black, fontSize = 17.sp)
-                    Text(sh("Rakip bul veya sıraya gir", "Find a rival or enter the queue"), color = Color.White.copy(alpha = .8f), fontSize = 10.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    sh("OYUN SEÇ", "CHOOSE A GAME"),
+                    color = MainUi.Gold,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = .8.sp,
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    WordSiegeModeCard(
+                        title = sh("RAKİP BUL", "FIND RIVAL"),
+                        subtitle = sh("Çevrimiçi 1v1", "Online 1v1"),
+                        icon = Icons.Rounded.Groups,
+                        color = SiegePurple,
+                        enabled = !busy,
+                        modifier = Modifier.weight(1f),
+                        onClick = onNewGame,
+                        loading = busy,
+                    )
+                    WordSiegeModeCard(
+                        title = sh("BOT İLE\nALIŞTIR", "PRACTICE\nWITH BOT"),
+                        subtitle = sh("Hemen başla", "Start now"),
+                        icon = Icons.Rounded.SmartToy,
+                        color = MainUi.Blue,
+                        enabled = true,
+                        modifier = Modifier.weight(1f),
+                        onClick = onPractice,
+                    )
                 }
-                if (busy) CircularProgressIndicator(Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
-                else Icon(Icons.Rounded.ChevronRight, null)
             }
         }
 
@@ -439,23 +461,23 @@ private fun WordSiegeGamesList(
         if (!loading && games.isEmpty()) {
             item {
                 Surface(
-                    color = MainUi.Surface,
-                    shape = RoundedCornerShape(22.dp),
-                    border = BorderStroke(1.dp, MainUi.Border),
+                    color = SiegePurpleSoft,
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, SiegePurple.copy(alpha = .2f)),
                 ) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(22.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Icon(Icons.Rounded.GridOn, null, tint = SiegePurple, modifier = Modifier.size(42.dp))
-                        Text(sh("İlk kuşatmanı başlat", "Start your first siege"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                        Text(
-                            sh("Oyunlar süre yüzünden kaybedilmez; istediğinde dönüp hamleni yaparsın.", "Games never expire on a timer; return whenever you are ready."),
-                            color = MainUi.Muted,
-                            fontSize = 12.sp,
-                            textAlign = TextAlign.Center,
-                        )
+                    Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(shape = CircleShape, color = Color.White) {
+                            Icon(Icons.Rounded.TipsAndUpdates, null, Modifier.padding(9.dp).size(21.dp), tint = SiegePurple)
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(sh("İlk kuşatmanı kur", "Build your first siege"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            Text(
+                                sh("Bonuslar sadece yeni harfte çalışır; rakibin karesini kelimene katarsan alan sana geçer.", "Bonuses work on new tiles; use a rival tile in your word to capture its territory."),
+                                color = MainUi.Muted,
+                                fontSize = 10.sp,
+                            )
+                        }
                     }
                 }
             }
@@ -479,6 +501,37 @@ private fun WordSiegeGamesList(
             }
         }
         item { Spacer(Modifier.height(12.dp)) }
+    }
+}
+
+@Composable
+private fun WordSiegeModeCard(
+    title: String,
+    subtitle: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    color: Color,
+    enabled: Boolean,
+    modifier: Modifier = Modifier,
+    loading: Boolean = false,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier.height(112.dp).clickable(enabled = enabled, onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        color = color,
+        shadowElevation = 2.dp,
+    ) {
+        Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Icon(icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
+                if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                else Icon(Icons.Rounded.ArrowForward, null, tint = Color.White.copy(alpha = .82f), modifier = Modifier.size(18.dp))
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp, lineHeight = 15.sp)
+                Text(subtitle, color = Color.White.copy(alpha = .78f), fontWeight = FontWeight.SemiBold, fontSize = 9.sp)
+            }
+        }
     }
 }
 
@@ -562,7 +615,7 @@ private fun WordSiegeMatch(
     val rack = game.rackFor(me)
     val canAct = myTurn && !busy
     LazyColumn(
-        Modifier.fillMaxSize(),
+        Modifier.fillMaxSize().statusBarsPadding(),
         contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -825,7 +878,7 @@ private fun WordSiegePlayerCard(
 }
 
 @Composable
-private fun WordSiegeBoard(
+internal fun WordSiegeBoard(
     board: List<WordSiegeCellDto>,
     rack: String,
     placements: Map<Int, Int>,
@@ -927,7 +980,7 @@ private fun WordSiegeBoardCell(
 }
 
 @Composable
-private fun WordSiegeRackTile(
+internal fun WordSiegeRackTile(
     letter: Char,
     selected: Boolean,
     used: Boolean,
@@ -986,7 +1039,7 @@ private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
 }
 
 @Composable
-private fun WordSiegeNotice(message: String) {
+internal fun WordSiegeNotice(message: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(13.dp),
@@ -1145,7 +1198,7 @@ private fun wordSiegeLetterValue(letter: String): String = when (letter) {
     else -> "1"
 }
 
-private fun wordSiegeFriendlyError(raw: String): String {
+internal fun wordSiegeFriendlyError(raw: String): String {
     val invalidWord = raw.substringAfter("word_siege_invalid_word:", "")
         .substringBefore(' ')
         .substringBefore('"')
