@@ -133,6 +133,22 @@ private fun profileFrameVisual(frameId: String?, fallbackAccent: Color): Profile
     else -> ProfileFrameVisual(primary = fallbackAccent, secondary = Color(0xFF57C7F3), marker = null, outerPadding = 3.dp)
 }
 
+private fun premiumFrameAsset(frameId: String?): Int? = when {
+    frameId?.contains("black_gold") == true -> R.drawable.premium_frame_black_gold_higgsfield
+    else -> null
+}
+
+@Composable
+private fun PremiumFrameAsset(frameId: String?, modifier: Modifier) {
+    val resId = premiumFrameAsset(frameId) ?: return
+    Image(
+        painter = painterResource(resId),
+        contentDescription = null,
+        modifier = modifier,
+        contentScale = ContentScale.FillBounds,
+    )
+}
+
 @Composable
 private fun FramelessGenderSymbol(gender: String?, size: Dp) {
     val visual = genderVisual(gender) ?: return
@@ -184,7 +200,8 @@ internal fun ProfilePhotoAvatar(
         gender = ProfilePhotoRuntime.genderForAvatar(avatarPath)
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
-    val frame = profileFrameVisual(SonHarfCosmetics.profileFrameId, accent)
+    val frameId = SonHarfCosmetics.profileFrameId
+    val frame = profileFrameVisual(frameId, accent)
     Box(Modifier.size(size + 8.dp), contentAlignment = Alignment.Center) {
         Box(
             Modifier
@@ -202,6 +219,7 @@ internal fun ProfilePhotoAvatar(
                 }
             }
         }
+        PremiumFrameAsset(frameId, Modifier.fillMaxSize())
         Box(Modifier.align(Alignment.TopEnd)) { ProfileFrameMarker(frame.marker, size) }
         Box(Modifier.align(Alignment.BottomEnd)) { FramelessGenderSymbol(gender, size) }
     }
@@ -245,7 +263,8 @@ internal fun ProfilePhotoAvatarRectWithGender(
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     val shape = RoundedCornerShape(14.dp)
-    val frame = profileFrameVisual(SonHarfCosmetics.profileFrameId, accent)
+    val frameId = SonHarfCosmetics.profileFrameId
+    val frame = profileFrameVisual(frameId, accent)
     Box(Modifier.size(width + 4.dp, height + 8.dp), contentAlignment = Alignment.TopCenter) {
         Box(
             Modifier
@@ -263,6 +282,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
                 }
             }
         }
+        PremiumFrameAsset(frameId, Modifier.size(width, height).align(Alignment.TopCenter))
         Box(Modifier.align(Alignment.TopEnd)) { ProfileFrameMarker(frame.marker, width) }
         Box(Modifier.align(Alignment.BottomEnd)) { FramelessGenderSymbol(gender, height) }
     }
