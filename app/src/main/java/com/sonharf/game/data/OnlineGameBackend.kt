@@ -103,6 +103,8 @@ data class TriviaQuestionDto(
     @SerialName("option_b") val optionB: String,
     @SerialName("option_c") val optionC: String,
     @SerialName("option_d") val optionD: String,
+    @SerialName("answer_unit") val answerUnit: String = "",
+    @SerialName("question_kind") val questionKind: String = "legacy",
 )
 
 @Serializable

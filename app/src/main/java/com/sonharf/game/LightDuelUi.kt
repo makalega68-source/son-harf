@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -248,7 +250,7 @@ internal fun LightDuelArena(
 
     val triviaResolved = quizActive && triviaRound?.resolvedAt != null
     val deadline = when { triviaResolved -> triviaRound?.resultUntil; quizActive -> triviaRound?.answerDeadline; else -> room.turnDeadline }
-    var seconds by remember(deadline, room.status, triviaResolved) { mutableIntStateOf(when { deadline == null && !quizActive -> 0; triviaResolved -> 5; else -> 10 }) }
+    var seconds by remember(deadline, room.status, triviaResolved) { mutableIntStateOf(when { deadline == null && !quizActive -> 0; triviaResolved -> 3; else -> 10 }) }
     val haptics = LocalHapticFeedback.current
 
     LaunchedEffect(deadline, room.currentPlayerId, room.status) {
@@ -323,7 +325,7 @@ internal fun LightDuelArena(
 
         if (quizActive) {
             val activeTrivia = requireNotNull(triviaRound)
-            LightBonusCard(activeTrivia, requireNotNull(triviaQuestion), (if (host) activeTrivia.hostAnswer else activeTrivia.guestAnswer) ?: triviaSelection, onTrivia, Modifier.padding(horizontal = 12.dp))
+            LightBonusCard(activeTrivia, requireNotNull(triviaQuestion), (if (host) activeTrivia.hostAnswer else activeTrivia.guestAnswer) ?: triviaSelection, host, room.isBot, playerName, opponentName.removeSuffix(" BOT"), onTrivia, Modifier.padding(horizontal = 12.dp))
         }
 
         LightInputBar(wordInput, myTurn, busy, quizActive, onSubmit, Modifier.padding(horizontal = 12.dp))
@@ -378,37 +380,117 @@ private fun LightVipWordHistory(isVip: Boolean, words: List<GameWordDto>, langua
 }
 
 @Composable
-private fun LightBonusCard(round: TriviaRoundDto, question: TriviaQuestionDto, myAnswer: Long?, onTrivia: (Int) -> Unit, modifier: Modifier = Modifier) {
-    val selectedAnswer = myAnswer
+private fun LightBonusCard(
+    round: TriviaRoundDto,
+    question: TriviaQuestionDto,
+    myAnswer: Long?,
+    host: Boolean,
+    botMatch: Boolean,
+    playerName: String,
+    opponentName: String,
+    onTrivia: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val resolved = round.resolvedAt != null
-    Card(modifier = modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F2FF)), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, LPurple.copy(alpha = .35f))) {
-        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("★ BONUS +${round.bonusPoints}", color = LGold, fontWeight = FontWeight.Black, fontSize = 11.sp)
-            Text(question.question, color = LText, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-            val options = listOf(question.optionA, question.optionB, question.optionC, question.optionD)
-            options.chunked(2).forEach { pair ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    pair.forEach { raw ->
-                        val answerValue = raw.toLongOrNull()
-                        val selected = answerValue != null && selectedAnswer == answerValue
-                        val correct = resolved && answerValue != null && round.correctAnswer == answerValue
-                        val containerColor = when { correct -> LGreen.copy(alpha = .14f); resolved && selected -> LRed.copy(alpha = .13f); selected -> LBlue.copy(alpha = .11f); else -> Color.Transparent }
-                        val optionColor = when { correct -> LGreen; resolved && selected -> LRed; selected -> LBlue; else -> LText }
-                        OutlinedButton(
-                            onClick = { answerValue?.takeIf { it in 0L..Int.MAX_VALUE.toLong() }?.let { onTrivia(it.toInt()) } },
-                            enabled = answerValue != null && selectedAnswer == null && !resolved,
-                            modifier = Modifier.weight(1f).heightIn(min = 34.dp),
-                            border = BorderStroke(if (selected || correct) 2.dp else 1.dp, when { correct -> LGreen; resolved && selected -> LRed; selected -> LBlue; else -> LPurple.copy(alpha = .45f) }),
-                            colors = ButtonDefaults.outlinedButtonColors(containerColor = containerColor, disabledContainerColor = containerColor, contentColor = optionColor, disabledContentColor = optionColor),
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
-                        ) { Text(raw, color = optionColor, fontSize = 9.sp, fontWeight = if (selected || correct) FontWeight.Black else FontWeight.Medium, maxLines = 1) }
+    val mySide = if (host) "host" else "guest"
+    val opponentSide = if (host) { if (botMatch) "bot" else "guest" } else "host"
+    val opponentAnswer = when {
+        !resolved -> null
+        host && botMatch -> round.botAnswer
+        host -> round.guestAnswer
+        else -> round.hostAnswer
+    }
+    val correct = if (resolved) round.correctAnswer else null
+    val myWon = resolved && round.winnerSide == mySide
+    val opponentWon = resolved && round.winnerSide == opponentSide
+    val tie = resolved && round.winnerSide == "tie"
+    val nobody = resolved && round.winnerSide == "none"
+    var estimateText by remember(round.id) { mutableStateOf("") }
+    val locked = myAnswer != null || resolved
+    val parsed = estimateText.toLongOrNull()
+    val canSubmit = !locked && parsed != null && parsed in 0L..Int.MAX_VALUE.toLong()
+
+    fun distance(answer: Long?): Long? = if (answer != null && correct != null) kotlin.math.abs(answer - correct) else null
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F2FF)),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, LPurple.copy(alpha = .35f)),
+    ) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("★ BİL BAKALIM • +10 PUAN", color = LGold, fontWeight = FontWeight.Black, fontSize = 11.sp)
+            Text(question.question, color = LText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            if (question.answerUnit.isNotBlank()) {
+                Text(question.answerUnit, color = LMuted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+            }
+
+            if (!resolved) {
+                OutlinedTextField(
+                    value = if (locked) myAnswer?.toString().orEmpty() else estimateText,
+                    onValueChange = { raw -> if (!locked) estimateText = raw.filter(Char::isDigit).take(10) },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !locked,
+                    singleLine = true,
+                    label = { Text(sh("TAHMİNİNİ YAZ", "ENTER YOUR ESTIMATE")) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = LBlue, unfocusedBorderColor = LBorder),
+                )
+                Button(
+                    onClick = { parsed?.takeIf { it in 0L..Int.MAX_VALUE.toLong() }?.let { onTrivia(it.toInt()) } },
+                    modifier = Modifier.fillMaxWidth().height(40.dp),
+                    enabled = canSubmit,
+                    colors = ButtonDefaults.buttonColors(containerColor = LBlue),
+                    shape = RoundedCornerShape(13.dp),
+                ) { Text(if (locked) sh("TAHMİN KİLİTLENDİ", "ESTIMATE LOCKED") else sh("TAHMİNİ KİLİTLE", "LOCK ESTIMATE"), fontWeight = FontWeight.Black) }
+                Text(
+                    if (locked) sh("Cevabın kilitlendi. Rakibin tahmini sonuç açıklanana kadar gizli.", "Your answer is locked. The opponent estimate stays hidden until the result.")
+                    else sh("10 saniye içinde sayısal tahminini gir. Rakibin cevabı önceden görünmez.", "Enter a numeric estimate within 10 seconds. The opponent answer is hidden until reveal."),
+                    color = if (locked) LBlue else LMuted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold,
+                )
+            } else {
+                Surface(Modifier.fillMaxWidth(), color = LGold.copy(alpha = .12f), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, LGold.copy(alpha = .35f))) {
+                    Column(Modifier.padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(sh("DOĞRU CEVAP", "CORRECT ANSWER"), color = LGold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        Text(correct?.toString() ?: "—", color = LText, fontSize = 24.sp, fontWeight = FontWeight.Black)
                     }
                 }
+
+                fun answerColor(answer: Long?, won: Boolean): Color = when {
+                    answer == null -> LRed
+                    tie -> LGold
+                    won -> LGreen
+                    else -> LRed
+                }
+
+                BilBakalimResultRow(playerName, myAnswer, distance(myAnswer), answerColor(myAnswer, myWon), myWon)
+                BilBakalimResultRow(opponentName, opponentAnswer, distance(opponentAnswer), answerColor(opponentAnswer, opponentWon), opponentWon)
+
+                val resultText = when {
+                    nobody -> sh("İKİ OYUNCU DA CEVAP VERMEDİ • PUAN YOK", "BOTH PLAYERS GAVE NO ANSWER • NO POINTS")
+                    tie -> sh("BERABERE • PUAN YOK", "TIE • NO POINTS")
+                    myWon -> sh("EN YAKIN TAHMİN SENİN • +10 PUAN", "YOUR ESTIMATE IS CLOSEST • +10 POINTS")
+                    opponentWon -> sh("RAKİP DAHA YAKIN • +10 PUAN RAKİBE", "OPPONENT IS CLOSER • +10 POINTS TO OPPONENT")
+                    else -> sh("SONUÇ HESAPLANDI", "RESULT CALCULATED")
+                }
+                Text(resultText, Modifier.fillMaxWidth(), color = when { myWon -> LGreen; opponentWon -> LRed; else -> LGold }, fontSize = 10.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                Text(sh("Sonuç 3 saniye sonra otomatik kapanır.", "Result closes automatically after 3 seconds."), Modifier.fillMaxWidth(), color = LMuted, fontSize = 8.sp, textAlign = TextAlign.Center)
             }
-            when {
-                resolved && selectedAnswer == round.correctAnswer -> Text(sh("Doğru cevap!", "Correct answer!"), color = LGreen, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                resolved -> Text(sh("Doğru cevap: ${round.correctAnswer ?: "—"}", "Correct answer: ${round.correctAnswer ?: "—"}"), color = LText, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                selectedAnswer != null -> Text(sh("Cevabın alındı, sonuç bekleniyor…", "Answer received, waiting for result…"), color = LBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun BilBakalimResultRow(name: String, answer: Long?, distance: Long?, accent: Color, winner: Boolean) {
+    Surface(Modifier.fillMaxWidth(), color = accent.copy(alpha = .10f), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, accent.copy(alpha = .45f))) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(name, color = LText, fontSize = 10.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text(answer?.toString() ?: sh("CEVAP YOK", "NO ANSWER"), color = accent, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                if (distance != null) Text(sh("Fark: $distance", "Diff: $distance"), color = accent, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                if (winner) Text("+10", color = LGreen, fontSize = 12.sp, fontWeight = FontWeight.Black)
             }
         }
     }
