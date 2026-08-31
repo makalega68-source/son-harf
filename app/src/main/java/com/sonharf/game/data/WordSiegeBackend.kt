@@ -74,6 +74,22 @@ data class WordSiegeMessageDto(
     @SerialName("created_at") val createdAt: String = "",
 )
 
+@Serializable
+data class WordSiegeMovePreviewDto(
+    val valid: Boolean = false,
+    val reason: String? = null,
+    @SerialName("formed_words") val formedWords: List<String> = emptyList(),
+    @SerialName("base_word_score") val baseWordScore: Int = 0,
+    @SerialName("word_score") val wordScore: Int = 0,
+    @SerialName("bonus_score") val bonusScore: Int = 0,
+    @SerialName("area_score") val areaScore: Int = 0,
+    @SerialName("area_cells") val areaCells: Int = 0,
+    @SerialName("captured_cells") val capturedCells: Int = 0,
+    @SerialName("bonus_cells") val bonusCells: Int = 0,
+    @SerialName("preview_cells") val previewCells: List<Int> = emptyList(),
+    @SerialName("total_score") val totalScore: Int = 0,
+)
+
 data class WordSiegePlacement(
     val index: Int,
     val rackIndex: Int,
@@ -85,6 +101,17 @@ private data class WordSiegeMessageWrite(
     @SerialName("sender_id") val senderId: String,
     val body: String,
 )
+
+private fun wordSiegePlacementsJson(placements: List<WordSiegePlacement>) = buildJsonArray {
+    placements.forEach { placement ->
+        add(
+            buildJsonObject {
+                put("index", placement.index)
+                put("rack_index", placement.rackIndex)
+            },
+        )
+    }
+}
 
 suspend fun OnlineGameBackend.getWordSiegeGames(): List<WordSiegeGameDto> =
     SupabaseProvider.client.from("word_siege_games")
@@ -110,6 +137,19 @@ suspend fun OnlineGameBackend.cancelWordSiegeWaiting(gameId: String): WordSiegeG
         buildJsonObject { put("p_game_id", gameId) },
     ).decodeSingle()
 
+suspend fun OnlineGameBackend.previewWordSiegeMove(
+    gameId: String,
+    placements: List<WordSiegePlacement>,
+    horizontal: Boolean,
+): WordSiegeMovePreviewDto = SupabaseProvider.client.postgrest.rpc(
+    "preview_word_siege_move_v1",
+    buildJsonObject {
+        put("p_game_id", gameId)
+        put("p_horizontal", horizontal)
+        put("p_placements", wordSiegePlacementsJson(placements))
+    },
+).decodeSingle()
+
 suspend fun OnlineGameBackend.submitWordSiegeMove(
     gameId: String,
     placements: List<WordSiegePlacement>,
@@ -119,19 +159,7 @@ suspend fun OnlineGameBackend.submitWordSiegeMove(
     buildJsonObject {
         put("p_game_id", gameId)
         put("p_horizontal", horizontal)
-        put(
-            "p_placements",
-            buildJsonArray {
-                placements.forEach { placement ->
-                    add(
-                        buildJsonObject {
-                            put("index", placement.index)
-                            put("rack_index", placement.rackIndex)
-                        },
-                    )
-                }
-            },
-        )
+        put("p_placements", wordSiegePlacementsJson(placements))
     },
 ).decodeSingle()
 
