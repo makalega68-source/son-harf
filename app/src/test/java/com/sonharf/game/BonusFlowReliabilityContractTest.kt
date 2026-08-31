@@ -46,13 +46,16 @@ class BonusFlowReliabilityContractTest {
         ).readText()
         val auth = projectFile("app/src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
         val logo = projectFile("app/src/main/java/com/sonharf/game/SonHarfBrandLogo.kt").readText()
-        val home = projectFile("app/src/main/java/com/sonharf/game/PremiumMasterHome.kt").readText()
+        val activeHome = projectFile("app/src/main/java/com/sonharf/game/MainExperienceApp.kt").readText()
+        val legacyHome = projectFile("app/src/main/java/com/sonharf/game/PremiumMasterHome.kt").readText()
 
         assertTrue(vault.contains("AndroidKeyStore"))
         assertTrue(vault.contains("AES/GCM/NoPadding"))
         assertTrue(auth.contains("RememberedCredentialVault.save"))
         assertTrue(logo.contains("R.drawable.son_harf_splash_logo"))
-        assertTrue(home.contains("SonHarfBrandLogo("))
+        assertTrue(activeHome.contains("MainDestination.HOME -> MainHomeScreen("))
+        assertTrue(activeHome.contains("SonHarfBrandLogo("))
+        assertTrue(legacyHome.contains("SonHarfBrandLogo("))
     }
 
     private fun projectFile(path: String): File {
