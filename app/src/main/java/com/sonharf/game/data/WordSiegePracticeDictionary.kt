@@ -15,5 +15,5 @@ internal suspend fun validateWordSiegeDictionaryWord(
             put("p_word", word.trim())
             put("p_language", language)
         },
-    ).decodeSingle()
+    ).decodeAs<Boolean>()
 }
