@@ -27,6 +27,19 @@ data class WordSiegeLiveStats(
     val myArea: Int,
 )
 
+data class WordSiegeAnalysisVisibility(
+    val showTotal: Boolean,
+    val showBreakdown: Boolean,
+    val showTerritoryPreview: Boolean,
+)
+
+internal fun wordSiegeAnalysisVisibility(vip: Boolean, validPreview: Boolean): WordSiegeAnalysisVisibility =
+    WordSiegeAnalysisVisibility(
+        showTotal = validPreview,
+        showBreakdown = vip && validPreview,
+        showTerritoryPreview = vip && validPreview,
+    )
+
 internal fun wordSiegeLiveStats(
     game: WordSiegeGameDto,
     moves: List<WordSiegeMoveDto>,
@@ -65,6 +78,7 @@ internal fun WordSiegeMoveAnalysisBar(
     tight: Boolean,
 ) {
     val valid = preview?.valid == true
+    val visibility = wordSiegeAnalysisVisibility(vip, valid)
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(if (tight) 10.dp else 12.dp),
@@ -79,45 +93,44 @@ internal fun WordSiegeMoveAnalysisBar(
             ) {
                 Text(sh("HAMLE", "MOVE"), color = MainUi.Muted, fontSize = if (tight) 7.sp else 8.sp, fontWeight = FontWeight.Black)
                 Text(
-                    if (valid) "+${preview?.totalScore ?: 0}" else if (placementsPresent) "—" else "+0",
-                    color = if (valid) MainUi.Blue else MainUi.Muted,
+                    if (visibility.showTotal) "+${preview?.totalScore ?: 0}" else if (placementsPresent) "—" else "+0",
+                    color = if (visibility.showTotal) MainUi.Blue else MainUi.Muted,
                     fontSize = if (tight) 11.sp else 13.sp,
                     fontWeight = FontWeight.Black,
                 )
             }
-            return@Surface
-        }
-
-        val stats = wordSiegeLiveStats(game, moves, me)
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = if (tight) 4.dp else 6.dp),
-            verticalArrangement = Arrangement.spacedBy(if (tight) 2.dp else 3.dp),
-        ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(sh("HAMLE ANALİZİ • VIP", "MOVE ANALYSIS • VIP"), color = SiegePurple, fontSize = if (tight) 7.sp else 8.sp, fontWeight = FontWeight.Black)
-                Text(
-                    if (valid) "+${preview?.totalScore ?: 0}" else "—",
-                    color = if (valid) MainUi.Text else MainUi.Muted,
-                    fontSize = if (tight) 10.sp else 12.sp,
-                    fontWeight = FontWeight.Black,
-                )
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                AnalysisMetric(sh("Kelime", "Word"), if (valid) preview?.baseWordScore ?: 0 else null, tight)
-                AnalysisMetric(sh("Alan", "Area"), if (valid) preview?.areaScore ?: 0 else null, tight)
-                AnalysisMetric(sh("Bonus", "Bonus"), if (valid) preview?.bonusScore ?: 0 else null, tight)
-                AnalysisMetric(sh("Toplam", "Total"), if (valid) preview?.totalScore ?: 0 else null, tight, bold = true)
-            }
-            if (!tight) {
-                Text(
-                    sh(
-                        "Oynanan taş ${stats.totalTilesPlayed} • Sen ${stats.myTilesPlayed} • Kelime ${stats.myWordCount} • Alan ${stats.myArea} • Torba ${game.bag.length}",
-                        "Tiles played ${stats.totalTilesPlayed} • You ${stats.myTilesPlayed} • Words ${stats.myWordCount} • Area ${stats.myArea} • Bag ${game.bag.length}",
-                    ),
-                    color = MainUi.Muted,
-                    fontSize = 7.sp,
-                    maxLines = 1,
-                )
+        } else {
+            val stats = wordSiegeLiveStats(game, moves, me)
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = if (tight) 4.dp else 6.dp),
+                verticalArrangement = Arrangement.spacedBy(if (tight) 2.dp else 3.dp),
+            ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(sh("HAMLE ANALİZİ • VIP", "MOVE ANALYSIS • VIP"), color = SiegePurple, fontSize = if (tight) 7.sp else 8.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        if (visibility.showTotal) "+${preview?.totalScore ?: 0}" else "—",
+                        color = if (visibility.showTotal) MainUi.Text else MainUi.Muted,
+                        fontSize = if (tight) 10.sp else 12.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    AnalysisMetric(sh("Kelime", "Word"), if (visibility.showBreakdown) preview?.baseWordScore ?: 0 else null, tight)
+                    AnalysisMetric(sh("Alan", "Area"), if (visibility.showBreakdown) preview?.areaScore ?: 0 else null, tight)
+                    AnalysisMetric(sh("Bonus", "Bonus"), if (visibility.showBreakdown) preview?.bonusScore ?: 0 else null, tight)
+                    AnalysisMetric(sh("Toplam", "Total"), if (visibility.showBreakdown) preview?.totalScore ?: 0 else null, tight, bold = true)
+                }
+                if (!tight) {
+                    Text(
+                        sh(
+                            "Oynanan taş ${stats.totalTilesPlayed} • Sen ${stats.myTilesPlayed} • Kelime ${stats.myWordCount} • Alan ${stats.myArea} • Torba ${game.bag.length}",
+                            "Tiles played ${stats.totalTilesPlayed} • You ${stats.myTilesPlayed} • Words ${stats.myWordCount} • Area ${stats.myArea} • Bag ${game.bag.length}",
+                        ),
+                        color = MainUi.Muted,
+                        fontSize = 7.sp,
+                        maxLines = 1,
+                    )
+                }
             }
         }
     }
