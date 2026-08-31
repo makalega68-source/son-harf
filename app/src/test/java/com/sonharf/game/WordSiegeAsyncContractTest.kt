@@ -12,6 +12,7 @@ class WordSiegeAsyncContractTest {
     fun asyncExperienceContainsEveryLockedProductDecision() {
         val ui = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt").readText()
+        val sql = projectFile("supabase/migrations/20260830214430_word_siege_async_v1.sql").readText()
 
         assertTrue(ui.contains("SÜRE YOK"))
         assertTrue(ui.contains("SIRA SENDE"))
@@ -20,10 +21,10 @@ class WordSiegeAsyncContractTest {
         assertTrue(ui.contains("ProfilePhotoAvatarWithGender"))
         assertTrue(ui.contains("SOHBET"))
         assertTrue(ui.contains("PES ET"))
-        assertTrue(ui.contains("2H"))
-        assertTrue(ui.contains("3H"))
-        assertTrue(ui.contains("2K"))
-        assertTrue(ui.contains("3K"))
+        assertTrue(sql.contains("'2H'"))
+        assertTrue(sql.contains("'3H'"))
+        assertTrue(sql.contains("'2K'"))
+        assertTrue(sql.contains("'3K'"))
         assertTrue(ui.contains("Kelime ${'$'}wordScore • Alan ${'$'}area"))
         assertTrue(ui.contains("repeat(9)"))
         assertTrue(backend.contains("submit_word_siege_move_v1"))
