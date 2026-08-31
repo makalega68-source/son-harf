@@ -15,11 +15,11 @@ jobs:
         with:
           ref: "feat/training-bots-ownership-20260831"
       - name: Apply staged patch
-        run: python3 scripts/patch_word_siege_bot.py
+        run: python3 scripts/patch_word_siege_practice_ui.py
       - name: Commit scoped edit
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt
-          git commit -m "feat(word-siege): score validated bot candidates by difficulty"
+          git add app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt
+          git commit -m "feat(word-siege): label and color training matches"
           git push origin HEAD:feat/training-bots-ownership-20260831
