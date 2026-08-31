@@ -14,12 +14,10 @@ declare
   before_moves bigint;
   after_moves bigint;
 begin
-  insert into auth.users(id, aud, role, email, created_at, updated_at)
+  insert into auth.users(id, aud, role, email, created_at, updated_at, raw_user_meta_data)
   values
-    (p1, 'authenticated', 'authenticated', 'word-siege-test-1@example.invalid', now(), now()),
-    (p2, 'authenticated', 'authenticated', 'word-siege-test-2@example.invalid', now(), now());
-  insert into public.profiles(id, display_name)
-  values (p1, 'WS Test One'), (p2, 'WS Test Two');
+    (p1, 'authenticated', 'authenticated', 'word-siege-test-1@example.invalid', now(), now(), jsonb_build_object('display_name', 'WS Test One')),
+    (p2, 'authenticated', 'authenticated', 'word-siege-test-2@example.invalid', now(), now(), jsonb_build_object('display_name', 'WS Test Two'));
 
   perform set_config('request.jwt.claim.sub', p1::text, true);
 
