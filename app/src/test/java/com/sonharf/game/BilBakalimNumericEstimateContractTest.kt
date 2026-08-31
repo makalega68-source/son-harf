@@ -37,6 +37,7 @@ class BilBakalimNumericEstimateContractTest {
     @Test
     fun backendContractIsTenSecondsNearestAnswerTenPointsAndIdempotent() {
         val sql = projectFile("supabase/migrations/20260831233000_bilbakalim_numeric_estimate_v2.sql").readText()
+        assertTrue(sql.contains("question_kind='bil_bakalim'"))
         assertTrue(sql.contains("interval '10 seconds'"))
         assertTrue(sql.contains("award int:=10"))
         assertTrue(sql.contains("host_dist:=abs(host_est-v_correct)"))
@@ -66,6 +67,15 @@ class BilBakalimNumericEstimateContractTest {
         assertTrue(questionDto.contains("answer_unit"))
         assertTrue(questionDto.contains("question_kind"))
         assertFalse(questionDto.contains("correct_value"))
+    }
+
+    @Test
+    fun resolvedRoundAutoFinishesAndRefreshesServerState() {
+        val screen = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
+        assertTrue(screen.contains("latestRound.resultUntil"))
+        assertTrue(screen.contains("backend.finishTriviaResult(q.id)"))
+        assertTrue(screen.contains("refreshQuiz(it)"))
+        assertTrue(screen.contains("Bonus tamamlandı. Düello devam ediyor."))
     }
 
     private fun projectFile(path: String): File {
