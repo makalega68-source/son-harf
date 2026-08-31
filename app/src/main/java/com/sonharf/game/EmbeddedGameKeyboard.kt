@@ -11,17 +11,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-
-private val KeyboardBg = Color(0xFF070A18)
-private val KeyboardKey = Color(0xFF121833)
-private val KeyboardKeyAlt = Color(0xFF1C2347)
-private val KeyboardText = Color(0xFFF7F8FF)
-private val KeyboardAction = Color(0xFFFFB31A)
-private val KeyboardBlue = Color(0xFF2188FF)
-private val KeyboardViolet = Color(0xFF8A5CFF)
 
 @Composable
 internal fun EmbeddedWordKeyboard(
@@ -34,8 +27,7 @@ internal fun EmbeddedWordKeyboard(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Game-owned keyboard: the Android system IME never needs to open during a match.
-    // Turkish layout mirrors the familiar Turkish-Q ordering and remains fixed on screen.
+    val palette = SonHarfCosmetics.keyboardPalette
     val rows = if (language.lowercase() == "en") {
         listOf(
             listOf("Q","W","E","R","T","Y","U","I","O","P"),
@@ -52,9 +44,9 @@ internal fun EmbeddedWordKeyboard(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = KeyboardBg,
+        color = palette.background,
         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-        border = BorderStroke(1.dp, KeyboardViolet.copy(alpha = .30f)),
+        border = BorderStroke(1.dp, palette.accent.copy(alpha = .38f)),
     ) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp),
@@ -76,6 +68,7 @@ internal fun EmbeddedWordKeyboard(
                             label = key,
                             enabled = enabled && value.length < maxLength,
                             modifier = Modifier.weight(1f),
+                            palette = palette,
                             onClick = {
                                 SonHarfSoundFx.typingClick()
                                 onValueChange((value + key).take(maxLength))
@@ -93,6 +86,7 @@ internal fun EmbeddedWordKeyboard(
                     label = "⌫",
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     alt = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -103,6 +97,7 @@ internal fun EmbeddedWordKeyboard(
                     label = "TEMİZLE",
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1.35f),
+                    palette = palette,
                     alt = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -113,6 +108,7 @@ internal fun EmbeddedWordKeyboard(
                     label = "GÖNDER  ➤",
                     enabled = submitEnabled && value.isNotBlank(),
                     modifier = Modifier.weight(2.15f),
+                    palette = palette,
                     action = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -132,6 +128,7 @@ internal fun EmbeddedNumberKeyboard(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val palette = SonHarfCosmetics.keyboardPalette
     val rows = listOf(
         listOf("1","2","3"),
         listOf("4","5","6"),
@@ -139,8 +136,9 @@ internal fun EmbeddedNumberKeyboard(
     )
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = KeyboardBg,
+        color = palette.background,
         shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        border = BorderStroke(1.dp, palette.accent.copy(alpha = .30f)),
     ) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 7.dp),
@@ -153,6 +151,7 @@ internal fun EmbeddedNumberKeyboard(
                             label = key,
                             enabled = enabled,
                             modifier = Modifier.weight(1f),
+                            palette = palette,
                             onClick = {
                                 SonHarfSoundFx.typingClick()
                                 onValueChange((value + key).take(12))
@@ -166,6 +165,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = if (value.contains(",") || value.contains(".")) "−" else ",",
                     enabled = enabled,
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     alt = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -179,6 +179,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = "0",
                     enabled = enabled,
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     onClick = {
                         SonHarfSoundFx.typingClick()
                         onValueChange((value + "0").take(12))
@@ -188,6 +189,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = "⌫",
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     alt = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -198,6 +200,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = "✓",
                     enabled = enabled && value.replace(',', '.').toDoubleOrNull() != null,
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     action = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -214,10 +217,12 @@ private fun KeyboardKeyButton(
     label: String,
     enabled: Boolean,
     modifier: Modifier,
+    palette: SonHarfKeyboardPalette,
     alt: Boolean = false,
     action: Boolean = false,
     onClick: () -> Unit,
 ) {
+    val actionText = if (palette.action.luminance() > .55f) Color(0xFF171717) else Color.White
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -226,21 +231,21 @@ private fun KeyboardKeyButton(
         shape = RoundedCornerShape(11.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = when {
-                action -> KeyboardAction
-                alt -> KeyboardKeyAlt
-                else -> KeyboardKey
+                action -> palette.action
+                alt -> palette.keyAlt
+                else -> palette.key
             },
-            contentColor = if (action) Color(0xFF241300) else KeyboardText,
-            disabledContainerColor = if (alt) KeyboardKeyAlt.copy(alpha = .55f) else KeyboardKey.copy(alpha = .55f),
-            disabledContentColor = KeyboardText.copy(alpha = .42f),
+            contentColor = if (action) actionText else palette.text,
+            disabledContainerColor = if (alt) palette.keyAlt.copy(alpha = .55f) else palette.key.copy(alpha = .55f),
+            disabledContentColor = palette.text.copy(alpha = .42f),
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp),
         border = BorderStroke(
             1.dp,
             when {
-                action -> KeyboardAction.copy(alpha = .82f)
-                alt -> KeyboardBlue.copy(alpha = .32f)
-                else -> KeyboardViolet.copy(alpha = .24f)
+                action -> palette.action.copy(alpha = .82f)
+                alt -> palette.accent.copy(alpha = .32f)
+                else -> palette.accent.copy(alpha = .24f)
             },
         ),
     ) {

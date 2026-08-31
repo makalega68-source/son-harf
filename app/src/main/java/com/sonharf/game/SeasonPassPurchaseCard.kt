@@ -21,6 +21,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -82,9 +83,9 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfSurface.copy(alpha = .96f)),
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.2.dp, SonHarfPurple.copy(alpha = .55f)),
+        colors = CardDefaults.cardColors(containerColor = MainUi.Surface),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .38f)),
     ) {
         Column(
             Modifier.fillMaxWidth().padding(14.dp),
@@ -92,34 +93,42 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
         ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Column(Modifier.weight(1f)) {
-                    Text(sh("SEZON BİLETİ", "SEASON PASS"), color = SonHarfPurple, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                    Text(sh("SEZON BİLETİ", "SEASON PASS"), color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh(
-                            "Premium ödül yolu • özel Style • sezon unvanları • Son Coin",
-                            "Premium reward track • exclusive Style • season titles • Son Coins",
+                            "Premium ödül yolu • her açık seviyede ek Son Coin",
+                            "Premium reward track • extra Son Coin at every unlocked level",
                         ),
-                        color = SonHarfMuted,
+                        color = MainUi.Muted,
                         fontSize = 9.sp,
                     )
                 }
-                Text("🏆", fontSize = 26.sp)
+                Text("◈", color = MainUi.Gold, fontSize = 26.sp, fontWeight = FontWeight.Black)
             }
 
             Text(
                 sh(
-                    "Sezon Bileti yalnızca koleksiyon, görünüm ve ilerleme ödülleri verir; rating, süre, joker gücü veya maç avantajı vermez.",
-                    "Season Pass only grants collection, appearance and progression rewards; it never grants rating, time, joker power or match advantages.",
+                    "Sezon Bileti görünüm ve ilerleme ödülleri verir; maç gücü vermez.",
+                    "The Season Pass gives progression and collection rewards; it never gives match power.",
                 ),
-                color = SonHarfGreen,
+                color = MainUi.Green,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
+            )
+            Text(
+                sh(
+                    "Mevcut sezonda sunucunun gerçekten verdiği premium ödüller Son Coin'dir. Sezonluk çerçeve, unvan veya Style içerikleri backend tarafından tanımlanana kadar satın alma vaadine dahil edilmez.",
+                    "In the current season, the server-backed premium rewards are Son Coin. Seasonal frames, titles or Style items are not promised until the backend actually grants them.",
+                ),
+                color = MainUi.Muted,
+                fontSize = 8.5.sp,
             )
 
             Button(
                 onClick = {
                     val details = product
                     if (activity == null || details == null) {
-                        notice = sh("Sezon Bileti Google Play'de henüz kullanılabilir değil.", "Season Pass is not available on Google Play yet.")
+                        notice = sh("Sezon Bileti Google Play'de henüz kullanılamıyor.", "Season Pass is not available on Google Play yet.")
                         return@Button
                     }
                     busy = true
@@ -131,7 +140,7 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
                 },
                 enabled = !busy,
                 modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
+                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue, contentColor = Color.White),
                 shape = RoundedCornerShape(14.dp),
             ) {
                 Text(
@@ -141,7 +150,7 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
             }
 
             if (notice.isNotBlank()) {
-                Text(notice, color = SonHarfMuted, fontSize = 9.sp)
+                Text(notice, color = MainUi.Muted, fontSize = 9.sp)
             }
         }
     }

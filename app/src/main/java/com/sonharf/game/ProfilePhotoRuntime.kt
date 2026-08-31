@@ -103,11 +103,25 @@ internal object ProfilePhotoRuntime {
 }
 
 private data class GenderVisual(val symbol: String, val color: Color)
+private data class ProfileFrameVisual(val primary: Color, val secondary: Color, val marker: String?, val outerPadding: Dp)
 
 private fun genderVisual(gender: String?): GenderVisual? = when (gender?.trim()?.lowercase()) {
     "kadın", "kadin", "female", "woman" -> GenderVisual("♀", Color(0xFFFF4F9A))
     "erkek", "male", "man" -> GenderVisual("♂", Color(0xFF238BFF))
     else -> null
+}
+
+private fun profileFrameVisual(frameId: String?, fallbackAccent: Color): ProfileFrameVisual = when {
+    frameId?.contains("gold") == true || frameId?.contains("vip") == true -> ProfileFrameVisual(
+        primary = Color(0xFFF4B928), secondary = Color(0xFFFFE59B), marker = "VIP", outerPadding = 4.dp,
+    )
+    frameId?.contains("neon") == true -> ProfileFrameVisual(
+        primary = Color(0xFF22D3EE), secondary = Color(0xFF8B5CF6), marker = "✦", outerPadding = 4.dp,
+    )
+    frameId?.contains("starter") == true || frameId?.contains("founder") == true || frameId?.contains("light") == true -> ProfileFrameVisual(
+        primary = Color(0xFF6D5CE7), secondary = Color(0xFF2D8CFF), marker = "✧", outerPadding = 4.dp,
+    )
+    else -> ProfileFrameVisual(primary = fallbackAccent, secondary = Color(0xFF57C7F3), marker = null, outerPadding = 3.dp)
 }
 
 @Composable
@@ -118,12 +132,24 @@ private fun FramelessGenderSymbol(gender: String?, size: Dp) {
         color = visual.color,
         fontWeight = FontWeight.Black,
         fontSize = (size.value * .31f).coerceAtLeast(13f).sp,
-        style = TextStyle(
-            shadow = Shadow(
-                color = visual.color.copy(alpha = .28f),
-                blurRadius = (size.value * .12f).coerceAtLeast(3f),
+        style = TextStyle(shadow = Shadow(color = visual.color.copy(alpha = .28f), blurRadius = (size.value * .12f).coerceAtLeast(3f))),
+    )
+}
+
+@Composable
+private fun ProfileFrameMarker(marker: String?, size: Dp) {
+    if (marker.isNullOrBlank()) return
+    Text(
+        marker,
+        color = if (marker == "VIP") Color(0xFFB77800) else Color.White,
+        fontWeight = FontWeight.Black,
+        fontSize = if (marker == "VIP") (size.value * .12f).coerceAtLeast(7f).sp else (size.value * .22f).coerceAtLeast(11f).sp,
+        modifier = Modifier
+            .background(
+                if (marker == "VIP") Color(0xFFFFE7A6) else Color(0xFF182235).copy(alpha = .78f),
+                RoundedCornerShape(99.dp),
             )
-        ),
+            .padding(horizontal = if (marker == "VIP") 4.dp else 3.dp, vertical = 1.dp),
     )
 }
 
@@ -142,9 +168,14 @@ internal fun ProfilePhotoAvatar(
         gender = ProfilePhotoRuntime.genderForAvatar(avatarPath)
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
-    Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
+    val frame = profileFrameVisual(SonHarfCosmetics.profileFrameId, accent)
+    Box(Modifier.size(size + 8.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
+            Modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(Brush.sweepGradient(listOf(frame.secondary, frame.primary, frame.secondary, frame.primary)))
+                .padding(frame.outerPadding),
             contentAlignment = Alignment.Center,
         ) {
             if (bitmap != null) {
@@ -155,9 +186,8 @@ internal fun ProfilePhotoAvatar(
                 }
             }
         }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, size)
-        }
+        Box(Modifier.align(Alignment.TopEnd)) { ProfileFrameMarker(frame.marker, size) }
+        Box(Modifier.align(Alignment.BottomEnd)) { FramelessGenderSymbol(gender, size) }
     }
 }
 
@@ -170,28 +200,16 @@ internal fun ProfilePhotoAvatarWithGender(
     accent: Color = SonHarfCyan,
     visible: Boolean = true,
 ) {
-    var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(avatarPath, visible) {
-        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
-    }
-    val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
-    Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
-        Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (bitmap != null) {
-                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-            } else {
-                Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-                    Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (size.value * .38f).sp)
-                }
-            }
-        }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, size)
-        }
-    }
+    val width = if (size < 56.dp) 56.dp else size
+    ProfilePhotoAvatarRectWithGender(
+        avatarPath = avatarPath,
+        gender = gender,
+        name = name,
+        width = width,
+        height = width * (74f / 56f),
+        accent = accent,
+        visible = visible,
+    )
 }
 
 @Composable
@@ -202,52 +220,33 @@ internal fun ProfilePhotoAvatarRectWithGender(
     width: Dp,
     height: Dp,
     accent: Color = SonHarfCyan,
+    visible: Boolean = true,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(avatarPath) {
-        bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+    LaunchedEffect(avatarPath, visible) {
+        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     val shape = RoundedCornerShape(14.dp)
-    Box(
-        Modifier.size(width, height + 4.dp),
-        contentAlignment = Alignment.TopCenter,
-    ) {
+    val frame = profileFrameVisual(SonHarfCosmetics.profileFrameId, accent)
+    Box(Modifier.size(width + 4.dp, height + 8.dp), contentAlignment = Alignment.TopCenter) {
         Box(
             Modifier
                 .size(width, height)
                 .clip(shape)
-                .background(
-                    Brush.linearGradient(
-                        listOf(Color.White, accent.copy(alpha = .86f), Color(0xFF57C7F3), Color.White)
-                    )
-                )
-                .padding(3.dp),
+                .background(Brush.linearGradient(listOf(frame.primary, frame.secondary, frame.primary)))
+                .padding(frame.outerPadding),
             contentAlignment = Alignment.Center,
         ) {
             if (bitmap != null) {
-                Image(
-                    bitmap.asImageBitmap(),
-                    null,
-                    Modifier.fillMaxSize().clip(shape),
-                    contentScale = ContentScale.Crop,
-                )
+                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(shape), contentScale = ContentScale.Crop)
             } else {
-                Box(
-                    Modifier.fillMaxSize().clip(shape).background(Color.White),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        name.take(1).uppercase(),
-                        color = Color(0xFF16324A),
-                        fontWeight = FontWeight.Black,
-                        fontSize = (height.value * .32f).coerceAtLeast(14f).sp,
-                    )
+                Box(Modifier.fillMaxSize().clip(shape).background(Color.White), contentAlignment = Alignment.Center) {
+                    Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (height.value * .32f).coerceAtLeast(14f).sp)
                 }
             }
         }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, height)
-        }
+        Box(Modifier.align(Alignment.TopEnd)) { ProfileFrameMarker(frame.marker, width) }
+        Box(Modifier.align(Alignment.BottomEnd)) { FramelessGenderSymbol(gender, height) }
     }
 }

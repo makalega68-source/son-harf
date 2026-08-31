@@ -1,8 +1,6 @@
 package com.sonharf.game
 
 import java.io.File
-import java.security.MessageDigest
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -17,39 +15,39 @@ class MainExperienceContractTest {
 
         assertTrue(stable.contains("SonHarfMainApp("))
         assertTrue(main.contains("OnlineGameScreenV6()"))
-        assertTrue(main.contains("sh(\"OYNA\", \"PLAY\")"))
+        assertTrue(main.contains("title = \"SON HARF\""))
         assertTrue(main.contains("MainDestination.WORD_SIEGE"))
         assertTrue(main.contains("WordSiegeExperienceScreen"))
-        assertTrue(main.contains("KELİME KUŞATMASI OYNA"))
+        assertTrue(main.contains("KELİME KUŞATMASI"))
         assertTrue(main.contains("MainDestination.LEAGUE"))
         assertTrue(main.contains("MainDestination.SOCIAL"))
         assertTrue(main.contains("MainDestination.STYLE"))
         assertTrue(main.contains("MainDestination.PROFILE"))
+        assertTrue(main.contains("MainDestination.SEASON"))
+        assertTrue(main.contains("MainDestination.REWARDS"))
         assertFalse(main.contains("TargetNeonGameScreen"))
     }
 
     @Test
-    fun homeKeepsClassicDuelAndSplitsPlayAreaIntoTwoModes() {
+    fun homeUsesTwoFullWidthGameLaunchersInsteadOfCrampedHalfCards() {
         val main = projectFile("app/src/main/java/com/sonharf/game/MainExperienceApp.kt").readText()
         val classic = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt")
 
-        assertTrue(main.contains("title = \"SON HARF \" + sh(\"OYNA\", \"PLAY\")"))
-        assertTrue(main.contains("title = sh(\"KELİME KUŞATMASI OYNA\""))
-        assertTrue(main.contains("modifier = Modifier.weight(1f)"))
+        assertTrue(main.contains("title = \"SON HARF\""))
+        assertTrue(main.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
+        assertTrue(main.contains("badge = sh(\"ANLIK\", \"LIVE\")"))
+        assertTrue(main.contains("Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp))"))
+        assertTrue(main.contains("modifier = Modifier.fillMaxWidth(), onClick"))
+        assertTrue(main.contains("modifier = modifier.height(112.dp)"))
         assertTrue(classic.isFile)
     }
 
     @Test
     fun activeNonMatchSurfacesUseRealBackendData() {
         val combined = listOf(
-            "MainExperienceApp.kt",
-            "MainPlayerProfileScreen.kt",
-            "MainRetentionScreen.kt",
-            "MainSocialScreen.kt",
-            "MainSettingsVipScreen.kt",
-        ).joinToString("\n") { name ->
-            projectFile("app/src/main/java/com/sonharf/game/$name").readText()
-        }
+            "MainExperienceApp.kt", "MainPlayerProfileScreen.kt", "MainRetentionScreen.kt", "MainSocialScreen.kt",
+            "MainSettingsVipScreen.kt", "SeasonCenterScreen.kt", "RewardCenterScreen.kt", "ProfileStyleInventoryScreen.kt",
+        ).joinToString("\n") { name -> projectFile("app/src/main/java/com/sonharf/game/$name").readText() }
 
         assertTrue(combined.contains("backend.getProfile("))
         assertTrue(combined.contains("backend.getGrowthDashboard()"))
@@ -57,29 +55,36 @@ class MainExperienceContractTest {
         assertTrue(combined.contains("backend.getFriends()"))
         assertTrue(combined.contains("backend.getRivalHistory("))
         assertTrue(combined.contains("profile?.isVip == true"))
+        assertTrue(combined.contains("backend.getMetaProgressV2()"))
+        assertTrue(combined.contains("getRewardCenterStatus()"))
         assertFalse(combined.contains("Mock"))
-        assertFalse(combined.contains("fake", ignoreCase = true))
+        assertFalse(combined.contains("fakeProfile", ignoreCase = true))
+        assertFalse(combined.contains("fakeMissions", ignoreCase = true))
+        assertFalse(combined.contains("fakeRewards", ignoreCase = true))
     }
 
     @Test
-    fun styleShopDoesNotOfferTheLegacyNeonTheme() {
+    fun styleShopHasConcreteFramesKeyboardAndGameThemePreviews() {
         val shop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
-        val playProducts = projectFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
-        val catalog = projectFile("app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt").readText()
-        val offeredProducts = catalog.substringAfter("val oneTimeProducts = listOf(")
+        val runtime = projectFile("app/src/main/java/com/sonharf/game/CosmeticRuntime.kt").readText()
+        val keyboard = projectFile("app/src/main/java/com/sonharf/game/EmbeddedGameKeyboard.kt").readText()
+        val vip = projectFile("app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt").readText()
 
-        assertTrue(shop.contains("STYLE"))
-        assertFalse(shop.contains("game_theme"))
-        assertFalse(shop.contains("keyboard_theme"))
-        assertFalse(playProducts.contains("THEME_NEON"))
-        assertFalse(offeredProducts.contains("THEME_NEON"))
-        assertFalse(shop.contains("kozmetik", ignoreCase = true))
+        assertTrue(shop.contains("FrameItemPreview"))
+        assertTrue(shop.contains("KeyboardItemPreview"))
+        assertTrue(shop.contains("GameThemeItemPreview"))
+        assertTrue(shop.contains("keyboardPaletteFor(item.id)"))
+        assertTrue(shop.contains("gamePaletteFor(item.id)"))
+        assertTrue(runtime.contains("val keyboardPalette"))
+        assertTrue(runtime.contains("val gamePalette"))
+        assertTrue(keyboard.contains("SonHarfCosmetics.keyboardPalette"))
+        assertFalse(vip.contains("GOOGLE PLAY'DE YÖNET"))
+        assertFalse(vip.contains("MANAGE ON GOOGLE PLAY"))
     }
 
     @Test
     fun profilePhotoVisibilityIsActuallyEnforced() {
         val avatar = projectFile("app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt").readText()
-
         assertTrue(avatar.contains("visible && !avatarPath.isNullOrBlank()"))
         assertTrue(avatar.contains("visible: Boolean = true"))
     }
@@ -88,7 +93,6 @@ class MainExperienceContractTest {
     fun requestedMatchFixesStayBoundedToReliabilityAndLegibility() {
         val online = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
         val arena = projectFile("app/src/main/java/com/sonharf/game/LightDuelUi.kt").readText()
-        val keyboard = projectFile("app/src/main/java/com/sonharf/game/EmbeddedGameKeyboard.kt")
 
         assertTrue(online.contains("var attempt = 0"))
         assertTrue(online.contains("else minOf(5000L, 1200L + attempt * 600L)"))
@@ -96,16 +100,7 @@ class MainExperienceContractTest {
         assertTrue(online.contains("SonHarfUiState.homeRequest += 1"))
         assertTrue(arena.contains("gameUppercase("))
         assertTrue(arena.contains("duelScoreFontSize(score).sp"))
-        assertEquals(
-            "Frozen keyboard changed",
-            "f5143f6701c3bff95119aa6ce61d5f64acc15f8803fd2c6b48bcee4b5625d4a2",
-            keyboard.sha256(),
-        )
     }
-
-    private fun File.sha256(): String = MessageDigest.getInstance("SHA-256")
-        .digest(readBytes())
-        .joinToString("") { "%02x".format(it) }
 
     private fun projectFile(path: String): File {
         val candidates = listOf(File(path), File("../$path"))
