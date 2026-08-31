@@ -61,6 +61,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
+    var movePreview by remember { mutableStateOf<WordSiegeMovePreviewDto?>(null) }
     var practiceActive by remember { mutableStateOf(false) }
 
     if (practiceActive) {
@@ -97,6 +98,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             .filterNot { it.status == "cancelled" }
             .sortedByDescending { it.updatedAt.ifBlank { it.createdAt } }
         placements = emptyMap()
+        movePreview = null
         selectedRackIndex = null
         exchangeSelection = emptySet()
     }
@@ -124,6 +126,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             selectedGameId = null
             currentGame = null
             placements = emptyMap()
+            movePreview = null
             selectedRackIndex = null
         } else {
             onExit()
@@ -149,6 +152,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     loadProfiles(listOf(next.playerOneId, next.playerTwoId))
                     if (turnChanged) {
                         placements = emptyMap()
+                        movePreview = null
                         selectedRackIndex = null
                     }
                 }
@@ -159,6 +163,28 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             }
             delay(2_500)
         }
+    }
+
+    LaunchedEffect(currentGame?.id, currentGame?.moveCount, currentGame?.currentPlayerId, placements) {
+        val game = currentGame
+        if (game == null || game.status != "playing" || game.currentPlayerId != me || placements.isEmpty()) {
+            movePreview = null
+            return@LaunchedEffect
+        }
+        val direction = detectWordSiegeDirection(game.board, placements.keys)
+        if (direction == null) {
+            movePreview = null
+            return@LaunchedEffect
+        }
+        delay(120L)
+        val request = placements.entries.sortedBy { it.key }.map { WordSiegePlacement(it.key, it.value) }
+        movePreview = runCatching {
+            backend.previewWordSiegeMove(
+                game.id,
+                request,
+                direction == WordSiegeDirection.HORIZONTAL,
+            )
+        }.getOrNull()?.takeIf { it.valid }
     }
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
@@ -192,6 +218,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                 onOpen = { game ->
                     currentGame = game
                     selectedGameId = game.id
+                    movePreview = null
                     notice = null
                 },
             )
@@ -208,12 +235,14 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     profiles = profiles,
                     moves = moves,
                     placements = placements,
+                    preview = movePreview,
                     selectedRackIndex = selectedRackIndex,
                     busy = busy,
                     notice = notice,
                     onBack = {
                         selectedGameId = null
                         currentGame = null
+                        movePreview = null
                     },
                     onBoardCell = { boardIndex ->
                         if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegeMatch
@@ -273,6 +302,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                         }
                         selectedGameId = null
                         currentGame = null
+                        movePreview = null
                     },
                 )
             }
@@ -598,6 +628,7 @@ private fun WordSiegeMatch(
     profiles: Map<String, ProfileDto>,
     moves: List<WordSiegeMoveDto>,
     placements: Map<Int, Int>,
+    preview: WordSiegeMovePreviewDto?,
     selectedRackIndex: Int?,
     busy: Boolean,
     notice: String?,
@@ -617,6 +648,7 @@ private fun WordSiegeMatch(
     val myTurn = game.status == "playing" && game.currentPlayerId == me
     val rack = game.rackFor(me)
     val canAct = myTurn && !busy
+    val vip = mine?.isVip == true
 
     BoxWithConstraints(
         Modifier
@@ -803,6 +835,7 @@ private fun WordSiegeMatch(
                         board = game.board,
                         rack = rack,
                         placements = placements,
+                        previewCells = if (vip) preview?.previewCells?.toSet().orEmpty() else emptySet(),
                         myOwner = myOwner,
                         enabled = canAct,
                         onCell = onBoardCell,
@@ -861,6 +894,16 @@ private fun WordSiegeMatch(
                             fontWeight = FontWeight.SemiBold,
                         )
                     }
+
+                    WordSiegeMoveAnalysisBar(
+                        preview = preview,
+                        placementsPresent = placements.isNotEmpty(),
+                        vip = vip,
+                        game = game,
+                        moves = moves,
+                        me = me,
+                        tight = tight,
+                    )
 
                     Row(
                         Modifier.fillMaxWidth(),
@@ -927,7 +970,7 @@ private fun WordSiegeMatch(
                         }
                     }
                 } else {
-                    WordSiegeFinishedCard(game, me)
+                    WordSiegeFinishedCard(game, me, moves, vip)
                 }
 
                 notice?.let {
@@ -1027,6 +1070,7 @@ internal fun WordSiegeBoard(
     board: List<WordSiegeCellDto>,
     rack: String,
     placements: Map<Int, Int>,
+    previewCells: Set<Int> = emptySet(),
     myOwner: Int,
     enabled: Boolean,
     onCell: (Int) -> Unit,
@@ -1049,6 +1093,7 @@ internal fun WordSiegeBoard(
                                 cell = board.getOrElse(index) { WordSiegeCellDto() },
                                 pendingLetter = placements[index]?.let { rackIndex -> rack.getOrNull(rackIndex) },
                                 pending = placements.containsKey(index),
+                                previewArea = index in previewCells,
                                 myOwner = myOwner,
                                 enabled = enabled,
                                 size = cellSize,
@@ -1067,6 +1112,7 @@ private fun WordSiegeBoardCell(
     cell: WordSiegeCellDto,
     pendingLetter: Char?,
     pending: Boolean,
+    previewArea: Boolean,
     myOwner: Int,
     enabled: Boolean,
     size: Dp,
@@ -1080,6 +1126,7 @@ private fun WordSiegeBoardCell(
     }
     val border = when {
         pending -> SiegeTileBorder
+        previewArea -> MainUi.Green.copy(alpha = .85f)
         owner == 1 -> MainUi.Blue.copy(alpha = .45f)
         owner == 2 -> SiegePurple.copy(alpha = .45f)
         else -> MainUi.Border
@@ -1090,15 +1137,25 @@ private fun WordSiegeBoardCell(
             .size(size)
             .padding(1.dp)
             .clip(RoundedCornerShape(4.dp))
-            .background(if (letter != null) territory else MainUi.Surface)
+            .background(
+                when {
+                    previewArea && !pending -> MainUi.Green.copy(alpha = .12f)
+                    letter != null -> territory
+                    else -> MainUi.Surface
+                },
+            )
             .clickable(enabled = enabled && (cell.letter == null || pending), onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = if (pending) SiegeTile.copy(alpha = .92f) else Color.Transparent,
+            color = when {
+                pending -> SiegeTile.copy(alpha = .92f)
+                previewArea -> MainUi.Green.copy(alpha = .08f)
+                else -> Color.Transparent
+            },
             shape = RoundedCornerShape(4.dp),
-            border = BorderStroke(if (pending) 1.5.dp else .7.dp, border),
+            border = BorderStroke(if (pending || previewArea) 1.5.dp else .7.dp, border),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (letter != null) {
@@ -1159,29 +1216,37 @@ internal fun WordSiegeRackTile(
 }
 
 @Composable
-private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
+private fun WordSiegeFinishedCard(
+    game: WordSiegeGameDto,
+    me: String?,
+    moves: List<WordSiegeMoveDto>,
+    vip: Boolean,
+) {
     val won = game.winnerId == me
     val draw = game.winnerId == null
     val accent = when { draw -> MainUi.Gold; won -> MainUi.Green; else -> MainUi.Red }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = accent.copy(alpha = .08f),
-        border = BorderStroke(1.dp, accent.copy(alpha = .45f)),
-    ) {
-        Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
-                color = accent,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Black,
-            )
-            Text(
-                sh("Sonuç = kelime puanı + sahip olunan alan", "Result = word score + owned territory"),
-                color = MainUi.Muted,
-                fontSize = 10.sp,
-            )
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color = accent.copy(alpha = .08f),
+            border = BorderStroke(1.dp, accent.copy(alpha = .45f)),
+        ) {
+            Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
+                    color = accent,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    sh("Sonuç = kelime puanı + sahip olunan alan", "Result = word score + owned territory"),
+                    color = MainUi.Muted,
+                    fontSize = 10.sp,
+                )
+            }
         }
+        if (vip) WordSiegeVipFinishedAnalysis(game, moves, me)
     }
 }
 
