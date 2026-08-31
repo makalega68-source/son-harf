@@ -14,8 +14,8 @@ class WordSiegeAsyncContractTest {
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt").readText()
 
         assertTrue(ui.contains("Tur süresini seç"))
-        assertTrue(ui.contains("12 ${'$'}{sh(\"SAAT\"" ) || ui.contains("12 SAAT"))
-        assertTrue(ui.contains("72 ${'$'}{sh(\"SAAT\"" ) || ui.contains("72 SAAT"))
+        assertTrue(ui.contains("listOf(12, 72)"))
+        assertTrue(ui.contains("turnDurationHours"))
         assertTrue(ui.contains("OYUNLARIM"))
         assertTrue(ui.contains("AKTİF"))
         assertTrue(ui.contains("BİTEN"))
@@ -53,7 +53,6 @@ class WordSiegeAsyncContractTest {
         assertTrue(base.contains("jsonb_array_length(board) = 81"))
         assertTrue(base.contains("alter table public.word_siege_games enable row level security"))
         assertTrue(validation.contains("word_siege_prevalidate_move_v2"))
-
         assertTrue(deadline.contains("turn_duration_hours"))
         assertTrue(deadline.contains("turn_started_at"))
         assertTrue(deadline.contains("turn_deadline"))
