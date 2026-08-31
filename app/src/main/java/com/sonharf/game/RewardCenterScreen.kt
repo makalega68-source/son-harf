@@ -137,9 +137,14 @@ fun RewardCenterScreen(
     val remainingChestAds = ((s?.chestAdsLimit ?: 2) - (s?.chestAdsUsed ?: 0)).coerceAtLeast(0)
     val remainingTrialAds = ((s?.trialAdsLimit ?: 1) - (s?.trialAdsUsed ?: 0)).coerceAtLeast(0)
     val trialItem = items.firstOrNull { it.id == s?.trialItemId }
+    val rootModifier = if (onOpenTasks != null) {
+        Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()
+    } else {
+        Modifier.fillMaxSize()
+    }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = rootModifier,
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
