@@ -8,7 +8,7 @@ import org.junit.Test
 class WordSiegePracticeEngineTest {
     @Test
     fun firstPracticeMoveCoversCenterAndUsesBonus() {
-        val state = WordSiegePracticeEngine.newGame()
+        val state = WordSiegePracticeEngine.newGame().copy(playerRack = "KALEMTR")
 
         val (next, move) = WordSiegePracticeEngine.applyMove(
             state = state,
@@ -26,8 +26,12 @@ class WordSiegePracticeEngineTest {
 
     @Test
     fun botCanFindMoveAndCaptureAnExistingTile() {
+        val initial = WordSiegePracticeEngine.newGame().copy(
+            playerRack = "KALEMTR",
+            botRack = "MASASİN",
+        )
         val opened = WordSiegePracticeEngine.applyMove(
-            WordSiegePracticeEngine.newGame(),
+            initial,
             1,
             linkedMapOf(38 to 0, 39 to 1, 40 to 2, 41 to 3, 42 to 4),
             true,
