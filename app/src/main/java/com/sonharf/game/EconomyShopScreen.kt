@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -16,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -58,7 +56,6 @@ fun EconomyShopScreen(
 
 @Composable
 private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
-    val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -68,7 +65,6 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
     var notice by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var category by remember { mutableIntStateOf(0) }
-    var showVip by remember { mutableStateOf(false) }
 
     suspend fun reload() {
         val b = backend
@@ -141,7 +137,7 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
                     Icon(Icons.Rounded.Checkroom, null, tint = MainUi.Blue)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        sh("Satın aldığın Style öğeleri burada etkinleştirilmez. Profil > Görünümümü düzenle bölümünden uygula.", "Owned Style items are not equipped in the shop. Apply them from Profile > Edit appearance."),
+                        sh("Mağaza satın alma ve keşif alanıdır. Sahip olduğun Style öğelerini Profil > Görünümümü düzenle bölümünden uygula.", "The shop is for discovery and purchases. Apply owned Style items from Profile > Edit appearance."),
                         color = MainUi.Text,
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.Bold,
@@ -192,7 +188,9 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
                             onClick = {
                                 if (mine) {
                                     onOpenProfileAppearance?.invoke()
-                                    if (onOpenProfileAppearance == null) notice = sh("Bu öğeyi Profil > Görünümümü düzenle bölümünden uygulayabilirsin.", "Apply this item from Profile > Edit appearance.")
+                                    if (onOpenProfileAppearance == null) {
+                                        notice = sh("Bu öğeyi Profil > Görünümümü düzenle bölümünden uygulayabilirsin.", "Apply this item from Profile > Edit appearance.")
+                                    }
                                     return@Button
                                 }
                                 val b = backend ?: return@Button
@@ -216,7 +214,7 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
                                 }
                             },
                             enabled = busy == null && (mine || !item.vipOnly || profile?.isVip == true),
-                            colors = ButtonDefaults.buttonColors(containerColor = if (mine) MainUi.Blue else MainUi.Blue),
+                            colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
                             shape = RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                         ) {
@@ -249,7 +247,7 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
                     sh("Son Coin yalnızca Style ve güç vermeyen kişiselleştirme için kullanılır. Satın alımlar puan, süre, rating, lig veya joker avantajı vermez.", "Son Coin is only for Style and non-power personalization. Purchases never grant score, time, rating, league or joker advantages."),
                     Modifier.fillMaxWidth().padding(12.dp),
                     color = MainUi.Muted,
-                    fontSize = 9pxToSp(),
+                    fontSize = 9.sp,
                 )
             }
         }
@@ -261,11 +259,8 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
         }
         item { Spacer(Modifier.height(8.dp)) }
     }
-
-    if (showVip) VipPurchaseDialog { showVip = false }
 }
 
-@Composable
 private fun styleShopIcon(kind: String): String = when (kind) {
     "profile_frame" -> "◯"
     "name_style" -> "Aa"
@@ -276,5 +271,3 @@ private fun styleShopIcon(kind: String): String = when (kind) {
     "mascot" -> "●"
     else -> "◆"
 }
-
-private fun Int.pxToSp() = this.sp
