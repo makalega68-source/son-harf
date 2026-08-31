@@ -17,10 +17,10 @@ class MainExperienceContractTest {
 
         assertTrue(stable.contains("SonHarfMainApp("))
         assertTrue(main.contains("OnlineGameScreenV6()"))
-        assertTrue(main.contains("sh(\"OYNA\", \"PLAY\")"))
+        assertTrue(main.contains("title = \"SON HARF\""))
         assertTrue(main.contains("MainDestination.WORD_SIEGE"))
         assertTrue(main.contains("WordSiegeExperienceScreen"))
-        assertTrue(main.contains("KELİME KUŞATMASI OYNA"))
+        assertTrue(main.contains("KELİME KUŞATMASI"))
         assertTrue(main.contains("MainDestination.LEAGUE"))
         assertTrue(main.contains("MainDestination.SOCIAL"))
         assertTrue(main.contains("MainDestination.STYLE"))
@@ -35,8 +35,10 @@ class MainExperienceContractTest {
         val main = projectFile("app/src/main/java/com/sonharf/game/MainExperienceApp.kt").readText()
         val classic = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt")
 
-        assertTrue(main.contains("title = \"SON HARF \" + sh(\"OYNA\", \"PLAY\")"))
-        assertTrue(main.contains("title = sh(\"KELİME KUŞATMASI OYNA\""))
+        assertTrue(main.contains("title = \"SON HARF\""))
+        assertTrue(main.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
+        assertTrue(main.contains("badge = sh(\"ANLIK\", \"LIVE\")"))
+        assertTrue(main.contains("Text(sh(\"OYNA\", \"PLAY\")"))
         assertTrue(main.contains("modifier = Modifier.weight(1f)"))
         assertTrue(classic.isFile)
     }
