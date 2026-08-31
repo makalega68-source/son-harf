@@ -18,11 +18,25 @@ class MainExperienceContractTest {
         assertTrue(stable.contains("SonHarfMainApp("))
         assertTrue(main.contains("OnlineGameScreenV6()"))
         assertTrue(main.contains("sh(\"OYNA\", \"PLAY\")"))
+        assertTrue(main.contains("MainDestination.WORD_SIEGE"))
+        assertTrue(main.contains("WordSiegeExperienceScreen"))
+        assertTrue(main.contains("KELİME KUŞATMASI OYNA"))
         assertTrue(main.contains("MainDestination.LEAGUE"))
         assertTrue(main.contains("MainDestination.SOCIAL"))
         assertTrue(main.contains("MainDestination.STYLE"))
         assertTrue(main.contains("MainDestination.PROFILE"))
         assertFalse(main.contains("TargetNeonGameScreen"))
+    }
+
+    @Test
+    fun homeKeepsClassicDuelAndSplitsPlayAreaIntoTwoModes() {
+        val main = projectFile("app/src/main/java/com/sonharf/game/MainExperienceApp.kt").readText()
+        val classic = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt")
+
+        assertTrue(main.contains("title = \"SON HARF \" + sh(\"OYNA\", \"PLAY\")"))
+        assertTrue(main.contains("title = sh(\"KELİME KUŞATMASI OYNA\""))
+        assertTrue(main.contains("modifier = Modifier.weight(1f)"))
+        assertTrue(classic.isFile)
     }
 
     @Test
