@@ -59,13 +59,17 @@ class BetaReleaseRegressionContractTest {
     fun socialPhotosShopAndVipPolishRemainActive() {
         val competition = projectFile("app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt").readText()
         val shop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
+        val profileStyle = projectFile("app/src/main/java/com/sonharf/game/ProfileStyleInventoryScreen.kt").readText()
         val vip = projectFile("app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt").readText()
 
         assertTrue(competition.contains("memberProfiles"))
         assertTrue(competition.contains("leaderboardProfiles"))
         assertTrue(competition.contains("playerProfiles"))
         assertTrue(competition.contains("ProfilePhotoAvatar("))
-        assertTrue(shop.contains("val anotherItemBusy = busy != null && busy != item.id"))
+        assertTrue(shop.contains("onOpenProfileAppearance"))
+        assertTrue(shop.contains("PROFİLDE UYGULA"))
+        assertFalse(shop.contains("equipShopItem("))
+        assertTrue(profileStyle.contains("equipShopItem(item.id)"))
         assertTrue(vip.contains("BillingManager("))
         assertTrue(vip.contains("PlayPurchaseVerification.verify"))
         assertFalse(vip.contains("rememberInfiniteTransition"))

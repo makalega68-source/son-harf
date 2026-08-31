@@ -31,6 +31,8 @@ object SonHarfPreferences {
     private const val REMEMBER_LOGIN = "remember_login"
     private const val REMEMBERED_EMAIL = "remembered_email"
     private const val DISMISSED_MATCH_SUMMARY_ID = "dismissed_match_summary_id"
+    private const val SON_HARF_TUTORIAL_DONE = "son_harf_tutorial_done_v1"
+    private const val WORD_SIEGE_TUTORIAL_DONE = "word_siege_tutorial_done_v1"
 
     fun soundEnabled(context: Context): Boolean = prefs(context).getBoolean(SOUND, true)
     fun musicEnabled(context: Context): Boolean = prefs(context).getBoolean(MUSIC, soundEnabled(context))
@@ -41,6 +43,8 @@ object SonHarfPreferences {
     fun rememberLogin(context: Context): Boolean = prefs(context).getBoolean(REMEMBER_LOGIN, true)
     fun rememberedEmail(context: Context): String = prefs(context).getString(REMEMBERED_EMAIL, "").orEmpty()
     fun dismissedMatchSummaryId(context: Context): String? = prefs(context).getString(DISMISSED_MATCH_SUMMARY_ID, null)
+    fun sonHarfTutorialCompleted(context: Context): Boolean = prefs(context).getBoolean(SON_HARF_TUTORIAL_DONE, false)
+    fun wordSiegeTutorialCompleted(context: Context): Boolean = prefs(context).getBoolean(WORD_SIEGE_TUTORIAL_DONE, false)
 
     fun notificationsEnabled(context: Context): Boolean = gameInviteNotificationsEnabled(context) || friendRequestNotificationsEnabled(context) || systemNotificationsEnabled(context)
     fun gameInviteNotificationsEnabled(context: Context): Boolean = prefs(context).getBoolean(GAME_INVITE_NOTIFICATIONS, prefs(context).getBoolean(NOTIFICATIONS, true))
@@ -72,6 +76,12 @@ object SonHarfPreferences {
         editor.apply()
         if (!roomId.isNullOrBlank()) SonHarfGameNavigation.requestLobby()
     }
+    fun setSonHarfTutorialCompleted(context: Context, value: Boolean = true) =
+        prefs(context).edit().putBoolean(SON_HARF_TUTORIAL_DONE, value).apply()
+
+    fun setWordSiegeTutorialCompleted(context: Context, value: Boolean = true) =
+        prefs(context).edit().putBoolean(WORD_SIEGE_TUTORIAL_DONE, value).apply()
+
     fun setBotDifficulty(context: Context, value: String) {
         val normalized = if(value in setOf("easy","hard")) value else "normal"
         prefs(context).edit().putString(BOT_DIFFICULTY, normalized).apply()

@@ -17,14 +17,16 @@ class MainExperienceContractTest {
 
         assertTrue(stable.contains("SonHarfMainApp("))
         assertTrue(main.contains("OnlineGameScreenV6()"))
-        assertTrue(main.contains("sh(\"OYNA\", \"PLAY\")"))
+        assertTrue(main.contains("title = \"SON HARF\""))
         assertTrue(main.contains("MainDestination.WORD_SIEGE"))
         assertTrue(main.contains("WordSiegeExperienceScreen"))
-        assertTrue(main.contains("KELİME KUŞATMASI OYNA"))
+        assertTrue(main.contains("KELİME KUŞATMASI"))
         assertTrue(main.contains("MainDestination.LEAGUE"))
         assertTrue(main.contains("MainDestination.SOCIAL"))
         assertTrue(main.contains("MainDestination.STYLE"))
         assertTrue(main.contains("MainDestination.PROFILE"))
+        assertTrue(main.contains("MainDestination.SEASON"))
+        assertTrue(main.contains("MainDestination.REWARDS"))
         assertFalse(main.contains("TargetNeonGameScreen"))
     }
 
@@ -33,8 +35,10 @@ class MainExperienceContractTest {
         val main = projectFile("app/src/main/java/com/sonharf/game/MainExperienceApp.kt").readText()
         val classic = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt")
 
-        assertTrue(main.contains("title = \"SON HARF \" + sh(\"OYNA\", \"PLAY\")"))
-        assertTrue(main.contains("title = sh(\"KELİME KUŞATMASI OYNA\""))
+        assertTrue(main.contains("title = \"SON HARF\""))
+        assertTrue(main.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
+        assertTrue(main.contains("badge = sh(\"ANLIK\", \"LIVE\")"))
+        assertTrue(main.contains("Text(sh(\"OYNA\", \"PLAY\")"))
         assertTrue(main.contains("modifier = Modifier.weight(1f)"))
         assertTrue(classic.isFile)
     }
@@ -47,6 +51,9 @@ class MainExperienceContractTest {
             "MainRetentionScreen.kt",
             "MainSocialScreen.kt",
             "MainSettingsVipScreen.kt",
+            "SeasonCenterScreen.kt",
+            "RewardCenterScreen.kt",
+            "ProfileStyleInventoryScreen.kt",
         ).joinToString("\n") { name ->
             projectFile("app/src/main/java/com/sonharf/game/$name").readText()
         }
@@ -57,8 +64,12 @@ class MainExperienceContractTest {
         assertTrue(combined.contains("backend.getFriends()"))
         assertTrue(combined.contains("backend.getRivalHistory("))
         assertTrue(combined.contains("profile?.isVip == true"))
+        assertTrue(combined.contains("backend.getMetaProgressV2()"))
+        assertTrue(combined.contains("getRewardCenterStatus()"))
         assertFalse(combined.contains("Mock"))
-        assertFalse(combined.contains("fake", ignoreCase = true))
+        assertFalse(combined.contains("fakeProfile", ignoreCase = true))
+        assertFalse(combined.contains("fakeMissions", ignoreCase = true))
+        assertFalse(combined.contains("fakeRewards", ignoreCase = true))
     }
 
     @Test
@@ -69,10 +80,14 @@ class MainExperienceContractTest {
         val offeredProducts = catalog.substringAfter("val oneTimeProducts = listOf(")
 
         assertTrue(shop.contains("STYLE"))
-        assertFalse(shop.contains("game_theme"))
-        assertFalse(shop.contains("keyboard_theme"))
+        assertTrue(shop.contains("profile_frame"))
+        assertTrue(shop.contains("keyboard_theme"))
+        assertTrue(shop.contains("game_theme"))
+        assertFalse(shop.contains("THEME_NEON"))
         assertFalse(playProducts.contains("THEME_NEON"))
         assertFalse(offeredProducts.contains("THEME_NEON"))
+        assertFalse(shop.contains("rememberInfiniteTransition"))
+        assertFalse(shop.contains("Brush.linearGradient"))
         assertFalse(shop.contains("kozmetik", ignoreCase = true))
     }
 

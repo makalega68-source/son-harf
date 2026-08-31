@@ -34,11 +34,9 @@ internal data class WordSiegePracticeMove(
 
 internal class WordSiegePracticeError(val code: String) : IllegalArgumentException(code)
 
-/** Local, connection-free practice rules. Online matches still validate against the server dictionary. */
 internal object WordSiegePracticeEngine {
     private val trLocale = Locale.forLanguageTag("tr-TR")
 
-    // Deliberately friendly opening racks make the first practice game immediately playable.
     fun newGame(): WordSiegePracticeState = WordSiegePracticeState(
         board = List(81) { index ->
             WordSiegeCellDto(
@@ -59,11 +57,20 @@ internal object WordSiegePracticeEngine {
     fun rackFor(state: WordSiegePracticeState, owner: Int): String =
         if (owner == 1) state.playerRack else state.botRack
 
+    fun validateMove(
+        state: WordSiegePracticeState,
+        owner: Int,
+        placements: Map<Int, Int>,
+        horizontal: Boolean,
+        wordValidator: (String) -> Boolean = ::isPracticeWord,
+    ): WordSiegePracticeMove = applyMove(state, owner, placements, horizontal, wordValidator).second
+
     fun applyMove(
         state: WordSiegePracticeState,
         owner: Int,
         placements: Map<Int, Int>,
         horizontal: Boolean,
+        wordValidator: (String) -> Boolean = ::isPracticeWord,
     ): Pair<WordSiegePracticeState, WordSiegePracticeMove> {
         requireActiveTurn(state, owner)
         if (placements.size !in 1..7) fail("word_siege_invalid_placements")
@@ -92,12 +99,12 @@ internal object WordSiegePracticeEngine {
         var primary: String? = null
         var score = 0
         val captured = linkedSetOf<Int>()
-        var board = state.board.toMutableList()
+        val board = state.board.toMutableList()
 
         fun acceptWord(cells: List<Int>) {
             if (cells.size < 2) return
             val word = cells.joinToString("") { letterAt(it)?.toString().orEmpty() }
-            if (!isPracticeWord(word)) fail("word_siege_invalid_word:$word")
+            if (!wordValidator(word)) fail("word_siege_invalid_word:$word")
             words += word
             if (primary == null) primary = word
             score += scoreWord(state.board, placements, rack, cells)
@@ -190,19 +197,19 @@ internal object WordSiegePracticeEngine {
     fun bestBotMove(state: WordSiegePracticeState): WordSiegePracticeMove? {
         if (state.currentOwner != 2 || state.status != "playing") return null
         val rack = state.botRack
-        var best: Pair<WordSiegePracticeState, WordSiegePracticeMove>? = null
+        var best: WordSiegePracticeMove? = null
         botWords.forEach { word ->
             listOf(true, false).forEach { horizontal ->
                 (0..80).forEach startLoop@{ start ->
                     val placements = placementsForWord(state, rack, word, start, horizontal) ?: return@startLoop
-                    val candidate = runCatching { applyMove(state, 2, placements, horizontal) }.getOrNull() ?: return@startLoop
-                    if (best == null || candidate.second.wordScore + candidate.second.capturedCells * 2 > best!!.second.wordScore + best!!.second.capturedCells * 2) {
+                    val candidate = runCatching { validateMove(state, 2, placements, horizontal) }.getOrNull() ?: return@startLoop
+                    if (best == null || candidate.wordScore + candidate.capturedCells * 2 > best!!.wordScore + best!!.capturedCells * 2) {
                         best = candidate
                     }
                 }
             }
         }
-        return best?.second
+        return best
     }
 
     private fun placementsForWord(
@@ -292,8 +299,7 @@ internal object WordSiegePracticeEngine {
 
     private fun isPracticeWord(word: String): Boolean {
         val normalized = word.trim().uppercase(trLocale)
-        return normalized.length in 2..9 && normalized.all { it in "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ" } &&
-            normalized.firstOrNull() != 'Ğ' && normalized.lastOrNull() != 'Ğ'
+        return normalized.length in 2..9 && normalized in practiceDictionary
     }
 
     private fun letterValue(letter: String): Int = when (letter) {
@@ -316,4 +322,6 @@ internal object WordSiegePracticeEngine {
         "KART", "KARE", "KASA", "SIR", "SIRA", "ARA", "ARI", "TARİH", "NAR", "NİSAN",
         "TERİM", "METİN", "SİLİ", "LİSTE", "LİMAN", "KİLİT", "KİRA", "KİRAZ", "KİTAP",
     )
+
+    private val practiceDictionary = botWords.toSet() + setOf("ARAÇ", "TAM", "AT")
 }

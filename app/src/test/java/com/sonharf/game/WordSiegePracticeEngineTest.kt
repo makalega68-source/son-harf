@@ -50,6 +50,58 @@ class WordSiegePracticeEngineTest {
     }
 
     @Test
+    fun botValidatorRejectsInvalidCrossWord() {
+        val base = WordSiegePracticeEngine.newGame()
+        val board = base.board.toMutableList().also {
+            it[29] = it[29].copy(letter = "B", owner = 1, bonusUsed = true)
+        }
+        val state = base.copy(
+            board = board,
+            currentOwner = 2,
+            botRack = "KALEMZZ",
+        )
+
+        val error = runCatching {
+            WordSiegePracticeEngine.validateMove(
+                state = state,
+                owner = 2,
+                placements = linkedMapOf(38 to 0, 39 to 1, 40 to 2, 41 to 3, 42 to 4),
+                horizontal = true,
+            )
+        }.exceptionOrNull()
+
+        assertTrue(error is WordSiegePracticeError)
+        assertEquals("word_siege_invalid_word:BK", error?.message)
+    }
+
+    @Test
+    fun botValidatorRejectsInvalidExtension() {
+        val base = WordSiegePracticeEngine.newGame()
+        val board = base.board.toMutableList()
+        "MAKALE".forEachIndexed { offset, letter ->
+            val index = 36 + offset
+            board[index] = board[index].copy(letter = letter.toString(), owner = 1, bonusUsed = true)
+        }
+        val state = base.copy(
+            board = board,
+            currentOwner = 2,
+            botRack = "BZZZZZZ",
+        )
+
+        val error = runCatching {
+            WordSiegePracticeEngine.validateMove(
+                state = state,
+                owner = 2,
+                placements = mapOf(42 to 0),
+                horizontal = true,
+            )
+        }.exceptionOrNull()
+
+        assertTrue(error is WordSiegePracticeError)
+        assertEquals("word_siege_invalid_word:MAKALEB", error?.message)
+    }
+
+    @Test
     fun consecutivePassesFinishPractice() {
         val first = WordSiegePracticeEngine.pass(WordSiegePracticeEngine.newGame(), 1)
         val finished = WordSiegePracticeEngine.pass(first, 2)
