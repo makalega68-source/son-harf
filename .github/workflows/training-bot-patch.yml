@@ -15,12 +15,11 @@ jobs:
         with:
           ref: "feat/training-bots-ownership-20260831"
       - name: Apply staged patch
-        run: python3 scripts/patch_online_training.py
+        run: python3 scripts/patch_word_siege_ownership.py
       - name: Commit scoped edit
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          git commit -m "feat(training): disclose Son Harf bot matches"
+          git add app/src/main/java/com/sonharf/game/WordSiegeExperience.kt
+          git commit -m "feat(word-siege): render ownership by player perspective"
           git push origin HEAD:feat/training-bots-ownership-20260831
-# rerun 2
