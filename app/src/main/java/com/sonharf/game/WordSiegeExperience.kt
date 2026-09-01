@@ -614,39 +614,98 @@ private fun WordSiegeMatch(
     val myTurn = game.status == "playing" && game.currentPlayerId == me
     val rack = game.rackFor(me)
     val canAct = myTurn && !busy
-    LazyColumn(
-        Modifier.fillMaxSize().statusBarsPadding(),
-        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .padding(horizontal = 8.dp, vertical = 4.dp),
     ) {
-        item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, sh("Oyunlar", "Games"), tint = MainUi.Text) }
-                Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
+        val compact = maxHeight < 720.dp || maxWidth < 380.dp
+        val tight = maxHeight < 620.dp || maxWidth < 340.dp
+        val gap = when {
+            tight -> 3.dp
+            compact -> 4.dp
+            else -> 6.dp
+        }
+        val headerHeight = when {
+            tight -> 38.dp
+            compact -> 42.dp
+            else -> 46.dp
+        }
+        val playerHeight = when {
+            tight -> 48.dp
+            compact -> 52.dp
+            else -> 58.dp
+        }
+        val utilityHeight = if (tight) 32.dp else 36.dp
+        val rackHeight = when {
+            tight -> 38.dp
+            compact -> 42.dp
+            else -> 46.dp
+        }
+        val actionHeight = when {
+            tight -> 38.dp
+            compact -> 42.dp
+            else -> 44.dp
+        }
+
+        Column(
+            Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(gap),
+        ) {
+            Row(
+                Modifier.fillMaxWidth().height(headerHeight),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(onClick = onBack, modifier = Modifier.size(if (tight) 32.dp else 36.dp)) {
+                    Icon(
+                        Icons.Rounded.ArrowBack,
+                        sh("Oyunlar", "Games"),
+                        tint = MainUi.Text,
+                        modifier = Modifier.size(if (tight) 19.dp else 21.dp),
+                    )
+                }
+                Spacer(Modifier.width(if (tight) 2.dp else 4.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                    Text(
+                        sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                        color = MainUi.Text,
+                        fontSize = if (tight) 15.sp else 17.sp,
+                        lineHeight = if (tight) 17.sp else 19.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                    )
                     Text(
                         if (game.status == "playing") {
                             if (myTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")
                         } else game.statusLabel(me),
                         color = if (myTurn) MainUi.Blue else SiegePurple,
-                        fontSize = 10.sp,
+                        fontSize = if (tight) 8.sp else 9.sp,
+                        lineHeight = if (tight) 9.sp else 10.sp,
                         fontWeight = FontWeight.Black,
+                        maxLines = 1,
                     )
                 }
                 Surface(shape = RoundedCornerShape(99.dp), color = SiegePurpleSoft) {
                     Text(
                         sh("SÜRE YOK", "NO TIMER"),
-                        Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                        Modifier.padding(
+                            horizontal = if (tight) 6.dp else 8.dp,
+                            vertical = if (tight) 4.dp else 5.dp,
+                        ),
                         color = SiegePurple,
-                        fontSize = 8.sp,
+                        fontSize = if (tight) 7.sp else 8.sp,
                         fontWeight = FontWeight.Black,
                     )
                 }
             }
-        }
 
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(
+                Modifier.fillMaxWidth().height(playerHeight),
+                horizontalArrangement = Arrangement.spacedBy(if (tight) 5.dp else 7.dp),
+            ) {
                 WordSiegePlayerCard(
                     profile = mine,
                     fallbackName = sh("Sen", "You"),
@@ -654,7 +713,8 @@ private fun WordSiegeMatch(
                     area = game.areaFor(myOwner),
                     accent = MainUi.Blue,
                     active = game.currentPlayerId == me,
-                    modifier = Modifier.weight(1f),
+                    compact = compact,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
                 WordSiegePlayerCard(
                     profile = opponent,
@@ -663,170 +723,276 @@ private fun WordSiegeMatch(
                     area = game.areaFor(if (myOwner == 1) 2 else 1),
                     accent = SiegePurple,
                     active = game.currentPlayerId == game.opponentId(me),
-                    modifier = Modifier.weight(1f),
+                    compact = compact,
+                    modifier = Modifier.weight(1f).fillMaxHeight(),
                 )
             }
-        }
 
-        if (game.status == "waiting") {
-            item {
-                Surface(color = MainUi.Surface, shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, MainUi.Border)) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+            if (game.status == "waiting") {
+                Box(
+                    Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Surface(
+                        color = MainUi.Surface,
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, MainUi.Border),
                     ) {
-                        CircularProgressIndicator(color = SiegePurple)
-                        Text(sh("RAKİP ARANIYOR", "FINDING A RIVAL"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                        Text(
-                            sh("Beklerken çıkabilirsin. Rakip bulunduğunda oyun listende görünür.", "You can leave while waiting. The match will stay in your game list."),
-                            color = MainUi.Muted,
-                            fontSize = 12.sp,
-                            textAlign = TextAlign.Center,
-                        )
-                        OutlinedButton(onClick = onCancelWaiting, enabled = !busy, border = BorderStroke(1.dp, MainUi.Red)) {
-                            Text(sh("ARAMAYI İPTAL ET", "CANCEL SEARCH"), color = MainUi.Red, fontWeight = FontWeight.Bold)
+                        Column(
+                            Modifier.fillMaxWidth().padding(if (tight) 14.dp else 18.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(if (tight) 7.dp else 10.dp),
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(if (tight) 28.dp else 34.dp),
+                                color = SiegePurple,
+                                strokeWidth = 3.dp,
+                            )
+                            Text(
+                                sh("RAKİP ARANIYOR", "FINDING A RIVAL"),
+                                color = MainUi.Text,
+                                fontSize = if (tight) 13.sp else 15.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                            Text(
+                                sh(
+                                    "Beklerken çıkabilirsin. Rakip bulunduğunda oyun listende görünür.",
+                                    "You can leave while waiting. The match will stay in your game list.",
+                                ),
+                                color = MainUi.Muted,
+                                fontSize = if (tight) 9.sp else 10.sp,
+                                textAlign = TextAlign.Center,
+                            )
+                            OutlinedButton(
+                                onClick = onCancelWaiting,
+                                enabled = !busy,
+                                border = BorderStroke(1.dp, MainUi.Red),
+                                modifier = Modifier.height(if (tight) 34.dp else 38.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp),
+                            ) {
+                                Text(
+                                    sh("ARAMAYI İPTAL ET", "CANCEL SEARCH"),
+                                    color = MainUi.Red,
+                                    fontSize = if (tight) 9.sp else 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
                         }
                     }
                 }
-            }
-            notice?.let { item { WordSiegeNotice(it) } }
-            return@LazyColumn
-        }
-
-        item {
-            WordSiegeBoard(
-                board = game.board,
-                rack = rack,
-                placements = placements,
-                myOwner = myOwner,
-                enabled = canAct,
-                onCell = onBoardCell,
-            )
-        }
-
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                OutlinedButton(
-                    onClick = onChat,
-                    enabled = game.playerTwoId != null,
-                    modifier = Modifier.weight(1f).height(40.dp),
-                    border = BorderStroke(1.dp, MainUi.Blue),
-                    contentPadding = PaddingValues(horizontal = 6.dp),
-                ) {
-                    Icon(Icons.Rounded.Chat, null, Modifier.size(16.dp), tint = MainUi.Blue)
-                    Spacer(Modifier.width(4.dp))
-                    Text(sh("SOHBET", "CHAT"), color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                }
-                OutlinedButton(
-                    onClick = onForfeit,
-                    enabled = game.status == "playing" && !busy,
-                    modifier = Modifier.weight(1f).height(40.dp),
-                    border = BorderStroke(1.dp, MainUi.Red),
-                    contentPadding = PaddingValues(horizontal = 6.dp),
-                ) {
-                    Icon(Icons.Rounded.Flag, null, Modifier.size(16.dp), tint = MainUi.Red)
-                    Spacer(Modifier.width(4.dp))
-                    Text(sh("PES ET", "FORFEIT"), color = MainUi.Red, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                }
-            }
-        }
-
-        if (game.status == "playing") {
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(
-                        selected = horizontal,
-                        onClick = { onHorizontal(true) },
-                        enabled = canAct,
-                        label = { Text(sh("YATAY", "HORIZONTAL"), fontSize = 9.sp, fontWeight = FontWeight.Bold) },
-                        leadingIcon = { Icon(Icons.Rounded.SwapHoriz, null, Modifier.size(16.dp)) },
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = SiegeBlueSoft, selectedLabelColor = MainUi.Blue),
-                    )
-                    FilterChip(
-                        selected = !horizontal,
-                        onClick = { onHorizontal(false) },
-                        enabled = canAct,
-                        label = { Text(sh("DİKEY", "VERTICAL"), fontSize = 9.sp, fontWeight = FontWeight.Bold) },
-                        leadingIcon = { Icon(Icons.Rounded.SwapVert, null, Modifier.size(16.dp)) },
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = SiegePurpleSoft, selectedLabelColor = SiegePurple),
-                    )
-                    Spacer(Modifier.weight(1f))
+                notice?.let {
                     Text(
-                        sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"),
-                        color = MainUi.Muted,
-                        fontSize = 9.sp,
-                        modifier = Modifier.align(Alignment.CenterVertically),
+                        it,
+                        color = MainUi.Text,
+                        fontSize = if (tight) 8.sp else 9.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
                     )
                 }
-            }
+            } else {
+                BoxWithConstraints(
+                    Modifier.fillMaxWidth().weight(1f),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    val boardSize = minOf(maxWidth, maxHeight)
+                    WordSiegeBoard(
+                        board = game.board,
+                        rack = rack,
+                        placements = placements,
+                        myOwner = myOwner,
+                        enabled = canAct,
+                        onCell = onBoardCell,
+                        modifier = Modifier.size(boardSize),
+                    )
+                }
 
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    rack.forEachIndexed { index, letter ->
-                        WordSiegeRackTile(
-                            letter = letter,
-                            selected = selectedRackIndex == index,
-                            used = index in placements.values,
-                            enabled = canAct,
-                            modifier = Modifier.weight(1f),
-                            onClick = { onRackTile(index) },
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(if (tight) 5.dp else 7.dp),
+                ) {
+                    OutlinedButton(
+                        onClick = onChat,
+                        enabled = game.playerTwoId != null,
+                        modifier = Modifier.weight(1f).height(utilityHeight),
+                        border = BorderStroke(1.dp, MainUi.Blue),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
+                    ) {
+                        Icon(Icons.Rounded.Chat, null, Modifier.size(if (tight) 14.dp else 15.dp), tint = MainUi.Blue)
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            sh("SOHBET", "CHAT"),
+                            color = MainUi.Blue,
+                            fontSize = if (tight) 8.sp else 9.sp,
+                            fontWeight = FontWeight.Black,
                         )
                     }
-                    repeat((7 - rack.length).coerceAtLeast(0)) {
-                        Spacer(Modifier.weight(1f).height(48.dp))
-                    }
-                }
-            }
-
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedButton(
-                        onClick = onPass,
-                        enabled = canAct,
-                        modifier = Modifier.weight(1f).height(46.dp),
-                        contentPadding = PaddingValues(horizontal = 3.dp),
-                    ) { Text(sh("PAS", "PASS"), fontSize = 10.sp, fontWeight = FontWeight.Black) }
-                    OutlinedButton(
-                        onClick = onExchange,
-                        enabled = canAct && game.bag.isNotEmpty(),
-                        modifier = Modifier.weight(1.15f).height(46.dp),
-                        border = BorderStroke(1.dp, SiegePurple),
-                        contentPadding = PaddingValues(horizontal = 3.dp),
-                    ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                    Button(
-                        onClick = onSubmit,
-                        enabled = canAct && placements.isNotEmpty(),
-                        modifier = Modifier.weight(1.45f).height(46.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                        contentPadding = PaddingValues(horizontal = 5.dp),
+                        onClick = onForfeit,
+                        enabled = game.status == "playing" && !busy,
+                        modifier = Modifier.weight(1f).height(utilityHeight),
+                        border = BorderStroke(1.dp, MainUi.Red),
+                        contentPadding = PaddingValues(horizontal = 4.dp),
                     ) {
-                        if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-                        else Text(sh("OYNA", "PLAY"), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        Icon(Icons.Rounded.Flag, null, Modifier.size(if (tight) 14.dp else 15.dp), tint = MainUi.Red)
+                        Spacer(Modifier.width(3.dp))
+                        Text(
+                            sh("PES ET", "FORFEIT"),
+                            color = MainUi.Red,
+                            fontSize = if (tight) 8.sp else 9.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
+                }
+
+                if (game.status == "playing") {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(if (tight) 4.dp else 6.dp),
+                    ) {
+                        FilterChip(
+                            selected = horizontal,
+                            onClick = { onHorizontal(true) },
+                            enabled = canAct,
+                            modifier = Modifier.height(if (tight) 30.dp else 32.dp),
+                            label = {
+                                Text(
+                                    sh("YATAY", "HORIZONTAL"),
+                                    fontSize = if (tight) 8.sp else 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            },
+                            leadingIcon = { Icon(Icons.Rounded.SwapHoriz, null, Modifier.size(if (tight) 14.dp else 15.dp)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = SiegeBlueSoft,
+                                selectedLabelColor = MainUi.Blue,
+                            ),
+                        )
+                        FilterChip(
+                            selected = !horizontal,
+                            onClick = { onHorizontal(false) },
+                            enabled = canAct,
+                            modifier = Modifier.height(if (tight) 30.dp else 32.dp),
+                            label = {
+                                Text(
+                                    sh("DİKEY", "VERTICAL"),
+                                    fontSize = if (tight) 8.sp else 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            },
+                            leadingIcon = { Icon(Icons.Rounded.SwapVert, null, Modifier.size(if (tight) 14.dp else 15.dp)) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = SiegePurpleSoft,
+                                selectedLabelColor = SiegePurple,
+                            ),
+                        )
+                        Spacer(Modifier.weight(1f))
+                        Text(
+                            sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"),
+                            color = MainUi.Muted,
+                            fontSize = if (tight) 8.sp else 9.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(if (tight) 3.dp else 4.dp),
+                    ) {
+                        rack.forEachIndexed { index, letter ->
+                            WordSiegeRackTile(
+                                letter = letter,
+                                selected = selectedRackIndex == index,
+                                used = index in placements.values,
+                                enabled = canAct,
+                                modifier = Modifier.weight(1f),
+                                tileHeight = rackHeight,
+                                onClick = { onRackTile(index) },
+                            )
+                        }
+                        repeat((7 - rack.length).coerceAtLeast(0)) {
+                            Spacer(Modifier.weight(1f).height(rackHeight))
+                        }
+                    }
+
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(if (tight) 4.dp else 6.dp),
+                    ) {
+                        OutlinedButton(
+                            onClick = onPass,
+                            enabled = canAct,
+                            modifier = Modifier.weight(1f).height(actionHeight),
+                            contentPadding = PaddingValues(horizontal = 2.dp),
+                        ) {
+                            Text(sh("PAS", "PASS"), fontSize = if (tight) 9.sp else 10.sp, fontWeight = FontWeight.Black)
+                        }
+                        OutlinedButton(
+                            onClick = onExchange,
+                            enabled = canAct && game.bag.isNotEmpty(),
+                            modifier = Modifier.weight(1.15f).height(actionHeight),
+                            border = BorderStroke(1.dp, SiegePurple),
+                            contentPadding = PaddingValues(horizontal = 2.dp),
+                        ) {
+                            Text(
+                                sh("DEĞİŞTİR", "EXCHANGE"),
+                                color = SiegePurple,
+                                fontSize = if (tight) 8.sp else 9.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
+                        Button(
+                            onClick = onSubmit,
+                            enabled = canAct && placements.isNotEmpty(),
+                            modifier = Modifier.weight(1.45f).height(actionHeight),
+                            colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                        ) {
+                            if (busy) {
+                                CircularProgressIndicator(
+                                    Modifier.size(15.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp,
+                                )
+                            } else {
+                                Text(sh("OYNA", "PLAY"), fontSize = if (tight) 10.sp else 11.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                } else {
+                    WordSiegeFinishedCard(game, me)
+                }
+
+                notice?.let {
+                    Text(
+                        it,
+                        color = MainUi.Text,
+                        fontSize = if (tight) 8.sp else 9.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+
+                if (!tight) {
+                    moves.lastOrNull()?.let { lastMove ->
+                        Text(
+                            sh(
+                                "Son hamle: ${lastMove.formedWords.joinToString(" + ")} • +${lastMove.wordScore} kelime • ${lastMove.capturedCells} alan",
+                                "Last move: ${lastMove.formedWords.joinToString(" + ")} • +${lastMove.wordScore} word • ${lastMove.capturedCells} territory",
+                            ),
+                            color = MainUi.Muted,
+                            fontSize = 8.sp,
+                            textAlign = TextAlign.Center,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             }
-        } else {
-            item { WordSiegeFinishedCard(game, me) }
         }
-
-        notice?.let { item { WordSiegeNotice(it) } }
-
-        moves.lastOrNull()?.let { lastMove ->
-            item {
-                Text(
-                    sh(
-                        "Son hamle: ${lastMove.formedWords.joinToString(" + ")} • +${lastMove.wordScore} kelime • ${lastMove.capturedCells} alan",
-                        "Last move: ${lastMove.formedWords.joinToString(" + ")} • +${lastMove.wordScore} word • ${lastMove.capturedCells} territory",
-                    ),
-                    color = MainUi.Muted,
-                    fontSize = 9.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-        }
-        item { Spacer(Modifier.height(10.dp)) }
     }
 }
 
@@ -839,37 +1005,50 @@ private fun WordSiegePlayerCard(
     accent: Color,
     active: Boolean,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
+    val avatarSize = if (compact) 28.dp else 34.dp
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(17.dp),
+        shape = RoundedCornerShape(if (compact) 13.dp else 15.dp),
         color = if (active) accent.copy(alpha = .08f) else MainUi.Surface,
         border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) accent else MainUi.Border),
     ) {
-        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = if (compact) 6.dp else 8.dp, vertical = if (compact) 4.dp else 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             ProfilePhotoAvatarWithGender(
                 avatarPath = profile?.avatarPath,
                 gender = profile?.gender,
                 name = profile?.displayName ?: fallbackName,
-                size = 36.dp,
+                size = avatarSize,
                 accent = accent,
                 visible = profile?.avatarVisibility != "hidden",
             )
-            Spacer(Modifier.width(6.dp))
-            Column(Modifier.weight(1f)) {
+            Spacer(Modifier.width(if (compact) 5.dp else 6.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                 Text(
                     profile?.displayName ?: fallbackName,
                     color = MainUi.Text,
-                    fontSize = 11.sp,
+                    fontSize = if (compact) 9.sp else 10.sp,
+                    lineHeight = if (compact) 10.sp else 11.sp,
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text("${wordScore + area}", color = accent, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text(
+                    "${wordScore + area}",
+                    color = accent,
+                    fontSize = if (compact) 15.sp else 17.sp,
+                    lineHeight = if (compact) 16.sp else 18.sp,
+                    fontWeight = FontWeight.Black,
+                )
                 Text(
                     sh("Kelime $wordScore • Alan $area", "Word $wordScore • Area $area"),
                     color = MainUi.Muted,
-                    fontSize = 7.sp,
+                    fontSize = if (compact) 6.sp else 7.sp,
+                    lineHeight = if (compact) 7.sp else 8.sp,
                     maxLines = 1,
                 )
             }
@@ -885,9 +1064,10 @@ internal fun WordSiegeBoard(
     myOwner: Int,
     enabled: Boolean,
     onCell: (Int) -> Unit,
+    modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier,
         color = Color(0xFFE7EDF5),
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, MainUi.Border),
@@ -986,10 +1166,11 @@ internal fun WordSiegeRackTile(
     used: Boolean,
     enabled: Boolean,
     modifier: Modifier = Modifier,
+    tileHeight: Dp = 48.dp,
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = modifier.height(48.dp).clickable(enabled = enabled, onClick = onClick),
+        modifier = modifier.height(tileHeight).clickable(enabled = enabled, onClick = onClick),
         color = when {
             used -> MainUi.SurfaceSoft
             selected -> SiegeTile
