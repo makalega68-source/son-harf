@@ -20,6 +20,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.draw.clipToBounds
+import kotlin.math.roundToInt
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -969,34 +975,41 @@ private fun shPlain(tr: String, en: String): String = if (SonHarfUiState.isEngli
 
 @Composable
 internal fun WordSiegeBoard(
-    board: List<WordSiegeCellDto>,
-    rack: String,
-    placements: Map<Int, Int>,
-    previewCells: Set<Int> = emptySet(),
-    myOwner: Int,
-    enabled: Boolean,
-    onCell: (Int) -> Unit,
-    modifier: Modifier = Modifier.fillMaxWidth(),
+    board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>, previewCells: Set<Int> = emptySet(),
+    myOwner: Int, enabled: Boolean, onCell: (Int) -> Unit, modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
+    val density = LocalDensity.current
     Surface(modifier = modifier, color = Color(0xFFE7EDF5), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, MainUi.Border)) {
-        BoxWithConstraints(Modifier.fillMaxSize().padding(3.dp)) {
-            val cellSize = minOf(maxWidth, maxHeight) / 9
-            Column(Modifier.align(Alignment.Center)) {
-                repeat(9) { row ->
-                    Row {
-                        repeat(9) { column ->
+        BoxWithConstraints(Modifier.fillMaxSize().clipToBounds()) {
+            val viewportWidth = maxWidth; val viewportHeight = maxHeight
+            val viewportShortSide = minOf(viewportWidth, viewportHeight)
+            val boardSize = maxOf(432.dp, viewportShortSide + 96.dp)
+            val cellSize = (boardSize - 6.dp) / 9
+            val viewportWidthPx = with(density) { viewportWidth.toPx() }
+            val viewportHeightPx = with(density) { viewportHeight.toPx() }
+            val boardSizePx = with(density) { boardSize.toPx() }
+            val minX = (viewportWidthPx - boardSizePx).coerceAtMost(0f)
+            val minY = (viewportHeightPx - boardSizePx).coerceAtMost(0f)
+            var offsetX by remember(boardSizePx, viewportWidthPx) { mutableFloatStateOf(minX / 2f) }
+            var offsetY by remember(boardSizePx, viewportHeightPx) { mutableFloatStateOf(minY / 2f) }
+            Box(Modifier.fillMaxSize().pointerInput(boardSizePx, viewportWidthPx, viewportHeightPx) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    offsetX = (offsetX + dragAmount.x).coerceIn(minX, 0f)
+                    offsetY = (offsetY + dragAmount.y).coerceIn(minY, 0f)
+                }
+            }) {
+                Surface(Modifier.size(boardSize).offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }, color = Color(0xFFE7EDF5), shape = RoundedCornerShape(10.dp)) {
+                    Column(Modifier.fillMaxSize().padding(3.dp)) {
+                        repeat(9) { row -> Row { repeat(9) { column ->
                             val index = row * 9 + column
                             WordSiegeBoardCell(
                                 cell = board.getOrElse(index) { WordSiegeCellDto() },
                                 pendingLetter = placements[index]?.let { rackIndex -> rack.getOrNull(rackIndex) },
-                                pending = placements.containsKey(index),
-                                previewArea = index in previewCells,
-                                myOwner = myOwner,
-                                enabled = enabled,
-                                size = cellSize,
-                                onClick = { onCell(index) },
+                                pending = placements.containsKey(index), previewArea = index in previewCells,
+                                myOwner = myOwner, enabled = enabled, size = cellSize, onClick = { onCell(index) },
                             )
-                        }
+                        } } }
                     }
                 }
             }

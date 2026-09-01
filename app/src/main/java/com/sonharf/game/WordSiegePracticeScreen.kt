@@ -18,6 +18,12 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.draw.clipToBounds
+import kotlin.math.roundToInt
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -322,7 +328,7 @@ private fun PracticePlayerCard(
 ) {
     Surface(modifier = modifier, color = MainUi.Surface, shape = RoundedCornerShape(15.dp), border = BorderStroke(if (active) 2.dp else 1.dp, if (active) accent else MainUi.Border)) {
         Row(Modifier.padding(5.dp), verticalAlignment = Alignment.CenterVertically) {
-            ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, width = 50.dp, height = 64.dp, accent = accent)
+            ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, width = 64.dp * (56f / 74f), height = 64.dp, accent = accent)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
@@ -342,14 +348,28 @@ private fun PracticeBoard(
     val lightTheme = MainUi.Background.luminance() > .58f
     val neutralBorder = if (lightTheme) Color(0xFFAAB7C5) else MainUi.Border
     val neutralBorderWidth = if (lightTheme) 1.35.dp else 1.dp
+    val density = LocalDensity.current
     Surface(modifier, color = MainUi.Surface, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.2.dp, MainUi.Border)) {
-        Column(Modifier.fillMaxSize().padding(1.dp)) {
-            repeat(9) { row ->
-                Row(Modifier.weight(1f).fillMaxWidth()) {
-                    repeat(9) { column ->
-                        val index = row * 9 + column
-                        val cell = state.board[index]
-                        val tempRack = placements[index]
+        BoxWithConstraints(Modifier.fillMaxSize().clipToBounds()) {
+            val viewportWidth = maxWidth; val viewportHeight = maxHeight
+            val viewportShortSide = minOf(viewportWidth, viewportHeight)
+            val boardSize = maxOf(432.dp, viewportShortSide + 96.dp)
+            val cellSize = (boardSize - 2.dp) / 9
+            val viewportWidthPx = with(density) { viewportWidth.toPx() }
+            val viewportHeightPx = with(density) { viewportHeight.toPx() }
+            val boardSizePx = with(density) { boardSize.toPx() }
+            val minX = (viewportWidthPx - boardSizePx).coerceAtMost(0f)
+            val minY = (viewportHeightPx - boardSizePx).coerceAtMost(0f)
+            var offsetX by remember(boardSizePx, viewportWidthPx) { mutableFloatStateOf(minX / 2f) }
+            var offsetY by remember(boardSizePx, viewportHeightPx) { mutableFloatStateOf(minY / 2f) }
+            Box(Modifier.fillMaxSize().pointerInput(boardSizePx, viewportWidthPx, viewportHeightPx) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume(); offsetX = (offsetX + dragAmount.x).coerceIn(minX, 0f); offsetY = (offsetY + dragAmount.y).coerceIn(minY, 0f)
+                }
+            }) {
+                Column(Modifier.size(boardSize).offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }.padding(1.dp)) {
+                    repeat(9) { row -> Row { repeat(9) { column ->
+                        val index = row * 9 + column; val cell = state.board[index]; val tempRack = placements[index]
                         val letter = tempRack?.let { rack.getOrNull(it)?.toString() } ?: cell.letter
                         val owner = if (tempRack != null) 1 else cell.owner
                         val relation = TrainingBotSupport.ownershipRelation(owner, 1)
@@ -366,20 +386,16 @@ private fun PracticeBoard(
                         val fill by animateColorAsState(targetFill, tween(220), label = "practice-owner-fill-$index")
                         val border by animateColorAsState(targetBorder, tween(220), label = "practice-owner-border-$index")
                         val shape = RoundedCornerShape(5.dp)
-                        Box(
-                            Modifier.weight(1f).fillMaxHeight().padding(.28.dp).background(fill, shape)
-                                .border(if (owner == 0) neutralBorderWidth else 1.65.dp, if (owner == 0) neutralBorder else border, shape)
-                                .then(if (enabled) Modifier.clickable { onCellClick(index) } else Modifier), contentAlignment = Alignment.Center,
-                        ) {
+                        Box(Modifier.size(cellSize).padding(.6.dp).background(fill, shape)
+                            .border(if (owner == 0) neutralBorderWidth else 1.65.dp, if (owner == 0) neutralBorder else border, shape)
+                            .then(if (enabled) Modifier.clickable { onCellClick(index) } else Modifier), contentAlignment = Alignment.Center) {
                             if (letter != null) {
-                                Text(letter, color = SonHarfCosmetics.gamePalette.tileText, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                                Text(letter, color = SonHarfCosmetics.gamePalette.tileText, fontWeight = FontWeight.Black, fontSize = 20.sp)
                                 if (owner != 0 && tempRack == null) Box(Modifier.align(Alignment.TopEnd).padding(2.dp).size(5.dp).background(border, androidx.compose.foundation.shape.CircleShape))
-                            } else if (cell.bonus != null) {
-                                Text(cell.bonus, color = if (cell.bonus.endsWith("K")) SiegePurple else MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 8.sp)
-                            }
+                            } else if (cell.bonus != null) Text(cell.bonus, color = if (cell.bonus.endsWith("K")) SiegePurple else MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 8.sp)
                             if (tempRack != null && tempRack == selectedRackIndex) Box(Modifier.fillMaxSize().padding(1.dp).background(MainUi.Blue.copy(alpha = .08f), shape))
                         }
-                    }
+                    } } }
                 }
             }
         }

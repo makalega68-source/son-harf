@@ -57,6 +57,7 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var items by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
+    var previewItem by remember { mutableStateOf<ShopItemDto?>(null) }
     var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
     var busy by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -147,20 +148,24 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
                 modifier = Modifier.fillMaxWidth(), color = MainUi.Surface, shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, MainUi.Border),
             ) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    StyleItemVisual(
+                        item = item, profile = profile,
+                        modifier = Modifier.fillMaxWidth().height(154.dp).clickable { previewItem = item }, large = true,
+                    )
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        StyleItemVisual(item)
-                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                                Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 15.sp, modifier = Modifier.weight(1f))
                                 if (item.vipOnly) {
                                     Surface(color = MainUi.Gold.copy(alpha = .14f), shape = RoundedCornerShape(8.dp)) {
                                         Text("VIP", Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = MainUi.Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
                                     }
                                 }
                             }
-                            Text(description, color = MainUi.Muted, fontSize = 9.sp, maxLines = 2)
+                            Text(styleKindLabel(item.kind), color = MainUi.Blue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Text(description, color = MainUi.Muted, fontSize = 9.5.sp, maxLines = 2)
                         }
+                        TextButton(onClick = { previewItem = item }) { Text(sh("BÜYÜK ÖNİZLE", "LARGE PREVIEW"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Text(if (mine) sh("✓ SAHİPSİN", "✓ OWNED") else "◈ ${item.diamondPrice} SC", color = if (mine) MainUi.Green else MainUi.Gold, fontWeight = FontWeight.Black, fontSize = 13.sp)
@@ -223,10 +228,37 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
         }
         item { Spacer(Modifier.height(8.dp)) }
     }
+    previewItem?.let { item ->
+        val previewName = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
+        AlertDialog(
+            onDismissRequest = { previewItem = null },
+            title = { Text(previewName, color = MainUi.Text, fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StyleItemVisual(item, profile, Modifier.fillMaxWidth().height(270.dp), large = true)
+                    Text(styleKindLabel(item.kind), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr, color = MainUi.Muted, fontSize = 11.sp)
+                }
+            },
+            confirmButton = { TextButton(onClick = { previewItem = null }) { Text(sh("KAPAT", "CLOSE")) } },
+            containerColor = MainUi.Surface,
+        )
+    }
+}
+
+private fun styleKindLabel(kind: String): String = when (kind) {
+    "profile_frame" -> sh("PROFİL ÇERÇEVESİ", "PROFILE FRAME")
+    "keyboard_theme" -> sh("KLAVYE", "KEYBOARD")
+    "game_theme" -> sh("TEMA", "THEME")
+    "victory_effect" -> sh("ZAFER EFEKTİ", "VICTORY EFFECT")
+    "emoji_pack" -> "EMOJI"
+    "mascot" -> "MASCOT"
+    "name_style" -> sh("İSİM STİLİ", "NAME STYLE")
+    else -> "STYLE"
 }
 
 @Composable
-private fun StyleItemVisual(item: ShopItemDto) {
+private fun StyleItemVisual(item: ShopItemDto, profile: ProfileDto?, modifier: Modifier = Modifier, large: Boolean = false) {
     val frameAccent = SonHarfCosmetics.frameAccent(item.id)
     val baseAccent = when (item.kind) {
         "profile_frame" -> frameAccent
@@ -239,29 +271,27 @@ private fun StyleItemVisual(item: ShopItemDto) {
         else -> MainUi.Blue
     }
     Surface(
-        modifier = Modifier.size(82.dp), shape = RoundedCornerShape(20.dp), color = baseAccent.copy(alpha = .08f), border = BorderStroke(1.dp, baseAccent.copy(alpha = .22f)),
+        modifier = modifier.then(if (modifier == Modifier) Modifier.size(82.dp) else Modifier), shape = RoundedCornerShape(if (large) 24.dp else 20.dp), color = baseAccent.copy(alpha = .08f), border = BorderStroke(1.dp, baseAccent.copy(alpha = .22f)),
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             when (item.kind) {
-                "profile_frame" -> FrameItemPreview(item.id, item.vipOnly)
+                "profile_frame" -> FrameItemPreview(item.id, item.vipOnly, profile, large)
                 "name_style" -> {
                     val label = when { "black" in item.id -> "Ümit"; "gold" in item.id -> "★ Ümit"; "cyan" in item.id -> "Ümit ✦"; else -> "Ümit" }
                     Text(label, color = baseAccent, fontSize = 16.sp, fontWeight = FontWeight.Black)
                 }
                 "emoji_pack" -> Text(if ("vip" in item.id) "👑✨" else "😎✨", fontSize = 24.sp)
                 "victory_effect" -> {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(if ("crown" in item.id) Icons.Rounded.EmojiEvents else Icons.Rounded.AutoAwesome, null, tint = baseAccent, modifier = Modifier.size(40.dp))
-                        Text("✦", color = MainUi.Gold, modifier = Modifier.align(Alignment.TopEnd).padding(10.dp), fontSize = 15.sp)
-                    }
+                    val asset = premiumStyleAsset(item.id)
+                    if (asset != null) Image(painterResource(asset), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    else Icon(Icons.Rounded.AutoAwesome, null, tint = baseAccent, modifier = Modifier.size(if (large) 62.dp else 40.dp))
                 }
-                "keyboard_theme" -> KeyboardItemPreview(item.id)
-                "game_theme" -> GameThemeItemPreview(item.id)
+                "keyboard_theme" -> KeyboardItemPreview(item.id, large)
+                "game_theme" -> GameThemeItemPreview(item.id, large)
                 "mascot" -> {
-                    Box(contentAlignment = Alignment.Center) {
-                        Surface(Modifier.size(50.dp), shape = CircleShape, color = baseAccent.copy(alpha = .20f)) {}
-                        Icon(Icons.Rounded.Pets, null, tint = baseAccent, modifier = Modifier.size(34.dp))
-                    }
+                    val asset = premiumStyleAsset(item.id)
+                    if (asset != null) Image(painterResource(asset), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                    else Icon(Icons.Rounded.Pets, null, tint = baseAccent, modifier = Modifier.size(if (large) 62.dp else 34.dp))
                 }
                 else -> Icon(Icons.Rounded.Diamond, null, tint = baseAccent, modifier = Modifier.size(36.dp))
             }
@@ -270,50 +300,43 @@ private fun StyleItemVisual(item: ShopItemDto) {
 }
 
 internal fun premiumStyleAsset(id: String): Int? = when {
-    "frame_black_gold" in id -> R.drawable.premium_frame_black_gold_higgsfield_v2
-    "frame_royal_gold" in id -> R.drawable.premium_frame_royal_gold_higgsfield
+    "frame_black_gold" in id -> R.drawable.premium_frame_black_gold_v3
+    "frame_royal_gold" in id -> R.drawable.premium_frame_royal_gold_v3
+    "frame_modern_neon" in id || "frame_neon" in id -> R.drawable.premium_frame_neon_v3
     "frame_crystal" in id -> R.drawable.premium_frame_crystal_higgsfield
     "frame_purple_prestige" in id -> R.drawable.premium_frame_purple_prestige_higgsfield
     "keyboard_midnight" in id -> R.drawable.premium_keyboard_midnight_higgsfield
     "keyboard_black_gold" in id -> R.drawable.premium_keyboard_black_gold_higgsfield
     "keyboard_crystal" in id -> R.drawable.premium_keyboard_crystal_higgsfield
     "theme_midnight" in id -> R.drawable.premium_theme_midnight_preview_higgsfield
+    "victory_crown" in id -> R.drawable.premium_victory_crown_preview_higgsfield
+    "mascot_white" in id -> R.drawable.premium_mascot_white_preview_higgsfield
     else -> null
 }
 
 @Composable
-private fun FrameItemPreview(id: String, vipOnly: Boolean) {
-    val accent = SonHarfCosmetics.frameAccent(id)
-    val secondary = when {
-        "neon" in id -> SonHarfPurple
-        "gold" in id || vipOnly -> Color(0xFFFFD76A)
-        "starter" in id || "founder" in id || "light" in id -> MainUi.Blue
-        else -> accent.copy(alpha = .55f)
-    }
-    val asset = premiumStyleAsset(id)
-    Box(Modifier.size(62.dp, 68.dp), contentAlignment = Alignment.Center) {
-        Surface(Modifier.size(52.dp, 58.dp), shape = RoundedCornerShape(15.dp), color = MainUi.SurfaceSoft, border = BorderStroke(1.dp, secondary.copy(alpha = .55f))) {
-            Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Person, null, tint = MainUi.Text.copy(alpha = .72f), modifier = Modifier.size(29.dp)) }
-        }
-        if (asset != null) {
-            Image(painterResource(asset), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
-        } else {
-            Surface(Modifier.fillMaxSize(), shape = RoundedCornerShape(19.dp), color = Color.Transparent, border = BorderStroke(4.dp, accent)) {}
-        }
-        when {
-            vipOnly || "vip" in id -> Text("VIP", Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp), color = MainUi.Gold, fontSize = 7.sp, fontWeight = FontWeight.Black)
-            "gold" in id -> Icon(Icons.Rounded.WorkspacePremium, null, tint = MainUi.Gold, modifier = Modifier.align(Alignment.TopEnd).size(17.dp))
-            "neon" in id -> Text("✦", Modifier.align(Alignment.TopEnd), color = SonHarfCyan, fontSize = 17.sp, fontWeight = FontWeight.Black)
-            "starter" in id || "founder" in id || "light" in id -> Text("✧", Modifier.align(Alignment.TopEnd), color = MainUi.Blue, fontSize = 17.sp, fontWeight = FontWeight.Black)
+private fun FrameItemPreview(id: String, vipOnly: Boolean, profile: ProfileDto?, large: Boolean) {
+    val previewWidth = if (large) 104.dp else 58.dp
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        ProfilePhotoAvatarRectWithGender(
+            avatarPath = profile?.avatarPath, gender = profile?.gender,
+            name = profile?.displayName ?: sh("Oyuncu", "Player"),
+            width = previewWidth, height = previewWidth * (74f / 56f),
+            accent = SonHarfCosmetics.frameAccent(id), visible = true, frameIdOverride = id,
+        )
+        if (vipOnly) {
+            Surface(Modifier.align(Alignment.BottomEnd).padding(6.dp), shape = RoundedCornerShape(99.dp), color = MainUi.Gold.copy(alpha = .16f)) {
+                Text("VIP", Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = MainUi.Gold, fontSize = 7.sp, fontWeight = FontWeight.Black)
+            }
         }
     }
 }
 
 @Composable
-private fun KeyboardItemPreview(id: String) {
+private fun KeyboardItemPreview(id: String, large: Boolean = false) {
     val asset = premiumStyleAsset(id)
     if (asset != null) {
-        Image(painterResource(asset), null, Modifier.size(68.dp, 54.dp), contentScale = ContentScale.Crop)
+        Image(painterResource(asset), null, if (large) Modifier.fillMaxSize().padding(10.dp) else Modifier.size(68.dp, 54.dp), contentScale = ContentScale.Fit)
         return
     }
     val palette = SonHarfCosmetics.keyboardPaletteFor(id)
@@ -331,10 +354,10 @@ private fun KeyboardItemPreview(id: String) {
 }
 
 @Composable
-private fun GameThemeItemPreview(id: String) {
+private fun GameThemeItemPreview(id: String, large: Boolean = false) {
     val asset = premiumStyleAsset(id)
     if (asset != null) {
-        Image(painterResource(asset), null, Modifier.size(64.dp, 56.dp), contentScale = ContentScale.Crop)
+        Image(painterResource(asset), null, if (large) Modifier.fillMaxSize().padding(10.dp) else Modifier.size(64.dp, 56.dp), contentScale = ContentScale.Fit)
         return
     }
     val palette = SonHarfCosmetics.gamePaletteFor(id)
