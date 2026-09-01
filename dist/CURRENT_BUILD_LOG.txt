@@ -17,10 +17,10 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:preDebugUnitTestBuild UP-TO-DATE
 > Task :app:javaPreCompileDebug
 > Task :app:javaPreCompileDebugUnitTest
-> Task :app:processDebugManifestForPackage
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
+> Task :app:processDebugManifestForPackage
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
 > Task :app:desugarDebugFileDependencies
@@ -55,51 +55,51 @@ e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game
 e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainSocialScreen.kt:337:50 Unresolved reference 'MainSectionTitle'.
 e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainSocialScreen.kt:411:49 Unresolved reference 'MainSectionTitle'.
 e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainSocialScreen.kt:450:55 Unresolved reference 'MainSectionTitle'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:107:20 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:107:20 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:107:31 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:107:46 Unresolved reference 'MainExperienceSummary'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:108:21 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:108:47 Unresolved reference 'MetaProgressSnapshotDto'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:108:73 Null cannot be a value of a non-null type 'uninferred T (of fun <T> mutableStateOf)'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:109:18 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:109:44 Unresolved reference 'RivalSummaryDto'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:109:62 Null cannot be a value of a non-null type 'uninferred T (of fun <T> mutableStateOf)'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:113:25 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:113:41 Unresolved reference 'getMyProfile'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:114:25 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:114:41 Unresolved reference 'getMainExperienceSummary'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:115:25 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:115:41 Unresolved reference 'getMetaProgressSnapshot'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:116:25 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:116:41 Unresolved reference 'getTopRival'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:141:86 Unresolved reference 'rating'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:146:44 Unresolved reference 'winStreak'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:147:44 Unresolved reference 'dailyWins'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:148:44 Unresolved reference 'unreadNotifications'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:154:13 Inapplicable candidate(s): fun MonsterHubRow(icon: ImageVector, title: String, value: String, accent: Color, onClick: () -> Unit): Unit
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:154:101 Unresolved reference 'dailyMissions'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:154:124 Unresolved reference 'it'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:154:140 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:154:140 Cannot infer type for type parameter 'R'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:154:140 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:111:20 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:111:20 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:111:31 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:111:46 Unresolved reference 'MainExperienceSummary'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:112:21 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:112:47 Unresolved reference 'MetaProgressSnapshotDto'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:112:73 Null cannot be a value of a non-null type 'uninferred T (of fun <T> mutableStateOf)'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:113:18 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:113:44 Unresolved reference 'RivalSummaryDto'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:113:62 Null cannot be a value of a non-null type 'uninferred T (of fun <T> mutableStateOf)'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:117:25 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:117:41 Unresolved reference 'getMyProfile'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:118:25 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:118:41 Unresolved reference 'getMainExperienceSummary'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:119:25 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:119:41 Unresolved reference 'getMetaProgressSnapshot'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:120:25 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:120:41 Unresolved reference 'getTopRival'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:145:86 Unresolved reference 'rating'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:150:44 Unresolved reference 'winStreak'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:151:44 Unresolved reference 'dailyWins'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:152:44 Unresolved reference 'unreadNotifications'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:158:13 Inapplicable candidate(s): fun MonsterHubRow(icon: ImageVector, title: String, value: String, accent: Color, onClick: () -> Unit): Unit
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:158:101 Unresolved reference 'dailyMissions'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:158:124 Unresolved reference 'it'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:158:140 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:158:140 Cannot infer type for type parameter 'R'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:158:140 Unresolved reference. None of the following candidates is applicable because of a receiver type mismatch:
 fun <T, R> T.let(block: (T) -> R): R
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:154:144 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:154:163 Unresolved reference 'dailyMissions'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:156:104 Unresolved reference 'pendingFriendRequests'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:156:126 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:156:133 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:156:138 'operator' modifier is required on 'fun <T> Comparable<T>.compareTo(other: T): Int'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:156:145 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:156:149 Cannot infer type for type parameter 'T'. Specify it explicitly.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:158:94 Unresolved reference 'displayName'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:169:65 Unresolved reference 'MainExperienceSummary'.
-e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:182:40 Unresolved reference 'rating'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:158:144 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:158:163 Unresolved reference 'dailyMissions'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:160:104 Unresolved reference 'pendingFriendRequests'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:160:126 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:160:133 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:160:138 'operator' modifier is required on 'fun <T> Comparable<T>.compareTo(other: T): Int'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:160:145 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:160:149 Cannot infer type for type parameter 'T'. Specify it explicitly.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:162:94 Unresolved reference 'displayName'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:173:65 Unresolved reference 'MainExperienceSummary'.
+e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt:186:40 Unresolved reference 'rating'.
 e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt:384:43 Unresolved reference 'auroraTheme'.
 e: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt:403:62 Unresolved reference 'auroraTheme'.
 
 > Task :app:compileDebugKotlin FAILED
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/gradle_build-1788275073633.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/gradle_build-1788275110634.json
 
 [Incubating] Problems report is available at: file:///home/runner/work/son-harf/son-harf/build/reports/problems/problems-report.html
 
@@ -306,5 +306,5 @@ Caused by: org.jetbrains.kotlin.gradle.tasks.CompilationErrorException: Compilat
 	... 2 more
 
 
-BUILD FAILED in 54s
+BUILD FAILED in 1m 1s
 30 actionable tasks: 30 executed
