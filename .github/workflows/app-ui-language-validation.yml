@@ -1,0 +1,36 @@
+name: App UI Language Validation
+on:
+  push:
+    branches:
+      - feature/app-ui-language-first-launch-20260901
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+      - name: Verify language contract
+        run: |
+          grep -q 'LANGUAGE_SELECTED' app/src/main/java/com/sonharf/game/SonHarfPreferences.kt
+          grep -q 'hasSelectedLanguage' app/src/main/java/com/sonharf/game/StableV1App.kt
+          grep -q 'AppLanguageSelectionScreen' app/src/main/java/com/sonharf/game/StableV1App.kt
+          grep -q '🇹🇷' app/src/main/java/com/sonharf/game/AppLanguageSelectionScreen.kt
+          grep -q '🇬🇧' app/src/main/java/com/sonharf/game/AppLanguageSelectionScreen.kt
+          grep -q 'putBoolean(LANGUAGE_SELECTED, true)' app/src/main/java/com/sonharf/game/SonHarfPreferences.kt
+          grep -q 'SettingActionLine(sh("Dil", "Language")' app/src/main/java/com/sonharf/game/AuroraApp.kt
+          grep -q 'fun sh(tr: String, en: String)' app/src/main/java/com/sonharf/game/SonHarfUiState.kt
+      - name: Unit tests
+        run: gradle :app:testDebugUnitTest --stacktrace
+      - name: Build debug APK
+        run: gradle :app:assembleDebug --stacktrace
