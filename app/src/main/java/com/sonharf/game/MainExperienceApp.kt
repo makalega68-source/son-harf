@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,6 +47,27 @@ internal fun MainSectionTitle(title: String) {
         fontWeight = FontWeight.Black,
         letterSpacing = .35.sp,
     )
+}
+
+@Composable
+internal fun MainSectionTitle(title: String, action: String, onAction: () -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            text = title,
+            color = MainUi.Text,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = .35.sp,
+            modifier = Modifier.weight(1f),
+        )
+        Text(
+            text = action,
+            color = MainUi.Blue,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Black,
+            modifier = Modifier.clickable(onClick = onAction).padding(vertical = 4.dp),
+        )
+    }
 }
 
 @Composable
