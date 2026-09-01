@@ -17,10 +17,9 @@ import com.sonharf.game.data.SupabaseProvider
 /**
  * V1 stabilization shell.
  *
- * Product scope is intentionally narrow:
- * verified auth -> core duel lobby -> live match -> result/rematch.
- * Experimental game modes and legacy visual shells remain in the repository
- * but are not part of the active V1 navigation path.
+ * Verified auth remains unchanged. After authentication the active product shell
+ * is the Monster-inspired Son Harf experience. Legacy visual shells stay in the
+ * repository only as rollback material.
  */
 @Composable
 fun StableV1App() {
@@ -34,10 +33,10 @@ fun StableV1App() {
 
     if (!authChecked) {
         Box(
-            Modifier.fillMaxSize().background(SonHarfBg),
+            Modifier.fillMaxSize().background(MonsterUi.Background),
             contentAlignment = Alignment.Center,
         ) {
-            CircularProgressIndicator(color = SonHarfBlue)
+            CircularProgressIndicator(color = MonsterUi.Accent)
         }
         return
     }
@@ -52,8 +51,8 @@ fun StableV1App() {
     Box(
         Modifier
             .fillMaxSize()
-            .background(SonHarfBg),
+            .background(MonsterUi.Background),
     ) {
-        SonHarfMainApp(onSignedOut = { authenticated = false })
+        MonsterExperienceApp(onSignedOut = { authenticated = false })
     }
 }
