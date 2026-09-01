@@ -1,8 +1,8 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -13,12 +13,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.CompetitiveSeasonDto
@@ -45,7 +44,9 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
 
     LaunchedEffect(language, period) {
         val b = backend
-        if (b == null) { rows = emptyList(); error = true; return@LaunchedEffect }
+        if (b == null) {
+            rows = emptyList(); error = true; return@LaunchedEffect
+        }
         loading = true
         error = false
         myProfile = me?.let { runCatching { b.getProfile(it) }.getOrNull() }
@@ -64,211 +65,190 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                         leagueName = s.leagueName,
                     )
                 }
-            } else {
-                b.getLeaderboardV2(language, period, 50)
-            }
+            } else b.getLeaderboardV2(language, period, 50)
+        }.onSuccess { loaded ->
+            rows = loaded
+            profiles = loaded.associate { row -> row.userId to runCatching { b.getProfile(row.userId) }.getOrNull() }
+        }.onFailure {
+            rows = emptyList(); profiles = emptyMap(); error = true
         }
-            .onSuccess { loaded ->
-                rows = loaded
-                val loadedProfiles = linkedMapOf<String, ProfileDto?>()
-                loaded.forEach { row ->
-                    loadedProfiles[row.userId] = runCatching { b.getProfile(row.userId) }.getOrNull()
-                }
-                profiles = loadedProfiles
-            }
-            .onFailure { rows = emptyList(); profiles = emptyMap(); error = true }
         loading = false
         runCatching { b.logEvent("leaderboard_open", "$language:$period") }
     }
 
     val myIndex = rows.indexOfFirst { it.userId == me }
     val myRow = rows.getOrNull(myIndex)
-    val currentRating = if (period == "season") (seasonInfo?.rating ?: myRow?.rating ?: 1000) else (myRow?.rating ?: myProfile?.rating ?: 1000)
+    val currentRating = if (period == "season") seasonInfo?.rating ?: myRow?.rating ?: 1000 else myRow?.rating ?: myProfile?.rating ?: 1000
     val leagueProgress = ratingLeagueProgress(currentRating)
-    val league = leagueProgress.leagueName
 
     LazyColumn(
-        Modifier.fillMaxSize().background(SonHarfBg),
-        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(11.dp),
+        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0D0E11), SonHarfBg, Color(0xFF15171C)))),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                OutlinedButton(
-                    onClick = onBack,
-                    modifier = Modifier.size(42.dp),
-                    contentPadding = PaddingValues(0.dp),
-                    shape = CircleShape,
-                    border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f)),
-                ) { Text("‹", fontSize = 28.sp, color = SonHarfCyan) }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(sh("LİGLER", "LEAGUES"), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 22.sp)
-                    Text(
-                        if (period == "season")
-                            (if (SonHarfUiState.isEnglish) seasonInfo?.nameEn else seasonInfo?.nameTr) ?: sh("Rekabet sezonu", "Competitive season")
-                        else sh("Oyuncu sıralaması", "Player ranking"),
-                        color = SonHarfMuted,
-                        fontSize = 9.sp,
-                    )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Surface(onClick = onBack, shape = RoundedCornerShape(12.dp), color = SonHarfSurface2, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .18f))) {
+                    Text("‹", Modifier.padding(horizontal = 13.dp, vertical = 5.dp), color = SonHarfText, fontSize = 28.sp, fontWeight = FontWeight.Bold)
                 }
-                Spacer(Modifier.size(42.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(sh("LİG & SIRALAMA", "LEAGUE & RANKING"), color = SonHarfText, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Canlı rekabet tablosu", "Live competition table"), color = SonHarfMuted, fontSize = 9.sp)
+                }
+                Surface(shape = RoundedCornerShape(10.dp), color = SonHarfPink.copy(alpha = .14f)) {
+                    Row(Modifier.padding(horizontal = 9.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(6.dp).clip(CircleShape).background(SonHarfPink))
+                        Spacer(Modifier.width(5.dp))
+                        Text("LIVE", color = SonHarfPink, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    }
+                }
             }
         }
 
         item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF3FF)),
-                shape = RoundedCornerShape(26.dp),
-                border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .24f)),
-            ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
+            Surface(shape = RoundedCornerShape(18.dp), color = Color.Transparent) {
+                Box(
+                    Modifier.fillMaxWidth().background(
+                        Brush.horizontalGradient(listOf(Color(0xFF24261D), Color(0xFF1B1D20)))
+                    ).padding(16.dp)
                 ) {
-                    LeagueShield()
-                    Text(if (SonHarfUiState.isEnglish) "$league LEAGUE" else "$league LİGİ", color = SonHarfCyan, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                    Text(
-                        if (period == "season" && (seasonInfo?.seasonRank ?: 0) > 0)
-                            sh("SEZON SIRAN: #${seasonInfo?.seasonRank}", "SEASON RANK: #${seasonInfo?.seasonRank}")
-                        else if (myIndex >= 0)
-                            sh("SIRALAMAN: ${myIndex + 1}", "YOUR RANK: ${myIndex + 1}")
-                        else
-                            sh("Bu dönemde henüz sıran yok", "No rank this period yet"),
-                        color = SonHarfText,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                    )
-                    LinearProgressIndicator(
-                        progress = { leagueProgress.progress },
-                        modifier = Modifier.fillMaxWidth().height(8.dp).clip(CircleShape),
-                        color = SonHarfBlue,
-                        trackColor = SonHarfMuted.copy(alpha = .16f),
-                    )
-                    Text(
-                        if (leagueProgress.nextAt == null)
-                            sh("$currentRating rating • En üst lig", "$currentRating rating • Top league")
-                        else
-                            sh(
-                                "$currentRating rating • Sonraki lige ${leagueProgress.pointsToNext} puan",
-                                "$currentRating rating • ${leagueProgress.pointsToNext} points to next league",
-                            ),
-                        color = SonHarfMuted,
-                        fontSize = 10.sp,
-                    )
-                }
-            }
-        }
-
-        if (period != "season") {
-            item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    FilterChip(selected = language == "tr", onClick = { language = "tr" }, label = { Text("🇹🇷 TR", fontWeight = FontWeight.Bold) }, modifier = Modifier.weight(1f))
-                    FilterChip(selected = language == "en", onClick = { language = "en" }, label = { Text("🇬🇧 EN", fontWeight = FontWeight.Bold) }, modifier = Modifier.weight(1f))
+                    Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Surface(shape = RoundedCornerShape(14.dp), color = SonHarfBlue.copy(alpha = .12f), border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .26f))) {
+                                Text("◆", Modifier.padding(horizontal = 15.dp, vertical = 11.dp), color = SonHarfBlue, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(if (SonHarfUiState.isEnglish) "${leagueProgress.leagueName} LEAGUE" else "${leagueProgress.leagueName} LİGİ", color = SonHarfText, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                                Text("$currentRating RATING", color = SonHarfBlue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(if (myIndex >= 0) "#${myIndex + 1}" else "—", color = SonHarfText, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                                Text(sh("SIRAN", "YOUR RANK"), color = SonHarfMuted, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        LinearProgressIndicator(
+                            progress = { leagueProgress.progress },
+                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                            color = SonHarfBlue,
+                            trackColor = SonHarfSurface2,
+                        )
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(
+                                if (leagueProgress.nextAt == null) sh("En üst lig", "Top league") else sh("Sonraki lige ${leagueProgress.pointsToNext} puan", "${leagueProgress.pointsToNext} points to next league"),
+                                color = SonHarfMuted,
+                                fontSize = 8.sp,
+                            )
+                            Text(if (period == "season") sh("SEZON", "SEASON") else sh("AKTİF", "ACTIVE"), color = SonHarfBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
                 }
             }
         }
 
         item {
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(SonHarfSurface2).padding(4.dp)) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(SonHarfSurface).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 listOf(
                     "season" to sh("SEZON", "SEASON"),
                     "week" to sh("HAFTA", "WEEK"),
                     "month" to sh("AY", "MONTH"),
-                    "total" to sh("TOPLAM", "TOTAL"),
+                    "total" to sh("TÜMÜ", "ALL"),
                 ).forEach { (key, title) ->
                     val selected = period == key
-                    Button(
-                        onClick = { period = key },
-                        modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (selected) SonHarfBlue else Color.Transparent, contentColor = SonHarfText),
-                        shape = RoundedCornerShape(11.dp),
-                        contentPadding = PaddingValues(horizontal = 5.dp, vertical = 8.dp),
-                    ) { Text(title, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                    Surface(
+                        modifier = Modifier.weight(1f).clickable { period = key },
+                        shape = RoundedCornerShape(10.dp),
+                        color = if (selected) SonHarfBlue else Color.Transparent,
+                    ) {
+                        Text(title, Modifier.padding(vertical = 9.dp), color = if (selected) Color(0xFF101114) else SonHarfMuted, fontSize = 8.5.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                    }
                 }
             }
         }
 
-        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfCyan) }
+        if (period != "season") item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                LeagueLanguagePill("🇹🇷 TR", language == "tr", Modifier.weight(1f)) { language = "tr" }
+                LeagueLanguagePill("🇬🇧 EN", language == "en", Modifier.weight(1f)) { language = "en" }
+            }
+        }
+
+        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfBlue, trackColor = SonHarfSurface2) }
 
         item {
-            Text(sh("ÖNDEKİ OYUNCULAR", "LEADING PLAYERS"), color = SonHarfGold, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(sh("OYUNCULAR", "PLAYERS"), color = SonHarfText, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Text(sh("RATING", "RATING"), color = SonHarfMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            }
         }
 
         itemsIndexed(rows, key = { _, row -> row.userId }) { index, row ->
             val mine = row.userId == me
-            Card(
-                colors = CardDefaults.cardColors(containerColor = if (mine) SonHarfBlue.copy(alpha = .10f) else SonHarfSurface),
-                shape = RoundedCornerShape(15.dp),
-                border = BorderStroke(1.dp, when { mine -> SonHarfBlue; index == 0 -> SonHarfGold.copy(alpha = .55f); else -> SonHarfMuted.copy(alpha = .10f) }),
+            val accent = when (index) { 0 -> SonHarfGold; 1 -> Color(0xFFC5C8D0); 2 -> Color(0xFFCD8D5C); else -> SonHarfMuted }
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = if (mine) SonHarfBlue.copy(alpha = .08f) else SonHarfSurface,
+                border = BorderStroke(1.dp, if (mine) SonHarfBlue.copy(alpha = .48f) else SonHarfMuted.copy(alpha = .10f)),
             ) {
                 Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        when (index) { 0 -> "🥇"; 1 -> "🥈"; 2 -> "🥉"; else -> "${index + 1}" },
-                        Modifier.width(40.dp),
-                        color = if (index == 0) SonHarfGold else SonHarfMuted,
-                        textAlign = TextAlign.Center,
-                        fontWeight = FontWeight.Black,
-                    )
+                    Surface(shape = RoundedCornerShape(9.dp), color = accent.copy(alpha = .10f)) {
+                        Text("${index + 1}", Modifier.width(34.dp).padding(vertical = 8.dp), color = accent, textAlign = TextAlign.Center, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                    }
+                    Spacer(Modifier.width(9.dp))
                     ProfilePhotoAvatar(
                         avatarPath = profiles[row.userId]?.avatarPath,
                         name = row.displayName,
-                        size = 36.dp,
+                        size = 38.dp,
                         visible = profiles[row.userId]?.avatarVisibility != "hidden",
                         accent = if (profiles[row.userId]?.isVip == true) SonHarfGold else SonHarfBlue,
                     )
                     Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(row.displayName, color = SonHarfText, fontWeight = if (mine) FontWeight.Black else FontWeight.Bold, maxLines = 1)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(row.displayName, color = SonHarfText, fontSize = 12.sp, fontWeight = if (mine) FontWeight.Black else FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (mine) {
+                                Spacer(Modifier.width(6.dp))
+                                Surface(shape = RoundedCornerShape(6.dp), color = SonHarfBlue.copy(alpha = .12f)) {
+                                    Text(sh("SEN", "YOU"), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = SonHarfBlue, fontSize = 6.5.sp, fontWeight = FontWeight.Black)
+                                }
+                            }
+                        }
                         val rate = if (row.winRate % 1.0 == 0.0) row.winRate.toInt().toString() else String.format("%.1f", row.winRate)
-                        Text("${row.leagueName} • ${row.rating} rating • ${row.wins}W • %$rate", color = SonHarfMuted, fontSize = 9.sp)
+                        Text("${row.leagueName}  •  ${row.wins}W ${row.losses}L  •  %$rate", color = SonHarfMuted, fontSize = 8.sp, maxLines = 1)
                     }
-                    if (mine) Text(sh("SEN", "YOU"), color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(row.rating.toString(), color = SonHarfText, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                        Text("RATING", color = SonHarfBlue, fontSize = 6.5.sp, fontWeight = FontWeight.Black)
+                    }
                 }
             }
         }
 
         if (!loading && rows.isEmpty()) item {
-            Text(
-                if (error) sh("Liderlik verisi alınamadı.", "Leaderboard data could not be loaded.") else sh("Bu dönemde sıralama henüz oluşmadı.", "No ranking for this period yet."),
-                color = SonHarfMuted,
-                modifier = Modifier.fillMaxWidth().padding(26.dp),
-                textAlign = TextAlign.Center,
-            )
+            Surface(shape = RoundedCornerShape(16.dp), color = SonHarfSurface, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .12f))) {
+                Text(
+                    if (error) sh("Liderlik verisi alınamadı.", "Leaderboard data could not be loaded.") else sh("Bu dönemde sıralama henüz oluşmadı.", "No ranking for this period yet."),
+                    Modifier.fillMaxWidth().padding(26.dp),
+                    color = SonHarfMuted,
+                    textAlign = TextAlign.Center,
+                    fontSize = 10.sp,
+                )
+            }
         }
-        item { Spacer(Modifier.height(8.dp)) }
+        item { Spacer(Modifier.height(6.dp)) }
     }
 }
 
 @Composable
-private fun LeagueShield() {
-    Box(Modifier.size(126.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            val cx = size.width / 2f
-            val top = size.height * .12f
-            val bottom = size.height * .88f
-            val outer = Path().apply {
-                moveTo(cx, top)
-                lineTo(size.width * .84f, size.height * .28f)
-                lineTo(size.width * .76f, size.height * .67f)
-                lineTo(cx, bottom)
-                lineTo(size.width * .24f, size.height * .67f)
-                lineTo(size.width * .16f, size.height * .28f)
-                close()
-            }
-            drawPath(outer, color = Color(0xFF1769E0))
-            drawPath(outer, color = SonHarfCyan.copy(alpha = .65f), style = Stroke(width = 3f))
-            val gem = Path().apply {
-                moveTo(cx, size.height*.31f)
-                lineTo(size.width*.70f, size.height*.48f)
-                lineTo(cx, size.height*.72f)
-                lineTo(size.width*.30f, size.height*.48f)
-                close()
-            }
-            drawPath(gem, color = Color(0xFF5BA1F7))
-            drawLine(SonHarfGold, Offset(size.width*.10f,size.height*.36f), Offset(size.width*.01f,size.height*.24f), strokeWidth=5f)
-            drawLine(SonHarfGold, Offset(size.width*.90f,size.height*.36f), Offset(size.width*.99f,size.height*.24f), strokeWidth=5f)
-        }
-        Text("◆", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Black)
+private fun LeagueLanguagePill(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(11.dp),
+        color = if (selected) SonHarfSurface2 else SonHarfSurface,
+        border = BorderStroke(1.dp, if (selected) SonHarfBlue.copy(alpha = .40f) else SonHarfMuted.copy(alpha = .10f)),
+    ) {
+        Text(label, Modifier.padding(vertical = 9.dp), color = if (selected) SonHarfBlue else SonHarfMuted, textAlign = TextAlign.Center, fontSize = 9.sp, fontWeight = FontWeight.Black)
     }
 }
