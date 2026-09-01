@@ -1,0 +1,75 @@
+name: Son Harf Turn Feedback Checkpoint
+
+on:
+  push:
+    branches:
+      - fix/son-harf-turn-feedback-20260901
+    paths:
+      - 'scripts/apply_son_harf_turn_feedback_patch.py'
+      - '.github/workflows/son-harf-turn-feedback-checkpoint.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: son-harf-turn-feedback-checkpoint
+  cancel-in-progress: false
+
+jobs:
+  patch-test-build-checkpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/son-harf-turn-feedback-20260901
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Apply Son Harf-only patch
+        run: |
+          python3 scripts/apply_son_harf_turn_feedback_patch.py
+          sed -i 's#source("src/main/java/#source("app/src/main/java/#g' app/src/test/java/com/sonharf/game/SonHarfTurnResolutionContractTest.kt
+
+      - name: Scope guard
+        run: |
+          git diff --name-only | tee /tmp/changed.txt
+          grep -Eq '^app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt$' /tmp/changed.txt
+          grep -Eq '^app/src/main/java/com/sonharf/game/LightDuelUi.kt$' /tmp/changed.txt
+          grep -Eq '^app/src/test/java/com/sonharf/game/SonHarfTurnResolutionContractTest.kt$' /tmp/changed.txt
+          if grep -Ei 'WordSiege|EconomyShop|Higgsfield|Private|Tournament|Admin' /tmp/changed.txt; then
+            echo 'Forbidden scope change detected' >&2
+            exit 1
+          fi
+
+      - name: Critical Son Harf contract tests
+        run: gradle :app:testDebugUnitTest --tests 'com.sonharf.game.SonHarfTurnResolutionContractTest' --stacktrace
+
+      - name: Full unit regression and debug build
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Remove one-shot patch infrastructure
+        run: |
+          rm -f scripts/apply_son_harf_turn_feedback_patch.py
+          rm -f .github/workflows/son-harf-turn-feedback-checkpoint.yml
+
+      - name: Checkpoint only after green tests and build
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --name-only
+          git commit -m 'Fix Son Harf turn resolution and match feedback'
+          git push origin HEAD:fix/son-harf-turn-feedback-20260901
