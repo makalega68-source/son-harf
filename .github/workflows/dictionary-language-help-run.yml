@@ -34,6 +34,11 @@ jobs:
           s = p.read_text()
           s = s.replace('fun SonHarfMainApp(\n', 'internal fun SonHarfMainApp(\n', 1)
           p.write_text(s)
+
+          t = Path('app/src/test/java/com/sonharf/game/DictionaryLanguageHelpContractTest.kt')
+          s = t.read_text()
+          s = s.replace('import kotlin.test.Test\nimport kotlin.test.assertFalse\nimport kotlin.test.assertTrue', 'import org.junit.Test\nimport org.junit.Assert.assertFalse\nimport org.junit.Assert.assertTrue')
+          t.write_text(s)
           PY
       - name: Unit tests and debug APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
