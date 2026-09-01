@@ -35,19 +35,19 @@ import java.time.Instant
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
-private val LBg = Color(0xFFF7F9FC)
-private val LCard = Color.White
-private val LCard2 = Color(0xFFF0F4F8)
-private val LText = Color(0xFF182235)
-private val LMuted = Color(0xFF718096)
-private val LBlue = Color(0xFF1769E0)
-private val LBlueSoft = Color(0xFFE8F2FF)
-private val LBlue2 = Color(0xFF4A8FE7)
-private val LBorder = Color(0xFFDDE5EE)
-private val LRed = Color(0xFFE24D6B)
-private val LGold = Color(0xFFF3A81A)
-private val LPurple = Color(0xFF7658D6)
-private val LGreen = Color(0xFF22A85A)
+private val LBg = Color(0xFF101114)
+private val LCard = Color(0xFF181A1F)
+private val LCard2 = Color(0xFF25272E)
+private val LText = Color(0xFFF7F7F8)
+private val LMuted = Color(0xFF8E929D)
+private val LBlue = Color(0xFFEAFB17)
+private val LBlueSoft = Color(0xFF292D20)
+private val LBlue2 = Color(0xFFCFE900)
+private val LBorder = Color(0xFF2C2F36)
+private val LRed = Color(0xFFFF5B4D)
+private val LGold = Color(0xFFFFC857)
+private val LPurple = Color(0xFF9A86FF)
+private val LGreen = Color(0xFF47C77A)
 
 @Composable
 internal fun LightDuelLobby(
@@ -76,7 +76,7 @@ internal fun LightDuelLobby(
     Box(
         Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color.White, LBg, Color(0xFFF1F6FC))))
+            .background(Brush.verticalGradient(listOf(Color(0xFF0D0E11), LBg, Color(0xFF15171C))))
             .statusBarsPadding()
     ) {
         LazyColumn(
@@ -127,7 +127,7 @@ internal fun LightDuelLobby(
                             .height(335.dp)
                             .background(
                                 Brush.radialGradient(
-                                    listOf(Color(0xFFF3F8FF), Color.White, Color(0xFFF8FAFD))
+                                    listOf(Color(0xFF202228), Color(0xFF181A1F), Color(0xFF121317))
                                 )
                             ),
                         contentAlignment = Alignment.Center,
@@ -145,7 +145,7 @@ internal fun LightDuelLobby(
                             contentAlignment = Alignment.Center,
                         ) {
                             Box(
-                                Modifier.fillMaxSize().clip(CircleShape).background(Color.White),
+                                Modifier.fillMaxSize().clip(CircleShape).background(LCard),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -208,8 +208,8 @@ internal fun LightDuelLobby(
                     modifier = Modifier.fillMaxWidth().height(62.dp),
                     shape = RoundedCornerShape(22.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (matching) Color(0xFFFCE8ED) else LBlue,
-                        contentColor = if (matching) LRed else Color.White,
+                        containerColor = if (matching) LRed.copy(alpha = .14f) else LBlue,
+                        contentColor = if (matching) LRed else Color(0xFF101114),
                     ),
                     border = if (matching) BorderStroke(1.dp, LRed.copy(alpha = .35f)) else null,
                 ) {
@@ -254,7 +254,7 @@ internal fun LightDuelLobby(
                         Button(
                             onClick = onCreate,
                             modifier = Modifier.fillMaxWidth(),
-                            colors = ButtonDefaults.buttonColors(containerColor = LBlue),
+                            colors = ButtonDefaults.buttonColors(containerColor = LBlue, contentColor = Color(0xFF101114)),
                         ) {
                             Text(sh("VIP ODA OLUŞTUR", "CREATE VIP ROOM"), fontWeight = FontWeight.Bold)
                         }
@@ -267,8 +267,8 @@ internal fun LightDuelLobby(
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = LBlue,
                                 unfocusedBorderColor = LBorder,
-                                focusedContainerColor = Color.White,
-                                unfocusedContainerColor = Color.White,
+                                focusedContainerColor = LCard,
+                                unfocusedContainerColor = LCard,
                             ),
                         )
                         OutlinedButton(
@@ -321,7 +321,7 @@ internal fun LightDuelLobby(
                                 Button(
                                     onClick = { onInvite(p.id) },
                                     enabled = p.presenceStatus == "online",
-                                    colors = ButtonDefaults.buttonColors(containerColor = LBlue),
+                                    colors = ButtonDefaults.buttonColors(containerColor = LBlue, contentColor = Color(0xFF101114)),
                                 ) {
                                     Text(sh("Davet", "Invite"))
                                 }
@@ -450,7 +450,7 @@ internal fun LightDuelArena(
     Column(
         Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color.White, LBg, Color(0xFFF2F6FB))))
+            .background(Brush.verticalGradient(listOf(Color(0xFF0D0E11), LBg, Color(0xFF15171C))))
             .statusBarsPadding(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
@@ -659,7 +659,7 @@ private fun LightPlayerCard(
 ) {
     Card(
         modifier = modifier.height(106.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = LCard),
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(
             width = if (active) 3.dp else 1.dp,
@@ -732,7 +732,7 @@ private fun LightVipWordHistory(
     Surface(
         modifier = modifier.fillMaxWidth().height(58.dp),
         shape = RoundedCornerShape(15.dp),
-        color = Color.White,
+        color = LCard,
         border = BorderStroke(1.dp, if (isVip) LBlue.copy(alpha = .28f) else LBorder),
     ) {
         if (!isVip) {
@@ -813,7 +813,7 @@ private fun LightBonusCard(
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F2FF)),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF201D2B)),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, LPurple.copy(alpha = .35f)),
     ) {
@@ -907,7 +907,7 @@ private fun LightInputBar(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        color = Color.White,
+        color = LCard,
         border = BorderStroke(1.5.dp, if (myTurn && !quiz) LBlue else LBorder),
     ) {
         Row(
@@ -971,7 +971,7 @@ private fun LightGameKeyboard(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = Color(0xFFF4F7FB),
+        color = Color(0xFF14161A),
         border = BorderStroke(1.dp, LBorder),
         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
     ) {
@@ -1023,7 +1023,7 @@ private fun LightGameKeyboard(
                     colors = ButtonDefaults.buttonColors(
                         containerColor = LBlue,
                         contentColor = Color.White,
-                        disabledContainerColor = Color(0xFFE4EAF1),
+                        disabledContainerColor = LCard2,
                         disabledContentColor = LMuted,
                     ),
                 ) {
@@ -1052,8 +1052,8 @@ private fun LightKey(
                 onClick = onClick,
             ),
         shape = RoundedCornerShape(10.dp),
-        color = Color.White,
-        border = BorderStroke(1.dp, if (enabled) Color(0xFFCBD9E8) else Color(0xFFE3E8EE)),
+        color = LCard2,
+        border = BorderStroke(1.dp, if (enabled) LBorder else LBorder.copy(alpha = .55f)),
         shadowElevation = 1.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -1076,7 +1076,7 @@ private fun LightSpecialKey(
         shape = RoundedCornerShape(12.dp),
         border = BorderStroke(1.dp, LBorder),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = Color.White,
+            containerColor = LCard2,
             contentColor = LText,
             disabledContentColor = LMuted.copy(alpha = .45f),
         ),
@@ -1115,7 +1115,7 @@ private fun LightLobbyAction(
 ) {
     Card(
         modifier = modifier.height(104.dp).clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = LCard),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(1.dp, LBorder),
     ) {
@@ -1207,7 +1207,7 @@ private fun LightWaitingRoom(code: String, playerName: String, onExit: () -> Uni
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(.88f),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = LCard),
             shape = RoundedCornerShape(26.dp),
             border = BorderStroke(1.dp, LBorder),
         ) {
@@ -1250,7 +1250,7 @@ private fun LightResult(
     ) {
         Card(
             modifier = Modifier.fillMaxWidth(.88f),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = LCard),
             shape = RoundedCornerShape(28.dp),
             border = BorderStroke(1.dp, if (draw) LGold.copy(alpha = .45f) else if (won) LBlue.copy(alpha = .45f) else LRed.copy(alpha = .35f)),
         ) {
@@ -1269,7 +1269,7 @@ private fun LightResult(
                 Button(
                     onClick = onRematch,
                     modifier = Modifier.fillMaxWidth().height(54.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = LBlue),
+                    colors = ButtonDefaults.buttonColors(containerColor = LBlue, contentColor = Color(0xFF101114)),
                 ) {
                     Text(sh("RÖVANŞ", "REMATCH"), fontWeight = FontWeight.Black)
                 }
