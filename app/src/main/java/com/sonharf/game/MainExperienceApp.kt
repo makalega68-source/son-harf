@@ -60,7 +60,7 @@ internal fun MainScreenHeader(
             Surface(
                 onClick = onBack,
                 shape = RoundedCornerShape(12.dp),
-                color = MainUi.SurfaceRaisedCompat,
+                color = MonsterUi.SurfaceRaised,
                 border = BorderStroke(1.dp, MainUi.Border),
             ) {
                 Icon(
@@ -81,7 +81,7 @@ internal fun MainScreenHeader(
             Surface(
                 onClick = onAction,
                 shape = RoundedCornerShape(12.dp),
-                color = MainUi.SurfaceRaisedCompat,
+                color = MonsterUi.SurfaceRaised,
                 border = BorderStroke(1.dp, MainUi.Border),
             ) {
                 Icon(
@@ -94,9 +94,6 @@ internal fun MainScreenHeader(
         }
     }
 }
-
-private val MainUi.SurfaceRaisedCompat: Color
-    get() = MonsterUi.SurfaceRaised
 
 @Composable
 internal fun MainMetricCard(value: String, label: String, modifier: Modifier = Modifier) {
