@@ -24,6 +24,7 @@ object SonHarfPreferences {
     private const val SYSTEM_NOTIFICATIONS = "system_notifications_enabled"
     private const val DARK_MODE = "dark_mode_enabled"
     private const val LANGUAGE = "app_language"
+    private const val LANGUAGE_SELECTED = "app_language_selected"
     private const val BOT_DIFFICULTY = "bot_difficulty"
     private const val PENDING_REGISTER_EMAIL = "pending_register_email"
     private const val PENDING_REGISTER_NAME = "pending_register_name"
@@ -37,6 +38,7 @@ object SonHarfPreferences {
     fun vibrationEnabled(context: Context): Boolean = prefs(context).getBoolean(VIBRATION, true)
     fun darkModeEnabled(context: Context): Boolean = false
     fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"
+    fun hasSelectedLanguage(context: Context): Boolean = prefs(context).getBoolean(LANGUAGE_SELECTED, false)
     fun botDifficulty(context: Context): String = prefs(context).getString(BOT_DIFFICULTY, "normal")?.takeIf { it in setOf("easy","normal","hard") } ?: "normal"
     fun rememberLogin(context: Context): Boolean = prefs(context).getBoolean(REMEMBER_LOGIN, true)
     fun rememberedEmail(context: Context): String = prefs(context).getString(REMEMBERED_EMAIL, "").orEmpty()
@@ -57,7 +59,6 @@ object SonHarfPreferences {
     }
     fun setVibrationEnabled(context: Context, value: Boolean) = prefs(context).edit().putBoolean(VIBRATION, value).apply()
     fun setDarkModeEnabled(context: Context, value: Boolean) {
-        // The active product uses one canonical light appearance.
         prefs(context).edit().putBoolean(DARK_MODE, false).apply()
         SonHarfUiState.darkMode = false
     }
@@ -82,7 +83,7 @@ object SonHarfPreferences {
 
     fun setLanguage(context: Context, value: String) {
         val normalized = if (value == "en") "en" else "tr"
-        prefs(context).edit().putString(LANGUAGE, normalized).apply()
+        prefs(context).edit().putString(LANGUAGE, normalized).putBoolean(LANGUAGE_SELECTED, true).apply()
         SonHarfUiState.language = normalized
     }
 
@@ -111,8 +112,8 @@ object SonHarfPreferences {
     }
 
     fun pendingRegistrationGender(context: Context, email: String): String? {
-        val p = prefs(context); val savedEmail = p.getString(PENDING_REGISTER_EMAIL, null)?.lowercase()
-        if (savedEmail != email.trim().lowercase()) return null
+        val p = prefs(context)
+        if (p.getString(PENDING_REGISTER_EMAIL, null)?.lowercase() != email.trim().lowercase()) return null
         return p.getString(PENDING_REGISTER_GENDER, null)?.let(::normalizeGender)?.takeIf { it.isNotBlank() }
     }
 
