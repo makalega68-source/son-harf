@@ -1,0 +1,30 @@
+name: Apply Monster Duel Theme
+
+on:
+  push:
+    paths:
+      - '.github/workflows/apply-monster-duel-theme.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply deterministic theme migration
+        run: python scripts/apply_monster_duel_theme.py
+      - name: Commit migrated duel UI
+        run: |
+          if git diff --quiet; then
+            echo "No migration changes needed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/LightDuelUi.kt
+          git commit -m "Apply Monster visual system to duel UI [monster-patch]"
+          git push origin HEAD:main
