@@ -4,22 +4,27 @@ import com.sonharf.game.data.fetchWordSiegeBotLexicon
 import com.sonharf.game.data.validateWordSiegeDictionaryWords
 import java.util.Locale
 import kotlin.random.Random
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 
 internal data class WordSiegeBotPlan(
     val move: WordSiegePracticeMove?,
     val lexiconCount: Int,
     val structuralCandidateCount: Int,
     val validCandidateCount: Int,
+    val anchorCount: Int,
+    val passReason: String? = null,
 )
 
 /**
  * Online-backed training planner.
  *
- * Candidate words come from the same main dictionary used by human validation.
- * Geometry / connectivity / all newly formed word extraction is delegated to
- * WordSiegePracticeEngine.validateMove, so the bot does not get a relaxed rule set.
- * Expected invalid placements are filtered; unexpected exceptions are deliberately
- * allowed to escape so a code/server error can never be disguised as PASS.
+ * Long-match guard: a full-board alphabet is too broad for a capped dictionary feed.
+ * Once the board grows, the old single `rack + every board letter` query could fill
+ * its limit with structurally irrelevant words and starve playable anchor words.
+ * We now request small anchor-focused feeds first, then merge a smaller broad feed.
+ * Shared move validation remains authoritative; validation is never relaxed.
  */
 internal object WordSiegeBotPlanner {
     private val trLocale = Locale.forLanguageTag("tr-TR")
@@ -32,10 +37,28 @@ internal object WordSiegeBotPlanner {
         require(state.status == "playing" && state.currentOwner == 2) { "word_siege_bot_not_turn" }
         val rack = state.botRack.uppercase(trLocale)
         require(rack.isNotBlank()) { "word_siege_bot_empty_rack" }
-        val boardLetters = state.board.mapNotNull { it.letter?.firstOrNull() }.joinToString("")
-        val lexicon = fetchWordSiegeBotLexicon(rack + boardLetters, "tr", 1000)
-            .asSequence()
-            .map { it.uppercase(trLocale) }
+        val anchorCount = countPlayableAnchors(state)
+        val lexicon = fetchPrioritizedLexicon(state, rack)
+        return planFromLexicon(state, lexicon, difficulty, random, anchorCount) { words ->
+            buildSet {
+                words.chunked(600).forEach { addAll(validateWordSiegeDictionaryWords(it, "tr")) }
+            }
+        }
+    }
+
+    internal suspend fun planFromLexicon(
+        state: WordSiegePracticeState,
+        lexiconInput: Collection<String>,
+        difficulty: TrainingBotDifficulty = TrainingBotDifficulty.MEDIUM,
+        random: Random = Random.Default,
+        anchorCount: Int = countPlayableAnchors(state),
+        validateWords: suspend (List<String>) -> Set<String> = { it.toSet() },
+    ): WordSiegeBotPlan {
+        require(state.status == "playing" && state.currentOwner == 2) { "word_siege_bot_not_turn" }
+        val rack = state.botRack.uppercase(trLocale)
+        require(rack.isNotBlank()) { "word_siege_bot_empty_rack" }
+        val lexicon = lexiconInput.asSequence()
+            .map { it.trim().uppercase(trLocale) }
             .filter { it.length in 2..9 }
             .distinct()
             .toList()
@@ -64,7 +87,7 @@ internal object WordSiegeBotPlanner {
         }
 
         if (structural.isEmpty()) {
-            return WordSiegeBotPlan(null, lexicon.size, 0, 0)
+            return WordSiegeBotPlan(null, lexicon.size, 0, 0, anchorCount, "no_structural_candidate")
         }
 
         val wordsToValidate = structural.asSequence()
@@ -73,12 +96,10 @@ internal object WordSiegeBotPlanner {
             .filter(String::isNotEmpty)
             .distinct()
             .toList()
-        val allowed = buildSet {
-            wordsToValidate.chunked(600).forEach { addAll(validateWordSiegeDictionaryWords(it, "tr")) }
-        }
+        val allowed = validateWords(wordsToValidate)
         val valid = structural.filter { candidate -> candidate.move.formedWords.all { it in allowed } }
         if (valid.isEmpty()) {
-            return WordSiegeBotPlan(null, lexicon.size, structural.size, 0)
+            return WordSiegeBotPlan(null, lexicon.size, structural.size, 0, anchorCount, "dictionary_rejected_all")
         }
 
         val ranked = valid.sortedByDescending { it.score }
@@ -92,11 +113,56 @@ internal object WordSiegeBotPlanner {
             TrainingBotDifficulty.MEDIUM -> if (window == 1 || random.nextInt(100) < 65) 0 else random.nextInt(window)
             TrainingBotDifficulty.HARD -> if (window == 1 || random.nextInt(100) < 85) 0 else 1
         }
-        return WordSiegeBotPlan(ranked[index].move, lexicon.size, structural.size, valid.size)
+        return WordSiegeBotPlan(ranked[index].move, lexicon.size, structural.size, valid.size, anchorCount)
+    }
+
+    private suspend fun fetchPrioritizedLexicon(state: WordSiegePracticeState, rack: String): List<String> = coroutineScope {
+        val boardLetters = state.board.mapNotNull { it.letter?.firstOrNull()?.uppercaseChar() }
+        if (boardLetters.isEmpty()) return@coroutineScope fetchWordSiegeBotLexicon(rack, "tr", 1000)
+
+        val anchorLetters = state.board.indices.asSequence()
+            .filter { state.board[it].letter != null }
+            .filter { index -> neighbors(index).any { state.board[it].letter == null } }
+            .mapNotNull { state.board[it].letter?.firstOrNull()?.uppercaseChar() }
+            .distinct()
+            .take(8)
+            .toList()
+
+        val focused = anchorLetters.map { anchor ->
+            async { fetchWordSiegeBotLexicon(rack + anchor, "tr", 220) }
+        }
+        val broad = async {
+            val distinctBoardAlphabet = boardLetters.distinct().joinToString("")
+            fetchWordSiegeBotLexicon(rack + distinctBoardAlphabet, "tr", 500)
+        }
+        (focused.awaitAll().flatten() + broad.await()).asSequence()
+            .map { it.uppercase(trLocale) }
+            .filter { it.length in 2..9 }
+            .distinct()
+            .take(2200)
+            .toList()
+    }
+
+    internal fun countPlayableAnchors(state: WordSiegePracticeState): Int {
+        if (state.board.none { it.letter != null }) return 1
+        return state.board.indices.count { index ->
+            state.board[index].letter == null && neighbors(index).any { state.board[it].letter != null }
+        }
+    }
+
+    private fun neighbors(index: Int): List<Int> {
+        val row = index / 9
+        val col = index % 9
+        return buildList(4) {
+            if (row > 0) add(index - 9)
+            if (row < 8) add(index + 9)
+            if (col > 0) add(index - 1)
+            if (col < 8) add(index + 1)
+        }
     }
 
     private fun placementsForWord(
-        state: WordSiegePracticeState,
+        state: WordSiePracticeState,
         rack: String,
         word: String,
         start: Int,
