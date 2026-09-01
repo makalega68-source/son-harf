@@ -15,12 +15,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * Shared design tokens for screens that still depend on the historical MainUi
- * API. The old light dashboard layout is intentionally retired; these values
- * now mirror the purchased Monster Livescore visual language so feature screens
- * remain visually coherent while their business logic stays untouched.
- */
+/** Shared compatibility tokens for feature screens on the new Monster shell. */
 internal object MainUi {
     val Background = MonsterUi.Background
     val Surface = MonsterUi.Surface
@@ -28,19 +23,29 @@ internal object MainUi {
     val Text = MonsterUi.Text
     val Muted = MonsterUi.Muted
     val Blue = MonsterUi.Accent
-    val BlueDeep = Color(0xFFCFE900)
-    val BlueSoft = Color(0xFF343A28)
+    val BlueDeep = Color(0xFF0A66D8)
+    val BlueSoft = Color(0xFFE8F1FF)
     val Border = MonsterUi.Border
     val Green = MonsterUi.Green
     val Gold = MonsterUi.Gold
     val Red = MonsterUi.Coral
-    val Purple = Color(0xFFB7A8FF)
+    val Purple = Color(0xFF7659D6)
 }
 
-/** Legacy entry point kept only for source compatibility. */
 @Composable
 fun SonHarfMainApp(onSignedOut: () -> Unit) {
     MonsterExperienceApp(onSignedOut = onSignedOut)
+}
+
+@Composable
+internal fun MainSectionTitle(title: String) {
+    Text(
+        text = title,
+        color = MainUi.Text,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.Black,
+        letterSpacing = .35.sp,
+    )
 }
 
 @Composable
@@ -52,23 +57,10 @@ internal fun MainScreenHeader(
     actionDescription: String = "",
     onAction: (() -> Unit)? = null,
 ) {
-    Row(
-        Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) {
-            Surface(
-                onClick = onBack,
-                shape = RoundedCornerShape(12.dp),
-                color = MonsterUi.SurfaceRaised,
-                border = BorderStroke(1.dp, MainUi.Border),
-            ) {
-                Icon(
-                    Icons.Rounded.ArrowBack,
-                    contentDescription = sh("Geri", "Back"),
-                    tint = MainUi.Text,
-                    modifier = Modifier.padding(10.dp).size(20.dp),
-                )
+            Surface(onClick = onBack, shape = RoundedCornerShape(12.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MainUi.Border)) {
+                Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = MainUi.Text, modifier = Modifier.padding(10.dp).size(20.dp))
             }
             Spacer(Modifier.width(12.dp))
         }
@@ -78,18 +70,8 @@ internal fun MainScreenHeader(
             Text(subtitle, color = MainUi.Muted, fontSize = 10.sp)
         }
         if (actionIcon != null && onAction != null) {
-            Surface(
-                onClick = onAction,
-                shape = RoundedCornerShape(12.dp),
-                color = MonsterUi.SurfaceRaised,
-                border = BorderStroke(1.dp, MainUi.Border),
-            ) {
-                Icon(
-                    actionIcon,
-                    contentDescription = actionDescription,
-                    tint = MainUi.Text,
-                    modifier = Modifier.padding(10.dp).size(20.dp),
-                )
+            Surface(onClick = onAction, shape = RoundedCornerShape(12.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MainUi.Border)) {
+                Icon(actionIcon, contentDescription = actionDescription, tint = MainUi.Text, modifier = Modifier.padding(10.dp).size(20.dp))
             }
         }
     }
@@ -97,12 +79,7 @@ internal fun MainScreenHeader(
 
 @Composable
 internal fun MainMetricCard(value: String, label: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        color = MainUi.Surface,
-        border = BorderStroke(1.dp, MainUi.Border),
-    ) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
         Column(Modifier.padding(12.dp)) {
             Text(value, color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(3.dp))
