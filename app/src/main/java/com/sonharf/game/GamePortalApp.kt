@@ -4,16 +4,16 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
 // Legacy-compatible shared palette.
-// Kept in sync with the active premium dark theme so rollback/legacy screens
-// do not flash back to the old light visual language.
-internal val PortalBg = Color(0xFF0B0D12)
-internal val PortalCard = Color(0xFF141821)
-internal val PortalText = Color(0xFFF4F6FA)
-internal val PortalMuted = Color(0xFF9299A8)
-internal val PortalBlue = Color(0xFFB9F227)
-internal val PortalGold = Color(0xFFFFC857)
-internal val PortalGreen = Color(0xFF61D68A)
-internal val PortalRed = Color(0xFFFF6B72)
+// These constants stay because older source files still compile against them,
+// even though those screens are not part of the active V1 navigation path.
+internal val PortalBg = Color(0xFFF7F9FC)
+internal val PortalCard = Color.White
+internal val PortalText = Color(0xFF182235)
+internal val PortalMuted = Color(0xFF718096)
+internal val PortalBlue = Color(0xFF1769E0)
+internal val PortalGold = Color(0xFFF3A81A)
+internal val PortalGreen = Color(0xFF22B95F)
+internal val PortalRed = Color(0xFFE64B55)
 
 /**
  * Active Son Harf V1 shell.
