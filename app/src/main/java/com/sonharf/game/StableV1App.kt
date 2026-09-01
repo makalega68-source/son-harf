@@ -12,7 +12,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import com.sonharf.game.data.SupabaseProvider
 
 /**
@@ -35,7 +34,7 @@ fun StableV1App() {
 
     if (!authChecked) {
         Box(
-            Modifier.fillMaxSize().background(Color(0xFFF7F9FC)),
+            Modifier.fillMaxSize().background(SonHarfBg),
             contentAlignment = Alignment.Center,
         ) {
             CircularProgressIndicator(color = SonHarfBlue)
