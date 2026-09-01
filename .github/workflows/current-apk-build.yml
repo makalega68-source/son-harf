@@ -20,18 +20,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply pending Monster duel migration
+      - name: Apply pending Monster duel migrations
         shell: bash
         run: |
           set -euo pipefail
           if [ -f scripts/apply_monster_duel_theme.py ]; then
             python scripts/apply_monster_duel_theme.py
           fi
+          if [ -f scripts/rebuild_monster_duel_layout.py ]; then
+            python scripts/rebuild_monster_duel_layout.py
+          fi
           if ! git diff --quiet -- app/src/main/java/com/sonharf/game/LightDuelUi.kt; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
             git add app/src/main/java/com/sonharf/game/LightDuelUi.kt
-            git commit -m "Apply Monster visual system to duel UI [skip ci]"
+            git commit -m "Rebuild duel lobby and arena with Monster layout [skip ci]"
             git push origin HEAD:main
           fi
       - uses: actions/setup-java@v5
