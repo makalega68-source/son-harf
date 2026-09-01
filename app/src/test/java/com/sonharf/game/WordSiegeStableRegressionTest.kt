@@ -19,11 +19,13 @@ class WordSiegeStableRegressionTest {
         assertTrue(experience.contains("horizontal"))
         assertTrue(experience.contains("ProfileDto"))
         assertTrue(experience.contains("statusBarsPadding"))
-        assertTrue(practice.contains("ProfilePhotoAvatar"))
+        assertTrue(pan.contains("ProfilePhotoAvatarWithGender"))
+        assertTrue(practice.contains("showPass"))
+        assertTrue(practice.contains("showExchange"))
         assertTrue(engine.contains("exchange"))
         assertTrue(engine.contains("pass"))
-        assertTrue(pan.contains("territory"))
-        assertTrue(pan.contains("score"))
+        assertTrue(pan.contains("areaScore"))
+        assertTrue(pan.contains("totalScore"))
         assertTrue(backend.contains("WordSiege"))
     }
 
