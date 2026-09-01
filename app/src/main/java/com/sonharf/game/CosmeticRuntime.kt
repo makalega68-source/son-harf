@@ -23,6 +23,9 @@ object SonHarfCosmetics {
         emojiPackId = e?.emojiPackId
     }
 
+    val currentThemePalette: SonHarfThemePalette
+        get() = SonHarfThemeCatalog.forId(gameThemeId)
+
     val profileAccent: Color
         get() = when (profileFrameId) {
             "frame_gold" -> SonHarfGold
@@ -35,7 +38,9 @@ object SonHarfCosmetics {
         get() = if (nameStyleId == "name_cyan") SonHarfCyan else SonHarfText
 
     val keyboardIsNeon: Boolean get() = keyboardThemeId == "keyboard_neon"
-    val monsterBlueTheme: Boolean get() = gameThemeId == "theme_monster_blue"
+    val monsterBlueTheme: Boolean get() = gameThemeId == SonHarfThemeCatalog.BLUE_WHITE_ID
+    val charcoalIvoryTheme: Boolean get() = gameThemeId == SonHarfThemeCatalog.CHARCOAL_IVORY_ID
+    val sapphireIceTheme: Boolean get() = gameThemeId == SonHarfThemeCatalog.SAPPHIRE_ICE_ID
     // Retained only so older arena code compiles; Aurora is retired from sale.
     val auroraTheme: Boolean get() = gameThemeId == "theme_aurora"
     val crownVictory: Boolean get() = victoryEffectId == "victory_crown"
