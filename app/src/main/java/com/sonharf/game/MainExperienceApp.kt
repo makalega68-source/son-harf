@@ -18,19 +18,19 @@ import androidx.compose.ui.unit.sp
 
 /** Shared compatibility tokens for feature screens on the new Monster shell. */
 internal object MainUi {
-    val Background = MonsterUi.Background
-    val Surface = MonsterUi.Surface
-    val SurfaceSoft = MonsterUi.SurfaceSoft
-    val Text = MonsterUi.Text
-    val Muted = MonsterUi.Muted
-    val Blue = MonsterUi.Accent
-    val BlueDeep = Color(0xFF0A66D8)
-    val BlueSoft = Color(0xFFE8F1FF)
-    val Border = MonsterUi.Border
-    val Green = MonsterUi.Green
-    val Gold = MonsterUi.Gold
-    val Red = MonsterUi.Coral
-    val Purple = Color(0xFF7659D6)
+    val Background: Color get() = MonsterUi.Background
+    val Surface: Color get() = MonsterUi.Surface
+    val SurfaceSoft: Color get() = MonsterUi.SurfaceSoft
+    val Text: Color get() = MonsterUi.Text
+    val Muted: Color get() = MonsterUi.Muted
+    val Blue: Color get() = MonsterUi.Accent
+    val BlueDeep: Color get() = MonsterUi.Accent
+    val BlueSoft: Color get() = MonsterUi.SurfaceRaised
+    val Border: Color get() = MonsterUi.Border
+    val Green: Color get() = MonsterUi.Green
+    val Gold: Color get() = MonsterUi.Gold
+    val Red: Color get() = MonsterUi.Coral
+    val Purple: Color get() = if (SonHarfCosmetics.sapphireIceTheme) Color(0xFF9B8CFF) else Color(0xFF7659D6)
 }
 
 @Composable

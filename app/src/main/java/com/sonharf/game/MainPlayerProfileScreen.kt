@@ -301,6 +301,21 @@ internal fun MainPlayerProfileScreen(
         }
 
         item {
+            MainSectionTitle(sh("TEMA & GÖRÜNÜM", "THEME & APPEARANCE"))
+            Spacer(Modifier.height(8.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = MainUi.Surface,
+                border = BorderStroke(1.dp, MainUi.Border),
+            ) {
+                Box(Modifier.fillMaxWidth().padding(14.dp)) {
+                    ProfileThemeSelector(backend)
+                }
+            }
+        }
+
+        item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 OutlinedButton(
                     onClick = onVip,

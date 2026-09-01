@@ -25,20 +25,21 @@ import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
 
 internal object MonsterUi {
-    val Background = Color(0xFFF7FAFF)
-    val Surface = Color(0xFFFFFFFF)
-    val SurfaceRaised = Color(0xFFF0F5FC)
-    val SurfaceSoft = Color(0xFFE8EEF7)
-    val Text = Color(0xFF10213A)
-    val Muted = Color(0xFF62758F)
-    val Border = Color(0xFFD5E2F0)
-    val Accent: Color get() = if (SonHarfCosmetics.monsterBlueTheme) Color(0xFF1677FF) else Color(0xFF64748B)
-    val AccentText = Color.White
-    val Live = Color(0xFFFF4D4F)
-    val Coral = Color(0xFFFF6B61)
-    val Orange = Color(0xFFF59E0B)
-    val Green = Color(0xFF168A55)
-    val Gold = Color(0xFFD68A00)
+    private val palette: SonHarfThemePalette get() = SonHarfCosmetics.currentThemePalette
+    val Background: Color get() = palette.background
+    val Surface: Color get() = palette.surface
+    val SurfaceRaised: Color get() = palette.surfaceRaised
+    val SurfaceSoft: Color get() = palette.surfaceSoft
+    val Text: Color get() = palette.text
+    val Muted: Color get() = palette.muted
+    val Border: Color get() = palette.border
+    val Accent: Color get() = palette.accent
+    val AccentText: Color get() = palette.accentText
+    val Live: Color get() = palette.live
+    val Coral: Color get() = palette.coral
+    val Orange: Color get() = palette.orange
+    val Green: Color get() = palette.green
+    val Gold: Color get() = palette.gold
 }
 
 private data class MonsterHomeStats(

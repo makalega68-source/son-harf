@@ -340,10 +340,10 @@ internal fun MainVipScreen(
         item {
             Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                    MainVipBenefit(Icons.Rounded.Block, sh("Reklamsız deneyim", "Ad-free experience"), sh("Maç dışında da sade ve kesintisiz", "Clean and uninterrupted outside matches"))
+                    MainVipBenefit(Icons.Rounded.Diamond, sh("Aylık 400 Son Coin", "400 Son Coin monthly"), sh("Her üyelik ayında hesabına Style bütçesi", "A Style budget added each membership month"))
+                    MainVipBenefit(Icons.Rounded.Block, sh("Reklamsız deneyim", "Ad-free experience"), sh("Opsiyonel ödül akışlarında reklam beklemeden, aynı limitlerle devam et", "Skip ads in optional reward flows while keeping the same limits"))
                     MainVipBenefit(Icons.Rounded.Verified, sh("VIP profil rozeti", "VIP profile badge"), sh("Profil ve sosyal alanlarda görünür", "Visible on profile and social surfaces"))
-                    MainVipBenefit(Icons.Rounded.Checkroom, sh("Özel Style içerikleri", "Exclusive Style content"), sh("Profil çerçevesi ve kişiselleştirme", "Profile frames and personalization"))
-                    MainVipBenefit(Icons.Rounded.History, sh("Kelime geçmişi", "Word history"), sh("Düelloda son kelimeleri gör", "See recent words during a duel"))
+                    MainVipBenefit(Icons.Rounded.Checkroom, sh("Özel Style içerikleri", "Exclusive Style content"), sh("VIP görünüm ve kişiselleştirme seçenekleri", "VIP appearance and personalization options"))
                     MainVipBenefit(Icons.Rounded.Insights, sh("Gelişmiş istatistikler", "Advanced statistics"), sh("Performansını daha ayrıntılı incele", "Review performance in more detail"))
                     MainVipBenefit(Icons.Rounded.Lock, sh("Özel oda oluşturma", "Create private rooms"), sh("Arkadaşlarınla kodlu oda aç", "Open coded rooms with friends"))
                     MainVipBenefit(Icons.Rounded.Storefront, sh("VIP Style görünümü", "VIP Style view"), sh("Üyelere özel ürünleri keşfet", "Discover member-only items"))
