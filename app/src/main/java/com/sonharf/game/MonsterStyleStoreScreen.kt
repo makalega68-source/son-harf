@@ -4,9 +4,11 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.ShoppingBag
 import androidx.compose.material3.*
@@ -23,42 +25,48 @@ import kotlinx.coroutines.launch
 
 @Composable
 internal fun MonsterStyleStoreScreen() {
-    var showFullCatalog by remember { mutableStateOf(false) }
-    if (showFullCatalog) {
-        EconomyShopScreen(onBack = { showFullCatalog = false })
-        return
-    }
-
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
-    var theme by remember { mutableStateOf<ShopItemDto?>(null) }
-    var owned by remember { mutableStateOf(false) }
-    var equipped by remember { mutableStateOf(false) }
-    var busy by remember { mutableStateOf(false) }
+    var themes by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
+    var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var equippedId by remember { mutableStateOf<String?>(null) }
+    var busyId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(true) }
 
     suspend fun reload() {
-        val b = backend ?: return
-        val id = b.currentUserId() ?: return
+        val b = backend
+        if (b == null) {
+            notice = sh("Tema mağazası için sunucu bağlantısı gerekiyor.", "The theme store requires a server connection.")
+            loading = false
+            return
+        }
+        val id = b.currentUserId()
+        if (id == null) {
+            notice = sh("Oyuncu oturumu hazırlanamadı.", "Player session is not ready.")
+            loading = false
+            return
+        }
         runCatching {
-            val p = b.getProfile(id)
-            val items = b.getShopItems()
-            val inventory = b.getInventory()
-            val eq = b.getEquippedCosmetics()
-            profile = p
-            theme = items.firstOrNull { it.id == "theme_monster_blue" }
-            owned = "theme_monster_blue" in inventory
-            equipped = eq?.gameThemeId == "theme_monster_blue"
-            SonHarfCosmetics.apply(eq)
+            profile = b.getProfile(id)
+            themes = b.getShopItems()
+                .filter { it.kind == "game_theme" && SonHarfThemeCatalog.known(it.id) }
+                .sortedBy { it.sortOrder }
+            owned = b.getInventory()
+            val equipped = b.getEquippedCosmetics()
+            equippedId = equipped?.gameThemeId
+            SonHarfCosmetics.apply(equipped)
         }.onFailure {
             notice = sh("Tema mağazası yüklenemedi.", "Theme store could not be loaded.")
         }
+        loading = false
     }
 
     LaunchedEffect(Unit) { reload() }
 
-    Surface(Modifier.fillMaxSize(), color = Color(0xFFF7FAFF)) {
+    val shell = SonHarfCosmetics.currentThemePalette
+    Surface(Modifier.fillMaxSize(), color = shell.background) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().statusBarsPadding(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
@@ -67,88 +75,84 @@ internal fun MonsterStyleStoreScreen() {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("STYLE", color = Color(0xFF10213A), fontSize = 28.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Temalar ve görünüm paketleri", "Themes and appearance packs"), color = Color(0xFF62758F), fontSize = 10.sp)
+                        Text("STYLE", color = shell.text, fontSize = 28.sp, fontWeight = FontWeight.Black)
+                        Text(sh("Premium tema koleksiyonu", "Premium theme collection"), color = shell.muted, fontSize = 10.sp)
                     }
-                    Surface(shape = RoundedCornerShape(99.dp), color = Color(0xFFE8F1FF), border = BorderStroke(1.dp, Color(0xFFBED5F5))) {
-                        Text("◈ ${profile?.diamonds ?: 0} SC", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color(0xFF0A66D8), fontWeight = FontWeight.Black)
-                    }
-                }
-            }
-
-            item {
-                Text(sh("PREMIUM TEMA", "PREMIUM THEME"), color = Color(0xFF0A66D8), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
-            }
-
-            item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
-                    shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(if (equipped) 2.dp else 1.dp, if (equipped) Color(0xFF1677FF) else Color(0xFFD5E2F0)),
-                ) {
-                    Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                        MonsterBlueThemePreview()
-                        Row(verticalAlignment = Alignment.Top) {
-                            Column(Modifier.weight(1f)) {
-                                Text(sh("Mavi Beyaz Arena", "Blue White Arena"), color = Color(0xFF10213A), fontSize = 19.sp, fontWeight = FontWeight.Black)
-                                Text(
-                                    sh("Yeni Monster düzeninin premium beyaz-mavi renk paketi. Menü, kart ve oyun vurgularını mavi-beyaz stile geçirir.", "Premium blue-white color pack for the new Monster layout. Applies blue-white styling to menus, cards and game accents."),
-                                    color = Color(0xFF62758F),
-                                    fontSize = 10.sp,
-                                )
-                            }
-                            if (equipped) Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF1677FF), modifier = Modifier.size(26.dp))
-                        }
-
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                            val price = theme?.diamondPrice ?: 600
-                            Text(
-                                when {
-                                    equipped -> sh("AKTİF", "EQUIPPED")
-                                    owned -> sh("✓ SAHİPSİN", "✓ OWNED")
-                                    else -> "◈ $price SC"
-                                },
-                                color = if (owned || equipped) Color(0xFF168A55) else Color(0xFF0A66D8),
-                                fontWeight = FontWeight.Black,
-                                fontSize = 15.sp,
-                            )
-                            Button(
-                                enabled = !busy && !equipped && theme != null,
-                                onClick = {
-                                    val b = backend ?: return@Button
-                                    scope.launch {
-                                        busy = true
-                                        runCatching {
-                                            if (!owned) b.purchaseShopItem("theme_monster_blue")
-                                            b.equipShopItem("theme_monster_blue")
-                                        }.onSuccess {
-                                            notice = sh("Mavi Beyaz Arena etkinleştirildi.", "Blue White Arena equipped.")
-                                            reload()
-                                        }.onFailure {
-                                            val raw = it.message.orEmpty()
-                                            notice = if ("insufficient_diamonds" in raw) sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.") else sh("Tema etkinleştirilemedi.", "Theme could not be equipped.")
-                                        }
-                                        busy = false
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1677FF), contentColor = Color.White),
-                                shape = RoundedCornerShape(14.dp),
-                            ) {
-                                Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, Modifier.size(17.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(if (busy) "…" else if (owned) sh("KULLAN", "EQUIP") else sh("SATIN AL", "BUY"), fontWeight = FontWeight.Black)
-                            }
-                        }
+                    Surface(shape = RoundedCornerShape(99.dp), color = shell.surfaceRaised, border = BorderStroke(1.dp, shell.border)) {
+                        Text("◈ ${profile?.diamonds ?: 0} SC", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = shell.accent, fontWeight = FontWeight.Black)
                     }
                 }
             }
 
             item {
-                Surface(color = Color(0xFFEAF3FF), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Color(0xFFC7DCF7))) {
+                Surface(color = shell.surface, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, shell.border)) {
+                    Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(sh("MONSTER PREMIUM TEMALAR", "MONSTER PREMIUM THEMES"), color = shell.text, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        Text(
+                            sh("Yerleşim aynı kalır; yalnız renk paleti değişir. Tüm paletler yüksek kontrast için tasarlanmıştır.", "Layout stays identical; only the color palette changes. Every palette is designed for high contrast."),
+                            color = shell.muted,
+                            fontSize = 9.sp,
+                        )
+                    }
+                }
+            }
+
+            if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = shell.accent, trackColor = shell.surfaceSoft) }
+
+            items(themes.size) { index ->
+                val item = themes[index]
+                val palette = SonHarfThemeCatalog.forId(item.id)
+                val mine = item.id in owned
+                val active = equippedId == item.id
+                PremiumThemeStoreCard(
+                    item = item,
+                    palette = palette,
+                    owned = mine,
+                    active = active,
+                    busy = busyId == item.id,
+                    disabledByOtherOperation = busyId != null && busyId != item.id,
+                    onAction = {
+                        val b = backend ?: return@PremiumThemeStoreCard
+                        scope.launch {
+                            busyId = item.id
+                            runCatching {
+                                if (!mine) b.purchaseShopItem(item.id)
+                                b.equipShopItem(item.id)
+                            }.onSuccess {
+                                notice = if (mine) {
+                                    sh("${palette.nameTr} etkinleştirildi.", "${palette.nameEn} equipped.")
+                                } else {
+                                    sh("Satın alma tamamlandı ve tema etkinleştirildi.", "Purchase complete and theme equipped.")
+                                }
+                                reload()
+                            }.onFailure { error ->
+                                val raw = error.message.orEmpty()
+                                notice = when {
+                                    "insufficient_diamonds" in raw -> sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                                    "vip_required" in raw -> sh("Bu tema VIP üyelerine özel.", "This theme is VIP only.")
+                                    else -> sh("Tema işlemi tamamlanamadı.", "Theme action could not be completed.")
+                                }
+                            }
+                            busyId = null
+                        }
+                    },
+                )
+            }
+
+            if (!loading && themes.isEmpty()) {
+                item {
+                    Surface(color = shell.surface, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, shell.border)) {
+                        Text(sh("Tema ürünleri henüz sunucuda yayınlanmamış.", "Theme products are not published on the server yet."), Modifier.fillMaxWidth().padding(14.dp), color = shell.muted, textAlign = TextAlign.Center, fontSize = 10.sp)
+                    }
+                }
+            }
+
+            item {
+                Surface(color = shell.surfaceRaised, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, shell.border)) {
                     Text(
-                        sh("Bu tema yalnız görünümü değiştirir. Puan, süre, joker gücü veya lig avantajı vermez.", "This theme only changes appearance. It gives no score, timer, power or league advantage."),
+                        sh("Temalar yalnız görünümü değiştirir. Puan, süre, rating, joker gücü veya maç avantajı vermez.", "Themes only change appearance. They give no score, timer, rating, joker power or match advantage."),
                         Modifier.fillMaxWidth().padding(12.dp),
-                        color = Color(0xFF31506F),
+                        color = shell.muted,
                         fontSize = 10.sp,
                         textAlign = TextAlign.Center,
                     )
@@ -157,20 +161,78 @@ internal fun MonsterStyleStoreScreen() {
 
             notice?.let { message ->
                 item {
-                    Surface(color = Color.White, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, Color(0xFFD5E2F0))) {
-                        Text(message, Modifier.fillMaxWidth().padding(11.dp), color = Color(0xFF10213A), fontSize = 10.sp, textAlign = TextAlign.Center)
+                    Surface(color = shell.surface, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, shell.border)) {
+                        Text(message, Modifier.fillMaxWidth().padding(11.dp), color = shell.text, fontSize = 10.sp, textAlign = TextAlign.Center)
                     }
                 }
             }
 
-            item {
-                OutlinedButton(
-                    onClick = { showFullCatalog = true },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    border = BorderStroke(1.dp, Color(0xFF1677FF)),
+            item { Spacer(Modifier.height(8.dp)) }
+        }
+    }
+}
+
+@Composable
+private fun PremiumThemeStoreCard(
+    item: ShopItemDto,
+    palette: SonHarfThemePalette,
+    owned: Boolean,
+    active: Boolean,
+    busy: Boolean,
+    disabledByOtherOperation: Boolean,
+    onAction: () -> Unit,
+) {
+    val shell = SonHarfCosmetics.currentThemePalette
+    Card(
+        colors = CardDefaults.cardColors(containerColor = shell.surface),
+        shape = RoundedCornerShape(24.dp),
+        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) shell.accent else shell.border),
+    ) {
+        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+            MonsterThemePreview(palette)
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Text(if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr, color = shell.text, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                    Text(if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr, color = shell.muted, fontSize = 10.sp)
+                }
+                if (active) Icon(Icons.Rounded.CheckCircle, null, tint = shell.green, modifier = Modifier.size(26.dp))
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                Column {
+                    Text(
+                        when {
+                            active -> sh("AKTİF", "EQUIPPED")
+                            owned -> sh("✓ SAHİPSİN", "✓ OWNED")
+                            else -> "◈ ${item.diamondPrice} SC"
+                        },
+                        color = when { active -> shell.green; owned -> shell.green; else -> shell.accent },
+                        fontWeight = FontWeight.Black,
+                        fontSize = 15.sp,
+                    )
+                    if (!owned && !active) Text(sh("Kalıcı tema", "Permanent theme"), color = shell.muted, fontSize = 8.sp)
+                }
+                Button(
+                    enabled = !busy && !disabledByOtherOperation && !active,
+                    onClick = onAction,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = shell.accent,
+                        contentColor = shell.accentText,
+                        disabledContainerColor = shell.surfaceSoft,
+                        disabledContentColor = shell.muted,
+                    ),
                     shape = RoundedCornerShape(14.dp),
                 ) {
-                    Text(sh("DİĞER STYLE ÜRÜNLERİ", "OTHER STYLE ITEMS"), color = Color(0xFF0A66D8), fontWeight = FontWeight.Black)
+                    Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, Modifier.size(17.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        when {
+                            busy -> "…"
+                            active -> sh("AKTİF", "EQUIPPED")
+                            owned -> sh("KULLAN", "EQUIP")
+                            else -> sh("SATIN AL", "BUY")
+                        },
+                        fontWeight = FontWeight.Black,
+                    )
                 }
             }
         }
@@ -178,28 +240,33 @@ internal fun MonsterStyleStoreScreen() {
 }
 
 @Composable
-private fun MonsterBlueThemePreview() {
+internal fun MonsterThemePreview(palette: SonHarfThemePalette, modifier: Modifier = Modifier) {
     Surface(
-        modifier = Modifier.fillMaxWidth().height(150.dp),
-        color = Color(0xFFF4F8FE),
+        modifier = modifier.fillMaxWidth().height(150.dp),
+        color = palette.background,
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, Color(0xFFD5E2F0)),
+        border = BorderStroke(1.dp, palette.border),
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Surface(Modifier.size(34.dp), shape = RoundedCornerShape(10.dp), color = Color(0xFF1677FF)) {}
+                Surface(Modifier.size(34.dp), shape = RoundedCornerShape(10.dp), color = palette.accent) {}
                 Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
-                    Box(Modifier.fillMaxWidth(.55f).height(8.dp).background(Color(0xFF10213A), RoundedCornerShape(99.dp)))
+                    Box(Modifier.fillMaxWidth(.55f).height(8.dp).background(palette.text, RoundedCornerShape(99.dp)))
                     Spacer(Modifier.height(5.dp))
-                    Box(Modifier.fillMaxWidth(.35f).height(6.dp).background(Color(0xFF9AAAC0), RoundedCornerShape(99.dp)))
+                    Box(Modifier.fillMaxWidth(.35f).height(6.dp).background(palette.muted, RoundedCornerShape(99.dp)))
+                }
+                Surface(shape = CircleShape, color = palette.surfaceRaised, border = BorderStroke(1.dp, palette.border)) {
+                    Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Palette, null, tint = palette.accent, modifier = Modifier.size(14.dp)) }
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Surface(Modifier.weight(1f).height(56.dp), color = Color.White, shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, Color(0xFFD5E2F0))) {}
-                Surface(Modifier.weight(1f).height(56.dp), color = Color(0xFFE8F1FF), shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, Color(0xFFB9D4FA))) {}
+                Surface(Modifier.weight(1f).height(56.dp), color = palette.surface, shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, palette.border)) {}
+                Surface(Modifier.weight(1f).height(56.dp), color = palette.surfaceRaised, shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, palette.border)) {}
             }
-            Box(Modifier.fillMaxWidth().height(24.dp).background(Color(0xFF1677FF), RoundedCornerShape(10.dp)))
+            Box(Modifier.fillMaxWidth().height(24.dp).background(palette.accent, RoundedCornerShape(10.dp)), contentAlignment = Alignment.Center) {
+                Box(Modifier.width(64.dp).height(5.dp).background(palette.accentText.copy(alpha = .88f), RoundedCornerShape(99.dp)))
+            }
         }
     }
 }
