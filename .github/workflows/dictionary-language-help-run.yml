@@ -1,0 +1,35 @@
+name: Dictionary Language Help Run
+on:
+  push:
+    branches:
+      - feat/dictionary-language-help-20260901
+    paths:
+      - .github/workflows/dictionary-language-help-run.yml
+permissions:
+  contents: write
+jobs:
+  patch-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/dictionary-language-help-20260901
+          fetch-depth: 0
+      - name: Apply scoped app patch
+        run: python scripts/apply_dictionary_language_help_patch.py
+      - name: Unit tests and debug APK
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+      - name: Commit scoped app changes
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/src/main/java/com/sonharf/game/MainExperienceApp.kt
+          git add app/src/main/java/com/sonharf/game/StableV1App.kt
+          git add app/src/main/java/com/sonharf/game/WordSiegeExperience.kt
+          git add app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt
+          git add app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt
+          git add app/src/main/java/com/sonharf/game/WordSiegeBotPlanner.kt
+          git add app/src/test/java/com/sonharf/game/DictionaryLanguageHelpContractTest.kt
+          git diff --cached --quiet && exit 0
+          git commit -m "Add Word Siege language selection and game-only help"
+          git push origin HEAD:feat/dictionary-language-help-20260901
