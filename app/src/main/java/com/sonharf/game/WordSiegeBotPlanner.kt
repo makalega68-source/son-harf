@@ -162,7 +162,7 @@ internal object WordSiegeBotPlanner {
     }
 
     private fun placementsForWord(
-        state: WordSiePracticeState,
+        state: WordSiegePracticeState,
         rack: String,
         word: String,
         start: Int,
