@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -14,6 +15,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -266,6 +269,18 @@ private fun StyleItemVisual(item: ShopItemDto) {
     }
 }
 
+internal fun premiumStyleAsset(id: String): Int? = when {
+    "frame_black_gold" in id -> R.drawable.premium_frame_black_gold_higgsfield_v2
+    "frame_royal_gold" in id -> R.drawable.premium_frame_royal_gold_higgsfield
+    "frame_crystal" in id -> R.drawable.premium_frame_crystal_higgsfield
+    "frame_purple_prestige" in id -> R.drawable.premium_frame_purple_prestige_higgsfield
+    "keyboard_midnight" in id -> R.drawable.premium_keyboard_midnight_higgsfield
+    "keyboard_black_gold" in id -> R.drawable.premium_keyboard_black_gold_higgsfield
+    "keyboard_crystal" in id -> R.drawable.premium_keyboard_crystal_higgsfield
+    "theme_midnight" in id -> R.drawable.premium_theme_midnight_preview_higgsfield
+    else -> null
+}
+
 @Composable
 private fun FrameItemPreview(id: String, vipOnly: Boolean) {
     val accent = SonHarfCosmetics.frameAccent(id)
@@ -275,10 +290,15 @@ private fun FrameItemPreview(id: String, vipOnly: Boolean) {
         "starter" in id || "founder" in id || "light" in id -> MainUi.Blue
         else -> accent.copy(alpha = .55f)
     }
+    val asset = premiumStyleAsset(id)
     Box(Modifier.size(62.dp, 68.dp), contentAlignment = Alignment.Center) {
-        Surface(Modifier.fillMaxSize(), shape = RoundedCornerShape(19.dp), color = Color.White, border = BorderStroke(4.dp, accent)) {}
-        Surface(Modifier.size(52.dp, 58.dp), shape = RoundedCornerShape(15.dp), color = MainUi.SurfaceSoft, border = BorderStroke(2.dp, secondary)) {
+        Surface(Modifier.size(52.dp, 58.dp), shape = RoundedCornerShape(15.dp), color = MainUi.SurfaceSoft, border = BorderStroke(1.dp, secondary.copy(alpha = .55f))) {
             Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Person, null, tint = MainUi.Text.copy(alpha = .72f), modifier = Modifier.size(29.dp)) }
+        }
+        if (asset != null) {
+            Image(painterResource(asset), null, Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
+        } else {
+            Surface(Modifier.fillMaxSize(), shape = RoundedCornerShape(19.dp), color = Color.Transparent, border = BorderStroke(4.dp, accent)) {}
         }
         when {
             vipOnly || "vip" in id -> Text("VIP", Modifier.align(Alignment.BottomCenter).padding(bottom = 1.dp), color = MainUi.Gold, fontSize = 7.sp, fontWeight = FontWeight.Black)
@@ -291,6 +311,11 @@ private fun FrameItemPreview(id: String, vipOnly: Boolean) {
 
 @Composable
 private fun KeyboardItemPreview(id: String) {
+    val asset = premiumStyleAsset(id)
+    if (asset != null) {
+        Image(painterResource(asset), null, Modifier.size(68.dp, 54.dp), contentScale = ContentScale.Crop)
+        return
+    }
     val palette = SonHarfCosmetics.keyboardPaletteFor(id)
     Surface(Modifier.size(64.dp, 52.dp), shape = RoundedCornerShape(10.dp), color = palette.background, border = BorderStroke(1.dp, palette.accent.copy(alpha = .65f))) {
         Column(Modifier.padding(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -307,6 +332,11 @@ private fun KeyboardItemPreview(id: String) {
 
 @Composable
 private fun GameThemeItemPreview(id: String) {
+    val asset = premiumStyleAsset(id)
+    if (asset != null) {
+        Image(painterResource(asset), null, Modifier.size(64.dp, 56.dp), contentScale = ContentScale.Crop)
+        return
+    }
     val palette = SonHarfCosmetics.gamePaletteFor(id)
     Surface(Modifier.size(64.dp, 52.dp), shape = RoundedCornerShape(10.dp), color = palette.background, border = BorderStroke(1.dp, palette.accent.copy(alpha = .62f))) {
         Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
