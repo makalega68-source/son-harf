@@ -26,7 +26,15 @@ jobs:
         with:
           gradle-version: '8.14.4'
       - name: Apply scoped app patch
-        run: python scripts/apply_dictionary_language_help_patch.py
+        run: |
+          python scripts/apply_dictionary_language_help_patch.py
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/sonharf/game/MainExperienceApp.kt')
+          s = p.read_text()
+          s = s.replace('fun SonHarfMainApp(\n', 'internal fun SonHarfMainApp(\n', 1)
+          p.write_text(s)
+          PY
       - name: Unit tests and debug APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
       - name: Commit scoped app changes
