@@ -19,21 +19,19 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
 import kotlinx.coroutines.runBlocking
 
-// Premium dark palette adapted from the purchased Monster Livescore UI kit.
-// We keep Son Harf's own brand identity and game semantics while borrowing the
-// kit's high-contrast dark surfaces, restrained neon accent and sports-style
-// information hierarchy.
-internal val SonHarfBg: Color get() = Color(0xFF0B0D12)
-internal val SonHarfSurface: Color get() = Color(0xFF141821)
-internal val SonHarfSurface2: Color get() = Color(0xFF1B202B)
-internal val SonHarfPurple = Color(0xFF8B7CFF)
-internal val SonHarfCyan = Color(0xFFB9F227)
-internal val SonHarfBlue = Color(0xFFB9F227)
+// Global Monster-derived palette. Product mechanics and Son Harf identity stay
+// intact; the application chrome now uses one consistent purchased-kit system.
+internal val SonHarfBg: Color get() = Color(0xFF101114)
+internal val SonHarfSurface: Color get() = Color(0xFF181A1F)
+internal val SonHarfSurface2: Color get() = Color(0xFF25272E)
+internal val SonHarfPurple = Color(0xFF9A86FF)
+internal val SonHarfCyan = Color(0xFFEAFB17)
+internal val SonHarfBlue = Color(0xFFEAFB17)
 internal val SonHarfGold = Color(0xFFFFC857)
-internal val SonHarfGreen = Color(0xFF61D68A)
-internal val SonHarfText: Color get() = Color(0xFFF4F6FA)
-internal val SonHarfMuted: Color get() = Color(0xFF9299A8)
-internal val SonHarfPink = Color(0xFFFF6B81)
+internal val SonHarfGreen = Color(0xFF47C77A)
+internal val SonHarfText: Color get() = Color(0xFFF7F7F8)
+internal val SonHarfMuted: Color get() = Color(0xFF8E929D)
+internal val SonHarfPink = Color(0xFFFF5B4D)
 
 private val SonHarfTypography = Typography(
     bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 25.sp),
@@ -107,13 +105,13 @@ class MainActivity : ComponentActivity() {
                     background = SonHarfBg,
                     surface = SonHarfSurface,
                     surfaceVariant = SonHarfSurface2,
-                    onPrimary = Color(0xFF11140A),
+                    onPrimary = Color(0xFF101114),
                     onSecondary = Color.White,
                     onTertiary = Color(0xFF07120B),
                     onBackground = SonHarfText,
                     onSurface = SonHarfText,
                     onSurfaceVariant = SonHarfText,
-                    error = Color(0xFFFF6B72),
+                    error = Color(0xFFFF5B4D),
                 ),
                 typography = SonHarfTypography,
             ) {
