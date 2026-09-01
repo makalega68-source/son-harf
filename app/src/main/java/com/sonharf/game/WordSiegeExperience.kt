@@ -203,7 +203,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     CircularProgressIndicator(color = MainUi.Blue)
                 }
             } else {
-                WordSiegeMatch(
+                WordSiegePanMatch(
                     game = game,
                     me = me,
                     profiles = profiles,
@@ -218,13 +218,13 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                         currentGame = null
                     },
                     onBoardCell = { boardIndex ->
-                        if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegeMatch
+                        if (game.status != "playing" || game.currentPlayerId != me || busy) return@WordSiegePanMatch
                         if (placements.containsKey(boardIndex)) {
                             val rackIndex = placements.getValue(boardIndex)
                             placements = placements - boardIndex
                             selectedRackIndex = rackIndex
                         } else if (game.board.getOrNull(boardIndex)?.letter == null) {
-                            val rackIndex = selectedRackIndex ?: return@WordSiegeMatch
+                            val rackIndex = selectedRackIndex ?: return@WordSiegePanMatch
                             if (rackIndex !in placements.values) {
                                 placements = placements + (boardIndex to rackIndex)
                                 selectedRackIndex = null
@@ -545,8 +545,8 @@ private fun WordSiegeGameCard(
     val opponentId = game.opponentId(me)
     val opponent = opponentId?.let(profiles::get)
     val myOwner = game.ownerFor(me)
-    val myTotal = if (myOwner == 1) game.playerOneWordScore + game.playerOneArea else game.playerTwoWordScore + game.playerTwoArea
-    val rivalTotal = if (myOwner == 1) game.playerTwoWordScore + game.playerTwoArea else game.playerOneWordScore + game.playerOneArea
+    val myTotal = if (myOwner == 1) game.playerOneWordScore + game.playerOneAreaScore else game.playerTwoWordScore + game.playerTwoAreaScore
+    val rivalTotal = if (myOwner == 1) game.playerTwoWordScore + game.playerTwoAreaScore else game.playerOneWordScore + game.playerOneAreaScore
     Surface(
         modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),

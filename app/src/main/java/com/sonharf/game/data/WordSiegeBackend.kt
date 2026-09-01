@@ -32,6 +32,8 @@ data class WordSiegeGameDto(
     @SerialName("player_two_rack") val playerTwoRack: String? = null,
     @SerialName("player_one_word_score") val playerOneWordScore: Int = 0,
     @SerialName("player_two_word_score") val playerTwoWordScore: Int = 0,
+    @SerialName("player_one_area_score") val playerOneAreaScore: Int = 0,
+    @SerialName("player_two_area_score") val playerTwoAreaScore: Int = 0,
     @SerialName("player_one_area") val playerOneArea: Int = 0,
     @SerialName("player_two_area") val playerTwoArea: Int = 0,
     @SerialName("consecutive_passes") val consecutivePasses: Int = 0,
@@ -54,6 +56,10 @@ data class WordSiegeMoveDto(
     @SerialName("formed_words") val formedWords: List<String> = emptyList(),
     @SerialName("placed_tiles") val placedTiles: List<WordSiegePlacedTileDto> = emptyList(),
     @SerialName("word_score") val wordScore: Int = 0,
+    @SerialName("neutral_captured") val neutralCaptured: Int = 0,
+    @SerialName("opponent_captured") val opponentCaptured: Int = 0,
+    @SerialName("area_score") val areaScore: Int = 0,
+    @SerialName("total_score") val totalScore: Int = wordScore + areaScore,
     @SerialName("captured_cells") val capturedCells: Int = 0,
     @SerialName("created_at") val createdAt: String = "",
 )
@@ -144,13 +150,14 @@ suspend fun OnlineGameBackend.passWordSiegeTurn(gameId: String): WordSiegeGameDt
 suspend fun OnlineGameBackend.exchangeWordSiegeTiles(
     gameId: String,
     rackIndices: Set<Int>,
-): WordSiegeGameDto = SupabaseProvider.client.postgrest.rpc(
-    "exchange_word_siege_tiles_v1",
-    buildJsonObject {
-        put("p_game_id", gameId)
-        put("p_rack_indices", buildJsonArray { rackIndices.sorted().forEach { add(JsonPrimitive(it)) } })
-    },
-).decodeSingle()
+): WordSiegeGameDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "exchange_word_siege_tiles_v1",
+        buildJsonObject {
+            put("p_game_id", gameId)
+            put("p_rack_indices", buildJsonArray { rackIndices.sorted().forEach { add(JsonPrimitive(it)) } })
+        },
+    ).decodeSingle()
 
 suspend fun OnlineGameBackend.forfeitWordSiegeGame(gameId: String): WordSiegeGameDto =
     SupabaseProvider.client.postgrest.rpc(
