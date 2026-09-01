@@ -32,7 +32,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
-            set -euo pipefail
+            set -eu
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             mkdir -p runtime-shots
 
@@ -41,7 +41,6 @@ jobs:
             sleep 2
             adb exec-out screencap -p > runtime-shots/siege-center.png
 
-            # Pan left/right/up/down/diagonal on the board viewport, capturing real runtime frames.
             adb shell input swipe 540 720 300 720 350
             adb exec-out screencap -p > runtime-shots/siege-pan-left.png
             adb shell input swipe 300 720 760 720 350
@@ -58,7 +57,6 @@ jobs:
             sleep 2
             adb exec-out screencap -p > runtime-shots/sonharf-duel.png
 
-            # Basic process/runtime guard: activity must still be alive after rendering and gestures.
             adb shell dumpsys activity activities | grep -q 'com.sonharf.game/.VisualQaActivity'
       - uses: actions/upload-artifact@v4
         with:
