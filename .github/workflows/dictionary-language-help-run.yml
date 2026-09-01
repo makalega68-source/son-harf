@@ -18,8 +18,7 @@ jobs:
       - name: Apply scoped app patch
         run: python scripts/apply_dictionary_language_help_patch.py
       - name: Unit tests and debug APK
-        working-directory: app
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+        run: cd app && ./gradlew --no-daemon testDebugUnitTest assembleDebug
       - name: Commit scoped app changes
         run: |
           git config user.name github-actions[bot]
