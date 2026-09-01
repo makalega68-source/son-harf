@@ -45,13 +45,22 @@ jobs:
           from pathlib import Path
           p = Path('app/src/test/java/com/sonharf/game/SonHarfTurnResolutionContractTest.kt')
           s = p.read_text()
+          s = s.replace('import java.nio.file.Files\nimport java.nio.file.Path\n', '')
           s = s.replace('import kotlin.test.Test', 'import org.junit.Test')
           s = s.replace('import kotlin.test.assertFalse', 'import org.junit.Assert.assertFalse')
           s = s.replace('import kotlin.test.assertTrue', 'import org.junit.Assert.assertTrue')
+          s = s.replace(
+              '    private fun source(path: String): String = Files.readString(Path.of(path))',
+              '    private fun source(path: String): String = java.io.File(path).readText()',
+          )
           s = s.replace('source("src/main/java/', 'source("app/src/main/java/')
           s = s.replace(
               '        assertTrue(online.contains("validation_result=${if (rejected) \\"REJECTED\\" else \\"ACCEPTED\\"}"))\n',
               '        assertTrue(online.contains("validation_result="))\n        assertTrue(online.contains("ACCEPTED"))\n        assertTrue(online.contains("REJECTED"))\n',
+          )
+          s = s.replace(
+              '            assertTrue(online.contains(it), "missing log field $it")',
+              '            assertTrue("missing log field $it", online.contains(it))',
           )
           s = s.replace(
               '        assertTrue(ui.contains("${league.leagueName} • $rating"))\n',
