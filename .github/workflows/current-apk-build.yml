@@ -89,7 +89,7 @@ jobs:
               rm -f dist/CURRENT_BUILD_OK.txt
             fi
 
-            git add dist/CURRENT_BUILD_LOG.txt dist/CURRENT_BUILD_OK.txt dist/CURRENT_BUILD_FAIL.txt dist/SonHarf-Current.apk 2>/dev/null || true
+            git add -f dist/CURRENT_BUILD_LOG.txt dist/CURRENT_BUILD_OK.txt dist/CURRENT_BUILD_FAIL.txt dist/SonHarf-Current.apk 2>/dev/null || true
             if git diff --cached --quiet; then
               echo "Current APK result already published."
               exit 0
