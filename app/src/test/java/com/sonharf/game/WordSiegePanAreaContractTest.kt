@@ -25,6 +25,26 @@ class WordSiegePanAreaContractTest {
         assertFalse(pan.contains("verticalScroll("))
     }
 
+    @Test fun dragDoesNotTriggerCellAndDoesNotRecenterAfterEveryMove() {
+        val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
+
+        assertTrue(pan.contains("blockCellTap"))
+        assertTrue(pan.contains("dragReleaseToken"))
+        assertTrue(pan.contains("delay(140)"))
+        assertTrue(pan.contains("if (!tapBlocked) onClick()"))
+        assertFalse(pan.contains("observedMoveId"))
+        assertFalse(pan.contains("LaunchedEffect(lastMove?.id)"))
+    }
+
+    @Test fun gameHelpIsReservedInTheWordSiegeHeader() {
+        val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
+
+        assertTrue(pan.contains("var showHelp"))
+        assertTrue(pan.contains("FilledTonalIconButton"))
+        assertTrue(pan.contains("How to Play Word Siege"))
+        assertTrue(pan.contains("AlertDialog("))
+    }
+
     @Test fun boardKeepsReadableOwnershipAndTapPlacementContract() {
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
@@ -34,7 +54,7 @@ class WordSiegePanAreaContractTest {
         assertTrue(pan.contains("fontSize = 21.sp"))
         assertTrue(pan.contains("fontSize = 10.sp"))
         assertTrue(pan.contains("color = Color.Black"))
-        assertTrue(pan.contains(".clickable(enabled = enabled && (cell.letter == null || pending), onClick = onClick)"))
+        assertTrue(pan.contains("enabled = enabled && (cell.letter == null || pending)"))
         assertTrue(experience.contains("if (placements.containsKey(boardIndex))"))
         assertTrue(experience.contains("game.board.getOrNull(boardIndex)?.letter == null"))
     }
