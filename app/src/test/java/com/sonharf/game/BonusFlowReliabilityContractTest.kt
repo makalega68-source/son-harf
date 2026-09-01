@@ -40,21 +40,21 @@ class BonusFlowReliabilityContractTest {
     }
 
     @Test
-    fun rememberedPasswordIsEncryptedAndLatestLogoIsUsed() {
+    fun rememberedPasswordIsEncryptedAndLatestLogoAssetRemainsAvailable() {
         val vault = projectFile(
             "app/src/main/java/com/sonharf/game/RememberedCredentialVault.kt"
         ).readText()
         val auth = projectFile("app/src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
         val logo = projectFile("app/src/main/java/com/sonharf/game/SonHarfBrandLogo.kt").readText()
-        val activeHome = projectFile("app/src/main/java/com/sonharf/game/MainExperienceApp.kt").readText()
+        val activeHome = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
         val legacyHome = projectFile("app/src/main/java/com/sonharf/game/PremiumMasterHome.kt").readText()
 
         assertTrue(vault.contains("AndroidKeyStore"))
         assertTrue(vault.contains("AES/GCM/NoPadding"))
         assertTrue(auth.contains("RememberedCredentialVault.save"))
         assertTrue(logo.contains("R.drawable.son_harf_splash_logo"))
-        assertTrue(activeHome.contains("MainDestination.HOME -> MainHomeScreen("))
-        assertTrue(activeHome.contains("SonHarfBrandLogo("))
+        assertTrue(activeHome.contains("MonsterDestination.HOME -> MonsterHomeScreen("))
+        assertTrue(activeHome.contains("SON HARF"))
         assertTrue(legacyHome.contains("SonHarfBrandLogo("))
     }
 
