@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+// Acceptance contract for the isolated Style + Word Siege pan correction package.
 class StylePanFrameContractTest {
     @Test
     fun boardUsesBoundedTwoAxisPan() {
