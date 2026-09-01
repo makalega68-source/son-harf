@@ -36,5 +36,7 @@ object SonHarfCosmetics {
 
     val keyboardIsNeon: Boolean get() = keyboardThemeId == "keyboard_neon"
     val monsterBlueTheme: Boolean get() = gameThemeId == "theme_monster_blue"
+    // Retained only so older arena code compiles; Aurora is retired from sale.
+    val auroraTheme: Boolean get() = gameThemeId == "theme_aurora"
     val crownVictory: Boolean get() = victoryEffectId == "victory_crown"
 }
