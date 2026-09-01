@@ -350,6 +350,7 @@ internal fun LightDuelArena(
     isVip: Boolean,
     feedbackWord: String?,
     feedbackCorrect: Boolean?,
+    feedbackScoreDelta: Int?,
     wordInput: String,
     onWordInput: (String) -> Unit,
     notice: String,
@@ -382,6 +383,7 @@ internal fun LightDuelArena(
     val shownLastWord = feedbackWord ?: gameUppercase(last, room.language)
     val shownLastWordColor = when {
         feedbackWord != null && feedbackCorrect == false -> LRed
+        feedbackWord != null && feedbackCorrect == null -> LBlue
         shownLastWord.isNotBlank() -> LGreen
         else -> LBlue
     }
@@ -471,11 +473,13 @@ internal fun LightDuelArena(
                 modifier = Modifier.weight(1f),
             )
 
+            val timerWarning = !quizActive && seconds in 1..10
+            val timerCritical = !quizActive && seconds in 1..3
             Surface(
-                modifier = Modifier.size(78.dp),
+                modifier = Modifier.size(if (timerWarning) 82.dp else 78.dp),
                 shape = CircleShape,
                 color = Color.White,
-                border = BorderStroke(3.dp, if (seconds <= 3 && !quizActive) LRed else LBlue),
+                border = BorderStroke(3.dp, when { timerCritical -> LRed; timerWarning -> LGold; else -> LBlue }),
                 shadowElevation = 2.dp,
             ) {
                 Column(
@@ -483,7 +487,7 @@ internal fun LightDuelArena(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    Text(seconds.toString(), color = LText, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                    Text(seconds.toString(), color = if (timerCritical) LRed else LText, fontSize = if (timerWarning) 34.sp else 30.sp, fontWeight = FontWeight.Black)
                     Text(if (quizActive) "BONUS" else sh("sn", "sec"), color = if (quizActive) LGold else LBlue, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -577,13 +581,37 @@ internal fun LightDuelArena(
                         fontWeight = FontWeight.Black,
                     )
                     Spacer(Modifier.height(3.dp))
-                    Text(
-                        shownLastWord.ifBlank { sh("İLK KELİMEYİ YAZ", "ENTER FIRST WORD") },
-                        color = shownLastWordColor,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Black,
-                        maxLines = 1,
-                    )
+                    BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        val visibleWord = shownLastWord.ifBlank { sh("İLK KELİMEYİ YAZ", "ENTER FIRST WORD") }
+                        val wordSize = when {
+                            maxWidth < 330.dp && visibleWord.length >= 14 -> 20.sp
+                            visibleWord.length >= 20 -> 20.sp
+                            visibleWord.length >= 16 -> 23.sp
+                            visibleWord.length >= 12 -> 27.sp
+                            maxWidth < 330.dp -> 30.sp
+                            else -> 34.sp
+                        }
+                        Text(
+                            visibleWord,
+                            color = shownLastWordColor,
+                            fontSize = wordSize,
+                            lineHeight = (wordSize.value + 3).sp,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                    if (feedbackScoreDelta != null && feedbackScoreDelta != 0) {
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            "${if (feedbackScoreDelta > 0) "+" else ""}$feedbackScoreDelta ${if (room.language == "en") "PTS" else "PUAN"}",
+                            color = if (feedbackScoreDelta > 0) LGreen else LRed,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
                     Spacer(Modifier.height(3.dp))
                     Text(
                         if (last.isBlank()) sh("İlk kelimeyi sen başlat.", "Start with the first word.")
@@ -591,6 +619,15 @@ internal fun LightDuelArena(
                         color = LMuted,
                         fontSize = 10.sp,
                     )
+                }
+
+                if (room.isBot) {
+                    Text(sh("ANTRENMAN • RATING ETKİLENMEZ", "PRACTICE • RATING UNAFFECTED"), color = LMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                } else {
+                    val goal = ratingLeagueProgress(playerRating)
+                    if (goal.nextAt != null && goal.pointsToNext > 0) {
+                        Text(sh("${goal.nextLeagueName} ligine ${goal.pointsToNext} rating kaldı", "${goal.pointsToNext} rating to ${goal.nextLeagueName}"), color = LGold, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
 
                 Spacer(Modifier.weight(.20f))
@@ -710,8 +747,9 @@ private fun LightPlayerCard(
                     softWrap = false,
                     overflow = TextOverflow.Clip,
                 )
+                val league = ratingLeagueProgress(rating)
                 Text(
-                    "🏆 $rating",
+                    "${league.leagueName} • $rating",
                     color = LGold,
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Bold,
@@ -922,7 +960,7 @@ private fun LightInputBar(
                     else -> sh("Kelimeyi hazırlayabilirsin…", "Prepare your word…")
                 },
                 color = if (value.isBlank()) LMuted else LText,
-                fontSize = if (value.isBlank()) 14.sp else 18.sp,
+                fontSize = if (value.isBlank()) 14.sp else if (value.length >= 18) 18.sp else if (value.length >= 12) 20.sp else 22.sp,
                 fontWeight = if (value.isBlank()) FontWeight.Medium else FontWeight.Black,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,

@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.*
@@ -61,6 +62,9 @@ fun OnlineGameScreenV6() {
     var notice by remember { mutableStateOf(sh("Hazır", "Ready")) }
     var feedbackWord by remember { mutableStateOf<String?>(null) }
     var feedbackCorrect by remember { mutableStateOf<Boolean?>(null) }
+    var feedbackScoreDelta by remember { mutableStateOf<Int?>(null) }
+    var isResolvingTurn by remember { mutableStateOf(false) }
+    var pendingRoomAfterResolution by remember { mutableStateOf<GameRoomDto?>(null) }
     var busy by remember { mutableStateOf(false) }
     var matching by remember { mutableStateOf(false) }
     var showPrivate by remember { mutableStateOf(false) }
@@ -89,6 +93,11 @@ fun OnlineGameScreenV6() {
         else -> sh("İşlem tekrar deneniyor.", "Retrying the action.")
     }
     fun failedEvent(e: String?) = e in setOf("word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "ends_with_soft_g", "turn_expired")
+    fun playerScore(r: GameRoomDto, playerId: String?): Int = when (playerId) {
+        r.hostId -> r.hostScore
+        r.guestId -> r.guestScore
+        else -> 0
+    }
     fun eventMessage(e: String?) = when (e) {
         "word_already_used" -> sh("Bu kelime daha önce kullanıldı.", "This word has already been used.")
         "wrong_start_letter" -> sh("Kelime son harfle başlamalı.", "The word must start with the last letter.")
@@ -142,7 +151,7 @@ fun OnlineGameScreenV6() {
             backend.observeRoom(r.id)
                 .catch { notice = friendly(it.message.orEmpty()) }
                 .collect {
-                    room = it
+                    if (isResolvingTurn) pendingRoomAfterResolution = it else room = it
                     refreshQuiz(it)
                     refreshOpponent(it)
                     if (
@@ -162,12 +171,13 @@ fun OnlineGameScreenV6() {
                     val previousLastId = words.lastOrNull()?.id
                     words = it
                     val latest = it.lastOrNull()
-                    if (latest != null && latest.id != previousLastId) {
+                    if (latest != null && latest.id != previousLastId && !isResolvingTurn && feedbackWord == null) {
                         feedbackWord = gameUppercase(
                             latest.word.trim().ifBlank { latest.normalizedWord.trim() },
                             room?.language ?: language,
                         )
                         feedbackCorrect = true
+                        feedbackScoreDelta = null
                     }
                     if (
                         notice.contains("İşlem tekrar deneniyor", true) ||
@@ -188,6 +198,17 @@ fun OnlineGameScreenV6() {
             else notice = sh("${p.displayName}, düelloya hazırsın.", "${p.displayName}, you are ready to duel.")
         }.onFailure { notice = friendly(it.message.orEmpty()) }
         busy = false
+    }
+
+    LaunchedEffect(feedbackWord, feedbackCorrect, feedbackScoreDelta) {
+        if (feedbackWord != null && feedbackCorrect != null) {
+            delay(950L)
+            if (!isResolvingTurn) {
+                feedbackWord = null
+                feedbackCorrect = null
+                feedbackScoreDelta = null
+            }
+        }
     }
 
     val active = room
@@ -239,12 +260,13 @@ fun OnlineGameScreenV6() {
         }
         LaunchedEffect(active.currentPlayerId, active.validWordCount, active.roundNo) { wordInput = "" }
         LaunchedEffect(active.id) { while (true) { if (!active.isBot && active.status != "waiting") runCatching { backend.heartbeatRoom(active.id) }.onSuccess { room = it }; delay(5000) } }
-        LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount, active.roundNo) {
-            if (active.isBot && active.botTurn && active.status in listOf("playing", "final", "sudden_death")) {
+        LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount, active.roundNo, isResolvingTurn) {
+            if (!isResolvingTurn && active.isBot && active.botTurn && active.status in listOf("playing", "final", "sudden_death")) {
                 var attempt = 0
                 while (true) {
                     val latest = room ?: return@LaunchedEffect
                     if (
+                        isResolvingTurn ||
                         latest.id != active.id ||
                         !latest.isBot ||
                         !latest.botTurn ||
@@ -311,6 +333,7 @@ fun OnlineGameScreenV6() {
             isVip = profile?.isVip == true,
             feedbackWord = feedbackWord,
             feedbackCorrect = feedbackCorrect,
+            feedbackScoreDelta = feedbackScoreDelta,
             wordInput = wordInput,
             onWordInput = { wordInput = it.take(40) },
             notice = notice,
@@ -319,35 +342,88 @@ fun OnlineGameScreenV6() {
             triviaQuestion = triviaQuestion,
             triviaSelection = triviaSelection?.takeIf { it.first == triviaRound?.id }?.second,
             onSubmit = {
-                scope.launch {
-                    val submitted = wordInput.trim()
-                    if (submitted.isBlank()) return@launch
+                val submitted = wordInput.trim()
+                if (submitted.isNotBlank() && !isResolvingTurn && !busy) {
+                    val turnBefore = active.currentPlayerId
+                    val botTurnBefore = active.botTurn
+                    val scoreBefore = playerScore(active, me)
                     val shownWord = gameUppercase(submitted, active.language)
-                    wordInput = ""
+                    isResolvingTurn = true
+                    pendingRoomAfterResolution = null
                     busy = true
+                    wordInput = ""
+                    feedbackWord = shownWord
+                    feedbackCorrect = null
+                    feedbackScoreDelta = null
                     SonHarfSoundFx.tap()
-                    runCatching { backend.submitWord(active.id, submitted) }
-                        .onSuccess { result ->
-                            room = result
-                            if (failedEvent(result.lastEvent) && result.lastEventPlayerId == me) {
-                                feedbackWord = shownWord
-                                feedbackCorrect = false
+                    Log.d(
+                        "SonHarfMove",
+                        "submitted_word=$submitted normalized_word=$shownWord validation_started=true " +
+                            "turn_before=$turnBefore bot_turn_before=$botTurnBefore",
+                    )
+                    scope.launch {
+                        try {
+                            val result = backend.submitWord(active.id, submitted)
+                            val rejected = failedEvent(result.lastEvent) && result.lastEventPlayerId == me
+                            val scoreDelta = playerScore(result, me) - scoreBefore
+                            feedbackWord = shownWord
+                            feedbackCorrect = !rejected
+                            feedbackScoreDelta = scoreDelta.takeIf { it != 0 }
+                            if (rejected) {
                                 notice = eventMessage(result.lastEvent)
                                 SonHarfSoundFx.warning()
                             } else {
-                                feedbackWord = shownWord
-                                feedbackCorrect = true
                                 notice = sh("Kelime kabul edildi: $shownWord", "Word accepted: $shownWord")
                                 SonHarfSoundFx.wordAccepted()
                             }
+                            val finalizedRoom = pendingRoomAfterResolution ?: result
+                            pendingRoomAfterResolution = null
+                            room = finalizedRoom
+                            Log.d(
+                                "SonHarfMove",
+                                "submitted_word=$submitted normalized_word=$shownWord validation_result=${if (rejected) "REJECTED" else "ACCEPTED"} " +
+                                    "score_delta=$scoreDelta turn_before=$turnBefore turn_after=${finalizedRoom.currentPlayerId} " +
+                                    "bot_triggered=false error_code=${result.lastEvent ?: "none"}",
+                            )
+                        } catch (t: Throwable) {
+                            val realtimeResult = pendingRoomAfterResolution
+                            pendingRoomAfterResolution = null
+                            if (realtimeResult != null &&
+                                (realtimeResult.validWordCount != active.validWordCount || realtimeResult.lastEventPlayerId == me)
+                            ) {
+                                val rejected = failedEvent(realtimeResult.lastEvent) && realtimeResult.lastEventPlayerId == me
+                                val scoreDelta = playerScore(realtimeResult, me) - scoreBefore
+                                feedbackCorrect = !rejected
+                                feedbackScoreDelta = scoreDelta.takeIf { it != 0 }
+                                notice = if (rejected) eventMessage(realtimeResult.lastEvent)
+                                else sh("Kelime kabul edildi: $shownWord", "Word accepted: $shownWord")
+                                room = realtimeResult
+                                if (rejected) SonHarfSoundFx.warning() else SonHarfSoundFx.wordAccepted()
+                                Log.w(
+                                    "SonHarfMove",
+                                    "submitted_word=$submitted normalized_word=$shownWord validation_result=${if (rejected) "REJECTED" else "ACCEPTED"} " +
+                                        "score_delta=$scoreDelta turn_before=$turnBefore turn_after=${realtimeResult.currentPlayerId} " +
+                                        "bot_triggered=false error_code=rpc_response_failed_realtime_recovered",
+                                    t,
+                                )
+                            } else {
+                                feedbackCorrect = false
+                                feedbackScoreDelta = null
+                                notice = friendly(t.message.orEmpty())
+                                SonHarfSoundFx.warning()
+                                Log.e(
+                                    "SonHarfMove",
+                                    "submitted_word=$submitted normalized_word=$shownWord validation_result=REJECTED " +
+                                        "score_delta=0 turn_before=$turnBefore turn_after=$turnBefore bot_triggered=false " +
+                                        "error_code=${t::class.simpleName ?: "unknown"}",
+                                    t,
+                                )
+                            }
+                        } finally {
+                            busy = false
+                            isResolvingTurn = false
                         }
-                        .onFailure {
-                            feedbackWord = shownWord
-                            feedbackCorrect = false
-                            notice = friendly(it.message.orEmpty())
-                            SonHarfSoundFx.warning()
-                        }
-                    busy = false
+                    }
                 }
             },
             onTimeout = {
