@@ -13,20 +13,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import com.sonharf.game.data.SupabaseProvider
 
 /**
  * V1 stabilization shell.
  *
  * Product scope is intentionally narrow:
- * verified auth -> core duel lobby -> live match -> result/rematch.
- * Experimental game modes and legacy visual shells remain in the repository
- * but are not part of the active V1 navigation path.
+ * app UI language -> verified auth -> core duel lobby -> live match -> result/rematch.
+ * UI language is a local presentation preference and is deliberately independent
+ * from Son Harf / Kelime Kuşatması match and dictionary language state.
  */
 @Composable
 fun StableV1App() {
+    val context = LocalContext.current
+    var languageSelected by remember { mutableStateOf(SonHarfPreferences.hasSelectedLanguage(context)) }
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
+
+    if (!languageSelected) {
+        AppLanguageSelectionScreen { language ->
+            SonHarfPreferences.setLanguage(context, language)
+            languageSelected = true
+        }
+        return
+    }
 
     LaunchedEffect(Unit) {
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
