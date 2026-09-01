@@ -18,6 +18,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -123,7 +124,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
         botThinking = true
         runCatching { WordSiegeBotPlanner.plan(state, botDifficulty) }
             .onSuccess { plan ->
-                Log.d("WordSiegeBot", "lexicon=${plan.lexiconCount} structural=${plan.structuralCandidateCount} valid=${plan.validCandidateCount}")
+                Log.d("WordSiegeBot", "turn_number=${state.moveCount + 1} rack=${state.botRack} bag_remaining=${state.bag.length} anchor_count=${plan.anchorCount} candidate_count_before_validation=${plan.structuralCandidateCount} candidate_count_after_validation=${plan.validCandidateCount} selected_move=${plan.move?.primaryWord ?: "none"} pass_reason=${plan.passReason ?: "none"}")
                 delay(TrainingBotSupport.reactionDelayMs(botDifficulty, plan.move?.placements?.size ?: 1))
                 val planned = plan.move
                 if (planned == null) {
@@ -147,20 +148,20 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
         BoxWithConstraints(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 5.dp),
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 4.dp, vertical = 3.dp),
         ) {
             val compact = maxHeight < 720.dp || maxWidth < 380.dp
-            val gap = if (compact) 3.dp else 6.dp
+            val gap = if (compact) 2.dp else 4.dp
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(gap)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onExit, modifier = Modifier.size(if (compact) 38.dp else 42.dp)) {
+                    IconButton(onClick = onExit, modifier = Modifier.size(if (compact) 36.dp else 40.dp)) {
                         Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                     }
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = if (compact) 16.sp else 18.sp, fontWeight = FontWeight.Black)
+                        Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = if (compact) 15.sp else 17.sp, fontWeight = FontWeight.Black)
                         Text(sh("ANTRENMAN MAÇI • RATING/LİG ETKİSİ YOK", "TRAINING MATCH • NO RATING/LEAGUE EFFECT"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black)
                     }
-                    IconButton(onClick = ::startAgain, modifier = Modifier.size(if (compact) 38.dp else 42.dp)) {
+                    IconButton(onClick = ::startAgain, modifier = Modifier.size(if (compact) 36.dp else 40.dp)) {
                         Icon(Icons.Rounded.Refresh, sh("Yeni oyun", "New game"), tint = MainUi.Blue)
                     }
                 }
@@ -182,7 +183,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     shape = RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, (if (state.currentOwner == 1) MainUi.Blue else SiegePurple).copy(alpha = .28f)),
                 ) {
-                    Row(Modifier.padding(horizontal = 10.dp, vertical = if (compact) 5.dp else 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(horizontal = 9.dp, vertical = if (compact) 4.dp else 5.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (botThinking || busy) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp, color = if (botThinking) SiegePurple else MainUi.Blue)
                         else Icon(Icons.Rounded.TouchApp, null, tint = if (state.currentOwner == 1) MainUi.Blue else SiegePurple, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(7.dp))
@@ -306,8 +307,8 @@ private fun ExchangeRackSelector(rack: String, selected: Set<Int>, onToggle: (In
                 shape = RoundedCornerShape(9.dp), border = BorderStroke(if (active) 2.dp else 1.dp, if (active) MainUi.Gold else MainUi.Border),
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(char.toString(), color = MainUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                    Text(WordSiegePracticeEngine.tileValue(char).toString(), modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp), color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(char.toString(), color = SonHarfCosmetics.gamePalette.tileText, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text(WordSiegePracticeEngine.tileValue(char).toString(), modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp), color = SonHarfCosmetics.gamePalette.tilePointText, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -320,8 +321,8 @@ private fun PracticePlayerCard(
     accent: Color, modifier: Modifier = Modifier,
 ) {
     Surface(modifier = modifier, color = MainUi.Surface, shape = RoundedCornerShape(15.dp), border = BorderStroke(if (active) 2.dp else 1.dp, if (active) accent else MainUi.Border)) {
-        Row(Modifier.padding(7.dp), verticalAlignment = Alignment.CenterVertically) {
-            ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, width = 56.dp, height = 74.dp, accent = accent)
+        Row(Modifier.padding(5.dp), verticalAlignment = Alignment.CenterVertically) {
+            ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, width = 50.dp, height = 64.dp, accent = accent)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
@@ -338,8 +339,11 @@ private fun PracticeBoard(
     modifier: Modifier = Modifier, onCellClick: (Int) -> Unit,
 ) {
     val rack = state.playerRack
+    val lightTheme = MainUi.Background.luminance() > .58f
+    val neutralBorder = if (lightTheme) Color(0xFFAAB7C5) else MainUi.Border
+    val neutralBorderWidth = if (lightTheme) 1.35.dp else 1.dp
     Surface(modifier, color = MainUi.Surface, shape = RoundedCornerShape(12.dp), border = BorderStroke(1.2.dp, MainUi.Border)) {
-        Column(Modifier.fillMaxSize().padding(2.dp)) {
+        Column(Modifier.fillMaxSize().padding(1.dp)) {
             repeat(9) { row ->
                 Row(Modifier.weight(1f).fillMaxWidth()) {
                     repeat(9) { column ->
@@ -363,12 +367,12 @@ private fun PracticeBoard(
                         val border by animateColorAsState(targetBorder, tween(220), label = "practice-owner-border-$index")
                         val shape = RoundedCornerShape(5.dp)
                         Box(
-                            Modifier.weight(1f).fillMaxHeight().padding(.65.dp).background(fill, shape)
-                                .border(if (owner == 0) 1.dp else 1.45.dp, border, shape)
+                            Modifier.weight(1f).fillMaxHeight().padding(.28.dp).background(fill, shape)
+                                .border(if (owner == 0) neutralBorderWidth else 1.65.dp, if (owner == 0) neutralBorder else border, shape)
                                 .then(if (enabled) Modifier.clickable { onCellClick(index) } else Modifier), contentAlignment = Alignment.Center,
                         ) {
                             if (letter != null) {
-                                Text(letter, color = Color(0xFF101216), fontWeight = FontWeight.Black, fontSize = 18.sp)
+                                Text(letter, color = SonHarfCosmetics.gamePalette.tileText, fontWeight = FontWeight.Black, fontSize = 18.sp)
                                 if (owner != 0 && tempRack == null) Box(Modifier.align(Alignment.TopEnd).padding(2.dp).size(5.dp).background(border, androidx.compose.foundation.shape.CircleShape))
                             } else if (cell.bonus != null) {
                                 Text(cell.bonus, color = if (cell.bonus.endsWith("K")) SiegePurple else MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 8.sp)
@@ -394,8 +398,8 @@ private fun PracticeRack(rack: String, placements: Map<Int, Int>, selected: Int?
                 shape = RoundedCornerShape(9.dp), border = BorderStroke(if (active) 2.dp else 1.dp, if (active) MainUi.Gold else MainUi.Gold.copy(alpha = .55f)),
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text(char.toString(), color = if (used) MainUi.Muted.copy(alpha = .45f) else MainUi.Text, fontWeight = FontWeight.Black, fontSize = 21.sp)
-                    Text(WordSiegePracticeEngine.tileValue(char).toString(), modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp), color = if (used) MainUi.Muted.copy(alpha = .30f) else MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(char.toString(), color = if (used) SonHarfCosmetics.gamePalette.tileText.copy(alpha = .35f) else SonHarfCosmetics.gamePalette.tileText, fontWeight = FontWeight.Black, fontSize = 21.sp)
+                    Text(WordSiegePracticeEngine.tileValue(char).toString(), modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp), color = if (used) SonHarfCosmetics.gamePalette.tilePointText.copy(alpha = .30f) else SonHarfCosmetics.gamePalette.tilePointText, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
