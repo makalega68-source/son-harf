@@ -41,19 +41,26 @@ class MainExperienceContractTest {
     }
 
     @Test
-    fun monsterShellUsesWhiteBluePaletteAndStoreThemeRuntime() {
+    fun monsterShellUsesOwnedPremiumThemeRuntime() {
         val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
         val store = projectFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
         val cosmetics = projectFile("app/src/main/java/com/sonharf/game/CosmeticRuntime.kt").readText()
+        val palettes = projectFile("app/src/main/java/com/sonharf/game/ThemePaletteRuntime.kt").readText()
+        val profileTheme = projectFile("app/src/main/java/com/sonharf/game/ProfileThemeSelector.kt").readText()
 
-        assertTrue(main.contains("Color(0xFFF7FAFF)"))
-        assertTrue(main.contains("Color(0xFFFFFFFF)"))
-        assertTrue(main.contains("Color(0xFF1677FF)"))
-        assertTrue(store.contains("theme_monster_blue"))
-        assertTrue(store.contains("Mavi Beyaz Arena"))
+        assertTrue(main.contains("SonHarfCosmetics.currentThemePalette"))
+        assertTrue(palettes.contains("theme_monster_blue"))
+        assertTrue(palettes.contains("theme_monster_charcoal_ivory"))
+        assertTrue(palettes.contains("theme_monster_sapphire_ice"))
+        assertTrue(palettes.contains("Color(0xFFF7FAFF)"))
+        assertTrue(palettes.contains("Color(0xFF202225)"))
+        assertTrue(palettes.contains("Color(0xFF0E1A2B)"))
+        assertTrue(store.contains("SonHarfThemeCatalog.known(it.id)"))
         assertTrue(store.contains("SATIN AL"))
-        assertTrue(cosmetics.contains("monsterBlueTheme"))
-        assertTrue(cosmetics.contains("gameThemeId == \"theme_monster_blue\""))
+        assertTrue(cosmetics.contains("currentThemePalette"))
+        assertTrue(profileTheme.contains("item.id in owned"))
+        assertTrue(profileTheme.contains("backend.equipShopItem(item.id)"))
+        assertFalse(profileTheme.contains("purchaseShopItem"))
     }
 
     @Test
@@ -77,17 +84,17 @@ class MainExperienceContractTest {
     }
 
     @Test
-    fun legacyThemeIsNotTheActiveStyleDestination() {
+    fun retiredLegacyThemesAreNotActiveStoreProducts() {
         val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
-        val store = projectFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
+        val migration = projectFile("supabase/migrations/20260901_premium_monster_theme_variants_v1.sql").readText()
         val catalog = projectFile("app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt").readText()
         val offeredProducts = catalog.substringAfter("val oneTimeProducts = listOf(")
 
         assertTrue(main.contains("MonsterDestination.STYLE -> MonsterStyleStoreScreen()"))
-        assertTrue(store.contains("theme_monster_blue"))
-        assertFalse(store.contains("theme_aurora"))
-        assertFalse(store.contains("theme_midnight"))
-        assertFalse(store.contains("theme_neon"))
+        assertTrue(migration.contains("theme_monster_blue"))
+        assertTrue(migration.contains("theme_monster_charcoal_ivory"))
+        assertTrue(migration.contains("theme_monster_sapphire_ice"))
+        assertTrue(migration.contains("id not in"))
         assertFalse(offeredProducts.contains("THEME_NEON"))
     }
 
