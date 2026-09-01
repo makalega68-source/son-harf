@@ -35,6 +35,6 @@ object SonHarfCosmetics {
         get() = if (nameStyleId == "name_cyan") SonHarfCyan else SonHarfText
 
     val keyboardIsNeon: Boolean get() = keyboardThemeId == "keyboard_neon"
-    val auroraTheme: Boolean get() = gameThemeId == "theme_aurora"
+    val monsterBlueTheme: Boolean get() = gameThemeId == "theme_monster_blue"
     val crownVictory: Boolean get() = victoryEffectId == "victory_crown"
 }
