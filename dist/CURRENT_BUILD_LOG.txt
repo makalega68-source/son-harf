@@ -1,0 +1,115 @@
+Starting a Gradle Daemon (subsequent builds will be faster)
+> Task :app:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:generateDebugBuildConfig
+> Task :app:generateDebugResValues
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:packageDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:extractDeepLinksDebug
+> Task :app:parseDebugLocalResources
+> Task :app:mergeDebugResources
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:processDebugManifestForPackage
+> Task :app:javaPreCompileDebug
+> Task :app:preDebugUnitTestBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:javaPreCompileDebugUnitTest
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugAssets
+> Task :app:desugarDebugFileDependencies
+> Task :app:compressDebugAssets
+> Task :app:mergeDebugJniLibFolders
+> Task :app:processDebugResources
+> Task :app:checkDebugDuplicateClasses
+> Task :app:mergeDebugNativeLibs
+> Task :app:mergeLibDexDebug
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so. Run with --info option to learn more.
+
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+> Task :app:mergeExtDexDebug
+> Task :app:compileDebugKotlin
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/AdminConsoleScreen.kt:127:71 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/AdminConsoleScreen.kt:893:32 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/AdminConsoleScreen.kt:921:32 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/BilBakalimBonusOverlay.kt:146:125 Unnecessary non-null assertion (!!) on a non-null receiver of type 'String'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/BilBakalimFeature.kt:267:100 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt:382:40 'val Icons.Rounded.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowForward.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt:715:32 'val Icons.Rounded.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowForward.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt:789:67 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt:43:36 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt:374:52 'val Icons.Rounded.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Send.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/CompleteProfileScreen.kt:30:40 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/DailyArenaScreen.kt:177:36 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/DailyCipherScreen.kt:117:40 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/EconomyShopScreen.kt:45:40 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/LightDuelUi.kt:356:51 Unnecessary safe call on a non-null receiver of type 'TriviaRoundDto'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/LightDuelUi.kt:358:38 Unnecessary safe call on a non-null receiver of type 'TriviaRoundDto'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/LightDuelUi.kt:359:34 Unnecessary safe call on a non-null receiver of type 'TriviaRoundDto'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainExperienceApp.kt:67:35 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainRetentionScreen.kt:407:36 'val Icons.Rounded.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowForward.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt:85:42 'val Icons.Rounded.VolumeUp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.VolumeUp.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt:195:48 'val Icons.Rounded.Help: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Help.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt:208:48 'val Icons.Rounded.Logout: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Logout.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt:382:40 'val Icons.Rounded.OpenInNew: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.OpenInNew.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt:395:40 'val Icons.Rounded.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowForward.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MasteryPathScreen.kt:74:67 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MetaHubScreen.kt:55:40 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/PremiumMasterHome.kt:182:39 'val Icons.Rounded.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowForward.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/PrivateRoomExperience.kt:52:21 'val LocalClipboardManager: ProvidableCompositionLocal<ClipboardManager>' is deprecated. Use LocalClipboard instead which supports suspend functions.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/PrivateRoomExperience.kt:115:44 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/RewardCenterScreen.kt:109:59 Unnecessary safe call on a non-null receiver of type 'RewardClaimDto'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/RewardCenterScreen.kt:109:122 Unnecessary safe call on a non-null receiver of type 'RewardClaimDto'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/RewardCenterScreen.kt:180:91 Unnecessary safe call on a non-null receiver of type 'RewardClaimDto'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/RewardCenterScreen.kt:180:156 Unnecessary safe call on a non-null receiver of type 'RewardClaimDto'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/SemanticPathGame.kt:157:36 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/SemanticPathGame.kt:221:44 'val Icons.Rounded.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Send.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/SketchGameOverlayV10.kt:320:62 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/TeamArenaScreen.kt:261:36 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WinnerFireworkOverlay.kt:230:48 Unnecessary safe call on a non-null receiver of type 'ProfileDto'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordArenaScreen.kt:383:67 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordArenaScreen.kt:539:63 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordDuelBotGame.kt:228:67 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordMeaningRuntime.kt:32:44 'constructor(p0: String!, p1: String!): Locale' is deprecated. Deprecated in Java.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegeExperience.kt:407:40 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegeExperience.kt:528:41 'val Icons.Rounded.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowForward.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegeExperience.kt:624:67 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegeExperience.kt:717:40 'val Icons.Rounded.Chat: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Chat.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegeExperience.kt:1117:48 'val Icons.Rounded.Send: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Send.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegeGame.kt:476:40 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegeGame.kt:607:44 'val Icons.Rounded.Backspace: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Backspace.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt:86:36 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt:190:36 'val Icons.Rounded.Chat: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Chat.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt:91:71 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+
+> Task :app:compileDebugJavaWithJavac
+> Task :app:processDebugJavaRes
+> Task :app:bundleDebugClassesToCompileJar
+> Task :app:bundleDebugClassesToRuntimeJar
+> Task :app:dexBuilderDebug
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:compileDebugUnitTestKotlin
+> Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
+> Task :app:processDebugUnitTestJavaRes
+> Task :app:mergeDebugJavaResource
+> Task :app:mergeProjectDexDebug
+> Task :app:testDebugUnitTest
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/gradle_build-1788273631983.json
+
+[Incubating] Problems report is available at: file:///home/runner/work/son-harf/son-harf/build/reports/problems/problems-report.html
+
+BUILD SUCCESSFUL in 2m 26s
+43 actionable tasks: 43 executed
