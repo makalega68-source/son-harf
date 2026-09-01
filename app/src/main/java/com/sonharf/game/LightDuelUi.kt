@@ -348,6 +348,7 @@ internal fun LightDuelArena(
     opponentRating: Int,
     words: List<GameWordDto>,
     isVip: Boolean,
+    motivationMessage: String?,
     feedbackWord: String?,
     feedbackCorrect: Boolean?,
     wordInput: String,
@@ -399,6 +400,7 @@ internal fun LightDuelArena(
             opponentName = opponentName,
             myRounds = myRounds,
             oppRounds = oppRounds,
+            motivationMessage = if (room.winnerId == me) motivationMessage else null,
             onRematch = onRematch,
             onExit = onExit,
         )
@@ -1237,6 +1239,7 @@ private fun LightResult(
     opponentName: String,
     myRounds: Int,
     oppRounds: Int,
+    motivationMessage: String?,
     onRematch: () -> Unit,
     onExit: () -> Unit,
 ) {
@@ -1266,6 +1269,16 @@ private fun LightResult(
                     fontWeight = FontWeight.Black,
                 )
                 Text("$playerName  $myRounds : $oppRounds  $opponentName", color = LText, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                if (won && !motivationMessage.isNullOrBlank()) {
+                    Text(
+                        motivationMessage,
+                        color = LBlue,
+                        textAlign = TextAlign.Center,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                    )
+                }
                 Button(
                     onClick = onRematch,
                     modifier = Modifier.fillMaxWidth().height(54.dp),

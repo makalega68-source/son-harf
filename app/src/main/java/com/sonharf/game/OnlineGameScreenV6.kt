@@ -61,6 +61,7 @@ fun OnlineGameScreenV6() {
     var notice by remember { mutableStateOf(sh("Hazır", "Ready")) }
     var feedbackWord by remember { mutableStateOf<String?>(null) }
     var feedbackCorrect by remember { mutableStateOf<Boolean?>(null) }
+    var motivationMessage by remember { mutableStateOf<String?>(null) }
     var busy by remember { mutableStateOf(false) }
     var matching by remember { mutableStateOf(false) }
     var showPrivate by remember { mutableStateOf(false) }
@@ -303,12 +304,24 @@ fun OnlineGameScreenV6() {
                 }
             }
         }
+        LaunchedEffect(active.id, active.status, active.winnerId, me) {
+            if (active.status == "finished" && active.winnerId == me) {
+                val local = MiniAiMotivation.localMatchWin()
+                motivationMessage = local
+                MiniAiMotivation.maybeAiMatchWin(active.id, active.language)?.let {
+                    motivationMessage = it
+                }
+            } else {
+                motivationMessage = null
+            }
+        }
         LightDuelArena(
             room = active, me = me, playerName = profile?.displayName ?: sh("Sen", "You"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility != "hidden" }, playerGender = profile?.gender, playerRating = profile?.rating ?: 1000,
             opponentName = if (active.isBot) "${active.botName ?: if (active.language == "en") "WordBot" else "KelimeBot"} BOT" else opponentProfile?.displayName ?: sh("Rakip", "Opponent"),
             opponentAvatarPath = if (active.isBot) null else opponentProfile?.avatarPath?.takeIf { opponentProfile?.avatarVisibility != "hidden" }, opponentGender = if (active.isBot) null else opponentProfile?.gender, opponentRating = if (active.isBot) 1000 else opponentProfile?.rating ?: 1000,
             words = words,
             isVip = profile?.isVip == true,
+            motivationMessage = motivationMessage,
             feedbackWord = feedbackWord,
             feedbackCorrect = feedbackCorrect,
             wordInput = wordInput,
