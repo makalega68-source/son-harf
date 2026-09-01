@@ -1,0 +1,49 @@
+name: Verify Son Harf Clean Checkpoint
+
+on:
+  push:
+    branches:
+      - verify/son-harf-clean-20260901
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 451136d9d93b7526079a176803d54d070b1a8650
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Exact scope guard
+        run: |
+          git diff --name-only 789c0c45e18961ea38c6e4c10d4399dd81479849..451136d9d93b7526079a176803d54d070b1a8650 | sort | tee /tmp/changed.txt
+          cat > /tmp/expected.txt <<'EOF'
+          app/src/main/java/com/sonharf/game/LightDuelUi.kt
+          app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          app/src/test/java/com/sonharf/game/SonHarfTurnResolutionContractTest.kt
+          EOF
+          diff -u /tmp/expected.txt /tmp/changed.txt
+          ! grep -E '(^|/)(\.gradle|build)/|WordSiege|EconomyShop|Higgsfield|Private|Tournament|Admin' /tmp/changed.txt
+
+      - name: Critical Son Harf contract tests
+        run: gradle :app:testDebugUnitTest --tests 'com.sonharf.game.SonHarfTurnResolutionContractTest' --stacktrace
+
+      - name: Full unit regression and debug build
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
