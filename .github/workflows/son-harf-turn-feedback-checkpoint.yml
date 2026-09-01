@@ -53,7 +53,6 @@ jobs:
               '    private fun source(path: String): String = Files.readString(Path.of(path))',
               '    private fun source(path: String): String = java.io.File(path).readText()',
           )
-          s = s.replace('source("src/main/java/', 'source("app/src/main/java/')
           s = s.replace(
               '        assertTrue(online.contains("validation_result=${if (rejected) \\"REJECTED\\" else \\"ACCEPTED\\"}"))\n',
               '        assertTrue(online.contains("validation_result="))\n        assertTrue(online.contains("ACCEPTED"))\n        assertTrue(online.contains("REJECTED"))\n',
