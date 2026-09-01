@@ -41,7 +41,9 @@ class PremiumBotUiContractTest {
         assertFalse(source.contains("LazyColumn"))
         assertTrue(source.contains("tween(220)"))
         assertTrue(source.contains("fontSize = 18.sp"))
-        assertTrue(source.contains("1.45.dp"))
+        assertTrue(source.contains("neutralBorderWidth = if (lightTheme) 1.35.dp"))
+        assertTrue(source.contains("Color(0xFFAAB7C5)"))
+        assertTrue(source.contains("1.65.dp"))
         assertTrue(source.contains("fontSize = 8.sp"))
     }
 
