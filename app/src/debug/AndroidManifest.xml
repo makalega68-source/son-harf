@@ -3,6 +3,6 @@
         <activity
             android:name=".VisualQaActivity"
             android:exported="true"
-            android:theme="@style/Theme.AppCompat.Light.NoActionBar" />
+            android:theme="@android:style/Theme.Material.Light.NoActionBar" />
     </application>
 </manifest>
