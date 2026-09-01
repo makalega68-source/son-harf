@@ -134,7 +134,10 @@ private fun profileFrameVisual(frameId: String?, fallbackAccent: Color): Profile
 }
 
 private fun premiumFrameAsset(frameId: String?): Int? = when {
-    frameId?.contains("black_gold") == true -> R.drawable.premium_frame_black_gold_higgsfield
+    frameId?.contains("black_gold") == true -> R.drawable.premium_frame_black_gold_higgsfield_v2
+    frameId?.contains("royal_gold") == true -> R.drawable.premium_frame_royal_gold_higgsfield
+    frameId?.contains("crystal") == true -> R.drawable.premium_frame_crystal_higgsfield
+    frameId?.contains("purple_prestige") == true -> R.drawable.premium_frame_purple_prestige_higgsfield
     else -> null
 }
 
