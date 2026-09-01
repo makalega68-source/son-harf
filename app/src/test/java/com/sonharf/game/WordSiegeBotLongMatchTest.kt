@@ -12,16 +12,13 @@ class WordSiegeBotLongMatchTest {
     fun botPlannerKeepsProducingCandidatesAcross24ProgressiveTurns() = runBlocking {
         var state = WordSiegePracticeEngine.newGame().copy(
             currentOwner = 2,
-            botRack = "ATATATA",
-            playerRack = "ATATATA",
-            bag = "AT".repeat(90),
+            botRack = "AAAAAAA",
+            playerRack = "AAAAAAA",
+            bag = "A".repeat(180),
         )
-        val lexicon = buildList {
-            for (length in 2..9) {
-                add(buildString { repeat(length) { append(if (it % 2 == 0) 'A' else 'T') } })
-                add(buildString { repeat(length) { append(if (it % 2 == 0) 'T' else 'A') } })
-            }
-        }
+        // "AA" forces progressive one-cell anchor extensions after the opening move.
+        // This isolates the long-board candidate/rack-renewal invariant from lexicon variety.
+        val lexicon = listOf("AA")
 
         repeat(24) { turn ->
             val beforeBag = state.bag.length
@@ -33,6 +30,12 @@ class WordSiegeBotLongMatchTest {
                 random = Random(1000 + turn),
             ) { words -> words.toSet() }
 
+            println(
+                "turn_number=${turn + 1} rack=$beforeRack bag_remaining=$beforeBag " +
+                    "anchor_count=${plan.anchorCount} candidate_count_before_validation=${plan.structuralCandidateCount} " +
+                    "candidate_count_after_validation=${plan.validCandidateCount} " +
+                    "selected_move=${plan.move?.primaryWord ?: "none"} pass_reason=${plan.passReason ?: "none"}",
+            )
             assertTrue("turn=$turn passReason=${plan.passReason}", plan.validCandidateCount > 0)
             val move = plan.move
             assertNotNull("turn=$turn", move)
@@ -51,6 +54,6 @@ class WordSiegeBotLongMatchTest {
         }
 
         assertTrue(state.moveCount >= 24)
-        assertTrue(state.board.count { it.letter != null } >= 20)
+        assertTrue(state.board.count { it.letter != null } >= 25)
     }
 }
