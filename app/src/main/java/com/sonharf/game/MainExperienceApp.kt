@@ -29,12 +29,12 @@ internal object MainUi {
     val Muted = MonsterUi.Muted
     val Blue = MonsterUi.Accent
     val BlueDeep = Color(0xFFCFE900)
-    val BlueSoft = MonsterUi.Accent.copy(alpha = .12f)
+    val BlueSoft = Color(0xFF343A28)
     val Border = MonsterUi.Border
     val Green = MonsterUi.Green
     val Gold = MonsterUi.Gold
     val Red = MonsterUi.Coral
-    val Purple = Color(0xFF9A86FF)
+    val Purple = Color(0xFFB7A8FF)
 }
 
 /** Legacy entry point kept only for source compatibility. */
@@ -99,33 +99,14 @@ internal fun MainScreenHeader(
 internal fun MainMetricCard(value: String, label: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MainUi.Surface,
         border = BorderStroke(1.dp, MainUi.Border),
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 13.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(value, color = MainUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black, maxLines = 1)
-            Spacer(Modifier.height(2.dp))
-            Text(label, color = MainUi.Muted, fontSize = 8.5.sp, maxLines = 1)
-        }
-    }
-}
-
-@Composable
-internal fun MainSectionTitle(title: String, action: String? = null, onAction: (() -> Unit)? = null) {
-    Row(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = .5.sp)
-        if (action != null && onAction != null) {
-            TextButton(onClick = onAction, contentPadding = PaddingValues(horizontal = 5.dp, vertical = 0.dp)) {
-                Text(action, color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            }
+        Column(Modifier.padding(12.dp)) {
+            Text(value, color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(3.dp))
+            Text(label, color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
