@@ -24,6 +24,8 @@ data class SonHarfGamePalette(
     val border: Color,
     val accent: Color,
     val secondary: Color,
+    val tileText: Color,
+    val tilePointText: Color,
 )
 
 object SonHarfCosmetics {
@@ -83,8 +85,8 @@ object SonHarfCosmetics {
             text = Color(0xFFF5F7FF), action = Color(0xFF2188FF), accent = Color(0xFF8A5CFF),
         )
         id?.contains("neon") == true -> SonHarfKeyboardPalette(
-            background = Color(0xFF050818), key = Color(0xFF111A35), keyAlt = Color(0xFF17264A),
-            text = Color(0xFFF6FBFF), action = Color(0xFF25D9FF), accent = Color(0xFF9B5CFF),
+            background = Color(0xFF08101E), key = Color(0xFFEAF8FF), keyAlt = Color(0xFFD8EDF7),
+            text = Color(0xFF101820), action = Color(0xFF25D9FF), accent = Color(0xFF8D5CFF),
         )
         id?.contains("gold") == true -> SonHarfKeyboardPalette(
             background = Color(0xFF17120A), key = Color(0xFF2A2110), keyAlt = Color(0xFF3A2B12),
@@ -107,21 +109,25 @@ object SonHarfCosmetics {
             background = Color(0xFF07111E), surface = Color(0xFF10233A), surfaceSoft = Color(0xFF16344A),
             text = Color(0xFFF4FAFF), muted = Color(0xFF9BB1C8), border = Color(0xFF294765),
             accent = Color(0xFF35D5D0), secondary = Color(0xFFA86BFF),
+            tileText = Color(0xFF101216), tilePointText = Color(0xFF4E5968),
         )
         id?.contains("sunset") == true -> SonHarfGamePalette(
             background = Color(0xFF211018), surface = Color(0xFF38202A), surfaceSoft = Color(0xFF4A2A32),
             text = Color(0xFFFFF5F7), muted = Color(0xFFC8A7AF), border = Color(0xFF67404B),
             accent = Color(0xFFFF8A4C), secondary = Color(0xFFFF4F87),
+            tileText = Color(0xFF101216), tilePointText = Color(0xFF4E5968),
         )
         id?.contains("midnight") == true -> SonHarfGamePalette(
             background = Color(0xFF050713), surface = Color(0xFF0C1022), surfaceSoft = Color(0xFF121936),
             text = Color(0xFFF5F7FF), muted = Color(0xFFA8B1C5), border = Color(0xFF29324C),
             accent = Color(0xFF2188FF), secondary = Color(0xFF8A5CFF),
+            tileText = Color(0xFF101216), tilePointText = Color(0xFF4E5968),
         )
         else -> SonHarfGamePalette(
             background = Color(0xFFF7F9FC), surface = Color.White, surfaceSoft = Color(0xFFF0F4F8),
             text = Color(0xFF182235), muted = Color(0xFF718096), border = Color(0xFFDDE5EE),
             accent = Color(0xFF1769E0), secondary = Color(0xFF6B4FD3),
+            tileText = Color(0xFF101216), tilePointText = Color(0xFF4E5968),
         )
     }
 
