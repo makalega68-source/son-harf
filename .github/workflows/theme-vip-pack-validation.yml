@@ -1,0 +1,49 @@
+name: Theme VIP Pack Validation
+
+on:
+  push:
+    branches: [theme-vip-pack]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: theme-vip-pack
+          fetch-depth: 0
+
+      - name: Apply isolated integration patch
+        run: |
+          python3 scripts/apply_theme_vip_pack.py
+          if ! git diff --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt \
+                    app/src/main/java/com/sonharf/game/MainExperienceApp.kt \
+                    app/src/main/java/com/sonharf/game/MainPlayerProfileScreen.kt \
+                    app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt
+            git commit -m "Integrate premium themes and VIP profile selector [skip ci]"
+            git push origin HEAD:theme-vip-pack
+          fi
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Compile and run unit tests only
+        run: gradle :app:compileDebugKotlin :app:testDebugUnitTest --stacktrace --warning-mode all
