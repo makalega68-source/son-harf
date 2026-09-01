@@ -13,36 +13,37 @@ class MainExperienceContractTest {
     @Test
     fun authenticatedUsersEnterTheCompleteMainExperience() {
         val stable = projectFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
-        val main = projectFile("app/src/main/java/com/sonharf/game/MainExperienceApp.kt").readText()
+        val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
 
-        assertTrue(stable.contains("SonHarfMainApp("))
+        assertTrue(stable.contains("MonsterExperienceApp("))
         assertTrue(main.contains("OnlineGameScreenV6()"))
-        assertTrue(main.contains("sh(\"OYNA\", \"PLAY\")"))
-        assertTrue(main.contains("MainDestination.WORD_SIEGE"))
+        assertTrue(main.contains("sh(\"Oyna\", \"Play\")"))
+        assertTrue(main.contains("MonsterDestination.WORD_SIEGE"))
         assertTrue(main.contains("WordSiegeExperienceScreen"))
-        assertTrue(main.contains("KELİME KUŞATMASI OYNA"))
-        assertTrue(main.contains("MainDestination.LEAGUE"))
-        assertTrue(main.contains("MainDestination.SOCIAL"))
-        assertTrue(main.contains("MainDestination.STYLE"))
-        assertTrue(main.contains("MainDestination.PROFILE"))
+        assertTrue(main.contains("MonsterDestination.LEAGUE"))
+        assertTrue(main.contains("MonsterDestination.SOCIAL"))
+        assertTrue(main.contains("MonsterDestination.STYLE"))
+        assertTrue(main.contains("MonsterDestination.PROFILE"))
         assertFalse(main.contains("TargetNeonGameScreen"))
     }
 
     @Test
-    fun homeKeepsClassicDuelAndSplitsPlayAreaIntoTwoModes() {
-        val main = projectFile("app/src/main/java/com/sonharf/game/MainExperienceApp.kt").readText()
+    fun homeKeepsClassicDuelAndSplitsPlayAreaIntoMultipleCompetitiveEntrances() {
+        val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
         val classic = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt")
 
-        assertTrue(main.contains("title = \"SON HARF \" + sh(\"OYNA\", \"PLAY\")"))
-        assertTrue(main.contains("title = sh(\"KELİME KUŞATMASI OYNA\""))
-        assertTrue(main.contains("modifier = Modifier.weight(1f)"))
+        assertTrue(main.contains("MonsterLiveMatchCard("))
+        assertTrue(main.contains("MonsterModePill(sh(\"Düello\", \"Duel\")"))
+        assertTrue(main.contains("MonsterModePill(sh(\"Kuşatma\", \"Siege\")"))
+        assertTrue(main.contains("MonsterModePill(sh(\"Lig\", \"League\")"))
+        assertTrue(main.contains("MonsterModePill(sh(\"Görev\", \"Mission\")"))
         assertTrue(classic.isFile)
     }
 
     @Test
     fun activeNonMatchSurfacesUseRealBackendData() {
         val combined = listOf(
-            "MainExperienceApp.kt",
+            "MonsterExperienceApp.kt",
             "MainPlayerProfileScreen.kt",
             "MainRetentionScreen.kt",
             "MainSocialScreen.kt",
