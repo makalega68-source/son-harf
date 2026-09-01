@@ -107,7 +107,7 @@ fun StableV1App() {
             if (tutorial == null) {
                 FloatingActionButton(
                     onClick = { showHelpChooser = true },
-                    modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 6.dp, end = 8.dp).size(42.dp),
+                    modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 6.dp, end = 68.dp).size(42.dp),
                     containerColor = MainUi.Surface,
                     contentColor = MainUi.Blue,
                 ) {
