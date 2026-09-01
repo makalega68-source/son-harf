@@ -5,6 +5,9 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -162,7 +165,7 @@ private fun StartupLoading() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            SonHarfBrandLogo(modifier = Modifier.fillMaxWidth(.58f))
+            SonHarfBrandLogo(modifier = Modifier.fillMaxWidth(.58f), size = null)
             Spacer(Modifier.height(24.dp))
             CircularProgressIndicator(color = SonHarfBlue, strokeWidth = 3.dp)
             Spacer(Modifier.height(14.dp))
