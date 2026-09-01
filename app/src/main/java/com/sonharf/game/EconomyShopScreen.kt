@@ -1,7 +1,9 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -54,6 +58,7 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var items by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
+    var previewItem by remember { mutableStateOf<ShopItemDto?>(null) }
     var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
     var busy by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -127,11 +132,8 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
                     Icon(Icons.Rounded.Checkroom, null, tint = MainUi.Blue)
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        sh("Mağaza satın alma ve keşif alanıdır. Sahip olduğun Style öğelerini Profil > Görünümümü düzenle bölümünden uygula.", "The shop is for discovery and purchases. Apply owned Style items from Profile > Edit appearance."),
-                        color = MainUi.Text,
-                        fontSize = 9.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.weight(1f),
+                        sh("Her Style ürününün gerçek görünümü aşağıdaki önizlemede gösterilir. Sahip olduklarını Profil > Görünümümü düzenle bölümünden uygula.", "Each Style item shows its real visual preview below. Apply owned items from Profile > Edit appearance."),
+                        color = MainUi.Text, fontSize = 9.5.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f),
                     )
                 }
             }
@@ -144,34 +146,30 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
             val description = if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr
             val mine = item.id in owned
             Surface(
-                modifier = Modifier.fillMaxWidth(),
-                color = MainUi.Surface,
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, MainUi.Border),
+                modifier = Modifier.fillMaxWidth(), color = MainUi.Surface, shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, MainUi.Border),
             ) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    StyleItemVisual(
+                        item = item, profile = profile,
+                        modifier = Modifier.fillMaxWidth().height(154.dp).clickable { previewItem = item }, large = true,
+                    )
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        StyleItemVisual(item)
-                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                                Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 15.sp, modifier = Modifier.weight(1f))
                                 if (item.vipOnly) {
                                     Surface(color = MainUi.Gold.copy(alpha = .14f), shape = RoundedCornerShape(8.dp)) {
                                         Text("VIP", Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = MainUi.Gold, fontSize = 8.sp, fontWeight = FontWeight.Black)
                                     }
                                 }
                             }
-                            Text(description, color = MainUi.Muted, fontSize = 9.sp, maxLines = 2)
+                            Text(styleKindLabel(item.kind), color = MainUi.Blue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Text(description, color = MainUi.Muted, fontSize = 9.5.sp, maxLines = 2)
                         }
+                        TextButton(onClick = { previewItem = item }) { Text(sh("BÜYÜK ÖNİZLE", "LARGE PREVIEW"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            if (mine) sh("✓ SAHİPSİN", "✓ OWNED") else "◈ ${item.diamondPrice} SC",
-                            color = if (mine) MainUi.Green else MainUi.Gold,
-                            fontWeight = FontWeight.Black,
-                            fontSize = 13.sp,
-                        )
+                        Text(if (mine) sh("✓ SAHİPSİN", "✓ OWNED") else "◈ ${item.diamondPrice} SC", color = if (mine) MainUi.Green else MainUi.Gold, fontWeight = FontWeight.Black, fontSize = 13.sp)
                         Button(
                             onClick = {
                                 if (mine) {
@@ -201,8 +199,7 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
                             },
                             enabled = busy == null && (mine || !item.vipOnly || profile?.isVip == true),
                             colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                            shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
                         ) {
                             Text(when { busy == item.id -> "…"; mine -> sh("PROFİLDE UYGULA", "APPLY IN PROFILE"); else -> sh("SATIN AL", "BUY") }, fontSize = 8.5.sp, fontWeight = FontWeight.Black)
                             if (mine) { Spacer(Modifier.width(3.dp)); Icon(Icons.Rounded.ChevronRight, null, Modifier.size(14.dp)) }
@@ -232,51 +229,145 @@ private fun EconomyCatalogScreen(onOpenProfileAppearance: (() -> Unit)?) {
         }
         item { Spacer(Modifier.height(8.dp)) }
     }
+    previewItem?.let { item ->
+        val previewName = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
+        AlertDialog(
+            onDismissRequest = { previewItem = null },
+            title = { Text(previewName, color = MainUi.Text, fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    StyleItemVisual(item, profile, Modifier.fillMaxWidth().height(270.dp), large = true)
+                    Text(styleKindLabel(item.kind), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr, color = MainUi.Muted, fontSize = 11.sp)
+                }
+            },
+            confirmButton = { TextButton(onClick = { previewItem = null }) { Text(sh("KAPAT", "CLOSE")) } },
+            containerColor = MainUi.Surface,
+        )
+    }
+}
+
+private fun styleKindLabel(kind: String): String = when (kind) {
+    "profile_frame" -> sh("PROFİL ÇERÇEVESİ", "PROFILE FRAME")
+    "keyboard_theme" -> sh("KLAVYE", "KEYBOARD")
+    "game_theme" -> sh("TEMA", "THEME")
+    "victory_effect" -> sh("ZAFER EFEKTİ", "VICTORY EFFECT")
+    "emoji_pack" -> "EMOJI"
+    "mascot" -> "MASCOT"
+    "name_style" -> sh("İSİM STİLİ", "NAME STYLE")
+    else -> "STYLE"
 }
 
 @Composable
-private fun StyleItemVisual(item: ShopItemDto) {
-    val accent = when (item.kind) {
-        "profile_frame" -> MainUi.Blue
-        "name_style" -> MainUi.Purple
+private fun StyleItemVisual(item: ShopItemDto, profile: ProfileDto?, modifier: Modifier = Modifier, large: Boolean = false) {
+    val frameAccent = SonHarfCosmetics.frameAccent(item.id)
+    val baseAccent = when (item.kind) {
+        "profile_frame" -> frameAccent
+        "name_style" -> when { "gold" in item.id -> MainUi.Gold; "black" in item.id -> MainUi.Text; "cyan" in item.id -> SonHarfCyan; else -> MainUi.Purple }
         "emoji_pack" -> MainUi.Gold
         "victory_effect" -> Color(0xFFF97316)
-        "keyboard_theme" -> MainUi.Green
-        "game_theme" -> MainUi.Purple
+        "keyboard_theme" -> SonHarfCosmetics.keyboardPaletteFor(item.id).accent
+        "game_theme" -> SonHarfCosmetics.gamePaletteFor(item.id).accent
         "mascot" -> Color(0xFF22A6A1)
         else -> MainUi.Blue
     }
     Surface(
-        modifier = Modifier.size(76.dp),
-        shape = RoundedCornerShape(18.dp),
-        color = accent.copy(alpha = .09f),
-        border = BorderStroke(1.dp, accent.copy(alpha = .20f)),
+        modifier = modifier.then(if (modifier == Modifier) Modifier.size(82.dp) else Modifier), shape = RoundedCornerShape(if (large) 24.dp else 20.dp), color = baseAccent.copy(alpha = .08f), border = BorderStroke(1.dp, baseAccent.copy(alpha = .22f)),
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             when (item.kind) {
-                "profile_frame" -> {
-                    Box(contentAlignment = Alignment.Center) {
-                        Surface(Modifier.size(52.dp, 62.dp), shape = RoundedCornerShape(16.dp), color = Color.White, border = BorderStroke(3.dp, accent)) {}
-                        Icon(Icons.Rounded.Person, null, tint = MainUi.Text.copy(alpha = .78f), modifier = Modifier.size(30.dp))
-                        Icon(Icons.Rounded.AutoAwesome, null, tint = MainUi.Gold, modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(18.dp))
-                    }
+                "profile_frame" -> FrameItemPreview(item.id, item.vipOnly, profile, large)
+                "name_style" -> {
+                    val label = when { "black" in item.id -> "Ümit"; "gold" in item.id -> "★ Ümit"; "cyan" in item.id -> "Ümit ✦"; else -> "Ümit" }
+                    Text(label, color = baseAccent, fontSize = 16.sp, fontWeight = FontWeight.Black)
                 }
-                "name_style" -> Text("Aa", color = accent, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                "emoji_pack" -> Text("😎✨", fontSize = 24.sp)
-                "victory_effect" -> Icon(Icons.Rounded.AutoAwesome, null, tint = accent, modifier = Modifier.size(40.dp))
-                "keyboard_theme" -> {
-                    Column(Modifier.width(52.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                        repeat(3) { Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) { repeat(4) { Surface(Modifier.weight(1f).height(10.dp), shape = RoundedCornerShape(3.dp), color = accent.copy(alpha = .75f)) {} } } }
-                    }
+                "emoji_pack" -> Text(if ("vip" in item.id) "👑✨" else "😎✨", fontSize = 24.sp)
+                "victory_effect" -> {
+                    val asset = premiumStyleAsset(item.id)
+                    if (asset != null) Image(painterResource(asset), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    else Icon(Icons.Rounded.AutoAwesome, null, tint = baseAccent, modifier = Modifier.size(if (large) 62.dp else 40.dp))
                 }
-                "game_theme" -> Icon(Icons.Rounded.GridOn, null, tint = accent, modifier = Modifier.size(40.dp))
+                "keyboard_theme" -> KeyboardItemPreview(item.id, large)
+                "game_theme" -> GameThemeItemPreview(item.id, large)
                 "mascot" -> {
-                    Box(contentAlignment = Alignment.Center) {
-                        Surface(Modifier.size(48.dp), shape = CircleShape, color = accent.copy(alpha = .23f)) {}
-                        Icon(Icons.Rounded.Pets, null, tint = accent, modifier = Modifier.size(34.dp))
+                    val asset = premiumStyleAsset(item.id)
+                    if (asset != null) Image(painterResource(asset), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+                    else Icon(Icons.Rounded.Pets, null, tint = baseAccent, modifier = Modifier.size(if (large) 62.dp else 34.dp))
+                }
+                else -> Icon(Icons.Rounded.Diamond, null, tint = baseAccent, modifier = Modifier.size(36.dp))
+            }
+        }
+    }
+}
+
+internal fun premiumStyleAsset(id: String): Int? = when {
+    "frame_black_gold" in id -> R.drawable.premium_frame_black_gold_v3
+    "frame_royal_gold" in id -> R.drawable.premium_frame_royal_gold_v3
+    "frame_modern_neon" in id || "frame_neon" in id -> R.drawable.premium_frame_neon_v3
+    "frame_crystal" in id -> R.drawable.premium_frame_crystal_higgsfield
+    "frame_purple_prestige" in id -> R.drawable.premium_frame_purple_prestige_higgsfield
+    "keyboard_midnight" in id -> R.drawable.premium_keyboard_midnight_higgsfield
+    "keyboard_black_gold" in id -> R.drawable.premium_keyboard_black_gold_higgsfield
+    "keyboard_crystal" in id -> R.drawable.premium_keyboard_crystal_higgsfield
+    "theme_midnight" in id -> R.drawable.premium_theme_midnight_preview_higgsfield
+    "victory_crown" in id -> R.drawable.premium_victory_crown_preview_higgsfield
+    "mascot_white" in id -> R.drawable.premium_mascot_white_preview_higgsfield
+    else -> null
+}
+
+@Composable
+private fun FrameItemPreview(id: String, vipOnly: Boolean, profile: ProfileDto?, large: Boolean) {
+    val previewWidth = if (large) 104.dp else 58.dp
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        ProfilePhotoAvatarRectWithGender(
+            avatarPath = profile?.avatarPath, gender = profile?.gender,
+            name = profile?.displayName ?: sh("Oyuncu", "Player"),
+            width = previewWidth, height = previewWidth * (74f / 56f),
+            accent = SonHarfCosmetics.frameAccent(id), visible = true, frameIdOverride = id,
+        )
+        if (vipOnly) {
+            Surface(Modifier.align(Alignment.BottomEnd).padding(6.dp), shape = RoundedCornerShape(99.dp), color = MainUi.Gold.copy(alpha = .16f)) {
+                Text("VIP", Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = MainUi.Gold, fontSize = 7.sp, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+}
+
+@Composable
+private fun KeyboardItemPreview(id: String, large: Boolean = false) {
+    val asset = premiumStyleAsset(id)
+    if (asset != null) {
+        Image(painterResource(asset), null, if (large) Modifier.fillMaxSize().padding(10.dp) else Modifier.size(68.dp, 54.dp), contentScale = ContentScale.Fit)
+        return
+    }
+    val palette = SonHarfCosmetics.keyboardPaletteFor(id)
+    Surface(Modifier.size(64.dp, 52.dp), shape = RoundedCornerShape(10.dp), color = palette.background, border = BorderStroke(1.dp, palette.accent.copy(alpha = .65f))) {
+        Column(Modifier.padding(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            repeat(3) { row ->
+                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                    repeat(4) { col ->
+                        Surface(Modifier.weight(1f).fillMaxHeight(), shape = RoundedCornerShape(3.dp), color = if (row == 2 && col == 3) palette.action else palette.key) {}
                     }
                 }
-                else -> Icon(Icons.Rounded.Diamond, null, tint = accent, modifier = Modifier.size(36.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun GameThemeItemPreview(id: String, large: Boolean = false) {
+    val asset = premiumStyleAsset(id)
+    if (asset != null) {
+        Image(painterResource(asset), null, if (large) Modifier.fillMaxSize().padding(10.dp) else Modifier.size(64.dp, 56.dp), contentScale = ContentScale.Fit)
+        return
+    }
+    val palette = SonHarfCosmetics.gamePaletteFor(id)
+    Surface(Modifier.size(64.dp, 52.dp), shape = RoundedCornerShape(10.dp), color = palette.background, border = BorderStroke(1.dp, palette.accent.copy(alpha = .62f))) {
+        Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Surface(Modifier.fillMaxWidth().height(11.dp), shape = RoundedCornerShape(4.dp), color = palette.surface) {}
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                Surface(Modifier.weight(1f).fillMaxHeight(), shape = RoundedCornerShape(4.dp), color = palette.accent.copy(alpha = .85f)) {}
+                Surface(Modifier.weight(1f).fillMaxHeight(), shape = RoundedCornerShape(4.dp), color = palette.secondary.copy(alpha = .85f)) {}
             }
         }
     }

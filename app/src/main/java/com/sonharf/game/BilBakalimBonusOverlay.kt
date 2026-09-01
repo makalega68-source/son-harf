@@ -69,9 +69,9 @@ private data class BilBonusAnswerDto(
 )
 
 private val BilBg = LetharaPalette.Night
-private val BilPanel = Color.White
-private val BilInk = LetharaPalette.Text
-private val BilMuted = LetharaPalette.Muted
+private val BilPanel: Color get() = MainUi.Surface
+private val BilInk: Color get() = MainUi.Text
+private val BilMuted: Color get() = MainUi.Muted
 private val BilGold = LetharaPalette.Gold
 private val BilGreen = LetharaPalette.Green
 private val BilRed = LetharaPalette.Red
@@ -222,7 +222,7 @@ fun BilBakalimBonusOverlay() {
 
     Box(
         Modifier.fillMaxSize().background(
-            Brush.verticalGradient(listOf(Color.White, SonHarfBg, SonHarfSurface2))
+            Brush.verticalGradient(listOf(MainUi.Background, MainUi.Surface, MainUi.Background))
         ).statusBarsPadding().navigationBarsPadding().imePadding().padding(14.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -268,6 +268,17 @@ fun BilBakalimBonusOverlay() {
                             }
                         }),
                         shape = RoundedCornerShape(18.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = BilInk,
+                            unfocusedTextColor = BilInk,
+                            cursorColor = BilBlue,
+                            focusedContainerColor = MainUi.SurfaceSoft,
+                            unfocusedContainerColor = MainUi.SurfaceSoft,
+                            focusedBorderColor = BilBlue,
+                            unfocusedBorderColor = MainUi.Border,
+                            focusedPlaceholderColor = BilMuted,
+                            unfocusedPlaceholderColor = BilMuted,
+                        ),
                     )
                     Button(
                         onClick = {
@@ -282,11 +293,11 @@ fun BilBakalimBonusOverlay() {
                         },
                         enabled = input.toLongOrNull()?.let { it <= Int.MAX_VALUE } == true && !busy,
                         modifier = Modifier.fillMaxWidth().height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = BilBlue),
+                        colors = ButtonDefaults.buttonColors(containerColor = BilBlue, contentColor = Color(0xFF07151A)),
                         shape = RoundedCornerShape(16.dp),
                     ) { Text("CEVABI KİLİTLE", fontWeight = FontWeight.Black, fontSize = 16.sp) }
                 } else if (!resolved) {
-                    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = SonHarfSurface2, border = BorderStroke(1.dp, BilBlue.copy(alpha = .4f))) {
+                    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = MainUi.SurfaceSoft, border = BorderStroke(1.dp, BilBlue.copy(alpha = .4f))) {
                         Column(Modifier.fillMaxWidth().padding(17.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("CEVABIN KİLİTLENDİ", color = BilBlue, fontWeight = FontWeight.Black, fontSize = 14.sp)
                             Text(myAnswer?.toString() ?: "—", color = BilInk, fontWeight = FontWeight.Black, fontSize = 34.sp)
@@ -295,16 +306,23 @@ fun BilBakalimBonusOverlay() {
                     }
                 } else {
                     Text("DOĞRU CEVAP", color = BilMuted, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                    Text(
-                        buildString {
-                            append(activeRound.correctAnswer ?: 0)
-                            if (!activeQuestion.answerUnit.isNullOrBlank()) append(" ${activeQuestion.answerUnit}")
-                        },
-                        color = BilInk,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 38.sp,
-                        textAlign = TextAlign.Center,
-                    )
+                    Surface(
+                        color = MainUi.SurfaceSoft,
+                        shape = RoundedCornerShape(16.dp),
+                        border = BorderStroke(1.5.dp, BilGold.copy(alpha = .72f)),
+                    ) {
+                        Text(
+                            buildString {
+                                append(activeRound.correctAnswer ?: 0)
+                                if (!activeQuestion.answerUnit.isNullOrBlank()) append(" ${activeQuestion.answerUnit}")
+                            },
+                            Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
+                            color = BilInk,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 38.sp,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
 
                     ResultAnswerCard(myName, myResolvedAnswer, winner = iWon)
                     ResultAnswerCard(opponentName, opponentResolvedAnswer, winner = opponentWon)
@@ -326,15 +344,15 @@ fun BilBakalimBonusOverlay() {
 private fun ResultAnswerCard(name: String, answer: Long?, winner: Boolean) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = if (winner) BilGreen.copy(alpha = .10f) else Color(0xFF15284A),
-        border = BorderStroke(if (winner) 2.dp else 1.dp, if (winner) BilGreen else BilMuted.copy(alpha = .18f)),
+        color = if (winner) BilGreen.copy(alpha = .13f) else BilRed.copy(alpha = .11f),
+        border = BorderStroke(if (winner) 2.dp else 1.5.dp, if (winner) BilGreen else BilRed.copy(alpha = .70f)),
         shape = RoundedCornerShape(18.dp),
     ) {
         Column(Modifier.fillMaxWidth().padding(13.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(name, color = BilMuted, fontWeight = FontWeight.Bold, fontSize = 12.sp, textAlign = TextAlign.Center)
             Text(
                 answer?.toString() ?: "Cevap yok",
-                color = if (winner) BilGreen else BilInk,
+                color = if (winner) BilGreen else BilRed,
                 fontWeight = FontWeight.Black,
                 fontSize = if (winner) 36.sp else 30.sp,
                 textAlign = TextAlign.Center,

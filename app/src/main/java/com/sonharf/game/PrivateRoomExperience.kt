@@ -2,7 +2,6 @@ package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -80,14 +79,9 @@ fun PrivateRoomWaitingLayer() {
         scope.launch {
             closing = true
             runCatching {
-                SupabaseProvider.client.postgrest.rpc(
-                    "cancel_private_room",
-                    buildJsonObject { put("p_room_id", activeRoom.id) },
-                )
+                SupabaseProvider.client.postgrest.rpc("cancel_private_room", buildJsonObject { put("p_room_id", activeRoom.id) })
             }.onSuccess {
-                room = null
-                friends = emptyList()
-                notice = null
+                room = null; friends = emptyList(); notice = null
             }.onFailure {
                 notice = sh("Oda kapatılamadı. Tekrar dene.", "Room could not be closed. Try again.")
             }
@@ -97,156 +91,89 @@ fun PrivateRoomWaitingLayer() {
 
     BackHandler(enabled = !closing) { closeRoom() }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = SonHarfBg,
-    ) {
+    Surface(modifier = Modifier.fillMaxSize(), color = SonHarfBg) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 22.dp, vertical = 28.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding(),
+            contentPadding = PaddingValues(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 28.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { closeRoom() }, enabled = !closing) {
                         Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = SonHarfText)
                     }
                     Column {
-                        Text(
-                            sh("ÖZEL ODA", "PRIVATE ROOM"),
-                            color = SonHarfCyan,
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Black,
-                        )
-                        Text(
-                            sh("Rakibini bekliyorsun", "Waiting for your opponent"),
-                            color = SonHarfMuted,
-                            fontSize = 12.sp,
-                        )
+                        Text(sh("ÖZEL ODA", "PRIVATE ROOM"), color = SonHarfCyan, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                        Text(sh("Rakibini bekliyorsun", "Waiting for your opponent"), color = SonHarfMuted, fontSize = 13.sp)
                     }
                 }
             }
 
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
-                    shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .28f)),
-                ) {
-                    Column(
-                        Modifier.fillMaxWidth().padding(22.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                    ) {
-                        Text(sh("ODA KODU", "ROOM CODE"), color = SonHarfMuted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        Text(activeRoom.code, color = SonHarfGold, fontSize = 38.sp, fontWeight = FontWeight.Black, letterSpacing = 5.sp)
-                        Text(
-                            if (activeRoom.language == "tr") "🇹🇷 TÜRKÇE" else "🇬🇧 ENGLISH",
-                            color = SonHarfCyan,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        OutlinedButton(
-                            onClick = {
-                                clipboard.setText(AnnotatedString(activeRoom.code))
-                                notice = sh("Oda kodu kopyalandı.", "Room code copied.")
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                        ) { Text(sh("KODU KOPYALA", "COPY CODE")) }
+                Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .28f))) {
+                    Column(Modifier.fillMaxWidth().padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text(sh("ODA KODU", "ROOM CODE"), color = SonHarfMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(activeRoom.code, color = SonHarfGold, fontSize = 36.sp, fontWeight = FontWeight.Black, letterSpacing = 4.sp)
+                        Text(if (activeRoom.language == "tr") "🇹🇷 TÜRKÇE" else "🇬🇧 ENGLISH", color = SonHarfCyan, fontWeight = FontWeight.Bold)
+                        OutlinedButton(onClick = {
+                            clipboard.setText(AnnotatedString(activeRoom.code)); notice = sh("Oda kodu kopyalandı.", "Room code copied.")
+                        }, modifier = Modifier.fillMaxWidth()) { Text(sh("KODU KOPYALA", "COPY CODE")) }
                     }
                 }
             }
 
             item {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            loadingFriends = true
-                            friends = runCatching { backend.getFriends().map { it.second } }.getOrDefault(emptyList())
-                            notice = if (friends.isEmpty()) sh("Davet edilebilecek arkadaş bulunamadı.", "No friends available to invite.") else null
-                            loadingFriends = false
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue),
-                    shape = RoundedCornerShape(18.dp),
-                ) {
+                Button(onClick = {
+                    scope.launch {
+                        loadingFriends = true
+                        friends = runCatching { backend.getFriends().map { it.second } }.getOrDefault(emptyList())
+                        notice = if (friends.isEmpty()) sh("Davet edilebilecek arkadaş bulunamadı.", "No friends available to invite.") else null
+                        loadingFriends = false
+                    }
+                }, modifier = Modifier.fillMaxWidth().height(52.dp), colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue), shape = RoundedCornerShape(18.dp)) {
                     Text(sh("ARKADAŞ DAVET ET", "INVITE A FRIEND"), fontWeight = FontWeight.Black)
                 }
             }
 
             if (loadingFriends) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-
             if (friends.isNotEmpty()) {
-                item { Text(sh("ARKADAŞLAR", "FRIENDS"), color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 12.sp) }
+                item { Text(sh("ARKADAŞLAR", "FRIENDS"), color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 13.sp) }
                 items(friends, key = { it.id }) { friend ->
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
-                        shape = RoundedCornerShape(16.dp),
-                    ) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                        ) {
+                    Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(16.dp)) {
+                        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                             Column(Modifier.weight(1f)) {
                                 Text(friend.displayName, fontWeight = FontWeight.Bold)
-                                Text(
-                                    if (friend.presenceStatus == "online") sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"),
-                                    color = if (friend.presenceStatus == "online") SonHarfGreen else SonHarfMuted,
-                                    fontSize = 10.sp,
-                                )
+                                Text(if (friend.presenceStatus == "online") sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"), color = if (friend.presenceStatus == "online") SonHarfGreen else SonHarfMuted, fontSize = 11.sp)
                             }
-                            Button(
-                                onClick = {
-                                    scope.launch {
-                                        busyFriend = friend.id
-                                        runCatching { backend.inviteFriendToPrivateRoom(activeRoom.id, friend.id) }
-                                            .onSuccess { notice = sh("${friend.displayName} davet edildi.", "${friend.displayName} invited.") }
-                                            .onFailure {
-                                                notice = when {
-                                                    "invite_already_pending" in it.message.orEmpty() -> sh("Bu arkadaş için davet zaten bekliyor.", "An invite is already pending for this friend.")
-                                                    "friend_in_game" in it.message.orEmpty() -> sh("Arkadaşın şu anda maçta.", "Your friend is currently in a match.")
-                                                    else -> sh("Davet gönderilemedi.", "Invite could not be sent.")
-                                                }
+                            Button(onClick = {
+                                scope.launch {
+                                    busyFriend = friend.id
+                                    runCatching { backend.inviteFriendToPrivateRoom(activeRoom.id, friend.id) }
+                                        .onSuccess { notice = sh("${friend.displayName} davet edildi.", "${friend.displayName} invited.") }
+                                        .onFailure {
+                                            notice = when {
+                                                "invite_already_pending" in it.message.orEmpty() -> sh("Bu arkadaş için davet zaten bekliyor.", "An invite is already pending for this friend.")
+                                                "friend_in_game" in it.message.orEmpty() -> sh("Arkadaşın şu anda maçta.", "Your friend is currently in a match.")
+                                                else -> sh("Davet gönderilemedi.", "Invite could not be sent.")
                                             }
-                                        busyFriend = null
-                                    }
-                                },
-                                enabled = busyFriend == null,
-                            ) {
-                                Text(if (busyFriend == friend.id) "…" else sh("DAVET", "INVITE"))
-                            }
+                                        }
+                                    busyFriend = null
+                                }
+                            }, enabled = busyFriend == null) { Text(if (busyFriend == friend.id) "…" else sh("DAVET", "INVITE")) }
                         }
                     }
                 }
             }
 
-            if (!notice.isNullOrBlank()) {
-                item {
-                    Surface(color = SonHarfSurface2, shape = RoundedCornerShape(14.dp)) {
-                        Text(
-                            notice!!,
-                            Modifier.fillMaxWidth().padding(12.dp),
-                            color = SonHarfMuted,
-                            textAlign = TextAlign.Center,
-                            fontSize = 11.sp,
-                        )
-                    }
+            if (!notice.isNullOrBlank()) item {
+                Surface(color = SonHarfSurface2, shape = RoundedCornerShape(14.dp)) {
+                    Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfMuted, textAlign = TextAlign.Center, fontSize = 12.sp)
                 }
             }
 
             item {
                 Spacer(Modifier.height(4.dp))
-                OutlinedButton(
-                    onClick = { closeRoom() },
-                    enabled = !closing,
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    border = BorderStroke(1.dp, SonHarfPink.copy(alpha = .55f)),
-                    shape = RoundedCornerShape(16.dp),
-                ) {
+                OutlinedButton(onClick = { closeRoom() }, enabled = !closing, modifier = Modifier.fillMaxWidth().height(48.dp), border = BorderStroke(1.dp, SonHarfPink.copy(alpha = .55f)), shape = RoundedCornerShape(16.dp)) {
                     Text(sh("ODAYI KAPAT", "CLOSE ROOM"), color = SonHarfPink, fontWeight = FontWeight.Bold)
                 }
             }

@@ -251,8 +251,13 @@ fun OnlineGameScreenV6() {
                         latest.status !in listOf("playing", "final", "sudden_death")
                     ) return@LaunchedEffect
 
+                    val difficulty = when (profile?.botDifficulty?.lowercase()) {
+                        "easy" -> TrainingBotDifficulty.EASY
+                        "hard" -> TrainingBotDifficulty.HARD
+                        else -> TrainingBotDifficulty.MEDIUM
+                    }
                     delay(
-                        if (attempt == 0) 1600L + (active.validWordCount % 4) * 350L
+                        if (attempt == 0) TrainingBotSupport.reactionDelayMs(difficulty, (active.validWordCount % 6) + 1)
                         else minOf(5000L, 1200L + attempt * 600L)
                     )
                     val result = runCatching { backend.botTakeTurn(active.id) }
@@ -1151,6 +1156,24 @@ private fun AuroraArena(
             }
 
             AuroraPlayerCard(opponentName, opponentAvatarPath, opponentGender, opponentRating, oppScore, oppRounds, !myTurn && liveWordPhase, opponentAccent, Modifier.weight(1f))
+        }
+
+        if (room.isBot) {
+            Surface(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = arenaGold.copy(alpha = .10f),
+                border = BorderStroke(1.dp, arenaGold.copy(alpha = .28f)),
+            ) {
+                Text(
+                    sh("ANTRENMAN MAÇI • Rating ve lig puanını etkilemez.", "TRAINING MATCH • Does not affect rating or league points."),
+                    Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    color = arenaGold,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
 
         Surface(

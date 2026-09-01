@@ -1,9 +1,13 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,16 +20,21 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import java.time.Duration
 import java.time.Instant
+import kotlin.math.roundToInt
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -966,34 +975,41 @@ private fun shPlain(tr: String, en: String): String = if (SonHarfUiState.isEngli
 
 @Composable
 internal fun WordSiegeBoard(
-    board: List<WordSiegeCellDto>,
-    rack: String,
-    placements: Map<Int, Int>,
-    previewCells: Set<Int> = emptySet(),
-    myOwner: Int,
-    enabled: Boolean,
-    onCell: (Int) -> Unit,
-    modifier: Modifier = Modifier.fillMaxWidth(),
+    board: List<WordSiegeCellDto>, rack: String, placements: Map<Int, Int>, previewCells: Set<Int> = emptySet(),
+    myOwner: Int, enabled: Boolean, onCell: (Int) -> Unit, modifier: Modifier = Modifier.fillMaxWidth(),
 ) {
+    val density = LocalDensity.current
     Surface(modifier = modifier, color = Color(0xFFE7EDF5), shape = RoundedCornerShape(12.dp), border = BorderStroke(1.dp, MainUi.Border)) {
-        BoxWithConstraints(Modifier.fillMaxSize().padding(3.dp)) {
-            val cellSize = minOf(maxWidth, maxHeight) / 9
-            Column(Modifier.align(Alignment.Center)) {
-                repeat(9) { row ->
-                    Row {
-                        repeat(9) { column ->
+        BoxWithConstraints(Modifier.fillMaxSize().clipToBounds()) {
+            val viewportWidth = maxWidth; val viewportHeight = maxHeight
+            val viewportShortSide = minOf(viewportWidth, viewportHeight)
+            val boardSize = maxOf(432.dp, viewportShortSide + 96.dp)
+            val cellSize = (boardSize - 6.dp) / 9
+            val viewportWidthPx = with(density) { viewportWidth.toPx() }
+            val viewportHeightPx = with(density) { viewportHeight.toPx() }
+            val boardSizePx = with(density) { boardSize.toPx() }
+            val minX = (viewportWidthPx - boardSizePx).coerceAtMost(0f)
+            val minY = (viewportHeightPx - boardSizePx).coerceAtMost(0f)
+            var offsetX by remember(boardSizePx, viewportWidthPx) { mutableFloatStateOf(minX / 2f) }
+            var offsetY by remember(boardSizePx, viewportHeightPx) { mutableFloatStateOf(minY / 2f) }
+            Box(Modifier.fillMaxSize().pointerInput(boardSizePx, viewportWidthPx, viewportHeightPx) {
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+                    offsetX = (offsetX + dragAmount.x).coerceIn(minX, 0f)
+                    offsetY = (offsetY + dragAmount.y).coerceIn(minY, 0f)
+                }
+            }) {
+                Surface(Modifier.size(boardSize).offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }, color = Color(0xFFE7EDF5), shape = RoundedCornerShape(10.dp)) {
+                    Column(Modifier.fillMaxSize().padding(3.dp)) {
+                        repeat(9) { row -> Row { repeat(9) { column ->
                             val index = row * 9 + column
                             WordSiegeBoardCell(
                                 cell = board.getOrElse(index) { WordSiegeCellDto() },
                                 pendingLetter = placements[index]?.let { rackIndex -> rack.getOrNull(rackIndex) },
-                                pending = placements.containsKey(index),
-                                previewArea = index in previewCells,
-                                myOwner = myOwner,
-                                enabled = enabled,
-                                size = cellSize,
-                                onClick = { onCell(index) },
+                                pending = placements.containsKey(index), previewArea = index in previewCells,
+                                myOwner = myOwner, enabled = enabled, size = cellSize, onClick = { onCell(index) },
                             )
-                        }
+                        } } }
                     }
                 }
             }
@@ -1004,29 +1020,36 @@ internal fun WordSiegeBoard(
 @Composable
 private fun WordSiegeBoardCell(cell: WordSiegeCellDto, pendingLetter: Char?, pending: Boolean, previewArea: Boolean, myOwner: Int, enabled: Boolean, size: Dp, onClick: () -> Unit) {
     val owner = if (pending) myOwner else cell.owner
-    val territory = when (owner) {
-        1 -> MainUi.Blue.copy(alpha = if (pending) .30f else .17f)
-        2 -> SiegePurple.copy(alpha = if (pending) .30f else .17f)
-        else -> MainUi.Surface
+    val relation = TrainingBotSupport.ownershipRelation(owner, myOwner)
+    val targetFill = when (relation) {
+        WordSiegeOwnershipRelation.SELF -> Color(TrainingBotSupport.OWN_FILL_ARGB)
+        WordSiegeOwnershipRelation.OPPONENT -> Color(TrainingBotSupport.OPPONENT_FILL_ARGB)
+        WordSiegeOwnershipRelation.NEUTRAL -> Color(TrainingBotSupport.NEUTRAL_FILL_ARGB)
     }
-    val border = when {
-        pending -> SiegeTileBorder
-        previewArea -> MainUi.Green.copy(alpha = .85f)
-        owner == 1 -> MainUi.Blue.copy(alpha = .45f)
-        owner == 2 -> SiegePurple.copy(alpha = .45f)
-        else -> MainUi.Border
+    val targetBorder = when (relation) {
+        WordSiegeOwnershipRelation.SELF -> Color(TrainingBotSupport.OWN_BORDER_ARGB)
+        WordSiegeOwnershipRelation.OPPONENT -> Color(TrainingBotSupport.OPPONENT_BORDER_ARGB)
+        WordSiegeOwnershipRelation.NEUTRAL -> MainUi.Border
     }
+    val fill by animateColorAsState(targetFill, tween(220), label = "siege-owner-fill")
+    val border by animateColorAsState(targetBorder, tween(220), label = "siege-owner-border")
     val letter = pendingLetter?.toString() ?: cell.letter
-    Box(Modifier.size(size).padding(1.dp).clip(RoundedCornerShape(4.dp)).background(when { previewArea && !pending -> MainUi.Green.copy(alpha = .12f); letter != null -> territory; else -> MainUi.Surface }).clickable(enabled = enabled && (cell.letter == null || pending), onClick = onClick), contentAlignment = Alignment.Center) {
-        Surface(Modifier.fillMaxSize(), color = when { pending -> SiegeTile.copy(alpha = .92f); previewArea -> MainUi.Green.copy(alpha = .08f); else -> Color.Transparent }, shape = RoundedCornerShape(4.dp), border = BorderStroke(if (pending || previewArea) 1.5.dp else .7.dp, border)) {
-            Box(contentAlignment = Alignment.Center) {
-                if (letter != null) {
-                    Text(letter, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black)
-                    Text(wordSiegeLetterValue(letter), color = MainUi.Muted, fontSize = 5.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp))
-                } else if (!cell.bonusUsed && cell.bonus != null) {
-                    Text(cell.bonus, color = if (cell.bonus in setOf("2H", "3H")) MainUi.Blue else SiegePurple, fontSize = 7.sp, fontWeight = FontWeight.Black)
-                }
-            }
+    val shape = RoundedCornerShape(4.dp)
+    Box(
+        Modifier.size(size).padding(1.dp).clip(shape)
+            .background(if (letter != null) fill else MainUi.Surface)
+            .border(if (owner != 0) 1.2.dp else .7.dp, if (previewArea) MainUi.Green else border, shape)
+            .clickable(enabled = enabled && (cell.letter == null || pending), onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (pending) Box(Modifier.fillMaxSize().background(SiegeTile.copy(alpha = .34f), shape))
+        if (previewArea && !pending) Box(Modifier.fillMaxSize().background(MainUi.Green.copy(alpha = .08f), shape))
+        if (letter != null) {
+            Text(letter, color = Color(0xFF111827), fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Text(wordSiegeLetterValue(letter), color = Color(0xFF374151), fontSize = 5.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp))
+            if (owner != 0 && !pending) Box(Modifier.align(Alignment.TopEnd).padding(2.dp).size(4.dp).background(border, CircleShape))
+        } else if (!cell.bonusUsed && cell.bonus != null) {
+            Text(cell.bonus, color = if (cell.bonus in setOf("2H", "3H")) MainUi.Blue else SiegePurple, fontSize = 7.sp, fontWeight = FontWeight.Black)
         }
     }
 }

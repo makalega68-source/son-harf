@@ -1,8 +1,6 @@
 package com.sonharf.game
 
 import java.io.File
-import java.security.MessageDigest
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -58,26 +56,24 @@ class SeasonStyleRewardsContractTest {
     }
 
     @Test
-    fun homeShowsSeasonTargetAndActiveStyleWithoutChangingFrozenKeyboard() {
+    fun homeShowsSeasonTargetAndActiveStyleAndEquippedKeyboardIsApplied() {
         val main = projectFile("app/src/main/java/com/sonharf/game/MainExperienceApp.kt").readText()
         val profile = projectFile("app/src/main/java/com/sonharf/game/MainPlayerProfileScreen.kt").readText()
-        val keyboard = projectFile("app/src/main/java/com/sonharf/game/EmbeddedGameKeyboard.kt")
+        val keyboard = projectFile("app/src/main/java/com/sonharf/game/EmbeddedGameKeyboard.kt").readText()
+        val cosmetics = projectFile("app/src/main/java/com/sonharf/game/CosmeticRuntime.kt").readText()
 
         assertTrue(main.contains("SEZON YAKIN HEDEFİ"))
         assertTrue(main.contains("seasonRemaining"))
         assertTrue(main.contains("SonHarfCosmetics.profileAccent"))
         assertTrue(profile.contains("GÖRÜNÜMÜMÜ DÜZENLE"))
         assertTrue(profile.contains("SonHarfCosmetics.profileAccent"))
-        assertEquals(
-            "Frozen keyboard changed",
-            "f5143f6701c3bff95119aa6ce61d5f64acc15f8803fd2c6b48bcee4b5625d4a2",
-            keyboard.sha256(),
-        )
+        assertTrue(keyboard.contains("SonHarfCosmetics.keyboardPalette"))
+        assertTrue(keyboard.contains("palette.background"))
+        assertTrue(keyboard.contains("palette.key"))
+        assertTrue(keyboard.contains("palette.action"))
+        assertTrue(cosmetics.contains("keyboardThemeId"))
+        assertTrue(cosmetics.contains("keyboardPaletteFor"))
     }
-
-    private fun File.sha256(): String = MessageDigest.getInstance("SHA-256")
-        .digest(readBytes())
-        .joinToString("") { "%02x".format(it) }
 
     private fun projectFile(path: String): File {
         val candidates = listOf(File(path), File("../$path"))

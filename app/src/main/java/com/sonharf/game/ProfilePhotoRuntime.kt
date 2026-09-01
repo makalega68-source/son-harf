@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -20,6 +22,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -46,6 +49,7 @@ internal object ProfilePhotoRuntime {
     private val genderCache = LinkedHashMap<String, String?>()
 
     suspend fun load(path: String): ByteArray? {
+        if (path.startsWith("bot:")) return null
         if (path.isBlank() || !SupabaseProvider.configured) return null
         synchronized(cache) { cache[path] }?.let { return it }
         val session = SupabaseProvider.client.auth.currentSessionOrNull() ?: return null
@@ -65,6 +69,8 @@ internal object ProfilePhotoRuntime {
     }
 
     suspend fun genderForAvatar(path: String?): String? {
+        if (path?.startsWith("bot:female") == true) return "female"
+        if (path?.startsWith("bot:male") == true) return "male"
         if (path.isNullOrBlank() || !SupabaseProvider.configured) return null
         val ownerId = path.substringBefore('/').takeIf { it.isNotBlank() } ?: return null
         synchronized(genderCache) { if (genderCache.containsKey(ownerId)) return genderCache[ownerId] }
@@ -103,11 +109,50 @@ internal object ProfilePhotoRuntime {
 }
 
 private data class GenderVisual(val symbol: String, val color: Color)
+private data class ProfileFrameVisual(val primary: Color, val secondary: Color, val marker: String?, val outerPadding: Dp)
 
 private fun genderVisual(gender: String?): GenderVisual? = when (gender?.trim()?.lowercase()) {
     "kadın", "kadin", "female", "woman" -> GenderVisual("♀", Color(0xFFFF4F9A))
     "erkek", "male", "man" -> GenderVisual("♂", Color(0xFF238BFF))
     else -> null
+}
+
+private fun profileFrameVisual(frameId: String?, fallbackAccent: Color): ProfileFrameVisual = when {
+    frameId?.contains("black_gold") == true -> ProfileFrameVisual(Color(0xFF17191F), Color(0xFFD6A84B), "✦", 4.dp)
+    frameId?.contains("royal_gold") == true -> ProfileFrameVisual(Color(0xFFD29B2B), Color(0xFFFFE5A3), "♛", 4.dp)
+    frameId?.contains("crystal") == true -> ProfileFrameVisual(Color(0xFFBCEBFF), Color(0xFF708BFF), "◇", 4.dp)
+    frameId?.contains("purple_prestige") == true -> ProfileFrameVisual(Color(0xFF5E3AB8), Color(0xFFC0A2FF), "✦", 4.dp)
+    frameId?.contains("ice") == true -> ProfileFrameVisual(Color(0xFF61B9E8), Color(0xFFD9F5FF), "❄", 4.dp)
+    frameId?.contains("gold") == true || frameId?.contains("vip") == true -> ProfileFrameVisual(
+        primary = Color(0xFFF4B928), secondary = Color(0xFFFFE59B), marker = "VIP", outerPadding = 4.dp,
+    )
+    frameId?.contains("neon") == true -> ProfileFrameVisual(
+        primary = Color(0xFF22D3EE), secondary = Color(0xFF8B5CF6), marker = "✦", outerPadding = 4.dp,
+    )
+    frameId?.contains("starter") == true || frameId?.contains("founder") == true || frameId?.contains("light") == true -> ProfileFrameVisual(
+        primary = Color(0xFF6D5CE7), secondary = Color(0xFF2D8CFF), marker = "✧", outerPadding = 4.dp,
+    )
+    else -> ProfileFrameVisual(primary = fallbackAccent, secondary = Color(0xFF57C7F3), marker = null, outerPadding = 3.dp)
+}
+
+private fun premiumFrameAsset(frameId: String?): Int? = when {
+    frameId?.contains("black_gold") == true -> R.drawable.premium_frame_black_gold_v3
+    frameId?.contains("royal_gold") == true -> R.drawable.premium_frame_royal_gold_v3
+    frameId?.contains("modern_neon") == true || frameId?.contains("neon") == true -> R.drawable.premium_frame_neon_v3
+    frameId?.contains("crystal") == true -> R.drawable.premium_frame_crystal_higgsfield
+    frameId?.contains("purple_prestige") == true -> R.drawable.premium_frame_purple_prestige_higgsfield
+    else -> null
+}
+
+@Composable
+private fun PremiumFrameAsset(frameId: String?, modifier: Modifier) {
+    val resId = premiumFrameAsset(frameId) ?: return
+    Image(
+        painter = painterResource(resId),
+        contentDescription = null,
+        modifier = modifier,
+        contentScale = ContentScale.Fit,
+    )
 }
 
 @Composable
@@ -123,6 +168,29 @@ private fun FramelessGenderSymbol(gender: String?, size: Dp) {
 }
 
 @Composable
+private fun ProfileFrameMarker(marker: String?, size: Dp) {
+    if (marker.isNullOrBlank()) return
+    Text(
+        marker,
+        color = if (marker == "VIP") Color(0xFFB77800) else Color.White,
+        fontWeight = FontWeight.Black,
+        fontSize = if (marker == "VIP") (size.value * .12f).coerceAtLeast(7f).sp else (size.value * .22f).coerceAtLeast(11f).sp,
+        modifier = Modifier
+            .background(
+                if (marker == "VIP") Color(0xFFFFE7A6) else Color(0xFF182235).copy(alpha = .78f),
+                RoundedCornerShape(99.dp),
+            )
+            .padding(horizontal = if (marker == "VIP") 4.dp else 3.dp, vertical = 1.dp),
+    )
+}
+
+@Composable
+private fun BotAvatar(path: String, modifier: Modifier) {
+    val res = if (path == "bot:female") R.drawable.bot_avatar_female_higgsfield else R.drawable.bot_avatar_male_higgsfield
+    Image(painterResource(res), null, modifier, contentScale = ContentScale.Crop)
+}
+
+@Composable
 internal fun ProfilePhotoAvatar(
     avatarPath: String?,
     name: String,
@@ -132,33 +200,37 @@ internal fun ProfilePhotoAvatar(
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     var gender by remember(avatarPath) { mutableStateOf<String?>(null) }
+    val isBot = avatarPath?.startsWith("bot:") == true
     LaunchedEffect(avatarPath, visible) {
-        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+        bytes = if (isBot) null else if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
         gender = ProfilePhotoRuntime.genderForAvatar(avatarPath)
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
-    Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
+    val frameId = SonHarfCosmetics.profileFrameId
+    val frame = profileFrameVisual(frameId, accent)
+    Box(Modifier.size(size + 8.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
+            Modifier
+                .size(size)
+                .clip(CircleShape)
+                .background(Brush.sweepGradient(listOf(frame.secondary, frame.primary, frame.secondary, frame.primary)))
+                .padding(frame.outerPadding),
             contentAlignment = Alignment.Center,
         ) {
-            if (bitmap != null) {
-                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
-            } else {
-                Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
+            when {
+                isBot && visible -> BotAvatar(requireNotNull(avatarPath), Modifier.fillMaxSize().clip(CircleShape))
+                bitmap != null -> Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                else -> Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
                     Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (size.value * .38f).sp)
                 }
             }
         }
+        PremiumFrameAsset(frameId, Modifier.fillMaxSize())
+        Box(Modifier.align(Alignment.TopEnd)) { ProfileFrameMarker(frame.marker, size) }
         Box(Modifier.align(Alignment.BottomEnd)) { FramelessGenderSymbol(gender, size) }
     }
 }
 
-/**
- * Unified player portrait. The duel arena established the 56x74 rounded portrait as the
- * game-wide identity shape; all call sites using the gender-aware avatar now share that
- * aspect ratio and never shrink below the arena portrait.
- */
 @Composable
 internal fun ProfilePhotoAvatarWithGender(
     avatarPath: String?,
@@ -167,6 +239,7 @@ internal fun ProfilePhotoAvatarWithGender(
     size: Dp,
     accent: Color = SonHarfCyan,
     visible: Boolean = true,
+    frameIdOverride: String? = null,
 ) {
     val width = if (size < 56.dp) 56.dp else size
     ProfilePhotoAvatarRectWithGender(
@@ -177,6 +250,7 @@ internal fun ProfilePhotoAvatarWithGender(
         height = width * (74f / 56f),
         accent = accent,
         visible = visible,
+        frameIdOverride = frameIdOverride,
     )
 }
 
@@ -189,30 +263,39 @@ internal fun ProfilePhotoAvatarRectWithGender(
     height: Dp,
     accent: Color = SonHarfCyan,
     visible: Boolean = true,
+    frameIdOverride: String? = null,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
+    val isBot = avatarPath?.startsWith("bot:") == true
     LaunchedEffect(avatarPath, visible) {
-        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+        bytes = if (isBot) null else if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     val shape = RoundedCornerShape(14.dp)
-    Box(Modifier.size(width, height + 4.dp), contentAlignment = Alignment.TopCenter) {
+    val frameId = frameIdOverride ?: SonHarfCosmetics.profileFrameId
+    val frame = profileFrameVisual(frameId, accent)
+    Box(Modifier.size(width + 4.dp, height + 8.dp), contentAlignment = Alignment.TopCenter) {
         Box(
-            Modifier
-                .size(width, height)
-                .clip(shape)
-                .background(Brush.linearGradient(listOf(Color.White, accent.copy(alpha = .86f), Color(0xFF57C7F3), Color.White)))
-                .padding(3.dp),
+            Modifier.size(width, height).clip(shape).background(Color.White),
             contentAlignment = Alignment.Center,
         ) {
-            if (bitmap != null) {
-                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(shape), contentScale = ContentScale.Crop)
-            } else {
-                Box(Modifier.fillMaxSize().clip(shape).background(Color.White), contentAlignment = Alignment.Center) {
+            when {
+                isBot && visible -> BotAvatar(requireNotNull(avatarPath), Modifier.fillMaxSize().clip(shape))
+                bitmap != null -> Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(shape), contentScale = ContentScale.Crop)
+                else -> Box(Modifier.fillMaxSize().clip(shape).background(Color.White), contentAlignment = Alignment.Center) {
                     Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (height.value * .32f).coerceAtLeast(14f).sp)
                 }
             }
         }
+        if (premiumFrameAsset(frameId) != null) {
+            PremiumFrameAsset(frameId, Modifier.size(width, height).align(Alignment.TopCenter))
+        } else {
+            Surface(
+                Modifier.size(width, height).align(Alignment.TopCenter), shape = shape,
+                color = Color.Transparent, border = BorderStroke(2.dp, frame.primary.copy(alpha = .85f)),
+            ) {}
+        }
+        Box(Modifier.align(Alignment.TopEnd)) { ProfileFrameMarker(frame.marker, width) }
         Box(Modifier.align(Alignment.BottomEnd)) { FramelessGenderSymbol(gender, height) }
     }
 }

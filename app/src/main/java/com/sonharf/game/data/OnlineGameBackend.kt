@@ -37,6 +37,7 @@ data class ProfileDto(
     val wins: Int = 0,
     val losses: Int = 0,
     val rating: Int = 1000,
+    @SerialName("bot_difficulty") val botDifficulty: String = "normal",
 )
 
 @Serializable
@@ -102,6 +103,8 @@ data class TriviaQuestionDto(
     @SerialName("option_b") val optionB: String,
     @SerialName("option_c") val optionC: String,
     @SerialName("option_d") val optionD: String,
+    @SerialName("answer_unit") val answerUnit: String = "",
+    @SerialName("question_kind") val questionKind: String = "legacy",
 )
 
 @Serializable
