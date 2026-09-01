@@ -9,6 +9,7 @@ internal const val WordSiegePracticeBot = "practice-bot"
 
 internal data class WordSiegePracticeState(
     val board: List<WordSiegeCellDto>,
+    val language: String = "tr",
     val bag: String,
     val playerRack: String,
     val botRack: String,
@@ -38,8 +39,9 @@ internal class WordSiegePracticeError(val code: String) : IllegalArgumentExcepti
 internal object WordSiegePracticeEngine {
     private val trLocale = Locale.forLanguageTag("tr-TR")
 
-    fun newGame(): WordSiegePracticeState {
-        val tiles = turkishTileDistribution.toList().shuffled()
+    fun newGame(language: String = "tr"): WordSiegePracticeState {
+        val normalizedLanguage = if (language.lowercase() == "en") "en" else "tr"
+        val tiles = (if (normalizedLanguage == "en") englishTileDistribution else turkishTileDistribution).toList().shuffled()
         return WordSiegePracticeState(
             board = List(81) { index ->
                 WordSiegeCellDto(
@@ -52,6 +54,7 @@ internal object WordSiegePracticeEngine {
                     },
                 )
             },
+            language = normalizedLanguage,
             playerRack = tiles.take(7).joinToString(""),
             botRack = tiles.drop(7).take(7).joinToString(""),
             bag = tiles.drop(14).joinToString(""),
@@ -61,16 +64,29 @@ internal object WordSiegePracticeEngine {
     fun rackFor(state: WordSiegePracticeState, owner: Int): String =
         if (owner == 1) state.playerRack else state.botRack
 
-    fun tileValue(letter: Char): Int = when (letter.uppercaseChar()) {
-        'A', 'E', 'İ', 'K', 'L', 'N', 'R', 'T' -> 1
-        'I', 'M', 'O', 'S', 'U' -> 2
-        'B', 'D', 'Ü', 'Y' -> 3
-        'C', 'Ç', 'Ş', 'Z' -> 4
-        'G', 'H', 'P' -> 5
-        'F', 'Ö', 'V' -> 7
-        'Ğ' -> 8
-        'J' -> 10
-        else -> 1
+    fun tileValue(letter: Char, language: String = "tr"): Int {
+        val upper = letter.uppercaseChar()
+        if (language == "en") return when (upper) {
+            'A','E','I','L','N','O','R','S','T','U' -> 1
+            'D','G' -> 2
+            'B','C','M','P' -> 3
+            'F','H','V','W','Y' -> 4
+            'K' -> 5
+            'J','X' -> 8
+            'Q','Z' -> 10
+            else -> 1
+        }
+        return when (upper) {
+            'A', 'E', 'İ', 'K', 'L', 'N', 'R', 'T' -> 1
+            'I', 'M', 'O', 'S', 'U' -> 2
+            'B', 'D', 'Ü', 'Y' -> 3
+            'C', 'Ç', 'Ş', 'Z' -> 4
+            'G', 'H', 'P' -> 5
+            'F', 'Ö', 'V' -> 7
+            'Ğ' -> 8
+            'J' -> 10
+            else -> 1
+        }
     }
 
     fun validateMove(
@@ -121,7 +137,7 @@ internal object WordSiegePracticeEngine {
             if (!wordValidator(word)) fail("word_siege_invalid_word:$word")
             words += word
             if (primary == null) primary = word
-            score += scoreWord(state.board, placements, rack, cells)
+            score += scoreWord(state, placements, rack, cells)
             cells.forEach { index ->
                 val cell = board[index]
                 if (cell.letter != null && cell.owner !in setOf(0, owner) && captured.add(index)) board[index] = cell.copy(owner = owner)
@@ -266,13 +282,14 @@ internal object WordSiegePracticeEngine {
         return placements.takeIf { it.isNotEmpty() }
     }
 
-    private fun scoreWord(board: List<WordSiegeCellDto>, placements: Map<Int, Int>, rack: String, cells: List<Int>): Int {
+    private fun scoreWord(state: WordSiegePracticeState, placements: Map<Int, Int>, rack: String, cells: List<Int>): Int {
+        val board = state.board
         var total = 0
         var multiplier = 1
         cells.forEach { index ->
             val cell = board[index]
             val letter = placements[index]?.let(rack::getOrNull) ?: cell.letter?.firstOrNull()
-            var value = letter?.let(::tileValue) ?: 0
+            var value = letter?.let { tileValue(it, state.language) } ?: 0
             val bonus = if (cell.letter == null && !cell.bonusUsed) cell.bonus else null
             if (bonus == "2H") value *= 2
             if (bonus == "3H") value *= 3
@@ -333,6 +350,9 @@ internal object WordSiegePracticeEngine {
     )
 
     private val practiceDictionary = botWords.toSet() + setOf("ARAÇ", "TAM", "AT")
+
+    private const val englishTileDistribution =
+        "EEEEEEEEEEEEAAAAAAAAAIIIIIIIIIOOOOOOOONNNNNNRRRRRRTTTTTTLLLLSSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYYKJXQZ"
 
     private const val turkishTileDistribution =
         "AAAAAAAAAAAAEEEEEEEEEEEİİİİİİİİLLLLLLNNNNNNRRRRRRTTTTTKKKK" +

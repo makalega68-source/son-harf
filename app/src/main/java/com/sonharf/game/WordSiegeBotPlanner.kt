@@ -35,13 +35,14 @@ internal object WordSiegeBotPlanner {
         random: Random = Random.Default,
     ): WordSiegeBotPlan {
         require(state.status == "playing" && state.currentOwner == 2) { "word_siege_bot_not_turn" }
-        val rack = state.botRack.uppercase(trLocale)
+        val locale = if (state.language == "en") Locale.ENGLISH else trLocale
+        val rack = state.botRack.uppercase(locale)
         require(rack.isNotBlank()) { "word_siege_bot_empty_rack" }
         val anchorCount = countPlayableAnchors(state)
         val lexicon = fetchPrioritizedLexicon(state, rack)
         return planFromLexicon(state, lexicon, difficulty, random, anchorCount) { words ->
             buildSet {
-                words.chunked(600).forEach { addAll(validateWordSiegeDictionaryWords(it, "tr")) }
+                words.chunked(600).forEach { addAll(validateWordSiegeDictionaryWords(it, state.language)) }
             }
         }
     }
@@ -55,7 +56,8 @@ internal object WordSiegeBotPlanner {
         validateWords: suspend (List<String>) -> Set<String> = { it.toSet() },
     ): WordSiegeBotPlan {
         require(state.status == "playing" && state.currentOwner == 2) { "word_siege_bot_not_turn" }
-        val rack = state.botRack.uppercase(trLocale)
+        val locale = if (state.language == "en") Locale.ENGLISH else trLocale
+        val rack = state.botRack.uppercase(locale)
         require(rack.isNotBlank()) { "word_siege_bot_empty_rack" }
         val lexicon = lexiconInput.asSequence()
             .map { it.trim().uppercase(trLocale) }
@@ -118,7 +120,7 @@ internal object WordSiegeBotPlanner {
 
     private suspend fun fetchPrioritizedLexicon(state: WordSiegePracticeState, rack: String): List<String> = coroutineScope {
         val boardLetters = state.board.mapNotNull { it.letter?.firstOrNull()?.uppercaseChar() }
-        if (boardLetters.isEmpty()) return@coroutineScope fetchWordSiegeBotLexicon(rack, "tr", 1000)
+        if (boardLetters.isEmpty()) return@coroutineScope fetchWordSiegeBotLexicon(rack, state.language, 1000)
 
         val anchorLetters = state.board.indices.asSequence()
             .filter { state.board[it].letter != null }
@@ -129,14 +131,14 @@ internal object WordSiegeBotPlanner {
             .toList()
 
         val focused = anchorLetters.map { anchor ->
-            async { fetchWordSiegeBotLexicon(rack + anchor, "tr", 220) }
+            async { fetchWordSiegeBotLexicon(rack + anchor, state.language, 220) }
         }
         val broad = async {
             val distinctBoardAlphabet = boardLetters.distinct().joinToString("")
-            fetchWordSiegeBotLexicon(rack + distinctBoardAlphabet, "tr", 500)
+            fetchWordSiegeBotLexicon(rack + distinctBoardAlphabet, state.language, 500)
         }
         (focused.awaitAll().flatten() + broad.await()).asSequence()
-            .map { it.uppercase(trLocale) }
+            .map { it.uppercase(if (state.language == "en") Locale.ENGLISH else trLocale) }
             .filter { it.length in 2..9 }
             .distinct()
             .take(2200)

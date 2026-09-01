@@ -51,13 +51,23 @@ private enum class MainDestination {
 }
 
 @Composable
-fun SonHarfMainApp(onSignedOut: () -> Unit) {
+internal fun SonHarfMainApp(
+    onSignedOut: () -> Unit,
+    onGameHelpKindChanged: (FirstPlayerTutorialKind?) -> Unit = {},
+) {
     val backend = remember { OnlineGameBackend() }
     var destination by remember { mutableStateOf(MainDestination.HOME) }
     val homeRequest = SonHarfUiState.homeRequest
 
     LaunchedEffect(homeRequest) { if (homeRequest > 0) destination = MainDestination.HOME }
     LaunchedEffect(destination) {
+        onGameHelpKindChanged(
+            when (destination) {
+                MainDestination.GAME -> FirstPlayerTutorialKind.SON_HARF
+                MainDestination.WORD_SIEGE -> FirstPlayerTutorialKind.WORD_SIEGE
+                else -> null
+            },
+        )
         if (destination != MainDestination.GAME) {
             while (true) { runCatching { backend.setPresence("online") }; delay(55_000) }
         }

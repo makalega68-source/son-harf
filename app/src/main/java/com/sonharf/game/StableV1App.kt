@@ -37,6 +37,7 @@ fun StableV1App() {
     var tutorial by remember { mutableStateOf<FirstPlayerTutorialKind?>(null) }
     var automaticTutorial by remember { mutableStateOf(false) }
     var showHelpChooser by remember { mutableStateOf(false) }
+    var gameHelpKind by remember { mutableStateOf<FirstPlayerTutorialKind?>(null) }
 
     LaunchedEffect(Unit) {
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
@@ -95,25 +96,33 @@ fun StableV1App() {
         if (showAdminPanel && adminAuthorized) {
             AdminConsoleScreen(onBack = { showAdminPanel = false })
         } else {
-            SonHarfMainApp(onSignedOut = {
-                tutorial = null
-                showHelpChooser = false
-                showAdminPanel = false
-                adminAuthorized = false
-                automaticTutorial = false
-                authenticated = false
-            })
+            SonHarfMainApp(
+                onSignedOut = {
+                    tutorial = null
+                    showHelpChooser = false
+                    showAdminPanel = false
+                    adminAuthorized = false
+                    automaticTutorial = false
+                    authenticated = false
+                },
+                onGameHelpKindChanged = { gameHelpKind = it },
+            )
 
-            if (tutorial == null) {
+            if (tutorial == null && gameHelpKind != null) {
                 FloatingActionButton(
-                    onClick = { showHelpChooser = true },
+                    onClick = {
+                        automaticTutorial = false
+                        tutorial = gameHelpKind
+                    },
                     modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 6.dp, end = 68.dp).size(42.dp),
                     containerColor = MainUi.Surface,
                     contentColor = MainUi.Blue,
                 ) {
                     Icon(Icons.Rounded.HelpOutline, contentDescription = sh("Nasıl Oynanır?", "How to Play?"), modifier = Modifier.size(22.dp))
                 }
+            }
 
+            if (tutorial == null) {
                 if (adminAuthorized) {
                     FloatingActionButton(
                         onClick = { showAdminPanel = true },
