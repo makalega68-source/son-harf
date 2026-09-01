@@ -15,7 +15,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -28,21 +27,22 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 
 internal object MonsterUi {
-    // Charcoal base: still premium/dark, but no longer near-black.
-    val Background = Color(0xFF24272C)
-    val Surface = Color(0xFF2D3036)
-    val SurfaceRaised = Color(0xFF363A41)
-    val SurfaceSoft = Color(0xFF40444C)
-    val Text = Color(0xFFF8F9FA)
-    val Muted = Color(0xFFB9BEC7)
-    val Border = Color(0xFF50555F)
-    val Accent = Color(0xFFEAFB17)
-    val AccentText = Color(0xFF17191C)
-    val Live = Color(0xFFFF5A52)
-    val Coral = Color(0xFFFF7167)
-    val Orange = Color(0xFFFFA24D)
-    val Green = Color(0xFF55D88A)
-    val Gold = Color(0xFFFFD166)
+    // New purchased Monster layout: white/blue visual system. The premium
+    // blue accent is activated by the Style-store game theme.
+    val Background = Color(0xFFF7FAFF)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceRaised = Color(0xFFF0F5FC)
+    val SurfaceSoft = Color(0xFFE8EEF7)
+    val Text = Color(0xFF10213A)
+    val Muted = Color(0xFF62758F)
+    val Border = Color(0xFFD5E2F0)
+    val Accent: Color get() = if (SonHarfCosmetics.monsterBlueTheme) Color(0xFF1677FF) else Color(0xFF64748B)
+    val AccentText = Color(0xFFFFFFFF)
+    val Live = Color(0xFFFF4D4F)
+    val Coral = Color(0xFFFF6B61)
+    val Orange = Color(0xFFF59E0B)
+    val Green = Color(0xFF168A55)
+    val Gold = Color(0xFFD68A00)
 }
 
 private enum class MonsterDestination { HOME, GAME, WORD_SIEGE, LEAGUE, SOCIAL, STYLE, PROFILE, TASKS, VIP, SETTINGS, PROFILE_DETAILS, ACCOUNT, DAILY_CHALLENGE }
@@ -52,6 +52,10 @@ fun MonsterExperienceApp(onSignedOut: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     var destination by remember { mutableStateOf(MonsterDestination.HOME) }
     val homeRequest = SonHarfUiState.homeRequest
+
+    LaunchedEffect(Unit) {
+        runCatching { SonHarfCosmetics.apply(backend.getEquippedCosmetics()) }
+    }
     LaunchedEffect(homeRequest) { if (homeRequest > 0) destination = MonsterDestination.HOME }
     LaunchedEffect(destination) {
         if (destination != MonsterDestination.GAME) while (true) {
@@ -77,7 +81,7 @@ fun MonsterExperienceApp(onSignedOut: () -> Unit) {
                 MonsterDestination.WORD_SIEGE -> WordSiegeExperienceScreen { destination = MonsterDestination.HOME }
                 MonsterDestination.LEAGUE -> LeaderboardExperienceScreen { destination = MonsterDestination.HOME }
                 MonsterDestination.SOCIAL -> MainSocialScreen(backend = backend, onPlay = { destination = MonsterDestination.GAME })
-                MonsterDestination.STYLE -> EconomyShopScreen()
+                MonsterDestination.STYLE -> MonsterStyleStoreScreen()
                 MonsterDestination.PROFILE -> MainPlayerProfileScreen(backend, { destination = MonsterDestination.PROFILE_DETAILS }, { destination = MonsterDestination.VIP }, { destination = MonsterDestination.SETTINGS }, { destination = MonsterDestination.SOCIAL })
                 MonsterDestination.TASKS -> MainRetentionScreen(backend, { destination = MonsterDestination.HOME }, { destination = MonsterDestination.GAME }, { destination = MonsterDestination.DAILY_CHALLENGE })
                 MonsterDestination.VIP -> MainVipScreen(backend) { destination = MonsterDestination.PROFILE }
