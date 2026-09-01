@@ -147,9 +147,8 @@ private fun premiumFrameAsset(frameId: String?): Int? = when {
 @Composable
 private fun PremiumFrameAsset(frameId: String?, modifier: Modifier) {
     val resId = premiumFrameAsset(frameId) ?: return
-    val painter = try { painterResource(resId) } catch (_: Throwable) { null } ?: return
     Image(
-        painter = painter,
+        painter = painterResource(resId),
         contentDescription = null,
         modifier = modifier,
         contentScale = ContentScale.Fit,
