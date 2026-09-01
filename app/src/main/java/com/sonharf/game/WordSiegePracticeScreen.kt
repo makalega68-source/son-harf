@@ -29,11 +29,11 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
+internal fun WordSiegePracticeScreen(language: String = "tr", onExit: () -> Unit) {
     val scope = rememberCoroutineScope()
     val backend = remember { OnlineGameBackend() }
     var meProfile by remember { mutableStateOf<ProfileDto?>(null) }
-    var state by remember { mutableStateOf(WordSiegePracticeEngine.newGame()) }
+    var state by remember(language) { mutableStateOf(WordSiegePracticeEngine.newGame(language)) }
     var botName by rememberSaveable { mutableStateOf(TrainingBotSupport.chooseBotName()) }
     val botDifficulty = TrainingBotDifficulty.MEDIUM
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
@@ -54,7 +54,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     }
 
     fun startAgain() {
-        state = WordSiegePracticeEngine.newGame()
+        state = WordSiegePracticeEngine.newGame(language)
         botName = TrainingBotSupport.chooseBotName(botName)
         notice = sh("Yeni harfler dağıtıldı. İlk hamle ortadaki 2K karesinden geçmeli.", "New tiles dealt. Your first move must cover the center 2W cell.")
         clearSelection()
@@ -85,7 +85,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                 var allowed: Boolean? = null
                 repeat(2) { attempt ->
                     if (allowed != null) return@repeat
-                    runCatching { validateWordSiegeDictionaryWord(word, "tr") }.onSuccess { allowed = it }
+                    runCatching { validateWordSiegeDictionaryWord(word, state.language) }.onSuccess { allowed = it }
                     if (allowed == null && attempt == 0) delay(220)
                 }
                 if (allowed == null) {

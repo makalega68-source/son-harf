@@ -61,6 +61,10 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     var notice by remember { mutableStateOf<String?>(null) }
     var hubTab by remember { mutableStateOf(WordSiegeHubTab.ACTIVE) }
     var showDurationPicker by remember { mutableStateOf(false) }
+    var showLanguagePicker by remember { mutableStateOf(false) }
+    var languagePickerForPractice by remember { mutableStateOf(false) }
+    var selectedMatchLanguage by remember { mutableStateOf("tr") }
+    var practiceLanguage by remember { mutableStateOf("tr") }
     var practiceActive by remember { mutableStateOf(false) }
 
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
@@ -78,7 +82,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     var clockTick by remember { mutableLongStateOf(System.currentTimeMillis()) }
 
     if (practiceActive) {
-        WordSiegePracticeScreen(onExit = { practiceActive = false })
+        WordSiegePracticeScreen(language = practiceLanguage, onExit = { practiceActive = false })
         return
     }
 
@@ -237,8 +241,8 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                 onTab = { hubTab = it },
                 onBack = onExit,
                 onRefresh = { scope.launch { refreshGames(showProgress = true) } },
-                onNewGame = { showDurationPicker = true },
-                onPractice = { practiceActive = true },
+                onNewGame = { languagePickerForPractice = false; showLanguagePicker = true },
+                onPractice = { languagePickerForPractice = true; showLanguagePicker = true },
                 onOpen = { openFreshGame(it.id) },
                 onCancelWaiting = { game ->
                     runGameAction(sh("Eşleşme araması iptal edildi.", "Match search cancelled.")) {
@@ -324,6 +328,36 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
         }
     }
 
+    if (showLanguagePicker) {
+        AlertDialog(
+            onDismissRequest = { showLanguagePicker = false },
+            title = { Text(sh("Oyun dilini seç", "Choose game language"), fontWeight = FontWeight.Black) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(sh("Arayüz dilinden bağımsızdır ve maç başladıktan sonra değişmez.", "Independent from UI language and locked when the match starts."), color = MainUi.Muted, fontSize = 12.sp)
+                    listOf("tr" to "🇹🇷 TÜRKÇE", "en" to "🇬🇧 ENGLISH").forEach { (language, label) ->
+                        Button(
+                            onClick = {
+                                showLanguagePicker = false
+                                if (languagePickerForPractice) {
+                                    practiceLanguage = language
+                                    practiceActive = true
+                                } else {
+                                    selectedMatchLanguage = language
+                                    showDurationPicker = true
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth().height(52.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (language == "tr") MainUi.Blue else SiegePurple),
+                        ) { Text(label, fontWeight = FontWeight.Black) }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = { TextButton(onClick = { showLanguagePicker = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
+        )
+    }
+
     if (showDurationPicker) {
         AlertDialog(
             onDismissRequest = { showDurationPicker = false },
@@ -337,7 +371,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                                 showDurationPicker = false
                                 busy = true
                                 scope.launch {
-                                    runCatching { backend.findOrCreateWordSiegeGame(if (SonHarfUiState.isEnglish) "en" else "tr", hours) }
+                                    runCatching { backend.findOrCreateWordSiegeGame(selectedMatchLanguage, hours) }
                                         .onSuccess { next ->
                                             applyGame(next)
                                             selectedGameId = next.id
