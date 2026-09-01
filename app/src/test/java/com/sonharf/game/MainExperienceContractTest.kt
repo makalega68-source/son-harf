@@ -11,33 +11,49 @@ import org.junit.Test
 class MainExperienceContractTest {
 
     @Test
-    fun authenticatedUsersEnterTheCompleteMainExperience() {
+    fun authenticatedUsersEnterTheNewMonsterExperience() {
         val stable = projectFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
         val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
 
         assertTrue(stable.contains("MonsterExperienceApp("))
         assertTrue(main.contains("OnlineGameScreenV6()"))
-        assertTrue(main.contains("sh(\"Oyna\", \"Play\")"))
         assertTrue(main.contains("MonsterDestination.WORD_SIEGE"))
         assertTrue(main.contains("WordSiegeExperienceScreen"))
         assertTrue(main.contains("MonsterDestination.LEAGUE"))
         assertTrue(main.contains("MonsterDestination.SOCIAL"))
         assertTrue(main.contains("MonsterDestination.STYLE"))
+        assertTrue(main.contains("MonsterStyleStoreScreen()"))
         assertTrue(main.contains("MonsterDestination.PROFILE"))
         assertFalse(main.contains("TargetNeonGameScreen"))
     }
 
     @Test
-    fun homeKeepsClassicDuelAndSplitsPlayAreaIntoMultipleCompetitiveEntrances() {
+    fun homeUsesPurchasedMonsterShellAndCompetitiveEntrances() {
         val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
         val classic = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt")
 
         assertTrue(main.contains("MonsterLiveMatchCard("))
-        assertTrue(main.contains("MonsterModePill(sh(\"Düello\", \"Duel\")"))
-        assertTrue(main.contains("MonsterModePill(sh(\"Kuşatma\", \"Siege\")"))
-        assertTrue(main.contains("MonsterModePill(sh(\"Lig\", \"League\")"))
-        assertTrue(main.contains("MonsterModePill(sh(\"Görev\", \"Mission\")"))
+        assertTrue(main.contains("KELİME\\nKUŞATMASI"))
+        assertTrue(main.contains("LİG &\\nRATING"))
+        assertTrue(main.contains("Günlük görevler"))
+        assertTrue(main.contains("Sosyal & arkadaşlar"))
         assertTrue(classic.isFile)
+    }
+
+    @Test
+    fun monsterShellUsesWhiteBluePaletteAndStoreThemeRuntime() {
+        val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
+        val store = projectFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
+        val cosmetics = projectFile("app/src/main/java/com/sonharf/game/CosmeticRuntime.kt").readText()
+
+        assertTrue(main.contains("Color(0xFFF7FAFF)"))
+        assertTrue(main.contains("Color(0xFFFFFFFF)"))
+        assertTrue(main.contains("Color(0xFF1677FF)"))
+        assertTrue(store.contains("theme_monster_blue"))
+        assertTrue(store.contains("Mavi Beyaz Arena"))
+        assertTrue(store.contains("SATIN AL"))
+        assertTrue(cosmetics.contains("monsterBlueTheme"))
+        assertTrue(cosmetics.contains("gameThemeId == \"theme_monster_blue\""))
     }
 
     @Test
@@ -53,28 +69,26 @@ class MainExperienceContractTest {
         }
 
         assertTrue(combined.contains("backend.getProfile("))
-        assertTrue(combined.contains("backend.getGrowthDashboard()"))
         assertTrue(combined.contains("backend.getUnifiedMissions()"))
         assertTrue(combined.contains("backend.getFriends()"))
-        assertTrue(combined.contains("backend.getRivalHistory("))
         assertTrue(combined.contains("profile?.isVip == true"))
         assertFalse(combined.contains("Mock"))
         assertFalse(combined.contains("fake", ignoreCase = true))
     }
 
     @Test
-    fun styleShopDoesNotOfferTheLegacyNeonTheme() {
-        val shop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
-        val playProducts = projectFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
+    fun legacyThemeIsNotTheActiveStyleDestination() {
+        val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
+        val store = projectFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
         val catalog = projectFile("app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt").readText()
         val offeredProducts = catalog.substringAfter("val oneTimeProducts = listOf(")
 
-        assertTrue(shop.contains("STYLE"))
-        assertFalse(shop.contains("game_theme"))
-        assertFalse(shop.contains("keyboard_theme"))
-        assertFalse(playProducts.contains("THEME_NEON"))
+        assertTrue(main.contains("MonsterDestination.STYLE -> MonsterStyleStoreScreen()"))
+        assertTrue(store.contains("theme_monster_blue"))
+        assertFalse(store.contains("theme_aurora"))
+        assertFalse(store.contains("theme_midnight"))
+        assertFalse(store.contains("theme_neon"))
         assertFalse(offeredProducts.contains("THEME_NEON"))
-        assertFalse(shop.contains("kozmetik", ignoreCase = true))
     }
 
     @Test
