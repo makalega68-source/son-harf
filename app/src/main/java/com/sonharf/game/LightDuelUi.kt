@@ -349,6 +349,7 @@ internal fun LightDuelArena(
     words: List<GameWordDto>,
     isVip: Boolean,
     motivationMessage: String?,
+    continueMessage: String?,
     feedbackWord: String?,
     feedbackCorrect: Boolean?,
     wordInput: String,
@@ -401,6 +402,7 @@ internal fun LightDuelArena(
             myRounds = myRounds,
             oppRounds = oppRounds,
             motivationMessage = if (room.winnerId == null) null else motivationMessage,
+            continueMessage = continueMessage,
             onRematch = onRematch,
             onExit = onExit,
         )
@@ -1240,6 +1242,7 @@ private fun LightResult(
     myRounds: Int,
     oppRounds: Int,
     motivationMessage: String?,
+    continueMessage: String?,
     onRematch: () -> Unit,
     onExit: () -> Unit,
 ) {
@@ -1276,6 +1279,16 @@ private fun LightResult(
                         textAlign = TextAlign.Center,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 2,
+                    )
+                }
+                if (!continueMessage.isNullOrBlank()) {
+                    Text(
+                        continueMessage,
+                        color = LMuted,
+                        textAlign = TextAlign.Center,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 2,
                     )
                 }

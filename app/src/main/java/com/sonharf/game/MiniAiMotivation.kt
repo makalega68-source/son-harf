@@ -64,6 +64,34 @@ internal object MiniAiMotivation {
         "So close. How about a rematch?",
         "Nice try. Ready to go again?",
     )
+    private val localReturnsTr = listOf(
+        "Tekrar hoş geldin! Hazırsan devam. 👋",
+        "Seni yeniden görmek güzel! ✨",
+        "Hoş geldin, kaldığın yerden devam. 🎯",
+        "Geri döndün! Güzel bir maç seni bekliyor. 👋",
+        "Tekrar buradasın, hazırsan başlayalım. ⚡",
+    )
+    private val localReturnsEn = listOf(
+        "Welcome back! Continue when you're ready. 👋",
+        "Great to see you again! ✨",
+        "Welcome back, pick up where you left off. 🎯",
+        "You're back! A good match awaits. 👋",
+        "Back again? Let's play when you're ready. ⚡",
+    )
+    private val localContinuesTr = listOf(
+        "Bir maç daha? ⚡",
+        "Rövanşa hazır mısın? 🎯",
+        "Hazırsan zinciri sürdürelim. ✨",
+        "Yeni maç, yeni fırsat. 👏",
+        "Devam etmek istersen oyun hazır. 🎮",
+    )
+    private val localContinuesEn = listOf(
+        "One more match? ⚡",
+        "Ready for a rematch? 🎯",
+        "Keep the chain going when you're ready. ✨",
+        "New match, new chance. 👏",
+        "The game is ready if you are. 🎮",
+    )
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val client = HttpClient(OkHttp)
     @Volatile private var lastShown: String? = null
@@ -84,8 +112,26 @@ internal object MiniAiMotivation {
         return selected
     }
 
-    internal fun shouldAttemptAi(matchId: String): Boolean =
-        (matchId.hashCode().toLong().absoluteValue % 20L) == 0L
+    internal fun localPlayerReturned(language: String = "tr", seed: Int = (System.nanoTime() xor Thread.currentThread().id).toInt()): String {
+        val pool = if (language == "en") localReturnsEn else localReturnsTr
+        val candidates = pool.filterNot { it == lastShown }.ifEmpty { pool }
+        val selected = candidates[seed.absoluteValue % candidates.size]
+        lastShown = selected
+        return selected
+    }
+
+    internal fun localMatchContinue(language: String = "tr", seed: Int = (System.nanoTime() xor Thread.currentThread().id).toInt()): String {
+        val pool = if (language == "en") localContinuesEn else localContinuesTr
+        val candidates = pool.filterNot { it == lastShown }.ifEmpty { pool }
+        val selected = candidates[seed.absoluteValue % candidates.size]
+        lastShown = selected
+        return selected
+    }
+
+    internal fun shouldAttemptAi(eventKey: String, divisor: Int = 20): Boolean {
+        val safeDivisor = divisor.coerceAtLeast(2)
+        return (eventKey.hashCode().toLong().absoluteValue % safeDivisor.toLong()) == 0L
+    }
 
     internal fun sanitizeAiReply(raw: String): String? {
         val clean = raw.trim().lineSequence().firstOrNull()?.trim().orEmpty()
@@ -94,6 +140,52 @@ internal object MiniAiMotivation {
         val punctuation = clipped.indexOfFirst { it == '.' || it == '!' || it == '?' }
         val singleSentence = if (punctuation >= 0) clipped.take(punctuation + 1) else clipped
         return singleSentence.trim().takeIf { it.length in 2..96 }
+    }
+
+    suspend fun maybeAiPlayerReturned(eventKey: String, language: String): String? {
+        if (!shouldAttemptAi("return:$eventKey", divisor = 40) || !SupabaseProvider.configured) return null
+        val token = SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken ?: return null
+        return runCatching {
+            val request = MiniMotivationRequest(
+                message = if (language == "en")
+                    "PLAYER_RETURNED: Maximum 8 words. Warm welcome, no pressure."
+                else
+                    "PLAYER_RETURNED: En fazla 8 kelime. Sıcak karşılama, baskı yok.",
+                language = language,
+                gameContext = "Verified event: player returned after at least six hours away. One short sentence only.",
+            )
+            val response = client.post("${BuildConfig.SUPABASE_URL}/functions/v1/eve-chat") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                header("apikey", BuildConfig.SUPABASE_KEY)
+                contentType(ContentType.Application.Json)
+                setBody(json.encodeToString(request))
+            }
+            if (!response.status.isSuccess()) return@runCatching null
+            sanitizeAiReply(json.decodeFromString<MiniMotivationResponse>(response.bodyAsText()).reply)
+        }.getOrNull()?.also { lastShown = it }
+    }
+
+    suspend fun maybeAiMatchContinue(matchId: String, language: String): String? {
+        if (!shouldAttemptAi("continue:$matchId", divisor = 40) || !SupabaseProvider.configured) return null
+        val token = SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken ?: return null
+        return runCatching {
+            val request = MiniMotivationRequest(
+                message = if (language == "en")
+                    "MATCH_CONTINUE: Maximum 8 words. Friendly invitation for another match, no pressure."
+                else
+                    "MATCH_CONTINUE: En fazla 8 kelime. Yeni maça samimi davet, baskı yok.",
+                language = language,
+                gameContext = "Verified event: Son Harf match ended. Invite the player to continue with one short sentence only.",
+            )
+            val response = client.post("${BuildConfig.SUPABASE_URL}/functions/v1/eve-chat") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                header("apikey", BuildConfig.SUPABASE_KEY)
+                contentType(ContentType.Application.Json)
+                setBody(json.encodeToString(request))
+            }
+            if (!response.status.isSuccess()) return@runCatching null
+            sanitizeAiReply(json.decodeFromString<MiniMotivationResponse>(response.bodyAsText()).reply)
+        }.getOrNull()?.also { lastShown = it }
     }
 
     suspend fun maybeAiMatchLoss(matchId: String, language: String): String? {

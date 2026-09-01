@@ -46,20 +46,48 @@ class MiniAiMotivationTest {
     }
 
     @Test
-    fun winAndLossTriggersAreWiredWithoutOtherTriggers() {
-        val online = File("src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
-        assertTrue(online.contains("active.status == \"finished\" && active.winnerId == me"))
-        assertTrue(online.contains("active.winnerId != null && active.winnerId != me"))
-        assertTrue(online.contains("MiniAiMotivation.maybeAiMatchWin(active.id, active.language)"))
-        assertTrue(online.contains("MiniAiMotivation.maybeAiMatchLoss(active.id, active.language)"))
-        assertFalse(online.contains("PLAYER_RETURNED"))
-        assertFalse(online.contains("MATCH_CONTINUE"))
+    fun playerReturnFallbackIsShortAndNonEmpty() {
+        val value = MiniAiMotivation.localPlayerReturned("tr", seed = 2)
+        assertTrue(value.isNotBlank())
+        assertTrue(value.length <= 96)
     }
 
     @Test
-    fun resultUiShowsMotivationForWinAndLossButNotDraw() {
+    fun matchContinueFallbackIsShortAndNonEmpty() {
+        val value = MiniAiMotivation.localMatchContinue("tr", seed = 2)
+        assertTrue(value.isNotBlank())
+        assertTrue(value.length <= 96)
+    }
+
+    @Test
+    fun secondaryAiGatesAreRarerThanWinLossGate() {
+        val primary = (1..800).count { MiniAiMotivation.shouldAttemptAi("primary-$it") }
+        val secondary = (1..800).count { MiniAiMotivation.shouldAttemptAi("secondary-$it", divisor = 40) }
+        assertTrue(primary > 0)
+        assertTrue(secondary > 0)
+        assertTrue(secondary < primary)
+        assertTrue(secondary < 40)
+    }
+
+    @Test
+    fun allFourMiniAiEventsAreWiredAndReturnNeedsSixHours() {
+        val online = File("src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
+        val helper = File("src/main/java/com/sonharf/game/MiniAiMotivation.kt").readText()
+        assertTrue(online.contains("MiniAiMotivation.maybeAiMatchWin(active.id, active.language)"))
+        assertTrue(online.contains("MiniAiMotivation.maybeAiMatchLoss(active.id, active.language)"))
+        assertTrue(online.contains("MiniAiMotivation.maybeAiPlayerReturned"))
+        assertTrue(online.contains("MiniAiMotivation.maybeAiMatchContinue(active.id, active.language)"))
+        assertTrue(online.contains("returnedAfterAbsence"))
+        assertTrue(online.contains("6 * 60 * 60 * 1000L"))
+        assertTrue(helper.contains("PLAYER_RETURNED:"))
+        assertTrue(helper.contains("MATCH_CONTINUE:"))
+    }
+
+    @Test
+    fun resultUiShowsContinueMessageForEveryFinishedResult() {
         val ui = File("src/main/java/com/sonharf/game/LightDuelUi.kt").readText()
+        assertTrue(ui.contains("continueMessage = continueMessage"))
+        assertTrue(ui.contains("if (!continueMessage.isNullOrBlank())"))
         assertTrue(ui.contains("motivationMessage = if (room.winnerId == null) null else motivationMessage"))
-        assertTrue(ui.contains("if (!draw && !motivationMessage.isNullOrBlank())"))
     }
 }

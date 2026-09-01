@@ -62,6 +62,12 @@ fun OnlineGameScreenV6() {
     var feedbackWord by remember { mutableStateOf<String?>(null) }
     var feedbackCorrect by remember { mutableStateOf<Boolean?>(null) }
     var motivationMessage by remember { mutableStateOf<String?>(null) }
+    var continueMessage by remember { mutableStateOf<String?>(null) }
+    val miniAiPrefs = remember(context) { context.getSharedPreferences("son_harf_mini_ai", 0) }
+    val previousVisitMs = remember { miniAiPrefs.getLong("last_visit_ms", 0L) }
+    val returnedAfterAbsence = remember(previousVisitMs) {
+        previousVisitMs > 0L && System.currentTimeMillis() - previousVisitMs >= 6 * 60 * 60 * 1000L
+    }
     var busy by remember { mutableStateOf(false) }
     var matching by remember { mutableStateOf(false) }
     var showPrivate by remember { mutableStateOf(false) }
@@ -182,11 +188,23 @@ fun OnlineGameScreenV6() {
     }
 
     LaunchedEffect(Unit) {
+        miniAiPrefs.edit().putLong("last_visit_ms", System.currentTimeMillis()).apply()
         busy = true
         runCatching { ensureProfile() }.onSuccess { p ->
             val old = runCatching { activeRoom() }.getOrNull()
-            if (old != null) { room = old; language = old.language; observe(old); notice = sh("${p.displayName}, aktif maçına dönüldü.", "${p.displayName}, returned to your active match.") }
-            else notice = sh("${p.displayName}, düelloya hazırsın.", "${p.displayName}, you are ready to duel.")
+            if (old != null) {
+                room = old; language = old.language; observe(old)
+                if (returnedAfterAbsence) {
+                    notice = MiniAiMotivation.localPlayerReturned(old.language)
+                    scope.launch {
+                        MiniAiMotivation.maybeAiPlayerReturned("${old.id}:$previousVisitMs", old.language)?.let {
+                            notice = it
+                        }
+                    }
+                } else {
+                    notice = sh("${p.displayName}, aktif maçına dönüldü.", "${p.displayName}, returned to your active match.")
+                }
+            } else notice = sh("${p.displayName}, düelloya hazırsın.", "${p.displayName}, you are ready to duel.")
         }.onFailure { notice = friendly(it.message.orEmpty()) }
         busy = false
     }
@@ -305,6 +323,14 @@ fun OnlineGameScreenV6() {
             }
         }
         LaunchedEffect(active.id, active.status, active.winnerId, me) {
+            if (active.status == "finished") {
+                continueMessage = MiniAiMotivation.localMatchContinue(active.language)
+                MiniAiMotivation.maybeAiMatchContinue(active.id, active.language)?.let {
+                    continueMessage = it
+                }
+            } else {
+                continueMessage = null
+            }
             if (active.status == "finished" && active.winnerId == me) {
                 val local = MiniAiMotivation.localMatchWin(active.language)
                 motivationMessage = local
@@ -328,6 +354,7 @@ fun OnlineGameScreenV6() {
             words = words,
             isVip = profile?.isVip == true,
             motivationMessage = motivationMessage,
+            continueMessage = continueMessage,
             feedbackWord = feedbackWord,
             feedbackCorrect = feedbackCorrect,
             wordInput = wordInput,
