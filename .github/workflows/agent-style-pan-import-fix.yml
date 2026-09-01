@@ -1,0 +1,42 @@
+name: Agent Style Pan Import Fix
+on:
+  push:
+    branches:
+      - feat/premium-style-private-room-bot-ui-20260831
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/premium-style-private-room-bot-ui-20260831
+          fetch-depth: 0
+      - name: Apply import-only fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('app/src/main/java/com/sonharf/game/EconomyShopScreen.kt')
+          s=p.read_text()
+          if 'import androidx.compose.foundation.clickable' not in s:
+              s=s.replace('import androidx.compose.foundation.background\n', 'import androidx.compose.foundation.background\nimport androidx.compose.foundation.clickable\n')
+          p.write_text(s)
+          p=Path('app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt')
+          s=p.read_text()
+          if 'import androidx.compose.foundation.BorderStroke' not in s:
+              s=s.replace('import androidx.compose.foundation.Image\n', 'import androidx.compose.foundation.BorderStroke\nimport androidx.compose.foundation.Image\n')
+          if 'import androidx.compose.material3.Surface' not in s:
+              s=s.replace('import androidx.compose.material3.Text\n', 'import androidx.compose.material3.Surface\nimport androidx.compose.material3.Text\n')
+          p.write_text(s)
+          PY
+          rm .github/workflows/agent-style-pan-import-fix.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/sonharf/game/EconomyShopScreen.kt app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt .github/workflows/agent-style-pan-import-fix.yml
+          git diff --cached --check
+          git commit -m 'fix(style): add required Compose preview imports'
+          git push origin HEAD:feat/premium-style-private-room-bot-ui-20260831
