@@ -306,9 +306,15 @@ fun OnlineGameScreenV6() {
         }
         LaunchedEffect(active.id, active.status, active.winnerId, me) {
             if (active.status == "finished" && active.winnerId == me) {
-                val local = MiniAiMotivation.localMatchWin()
+                val local = MiniAiMotivation.localMatchWin(active.language)
                 motivationMessage = local
                 MiniAiMotivation.maybeAiMatchWin(active.id, active.language)?.let {
+                    motivationMessage = it
+                }
+            } else if (active.status == "finished" && active.winnerId != null && active.winnerId != me) {
+                val local = MiniAiMotivation.localMatchLoss(active.language)
+                motivationMessage = local
+                MiniAiMotivation.maybeAiMatchLoss(active.id, active.language)?.let {
                     motivationMessage = it
                 }
             } else {

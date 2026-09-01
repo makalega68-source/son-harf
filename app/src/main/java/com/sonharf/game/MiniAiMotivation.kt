@@ -48,12 +48,36 @@ internal object MiniAiMotivation {
         "Excellent work! 👏",
         "That match was yours! ✨",
     )
+    private val localLossesTr = listOf(
+        "Çok yakındı. Bir tane daha?",
+        "Bu sefer olmadı, rövanş?",
+        "Pes etmek yok, yeniden deneyelim.",
+        "İyi mücadeleydi, bir maç daha?",
+        "Az farkla kaçtı. Rövanşa ne dersin?",
+        "Güzel denemeydi, tekrar hazır mısın?",
+    )
+    private val localLossesEn = listOf(
+        "That was close. One more?",
+        "Not this time. Rematch?",
+        "Keep going, let's try again.",
+        "Good fight. One more match?",
+        "So close. How about a rematch?",
+        "Nice try. Ready to go again?",
+    )
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
     private val client = HttpClient(OkHttp)
     @Volatile private var lastShown: String? = null
 
     internal fun localMatchWin(language: String = "tr", seed: Int = (System.nanoTime() xor Thread.currentThread().id).toInt()): String {
         val pool = if (language == "en") localWinsEn else localWinsTr
+        val candidates = pool.filterNot { it == lastShown }.ifEmpty { pool }
+        val selected = candidates[seed.absoluteValue % candidates.size]
+        lastShown = selected
+        return selected
+    }
+
+    internal fun localMatchLoss(language: String = "tr", seed: Int = (System.nanoTime() xor Thread.currentThread().id).toInt()): String {
+        val pool = if (language == "en") localLossesEn else localLossesTr
         val candidates = pool.filterNot { it == lastShown }.ifEmpty { pool }
         val selected = candidates[seed.absoluteValue % candidates.size]
         lastShown = selected
@@ -70,6 +94,31 @@ internal object MiniAiMotivation {
         val punctuation = clipped.indexOfFirst { it == '.' || it == '!' || it == '?' }
         val singleSentence = if (punctuation >= 0) clipped.take(punctuation + 1) else clipped
         return singleSentence.trim().takeIf { it.length in 2..96 }
+    }
+
+    suspend fun maybeAiMatchLoss(matchId: String, language: String): String? {
+        if (!shouldAttemptAi(matchId) || !SupabaseProvider.configured) return null
+        val token = SupabaseProvider.client.auth.currentSessionOrNull()?.accessToken ?: return null
+        return runCatching {
+            val request = MiniMotivationRequest(
+                message = if (language == "en")
+                    "MATCH_LOSS: One short, warm encouragement. Maximum 8 words. No blame or pressure."
+                else
+                    "MATCH_LOSS: En fazla 8 kelimelik kısa, samimi destek. Suçlama veya baskı yok.",
+                language = language,
+                gameContext = "Verified event: player lost the Son Harf match. Return one short sentence only.",
+            )
+            val response = client.post("${BuildConfig.SUPABASE_URL}/functions/v1/eve-chat") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                header("apikey", BuildConfig.SUPABASE_KEY)
+                contentType(ContentType.Application.Json)
+                setBody(json.encodeToString(request))
+            }
+            if (!response.status.isSuccess()) return@runCatching null
+            val body = response.bodyAsText()
+            val reply = json.decodeFromString<MiniMotivationResponse>(body).reply
+            sanitizeAiReply(reply)
+        }.getOrNull()?.also { lastShown = it }
     }
 
     suspend fun maybeAiMatchWin(matchId: String, language: String): String? {

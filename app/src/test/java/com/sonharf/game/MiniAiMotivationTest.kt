@@ -39,19 +39,27 @@ class MiniAiMotivationTest {
     }
 
     @Test
-    fun onlyMatchWinTriggerIsWiredInFirstStage() {
-        val online = File("src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
-        assertTrue(online.contains("active.status == \"finished\" && active.winnerId == me"))
-        assertTrue(online.contains("MiniAiMotivation.localMatchWin()"))
-        assertTrue(online.contains("MiniAiMotivation.maybeAiMatchWin(active.id, active.language)"))
-        assertFalse(online.contains("MATCH_LOSS"))
-        assertFalse(online.contains("PLAYER_RETURNED"))
+    fun matchLossLocalFallbackIsShortAndNonEmpty() {
+        val value = MiniAiMotivation.localMatchLoss("tr", seed = 1)
+        assertTrue(value.isNotBlank())
+        assertTrue(value.length <= 96)
     }
 
     @Test
-    fun resultUiShowsMotivationOnlyForWinner() {
+    fun winAndLossTriggersAreWiredWithoutOtherTriggers() {
+        val online = File("src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
+        assertTrue(online.contains("active.status == \"finished\" && active.winnerId == me"))
+        assertTrue(online.contains("active.winnerId != null && active.winnerId != me"))
+        assertTrue(online.contains("MiniAiMotivation.maybeAiMatchWin(active.id, active.language)"))
+        assertTrue(online.contains("MiniAiMotivation.maybeAiMatchLoss(active.id, active.language)"))
+        assertFalse(online.contains("PLAYER_RETURNED"))
+        assertFalse(online.contains("MATCH_CONTINUE"))
+    }
+
+    @Test
+    fun resultUiShowsMotivationForWinAndLossButNotDraw() {
         val ui = File("src/main/java/com/sonharf/game/LightDuelUi.kt").readText()
-        assertTrue(ui.contains("motivationMessage = if (room.winnerId == me) motivationMessage else null"))
-        assertTrue(ui.contains("if (won && !motivationMessage.isNullOrBlank())"))
+        assertTrue(ui.contains("motivationMessage = if (room.winnerId == null) null else motivationMessage"))
+        assertTrue(ui.contains("if (!draw && !motivationMessage.isNullOrBlank())"))
     }
 }

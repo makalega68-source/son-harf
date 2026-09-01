@@ -400,7 +400,7 @@ internal fun LightDuelArena(
             opponentName = opponentName,
             myRounds = myRounds,
             oppRounds = oppRounds,
-            motivationMessage = if (room.winnerId == me) motivationMessage else null,
+            motivationMessage = if (room.winnerId == null) null else motivationMessage,
             onRematch = onRematch,
             onExit = onExit,
         )
@@ -1269,7 +1269,7 @@ private fun LightResult(
                     fontWeight = FontWeight.Black,
                 )
                 Text("$playerName  $myRounds : $oppRounds  $opponentName", color = LText, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
-                if (won && !motivationMessage.isNullOrBlank()) {
+                if (!draw && !motivationMessage.isNullOrBlank()) {
                     Text(
                         motivationMessage,
                         color = LBlue,
