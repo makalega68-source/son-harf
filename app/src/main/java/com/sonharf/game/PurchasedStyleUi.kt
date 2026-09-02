@@ -29,14 +29,18 @@ internal object PurchasedFrameCatalog {
     const val MINT = "frame_asset_mint"
     const val PURPLE = "frame_asset_purple"
     const val GREEN = "frame_asset_green"
+    const val RED = "frame_asset_red"
+    const val GOLD_CROWN = "frame_asset_gold_crown"
 
-    val ids = setOf(GOLD, MINT, PURPLE, GREEN)
+    val ids = setOf(GOLD, MINT, PURPLE, GREEN, RED, GOLD_CROWN)
 
     fun drawable(id: String?): Int? = when (id) {
         GOLD -> R.drawable.style_frame_gold
         MINT -> R.drawable.style_frame_mint
         PURPLE -> R.drawable.style_frame_purple
         GREEN -> R.drawable.style_frame_green
+        RED -> R.drawable.style_frame_red
+        GOLD_CROWN -> R.drawable.style_frame_gold_crown
         else -> null
     }
 }
@@ -49,13 +53,18 @@ private data class PurchasedFrameSpec(
     val subtitleEn: String,
     @DrawableRes val drawable: Int,
     val accent: Color,
+    val accessTr: String,
+    val accessEn: String,
+    val sourceIcon: Int,
 )
 
 private val purchasedFrameSpecs = listOf(
-    PurchasedFrameSpec(PurchasedFrameCatalog.GOLD, "Altın Hat", "Gold Line", "Sıcak metalik profil çerçevesi", "Warm metallic profile frame", R.drawable.style_frame_gold, Color(0xFFD7A72E)),
-    PurchasedFrameSpec(PurchasedFrameCatalog.MINT, "Buz Mint", "Ice Mint", "Temiz ve modern mint çerçeve", "Clean modern mint frame", R.drawable.style_frame_mint, Color(0xFF32BFB3)),
-    PurchasedFrameSpec(PurchasedFrameCatalog.PURPLE, "Mor Spektrum", "Violet Spectrum", "Premium mor profil vurgusu", "Premium violet profile accent", R.drawable.style_frame_purple, Color(0xFF7257D8)),
-    PurchasedFrameSpec(PurchasedFrameCatalog.GREEN, "Zümrüt Hat", "Emerald Line", "Dengeli zümrüt profil çerçevesi", "Balanced emerald profile frame", R.drawable.style_frame_green, Color(0xFF2FAE68)),
+    PurchasedFrameSpec(PurchasedFrameCatalog.RED, "Kırmızı Hat", "Red Line", "Sade başlangıç ve günlük kullanım çerçevesi", "Clean starter and everyday frame", R.drawable.style_frame_red, Color(0xFFD84C4C), "SIRADAN", "STANDARD", R.drawable.style_icon_user),
+    PurchasedFrameSpec(PurchasedFrameCatalog.GREEN, "Zümrüt Hat", "Emerald Line", "Dengeli zümrüt profil çerçevesi", "Balanced emerald profile frame", R.drawable.style_frame_green, Color(0xFF2FAE68), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.MINT, "Buz Mint", "Ice Mint", "Temiz ve modern mint çerçeve", "Clean modern mint frame", R.drawable.style_frame_mint, Color(0xFF32BFB3), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.PURPLE, "Mor Spektrum", "Violet Spectrum", "Premium mor profil vurgusu", "Premium violet profile accent", R.drawable.style_frame_purple, Color(0xFF7257D8), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.GOLD, "Altın Hat", "Gold Line", "VIP ve prestij koleksiyonuna uygun metalik çerçeve", "Metallic frame for VIP and prestige collection", R.drawable.style_frame_gold, Color(0xFFD7A72E), "VIP / PREMIUM", "VIP / PREMIUM", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.GOLD_CROWN, "Altın Taç", "Gold Crown", "Yüksek lig ve prestij ödülü", "High-league prestige reward", R.drawable.style_frame_gold_crown, Color(0xFFE0A51C), "LİG ÖDÜLÜ", "LEAGUE REWARD", R.drawable.style_icon_trophy),
 )
 
 @Composable
@@ -71,7 +80,7 @@ internal fun PurchasedProfileFrameOverlay(frameId: String?, modifier: Modifier =
 
 @Composable
 internal fun PurchasedProfileFramesStoreRow() {
-    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
+    val backend = remember { if (SupabaseProvider.configured) runCatching { OnlineGameBackend() }.getOrNull() else null }
     val scope = rememberCoroutineScope()
     var shopItems by remember { mutableStateOf<Map<String, ShopItemDto>>(emptyMap()) }
     var inventory by remember { mutableStateOf<Set<String>>(emptySet()) }
@@ -141,6 +150,10 @@ internal fun PurchasedProfileFramesStoreRow() {
                         }
                         Text(sh(spec.titleTr, spec.titleEn), color = Color(0xFF142033), fontSize = 12.sp, fontWeight = FontWeight.Black)
                         Text(sh(spec.subtitleTr, spec.subtitleEn), color = Color(0xFF6F7C8D), fontSize = 8.sp, minLines = 2)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Image(painter = painterResource(spec.sourceIcon), contentDescription = null, modifier = Modifier.size(12.dp), colorFilter = ColorFilter.tint(spec.accent))
+                            Text(sh(spec.accessTr, spec.accessEn), color = spec.accent, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                        }
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             if (!owned && !equipped) {
                                 Image(
@@ -155,7 +168,8 @@ internal fun PurchasedProfileFramesStoreRow() {
                                 when {
                                     equipped -> sh("AKTİF", "ACTIVE")
                                     owned -> sh("SAHİPSİN", "OWNED")
-                                    else -> "${item?.diamondPrice ?: 0} SC"
+                                    item != null -> "${item.diamondPrice} SC"
+                                    else -> sh(spec.accessTr, spec.accessEn)
                                 },
                                 modifier = Modifier.weight(1f),
                                 color = if (owned || equipped) Color(0xFF2FAE68) else spec.accent,
@@ -183,7 +197,7 @@ internal fun PurchasedProfileFramesStoreRow() {
                                         busyId = null
                                     }
                                 },
-                                enabled = backend != null && item != null && !equipped && busyId == null,
+                                enabled = backend != null && (owned || item != null) && !equipped && busyId == null,
                                 contentPadding = PaddingValues(horizontal = 9.dp, vertical = 3.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = spec.accent, contentColor = Color.White),
                                 shape = RoundedCornerShape(10.dp),

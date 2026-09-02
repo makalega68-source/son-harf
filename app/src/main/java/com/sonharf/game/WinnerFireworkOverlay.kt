@@ -268,6 +268,7 @@ private fun WinnerCelebrationCard(
                 Text(sh("MAÇIN KAZANANI", "MATCH WINNER"), color = SonHarfMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
 
                 Box(Modifier.size(210.dp), contentAlignment = Alignment.Center) {
+                    PurchasedVictoryVfx(room.id)
                     Box(
                         Modifier.size(126.dp).clip(CircleShape).background(SonHarfPurple.copy(alpha = 0.18f)),
                         contentAlignment = Alignment.Center,

@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +19,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,7 +50,7 @@ private data class StylePreview(
 
 @Composable
 internal fun MonsterStyleStoreScreen() {
-    val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
+    val backend = remember { if (SupabaseProvider.configured) runCatching { OnlineGameBackend() }.getOrNull() else null }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var theme by remember { mutableStateOf<ShopItemDto?>(null) }
@@ -305,9 +308,26 @@ private fun StylePreviewCard(preview: StylePreview) {
 @Composable
 private fun BundleRow() {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { BundleCard(sh("Başlangıç Style Paketi", "Starter Style Bundle"), Icons.Rounded.RocketLaunch, StoreBlue) }
-        item { BundleCard(sh("Premium Style Paketi", "Premium Style Bundle"), Icons.Rounded.Diamond, Color(0xFF6C63D9)) }
-        item { BundleCard(sh("Sezon Style Paketi", "Season Style Bundle"), Icons.Rounded.CalendarMonth, StoreGold) }
+        item { AssetBundleCard(sh("Başlangıç Style Paketi", "Starter Style Bundle"), R.drawable.mobile_ui_market, StoreBlue) }
+        item { AssetBundleCard(sh("Premium Style Paketi", "Premium Style Bundle"), R.drawable.mobile_ui_market, Color(0xFF6C63D9)) }
+        item { AssetBundleCard(sh("Sezon Style Paketi", "Season Style Bundle"), R.drawable.mobile_ui_market, StoreGold) }
+    }
+}
+
+@Composable
+private fun AssetBundleCard(title: String, drawable: Int, accent: Color) {
+    Surface(modifier = Modifier.width(190.dp), shape = RoundedCornerShape(18.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = RoundedCornerShape(11.dp), color = accent.copy(alpha = .12f)) {
+                    Image(painterResource(drawable), null, Modifier.padding(9.dp).size(23.dp), colorFilter = ColorFilter.tint(accent))
+                }
+                Spacer(Modifier.width(8.dp))
+                Text(title, Modifier.weight(1f), color = StoreText, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            }
+            Text(sh("Son Harf tasarımına uyarlanmış, güç vermeyen Style koleksiyonu", "Son Harf-adapted cosmetic Style collection"), color = StoreMuted, fontSize = 8.sp)
+            Text(sh("YAKINDA", "COMING SOON"), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black)
+        }
     }
 }
 
@@ -331,7 +351,7 @@ private fun SonCoinReadyCard(balance: Int) {
     Surface(shape = RoundedCornerShape(20.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = CircleShape, color = StoreAlt) { Icon(Icons.Rounded.Toll, null, Modifier.padding(10.dp).size(24.dp), tint = StoreBlue) }
+                Surface(shape = CircleShape, color = StoreAlt) { Image(painterResource(R.drawable.mobile_ui_market), null, Modifier.padding(10.dp).size(24.dp), colorFilter = ColorFilter.tint(StoreBlue)) }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text("$balance Son Coin", color = StoreText, fontSize = 17.sp, fontWeight = FontWeight.Black)
