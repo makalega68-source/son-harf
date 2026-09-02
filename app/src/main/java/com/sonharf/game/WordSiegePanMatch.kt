@@ -263,7 +263,12 @@ internal fun WordSiegePanMatch(
                     onClick = onSubmit,
                     enabled = canAct && placements.isNotEmpty(),
                     modifier = Modifier.weight(1.45f).height(44.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MainUi.Blue,
+                        contentColor = Color.White,
+                        disabledContainerColor = SonHarfTheme.DisabledBackground,
+                        disabledContentColor = SonHarfTheme.DisabledContent,
+                    ),
                     contentPadding = PaddingValues(horizontal = 5.dp),
                 ) {
                     if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)

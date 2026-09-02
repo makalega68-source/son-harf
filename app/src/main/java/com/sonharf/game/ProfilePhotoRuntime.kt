@@ -161,6 +161,30 @@ private fun SyntheticProfilePortrait(name: String, gender: String?, modifier: Mo
     }
 }
 
+internal fun botGenderForName(name: String): String = when (name.substringBefore(" BOT").trim()) {
+    "İmran", "Esin", "Selin", "Elif", "Derya", "Zeynep", "Ceren" -> "kadın"
+    else -> "erkek"
+}
+
+/** A BOT-only portrait path: it never accepts or reads a user-storage avatar. */
+@Composable
+internal fun SyntheticBotPortrait(
+    name: String,
+    gender: String = botGenderForName(name),
+    width: Dp,
+    height: Dp,
+    accent: Color,
+) {
+    ProfilePhotoAvatarRectWithGender(
+        avatarPath = null,
+        gender = gender,
+        name = name.substringBefore(" BOT"),
+        width = width,
+        height = height,
+        accent = accent,
+    )
+}
+
 @Composable
 internal fun ProfilePhotoAvatar(
     avatarPath: String?,

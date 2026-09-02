@@ -16,21 +16,21 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Shared compatibility tokens for feature screens on the new Monster shell. */
+/** Shared compatibility aliases backed by the single shipped theme source. */
 internal object MainUi {
-    val Background = MonsterUi.Background
-    val Surface = MonsterUi.Surface
-    val SurfaceSoft = MonsterUi.SurfaceSoft
-    val Text = MonsterUi.Text
-    val Muted = MonsterUi.Muted
-    val Blue = MonsterUi.Accent
+    val Background = SonHarfTheme.Background
+    val Surface = SonHarfTheme.Surface
+    val SurfaceSoft = SonHarfTheme.SurfaceSecondary
+    val Text = SonHarfTheme.TextPrimary
+    val Muted = SonHarfTheme.TextSecondary
+    val Blue = SonHarfTheme.PrimaryBlue
     val BlueDeep = Color(0xFF0A66D8)
-    val BlueSoft = Color(0xFFE8F1FF)
-    val Border = MonsterUi.Border
-    val Green = MonsterUi.Green
-    val Gold = MonsterUi.Gold
-    val Red = MonsterUi.Coral
-    val Purple = Color(0xFF7659D6)
+    val BlueSoft = SonHarfTheme.PrimaryBlueSoft
+    val Border = SonHarfTheme.Border
+    val Green = SonHarfTheme.Success
+    val Gold = SonHarfTheme.Warning
+    val Red = SonHarfTheme.Error
+    val Purple = SonHarfTheme.Purple
 }
 
 @Composable
@@ -82,7 +82,7 @@ internal fun MainScreenHeader(
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) {
             Surface(onClick = onBack, shape = RoundedCornerShape(12.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MainUi.Border)) {
-                Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = MainUi.Text, modifier = Modifier.padding(10.dp).size(20.dp))
+                Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"), tint = MainUi.Text, modifier = Modifier.padding(14.dp).size(20.dp))
             }
             Spacer(Modifier.width(12.dp))
         }
@@ -93,7 +93,7 @@ internal fun MainScreenHeader(
         }
         if (actionIcon != null && onAction != null) {
             Surface(onClick = onAction, shape = RoundedCornerShape(12.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MainUi.Border)) {
-                Icon(actionIcon, contentDescription = actionDescription, tint = MainUi.Text, modifier = Modifier.padding(10.dp).size(20.dp))
+                Icon(actionIcon, contentDescription = actionDescription, tint = MainUi.Text, modifier = Modifier.padding(14.dp).size(20.dp))
             }
         }
     }

@@ -82,7 +82,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
     val leagueProgress = ratingLeagueProgress(currentRating)
 
     LazyColumn(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0D0E11), SonHarfBg, Color(0xFF15171C)))),
+        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(SonHarfTheme.Surface, SonHarfTheme.Background, SonHarfTheme.SurfaceSecondary))),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -107,10 +107,10 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
         }
 
         item {
-            Surface(shape = RoundedCornerShape(18.dp), color = Color.Transparent) {
+            Surface(shape = RoundedCornerShape(18.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
                 Box(
                     Modifier.fillMaxWidth().background(
-                        Brush.horizontalGradient(listOf(Color(0xFF24261D), Color(0xFF1B1D20)))
+                        Brush.horizontalGradient(listOf(SonHarfTheme.SurfaceSecondary, SonHarfTheme.Surface))
                     ).padding(16.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
@@ -161,7 +161,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                         shape = RoundedCornerShape(10.dp),
                         color = if (selected) SonHarfBlue else Color.Transparent,
                     ) {
-                        Text(title, Modifier.padding(vertical = 9.dp), color = if (selected) Color(0xFF101114) else SonHarfMuted, fontSize = 8.5.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                        Text(title, Modifier.padding(vertical = 9.dp), color = if (selected) Color.White else SonHarfMuted, fontSize = 8.5.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                     }
                 }
             }

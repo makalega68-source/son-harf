@@ -25,16 +25,16 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
 
-private val StoreBg = Color(0xFFF5F8FC)
-private val StoreSurface = Color.White
-private val StoreAlt = Color(0xFFEEF5FF)
-private val StoreBlue = Color(0xFF1677FF)
+private val StoreBg = SonHarfTheme.Background
+private val StoreSurface = SonHarfTheme.Surface
+private val StoreAlt = SonHarfTheme.SurfaceSecondary
+private val StoreBlue = SonHarfTheme.PrimaryBlue
 private val StoreBlue2 = Color(0xFF1687F8)
-private val StoreText = Color(0xFF142033)
-private val StoreMuted = Color(0xFF6F7C8D)
-private val StoreBorder = Color(0xFFD5E0EA)
-private val StoreGreen = Color(0xFF2FAE68)
-private val StoreGold = Color(0xFFF6C453)
+private val StoreText = SonHarfTheme.TextPrimary
+private val StoreMuted = SonHarfTheme.TextSecondary
+private val StoreBorder = SonHarfTheme.Border
+private val StoreGreen = SonHarfTheme.Success
+private val StoreGold = SonHarfTheme.Warning
 
 private data class StylePreview(
     val titleTr: String,
@@ -182,10 +182,13 @@ private fun StoreCategoryRail() {
         sh("Öne Çıkanlar", "Featured"), sh("Temalar", "Themes"), sh("Profil", "Profile"),
         sh("Maç", "Match"), sh("Prestij", "Prestige"), sh("Paketler", "Bundles"), "Son Coin",
     )
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
         items(categories) { label ->
             Surface(shape = RoundedCornerShape(99.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
-                Text(label, Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = StoreText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(label, Modifier.padding(horizontal = 13.dp, vertical = 9.dp), color = StoreText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
             }
         }
     }

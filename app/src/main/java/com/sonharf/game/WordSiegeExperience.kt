@@ -87,7 +87,11 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     if (next.none { it.id == id }) selectedGameId = null
                 }
             }
-            .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
+            .onFailure {
+                notice = if (currentGame?.status == "waiting") {
+                    sh("Bağlantı yenileniyor • rakip araması sürüyor", "Reconnecting • opponent search continues")
+                } else wordSiegeFriendlyError(it.message.orEmpty())
+            }
         if (showProgress) loading = false
     }
 
@@ -436,7 +440,7 @@ private fun WordSiegeGamesList(
                         title = sh("RAKİP BUL", "FIND RIVAL"),
                         subtitle = sh("Çevrimiçi 1v1", "Online 1v1"),
                         icon = Icons.Rounded.Groups,
-                        color = SiegePurple,
+                        color = MainUi.Blue,
                         enabled = !busy,
                         modifier = Modifier.weight(1f),
                         onClick = onNewGame,
@@ -446,7 +450,7 @@ private fun WordSiegeGamesList(
                         title = sh("BOT İLE\nALIŞTIR", "PRACTICE\nWITH BOT"),
                         subtitle = sh("Hemen başla", "Start now"),
                         icon = Icons.Rounded.SmartToy,
-                        color = MainUi.Blue,
+                        color = MainUi.BlueSoft,
                         enabled = true,
                         modifier = Modifier.weight(1f),
                         onClick = onPractice,
@@ -520,18 +524,20 @@ private fun WordSiegeModeCard(
     Surface(
         modifier = modifier.height(112.dp).clickable(enabled = enabled, onClick = onClick),
         shape = RoundedCornerShape(20.dp),
-        color = color,
+        color = if (color == MainUi.BlueSoft) MainUi.SurfaceSoft else color,
         shadowElevation = 2.dp,
     ) {
         Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Icon(icon, null, tint = Color.White, modifier = Modifier.size(24.dp))
-                if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-                else Icon(Icons.Rounded.ArrowForward, null, tint = Color.White.copy(alpha = .82f), modifier = Modifier.size(18.dp))
+                val contentColor = if (color == MainUi.BlueSoft) MainUi.Blue else Color.White
+                Icon(icon, null, tint = contentColor, modifier = Modifier.size(24.dp))
+                if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = contentColor, strokeWidth = 2.dp)
+                else Icon(Icons.Rounded.ArrowForward, null, tint = contentColor.copy(alpha = .82f), modifier = Modifier.size(18.dp))
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, color = Color.White, fontWeight = FontWeight.Black, fontSize = 13.sp, lineHeight = 15.sp)
-                Text(subtitle, color = Color.White.copy(alpha = .78f), fontWeight = FontWeight.SemiBold, fontSize = 9.sp)
+                val contentColor = if (color == MainUi.BlueSoft) MainUi.Text else Color.White
+                Text(title, color = contentColor, fontWeight = FontWeight.Black, fontSize = 13.sp, lineHeight = 15.sp)
+                Text(subtitle, color = contentColor.copy(alpha = .72f), fontWeight = FontWeight.SemiBold, fontSize = 9.sp)
             }
         }
     }
@@ -776,7 +782,12 @@ private fun WordSiegeMatch(
                         onClick = onSubmit,
                         enabled = canAct && placements.isNotEmpty(),
                         modifier = Modifier.weight(1.45f).height(46.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MainUi.Blue,
+                            contentColor = Color.White,
+                            disabledContainerColor = SonHarfTheme.DisabledBackground,
+                            disabledContentColor = SonHarfTheme.DisabledContent,
+                        ),
                         contentPadding = PaddingValues(horizontal = 5.dp),
                     ) {
                         if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
