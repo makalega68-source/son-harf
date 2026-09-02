@@ -29,8 +29,10 @@ class AssetIntegrationContractTest {
         assertTrue(shop.contains("withTimeout(STORE_LOAD_TIMEOUT_MS)"))
         assertTrue(shop.contains("güvenli modda") || shop.contains("safe mode"))
         assertTrue(frames.contains("SafeStyleDrawable"))
-        assertTrue(frames.contains("catch (_: Throwable)"))
+        assertTrue(frames.contains("ImageBitmap.imageResource"))
+        assertTrue(frames.contains("runCatching { ImageBitmap.imageResource"))
         assertTrue(frames.contains("BrokenImage"))
+        assertFalse(frames.contains("painterResource("))
     }
 
     @Test fun purchasedVfxIsCosmeticAndBounded() {
