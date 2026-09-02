@@ -239,7 +239,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
                 if (state.status == "playing") {
                     Text(
-                        sh("Yön otomatik algılanır • Torba ${state.bag.length}", "Direction is detected automatically • Bag ${state.bag.length}"),
+                        sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"),
                         color = MainUi.Muted,
                         fontSize = 8.sp,
                         modifier = Modifier.fillMaxWidth(),
