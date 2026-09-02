@@ -1,0 +1,87 @@
+name: Temporary Dictionary Style Authority
+
+on:
+  push:
+    branches:
+      - fix/dictionary-rpc-v2-style-source-20260902
+    paths:
+      - .github/workflows/temporary-dictionary-style-authority.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/dictionary-rpc-v2-style-source-20260902
+          fetch-depth: 0
+      - name: Apply focused catalog/test patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          style = Path('app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt')
+          s = style.read_text()
+          old_decl = 'private val verifiedStagedFrameIds = setOf(PurchasedFrameCatalog.GREEN, PurchasedFrameCatalog.MINT)\n\n'
+          if old_decl not in s:
+              raise SystemExit('verified staged declaration not found')
+          s = s.replace(old_decl, '')
+          old_filter = '''        val staged = purchasedFrameSpecs.filter { spec ->\n            spec.id in verifiedStagedFrameIds || spec.id in inventory || equippedId == spec.id\n        }'''
+          new_filter = '''        // Staged frame_asset_* entries are recovery renderers only. The backend active catalog\n        // is authoritative for discovery/sales; preserve staged items only when already owned/equipped.\n        val staged = purchasedFrameSpecs.filter { spec ->\n            spec.id in inventory || equippedId == spec.id\n        }'''
+          if old_filter not in s:
+              raise SystemExit('staged display filter not found')
+          style.write_text(s.replace(old_filter, new_filter))
+
+          regression = Path('app/src/test/java/com/sonharf/game/StyleAndOfflineSiegeRegressionTest.kt')
+          r = regression.read_text().replace('get_dictionary_snapshot_v1', 'get_dictionary_snapshot_v2')
+          anchor = '        assertTrue(frames.contains("legacyFrameSpec"))\n'
+          extra = '''        assertFalse(frames.contains("verifiedStagedFrameIds"))\n        assertTrue(frames.contains("spec.id in inventory || equippedId == spec.id"))\n'''
+          if anchor not in r:
+              raise SystemExit('style test anchor missing')
+          r = r.replace(anchor, anchor + extra)
+          regression.write_text(r)
+
+          live = Path('app/src/test/java/com/sonharf/game/CanonicalDictionaryLiveContractTest.kt')
+          l = live.read_text().replace('get_dictionary_snapshot_v1', 'get_dictionary_snapshot_v2')
+          live.write_text(l)
+
+          shared = Path('app/src/test/java/com/sonharf/game/data/SharedDictionaryServiceTest.kt')
+          t = shared.read_text().replace('get_dictionary_snapshot_v1', 'get_dictionary_snapshot_v2')
+          shared.write_text(t)
+          PY
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Unit tests and debug APK
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+      - name: Verify focused contracts
+        shell: bash
+        run: |
+          grep -q 'get_dictionary_snapshot_v2' app/src/main/java/com/sonharf/game/data/SharedDictionaryService.kt
+          ! grep -q 'verifiedStagedFrameIds' app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt
+          grep -q 'spec.id in inventory || equippedId == spec.id' app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt
+          grep -q 'get_dictionary_snapshot_v2' supabase/migrations/20260902_dictionary_snapshot_v2_style_authority.sql
+          grep -q "id like 'frame_asset_%'" supabase/migrations/20260902_dictionary_snapshot_v2_style_authority.sql
+      - name: Commit validated source and remove temporary machinery
+        shell: bash
+        run: |
+          rm .github/workflows/temporary-dictionary-style-authority.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt app/src/test/java/com/sonharf/game/StyleAndOfflineSiegeRegressionTest.kt app/src/test/java/com/sonharf/game/CanonicalDictionaryLiveContractTest.kt app/src/test/java/com/sonharf/game/data/SharedDictionaryServiceTest.kt .github/workflows/temporary-dictionary-style-authority.yml
+          git commit -m 'Make backend frame catalog authoritative' || true
+          git push origin HEAD:fix/dictionary-rpc-v2-style-source-20260902
+      - name: Upload validated APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-DictionaryV2-StyleAuthority
+          path: app/build/outputs/apk/debug/app-debug.apk
