@@ -10,6 +10,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
+import com.sonharf.game.data.SharedDictionaryService
 import kotlinx.coroutines.delay
 
 private data class PracticeBotProfile(val name: String, val gender: String)
@@ -49,6 +51,10 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     var playerProfile by remember { mutableStateOf<ProfileDto?>(null) }
     var botProfile by remember { mutableStateOf(WordSiegePracticeBots.random()) }
     var state by remember { mutableStateOf(WordSiegePracticeEngine.newGame()) }
+    val context = LocalContext.current.applicationContext
+    var dictionaryReady by remember { mutableStateOf(SharedDictionaryService.hasSnapshot(state.language)) }
+    var dictionaryLoading by remember { mutableStateOf(false) }
+    var dictionaryRetryKey by remember { mutableIntStateOf(0) }
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -69,6 +75,23 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     LaunchedEffect(me, backend) {
         val b = backend ?: return@LaunchedEffect
         if (me != null) playerProfile = runCatching { b.getProfile(me) }.getOrNull()
+    }
+
+    LaunchedEffect(state.language, dictionaryRetryKey) {
+        dictionaryLoading = true
+        dictionaryReady = SharedDictionaryService.restorePersisted(context, state.language)
+        if (!dictionaryReady) {
+            runCatching { SharedDictionaryService.preloadCanonical(context, state.language) }
+                .onSuccess {
+                    dictionaryReady = true
+                    notice = sh("Ana sözlük hazır. Çevrimdışı alıştırmada da aynı sözlük kullanılacak.", "Main dictionary ready. The same dictionary will be used for offline practice.")
+                }
+                .onFailure {
+                    dictionaryReady = false
+                    notice = sh("Ana sözlük yüklenemedi. Yenile düğmesine basıp tekrar dene.", "Main dictionary could not be loaded. Tap refresh to retry.")
+                }
+        }
+        dictionaryLoading = false
     }
 
     LaunchedEffect(playerTargetScore, botTargetScore, state.currentOwner) {
@@ -95,6 +118,10 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     }
 
     fun applyPlayerMove() {
+        if (!dictionaryReady) {
+            notice = sh("Ana sözlük henüz hazır değil. Yenile düğmesine basıp tekrar dene.", "Main dictionary is not ready yet. Tap refresh and try again.")
+            return
+        }
         runCatching { WordSiegePracticeEngine.applyMove(state, 1, placements) }
             .onSuccess { (next, move) ->
                 state = next
@@ -111,8 +138,8 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
     BackHandler(onBack = onExit)
 
-    LaunchedEffect(state.currentOwner, state.moveCount, state.status, displayedPlayerScore, displayedBotScore, displayedOwner) {
-        if (state.status != "playing" || state.currentOwner != 2) return@LaunchedEffect
+    LaunchedEffect(state.currentOwner, state.moveCount, state.status, displayedPlayerScore, displayedBotScore, displayedOwner, dictionaryReady) {
+        if (!dictionaryReady || state.status != "playing" || state.currentOwner != 2) return@LaunchedEffect
         if (displayedPlayerScore != playerTargetScore || displayedBotScore != botTargetScore || displayedOwner != 2) return@LaunchedEffect
         botThinking = true
         delay(950)
@@ -151,14 +178,22 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     }
                     Column(Modifier.weight(1f)) {
                         Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = if (compact) 16.sp else 18.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                        Text(sh("BOT İLE ALIŞTIRMA • ÇEVRİMDIŞI", "BOT PRACTICE • OFFLINE"), color = MainUi.Blue, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                        Text(
+                            when {
+                                dictionaryLoading -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK HAZIRLANIYOR", "BOT PRACTICE • LOADING MAIN DICTIONARY")
+                                dictionaryReady -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK", "BOT PRACTICE • MAIN DICTIONARY")
+                                else -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK GEREKLİ", "BOT PRACTICE • MAIN DICTIONARY REQUIRED")
+                            },
+                            color = MainUi.Blue, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1,
+                        )
                     }
                     IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = MainUi.Red)
                     }
                     IconButton(
                         onClick = {
-                            if (state.moveCount > 0 || placements.isNotEmpty()) showRestart = true else startAgain()
+                            if (!dictionaryReady) dictionaryRetryKey += 1
+                            else if (state.moveCount > 0 || placements.isNotEmpty()) showRestart = true else startAgain()
                         },
                         modifier = Modifier.size(48.dp),
                     ) {
@@ -227,9 +262,9 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                             rack = state.playerRack,
                             placements = placements,
                             myOwner = 1,
-                            enabled = state.status == "playing" && state.currentOwner == 1 && !botThinking,
+                            enabled = dictionaryReady && state.status == "playing" && state.currentOwner == 1 && !botThinking,
                             onCell = { boardIndex ->
-                                if (state.status != "playing" || state.currentOwner != 1 || botThinking) return@WordSiegeBoard
+                                if (!dictionaryReady || state.status != "playing" || state.currentOwner != 1 || botThinking) return@WordSiegeBoard
                                 if (placements.containsKey(boardIndex)) {
                                     selectedRackIndex = placements.getValue(boardIndex)
                                     placements = placements - boardIndex
@@ -261,7 +296,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                                 letter = letter,
                                 selected = selectedRackIndex == index,
                                 used = index in placements.values,
-                                enabled = state.currentOwner == 1 && !botThinking,
+                                enabled = dictionaryReady && state.currentOwner == 1 && !botThinking,
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     val pending = placements.entries.firstOrNull { it.value == index }?.key
@@ -274,19 +309,19 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        OutlinedButton(onClick = { showPass = true }, enabled = state.currentOwner == 1 && !botThinking, modifier = Modifier.weight(1f).height(if (compact) 40.dp else 43.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                        OutlinedButton(onClick = { showPass = true }, enabled = dictionaryReady && state.currentOwner == 1 && !botThinking, modifier = Modifier.weight(1f).height(if (compact) 40.dp else 43.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
                             Text(sh("PAS", "PASS"), fontSize = 9.sp, fontWeight = FontWeight.Black)
                         }
                         OutlinedButton(
                             onClick = { exchangeSelection = emptySet(); showExchange = true },
-                            enabled = state.currentOwner == 1 && !botThinking && state.bag.isNotEmpty(),
+                            enabled = dictionaryReady && state.currentOwner == 1 && !botThinking && state.bag.isNotEmpty(),
                             modifier = Modifier.weight(1.25f).height(if (compact) 40.dp else 43.dp),
                             border = BorderStroke(1.dp, SiegePurple),
                             contentPadding = PaddingValues(horizontal = 4.dp),
                         ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = 8.sp, fontWeight = FontWeight.Black) }
                         Button(
                             onClick = ::applyPlayerMove,
-                            enabled = state.currentOwner == 1 && placements.isNotEmpty() && !botThinking,
+                            enabled = dictionaryReady && state.currentOwner == 1 && placements.isNotEmpty() && !botThinking,
                             modifier = Modifier.weight(1.35f).height(if (compact) 40.dp else 43.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MainUi.Blue,
