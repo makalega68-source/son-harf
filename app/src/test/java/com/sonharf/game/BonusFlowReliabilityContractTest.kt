@@ -11,16 +11,19 @@ class BonusFlowReliabilityContractTest {
     fun bonusSelectionResultAndResumeStayServerAuthoritative() {
         val screen = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
         val arena = projectFile("app/src/main/java/com/sonharf/game/LightDuelUi.kt").readText()
-        val backend = projectFile("app/src/main/java/com/sonharf/game/data/OnlineGameBackend.kt").readText()
+        val secureBackend = projectFile("app/src/main/java/com/sonharf/game/data/SecureMatchBackend.kt").readText()
 
         assertTrue(screen.contains("while (true)"))
         assertTrue(screen.contains("backend.finishTriviaResult(q.id)"))
         assertTrue(screen.contains("backend.claimTriviaTimeout(expectedRound)"))
-        assertTrue(screen.contains("triviaSelection = q.id to estimate.toLong()"))
-        assertTrue(backend.contains("getMyTriviaAnswer"))
-        assertTrue(arena.contains("correct -> LGreen"))
-        assertTrue(arena.contains("resolved && selected -> LRed"))
-        assertTrue(arena.contains("else -> 10"))
+        assertTrue(screen.contains("backend.answerBilBakalimNumeric(q.id, estimate)"))
+        assertTrue(screen.contains("backend.triggerBilBakalimBonus(active.id)"))
+        assertTrue(secureBackend.contains("answer_bilbakalim_numeric_v4"))
+        assertTrue(secureBackend.contains("trigger_bilbakalim_bonus_v2"))
+        assertTrue(arena.contains("KeyboardType.Number"))
+        assertTrue(arena.contains("ASIL CEVAP"))
+        assertTrue(arena.contains("Rakibin cevabı sonuçtan önce gizli"))
+        assertTrue(arena.contains("triviaResolved -> 3"))
     }
 
     @Test
