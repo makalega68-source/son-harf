@@ -11,6 +11,7 @@ on:
       - 'settings.gradle.kts'
       - 'gradle.properties'
       - 'ci/build-trigger-gender-symbols.txt'
+      - 'scripts/apply_action_ui_pack.py'
 
 permissions:
   contents: write
@@ -20,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply pending Monster duel migrations
+      - name: Apply pending Monster duel migrations and Action UI adaptation
         shell: bash
         run: |
           set -euo pipefail
@@ -30,11 +31,14 @@ jobs:
           if [ -f scripts/rebuild_monster_duel_layout.py ]; then
             python scripts/rebuild_monster_duel_layout.py
           fi
-          if ! git diff --quiet -- app/src/main/java/com/sonharf/game/LightDuelUi.kt; then
+          if [ -f scripts/apply_action_ui_pack.py ]; then
+            python scripts/apply_action_ui_pack.py
+          fi
+          if ! git diff --quiet -- app/src/main/java/com/sonharf/game/LightDuelUi.kt app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add app/src/main/java/com/sonharf/game/LightDuelUi.kt
-            git commit -m "Rebuild duel lobby and arena with Monster layout [skip ci]"
+            git add app/src/main/java/com/sonharf/game/LightDuelUi.kt app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+            git commit -m "Apply current V1 UI adaptations [skip ci]"
             git push origin HEAD:main
           fi
       - uses: actions/setup-java@v5

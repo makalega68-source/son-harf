@@ -20,7 +20,8 @@ internal val PortalRed = Color(0xFFE64B55)
  *
  * The legacy/experimental screens remain available in source control as
  * rollback material, but the shipped V1 path is intentionally focused on the
- * verified core duel flow.
+ * verified core duel flow. The active shell includes the licensed-safe Action
+ * UI adaptation applied in MonsterExperienceApp.
  */
 @Composable
 fun GamePortalApp() {
