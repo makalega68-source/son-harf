@@ -16,31 +16,27 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: current-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-current-apk:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Apply pending Monster duel migrations and Action UI adaptation
+      - name: Verify committed light duel source
         shell: bash
         run: |
           set -euo pipefail
-          if [ -f scripts/apply_monster_duel_theme.py ]; then
-            python scripts/apply_monster_duel_theme.py
+          file='app/src/main/java/com/sonharf/game/LightDuelUi.kt'
+          grep -q 'private val LBg = Color(0xFFF7F9FC)' "$file"
+          grep -q 'private val LBlue = Color(0xFF1769E0)' "$file"
+          if grep -q 'private val LBg = Color(0xFF101114)' "$file" || grep -q 'private val LBlue = Color(0xFFEAFB17)' "$file"; then
+            echo '::error::Legacy Monster duel palette detected in committed source.'
+            exit 1
           fi
-          if [ -f scripts/rebuild_monster_duel_layout.py ]; then
-            python scripts/rebuild_monster_duel_layout.py
-          fi
-          if [ -f scripts/apply_action_ui_pack.py ]; then
-            python scripts/apply_action_ui_pack.py
-          fi
-          if ! git diff --quiet -- app/src/main/java/com/sonharf/game/LightDuelUi.kt app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add app/src/main/java/com/sonharf/game/LightDuelUi.kt app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-            git commit -m "Apply current V1 UI adaptations [skip ci]"
-            git push origin HEAD:main
-          fi
+          git diff --exit-code
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
