@@ -37,6 +37,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
+private enum class MatchmakingUiState { Idle, Searching, Matched, Error, Cancelled }
+
 @Composable
 fun OnlineGameScreenV6() {
     if (!SupabaseProvider.configured) {
@@ -62,7 +64,8 @@ fun OnlineGameScreenV6() {
     var feedbackWord by remember { mutableStateOf<String?>(null) }
     var feedbackCorrect by remember { mutableStateOf<Boolean?>(null) }
     var busy by remember { mutableStateOf(false) }
-    var matching by remember { mutableStateOf(false) }
+    var matchmakingState by remember { mutableStateOf(MatchmakingUiState.Idle) }
+    val matching = matchmakingState == MatchmakingUiState.Searching
     var showPrivate by remember { mutableStateOf(false) }
     var showFriends by remember { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
@@ -136,7 +139,7 @@ fun OnlineGameScreenV6() {
         opponentProfile = id?.let { runCatching { backend.getProfile(it) }.getOrNull() }
     }
     fun observe(r: GameRoomDto) {
-        roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); matchJob?.cancel(); matching = false
+        roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); matchJob?.cancel(); matchmakingState = MatchmakingUiState.Matched
         scope.launch { refreshOpponent(r) }
         roomJob = scope.launch {
             backend.observeRoom(r.id)
@@ -198,27 +201,33 @@ fun OnlineGameScreenV6() {
             onLanguage = { language = it; SonHarfSoundFx.tap() },
             onPrivateCode = { privateCode = it.filter(Char::isLetterOrDigit).uppercase().take(6) },
             onRandom = {
+                if (busy || matchmakingState == MatchmakingUiState.Searching) return@LightDuelLobby
                 scope.launch {
                     busy = true
                     runCatching { ensureProfile(); backend.startRandomMatchmaking(language) }
-                        .onSuccess { matching = true; notice = sh("Rakip aranıyor…", "Searching for an opponent…") }
+                        .onSuccess { matchmakingState = MatchmakingUiState.Searching; notice = sh("Rakip aranıyor…", "Searching for an opponent…") }
                         .onFailure {
                             if ("player_already_in_game" in it.message.orEmpty()) {
                                 val old = runCatching { activeRoom() }.getOrNull()
                                 if (old != null) { room = old; language = old.language; observe(old) } else notice = friendly(it.message.orEmpty())
-                            } else notice = friendly(it.message.orEmpty())
+                            } else {
+                                matchmakingState = MatchmakingUiState.Error
+                                notice = friendly(it.message.orEmpty())
+                            }
                         }
                     busy = false
-                    if (matching) matchJob = launch {
-                        while (matching && room == null) {
-                            val found = runCatching { backend.pollRandomMatchmakingRoom() }.getOrNull()
-                            if (found != null) { room = found; language = found.language; observe(found); SonHarfSoundFx.softNotify(); break }
+                    if (matchmakingState == MatchmakingUiState.Searching) matchJob = launch {
+                        while (matchmakingState == MatchmakingUiState.Searching && room == null) {
+                            val poll = runCatching { backend.pollRandomMatchmakingRoom() }
+                            val found = poll.getOrNull()
+                            if (found != null) { matchmakingState = MatchmakingUiState.Matched; room = found; language = found.language; observe(found); SonHarfSoundFx.softNotify(); break }
+                            if (poll.isFailure) notice = sh("Bağlantı yenileniyor • rakip araması sürüyor", "Reconnecting • opponent search continues")
                             delay(900)
                         }
                     }
                 }
             },
-            onCancel = { scope.launch { matching = false; matchJob?.cancel(); runCatching { backend.cancelRandomMatchmaking() }; notice = sh("Eşleşme iptal edildi.", "Matchmaking cancelled.") } },
+            onCancel = { scope.launch { matchmakingState = MatchmakingUiState.Cancelled; matchJob?.cancel(); runCatching { backend.cancelRandomMatchmaking() }; notice = sh("Eşleşme iptal edildi.", "Matchmaking cancelled.") } },
             onPrivate = { showPrivate = !showPrivate; showFriends = false },
             onFriends = { scope.launch { friends = runCatching { backend.getFriends() }.getOrDefault(emptyList()); invites = runCatching { backend.getIncomingGameInvites() }.getOrDefault(emptyList()); showFriends = !showFriends; showPrivate = false } },
             onCreate = { scope.launch { busy = true; runCatching { backend.createPrivateRoom(language) }.onSuccess { room = it; observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) }; busy = false } },
@@ -306,7 +315,7 @@ fun OnlineGameScreenV6() {
         LightDuelArena(
             room = active, me = me, playerName = profile?.displayName ?: sh("Sen", "You"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility != "hidden" }, playerGender = profile?.gender, playerRating = profile?.rating ?: 1000,
             opponentName = if (active.isBot) "${active.botName ?: if (active.language == "en") "WordBot" else "KelimeBot"} BOT" else opponentProfile?.displayName ?: sh("Rakip", "Opponent"),
-            opponentAvatarPath = if (active.isBot) null else opponentProfile?.avatarPath?.takeIf { opponentProfile?.avatarVisibility != "hidden" }, opponentGender = if (active.isBot) null else opponentProfile?.gender, opponentRating = if (active.isBot) 1000 else opponentProfile?.rating ?: 1000,
+            opponentAvatarPath = if (active.isBot) null else opponentProfile?.avatarPath?.takeIf { opponentProfile?.avatarVisibility != "hidden" }, opponentGender = if (active.isBot) botGenderForName(active.botName.orEmpty()) else opponentProfile?.gender, opponentRating = if (active.isBot) 1000 else opponentProfile?.rating ?: 1000,
             words = words,
             isVip = profile?.isVip == true,
             feedbackWord = feedbackWord,

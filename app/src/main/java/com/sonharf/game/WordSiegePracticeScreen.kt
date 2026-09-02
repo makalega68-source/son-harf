@@ -140,20 +140,20 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                 verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(if (compact) 40.dp else 44.dp),
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = onExit, modifier = Modifier.size(38.dp)) {
+                    IconButton(onClick = onExit, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                     }
                     Column(Modifier.weight(1f)) {
                         Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = if (compact) 16.sp else 18.sp, fontWeight = FontWeight.Black, maxLines = 1)
                         Text(sh("BOT İLE ALIŞTIRMA • ÇEVRİMDIŞI", "BOT PRACTICE • OFFLINE"), color = MainUi.Blue, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
                     }
-                    IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(38.dp)) {
+                    IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = MainUi.Red)
                     }
-                    IconButton(onClick = ::startAgain, modifier = Modifier.size(38.dp)) {
+                    IconButton(onClick = ::startAgain, modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Rounded.Refresh, sh("Yeni oyun", "New game"), tint = MainUi.Blue)
                     }
                 }
@@ -189,13 +189,13 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = if (displayedOwner == 1) SiegeBlueSoft else SiegePurpleSoft,
+                    color = if (displayedOwner == 1) MainUi.Blue else SiegePurpleSoft,
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, if (displayedOwner == 1) MainUi.Green.copy(alpha = .25f) else MainUi.Red.copy(alpha = .25f)),
                 ) {
                     Row(Modifier.padding(horizontal = 10.dp, vertical = if (compact) 5.dp else 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (botThinking) CircularProgressIndicator(Modifier.size(14.dp), color = SiegePurple, strokeWidth = 2.dp)
-                        else Icon(if (displayedOwner == 1) Icons.Rounded.TouchApp else Icons.Rounded.SmartToy, null, tint = if (displayedOwner == 1) MainUi.Green else MainUi.Red, modifier = Modifier.size(15.dp))
+                        else Icon(if (displayedOwner == 1) Icons.Rounded.TouchApp else Icons.Rounded.SmartToy, null, tint = if (displayedOwner == 1) Color.White else MainUi.Red, modifier = Modifier.size(15.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(
                             when {
@@ -204,7 +204,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                                 displayedOwner == 1 -> sh("SIRA SENDE • Harf seç, tahtaya bırak, OYNA", "YOUR TURN • Select tile, place it, PLAY")
                                 else -> sh("${botProfile.name.uppercase()} OYNUYOR", "${botProfile.name.uppercase()} IS PLAYING")
                             },
-                            color = MainUi.Text,
+                            color = if (displayedOwner == 1) Color.White else MainUi.Text,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,
                             maxLines = 1,
@@ -280,7 +280,12 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                             onClick = ::applyPlayerMove,
                             enabled = state.currentOwner == 1 && placements.isNotEmpty() && !botThinking,
                             modifier = Modifier.weight(1.35f).height(if (compact) 40.dp else 43.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MainUi.Blue,
+                                contentColor = Color.White,
+                                disabledContainerColor = SonHarfTheme.DisabledBackground,
+                                disabledContentColor = SonHarfTheme.DisabledContent,
+                            ),
                             contentPadding = PaddingValues(horizontal = 4.dp),
                         ) { Text(sh("OYNA", "PLAY"), fontSize = 10.sp, fontWeight = FontWeight.Black) }
                     }

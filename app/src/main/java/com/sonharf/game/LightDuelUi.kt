@@ -672,15 +672,13 @@ private fun LightPlayerCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (bot) {
-                Box(
-                    Modifier
-                        .size(56.dp, 74.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(accent.copy(alpha = .10f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("BOT", color = accent, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                }
+                SyntheticBotPortrait(
+                    name = name,
+                    gender = gender ?: botGenderForName(name),
+                    width = 56.dp,
+                    height = 74.dp,
+                    accent = accent,
+                )
             } else {
                 ProfilePhotoAvatarRectWithGender(
                     avatarPath = avatarPath,

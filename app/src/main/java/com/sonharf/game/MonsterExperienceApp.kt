@@ -26,20 +26,20 @@ import kotlinx.coroutines.delay
 
 // SON HARF ACTION UI ADAPTATION: original Compose implementation; no third-party binary assets bundled.
 internal object MonsterUi {
-    val Background = Color(0xFF07111F)
-    val Surface = Color(0xFF111D2E)
-    val SurfaceRaised = Color(0xFF17263A)
-    val SurfaceSoft = Color(0xFF20324A)
-    val Text = Color(0xFFF5F8FC)
-    val Muted = Color(0xFF9AAAC0)
-    val Border = Color(0xFF2A4260)
-    val Accent: Color get() = if (SonHarfCosmetics.monsterBlueTheme) Color(0xFF2F9BFF) else Color(0xFF268CFF)
+    val Background = SonHarfTheme.Background
+    val Surface = SonHarfTheme.Surface
+    val SurfaceRaised = SonHarfTheme.Surface
+    val SurfaceSoft = SonHarfTheme.SurfaceSecondary
+    val Text = SonHarfTheme.TextPrimary
+    val Muted = SonHarfTheme.TextSecondary
+    val Border = SonHarfTheme.Border
+    val Accent: Color get() = SonHarfTheme.PrimaryBlue
     val AccentText = Color.White
-    val Live = Color(0xFFFF5A64)
-    val Coral = Color(0xFFFF6D75)
-    val Orange = Color(0xFFFFA928)
-    val Green = Color(0xFF35D28A)
-    val Gold = Color(0xFFFFC857)
+    val Live = SonHarfTheme.Error
+    val Coral = SonHarfTheme.Error
+    val Orange = SonHarfTheme.Warning
+    val Green = SonHarfTheme.Success
+    val Gold = SonHarfTheme.Warning
 }
 
 private data class MonsterHomeStats(
@@ -77,7 +77,7 @@ fun MonsterExperienceApp(onSignedOut: () -> Unit) {
 
     val topLevel = destination in setOf(MonsterDestination.HOME, MonsterDestination.LEAGUE, MonsterDestination.SOCIAL, MonsterDestination.STYLE, MonsterDestination.PROFILE)
     Scaffold(
-        containerColor = MonsterUi.Background,
+        containerColor = SonHarfTheme.Background,
         bottomBar = {
             if (topLevel) MonsterBottomBar(
                 destination,
@@ -89,7 +89,7 @@ fun MonsterExperienceApp(onSignedOut: () -> Unit) {
             )
         },
     ) { padding ->
-        Box(Modifier.fillMaxSize().padding(if (topLevel) padding else PaddingValues(0.dp)).background(MonsterUi.Background)) {
+        Box(Modifier.fillMaxSize().padding(if (topLevel) padding else PaddingValues(0.dp)).background(SonHarfTheme.Background)) {
             when (destination) {
                 MonsterDestination.HOME -> MonsterHomeScreen(
                     backend,
@@ -287,7 +287,7 @@ private fun MonsterIconButton(icon: ImageVector, onClick: () -> Unit) {
 
 @Composable
 private fun MonsterBottomBar(current: MonsterDestination, home: () -> Unit, league: () -> Unit, social: () -> Unit, style: () -> Unit, profile: () -> Unit) {
-    Surface(color = MonsterUi.Surface, tonalElevation = 0.dp) {
+    Surface(color = SonHarfTheme.Surface, tonalElevation = 0.dp, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
         Row(Modifier.fillMaxWidth().navigationBarsPadding().height(60.dp), horizontalArrangement = Arrangement.SpaceAround, verticalAlignment = Alignment.CenterVertically) {
             MonsterNavItem(Icons.Rounded.Home, sh("ANA", "HOME"), current == MonsterDestination.HOME, home)
             MonsterNavItem(Icons.Rounded.EmojiEvents, sh("LİG", "LEAGUE"), current == MonsterDestination.LEAGUE, league)
