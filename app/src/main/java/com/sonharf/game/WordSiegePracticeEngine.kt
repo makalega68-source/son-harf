@@ -14,6 +14,8 @@ internal data class WordSiegePracticeState(
     val currentOwner: Int = 1,
     val playerWordScore: Int = 0,
     val botWordScore: Int = 0,
+    val playerAreaScore: Int = 0,
+    val botAreaScore: Int = 0,
     val playerArea: Int = 0,
     val botArea: Int = 0,
     val consecutivePasses: Int = 0,
@@ -60,6 +62,23 @@ internal object WordSiegePracticeEngine {
         if (owner == 1) state.playerRack else state.botRack
 
     fun applyMove(
+        state: WordSiegePracticeState,
+        owner: Int,
+        placements: Map<Int, Int>,
+    ): Pair<WordSiegePracticeState, WordSiegePracticeMove> {
+        val horizontal = WordSiegeFinalRules.detectOrientation(state.board, placements.keys) == WordSiegeOrientation.HORIZONTAL
+        return applyMoveResolved(state, owner, placements, horizontal)
+    }
+
+    /** Compatibility overload: direction is deliberately ignored; final rules always auto-detect it. */
+    fun applyMove(
+        state: WordSiegePracticeState,
+        owner: Int,
+        placements: Map<Int, Int>,
+        @Suppress("UNUSED_PARAMETER") horizontal: Boolean,
+    ): Pair<WordSiegePracticeState, WordSiegePracticeMove> = applyMove(state, owner, placements)
+
+    private fun applyMoveResolved(
         state: WordSiegePracticeState,
         owner: Int,
         placements: Map<Int, Int>,
@@ -132,6 +151,8 @@ internal object WordSiegePracticeEngine {
         val draw = state.bag.take(drawCount)
         val nextRack = remainingRack + draw
         val nextBag = state.bag.drop(draw.length)
+        val gainedCells = board.indices.count { index -> state.board[index].owner != owner && board[index].owner == owner }
+        val areaTransfer = WordSiegeFinalRules.cubeTransfer(gainedCells)
         val playerArea = board.count { it.owner == 1 }
         val botArea = board.count { it.owner == 2 }
         val next = state.copy(
@@ -142,6 +163,8 @@ internal object WordSiegePracticeEngine {
             currentOwner = other(owner),
             playerWordScore = state.playerWordScore + if (owner == 1) score else 0,
             botWordScore = state.botWordScore + if (owner == 2) score else 0,
+            playerAreaScore = state.playerAreaScore + if (owner == 1) areaTransfer else 0,
+            botAreaScore = state.botAreaScore + if (owner == 2) areaTransfer else 0,
             playerArea = playerArea,
             botArea = botArea,
             consecutivePasses = 0,
@@ -149,7 +172,7 @@ internal object WordSiegePracticeEngine {
             lastAction = "word:${primary.orEmpty()}",
         )
         val finished = if (nextBag.isEmpty() && nextRack.isEmpty()) finish(next, "rack_empty") else next
-        return finished to WordSiegePracticeMove(placements, horizontal, primary.orEmpty(), words, score, captured.size)
+        return finished to WordSiegePracticeMove(placements, horizontal, primary.orEmpty(), words, score, gainedCells)
     }
 
     fun pass(state: WordSiegePracticeState, owner: Int): WordSiegePracticeState {
@@ -195,7 +218,7 @@ internal object WordSiegePracticeEngine {
             listOf(true, false).forEach { horizontal ->
                 (0..80).forEach startLoop@{ start ->
                     val placements = placementsForWord(state, rack, word, start, horizontal) ?: return@startLoop
-                    val candidate = runCatching { applyMove(state, 2, placements, horizontal) }.getOrNull() ?: return@startLoop
+                    val candidate = runCatching { applyMove(state, 2, placements) }.getOrNull() ?: return@startLoop
                     if (best == null || candidate.second.wordScore + candidate.second.capturedCells * 2 > best!!.second.wordScore + best!!.second.capturedCells * 2) {
                         best = candidate
                     }
@@ -276,13 +299,19 @@ internal object WordSiegePracticeEngine {
 
     private fun finish(state: WordSiegePracticeState, reason: String, forcedWinner: Int? = null): WordSiegePracticeState {
         val winner = forcedWinner ?: when {
-            state.playerWordScore + state.playerArea > state.botWordScore + state.botArea -> 1
-            state.botWordScore + state.botArea > state.playerWordScore + state.playerArea -> 2
+            totalScore(state, 1) > totalScore(state, 2) -> 1
+            totalScore(state, 2) > totalScore(state, 1) -> 2
             state.playerArea > state.botArea -> 1
             state.botArea > state.playerArea -> 2
             else -> null
         }
         return state.copy(status = "finished", winnerOwner = winner, lastAction = reason)
+    }
+
+    fun totalScore(state: WordSiegePracticeState, owner: Int): Int = if (owner == 1) {
+        WordSiegeFinalRules.netScore(state.playerWordScore, state.playerAreaScore, state.botAreaScore)
+    } else {
+        WordSiegeFinalRules.netScore(state.botWordScore, state.botAreaScore, state.playerAreaScore)
     }
 
     private fun requireActiveTurn(state: WordSiegePracticeState, owner: Int) {
@@ -292,8 +321,7 @@ internal object WordSiegePracticeEngine {
 
     private fun isPracticeWord(word: String): Boolean {
         val normalized = word.trim().uppercase(trLocale)
-        return normalized.length in 2..9 && normalized.all { it in "ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ" } &&
-            normalized.firstOrNull() != 'Ğ' && normalized.lastOrNull() != 'Ğ'
+        return normalized in practiceDictionary
     }
 
     private fun letterValue(letter: String): Int = when (letter) {
@@ -313,7 +341,10 @@ internal object WordSiegePracticeEngine {
 
     private val botWords = listOf(
         "MASA", "KALEM", "KALE", "ELMA", "SİMA", "İSİM", "LİMAN", "MİNİ", "SİNEK",
+        "KARA", "PARA", "SEL", "KAT", "MAKALE",
         "KART", "KARE", "KASA", "SIR", "SIRA", "ARA", "ARI", "TARİH", "NAR", "NİSAN",
         "TERİM", "METİN", "SİLİ", "LİSTE", "LİMAN", "KİLİT", "KİRA", "KİRAZ", "KİTAP",
     )
+
+    private val practiceDictionary: Set<String> = botWords.toSet()
 }

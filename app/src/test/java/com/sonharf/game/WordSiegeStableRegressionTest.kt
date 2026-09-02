@@ -6,26 +6,30 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WordSiegeStableRegressionTest {
-    @Test fun latestStableSiegeKeepsPracticePanAreaProfilesAndCoreActions() {
+    @Test fun latestStableSiegeKeepsPracticePanProfilesActionsAndFinalRules() {
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         val engine = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt").readText()
+        val rules = projectFile("app/src/main/java/com/sonharf/game/WordSiegeFinalRules.kt").readText()
 
         assertTrue(experience.contains("WordSiegePracticeScreen"))
         assertTrue(experience.contains("showPass"))
         assertTrue(experience.contains("showExchange"))
-        assertTrue(experience.contains("horizontal"))
+        assertTrue(experience.contains("WordSiegeFinalRules.detectOrientation"))
         assertTrue(experience.contains("ProfileDto"))
         assertTrue(experience.contains("statusBarsPadding"))
         assertTrue(pan.contains("ProfilePhotoAvatarWithGender"))
+        assertTrue(pan.contains("Yön otomatik algılanır"))
         assertTrue(practice.contains("showPass"))
         assertTrue(practice.contains("showExchange"))
+        assertTrue(practice.contains("Yön otomatik algılanır"))
         assertTrue(engine.contains("exchange"))
         assertTrue(engine.contains("pass"))
-        assertTrue(pan.contains("areaScore"))
-        assertTrue(pan.contains("totalScore"))
+        assertTrue(engine.contains("return normalized in practiceDictionary"))
+        assertTrue(rules.contains("CUBE_TRANSFER_POINTS: Int = 2"))
+        assertTrue(rules.contains("wordScore + earnedCubePoints - opponentEarnedCubePoints"))
         assertTrue(backend.contains("WordSiege"))
     }
 

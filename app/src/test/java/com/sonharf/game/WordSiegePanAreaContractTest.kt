@@ -29,19 +29,22 @@ class WordSiegePanAreaContractTest {
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
 
-        assertTrue(pan.contains("PanSiegeMine = Color(0xFF9FD5A5)"))
-        assertTrue(pan.contains("PanSiegeRival = Color(0xFFEAA4A4)"))
+        assertTrue(pan.contains("PanSiegeMine = Color(0xFF35C878)"))
+        assertTrue(pan.contains("PanSiegeRival = Color(0xFFFF5F57)"))
         assertTrue(pan.contains("fontSize = 21.sp"))
         assertTrue(pan.contains("fontSize = 10.sp"))
         assertTrue(pan.contains("color = Color.Black"))
         assertTrue(pan.contains(".clickable(enabled = enabled && (cell.letter == null || pending), onClick = onClick)"))
         assertTrue(experience.contains("if (placements.containsKey(boardIndex))"))
         assertTrue(experience.contains("game.board.getOrNull(boardIndex)?.letter == null"))
+        assertTrue(experience.contains("0xFF35C878"))
+        assertTrue(experience.contains("0xFFFF5F57"))
     }
 
-    @Test fun areaPointsAreServerCalculatedFromOwnershipDiffOnly() {
+    @Test fun areaPointsAreServerCalculatedAsTwoPointsPerGainedCubeAndTransferredInNetScore() {
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt").readText()
-        val migration = projectFile("supabase/migrations/20260901060000_word_siege_area_score_v1.sql").readText()
+        val baseMigration = projectFile("supabase/migrations/20260901060000_word_siege_area_score_v1.sql").readText()
+        val finalMigration = projectFile("supabase/migrations/20260902090000_word_siege_final_transfer_v2.sql").readText()
 
         assertTrue(backend.contains("player_one_area_score"))
         assertTrue(backend.contains("neutral_captured"))
@@ -49,15 +52,18 @@ class WordSiegePanAreaContractTest {
         assertTrue(backend.contains("area_score"))
         assertTrue(backend.contains("total_score"))
 
-        assertTrue(migration.contains("before_owner = 0 and after_owner = p_owner"))
-        assertTrue(migration.contains("before_owner not in (0, p_owner) and after_owner = p_owner"))
-        assertTrue(migration.contains("neutral_count + opponent_count * 2"))
-        assertTrue(migration.contains("player_one_area_score = player_one_area_score +"))
-        assertTrue(migration.contains("player_two_area_score = player_two_area_score +"))
-        assertTrue(migration.contains("player_one_area = v_one_area"))
-        assertTrue(migration.contains("player_two_area = v_two_area"))
-        assertTrue(migration.contains("v_one_total := r.player_one_word_score + r.player_one_area_score"))
-        assertTrue(migration.contains("v_two_total := r.player_two_word_score + r.player_two_area_score"))
+        // Preserve the original transactional/ownership pipeline.
+        assertTrue(baseMigration.contains("before_owner = 0 and after_owner = p_owner"))
+        assertTrue(baseMigration.contains("before_owner not in (0, p_owner) and after_owner = p_owner"))
+        assertTrue(baseMigration.contains("player_one_area_score = player_one_area_score +"))
+        assertTrue(baseMigration.contains("player_two_area_score = player_two_area_score +"))
+        assertTrue(baseMigration.contains("player_one_area = v_one_area"))
+        assertTrue(baseMigration.contains("player_two_area = v_two_area"))
+
+        // Final rule: every gained cube is worth two transferred points.
+        assertTrue(finalMigration.contains("(neutral_count + opponent_count) * 2"))
+        assertTrue(finalMigration.contains("r.player_one_word_score + r.player_one_area_score - r.player_two_area_score"))
+        assertTrue(finalMigration.contains("r.player_two_word_score + r.player_two_area_score - r.player_one_area_score"))
     }
 
     @Test fun duplicateProtectionAndExistingValidationPipelineStayIntact() {

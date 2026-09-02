@@ -23,7 +23,6 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     var state by remember { mutableStateOf(WordSiegePracticeEngine.newGame()) }
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
-    var horizontal by remember { mutableStateOf(true) }
     var notice by remember { mutableStateOf<String?>(null) }
     var lastMove by remember { mutableStateOf<WordSiegePracticeMove?>(null) }
     var botThinking by remember { mutableStateOf(false) }
@@ -31,6 +30,21 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     var showForfeit by remember { mutableStateOf(false) }
     var showExchange by remember { mutableStateOf(false) }
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
+
+    val playerTargetScore = WordSiegePracticeEngine.totalScore(state, 1)
+    val botTargetScore = WordSiegePracticeEngine.totalScore(state, 2)
+    var displayedPlayerScore by remember { mutableIntStateOf(playerTargetScore) }
+    var displayedBotScore by remember { mutableIntStateOf(botTargetScore) }
+    var displayedOwner by remember { mutableIntStateOf(state.currentOwner) }
+
+    LaunchedEffect(playerTargetScore, botTargetScore, state.currentOwner) {
+        while (displayedPlayerScore != playerTargetScore || displayedBotScore != botTargetScore) {
+            displayedPlayerScore += (playerTargetScore - displayedPlayerScore).coerceIn(-1, 1)
+            displayedBotScore += (botTargetScore - displayedBotScore).coerceIn(-1, 1)
+            delay(28)
+        }
+        displayedOwner = state.currentOwner
+    }
 
     fun clearSelection() {
         placements = emptyMap()
@@ -46,11 +60,11 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     }
 
     fun applyPlayerMove() {
-        runCatching { WordSiegePracticeEngine.applyMove(state, 1, placements, horizontal) }
+        runCatching { WordSiegePracticeEngine.applyMove(state, 1, placements) }
             .onSuccess { (next, move) ->
                 state = next
                 lastMove = move
-                notice = sh("+${move.wordScore} kelime puanı • ${move.capturedCells} alan ele geçirildi", "+${move.wordScore} word points • ${move.capturedCells} territory captured")
+                notice = sh("+${move.wordScore} kelime • ${move.capturedCells} küp • +${move.capturedCells * 2}/-${move.capturedCells * 2} transfer", "+${move.wordScore} word • ${move.capturedCells} cubes • +${move.capturedCells * 2}/-${move.capturedCells * 2} transfer")
                 clearSelection()
                 SonHarfSoundFx.wordAccepted()
             }
@@ -62,8 +76,9 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
     BackHandler(onBack = onExit)
 
-    LaunchedEffect(state.currentOwner, state.moveCount, state.status) {
+    LaunchedEffect(state.currentOwner, state.moveCount, state.status, displayedPlayerScore, displayedBotScore, displayedOwner) {
         if (state.status != "playing" || state.currentOwner != 2) return@LaunchedEffect
+        if (displayedPlayerScore != playerTargetScore || displayedBotScore != botTargetScore || displayedOwner != 2) return@LaunchedEffect
         botThinking = true
         delay(950)
         val planned = WordSiegePracticeEngine.bestBotMove(state)
@@ -71,7 +86,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
             state = WordSiegePracticeEngine.pass(state, 2)
             notice = sh("Bot pas verdi. Sıra sende.", "Bot passed. Your turn.")
         } else {
-            val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements, planned.horizontal)
+            val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements)
             state = next
             lastMove = move
             notice = sh("Bot ${move.primaryWord} oynadı • +${move.wordScore}", "Bot played ${move.primaryWord} • +${move.wordScore}")
@@ -102,27 +117,27 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    WordSiegePracticeScoreCard(sh("SEN", "YOU"), state.playerWordScore, state.playerArea, MainUi.Blue, active = state.currentOwner == 1, modifier = Modifier.weight(1f))
-                    WordSiegePracticeScoreCard(sh("BOT", "BOT"), state.botWordScore, state.botArea, SiegePurple, active = state.currentOwner == 2, modifier = Modifier.weight(1f))
+                    WordSiegePracticeScoreCard(sh("SEN", "YOU"), displayedPlayerScore, state.playerArea, MainUi.Green, active = displayedOwner == 1, modifier = Modifier.weight(1f))
+                    WordSiegePracticeScoreCard(sh("BOT", "BOT"), displayedBotScore, state.botArea, MainUi.Red, active = displayedOwner == 2, modifier = Modifier.weight(1f))
                 }
             }
 
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = if (state.currentOwner == 1) SiegeBlueSoft else SiegePurpleSoft,
+                    color = if (displayedOwner == 1) SiegeBlueSoft else SiegePurpleSoft,
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, if (state.currentOwner == 1) MainUi.Blue.copy(alpha = .25f) else SiegePurple.copy(alpha = .25f)),
+                    border = BorderStroke(1.dp, if (displayedOwner == 1) MainUi.Green.copy(alpha = .25f) else MainUi.Red.copy(alpha = .25f)),
                 ) {
                     Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (botThinking) CircularProgressIndicator(Modifier.size(16.dp), color = SiegePurple, strokeWidth = 2.dp)
-                        else Icon(if (state.currentOwner == 1) Icons.Rounded.TouchApp else Icons.Rounded.SmartToy, null, tint = if (state.currentOwner == 1) MainUi.Blue else SiegePurple, modifier = Modifier.size(17.dp))
+                        else Icon(if (displayedOwner == 1) Icons.Rounded.TouchApp else Icons.Rounded.SmartToy, null, tint = if (displayedOwner == 1) MainUi.Green else MainUi.Red, modifier = Modifier.size(17.dp))
                         Spacer(Modifier.width(7.dp))
                         Text(
                             when {
                                 state.status == "finished" -> sh("ALIŞTIRMA BİTTİ", "PRACTICE FINISHED")
                                 botThinking -> sh("BOT HAMLESİNİ HAZIRLIYOR", "BOT IS PREPARING A MOVE")
-                                state.currentOwner == 1 -> sh("SIRA SENDE • Harf seç, tahtaya bırak, OYNA", "YOUR TURN • Select tile, place it, PLAY")
+                                displayedOwner == 1 -> sh("SIRA SENDE • Harf seç, tahtaya bırak, OYNA", "YOUR TURN • Select tile, place it, PLAY")
                                 else -> sh("BOTUN SIRASI", "BOT'S TURN")
                             },
                             color = MainUi.Text,
@@ -158,24 +173,13 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
             if (state.status == "playing") {
                 item {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        FilterChip(
-                            selected = horizontal,
-                            onClick = { horizontal = true },
-                            enabled = state.currentOwner == 1 && !botThinking,
-                            label = { Text(sh("YATAY", "HORIZONTAL"), fontSize = 9.sp, fontWeight = FontWeight.Bold) },
-                            leadingIcon = { Icon(Icons.Rounded.SwapHoriz, null, Modifier.size(15.dp)) },
-                        )
-                        FilterChip(
-                            selected = !horizontal,
-                            onClick = { horizontal = false },
-                            enabled = state.currentOwner == 1 && !botThinking,
-                            label = { Text(sh("DİKEY", "VERTICAL"), fontSize = 9.sp, fontWeight = FontWeight.Bold) },
-                            leadingIcon = { Icon(Icons.Rounded.SwapVert, null, Modifier.size(15.dp)) },
-                        )
-                        Spacer(Modifier.weight(1f))
-                        Text(sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"), color = MainUi.Muted, fontSize = 9.sp)
-                    }
+                    Text(
+                        sh("Yön otomatik algılanır • Torba ${state.bag.length}", "Direction is detected automatically • Bag ${state.bag.length}"),
+                        color = MainUi.Muted,
+                        fontSize = 9.sp,
+                        modifier = Modifier.fillMaxWidth(),
+                        textAlign = TextAlign.End,
+                    )
                 }
 
                 item {
@@ -320,7 +324,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 @Composable
 private fun WordSiegePracticeScoreCard(
     label: String,
-    wordScore: Int,
+    score: Int,
     area: Int,
     accent: Color,
     active: Boolean,
@@ -339,8 +343,8 @@ private fun WordSiegePracticeScoreCard(
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(label, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 11.sp)
-                Text("${wordScore + area}", color = accent, fontWeight = FontWeight.Black, fontSize = 19.sp)
-                Text(sh("Kelime $wordScore • Alan $area", "Word $wordScore • Area $area"), color = MainUi.Muted, fontSize = 7.sp, maxLines = 1)
+                Text("$score", color = accent, fontWeight = FontWeight.Black, fontSize = 19.sp)
+                Text(sh("Alan $area • Küp başına ±2", "Area $area • ±2 per cube"), color = MainUi.Muted, fontSize = 7.sp, maxLines = 1)
             }
         }
     }

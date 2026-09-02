@@ -59,7 +59,6 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     var showPass by remember { mutableStateOf(false) }
     var showExchange by remember { mutableStateOf(false) }
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
-    var horizontal by remember { mutableStateOf(true) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     var practiceActive by remember { mutableStateOf(false) }
@@ -210,7 +209,6 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     moves = moves,
                     placements = placements,
                     selectedRackIndex = selectedRackIndex,
-                    horizontal = horizontal,
                     busy = busy,
                     notice = notice,
                     onBack = {
@@ -236,17 +234,21 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                         if (pendingCell != null) placements = placements - pendingCell
                         selectedRackIndex = if (selectedRackIndex == rackIndex) null else rackIndex
                     },
-                    onHorizontal = { horizontal = it },
                     onSubmit = {
                         if (placements.isEmpty()) {
                             notice = sh("Önce raftan harf seçip tahtaya yerleştir.", "Place at least one rack tile on the board.")
                         } else {
-                            runGameAction {
-                                backend.submitWordSiegeMove(
-                                    game.id,
-                                    placements.entries.sortedBy { it.key }.map { WordSiegePlacement(it.key, it.value) },
-                                    horizontal,
-                                )
+                            val orientation = runCatching { WordSiegeFinalRules.detectOrientation(game.board, placements.keys) }
+                            if (orientation.isFailure) {
+                                notice = wordSiegeFriendlyError(orientation.exceptionOrNull()?.message.orEmpty())
+                            } else {
+                                runGameAction {
+                                    backend.submitWordSiegeMove(
+                                        game.id,
+                                        placements.entries.sortedBy { it.key }.map { WordSiegePlacement(it.key, it.value) },
+                                        orientation.getOrThrow() == WordSiegeOrientation.HORIZONTAL,
+                                    )
+                                }
                             }
                         }
                     },
@@ -734,31 +736,7 @@ private fun WordSiegeMatch(
 
         if (game.status == "playing") {
             item {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(
-                        selected = horizontal,
-                        onClick = { onHorizontal(true) },
-                        enabled = canAct,
-                        label = { Text(sh("YATAY", "HORIZONTAL"), fontSize = 9.sp, fontWeight = FontWeight.Bold) },
-                        leadingIcon = { Icon(Icons.Rounded.SwapHoriz, null, Modifier.size(16.dp)) },
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = SiegeBlueSoft, selectedLabelColor = MainUi.Blue),
-                    )
-                    FilterChip(
-                        selected = !horizontal,
-                        onClick = { onHorizontal(false) },
-                        enabled = canAct,
-                        label = { Text(sh("DİKEY", "VERTICAL"), fontSize = 9.sp, fontWeight = FontWeight.Bold) },
-                        leadingIcon = { Icon(Icons.Rounded.SwapVert, null, Modifier.size(16.dp)) },
-                        colors = FilterChipDefaults.filterChipColors(selectedContainerColor = SiegePurpleSoft, selectedLabelColor = SiegePurple),
-                    )
-                    Spacer(Modifier.weight(1f))
-                    Text(
-                        sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"),
-                        color = MainUi.Muted,
-                        fontSize = 9.sp,
-                        modifier = Modifier.align(Alignment.CenterVertically),
-                    )
-                }
+                Text(sh("Yön otomatik algılanır • Torba ${game.bag.length}", "Direction is detected automatically • Bag ${game.bag.length}"), color = MainUi.Muted, fontSize = 9.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End)
             }
 
             item {
@@ -927,15 +905,15 @@ private fun WordSiegeBoardCell(
     onClick: () -> Unit,
 ) {
     val owner = if (pending) myOwner else cell.owner
-    val territory = when (owner) {
-        1 -> MainUi.Blue.copy(alpha = if (pending) .30f else .17f)
-        2 -> SiegePurple.copy(alpha = if (pending) .30f else .17f)
-        else -> MainUi.Surface
+    val territory = when {
+        owner == 0 -> MainUi.Surface
+        owner == myOwner -> Color(0xFF35C878)
+        else -> Color(0xFFFF5F57)
     }
     val border = when {
         pending -> SiegeTileBorder
-        owner == 1 -> MainUi.Blue.copy(alpha = .45f)
-        owner == 2 -> SiegePurple.copy(alpha = .45f)
+        owner == myOwner -> MainUi.Green
+        owner != 0 -> MainUi.Red
         else -> MainUi.Border
     }
     val letter = pendingLetter?.toString() ?: cell.letter
