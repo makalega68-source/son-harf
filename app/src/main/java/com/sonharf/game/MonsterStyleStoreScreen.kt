@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,14 +18,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.graphics.ColorFilter
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 private val StoreBg = SonHarfTheme.Background
 private val StoreSurface = SonHarfTheme.Surface
@@ -38,6 +36,7 @@ private val StoreMuted = SonHarfTheme.TextSecondary
 private val StoreBorder = SonHarfTheme.Border
 private val StoreGreen = SonHarfTheme.Success
 private val StoreGold = SonHarfTheme.Warning
+private const val STORE_LOAD_TIMEOUT_MS = 12_000L
 
 private data class StylePreview(
     val titleTr: String,
@@ -50,40 +49,61 @@ private data class StylePreview(
 
 @Composable
 internal fun MonsterStyleStoreScreen() {
-    val backend = remember { if (SupabaseProvider.configured) runCatching { OnlineGameBackend() }.getOrNull() else null }
+    // One remembered Style backend only. Child sections receive this same instance.
+    // Any constructor/configuration failure degrades to an offline/fallback store instead of crashing composition.
+    val backend = remember {
+        if (SupabaseProvider.configured) runCatching { OnlineGameBackend() }.getOrNull() else null
+    }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var theme by remember { mutableStateOf<ShopItemDto?>(null) }
     var owned by remember { mutableStateOf(false) }
     var equipped by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf(true) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     suspend fun reload() {
-        val b = backend ?: return
-        val id = b.currentUserId() ?: return
+        loading = true
+        val b = backend
+        if (b == null) {
+            notice = sh("Style mağazası şu anda çevrimdışı kullanılabilir. Sunucu bağlantısı kurulamadı.", "Style is available in offline mode. The server connection is unavailable.")
+            loading = false
+            return
+        }
+
+        val id = runCatching { b.currentUserId() }.getOrNull()
+        if (id.isNullOrBlank()) {
+            notice = sh("Oturum doğrulanamadı. Style kataloğu güvenli modda gösteriliyor.", "Session could not be verified. The Style catalog is shown in safe mode.")
+            loading = false
+            return
+        }
+
         runCatching {
-            val p = b.getProfile(id)
-            val shop = b.getShopItems()
-            val inventory = b.getInventory()
-            val eq = b.getEquippedCosmetics()
-            profile = p
-            theme = shop.firstOrNull { it.id == "theme_monster_blue" && it.active }
-            owned = "theme_monster_blue" in inventory
-            equipped = eq?.gameThemeId == "theme_monster_blue"
-            SonHarfCosmetics.apply(eq)
+            withTimeout(STORE_LOAD_TIMEOUT_MS) {
+                val p = b.getProfile(id)
+                val shop = b.getShopItems()
+                val inventory = b.getInventory()
+                val eq = b.getEquippedCosmetics()
+                profile = p
+                theme = shop.firstOrNull { it.id == "theme_monster_blue" && it.active }
+                owned = "theme_monster_blue" in inventory
+                equipped = eq?.gameThemeId == "theme_monster_blue"
+                SonHarfCosmetics.apply(eq)
+            }
         }.onFailure {
-            notice = sh("Style mağazası yüklenemedi.", "Style shop could not be loaded.")
+            notice = sh("Style verileri alınamadı. Katalog güvenli modda açık kalacak; daha sonra tekrar deneyebilirsin.", "Style data could not be loaded. The catalog will remain open in safe mode; try again later.")
+        }
+        loading = false
+    }
+
+    LaunchedEffect(backend) {
+        runCatching { reload() }.onFailure {
+            loading = false
+            notice = sh("Style mağazası geçici olarak kullanılamıyor; ekran güvenli modda açık tutuldu.", "Style is temporarily unavailable; the screen remains open in safe mode.")
         }
     }
 
-    LaunchedEffect(Unit) { reload() }
-
-    val profileItems = listOf(
-        StylePreview("Arena Çerçevesi", "Arena Frame", "Profil ve eşleşme kartı çerçevesi", "Profile and matchup frame", Icons.Rounded.AccountCircle, StoreBlue),
-        StylePreview("İsim Plakası", "Nameplate", "İsmini premium bir plakada göster", "Show your name on a premium plate", Icons.Rounded.Badge, Color(0xFF6C63D9)),
-        StylePreview("Profil Arka Planı", "Profile Background", "Profil yüzeyini kişiselleştir", "Personalize your profile surface", Icons.Rounded.Wallpaper, Color(0xFF31A6A6)),
-    )
     val matchItems = listOf(
         StylePreview("VS Giriş Efekti", "VS Intro", "Maç açılışında güç vermeyen görsel intro", "Visual match intro with no gameplay power", Icons.Rounded.Bolt, StoreBlue),
         StylePreview("Kelime Gönderme", "Word Send Effect", "Kelime kabulünde kısa premium efekt", "Short premium effect on accepted words", Icons.Rounded.AutoAwesome, Color(0xFF7A62D3)),
@@ -103,6 +123,7 @@ internal fun MonsterStyleStoreScreen() {
         ) {
             item { StoreHeader(profile?.diamonds ?: 0) }
             item { StoreCategoryRail() }
+            if (loading) item { StoreNotice(sh("Style yükleniyor…", "Loading Style…")) }
             item {
                 StoreSectionHeader(
                     sh("ÖNE ÇIKANLAR", "FEATURED"),
@@ -119,21 +140,26 @@ internal fun MonsterStyleStoreScreen() {
                         val b = backend ?: return@FeaturedThemeCard
                         scope.launch {
                             busy = true
-                            runCatching {
-                                if (!owned) b.purchaseShopItem("theme_monster_blue")
-                                b.equipShopItem("theme_monster_blue")
-                            }.onSuccess {
-                                notice = sh("Mavi Beyaz Arena etkinleştirildi.", "Blue White Arena equipped.")
-                                reload()
-                            }.onFailure {
-                                val raw = it.message.orEmpty()
-                                notice = if ("insufficient_diamonds" in raw) {
-                                    sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
-                                } else {
-                                    sh("Tema işlemi tamamlanamadı.", "Theme action could not be completed.")
+                            try {
+                                runCatching {
+                                    withTimeout(STORE_LOAD_TIMEOUT_MS) {
+                                        if (!owned) b.purchaseShopItem("theme_monster_blue")
+                                        b.equipShopItem("theme_monster_blue")
+                                    }
+                                }.onSuccess {
+                                    notice = sh("Mavi Beyaz Arena etkinleştirildi.", "Blue White Arena equipped.")
+                                    reload()
+                                }.onFailure {
+                                    val raw = it.message.orEmpty()
+                                    notice = if ("insufficient_diamonds" in raw) {
+                                        sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                                    } else {
+                                        sh("Tema işlemi tamamlanamadı. Daha sonra tekrar dene.", "Theme action could not be completed. Try again later.")
+                                    }
                                 }
+                            } finally {
+                                busy = false
                             }
-                            busy = false
                         }
                     },
                 )
@@ -145,7 +171,7 @@ internal fun MonsterStyleStoreScreen() {
             item { ThemeSlotRow(equipped) }
 
             item { StoreSectionHeader(sh("PROFİL STYLE", "PROFILE STYLE"), sh("Çerçeve, plaka, arka plan ve rozet", "Frames, nameplates, backgrounds and badges")) }
-            item { PurchasedProfileFramesStoreRow() }
+            item { PurchasedProfileFramesStoreRow(backend = backend) }
 
             item { StoreSectionHeader(sh("MAÇ STYLE", "MATCH STYLE"), sh("Sadece görsel efektler; rekabet avantajı yok", "Visual effects only; no competitive advantage")) }
             item { PreviewRow(matchItems) }
@@ -283,7 +309,7 @@ private fun SmallThemeCard(title: String, state: String, accent: Color, live: Bo
 @Composable
 private fun PreviewRow(previews: List<StylePreview>) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        items(previews) { preview -> StylePreviewCard(preview) }
+        items(previews, key = { "${it.titleEn}:${it.subtitleEn}" }) { preview -> StylePreviewCard(preview) }
     }
 }
 
@@ -308,26 +334,9 @@ private fun StylePreviewCard(preview: StylePreview) {
 @Composable
 private fun BundleRow() {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { AssetBundleCard(sh("Başlangıç Style Paketi", "Starter Style Bundle"), R.drawable.mobile_ui_market, StoreBlue) }
-        item { AssetBundleCard(sh("Premium Style Paketi", "Premium Style Bundle"), R.drawable.mobile_ui_market, Color(0xFF6C63D9)) }
-        item { AssetBundleCard(sh("Sezon Style Paketi", "Season Style Bundle"), R.drawable.mobile_ui_market, StoreGold) }
-    }
-}
-
-@Composable
-private fun AssetBundleCard(title: String, drawable: Int, accent: Color) {
-    Surface(modifier = Modifier.width(190.dp), shape = RoundedCornerShape(18.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(11.dp), color = accent.copy(alpha = .12f)) {
-                    Image(painterResource(drawable), null, Modifier.padding(9.dp).size(23.dp), colorFilter = ColorFilter.tint(accent))
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(title, Modifier.weight(1f), color = StoreText, fontSize = 10.sp, fontWeight = FontWeight.Black)
-            }
-            Text(sh("Son Harf tasarımına uyarlanmış, güç vermeyen Style koleksiyonu", "Son Harf-adapted cosmetic Style collection"), color = StoreMuted, fontSize = 8.sp)
-            Text(sh("YAKINDA", "COMING SOON"), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black)
-        }
+        item(key = "starter_bundle") { BundleCard(sh("Başlangıç Style Paketi", "Starter Style Bundle"), Icons.Rounded.RocketLaunch, StoreBlue) }
+        item(key = "premium_bundle") { BundleCard(sh("Premium Style Paketi", "Premium Style Bundle"), Icons.Rounded.Diamond, Color(0xFF6C63D9)) }
+        item(key = "season_bundle") { BundleCard(sh("Sezon Style Paketi", "Season Style Bundle"), Icons.Rounded.CalendarMonth, StoreGold) }
     }
 }
 
@@ -340,7 +349,7 @@ private fun BundleCard(title: String, icon: ImageVector, accent: Color) {
                 Spacer(Modifier.width(8.dp))
                 Text(title, Modifier.weight(1f), color = StoreText, fontSize = 10.sp, fontWeight = FontWeight.Black)
             }
-            Text(sh("Theme + frame + title için hazır bundle slotu", "Ready bundle slot for theme + frame + title"), color = StoreMuted, fontSize = 8.sp)
+            Text(sh("Son Harf tasarımına uyarlanmış, güç vermeyen Style koleksiyonu", "Son Harf-adapted cosmetic Style collection"), color = StoreMuted, fontSize = 8.sp)
             Text(sh("YAKINDA", "COMING SOON"), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black)
         }
     }
@@ -351,7 +360,7 @@ private fun SonCoinReadyCard(balance: Int) {
     Surface(shape = RoundedCornerShape(20.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = CircleShape, color = StoreAlt) { Image(painterResource(R.drawable.mobile_ui_market), null, Modifier.padding(10.dp).size(24.dp), colorFilter = ColorFilter.tint(StoreBlue)) }
+                Surface(shape = CircleShape, color = StoreAlt) { Icon(Icons.Rounded.Toll, null, Modifier.padding(10.dp).size(24.dp), tint = StoreBlue) }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text("$balance Son Coin", color = StoreText, fontSize = 17.sp, fontWeight = FontWeight.Black)
