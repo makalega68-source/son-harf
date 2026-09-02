@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -22,6 +23,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.FriendshipDto
@@ -357,9 +359,13 @@ internal fun LightDuelArena(
     triviaRound: TriviaRoundDto?,
     triviaQuestion: TriviaQuestionDto?,
     triviaSelection: Long?,
+    voiceSupported: Boolean,
+    voiceUses: Int,
     onSubmit: () -> Unit,
     onTimeout: () -> Unit,
-    onTrivia: (Int) -> Unit,
+    onBonus: () -> Unit,
+    onVoice: () -> Unit,
+    onTrivia: (Long) -> Unit,
     onTriviaTimeout: () -> Unit,
     onChat: () -> Unit,
     onForfeit: () -> Unit,
@@ -399,6 +405,9 @@ internal fun LightDuelArena(
             opponentName = opponentName,
             myRounds = myRounds,
             oppRounds = oppRounds,
+            words = words,
+            isVip = isVip,
+            language = room.language,
             onRematch = onRematch,
             onExit = onExit,
         )
@@ -415,7 +424,7 @@ internal fun LightDuelArena(
         mutableIntStateOf(
             when {
                 deadline == null && !quizActive -> 0
-                triviaResolved -> 5
+                triviaResolved -> 3
                 else -> 10
             }
         )
@@ -572,15 +581,15 @@ internal fun LightDuelArena(
                     Text(
                         required,
                         color = LText,
-                        fontSize = 62.sp,
-                        lineHeight = 64.sp,
+                        fontSize = 52.sp,
+                        lineHeight = 54.sp,
                         fontWeight = FontWeight.Black,
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
                         shownLastWord.ifBlank { sh("İLK KELİMEYİ YAZ", "ENTER FIRST WORD") },
                         color = shownLastWordColor,
-                        fontSize = 14.sp,
+                        fontSize = 21.sp,
                         fontWeight = FontWeight.Black,
                         maxLines = 1,
                     )
@@ -610,7 +619,7 @@ internal fun LightDuelArena(
         ) {
             LightActionButton(sh("⚑ PES ET", "⚑ FORFEIT"), LRed, Modifier.weight(1f), onForfeit)
             LightActionButton(sh("● SOHBET", "● CHAT"), LBlue, Modifier.weight(1f), onChat)
-            LightActionButton("★ BONUS", LGold, Modifier.weight(1f)) { }
+            LightActionButton("★ BONUS", LGold, Modifier.weight(1f), onBonus)
         }
 
         if (quizActive) {
@@ -619,6 +628,9 @@ internal fun LightDuelArena(
                 round = activeTrivia,
                 question = requireNotNull(triviaQuestion),
                 myAnswer = (if (host) activeTrivia.hostAnswer else activeTrivia.guestAnswer) ?: triviaSelection,
+                opponentAnswer = if (room.isBot) activeTrivia.botAnswer else if (host) activeTrivia.guestAnswer else activeTrivia.hostAnswer,
+                myWon = activeTrivia.winnerSide == if (host) "host" else "guest",
+                tied = activeTrivia.winnerSide == "tie",
                 onTrivia = onTrivia,
                 modifier = Modifier.padding(horizontal = 12.dp),
             )
@@ -629,6 +641,9 @@ internal fun LightDuelArena(
             myTurn = myTurn,
             busy = busy,
             quiz = quizActive,
+            voiceSupported = voiceSupported,
+            voiceUses = voiceUses,
+            onVoice = onVoice,
             onSubmit = onSubmit,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
@@ -731,65 +746,25 @@ private fun LightVipWordHistory(
         modifier = modifier.fillMaxWidth().height(58.dp),
         shape = RoundedCornerShape(15.dp),
         color = Color.White,
-        border = BorderStroke(1.dp, if (isVip) LBlue.copy(alpha = .28f) else LBorder),
+        border = BorderStroke(1.dp, LBorder),
     ) {
-        if (!isVip) {
-            Box(
-                Modifier.fillMaxSize().padding(horizontal = 14.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    sh(
-                        "🔒 Son kelimeleri sadece VIP üyeler görebilir.",
-                        "🔒 Only VIP members can see the latest words.",
-                    ),
-                    color = LMuted,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                )
-            }
-        } else {
-            Row(
-                Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 7.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    "VIP",
-                    color = LGold,
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Black,
-                )
-                Spacer(Modifier.width(8.dp))
-                if (words.isEmpty()) {
-                    Text(
-                        sh("Henüz kelime yok.", "No words yet."),
-                        color = LMuted,
-                        fontSize = 10.sp,
-                    )
-                } else {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        items(words.takeLast(6)) { word ->
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = LBlueSoft,
-                                border = BorderStroke(1.dp, LBlue.copy(alpha = .18f)),
-                            ) {
-                                Text(
-                                    gameUppercase(
-                                        word.word.trim().ifBlank { word.normalizedWord.trim() },
-                                        language,
-                                    ),
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                    color = LText,
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                )
-                            }
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(sh("ZİNCİR", "CHAIN"), color = LBlue, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.width(8.dp))
+            if (words.isEmpty()) {
+                Text(sh("Henüz kelime yok.", "No words yet."), color = LMuted, fontSize = 10.sp)
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    items(words.takeLast(6)) { word ->
+                        Surface(shape = RoundedCornerShape(12.dp), color = LBlueSoft, border = BorderStroke(1.dp, LBlue.copy(alpha = .18f))) {
+                            Text(
+                                gameUppercase(word.word.trim().ifBlank { word.normalizedWord.trim() }, language),
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                color = LText, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                            )
                         }
                     }
                 }
@@ -803,11 +778,15 @@ private fun LightBonusCard(
     round: TriviaRoundDto,
     question: TriviaQuestionDto,
     myAnswer: Long?,
-    onTrivia: (Int) -> Unit,
+    opponentAnswer: Long?,
+    myWon: Boolean,
+    tied: Boolean,
+    onTrivia: (Long) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val selectedAnswer = myAnswer
     val resolved = round.resolvedAt != null
+    var value by remember(round.id) { mutableStateOf("") }
+    val parsed = value.toLongOrNull()
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -815,79 +794,33 @@ private fun LightBonusCard(
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(1.dp, LPurple.copy(alpha = .35f)),
     ) {
-        Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text("★ BONUS +${round.bonusPoints}", color = LGold, fontWeight = FontWeight.Black, fontSize = 11.sp)
-            Text(question.question, color = LText, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-            val options = listOf(question.optionA, question.optionB, question.optionC, question.optionD)
-            options.chunked(2).forEach { pair ->
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    pair.forEach { raw ->
-                        val answerValue = raw.toLongOrNull()
-                        val selected = answerValue != null && selectedAnswer == answerValue
-                        val correct = resolved && answerValue != null && round.correctAnswer == answerValue
-                        val containerColor = when {
-                            correct -> LGreen.copy(alpha = .14f)
-                            resolved && selected -> LRed.copy(alpha = .13f)
-                            selected -> LBlue.copy(alpha = .11f)
-                            else -> Color.Transparent
-                        }
-                        val optionColor = when {
-                            correct -> LGreen
-                            resolved && selected -> LRed
-                            selected -> LBlue
-                            else -> LText
-                        }
-                        OutlinedButton(
-                            onClick = {
-                                answerValue
-                                    ?.takeIf { it in 0L..Int.MAX_VALUE.toLong() }
-                                    ?.let {
-                                        onTrivia(it.toInt())
-                                    }
-                            },
-                            enabled = answerValue != null && selectedAnswer == null && !resolved,
-                            modifier = Modifier.weight(1f).heightIn(min = 34.dp),
-                            border = BorderStroke(
-                                if (selected || correct) 2.dp else 1.dp,
-                                when {
-                                    correct -> LGreen
-                                    resolved && selected -> LRed
-                                    selected -> LBlue
-                                    else -> LPurple.copy(alpha = .45f)
-                                },
-                            ),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                containerColor = containerColor,
-                                disabledContainerColor = containerColor,
-                                contentColor = optionColor,
-                                disabledContentColor = optionColor,
-                            ),
-                            contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
-                        ) {
-                            Text(raw, color = optionColor, fontSize = 9.sp, fontWeight = if (selected || correct) FontWeight.Black else FontWeight.Medium, maxLines = 1)
-                        }
-                    }
-                }
-            }
-            when {
-                resolved && selectedAnswer == round.correctAnswer -> Text(
-                    sh("Doğru cevap!", "Correct answer!"),
-                    color = LGreen,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
+        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("★ BİL BAKALIM +${round.bonusPoints}", color = LGold, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            Text(question.question, color = LText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            if (!resolved && myAnswer == null) {
+                OutlinedTextField(
+                    value = value,
+                    onValueChange = { raw -> value = raw.filter(Char::isDigit).take(16) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    textStyle = LocalTextStyle.current.copy(fontSize = 28.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center),
+                    placeholder = { Text(sh("Sayı gir", "Enter a number"), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
                 )
-                resolved -> Text(
-                    sh("Doğru cevap: ${round.correctAnswer ?: "—"}", "Correct answer: ${round.correctAnswer ?: "—"}"),
-                    color = LText,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                selectedAnswer != null -> Text(
-                    sh("Cevabın alındı, sonuç bekleniyor…", "Answer received, waiting for result…"),
-                    color = LBlue,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                )
+                Button(
+                    onClick = { parsed?.let(onTrivia) },
+                    enabled = parsed != null,
+                    modifier = Modifier.fillMaxWidth().height(46.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = LPurple),
+                ) { Text(sh("CEVABI KİLİTLE", "LOCK ANSWER"), fontWeight = FontWeight.Black) }
+            } else if (!resolved) {
+                Text(sh("Cevabın alındı. Rakibin cevabı sonuçtan önce gizli.", "Answer received. Opponent answer stays hidden until the result."), color = LBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            } else {
+                Text(sh("ASIL CEVAP ${round.correctAnswer ?: "—"}", "ACTUAL ANSWER ${round.correctAnswer ?: "—"}"), color = LText, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                val mineLabel = when { myAnswer == null -> sh("YANLIŞ • Cevap verilmedi", "WRONG • No answer"); tied -> sh("BERABERE • $myAnswer", "TIE • $myAnswer"); myWon -> sh("DOĞRU • $myAnswer", "CORRECT • $myAnswer"); else -> sh("YANLIŞ • $myAnswer", "WRONG • $myAnswer") }
+                Text(mineLabel, color = when { tied -> LMuted; myWon -> LGreen; else -> LRed }, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                val oppLabel = when { opponentAnswer == null -> sh("RAKİP • Cevap verilmedi", "OPPONENT • No answer"); tied -> sh("BERABERE • $opponentAnswer", "TIE • $opponentAnswer"); myWon -> sh("RAKİP • $opponentAnswer", "OPPONENT • $opponentAnswer"); else -> sh("DOĞRU • $opponentAnswer", "CORRECT • $opponentAnswer") }
+                Text(oppLabel, color = when { tied -> LMuted; myWon -> LRed; else -> LGreen }, fontSize = 12.sp, fontWeight = FontWeight.Black)
             }
         }
     }
@@ -899,6 +832,9 @@ private fun LightInputBar(
     myTurn: Boolean,
     busy: Boolean,
     quiz: Boolean,
+    voiceSupported: Boolean,
+    voiceUses: Int,
+    onVoice: () -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -908,10 +844,15 @@ private fun LightInputBar(
         color = Color.White,
         border = BorderStroke(1.5.dp, if (myTurn && !quiz) LBlue else LBorder),
     ) {
-        Row(
-            Modifier.fillMaxWidth().height(52.dp).padding(start = 15.dp, end = 5.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
+        Row(Modifier.fillMaxWidth().height(52.dp).padding(start = 10.dp, end = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            OutlinedButton(
+                onClick = onVoice,
+                enabled = myTurn && !busy && !quiz && voiceSupported && voiceUses < 5,
+                modifier = Modifier.height(40.dp),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+                border = BorderStroke(1.dp, LBlue.copy(alpha = .35f)),
+            ) { Text("🎙 ${5 - voiceUses}", fontSize = 11.sp, fontWeight = FontWeight.Black) }
+            Spacer(Modifier.width(6.dp))
             Text(
                 when {
                     value.isNotBlank() -> value
@@ -920,7 +861,7 @@ private fun LightInputBar(
                     else -> sh("Kelimeyi hazırlayabilirsin…", "Prepare your word…")
                 },
                 color = if (value.isBlank()) LMuted else LText,
-                fontSize = if (value.isBlank()) 14.sp else 18.sp,
+                fontSize = if (value.isBlank()) 13.sp else 18.sp,
                 fontWeight = if (value.isBlank()) FontWeight.Medium else FontWeight.Black,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
@@ -930,15 +871,8 @@ private fun LightInputBar(
                 enabled = myTurn && value.isNotBlank() && !busy && !quiz,
                 modifier = Modifier.height(40.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = LBlue,
-                    contentColor = Color.White,
-                    disabledContainerColor = LCard2,
-                    disabledContentColor = LMuted,
-                ),
-            ) {
-                Text("➤", fontSize = 18.sp, fontWeight = FontWeight.Black)
-            }
+                colors = ButtonDefaults.buttonColors(containerColor = LBlue, contentColor = Color.White, disabledContainerColor = LCard2, disabledContentColor = LMuted),
+            ) { Text("➤", fontSize = 18.sp, fontWeight = FontWeight.Black) }
         }
     }
 }
@@ -1235,6 +1169,9 @@ private fun LightResult(
     opponentName: String,
     myRounds: Int,
     oppRounds: Int,
+    words: List<GameWordDto>,
+    isVip: Boolean,
+    language: String,
     onRematch: () -> Unit,
     onExit: () -> Unit,
 ) {
@@ -1264,6 +1201,18 @@ private fun LightResult(
                     fontWeight = FontWeight.Black,
                 )
                 Text("$playerName  $myRounds : $oppRounds  $opponentName", color = LText, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                if (isVip && words.isNotEmpty()) {
+                    Text(sh("VIP • TAM KELİME GEÇMİŞİ", "VIP • FULL WORD HISTORY"), color = LGold, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        items(words) { word ->
+                            Surface(shape = RoundedCornerShape(10.dp), color = LBlueSoft) {
+                                Text(gameUppercase(word.word.trim().ifBlank { word.normalizedWord.trim() }, language), Modifier.padding(horizontal = 9.dp, vertical = 6.dp), color = LText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                } else {
+                    Text(sh("Maçta ${words.size} geçerli kelime oynandı.", "${words.size} valid words were played."), color = LMuted, fontSize = 10.sp)
+                }
                 Button(
                     onClick = onRematch,
                     modifier = Modifier.fillMaxWidth().height(54.dp),
