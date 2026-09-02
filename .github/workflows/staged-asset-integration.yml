@@ -3,6 +3,8 @@ name: Staged Asset Integration Validation
 on:
   push:
     branches: [ feat/asset-integration-staged-20260902 ]
+  pull_request:
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -55,6 +57,7 @@ jobs:
         run: gradle --no-daemon :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
       - name: Commit validated integration
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         shell: bash
         run: |
           set -euo pipefail
