@@ -58,6 +58,11 @@ internal object PurchasedFrameCatalog {
         PURPLE -> Color(0xFF7257D8)
         GOLD -> Color(0xFFD7A72E)
         GOLD_CROWN -> Color(0xFFE0A51C)
+        "frame_neon", "frame_modern_neon" -> Color(0xFF1677FF)
+        "frame_starter", "frame_ice", "frame_crystal" -> Color(0xFF32BFB3)
+        "frame_gold", "frame_royal_gold" -> Color(0xFFD7A72E)
+        "frame_black_gold" -> Color(0xFF5E5140)
+        "frame_purple_prestige" -> Color(0xFF7257D8)
         else -> Color(0xFF8A97A8)
     }
 }
@@ -68,7 +73,7 @@ private data class PurchasedFrameSpec(
     val titleEn: String,
     val subtitleTr: String,
     val subtitleEn: String,
-    @DrawableRes val drawable: Int,
+    @DrawableRes val drawable: Int?,
     val accent: Color,
     val accessTr: String,
     val accessEn: String,
@@ -90,10 +95,10 @@ private val purchasedFrameSpecs = listOf(
  * on specific devices. decodeStream is bounded to the local APK resource and cannot trigger network IO.
  */
 @Composable
-private fun rememberStyleBitmap(@DrawableRes drawable: Int): ImageBitmap? {
+private fun rememberStyleBitmap(@DrawableRes drawable: Int?): ImageBitmap? {
     val resources = LocalContext.current.resources
     return remember(resources, drawable) {
-        runCatching {
+        if (drawable == null) null else runCatching {
             resources.openRawResource(drawable).use { stream ->
                 BitmapFactory.decodeStream(stream)?.asImageBitmap()
             }
@@ -125,7 +130,7 @@ private fun SafeStyleDrawable(
 
 @Composable
 private fun SafeFrameArtwork(
-    @DrawableRes drawable: Int,
+    @DrawableRes drawable: Int?,
     frameId: String,
     modifier: Modifier,
 ): Boolean {
@@ -154,13 +159,28 @@ private fun SafeFrameArtwork(
 
 @Composable
 internal fun PurchasedProfileFrameOverlay(frameId: String?, modifier: Modifier = Modifier) {
-    val drawable = PurchasedFrameCatalog.drawable(frameId) ?: return
+    if (frameId.isNullOrBlank()) return
     SafeFrameArtwork(
-        drawable = drawable,
-        frameId = frameId.orEmpty(),
+        drawable = PurchasedFrameCatalog.drawable(frameId),
+        frameId = frameId,
         modifier = modifier,
     )
 }
+
+private val verifiedStagedFrameIds = setOf(PurchasedFrameCatalog.GREEN, PurchasedFrameCatalog.MINT)
+
+private fun legacyFrameSpec(item: ShopItemDto): PurchasedFrameSpec = PurchasedFrameSpec(
+    id = item.id,
+    titleTr = item.nameTr,
+    titleEn = item.nameEn,
+    subtitleTr = item.descriptionTr.ifBlank { "Satın alınmış profil çerçevesi" },
+    subtitleEn = item.descriptionEn.ifBlank { "Purchased profile frame" },
+    drawable = null,
+    accent = PurchasedFrameCatalog.accent(item.id),
+    accessTr = if (item.vipOnly) "VIP / PREMIUM" else "MAĞAZA",
+    accessEn = if (item.vipOnly) "VIP / PREMIUM" else "SHOP",
+    sourceIcon = if (item.vipOnly) R.drawable.style_icon_trophy else R.drawable.style_icon_coin,
+)
 
 @Composable
 internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
@@ -182,7 +202,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         }
         runCatching {
             withTimeout(12_000L) {
-                val shop = b.getShopItems().filter { it.kind == "profile_frame" && it.id in PurchasedFrameCatalog.ids }
+                val shop = b.getShopItems().filter { it.kind == "profile_frame" }
                 val owned = b.getInventory().toSet()
                 val equipped = b.getEquippedCosmetics()
                 shopItems = shop.associateBy { it.id }
@@ -203,6 +223,17 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         }
     }
 
+    val displaySpecs = remember(shopItems, inventory, equippedId) {
+        val legacy = shopItems.values
+            .filter { it.id !in PurchasedFrameCatalog.ids }
+            .sortedBy { it.sortOrder }
+            .map(::legacyFrameSpec)
+        val staged = purchasedFrameSpecs.filter { spec ->
+            spec.id in verifiedStagedFrameIds || spec.id in inventory || equippedId == spec.id
+        }
+        (legacy + staged).distinctBy { it.id }
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
         if (loading) {
             Text(sh("Çerçeveler yükleniyor…", "Loading frames…"), color = Color(0xFF6F7C8D), fontSize = 9.sp)
@@ -211,12 +242,12 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
             contentPadding = PaddingValues(horizontal = 2.dp),
             horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            items(purchasedFrameSpecs, key = { it.id }) { spec ->
+            items(displaySpecs, key = { it.id }) { spec ->
                 val item = shopItems[spec.id]
                 val owned = spec.id in inventory
                 val equipped = equippedId == spec.id
                 val frameBitmap = rememberStyleBitmap(spec.drawable)
-                val assetReady = frameBitmap != null
+                val assetReady = spec.drawable == null || frameBitmap != null
                 Surface(
                     modifier = Modifier.width(164.dp),
                     shape = RoundedCornerShape(18.dp),
@@ -270,7 +301,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                         }
                         if (!assetReady) {
                             Text(
-                                sh("Görsel doğrulanamadı", "Artwork unavailable"),
+                                sh("Orijinal görsel onarılıyor", "Original artwork is being repaired"),
                                 color = Color(0xFF8A97A8),
                                 fontSize = 7.sp,
                                 fontWeight = FontWeight.Bold,
@@ -295,7 +326,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                             )
                             when {
                                 equipped -> Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF2FAE68), modifier = Modifier.size(22.dp))
-                                !assetReady -> Text(sh("KAPALI", "LOCKED"), color = Color(0xFF8A97A8), fontSize = 7.sp, fontWeight = FontWeight.Black)
+                                !assetReady && !owned -> Text(sh("KAPALI", "LOCKED"), color = Color(0xFF8A97A8), fontSize = 7.sp, fontWeight = FontWeight.Black)
                                 else -> Button(
                                     onClick = {
                                         val b = backend ?: return@Button
@@ -322,7 +353,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                             }
                                         }
                                     },
-                                    enabled = backend != null && (owned || item != null) && busyId == null,
+                                    enabled = backend != null && (owned || (item != null && assetReady)) && busyId == null,
                                     contentPadding = PaddingValues(horizontal = 9.dp, vertical = 3.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = spec.accent, contentColor = Color.White),
                                     shape = RoundedCornerShape(10.dp),

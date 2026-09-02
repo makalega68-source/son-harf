@@ -28,8 +28,8 @@ class AssetIntegrationContractTest {
         assertTrue(frames.contains("openRawResource(drawable)"))
         assertTrue(frames.contains("BitmapFactory.decodeStream(stream)"))
         assertTrue(frames.contains("SafeFrameArtwork"))
-        assertTrue(frames.contains("Görsel doğrulanamadı") || frames.contains("Artwork unavailable"))
-        assertTrue(frames.contains("!assetReady ->"))
+        assertTrue(frames.contains("Orijinal görsel onarılıyor") || frames.contains("Original artwork is being repaired"))
+        assertTrue(frames.contains("!assetReady && !owned ->"))
         assertFalse(frames.contains("Icons.Rounded.BrokenImage"))
         assertFalse(frames.contains("ImageBitmap.imageResource(resources"))
         assertFalse(frames.contains("painterResource(drawable"))
@@ -39,7 +39,7 @@ class AssetIntegrationContractTest {
         val frames = read("src/main/java/com/sonharf/game/PurchasedStyleUi.kt")
         assertTrue(frames.contains("Modifier.width(164.dp)"))
         assertTrue(frames.contains("equipped -> Icon(Icons.Rounded.CheckCircle"))
-        assertTrue(frames.contains("!assetReady -> Text"))
+        assertTrue(frames.contains("!assetReady && !owned -> Text"))
     }
 
     @Test fun purchasedVfxIsCosmeticAndBounded() {
