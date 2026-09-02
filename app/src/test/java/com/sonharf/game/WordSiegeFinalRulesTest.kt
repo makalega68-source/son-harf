@@ -33,7 +33,7 @@ class WordSiegeFinalRulesTest {
 
         assertEquals("KARA", move.primaryWord)
         assertEquals(listOf("KARA"), move.formedWords)
-        assertEquals(4, move.capturedCells) // K cube + three rival cubes are gained.
+        assertEquals(4, move.capturedCells)
         assertEquals(8, next.playerAreaScore)
         assertEquals(1, next.board[39].owner)
         assertEquals(1, next.board[40].owner)
@@ -62,7 +62,7 @@ class WordSiegeFinalRulesTest {
             this[40] = WordSiegeCellDto(letter = "A", owner = 2)
             this[41] = WordSiegeCellDto(letter = "R", owner = 2)
             this[42] = WordSiegeCellDto(letter = "A", owner = 2)
-            this[30] = WordSiegeCellDto(letter = "M", owner = 2) // Placing K at 39 also forms MK.
+            this[30] = WordSiegeCellDto(letter = "M", owner = 2)
         }
         val before = state(board, rack = "KXXXXXX")
 
@@ -119,8 +119,10 @@ class WordSiegeFinalRulesTest {
         assertTrue(engine.contains("SharedDictionaryService.practiceCandidates"))
         assertTrue(!engine.contains("practiceDictionary"))
         assertTrue(sharedDictionary.contains("get_dictionary_snapshot_v1"))
-        assertTrue(practice.contains("Yön otomatik algılanır"))
-        assertTrue(pan.contains("Yön otomatik algılanır"))
+        assertTrue(!practice.contains("Yön otomatik algılanır"))
+        assertTrue(!pan.contains("Yön otomatik algılanır"))
+        assertTrue(practice.contains("Torba ${'$'}{state.bag.length}"))
+        assertTrue(pan.contains("Torba ${'$'}{game.bag.length}"))
         assertTrue(experience.contains("WordSiegeFinalRules.detectOrientation"))
         assertTrue(pan.contains("0xFF35C878"))
         assertTrue(pan.contains("0xFFFF5F57"))
