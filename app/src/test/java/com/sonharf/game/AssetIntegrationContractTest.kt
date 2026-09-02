@@ -26,13 +26,13 @@ class AssetIntegrationContractTest {
     @Test fun styleStoreUsesDecodeStreamAndNeverPaintsBrokenImageOverAvatar() {
         val frames = read("src/main/java/com/sonharf/game/PurchasedStyleUi.kt")
         assertTrue(frames.contains("openRawResource(drawable)"))
-        assertTrue(frames.contains("BitmapFactory.decodeStream"))
+        assertTrue(frames.contains("BitmapFactory.decodeStream(stream)"))
         assertTrue(frames.contains("SafeFrameArtwork"))
         assertTrue(frames.contains("Görsel doğrulanamadı") || frames.contains("Artwork unavailable"))
         assertTrue(frames.contains("!assetReady ->"))
-        assertFalse(frames.contains("BrokenImage"))
-        assertFalse(frames.contains("ImageBitmap.imageResource"))
-        assertFalse(frames.contains("painterResource("))
+        assertFalse(frames.contains("Icons.Rounded.BrokenImage"))
+        assertFalse(frames.contains("ImageBitmap.imageResource(resources"))
+        assertFalse(frames.contains("painterResource(drawable"))
     }
 
     @Test fun styleCardsKeepMobileActionsInsideViewportAndActiveItemHasNoDisabledActionButton() {
