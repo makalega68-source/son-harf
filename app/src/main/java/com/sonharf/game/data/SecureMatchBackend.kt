@@ -1,5 +1,8 @@
-package com.sonharf.game.data
+package com.sonharf.game
 
+import com.sonharf.game.data.GameRoomDto
+import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
