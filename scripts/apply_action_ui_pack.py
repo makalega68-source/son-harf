@@ -27,9 +27,10 @@ replacements = {
 }
 
 for old, new in replacements.items():
-    if old not in text:
-        raise SystemExit(f"Action UI contract drift: expected fragment not found: {old}")
-    text = text.replace(old, new)
+    if old in text:
+        text = text.replace(old, new)
+    elif new not in text:
+        raise SystemExit(f"Action UI contract drift: neither source nor adapted fragment found: {old}")
 
 # Marker keeps the adaptation traceable for future licensing/due-diligence review.
 marker = "// SON HARF ACTION UI ADAPTATION: original Compose implementation; no third-party binary assets bundled.\n"
