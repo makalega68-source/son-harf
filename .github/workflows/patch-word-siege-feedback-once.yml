@@ -1,0 +1,26 @@
+name: Patch Word Siege Feedback Once
+
+on:
+  push:
+    branches:
+      - fix/final-word-siege-20260902
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[skip feedback-patch]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/final-word-siege-20260902
+          fetch-depth: 0
+      - run: python3 scripts/patch_word_siege_feedback_order.py
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt
+          git commit -m "Sequence Word Siege score feedback before turn [skip feedback-patch]"
+          git push origin HEAD:fix/final-word-siege-20260902
