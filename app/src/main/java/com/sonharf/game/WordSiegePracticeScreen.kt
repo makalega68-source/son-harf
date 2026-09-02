@@ -12,12 +12,41 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.ProfileDto
 import kotlinx.coroutines.delay
+
+private data class PracticeBotProfile(val name: String, val gender: String)
+
+private val WordSiegePracticeBots = listOf(
+    PracticeBotProfile("Mesut", "erkek"),
+    PracticeBotProfile("İmran", "kadın"),
+    PracticeBotProfile("Ayaz", "erkek"),
+    PracticeBotProfile("Eren", "erkek"),
+    PracticeBotProfile("Esin", "kadın"),
+    PracticeBotProfile("Can", "erkek"),
+    PracticeBotProfile("Deniz", "erkek"),
+    PracticeBotProfile("Mert", "erkek"),
+    PracticeBotProfile("Selin", "kadın"),
+    PracticeBotProfile("Burak", "erkek"),
+    PracticeBotProfile("Elif", "kadın"),
+    PracticeBotProfile("Kerem", "erkek"),
+    PracticeBotProfile("Derya", "kadın"),
+    PracticeBotProfile("Arda", "erkek"),
+    PracticeBotProfile("Zeynep", "kadın"),
+    PracticeBotProfile("Emre", "erkek"),
+    PracticeBotProfile("Ceren", "kadın"),
+)
 
 @Composable
 internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
+    val backend = remember { OnlineGameBackend() }
+    val me = remember { backend.currentUserId() }
+    var playerProfile by remember { mutableStateOf<ProfileDto?>(null) }
+    var botProfile by remember { mutableStateOf(WordSiegePracticeBots.random()) }
     var state by remember { mutableStateOf(WordSiegePracticeEngine.newGame()) }
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
@@ -34,6 +63,10 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     var displayedPlayerScore by remember { mutableIntStateOf(playerTargetScore) }
     var displayedBotScore by remember { mutableIntStateOf(botTargetScore) }
     var displayedOwner by remember { mutableIntStateOf(state.currentOwner) }
+
+    LaunchedEffect(me) {
+        if (me != null) playerProfile = runCatching { backend.getProfile(me) }.getOrNull()
+    }
 
     LaunchedEffect(playerTargetScore, botTargetScore, state.currentOwner) {
         while (displayedPlayerScore != playerTargetScore || displayedBotScore != botTargetScore) {
@@ -52,6 +85,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
     fun startAgain() {
         state = WordSiegePracticeEngine.newGame(state.language)
+        botProfile = WordSiegePracticeBots.random()
         lastMove = null
         notice = sh("İlk hamle sende. Ortadaki 2K karesinden geç.", "Your first move must cover the center 2W cell.")
         clearSelection()
@@ -82,12 +116,12 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
         val planned = WordSiegePracticeEngine.bestBotMove(state)
         if (planned == null) {
             state = WordSiegePracticeEngine.pass(state, 2)
-            notice = sh("Bot pas verdi. Sıra sende.", "Bot passed. Your turn.")
+            notice = sh("${botProfile.name} pas verdi. Sıra sende.", "${botProfile.name} passed. Your turn.")
         } else {
             val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements)
             state = next
             lastMove = move
-            notice = sh("Bot ${move.primaryWord} oynadı • +${move.wordScore}", "Bot played ${move.primaryWord} • +${move.wordScore}")
+            notice = sh("${botProfile.name} ${move.primaryWord} oynadı • +${move.wordScore}", "${botProfile.name} played ${move.primaryWord} • +${move.wordScore}")
             SonHarfSoundFx.scoreTick()
         }
         botThinking = false
@@ -125,8 +159,32 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                 }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    WordSiegePracticeScoreCard(sh("SEN", "YOU"), displayedPlayerScore, state.playerArea, MainUi.Green, active = displayedOwner == 1, compact = compact, modifier = Modifier.weight(1f))
-                    WordSiegePracticeScoreCard(sh("BOT", "BOT"), displayedBotScore, state.botArea, MainUi.Red, active = displayedOwner == 2, compact = compact, modifier = Modifier.weight(1f))
+                    WordSiegePracticeScoreCard(
+                        name = playerProfile?.displayName ?: sh("SEN", "YOU"),
+                        score = displayedPlayerScore,
+                        area = state.playerArea,
+                        accent = MainUi.Green,
+                        active = displayedOwner == 1,
+                        compact = compact,
+                        avatarPath = playerProfile?.avatarPath,
+                        gender = playerProfile?.gender,
+                        avatarVisible = playerProfile?.avatarVisibility != "hidden",
+                        isBot = false,
+                        modifier = Modifier.weight(1f),
+                    )
+                    WordSiegePracticeScoreCard(
+                        name = botProfile.name,
+                        score = displayedBotScore,
+                        area = state.botArea,
+                        accent = MainUi.Red,
+                        active = displayedOwner == 2,
+                        compact = compact,
+                        avatarPath = null,
+                        gender = botProfile.gender,
+                        avatarVisible = true,
+                        isBot = true,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
 
                 Surface(
@@ -142,9 +200,9 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                         Text(
                             when {
                                 state.status == "finished" -> sh("ALIŞTIRMA BİTTİ", "PRACTICE FINISHED")
-                                botThinking -> sh("BOT HAMLESİNİ HAZIRLIYOR", "BOT IS PREPARING A MOVE")
+                                botThinking -> sh("${botProfile.name.uppercase()} HAMLESİNİ HAZIRLIYOR", "${botProfile.name.uppercase()} IS PREPARING A MOVE")
                                 displayedOwner == 1 -> sh("SIRA SENDE • Harf seç, tahtaya bırak, OYNA", "YOUR TURN • Select tile, place it, PLAY")
-                                else -> sh("BOTUN SIRASI", "BOT'S TURN")
+                                else -> sh("${botProfile.name.uppercase()} OYNUYOR", "${botProfile.name.uppercase()} IS PLAYING")
                             },
                             color = MainUi.Text,
                             fontSize = 9.sp,
@@ -233,7 +291,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     Surface(Modifier.fillMaxWidth(), color = color.copy(alpha = .08f), shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp), border = BorderStroke(1.dp, color.copy(alpha = .35f))) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
-                                Text(if (won) sh("KUŞATMA SENİN!", "SIEGE WON!") else if (draw) sh("BERABERE", "DRAW") else sh("BOT KAZANDI", "BOT WON"), color = color, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                                Text(if (won) sh("KUŞATMA SENİN!", "SIEGE WON!") else if (draw) sh("BERABERE", "DRAW") else sh("${botProfile.name.uppercase()} KAZANDI", "${botProfile.name.uppercase()} WON"), color = color, fontWeight = FontWeight.Black, fontSize = 14.sp)
                                 Text(sh("Yeni alıştırma ile tekrar dene.", "Try another practice round."), color = MainUi.Muted, fontSize = 8.sp)
                             }
                             TextButton(onClick = ::startAgain) { Text(sh("YENİ OYUN", "NEW GAME"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp) }
@@ -277,7 +335,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showForfeit = false },
             title = { Text(sh("Pes etmek istiyor musun?", "Do you want to forfeit?"), fontWeight = FontWeight.Black) },
-            text = { Text(sh("Bot bu alıştırmayı kazanır.", "Bot wins this practice round."), color = MainUi.Muted) },
+            text = { Text(sh("${botProfile.name} bu alıştırmayı kazanır.", "${botProfile.name} wins this practice round."), color = MainUi.Muted) },
             confirmButton = {
                 TextButton(onClick = { showForfeit = false; state = WordSiegePracticeEngine.forfeit(state, 1); clearSelection() }) {
                     Text(sh("PES ET", "FORFEIT"), color = MainUi.Red, fontWeight = FontWeight.Black)
@@ -320,12 +378,16 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
 @Composable
 private fun WordSiegePracticeScoreCard(
-    label: String,
+    name: String,
     score: Int,
     area: Int,
     accent: Color,
     active: Boolean,
     compact: Boolean,
+    avatarPath: String?,
+    gender: String?,
+    avatarVisible: Boolean,
+    isBot: Boolean,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -334,13 +396,26 @@ private fun WordSiegePracticeScoreCard(
         shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
         border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) accent else MainUi.Border),
     ) {
-        Row(Modifier.padding(horizontal = 8.dp, vertical = if (compact) 5.dp else 7.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = androidx.compose.foundation.shape.CircleShape, color = accent.copy(alpha = .13f)) {
-                Icon(if (label == sh("SEN", "YOU")) Icons.Rounded.Person else Icons.Rounded.SmartToy, null, Modifier.padding(5.dp).size(if (compact) 14.dp else 16.dp), tint = accent)
-            }
+        Row(Modifier.padding(horizontal = 7.dp, vertical = if (compact) 5.dp else 7.dp), verticalAlignment = Alignment.CenterVertically) {
+            ProfilePhotoAvatarWithGender(
+                avatarPath = avatarPath,
+                gender = gender,
+                name = name,
+                size = if (compact) 30.dp else 34.dp,
+                accent = accent,
+                visible = avatarVisible,
+            )
             Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f)) {
-                Text(label, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 9.sp, maxLines = 1)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    if (isBot) {
+                        Spacer(Modifier.width(4.dp))
+                        Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(99.dp), color = accent.copy(alpha = .12f)) {
+                            Text("BOT", Modifier.padding(horizontal = 4.dp, vertical = 1.dp), color = accent, fontSize = 6.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text("$score", color = accent, fontWeight = FontWeight.Black, fontSize = if (compact) 16.sp else 18.sp)
                     Spacer(Modifier.width(5.dp))
