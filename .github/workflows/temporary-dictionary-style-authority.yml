@@ -46,12 +46,10 @@ jobs:
           regression.write_text(r)
 
           live = Path('app/src/test/java/com/sonharf/game/CanonicalDictionaryLiveContractTest.kt')
-          l = live.read_text().replace('get_dictionary_snapshot_v1', 'get_dictionary_snapshot_v2')
-          live.write_text(l)
+          live.write_text(live.read_text().replace('get_dictionary_snapshot_v1', 'get_dictionary_snapshot_v2'))
 
           shared = Path('app/src/test/java/com/sonharf/game/data/SharedDictionaryServiceTest.kt')
-          t = shared.read_text().replace('get_dictionary_snapshot_v1', 'get_dictionary_snapshot_v2')
-          shared.write_text(t)
+          shared.write_text(shared.read_text().replace('get_dictionary_snapshot_v1', 'get_dictionary_snapshot_v2'))
           PY
       - uses: actions/setup-java@v5
         with:
@@ -61,8 +59,10 @@ jobs:
       - name: Install Android SDK 36
         run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0'
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
       - name: Unit tests and debug APK
-        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
       - name: Verify focused contracts
         shell: bash
         run: |
