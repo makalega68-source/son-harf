@@ -33,13 +33,14 @@ import com.sonharf.game.data.WordSiegeGameDto
 import com.sonharf.game.data.WordSiegeMoveDto
 import kotlin.math.max
 import kotlin.math.min
+import kotlinx.coroutines.delay
 
 private val PanSiegeTile = Color(0xFFFFE3A5)
 private val PanSiegeTileBorder = Color(0xFFD99818)
 private val PanSiegeBoardSurface = Color(0xFFE7EDF5)
 private val PanSiegeNeutral = Color(0xFFF7F8FA)
-private val PanSiegeMine = Color(0xFF9FD5A5)
-private val PanSiegeRival = Color(0xFFEAA4A4)
+private val PanSiegeMine = Color(0xFF35C878)
+private val PanSiegeRival = Color(0xFFFF5F57)
 private val PanSiegeCellSize = 52.dp
 
 @Composable
@@ -50,13 +51,11 @@ internal fun WordSiegePanMatch(
     moves: List<WordSiegeMoveDto>,
     placements: Map<Int, Int>,
     selectedRackIndex: Int?,
-    horizontal: Boolean,
     busy: Boolean,
     notice: String?,
     onBack: () -> Unit,
     onBoardCell: (Int) -> Unit,
     onRackTile: (Int) -> Unit,
-    onHorizontal: (Boolean) -> Unit,
     onSubmit: () -> Unit,
     onPass: () -> Unit,
     onExchange: () -> Unit,
@@ -73,6 +72,20 @@ internal fun WordSiegePanMatch(
     val rack = if (me == game.playerOneId) game.playerOneRack else game.playerTwoRack.orEmpty()
     val canAct = myTurn && !busy
     val lastMove = moves.lastOrNull()
+    val myEarnedCubePoints = WordSiegeFinalRules.earnedCubePoints(moves, me)
+    val rivalEarnedCubePoints = WordSiegeFinalRules.earnedCubePoints(moves, opponentId)
+    val myTargetScore = WordSiegeFinalRules.netScore(panSiegeWordScore(game, myOwner), myEarnedCubePoints, rivalEarnedCubePoints)
+    val rivalTargetScore = WordSiegeFinalRules.netScore(panSiegeWordScore(game, rivalOwner), rivalEarnedCubePoints, myEarnedCubePoints)
+    var displayedMyScore by remember(game.id) { mutableIntStateOf(myTargetScore) }
+    var displayedRivalScore by remember(game.id) { mutableIntStateOf(rivalTargetScore) }
+
+    LaunchedEffect(myTargetScore, rivalTargetScore) {
+        while (displayedMyScore != myTargetScore || displayedRivalScore != rivalTargetScore) {
+            displayedMyScore += (myTargetScore - displayedMyScore).coerceIn(-1, 1)
+            displayedRivalScore += (rivalTargetScore - displayedRivalScore).coerceIn(-1, 1)
+            delay(28)
+        }
+    }
 
     Column(
         Modifier
@@ -116,20 +129,20 @@ internal fun WordSiegePanMatch(
             PanSiegePlayerCard(
                 profile = mine,
                 fallbackName = sh("Sen", "You"),
-                wordScore = panSiegeWordScore(game, myOwner),
-                areaScore = panSiegeAreaScore(game, myOwner),
+                score = displayedMyScore,
+                earnedCubePoints = myEarnedCubePoints,
                 areaCount = panSiegeAreaCount(game, myOwner),
-                accent = MainUi.Blue,
+                accent = MainUi.Green,
                 active = game.currentPlayerId == me,
                 modifier = Modifier.weight(1f),
             )
             PanSiegePlayerCard(
                 profile = opponent,
                 fallbackName = if (game.status == "waiting") sh("Rakip aranıyor", "Finding rival") else sh("Rakip", "Rival"),
-                wordScore = panSiegeWordScore(game, rivalOwner),
-                areaScore = panSiegeAreaScore(game, rivalOwner),
+                score = displayedRivalScore,
+                earnedCubePoints = rivalEarnedCubePoints,
                 areaCount = panSiegeAreaCount(game, rivalOwner),
-                accent = SiegePurple,
+                accent = MainUi.Red,
                 active = game.currentPlayerId == opponentId,
                 modifier = Modifier.weight(1f),
             )
@@ -205,33 +218,13 @@ internal fun WordSiegePanMatch(
         }
 
         if (game.status == "playing") {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                FilterChip(
-                    selected = horizontal,
-                    onClick = { onHorizontal(true) },
-                    enabled = canAct,
-                    label = { Text(sh("YATAY", "HORIZONTAL"), fontSize = 8.sp, fontWeight = FontWeight.Bold) },
-                    leadingIcon = { Icon(Icons.Rounded.SwapHoriz, null, Modifier.size(14.dp)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = SiegeBlueSoft,
-                        selectedLabelColor = MainUi.Blue,
-                    ),
-                )
-                Spacer(Modifier.width(5.dp))
-                FilterChip(
-                    selected = !horizontal,
-                    onClick = { onHorizontal(false) },
-                    enabled = canAct,
-                    label = { Text(sh("DİKEY", "VERTICAL"), fontSize = 8.sp, fontWeight = FontWeight.Bold) },
-                    leadingIcon = { Icon(Icons.Rounded.SwapVert, null, Modifier.size(14.dp)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = SiegePurpleSoft,
-                        selectedLabelColor = SiegePurple,
-                    ),
-                )
-                Spacer(Modifier.weight(1f))
-                Text(sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"), color = MainUi.Muted, fontSize = 8.sp)
-            }
+            Text(
+                sh("Yön otomatik algılanır • Torba ${game.bag.length}", "Direction is detected automatically • Bag ${game.bag.length}"),
+                color = MainUi.Muted,
+                fontSize = 8.sp,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.End,
+            )
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 rack.forEachIndexed { index, letter ->
@@ -507,8 +500,8 @@ private fun PanSiegeBoardCell(
 private fun PanSiegePlayerCard(
     profile: ProfileDto?,
     fallbackName: String,
-    wordScore: Int,
-    areaScore: Int,
+    score: Int,
+    earnedCubePoints: Int,
     areaCount: Int,
     accent: Color,
     active: Boolean,
@@ -539,9 +532,9 @@ private fun PanSiegePlayerCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text("${wordScore + areaScore}", color = accent, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text("$score", color = accent, fontSize = 18.sp, fontWeight = FontWeight.Black)
                 Text(
-                    sh("Kelime $wordScore • Alan puanı $areaScore • Alan $areaCount", "Word $wordScore • Area score $areaScore • Area $areaCount"),
+                    sh("Küp +$earnedCubePoints • Alan $areaCount • küp başına ±2", "Cubes +$earnedCubePoints • Area $areaCount • ±2 per cube"),
                     color = MainUi.Muted,
                     fontSize = 7.sp,
                     maxLines = 1,
@@ -570,7 +563,7 @@ private fun PanSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
                 fontWeight = FontWeight.Black,
             )
             Text(
-                sh("Sonuç = kelime puanı + alan puanı", "Result = word score + area score"),
+                sh("Sonuç = kelime + kendi küp puanı - rakip küp puanı", "Result = word + own cube points - rival cube points"),
                 color = MainUi.Muted,
                 fontSize = 9.sp,
             )
