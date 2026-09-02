@@ -38,7 +38,7 @@ class FinalRestorationRegressionTest {
         assertTrue(duel.contains("playerAvatarPath"))
         assertTrue(duel.contains("opponentAvatarPath"))
         assertTrue(duel.contains("ProfilePhotoAvatarWithGender"))
-        assertTrue(duel.contains("LightBg"))
+        assertTrue(duel.contains("private val LBg = Color(0xFFF7F9FC)"))
         assertFalse(duel.contains("0xFFEAFB17"))
 
         // Word Siege keeps live area scoring, actions, direction and profile coverage.
