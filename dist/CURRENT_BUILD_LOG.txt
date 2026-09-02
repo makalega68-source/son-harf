@@ -9,16 +9,16 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
+> Task :app:mergeDebugResources
 > Task :app:extractDeepLinksDebug
 > Task :app:parseDebugLocalResources
-> Task :app:mergeDebugResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
-> Task :app:javaPreCompileDebug
-> Task :app:processDebugManifestForPackage
 > Task :app:preDebugUnitTestBuild UP-TO-DATE
-> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:processDebugManifestForPackage
+> Task :app:javaPreCompileDebug
 > Task :app:javaPreCompileDebugUnitTest
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
@@ -26,8 +26,8 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:desugarDebugFileDependencies
 > Task :app:compressDebugAssets
 > Task :app:mergeDebugJniLibFolders
-> Task :app:checkDebugDuplicateClasses
 > Task :app:processDebugResources
+> Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugNativeLibs
 > Task :app:mergeLibDexDebug
 
@@ -53,9 +53,9 @@ w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game
 w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/DailyArenaScreen.kt:177:36 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
 w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/DailyCipherScreen.kt:117:40 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
 w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/EconomyShopScreen.kt:45:40 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
-w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/LightDuelUi.kt:408:51 Unnecessary safe call on a non-null receiver of type 'TriviaRoundDto'.
-w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/LightDuelUi.kt:410:38 Unnecessary safe call on a non-null receiver of type 'TriviaRoundDto'.
-w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/LightDuelUi.kt:411:34 Unnecessary safe call on a non-null receiver of type 'TriviaRoundDto'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/LightDuelUi.kt:417:51 Unnecessary safe call on a non-null receiver of type 'TriviaRoundDto'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/LightDuelUi.kt:419:38 Unnecessary safe call on a non-null receiver of type 'TriviaRoundDto'.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/LightDuelUi.kt:420:34 Unnecessary safe call on a non-null receiver of type 'TriviaRoundDto'.
 w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainExperienceApp.kt:85:36 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
 w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainRetentionScreen.kt:407:36 'val Icons.Rounded.ArrowForward: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowForward.
 w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt:85:42 'val Icons.Rounded.VolumeUp: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.VolumeUp.
@@ -107,9 +107,9 @@ w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/gradle_build-1788384913719.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/gradle_build-1788388014362.json
 
 [Incubating] Problems report is available at: file:///home/runner/work/son-harf/son-harf/build/reports/problems/problems-report.html
 
-BUILD SUCCESSFUL in 2m 30s
+BUILD SUCCESSFUL in 2m 16s
 43 actionable tasks: 43 executed
