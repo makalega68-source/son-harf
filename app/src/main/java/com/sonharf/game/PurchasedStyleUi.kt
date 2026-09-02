@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.BrokenImage
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 
 internal object PurchasedFrameCatalog {
     const val GOLD = "frame_asset_gold"
@@ -68,44 +71,90 @@ private val purchasedFrameSpecs = listOf(
 )
 
 @Composable
+private fun SafeStyleDrawable(
+    @DrawableRes drawable: Int,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
+    tint: Color? = null,
+) {
+    val painter = try {
+        painterResource(drawable)
+    } catch (_: Throwable) {
+        null
+    }
+    if (painter != null) {
+        Image(
+            painter = painter,
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = contentScale,
+            colorFilter = tint?.let(ColorFilter::tint),
+        )
+    } else {
+        Icon(
+            imageVector = Icons.Rounded.BrokenImage,
+            contentDescription = null,
+            modifier = modifier,
+            tint = tint ?: Color(0xFF8A97A8),
+        )
+    }
+}
+
+@Composable
 internal fun PurchasedProfileFrameOverlay(frameId: String?, modifier: Modifier = Modifier) {
     val drawable = PurchasedFrameCatalog.drawable(frameId) ?: return
-    Image(
-        painter = painterResource(drawable),
-        contentDescription = null,
+    SafeStyleDrawable(
+        drawable = drawable,
         modifier = modifier,
         contentScale = ContentScale.FillBounds,
     )
 }
 
 @Composable
-internal fun PurchasedProfileFramesStoreRow() {
-    val backend = remember { if (SupabaseProvider.configured) runCatching { OnlineGameBackend() }.getOrNull() else null }
+internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
     val scope = rememberCoroutineScope()
     var shopItems by remember { mutableStateOf<Map<String, ShopItemDto>>(emptyMap()) }
     var inventory by remember { mutableStateOf<Set<String>>(emptySet()) }
     var equippedId by remember { mutableStateOf<String?>(SonHarfCosmetics.profileFrameId) }
     var busyId by remember { mutableStateOf<String?>(null) }
+    var loading by remember { mutableStateOf(true) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     suspend fun reload() {
-        val b = backend ?: return
+        loading = true
+        val b = backend
+        if (b == null) {
+            notice = sh("Profil Style sunucusu kullanılamıyor; çerçeveler güvenli önizleme modunda gösteriliyor.", "Profile Style server is unavailable; frames are shown in safe preview mode.")
+            loading = false
+            return
+        }
         runCatching {
-            val shop = b.getShopItems().filter { it.kind == "profile_frame" && it.id in PurchasedFrameCatalog.ids }
-            val owned = b.getInventory().toSet()
-            val equipped = b.getEquippedCosmetics()
-            shopItems = shop.associateBy { it.id }
-            inventory = owned
-            equippedId = equipped?.profileFrameId
-            SonHarfCosmetics.apply(equipped)
+            withTimeout(12_000L) {
+                val shop = b.getShopItems().filter { it.kind == "profile_frame" && it.id in PurchasedFrameCatalog.ids }
+                val owned = b.getInventory().toSet()
+                val equipped = b.getEquippedCosmetics()
+                shopItems = shop.associateBy { it.id }
+                inventory = owned
+                equippedId = equipped?.profileFrameId
+                SonHarfCosmetics.apply(equipped)
+            }
         }.onFailure {
-            notice = sh("Profil Style ürünleri yüklenemedi.", "Profile Style items could not be loaded.")
+            notice = sh("Profil Style verileri alınamadı; bölüm açık kalacak ve daha sonra yeniden denenebilir.", "Profile Style data could not be loaded; the section remains open and can be retried later.")
+        }
+        loading = false
+    }
+
+    LaunchedEffect(backend) {
+        runCatching { reload() }.onFailure {
+            loading = false
+            notice = sh("Profil Style geçici olarak kullanılamıyor.", "Profile Style is temporarily unavailable.")
         }
     }
 
-    LaunchedEffect(Unit) { reload() }
-
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        if (loading) {
+            Text(sh("Çerçeveler yükleniyor…", "Loading frames…"), color = Color(0xFF6F7C8D), fontSize = 9.sp)
+        }
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(purchasedFrameSpecs, key = { it.id }) { spec ->
                 val item = shopItems[spec.id]
@@ -124,16 +173,14 @@ internal fun PurchasedProfileFramesStoreRow() {
                         ) {
                             Box(contentAlignment = Alignment.Center) {
                                 Surface(modifier = Modifier.size(62.dp), shape = CircleShape, color = Color(0xFFF5F8FC)) {
-                                    Image(
-                                        painter = painterResource(R.drawable.style_icon_user),
-                                        contentDescription = null,
+                                    SafeStyleDrawable(
+                                        drawable = R.drawable.style_icon_user,
                                         modifier = Modifier.padding(15.dp),
-                                        colorFilter = ColorFilter.tint(Color(0xFF142033)),
+                                        tint = Color(0xFF142033),
                                     )
                                 }
-                                Image(
-                                    painter = painterResource(spec.drawable),
-                                    contentDescription = null,
+                                SafeStyleDrawable(
+                                    drawable = spec.drawable,
                                     modifier = Modifier.size(86.dp),
                                     contentScale = ContentScale.FillBounds,
                                 )
@@ -151,17 +198,12 @@ internal fun PurchasedProfileFramesStoreRow() {
                         Text(sh(spec.titleTr, spec.titleEn), color = Color(0xFF142033), fontSize = 12.sp, fontWeight = FontWeight.Black)
                         Text(sh(spec.subtitleTr, spec.subtitleEn), color = Color(0xFF6F7C8D), fontSize = 8.sp, minLines = 2)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Image(painter = painterResource(spec.sourceIcon), contentDescription = null, modifier = Modifier.size(12.dp), colorFilter = ColorFilter.tint(spec.accent))
+                            SafeStyleDrawable(drawable = spec.sourceIcon, modifier = Modifier.size(12.dp), tint = spec.accent)
                             Text(sh(spec.accessTr, spec.accessEn), color = spec.accent, fontSize = 7.sp, fontWeight = FontWeight.Black)
                         }
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             if (!owned && !equipped) {
-                                Image(
-                                    painter = painterResource(R.drawable.style_icon_coin),
-                                    contentDescription = null,
-                                    modifier = Modifier.size(15.dp),
-                                    colorFilter = ColorFilter.tint(spec.accent),
-                                )
+                                SafeStyleDrawable(drawable = R.drawable.style_icon_coin, modifier = Modifier.size(15.dp), tint = spec.accent)
                                 Spacer(Modifier.width(4.dp))
                             }
                             Text(
@@ -181,20 +223,25 @@ internal fun PurchasedProfileFramesStoreRow() {
                                     val b = backend ?: return@Button
                                     scope.launch {
                                         busyId = spec.id
-                                        runCatching {
-                                            if (!owned) b.purchaseShopItem(spec.id)
-                                            b.equipShopItem(spec.id)
-                                        }.onSuccess {
-                                            notice = sh("${spec.titleTr} kullanılıyor.", "${spec.titleEn} equipped.")
-                                            reload()
-                                        }.onFailure { error ->
-                                            notice = if ("insufficient_diamonds" in error.message.orEmpty()) {
-                                                sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
-                                            } else {
-                                                sh("Style işlemi tamamlanamadı.", "Style action could not be completed.")
+                                        try {
+                                            runCatching {
+                                                withTimeout(12_000L) {
+                                                    if (!owned) b.purchaseShopItem(spec.id)
+                                                    b.equipShopItem(spec.id)
+                                                }
+                                            }.onSuccess {
+                                                notice = sh("${spec.titleTr} kullanılıyor.", "${spec.titleEn} equipped.")
+                                                reload()
+                                            }.onFailure { error ->
+                                                notice = if ("insufficient_diamonds" in error.message.orEmpty()) {
+                                                    sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                                                } else {
+                                                    sh("Style işlemi tamamlanamadı. Daha sonra tekrar dene.", "Style action could not be completed. Try again later.")
+                                                }
                                             }
+                                        } finally {
+                                            busyId = null
                                         }
-                                        busyId = null
                                     }
                                 },
                                 enabled = backend != null && (owned || item != null) && !equipped && busyId == null,
@@ -211,12 +258,7 @@ internal fun PurchasedProfileFramesStoreRow() {
         }
         notice?.let { Text(it, color = Color(0xFF6F7C8D), fontSize = 9.sp) }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            Image(
-                painter = painterResource(R.drawable.style_icon_palette),
-                contentDescription = null,
-                modifier = Modifier.size(16.dp),
-                colorFilter = ColorFilter.tint(Color(0xFF1677FF)),
-            )
+            SafeStyleDrawable(drawable = R.drawable.style_icon_palette, modifier = Modifier.size(16.dp), tint = Color(0xFF1677FF))
             Text(
                 sh("Satın alınan çerçeveler yalnızca görünümü değiştirir; oyun gücü vermez.", "Purchased frames only change appearance; they grant no gameplay power."),
                 color = Color(0xFF6F7C8D),
