@@ -26,15 +26,15 @@ import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
 import java.util.Locale
 
-private val AdminBg = Color(0xFF061321)
-private val AdminPanel = Color(0xFF0D2237)
-private val AdminPanel2 = Color(0xFF132D47)
-private val AdminGold = Color(0xFFD9AD5E)
-private val AdminText = Color(0xFFF7F3E9)
-private val AdminMuted = Color(0xFFABB9C5)
-private val AdminGreen = Color(0xFF66B58A)
-private val AdminRed = Color(0xFFE07B78)
-private val AdminBlue = Color(0xFF70B6D9)
+private val AdminBg = Color(0xFFF5F8FC)
+private val AdminPanel = Color(0xFFFFFFFF)
+private val AdminPanel2 = Color(0xFFEEF5FF)
+private val AdminGold = Color(0xFFF6C453)
+private val AdminText = Color(0xFF142033)
+private val AdminMuted = Color(0xFF6F7C8D)
+private val AdminGreen = Color(0xFF35C878)
+private val AdminRed = Color(0xFFFF5F57)
+private val AdminBlue = Color(0xFF1677FF)
 
 private data class RepairAction(val key: String, val title: String, val detail: String)
 
@@ -98,7 +98,7 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
 
     LaunchedEffect(Unit) { reload() }
 
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AdminBg, Color(0xFF081B2B))))) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(AdminBg, Color(0xFFEEF5FF))))) {
         if (loading && dashboard == null) {
             CircularProgressIndicator(Modifier.align(Alignment.Center), color = AdminGold)
         } else if (dashboard == null) {
@@ -774,7 +774,7 @@ private fun AdminCapacityCompact(metric: AdminCapacityDto) {
             progress = { (metric.percentUsed / 100f).coerceIn(0f, 1f) },
             modifier = Modifier.fillMaxWidth().height(7.dp),
             color = tone,
-            trackColor = Color.White.copy(alpha = .07f),
+            trackColor = MainUi.Border.copy(alpha = .55f),
         )
         Text(
             "${formatBytes(metric.usedValue)} / ${formatBytes(metric.limitValue)}",
@@ -820,21 +820,21 @@ private fun AdminOwnerAccountCard(
             checked = account.lifetimeVip,
             enabled = enabled,
         ) { onChange(it, account.unlimitedDiamonds, account.unlimitedSonCoin, account.active) }
-        HorizontalDivider(color = Color.White.copy(alpha = .08f))
+        HorizontalDivider(color = MainUi.Border.copy(alpha = .72f))
         AdminToggleRow(
             title = "Sınırsız Elmas",
             detail = "Mağaza alışverişlerinde elmas bakiyesi düşmez.",
             checked = account.unlimitedDiamonds,
             enabled = enabled,
         ) { onChange(account.lifetimeVip, it, account.unlimitedSonCoin, account.active) }
-        HorizontalDivider(color = Color.White.copy(alpha = .08f))
+        HorizontalDivider(color = MainUi.Border.copy(alpha = .72f))
         AdminToggleRow(
             title = "Sınırsız Son Coin",
             detail = "Son Coin kullanan özel satın alımlarda bakiye düşmez.",
             checked = account.unlimitedSonCoin,
             enabled = enabled,
         ) { onChange(account.lifetimeVip, account.unlimitedDiamonds, it, account.active) }
-        HorizontalDivider(color = Color.White.copy(alpha = .08f))
+        HorizontalDivider(color = MainUi.Border.copy(alpha = .72f))
         AdminToggleRow(
             title = "Özel hesabı etkin tut",
             detail = "Kapatılırsa sınırsız haklar devre dışı kalır; hesap ve verileri silinmez.",
@@ -877,7 +877,7 @@ private fun AdminCapacityRow(metric: AdminCapacityDto, onResolve: () -> Unit) {
                 progress = { (metric.percentUsed / 100f).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(7.dp),
                 color = tone,
-                trackColor = Color.White.copy(alpha = .07f),
+                trackColor = MainUi.Border.copy(alpha = .55f),
             )
             Text(
                 "${formatBytes(metric.usedValue)} / ${formatBytes(metric.limitValue)}",
