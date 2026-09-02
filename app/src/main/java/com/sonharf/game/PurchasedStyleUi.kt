@@ -1,16 +1,18 @@
 package com.sonharf.game
 
+import android.graphics.BitmapFactory
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.BrokenImage
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,9 +21,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,6 +50,16 @@ internal object PurchasedFrameCatalog {
         GOLD_CROWN -> R.drawable.style_frame_gold_crown
         else -> null
     }
+
+    fun accent(id: String?): Color = when (id) {
+        RED -> Color(0xFFD84C4C)
+        GREEN -> Color(0xFF2FAE68)
+        MINT -> Color(0xFF32BFB3)
+        PURPLE -> Color(0xFF7257D8)
+        GOLD -> Color(0xFFD7A72E)
+        GOLD_CROWN -> Color(0xFFE0A51C)
+        else -> Color(0xFF8A97A8)
+    }
 }
 
 private data class PurchasedFrameSpec(
@@ -72,6 +84,23 @@ private val purchasedFrameSpecs = listOf(
     PurchasedFrameSpec(PurchasedFrameCatalog.GOLD_CROWN, "Altın Taç", "Gold Crown", "Yüksek lig ve prestij ödülü", "High-league prestige reward", R.drawable.style_frame_gold_crown, Color(0xFFE0A51C), "LİG ÖDÜLÜ", "LEAGUE REWARD", R.drawable.style_icon_trophy),
 )
 
+/**
+ * Decode drawable-nodpi assets through a raw stream instead of Compose's resource decoder.
+ * Some purchased PNGs are accepted by Android packaging but fail through ImageBitmap.imageResource
+ * on specific devices. decodeStream is bounded to the local APK resource and cannot trigger network IO.
+ */
+@Composable
+private fun rememberStyleBitmap(@DrawableRes drawable: Int): ImageBitmap? {
+    val resources = LocalContext.current.resources
+    return remember(resources, drawable) {
+        runCatching {
+            resources.openRawResource(drawable).use { stream ->
+                BitmapFactory.decodeStream(stream)?.asImageBitmap()
+            }
+        }.getOrNull()
+    }
+}
+
 @Composable
 private fun SafeStyleDrawable(
     @DrawableRes drawable: Int,
@@ -79,10 +108,7 @@ private fun SafeStyleDrawable(
     contentScale: ContentScale = ContentScale.Fit,
     tint: Color? = null,
 ) {
-    val resources = LocalContext.current.resources
-    val bitmap = remember(resources, drawable) {
-        runCatching { ImageBitmap.imageResource(resources, drawable) }.getOrNull()
-    }
+    val bitmap = rememberStyleBitmap(drawable)
     if (bitmap != null) {
         Image(
             bitmap = bitmap,
@@ -92,22 +118,47 @@ private fun SafeStyleDrawable(
             colorFilter = tint?.let { ColorFilter.tint(it) },
         )
     } else {
-        Icon(
-            imageVector = Icons.Rounded.BrokenImage,
+        // Never paint a broken-image glyph over user content. A missing decorative icon is harmless.
+        Spacer(modifier)
+    }
+}
+
+@Composable
+private fun SafeFrameArtwork(
+    @DrawableRes drawable: Int,
+    frameId: String,
+    modifier: Modifier,
+): Boolean {
+    val bitmap = rememberStyleBitmap(drawable)
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap,
             contentDescription = null,
             modifier = modifier,
-            tint = tint ?: Color(0xFF8A97A8),
+            contentScale = ContentScale.FillBounds,
         )
+        return true
     }
+
+    // Fail-safe visual frame: avatar stays visible and usable even if the packaged PNG cannot decode.
+    val accent = PurchasedFrameCatalog.accent(frameId)
+    Box(
+        modifier = modifier
+            .padding(5.dp)
+            .border(4.dp, accent, RoundedCornerShape(18.dp))
+            .padding(4.dp)
+            .border(2.dp, accent.copy(alpha = .45f), RoundedCornerShape(14.dp)),
+    )
+    return false
 }
 
 @Composable
 internal fun PurchasedProfileFrameOverlay(frameId: String?, modifier: Modifier = Modifier) {
     val drawable = PurchasedFrameCatalog.drawable(frameId) ?: return
-    SafeStyleDrawable(
+    SafeFrameArtwork(
         drawable = drawable,
+        frameId = frameId.orEmpty(),
         modifier = modifier,
-        contentScale = ContentScale.FillBounds,
     )
 }
 
@@ -156,13 +207,18 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         if (loading) {
             Text(sh("Çerçeveler yükleniyor…", "Loading frames…"), color = Color(0xFF6F7C8D), fontSize = 9.sp)
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = 2.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
             items(purchasedFrameSpecs, key = { it.id }) { spec ->
                 val item = shopItems[spec.id]
                 val owned = spec.id in inventory
                 val equipped = equippedId == spec.id
+                val frameBitmap = rememberStyleBitmap(spec.drawable)
+                val assetReady = frameBitmap != null
                 Surface(
-                    modifier = Modifier.width(184.dp),
+                    modifier = Modifier.width(164.dp),
                     shape = RoundedCornerShape(18.dp),
                     color = Color.White,
                     border = BorderStroke(if (equipped) 2.dp else 1.dp, if (equipped) spec.accent else Color(0xFFD5E0EA)),
@@ -180,11 +236,21 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                         tint = Color(0xFF142033),
                                     )
                                 }
-                                SafeStyleDrawable(
-                                    drawable = spec.drawable,
-                                    modifier = Modifier.size(86.dp),
-                                    contentScale = ContentScale.FillBounds,
-                                )
+                                if (frameBitmap != null) {
+                                    Image(
+                                        bitmap = frameBitmap,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(86.dp),
+                                        contentScale = ContentScale.FillBounds,
+                                    )
+                                } else {
+                                    Box(
+                                        Modifier.size(82.dp)
+                                            .border(4.dp, spec.accent, RoundedCornerShape(17.dp))
+                                            .padding(4.dp)
+                                            .border(2.dp, spec.accent.copy(alpha = .45f), RoundedCornerShape(13.dp)),
+                                    )
+                                }
                             }
                             if (equipped) {
                                 Surface(
@@ -196,14 +262,22 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                 }
                             }
                         }
-                        Text(sh(spec.titleTr, spec.titleEn), color = Color(0xFF142033), fontSize = 12.sp, fontWeight = FontWeight.Black)
-                        Text(sh(spec.subtitleTr, spec.subtitleEn), color = Color(0xFF6F7C8D), fontSize = 8.sp, minLines = 2)
+                        Text(sh(spec.titleTr, spec.titleEn), color = Color(0xFF142033), fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                        Text(sh(spec.subtitleTr, spec.subtitleEn), color = Color(0xFF6F7C8D), fontSize = 8.sp, minLines = 2, maxLines = 3)
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                             SafeStyleDrawable(drawable = spec.sourceIcon, modifier = Modifier.size(12.dp), tint = spec.accent)
                             Text(sh(spec.accessTr, spec.accessEn), color = spec.accent, fontSize = 7.sp, fontWeight = FontWeight.Black)
                         }
+                        if (!assetReady) {
+                            Text(
+                                sh("Görsel doğrulanamadı", "Artwork unavailable"),
+                                color = Color(0xFF8A97A8),
+                                fontSize = 7.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            if (!owned && !equipped) {
+                            if (!owned && !equipped && assetReady) {
                                 SafeStyleDrawable(drawable = R.drawable.style_icon_coin, modifier = Modifier.size(15.dp), tint = spec.accent)
                                 Spacer(Modifier.width(4.dp))
                             }
@@ -219,38 +293,42 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
                             )
-                            Button(
-                                onClick = {
-                                    val b = backend ?: return@Button
-                                    scope.launch {
-                                        busyId = spec.id
-                                        try {
-                                            runCatching {
-                                                withTimeout(12_000L) {
-                                                    if (!owned) b.purchaseShopItem(spec.id)
-                                                    b.equipShopItem(spec.id)
+                            when {
+                                equipped -> Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF2FAE68), modifier = Modifier.size(22.dp))
+                                !assetReady -> Text(sh("KAPALI", "LOCKED"), color = Color(0xFF8A97A8), fontSize = 7.sp, fontWeight = FontWeight.Black)
+                                else -> Button(
+                                    onClick = {
+                                        val b = backend ?: return@Button
+                                        scope.launch {
+                                            busyId = spec.id
+                                            try {
+                                                runCatching {
+                                                    withTimeout(12_000L) {
+                                                        if (!owned) b.purchaseShopItem(spec.id)
+                                                        b.equipShopItem(spec.id)
+                                                    }
+                                                }.onSuccess {
+                                                    notice = sh("${spec.titleTr} kullanılıyor.", "${spec.titleEn} equipped.")
+                                                    reload()
+                                                }.onFailure { error ->
+                                                    notice = if ("insufficient_diamonds" in error.message.orEmpty()) {
+                                                        sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                                                    } else {
+                                                        sh("Style işlemi tamamlanamadı. Daha sonra tekrar dene.", "Style action could not be completed. Try again later.")
+                                                    }
                                                 }
-                                            }.onSuccess {
-                                                notice = sh("${spec.titleTr} kullanılıyor.", "${spec.titleEn} equipped.")
-                                                reload()
-                                            }.onFailure { error ->
-                                                notice = if ("insufficient_diamonds" in error.message.orEmpty()) {
-                                                    sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
-                                                } else {
-                                                    sh("Style işlemi tamamlanamadı. Daha sonra tekrar dene.", "Style action could not be completed. Try again later.")
-                                                }
+                                            } finally {
+                                                busyId = null
                                             }
-                                        } finally {
-                                            busyId = null
                                         }
-                                    }
-                                },
-                                enabled = backend != null && (owned || item != null) && !equipped && busyId == null,
-                                contentPadding = PaddingValues(horizontal = 9.dp, vertical = 3.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = spec.accent, contentColor = Color.White),
-                                shape = RoundedCornerShape(10.dp),
-                            ) {
-                                Text(if (busyId == spec.id) "…" else if (owned) sh("KULLAN", "EQUIP") else sh("AL", "BUY"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                    },
+                                    enabled = backend != null && (owned || item != null) && busyId == null,
+                                    contentPadding = PaddingValues(horizontal = 9.dp, vertical = 3.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = spec.accent, contentColor = Color.White),
+                                    shape = RoundedCornerShape(10.dp),
+                                ) {
+                                    Text(if (busyId == spec.id) "…" else if (owned) sh("KULLAN", "EQUIP") else sh("AL", "BUY"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                }
                             }
                         }
                     }
