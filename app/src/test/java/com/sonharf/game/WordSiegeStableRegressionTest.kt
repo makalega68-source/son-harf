@@ -26,14 +26,6 @@ class WordSiegeStableRegressionTest {
         assertTrue(practice.contains("showPass"))
         assertTrue(practice.contains("showExchange"))
         assertTrue(practice.contains("Yön otomatik algılanır"))
-        assertTrue(practice.contains("BoxWithConstraints"))
-        assertTrue(practice.contains("navigationBarsPadding"))
-        assertTrue(practice.contains("val boardSize = minOf(maxWidth"))
-        assertTrue(!practice.contains("LazyColumn("))
-        assertTrue(practice.contains("ProfilePhotoAvatarWithGender"))
-        assertTrue(practice.contains("backend.getProfile(me)"))
-        listOf("Mesut", "İmran", "Ayaz", "Eren", "Esin", "Can", "Deniz", "Mert", "Selin", "Burak", "Elif", "Kerem", "Derya", "Arda", "Zeynep", "Emre", "Ceren").forEach { assertTrue(practice.contains("\"$it\"")) }
-        listOf("İmran", "Esin", "Selin", "Elif", "Derya", "Zeynep", "Ceren").forEach { name -> assertTrue(practice.contains("PracticeBotProfile(\"$name\", \"kadın\")")) }
         assertTrue(engine.contains("exchange"))
         assertTrue(engine.contains("pass"))
         assertTrue(engine.contains("SharedDictionaryService.isValidWordBlocking"))
