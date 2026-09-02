@@ -8,35 +8,35 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:mapDebugSourceSetPaths
 > Task :app:generateDebugResources
 > Task :app:packageDebugResources
-> Task :app:mergeDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
+> Task :app:mergeDebugResources
 > Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:preDebugUnitTestBuild UP-TO-DATE
 > Task :app:javaPreCompileDebug
 > Task :app:javaPreCompileDebugUnitTest
-> Task :app:processDebugManifestForPackage
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
 > Task :app:mergeDebugAssets
-> Task :app:desugarDebugFileDependencies
+> Task :app:processDebugManifestForPackage
 > Task :app:compressDebugAssets
+> Task :app:desugarDebugFileDependencies
 > Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
 > Task :app:mergeDebugNativeLibs
 > Task :app:processDebugResources
-> Task :app:validateSigningDebug
 > Task :app:mergeLibDexDebug
-> Task :app:writeDebugAppMetadata
-> Task :app:writeDebugSigningConfigVersions
 
 > Task :app:stripDebugDebugSymbols
 Unable to strip the following libraries, packaging them as they are: libandroidx.graphics.path.so. Run with --info option to learn more.
 
+> Task :app:validateSigningDebug
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
 > Task :app:mergeExtDexDebug
 > Task :app:compileDebugKotlin
 w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/AdminConsoleScreen.kt:127:71 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
@@ -90,7 +90,7 @@ w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game
 w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegeGame.kt:607:44 'val Icons.Rounded.Backspace: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Backspace.
 w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt:102:36 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
 w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt:206:36 'val Icons.Rounded.Chat: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.Chat.
-w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt:150:44 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
+w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt:177:44 'val Icons.Rounded.ArrowBack: ImageVector' is deprecated. Use the AutoMirrored version at Icons.AutoMirrored.Rounded.ArrowBack.
 
 > Task :app:compileDebugJavaWithJavac
 > Task :app:processDebugJavaRes
@@ -107,9 +107,9 @@ w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/gradle_build-1788373864446.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/gradle_build-1788380150084.json
 
 [Incubating] Problems report is available at: file:///home/runner/work/son-harf/son-harf/build/reports/problems/problems-report.html
 
-BUILD SUCCESSFUL in 2m 38s
+BUILD SUCCESSFUL in 2m 29s
 43 actionable tasks: 43 executed
