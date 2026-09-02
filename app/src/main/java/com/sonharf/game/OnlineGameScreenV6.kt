@@ -75,6 +75,13 @@ fun OnlineGameScreenV6() {
     var wordsJob by remember { mutableStateOf<Job?>(null) }
     var chatJob by remember { mutableStateOf<Job?>(null) }
     var matchJob by remember { mutableStateOf<Job?>(null) }
+    var voiceUses by remember { mutableIntStateOf(0) }
+    var voiceRequestId by remember { mutableStateOf<String?>(null) }
+    val voiceInput = rememberVoiceWordInput(language) { recognized, requestId ->
+        wordInput = recognized.take(40)
+        voiceRequestId = requestId
+        notice = sh("Ses tanındı. Kelimeyi kontrol edip GÖNDER'e bas.", "Voice recognized. Check the word, then press SEND.")
+    }
 
     fun friendly(raw: String) = when {
         "player_already_in_game" in raw -> sh("Aktif maçına dönülüyor…", "Returning to your active match…")
@@ -89,6 +96,8 @@ fun OnlineGameScreenV6() {
         "maintenance_mode" in raw -> sh("Oyun kısa süreli bakımda. Lütfen biraz sonra tekrar dene.", "The game is under brief maintenance. Please try again shortly.")
         "matchmaking_disabled" in raw -> sh("Eşleşme geçici olarak kapalı.", "Matchmaking is temporarily disabled.")
         "chat_disabled" in raw -> sh("Maç sohbeti geçici olarak kapalı.", "Match chat is temporarily disabled.")
+        "voice_limit_reached" in raw -> sh("Bu maçtaki 5 sesli cevap hakkın doldu.", "You have used all 5 voice answers for this match.")
+        "answer_already_submitted" in raw -> sh("Bonus cevabın zaten kilitlendi.", "Your bonus answer is already locked.")
         else -> sh("İşlem tekrar deneniyor.", "Retrying the action.")
     }
     fun failedEvent(e: String?) = e in setOf("word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "ends_with_soft_g", "turn_expired")
@@ -246,7 +255,13 @@ fun OnlineGameScreenV6() {
             notice = message
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
-        LaunchedEffect(active.currentPlayerId, active.validWordCount, active.roundNo) { wordInput = "" }
+        LaunchedEffect(active.currentPlayerId, active.validWordCount, active.roundNo) {
+            wordInput = ""
+            voiceRequestId = null
+        }
+        LaunchedEffect(active.id) {
+            voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(0)
+        }
         LaunchedEffect(active.id) { while (true) { if (!active.isBot && active.status != "waiting") runCatching { backend.heartbeatRoom(active.id) }.onSuccess { room = it }; delay(5000) } }
         LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount, active.roundNo) {
             if (active.isBot && active.botTurn && active.status in listOf("playing", "final", "sudden_death")) {
@@ -327,17 +342,28 @@ fun OnlineGameScreenV6() {
             triviaRound = triviaRound,
             triviaQuestion = triviaQuestion,
             triviaSelection = triviaSelection?.takeIf { it.first == triviaRound?.id }?.second,
+            voiceSupported = voiceInput.supported,
+            voiceUses = voiceUses,
             onSubmit = {
                 scope.launch {
                     val submitted = wordInput.trim()
                     if (submitted.isBlank()) return@launch
                     val shownWord = gameUppercase(submitted, active.language)
-                    wordInput = ""
+                    val voiceToken = voiceRequestId
+                    if (voiceToken == null) wordInput = ""
                     busy = true
                     SonHarfSoundFx.tap()
-                    runCatching { backend.submitWord(active.id, submitted) }
+                    runCatching {
+                        if (voiceToken != null) backend.submitVoiceWord(active.id, submitted, voiceToken)
+                        else backend.submitWord(active.id, submitted)
+                    }
                         .onSuccess { result ->
                             room = result
+                            if (voiceToken != null) {
+                                wordInput = ""
+                                voiceRequestId = null
+                                voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(voiceUses + 1)
+                            }
                             if (failedEvent(result.lastEvent) && result.lastEventPlayerId == me) {
                                 feedbackWord = shownWord
                                 feedbackCorrect = false
@@ -387,12 +413,35 @@ fun OnlineGameScreenV6() {
                     }
                 }
             },
+            onBonus = {
+                if (!busy && active.status == "playing") scope.launch {
+                    busy = true
+                    runCatching { backend.triggerBilBakalimBonus(active.id) }
+                        .onSuccess { updated ->
+                            room = updated
+                            refreshQuiz(updated)
+                            if (updated.status == "quiz") {
+                                notice = sh("BİL BAKALIM başladı!", "GUESS IT started!")
+                                SonHarfSoundFx.softNotify()
+                            }
+                        }
+                        .onFailure { notice = friendly(it.message.orEmpty()) }
+                    busy = false
+                }
+            },
+            onVoice = {
+                when {
+                    !voiceInput.supported -> notice = sh("Bu cihazda ses tanıma desteklenmiyor.", "Speech recognition is not supported on this device.")
+                    voiceUses >= 5 -> notice = sh("Bu maçtaki 5 sesli cevap hakkın doldu.", "You have used all 5 voice answers for this match.")
+                    else -> voiceInput.launch()
+                }
+            },
             onTrivia = { estimate ->
                 val q = triviaRound
                 if (q != null && q.resolvedAt == null && triviaSelection?.first != q.id) {
-                    triviaSelection = q.id to estimate.toLong()
+                    triviaSelection = q.id to estimate
                     scope.launch {
-                        runCatching { backend.answerTrivia(q.id, estimate) }
+                        runCatching { backend.answerBilBakalimNumeric(q.id, estimate) }
                             .onSuccess { room = it; refreshQuiz(it) }
                             .onFailure {
                                 triviaSelection = null
@@ -443,8 +492,22 @@ fun OnlineGameScreenV6() {
                     busy = false
                 }
             },
-            onExit = { roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); room = null; words = emptyList(); chat = emptyList(); notice = sh("Yeni düelloya hazırsın.", "You are ready for a new duel.") },
-            onRematch = { scope.launch { runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }.onSuccess { room = it; words = emptyList(); chat = emptyList(); if (it.id != active.id) observe(it) }.onFailure { notice = friendly(it.message.orEmpty()) } } }
+            onExit = {
+                roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); matchJob?.cancel()
+                voiceRequestId = null; voiceUses = 0; triviaRound = null; triviaQuestion = null; triviaSelection = null
+                room = null; words = emptyList(); chat = emptyList(); feedbackWord = null; feedbackCorrect = null
+                notice = sh("Yeni düelloya hazırsın.", "You are ready for a new duel.")
+            },
+            onRematch = { scope.launch {
+                runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }
+                    .onSuccess {
+                        voiceRequestId = null; voiceUses = 0; triviaRound = null; triviaQuestion = null; triviaSelection = null
+                        feedbackWord = null; feedbackCorrect = null; wordInput = ""
+                        room = it; words = emptyList(); chat = emptyList()
+                        if (it.id != active.id) observe(it)
+                    }
+                    .onFailure { notice = friendly(it.message.orEmpty()) }
+            } }
         )
         if (showChat && !active.isBot) AuroraChatDialog(chat, me, chatInput, { chatInput = it.take(300) }, { showChat = false }) {
             scope.launch {
