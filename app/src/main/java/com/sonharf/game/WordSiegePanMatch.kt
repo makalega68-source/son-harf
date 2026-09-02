@@ -222,7 +222,7 @@ internal fun WordSiegePanMatch(
 
         if (game.status == "playing") {
             Text(
-                sh("Yön otomatik algılanır • Torba ${game.bag.length}", "Direction is detected automatically • Bag ${game.bag.length}"),
+                sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"),
                 color = MainUi.Muted,
                 fontSize = 8.sp,
                 modifier = Modifier.fillMaxWidth(),
