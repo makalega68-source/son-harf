@@ -10,15 +10,15 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:packageDebugResources
 > Task :app:createDebugCompatibleScreenManifests
 > Task :app:extractDeepLinksDebug
-> Task :app:parseDebugLocalResources
 > Task :app:mergeDebugResources
+> Task :app:parseDebugLocalResources
 > Task :app:processDebugMainManifest
 > Task :app:processDebugManifest
 > Task :app:preDebugUnitTestBuild UP-TO-DATE
-> Task :app:processDebugManifestForPackage
 > Task :app:javaPreCompileDebug
 > Task :app:javaPreCompileDebugUnitTest
 > Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:processDebugManifestForPackage
 > Task :app:mergeDebugShaders
 > Task :app:compileDebugShaders NO-SOURCE
 > Task :app:generateDebugAssets UP-TO-DATE
@@ -27,8 +27,8 @@ Starting a Gradle Daemon (subsequent builds will be faster)
 > Task :app:compressDebugAssets
 > Task :app:mergeDebugJniLibFolders
 > Task :app:checkDebugDuplicateClasses
-> Task :app:processDebugResources
 > Task :app:mergeDebugNativeLibs
+> Task :app:processDebugResources
 > Task :app:mergeLibDexDebug
 
 > Task :app:stripDebugDebugSymbols
@@ -98,18 +98,18 @@ w: file:///home/runner/work/son-harf/son-harf/app/src/main/java/com/sonharf/game
 > Task :app:bundleDebugClassesToCompileJar
 > Task :app:dexBuilderDebug
 > Task :app:mergeDebugGlobalSynthetics
-> Task :app:mergeDebugJavaResource
-> Task :app:mergeProjectDexDebug
 > Task :app:compileDebugUnitTestKotlin
 > Task :app:compileDebugUnitTestJavaWithJavac NO-SOURCE
 > Task :app:processDebugUnitTestJavaRes
+> Task :app:mergeDebugJavaResource
+> Task :app:mergeProjectDexDebug
 > Task :app:testDebugUnitTest
 > Task :app:packageDebug
 > Task :app:createDebugApkListingFileRedirect
 > Task :app:assembleDebug
-gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/gradle_build-1788341387836.json
+gradle/actions: Writing build results to /home/runner/work/_temp/.gradle-actions/build-results/gradle_build-1788341406881.json
 
 [Incubating] Problems report is available at: file:///home/runner/work/son-harf/son-harf/build/reports/problems/problems-report.html
 
-BUILD SUCCESSFUL in 2m 20s
+BUILD SUCCESSFUL in 2m 29s
 43 actionable tasks: 43 executed
