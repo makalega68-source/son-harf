@@ -45,11 +45,14 @@ jobs:
           r = r.replace(anchor, anchor + extra)
           regression.write_text(r)
 
-          live = Path('app/src/test/java/com/sonharf/game/CanonicalDictionaryLiveContractTest.kt')
-          live.write_text(live.read_text().replace('get_dictionary_snapshot_v1', 'get_dictionary_snapshot_v2'))
-
-          shared = Path('app/src/test/java/com/sonharf/game/data/SharedDictionaryServiceTest.kt')
-          shared.write_text(shared.read_text().replace('get_dictionary_snapshot_v1', 'get_dictionary_snapshot_v2'))
+          for path in [
+              'app/src/test/java/com/sonharf/game/CanonicalDictionaryLiveContractTest.kt',
+              'app/src/test/java/com/sonharf/game/data/SharedDictionaryServiceTest.kt',
+              'app/src/test/java/com/sonharf/game/WordSiegeFinalRulesTest.kt',
+              'app/src/test/java/com/sonharf/game/WordSiegeStableRegressionTest.kt',
+          ]:
+              p = Path(path)
+              p.write_text(p.read_text().replace('get_dictionary_snapshot_v1', 'get_dictionary_snapshot_v2'))
           PY
       - uses: actions/setup-java@v5
         with:
@@ -71,13 +74,20 @@ jobs:
           grep -q 'spec.id in inventory || equippedId == spec.id' app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt
           grep -q 'get_dictionary_snapshot_v2' supabase/migrations/20260902_dictionary_snapshot_v2_style_authority.sql
           grep -q "id like 'frame_asset_%'" supabase/migrations/20260902_dictionary_snapshot_v2_style_authority.sql
+          ! grep -R -q 'get_dictionary_snapshot_v1' app/src/test/java/com/sonharf/game/WordSiegeFinalRulesTest.kt app/src/test/java/com/sonharf/game/WordSiegeStableRegressionTest.kt
       - name: Commit validated source and remove temporary machinery
         shell: bash
         run: |
           rm .github/workflows/temporary-dictionary-style-authority.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt app/src/test/java/com/sonharf/game/StyleAndOfflineSiegeRegressionTest.kt app/src/test/java/com/sonharf/game/CanonicalDictionaryLiveContractTest.kt app/src/test/java/com/sonharf/game/data/SharedDictionaryServiceTest.kt .github/workflows/temporary-dictionary-style-authority.yml
+          git add app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt \
+            app/src/test/java/com/sonharf/game/StyleAndOfflineSiegeRegressionTest.kt \
+            app/src/test/java/com/sonharf/game/CanonicalDictionaryLiveContractTest.kt \
+            app/src/test/java/com/sonharf/game/data/SharedDictionaryServiceTest.kt \
+            app/src/test/java/com/sonharf/game/WordSiegeFinalRulesTest.kt \
+            app/src/test/java/com/sonharf/game/WordSiegeStableRegressionTest.kt \
+            .github/workflows/temporary-dictionary-style-authority.yml
           git commit -m 'Make backend frame catalog authoritative' || true
           git push origin HEAD:fix/dictionary-rpc-v2-style-source-20260902
       - name: Upload validated APK
