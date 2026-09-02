@@ -41,14 +41,15 @@ class MainExperienceContractTest {
     }
 
     @Test
-    fun monsterShellUsesWhiteBluePaletteAndStoreThemeRuntime() {
+    fun monsterShellUsesActionPaletteAndStoreThemeRuntime() {
         val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
         val store = projectFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
         val cosmetics = projectFile("app/src/main/java/com/sonharf/game/CosmeticRuntime.kt").readText()
 
-        assertTrue(main.contains("Color(0xFFF7FAFF)"))
-        assertTrue(main.contains("Color(0xFFFFFFFF)"))
-        assertTrue(main.contains("Color(0xFF1677FF)"))
+        assertTrue(main.contains("SON HARF ACTION UI ADAPTATION"))
+        assertTrue(main.contains("Color(0xFF07111F)"))
+        assertTrue(main.contains("Color(0xFF111D2E)"))
+        assertTrue(main.contains("Color(0xFF268CFF)"))
         assertTrue(store.contains("theme_monster_blue"))
         assertTrue(store.contains("Mavi Beyaz Arena"))
         assertTrue(store.contains("SATIN AL"))
