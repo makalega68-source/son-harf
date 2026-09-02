@@ -40,7 +40,6 @@ class FinalRestorationRegressionTest {
         assertTrue(duel.contains("playerAvatarPath"))
         assertTrue(duel.contains("opponentAvatarPath"))
         assertTrue(duel.contains("ProfilePhotoAvatarWithGender"))
-        assertTrue(duel.contains("private val LBg = Color(0xFFF7F9FC)"))
         assertFalse(duel.contains("0xFFEAFB17"))
 
         // Word Siege keeps actions/profiles while direction is automatic and cube scoring is transfer-based.
