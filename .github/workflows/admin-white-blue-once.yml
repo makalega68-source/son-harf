@@ -1,0 +1,55 @@
+name: Admin White Blue Once
+
+on:
+  push:
+    branches: [ repair/son-harf-staged-20260901 ]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: repair/son-harf-staged-20260901
+      - name: Apply admin white-blue palette
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('app/src/main/java/com/sonharf/game/AdminConsoleScreen.kt')
+          text = path.read_text()
+          replacements = {
+              'private val AdminBg = Color(0xFF061321)': 'private val AdminBg = Color(0xFFF5F8FC)',
+              'private val AdminPanel = Color(0xFF0D2237)': 'private val AdminPanel = Color(0xFFFFFFFF)',
+              'private val AdminPanel2 = Color(0xFF132D47)': 'private val AdminPanel2 = Color(0xFFEEF5FF)',
+              'private val AdminGold = Color(0xFFD9AD5E)': 'private val AdminGold = Color(0xFFF6C453)',
+              'private val AdminText = Color(0xFFF7F3E9)': 'private val AdminText = Color(0xFF142033)',
+              'private val AdminMuted = Color(0xFFABB9C5)': 'private val AdminMuted = Color(0xFF6F7C8D)',
+              'private val AdminGreen = Color(0xFF66B58A)': 'private val AdminGreen = Color(0xFF35C878)',
+              'private val AdminRed = Color(0xFFE07B78)': 'private val AdminRed = Color(0xFFFF5F57)',
+              'private val AdminBlue = Color(0xFF70B6D9)': 'private val AdminBlue = Color(0xFF1677FF)',
+              'Brush.verticalGradient(listOf(AdminBg, Color(0xFF081B2B)))': 'Brush.verticalGradient(listOf(AdminBg, Color(0xFFEEF5FF)))',
+              'HorizontalDivider(color = Color.White.copy(alpha = .08f))': 'HorizontalDivider(color = MainUi.Border.copy(alpha = .72f))',
+              'trackColor = Color.White.copy(alpha = .07f)': 'trackColor = MainUi.Border.copy(alpha = .55f)',
+          }
+          missing = [old for old in replacements if old not in text]
+          if missing:
+              raise SystemExit('Expected admin palette markers missing: ' + repr(missing))
+          for old, new in replacements.items():
+              text = text.replace(old, new)
+          path.write_text(text)
+          PY
+      - name: Commit palette repair
+        shell: bash
+        run: |
+          if git diff --quiet -- app/src/main/java/com/sonharf/game/AdminConsoleScreen.kt; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/AdminConsoleScreen.kt
+          git commit -m "Restore stable admin panel"
+          git push origin HEAD:repair/son-harf-staged-20260901
