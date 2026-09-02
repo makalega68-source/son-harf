@@ -23,16 +23,23 @@ class AssetIntegrationContractTest {
         assertFalse(frames.contains("OnlineGameBackend()"))
     }
 
-    @Test fun styleStoreHasRuntimeFailSafeForBackendAndAssets() {
-        val shop = read("src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt")
+    @Test fun styleStoreUsesDecodeStreamAndNeverPaintsBrokenImageOverAvatar() {
         val frames = read("src/main/java/com/sonharf/game/PurchasedStyleUi.kt")
-        assertTrue(shop.contains("withTimeout(STORE_LOAD_TIMEOUT_MS)"))
-        assertTrue(shop.contains("güvenli modda") || shop.contains("safe mode"))
-        assertTrue(frames.contains("SafeStyleDrawable"))
-        assertTrue(frames.contains("ImageBitmap.imageResource"))
-        assertTrue(frames.contains("runCatching { ImageBitmap.imageResource"))
-        assertTrue(frames.contains("BrokenImage"))
+        assertTrue(frames.contains("openRawResource(drawable)"))
+        assertTrue(frames.contains("BitmapFactory.decodeStream"))
+        assertTrue(frames.contains("SafeFrameArtwork"))
+        assertTrue(frames.contains("Görsel doğrulanamadı") || frames.contains("Artwork unavailable"))
+        assertTrue(frames.contains("!assetReady ->"))
+        assertFalse(frames.contains("BrokenImage"))
+        assertFalse(frames.contains("ImageBitmap.imageResource"))
         assertFalse(frames.contains("painterResource("))
+    }
+
+    @Test fun styleCardsKeepMobileActionsInsideViewportAndActiveItemHasNoDisabledActionButton() {
+        val frames = read("src/main/java/com/sonharf/game/PurchasedStyleUi.kt")
+        assertTrue(frames.contains("Modifier.width(164.dp)"))
+        assertTrue(frames.contains("equipped -> Icon(Icons.Rounded.CheckCircle"))
+        assertTrue(frames.contains("!assetReady -> Text"))
     }
 
     @Test fun purchasedVfxIsCosmeticAndBounded() {
