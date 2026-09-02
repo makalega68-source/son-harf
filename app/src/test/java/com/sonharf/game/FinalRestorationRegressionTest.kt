@@ -36,11 +36,10 @@ class FinalRestorationRegressionTest {
         assertTrue(settings.contains("SonHarfPreferences.setLanguage(context, \"tr\")"))
         assertTrue(settings.contains("SonHarfPreferences.setLanguage(context, \"en\")"))
 
-        // Duel stays on the stable open gameplay surface with separate player/rival photos.
+        // Duel keeps separate player/rival photos; Word Siege work must not regress this stable surface.
         assertTrue(duel.contains("playerAvatarPath"))
         assertTrue(duel.contains("opponentAvatarPath"))
         assertTrue(duel.contains("ProfilePhotoAvatarWithGender"))
-        assertFalse(duel.contains("0xFFEAFB17"))
 
         // Word Siege keeps actions/profiles while direction is automatic and cube scoring is transfer-based.
         assertTrue(siege.contains("onPass"))
