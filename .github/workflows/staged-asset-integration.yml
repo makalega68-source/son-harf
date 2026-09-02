@@ -1,0 +1,81 @@
+name: Staged Asset Integration Validation
+
+on:
+  push:
+    branches: [ feat/asset-integration-staged-20260902 ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: staged-asset-integration
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    if: github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/asset-integration-staged-20260902
+          fetch-depth: 0
+
+      - name: Apply staged asset integration
+        run: python3 scripts/apply_staged_asset_integration.py
+
+      - name: Verify asset and product contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f app/src/main/res/drawable-nodpi/style_frame_red.png
+          test -f app/src/main/res/drawable-nodpi/style_frame_gold_crown.png
+          test -f app/src/main/res/drawable-nodpi/vfx_twinkle.png
+          test -f app/src/main/res/drawable-nodpi/mobile_ui_market.png
+          grep -q 'runCatching { OnlineGameBackend() }.getOrNull()' app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt
+          grep -q 'PurchasedVictoryVfx(room.id)' app/src/main/java/com/sonharf/game/WinnerFireworkOverlay.kt
+          grep -q 'private val LBg = Color(0xFFF7F9FC)' app/src/main/java/com/sonharf/game/LightDuelUi.kt
+          grep -q 'private val LBlue = Color(0xFF1769E0)' app/src/main/java/com/sonharf/game/LightDuelUi.kt
+          ! grep -q 'private val LBg = Color(0xFF101114)' app/src/main/java/com/sonharf/game/LightDuelUi.kt
+          ! grep -q 'private val LBlue = Color(0xFFEAFB17)' app/src/main/java/com/sonharf/game/LightDuelUi.kt
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Compile, test and assemble
+        run: gradle --no-daemon :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Commit validated integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt \
+                  app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt \
+                  app/src/main/java/com/sonharf/game/PurchasedVfxOverlay.kt \
+                  app/src/main/java/com/sonharf/game/WinnerFireworkOverlay.kt \
+                  app/src/test/java/com/sonharf/game/AssetIntegrationContractTest.kt \
+                  supabase/migrations/20260902193000_profile_frame_catalog_v2.sql \
+                  docs/ASSET_LICENSE_AND_USAGE.md
+          if ! git diff --cached --quiet; then
+            git commit -m "Integrate purchased assets in staged gates [skip ci]"
+            git push origin HEAD:feat/asset-integration-staged-20260902
+          fi
+
+      - name: Upload validated APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SonHarf-Staged-Assets
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 30
