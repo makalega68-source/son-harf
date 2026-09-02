@@ -78,13 +78,16 @@ internal fun WordSiegePanMatch(
     val rivalTargetScore = WordSiegeFinalRules.netScore(panSiegeWordScore(game, rivalOwner), rivalEarnedCubePoints, myEarnedCubePoints)
     var displayedMyScore by remember(game.id) { mutableIntStateOf(myTargetScore) }
     var displayedRivalScore by remember(game.id) { mutableIntStateOf(rivalTargetScore) }
+    var displayedCurrentPlayerId by remember(game.id) { mutableStateOf(game.currentPlayerId) }
+    val visualMyTurn = game.status == "playing" && displayedCurrentPlayerId == me
 
-    LaunchedEffect(myTargetScore, rivalTargetScore) {
+    LaunchedEffect(myTargetScore, rivalTargetScore, game.currentPlayerId) {
         while (displayedMyScore != myTargetScore || displayedRivalScore != rivalTargetScore) {
             displayedMyScore += (myTargetScore - displayedMyScore).coerceIn(-1, 1)
             displayedRivalScore += (rivalTargetScore - displayedRivalScore).coerceIn(-1, 1)
             delay(28)
         }
+        displayedCurrentPlayerId = game.currentPlayerId
     }
 
     Column(
@@ -107,9 +110,9 @@ internal fun WordSiegePanMatch(
                 )
                 Text(
                     if (game.status == "playing") {
-                        if (myTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")
+                        if (visualMyTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")
                     } else panSiegeStatusLabel(game, me),
-                    color = if (myTurn) MainUi.Blue else SiegePurple,
+                    color = if (visualMyTurn) MainUi.Green else MainUi.Red,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
                 )
@@ -133,7 +136,7 @@ internal fun WordSiegePanMatch(
                 earnedCubePoints = myEarnedCubePoints,
                 areaCount = panSiegeAreaCount(game, myOwner),
                 accent = MainUi.Green,
-                active = game.currentPlayerId == me,
+                active = displayedCurrentPlayerId == me,
                 modifier = Modifier.weight(1f),
             )
             PanSiegePlayerCard(
@@ -143,7 +146,7 @@ internal fun WordSiegePanMatch(
                 earnedCubePoints = rivalEarnedCubePoints,
                 areaCount = panSiegeAreaCount(game, rivalOwner),
                 accent = MainUi.Red,
-                active = game.currentPlayerId == opponentId,
+                active = displayedCurrentPlayerId == opponentId,
                 modifier = Modifier.weight(1f),
             )
         }
