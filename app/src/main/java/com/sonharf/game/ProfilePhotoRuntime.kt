@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Face
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -128,6 +131,37 @@ private fun FramelessGenderSymbol(gender: String?, size: Dp) {
 }
 
 @Composable
+private fun SyntheticProfilePortrait(name: String, gender: String?, modifier: Modifier, accent: Color) {
+    val visual = genderVisual(gender)
+    Box(
+        modifier.background(
+            Brush.linearGradient(
+                listOf(
+                    accent.copy(alpha = .18f),
+                    (visual?.color ?: Color(0xFF57C7F3)).copy(alpha = .28f),
+                    Color.White,
+                )
+            )
+        ),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Face,
+            contentDescription = null,
+            tint = accent.copy(alpha = .82f),
+            modifier = Modifier.fillMaxSize().padding(7.dp),
+        )
+        Text(
+            text = name.take(1).uppercase(),
+            color = Color.White,
+            fontWeight = FontWeight.Black,
+            fontSize = 9.sp,
+            modifier = Modifier.align(Alignment.BottomEnd).background(accent, CircleShape).padding(horizontal = 4.dp, vertical = 1.dp),
+        )
+    }
+}
+
+@Composable
 internal fun ProfilePhotoAvatar(
     avatarPath: String?,
     name: String,
@@ -150,9 +184,7 @@ internal fun ProfilePhotoAvatar(
             if (bitmap != null) {
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
             } else {
-                Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-                    Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (size.value * .38f).sp)
-                }
+                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
         Box(Modifier.align(Alignment.BottomEnd)) {
@@ -183,9 +215,7 @@ internal fun ProfilePhotoAvatarWithGender(
             if (bitmap != null) {
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
             } else {
-                Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
-                    Text(name.take(1).uppercase(), color = Color(0xFF16324A), fontWeight = FontWeight.Black, fontSize = (size.value * .38f).sp)
-                }
+                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
         Box(Modifier.align(Alignment.BottomEnd)) {
@@ -233,17 +263,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
                     contentScale = ContentScale.Crop,
                 )
             } else {
-                Box(
-                    Modifier.fillMaxSize().clip(shape).background(Color.White),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(
-                        name.take(1).uppercase(),
-                        color = Color(0xFF16324A),
-                        fontWeight = FontWeight.Black,
-                        fontSize = (height.value * .32f).coerceAtLeast(14f).sp,
-                    )
-                }
+                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(shape), accent)
             }
         }
         Box(Modifier.align(Alignment.BottomEnd)) {

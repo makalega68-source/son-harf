@@ -12,14 +12,9 @@ data class CoreWordCandidateDto(
     @SerialName("normalized_word") val normalizedWord: String,
 )
 
+/** Client-side word validation for Son Harf uses the same canonical snapshot as Word Siege. */
 suspend fun OnlineGameBackend.validateCoreWord(word: String, language: String): Boolean =
-    SupabaseProvider.client.postgrest.rpc(
-        "validate_core_word_v1",
-        buildJsonObject {
-            put("p_word", word.trim())
-            put("p_language", if (language.lowercase() == "en") "en" else "tr")
-        },
-    ).decodeSingle()
+    SharedDictionaryService.isValidWord(word, language)
 
 suspend fun OnlineGameBackend.getCoreWordCandidates(
     letters: String,
@@ -30,7 +25,7 @@ suspend fun OnlineGameBackend.getCoreWordCandidates(
         "get_core_word_candidates_v1",
         buildJsonObject {
             put("p_letters", letters)
-            put("p_language", if (language.lowercase() == "en") "en" else "tr")
+            put("p_language", SharedDictionaryService.canonicalLanguage(language))
             put("p_limit", limit.coerceIn(10, 300))
         },
     ).decodeList()

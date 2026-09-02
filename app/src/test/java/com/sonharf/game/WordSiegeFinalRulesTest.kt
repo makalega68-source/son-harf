@@ -1,14 +1,26 @@
 package com.sonharf.game
 
+import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.WordSiegeCellDto
 import java.io.File
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Before
 import org.junit.Test
 
 class WordSiegeFinalRulesTest {
+    @Before fun installCanonicalDictionaryFixture() {
+        SharedDictionaryService.installSnapshotForTests(
+            "tr",
+            listOf("ARA", "KARA", "KAT", "KALEM", "MAKALE", "MASA", "KAR", "MAL", "SEMA", "TER"),
+        )
+    }
+
+    @After fun clearCanonicalDictionaryFixture() = SharedDictionaryService.clearForTests()
+
     @Test fun araPlusKBecomesKaraAndIsAccepted() {
         val board = emptyBoard().toMutableList().apply {
             this[40] = WordSiegeCellDto(letter = "A", owner = 2)
@@ -21,7 +33,7 @@ class WordSiegeFinalRulesTest {
 
         assertEquals("KARA", move.primaryWord)
         assertEquals(listOf("KARA"), move.formedWords)
-        assertEquals(4, move.capturedCells) // K cube + three rival cubes are gained.
+        assertEquals(4, move.capturedCells)
         assertEquals(8, next.playerAreaScore)
         assertEquals(1, next.board[39].owner)
         assertEquals(1, next.board[40].owner)
@@ -50,7 +62,7 @@ class WordSiegeFinalRulesTest {
             this[40] = WordSiegeCellDto(letter = "A", owner = 2)
             this[41] = WordSiegeCellDto(letter = "R", owner = 2)
             this[42] = WordSiegeCellDto(letter = "A", owner = 2)
-            this[30] = WordSiegeCellDto(letter = "M", owner = 2) // Placing K at 39 also forms MK.
+            this[30] = WordSiegeCellDto(letter = "M", owner = 2)
         }
         val before = state(board, rack = "KXXXXXX")
 
@@ -96,15 +108,21 @@ class WordSiegeFinalRulesTest {
 
     @Test fun botAndHumanUseSameApplyMoveValidationAndUiLocksFinalOwnershipColors() {
         val engine = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
+        val sharedDictionary = projectFile("app/src/main/java/com/sonharf/game/data/SharedDictionaryService.kt").readText()
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
         val sql = projectFile("supabase/migrations/20260902090000_word_siege_final_transfer_v2.sql").readText()
 
         assertTrue(engine.contains("applyMove(state, 2, placements)"))
-        assertTrue(engine.contains("return normalized in practiceDictionary"))
-        assertTrue(practice.contains("Yön otomatik algılanır"))
-        assertTrue(pan.contains("Yön otomatik algılanır"))
+        assertTrue(engine.contains("SharedDictionaryService.isValidWordBlocking"))
+        assertTrue(engine.contains("SharedDictionaryService.practiceCandidates"))
+        assertTrue(!engine.contains("practiceDictionary"))
+        assertTrue(sharedDictionary.contains("get_dictionary_snapshot_v1"))
+        assertTrue(!practice.contains("Yön otomatik algılanır"))
+        assertTrue(!pan.contains("Yön otomatik algılanır"))
+        assertTrue(practice.contains("Torba ${'$'}{state.bag.length}"))
+        assertTrue(pan.contains("Torba ${'$'}{game.bag.length}"))
         assertTrue(experience.contains("WordSiegeFinalRules.detectOrientation"))
         assertTrue(pan.contains("0xFF35C878"))
         assertTrue(pan.contains("0xFFFF5F57"))

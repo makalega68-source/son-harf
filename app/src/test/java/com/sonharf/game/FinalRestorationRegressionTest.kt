@@ -36,20 +36,28 @@ class FinalRestorationRegressionTest {
         assertTrue(settings.contains("SonHarfPreferences.setLanguage(context, \"tr\")"))
         assertTrue(settings.contains("SonHarfPreferences.setLanguage(context, \"en\")"))
 
-        // Duel keeps separate player/rival photos; Word Siege work must not regress this stable surface.
+        // Duel keeps separate player/rival photos and the approved light Son Harf palette.
         assertTrue(duel.contains("playerAvatarPath"))
         assertTrue(duel.contains("opponentAvatarPath"))
         assertTrue(duel.contains("ProfilePhotoAvatarWithGender"))
+        assertTrue(duel.contains("Color(0xFFF7F9FC)"))
+        assertTrue(duel.contains("Color(0xFF1769E0)"))
+        assertTrue(duel.contains("Color.White"))
+        assertFalse(duel.contains("Color(0xFF101114)"))
+        assertFalse(duel.contains("Color(0xFFEAFB17)"))
+        assertFalse(duel.contains("Color(0xFF0D0E11)"))
 
-        // Word Siege keeps actions/profiles while direction is automatic and cube scoring is transfer-based.
+        // Word Siege keeps actions/profiles while direction remains automatic without technical helper text.
         assertTrue(siege.contains("onPass"))
         assertTrue(siege.contains("onExchange"))
         assertTrue(siege.contains("ProfilePhotoAvatarWithGender"))
-        assertTrue(siege.contains("Yön otomatik algılanır"))
+        assertFalse(siege.contains("Yön otomatik algılanır"))
+        assertTrue(siege.contains("Torba ${'$'}{game.bag.length}"))
         assertTrue(siege.contains("WordSiegeFinalRules.netScore"))
         assertTrue(siegePractice.contains("showPass"))
         assertTrue(siegePractice.contains("showExchange"))
-        assertTrue(siegePractice.contains("Yön otomatik algılanır"))
+        assertFalse(siegePractice.contains("Yön otomatik algılanır"))
+        assertTrue(siegePractice.contains("Torba ${'$'}{state.bag.length}"))
         assertTrue(siegeExperience.contains("WordSiegeFinalRules.detectOrientation"))
         assertTrue(siegeRules.contains("CUBE_TRANSFER_POINTS: Int = 2"))
 

@@ -1,11 +1,30 @@
 package com.sonharf.game
 
+import com.sonharf.game.data.SharedDictionaryService
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
+import org.junit.Before
 import org.junit.Test
 
 class WordSiegePracticeEngineTest {
+    @Before
+    fun installDictionaryFixture() {
+        SharedDictionaryService.installSnapshotForTests(
+            "tr",
+            listOf(
+                "KAR", "MAL", "SEMA", "TER", "MASA", "KALEM", "KARA", "KALE", "ELMA", "SİMA",
+                "İSİM", "LİMAN", "MİNİ", "SİNEK", "PARA", "SEL", "KAT", "MAKALE", "KART", "KARE",
+                "KASA", "SIR", "SIRA", "ARA", "ARI", "TARİH", "NAR", "NİSAN", "TERİM", "METİN",
+                "SİLİ", "LİSTE", "KİLİT", "KİRA", "KİRAZ", "KİTAP",
+            ),
+        )
+    }
+
+    @After
+    fun clearDictionaryFixture() = SharedDictionaryService.clearForTests()
+
     @Test
     fun firstPracticeMoveCoversCenterAndUsesBonus() {
         val state = WordSiegePracticeEngine.newGame()
