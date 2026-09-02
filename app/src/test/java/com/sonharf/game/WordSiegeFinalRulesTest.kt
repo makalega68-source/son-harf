@@ -1,14 +1,26 @@
 package com.sonharf.game
 
+import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.WordSiegeCellDto
 import java.io.File
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Before
 import org.junit.Test
 
 class WordSiegeFinalRulesTest {
+    @Before fun installCanonicalDictionaryFixture() {
+        SharedDictionaryService.installSnapshotForTests(
+            "tr",
+            listOf("ARA", "KARA", "KAT", "KALEM", "MAKALE", "MASA", "KAR", "MAL", "SEMA", "TER"),
+        )
+    }
+
+    @After fun clearCanonicalDictionaryFixture() = SharedDictionaryService.clearForTests()
+
     @Test fun araPlusKBecomesKaraAndIsAccepted() {
         val board = emptyBoard().toMutableList().apply {
             this[40] = WordSiegeCellDto(letter = "A", owner = 2)
@@ -96,13 +108,17 @@ class WordSiegeFinalRulesTest {
 
     @Test fun botAndHumanUseSameApplyMoveValidationAndUiLocksFinalOwnershipColors() {
         val engine = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
+        val sharedDictionary = projectFile("app/src/main/java/com/sonharf/game/data/SharedDictionaryService.kt").readText()
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
         val sql = projectFile("supabase/migrations/20260902090000_word_siege_final_transfer_v2.sql").readText()
 
         assertTrue(engine.contains("applyMove(state, 2, placements)"))
-        assertTrue(engine.contains("return normalized in practiceDictionary"))
+        assertTrue(engine.contains("SharedDictionaryService.isValidWordBlocking"))
+        assertTrue(engine.contains("SharedDictionaryService.practiceCandidates"))
+        assertTrue(!engine.contains("practiceDictionary"))
+        assertTrue(sharedDictionary.contains("get_dictionary_snapshot_v1"))
         assertTrue(practice.contains("Yön otomatik algılanır"))
         assertTrue(pan.contains("Yön otomatik algılanır"))
         assertTrue(experience.contains("WordSiegeFinalRules.detectOrientation"))
