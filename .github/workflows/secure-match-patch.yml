@@ -5,6 +5,7 @@ on:
     branches: [ feature/secure-bonus-competition-20260903 ]
     paths:
       - 'tools/apply_secure_match_patch.py'
+      - 'tools/secure-match-trigger.txt'
 
 permissions:
   contents: write
