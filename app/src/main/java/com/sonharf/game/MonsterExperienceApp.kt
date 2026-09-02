@@ -24,21 +24,22 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
 
+// SON HARF ACTION UI ADAPTATION: original Compose implementation; no third-party binary assets bundled.
 internal object MonsterUi {
-    val Background = Color(0xFFF7FAFF)
-    val Surface = Color(0xFFFFFFFF)
-    val SurfaceRaised = Color(0xFFF0F5FC)
-    val SurfaceSoft = Color(0xFFE8EEF7)
-    val Text = Color(0xFF10213A)
-    val Muted = Color(0xFF62758F)
-    val Border = Color(0xFFD5E2F0)
-    val Accent: Color get() = if (SonHarfCosmetics.monsterBlueTheme) Color(0xFF1677FF) else Color(0xFF64748B)
+    val Background = Color(0xFF07111F)
+    val Surface = Color(0xFF111D2E)
+    val SurfaceRaised = Color(0xFF17263A)
+    val SurfaceSoft = Color(0xFF20324A)
+    val Text = Color(0xFFF5F8FC)
+    val Muted = Color(0xFF9AAAC0)
+    val Border = Color(0xFF2A4260)
+    val Accent: Color get() = if (SonHarfCosmetics.monsterBlueTheme) Color(0xFF2F9BFF) else Color(0xFF268CFF)
     val AccentText = Color.White
-    val Live = Color(0xFFFF4D4F)
-    val Coral = Color(0xFFFF6B61)
-    val Orange = Color(0xFFF59E0B)
-    val Green = Color(0xFF168A55)
-    val Gold = Color(0xFFD68A00)
+    val Live = Color(0xFFFF5A64)
+    val Coral = Color(0xFFFF6D75)
+    val Orange = Color(0xFFFFA928)
+    val Green = Color(0xFF35D28A)
+    val Gold = Color(0xFFFFC857)
 }
 
 private data class MonsterHomeStats(
@@ -199,7 +200,7 @@ private fun MonsterHomeScreen(
 
 @Composable
 private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, onPlay: () -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = MonsterUi.Surface, border = BorderStroke(1.dp, MonsterUi.Border)) {
+    Surface(shape = RoundedCornerShape(22.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MonsterUi.Border)) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(7.dp).clip(CircleShape).background(MonsterUi.Live))
@@ -221,8 +222,8 @@ private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, 
             }
             Button(
                 onClick = onPlay,
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth().height(56.dp),
+                shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MonsterUi.Accent, contentColor = MonsterUi.AccentText),
             ) { Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 15.sp) }
         }
@@ -231,7 +232,7 @@ private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, 
 
 @Composable
 private fun MonsterQuickCard(title: String, subtitle: String, icon: ImageVector, accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier = modifier.height(128.dp).clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), color = MonsterUi.Surface, border = BorderStroke(1.dp, MonsterUi.Border)) {
+    Surface(modifier = modifier.height(128.dp).clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MonsterUi.Border)) {
         Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
             Column {
@@ -244,7 +245,7 @@ private fun MonsterQuickCard(title: String, subtitle: String, icon: ImageVector,
 
 @Composable
 private fun MonsterStatCard(value: String, label: String, icon: ImageVector, accent: Color, modifier: Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(15.dp), color = MonsterUi.Surface, border = BorderStroke(1.dp, MonsterUi.Border)) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(15.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MonsterUi.Border)) {
         Column(Modifier.padding(10.dp)) {
             Icon(icon, null, tint = accent, modifier = Modifier.size(17.dp))
             Spacer(Modifier.height(7.dp))
@@ -256,7 +257,7 @@ private fun MonsterStatCard(value: String, label: String, icon: ImageVector, acc
 
 @Composable
 private fun MonsterHubRow(icon: ImageVector, title: String, value: String, accent: Color, onClick: () -> Unit) {
-    Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(14.dp), color = MonsterUi.Surface, border = BorderStroke(1.dp, MonsterUi.Border)) {
+    Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(14.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MonsterUi.Border)) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = RoundedCornerShape(10.dp), color = accent.copy(alpha = .12f)) {
                 Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(18.dp))
