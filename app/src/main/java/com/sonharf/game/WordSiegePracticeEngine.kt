@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.WordSiegeCellDto
 import java.util.Locale
 
@@ -11,6 +12,7 @@ internal data class WordSiegePracticeState(
     val bag: String,
     val playerRack: String,
     val botRack: String,
+    val language: String = "tr",
     val currentOwner: Int = 1,
     val playerWordScore: Int = 0,
     val botWordScore: Int = 0,
@@ -36,27 +38,33 @@ internal data class WordSiegePracticeMove(
 
 internal class WordSiegePracticeError(val code: String) : IllegalArgumentException(code)
 
-/** Local, connection-free practice rules. Online matches still validate against the server dictionary. */
+/** Local practice rules backed by the same canonical dictionary service used by Son Harf. */
 internal object WordSiegePracticeEngine {
-    private val trLocale = Locale.forLanguageTag("tr-TR")
-
-    // Deliberately friendly opening racks make the first practice game immediately playable.
-    fun newGame(): WordSiegePracticeState = WordSiegePracticeState(
-        board = List(81) { index ->
-            WordSiegeCellDto(
-                bonus = when (index) {
-                    0, 8, 72, 80 -> "3K"
-                    4, 36, 44, 76 -> "3H"
-                    10, 16, 64, 70, 40 -> "2K"
-                    20, 24, 56, 60 -> "2H"
-                    else -> null
-                },
-            )
-        },
-        playerRack = "KALEMTR",
-        botRack = "MASASİN",
-        bag = "ELMALİSTEKARTONURBİLGİSAYARÇİÇEKDENİZKÖPRÜYILDIZTURUNCU",
-    )
+    fun newGame(language: String = "tr"): WordSiegePracticeState {
+        val lang = SharedDictionaryService.canonicalLanguage(language)
+        val english = lang == "en"
+        return WordSiegePracticeState(
+            board = List(81) { index ->
+                WordSiegeCellDto(
+                    bonus = when (index) {
+                        0, 8, 72, 80 -> "3K"
+                        4, 36, 44, 76 -> "3H"
+                        10, 16, 64, 70, 40 -> "2K"
+                        20, 24, 56, 60 -> "2H"
+                        else -> null
+                    },
+                )
+            },
+            playerRack = if (english) "PLANETS" else "KALEMTR",
+            botRack = if (english) "READING" else "MASASİN",
+            bag = if (english) {
+                "WATERHOUSELIGHTGARDENBRIDGEORANGEWINDOWMUSICPLAYERSTORYCLOUD"
+            } else {
+                "ELMALİSTEKARTONURBİLGİSAYARÇİÇEKDENİZKÖPRÜYILDIZTURUNCU"
+            },
+            language = lang,
+        )
+    }
 
     fun rackFor(state: WordSiegePracticeState, owner: Int): String =
         if (owner == 1) state.playerRack else state.botRack
@@ -111,12 +119,12 @@ internal object WordSiegePracticeEngine {
         var primary: String? = null
         var score = 0
         val captured = linkedSetOf<Int>()
-        var board = state.board.toMutableList()
+        val board = state.board.toMutableList()
 
         fun acceptWord(cells: List<Int>) {
             if (cells.size < 2) return
             val word = cells.joinToString("") { letterAt(it)?.toString().orEmpty() }
-            if (!isPracticeWord(word)) fail("word_siege_invalid_word:$word")
+            if (!SharedDictionaryService.isValidWordBlocking(word, state.language)) fail("word_siege_invalid_word:$word")
             words += word
             if (primary == null) primary = word
             score += scoreWord(state.board, placements, rack, cells)
@@ -214,7 +222,7 @@ internal object WordSiegePracticeEngine {
         if (state.currentOwner != 2 || state.status != "playing") return null
         val rack = state.botRack
         var best: Pair<WordSiegePracticeState, WordSiegePracticeMove>? = null
-        botWords.forEach { word ->
+        SharedDictionaryService.practiceCandidates(state.language, rack).forEach { word ->
             listOf(true, false).forEach { horizontal ->
                 (0..80).forEach startLoop@{ start ->
                     val placements = placementsForWord(state, rack, word, start, horizontal) ?: return@startLoop
@@ -319,12 +327,7 @@ internal object WordSiegePracticeEngine {
         if (state.currentOwner != owner) fail("word_siege_not_your_turn")
     }
 
-    private fun isPracticeWord(word: String): Boolean {
-        val normalized = word.trim().uppercase(trLocale)
-        return normalized in practiceDictionary
-    }
-
-    private fun letterValue(letter: String): Int = when (letter) {
+    private fun letterValue(letter: String): Int = when (letter.uppercase(Locale.forLanguageTag("tr-TR"))) {
         "A", "E", "İ", "K", "L", "N", "R", "T" -> 1
         "I", "M", "O", "S", "U" -> 2
         "B", "D", "Ü", "Y" -> 3
@@ -338,13 +341,4 @@ internal object WordSiegePracticeEngine {
 
     private fun other(owner: Int): Int = if (owner == 1) 2 else 1
     private fun fail(code: String): Nothing = throw WordSiegePracticeError(code)
-
-    private val botWords = listOf(
-        "MASA", "KALEM", "KALE", "ELMA", "SİMA", "İSİM", "LİMAN", "MİNİ", "SİNEK",
-        "KARA", "PARA", "SEL", "KAT", "MAKALE",
-        "KART", "KARE", "KASA", "SIR", "SIRA", "ARA", "ARI", "TARİH", "NAR", "NİSAN",
-        "TERİM", "METİN", "SİLİ", "LİSTE", "LİMAN", "KİLİT", "KİRA", "KİRAZ", "KİTAP",
-    )
-
-    private val practiceDictionary: Set<String> = botWords.toSet()
 }
