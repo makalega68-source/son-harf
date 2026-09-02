@@ -43,8 +43,9 @@ private val WordSiegePracticeBots = listOf(
 
 @Composable
 internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
-    val backend = remember { OnlineGameBackend() }
-    val me = remember { backend.currentUserId() }
+    // Profile enrichment is optional. Core practice actions never require backend/network availability.
+    val backend = remember { runCatching { OnlineGameBackend() }.getOrNull() }
+    val me = remember(backend) { backend?.currentUserId() }
     var playerProfile by remember { mutableStateOf<ProfileDto?>(null) }
     var botProfile by remember { mutableStateOf(WordSiegePracticeBots.random()) }
     var state by remember { mutableStateOf(WordSiegePracticeEngine.newGame()) }
@@ -55,6 +56,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     var botThinking by remember { mutableStateOf(false) }
     var showPass by remember { mutableStateOf(false) }
     var showForfeit by remember { mutableStateOf(false) }
+    var showRestart by remember { mutableStateOf(false) }
     var showExchange by remember { mutableStateOf(false) }
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
 
@@ -64,8 +66,9 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     var displayedBotScore by remember { mutableIntStateOf(botTargetScore) }
     var displayedOwner by remember { mutableIntStateOf(state.currentOwner) }
 
-    LaunchedEffect(me) {
-        if (me != null) playerProfile = runCatching { backend.getProfile(me) }.getOrNull()
+    LaunchedEffect(me, backend) {
+        val b = backend ?: return@LaunchedEffect
+        if (me != null) playerProfile = runCatching { b.getProfile(me) }.getOrNull()
     }
 
     LaunchedEffect(playerTargetScore, botTargetScore, state.currentOwner) {
@@ -153,7 +156,12 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(48.dp)) {
                         Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = MainUi.Red)
                     }
-                    IconButton(onClick = ::startAgain, modifier = Modifier.size(48.dp)) {
+                    IconButton(
+                        onClick = {
+                            if (state.moveCount > 0 || placements.isNotEmpty()) showRestart = true else startAgain()
+                        },
+                        modifier = Modifier.size(48.dp),
+                    ) {
                         Icon(Icons.Rounded.Refresh, sh("Yeni oyun", "New game"), tint = MainUi.Blue)
                     }
                 }
@@ -318,6 +326,21 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                 }
             }
         }
+    }
+
+    if (showRestart) {
+        AlertDialog(
+            onDismissRequest = { showRestart = false },
+            title = { Text(sh("Yeni oyun başlat?", "Start a new game?"), fontWeight = FontWeight.Black) },
+            text = { Text(sh("Mevcut alıştırmadaki ilerleme sıfırlanacak.", "Current practice progress will be reset."), color = MainUi.Muted) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showRestart = false
+                    startAgain()
+                }) { Text(sh("YENİ OYUN", "NEW GAME"), color = MainUi.Blue, fontWeight = FontWeight.Black) }
+            },
+            dismissButton = { TextButton(onClick = { showRestart = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
+        )
     }
 
     if (showPass) {
