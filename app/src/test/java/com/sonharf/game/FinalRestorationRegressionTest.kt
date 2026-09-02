@@ -14,6 +14,8 @@ class FinalRestorationRegressionTest {
         val duel = source("LightDuelUi.kt")
         val siege = source("WordSiegePanMatch.kt")
         val siegePractice = source("WordSiegePracticeScreen.kt")
+        val siegeExperience = source("WordSiegeExperience.kt")
+        val siegeRules = source("WordSiegeFinalRules.kt")
         val style = source("MonsterStyleStoreScreen.kt")
         val settings = source("MainSettingsVipScreen.kt")
         val admin = source("AdminConsoleScreen.kt")
@@ -41,15 +43,17 @@ class FinalRestorationRegressionTest {
         assertTrue(duel.contains("private val LBg = Color(0xFFF7F9FC)"))
         assertFalse(duel.contains("0xFFEAFB17"))
 
-        // Word Siege keeps live area scoring, actions, direction and profile coverage.
-        assertTrue(siege.contains("areaScore"))
-        assertTrue(siege.contains("totalScore"))
+        // Word Siege keeps actions/profiles while direction is automatic and cube scoring is transfer-based.
         assertTrue(siege.contains("onPass"))
         assertTrue(siege.contains("onExchange"))
-        assertTrue(siege.contains("horizontal"))
         assertTrue(siege.contains("ProfilePhotoAvatarWithGender"))
+        assertTrue(siege.contains("Yön otomatik algılanır"))
+        assertTrue(siege.contains("WordSiegeFinalRules.netScore"))
         assertTrue(siegePractice.contains("showPass"))
         assertTrue(siegePractice.contains("showExchange"))
+        assertTrue(siegePractice.contains("Yön otomatik algılanır"))
+        assertTrue(siegeExperience.contains("WordSiegeFinalRules.detectOrientation"))
+        assertTrue(siegeRules.contains("CUBE_TRANSFER_POINTS: Int = 2"))
 
         // Style remains cosmetic-only while preserving the real theme purchase/equip backend.
         assertTrue(style.contains("theme_monster_blue"))
