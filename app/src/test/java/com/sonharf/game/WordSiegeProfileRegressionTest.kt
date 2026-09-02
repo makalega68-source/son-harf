@@ -18,7 +18,8 @@ class WordSiegeProfileRegressionTest {
             assertTrue("Female bot mismatch: $it", practice.contains("PracticeBotProfile(\"$it\", \"kadın\")"))
         }
 
-        assertTrue(practice.contains("playerProfile = runCatching { backend.getProfile(me) }.getOrNull()"))
+        assertTrue(practice.contains("val backend = remember { runCatching { OnlineGameBackend() }.getOrNull() }"))
+        assertTrue(practice.contains("playerProfile = runCatching { b.getProfile(me) }.getOrNull()"))
         assertTrue(practice.contains("avatarPath = playerProfile?.avatarPath"))
         assertTrue(practice.contains("gender = playerProfile?.gender"))
         assertTrue(practice.contains("avatarVisible = playerProfile?.avatarVisibility != \"hidden\""))

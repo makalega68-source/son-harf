@@ -69,6 +69,23 @@ class WordSiegePracticeEngineTest {
     }
 
     @Test
+    fun practiceStillAcceptsKalemWithoutAnyCachedServerSnapshot() {
+        SharedDictionaryService.clearForTests()
+        val state = WordSiegePracticeEngine.newGame()
+
+        val (next, move) = WordSiegePracticeEngine.applyMove(
+            state,
+            1,
+            linkedMapOf(38 to 0, 39 to 1, 40 to 2, 41 to 3, 42 to 4),
+            true,
+        )
+
+        assertEquals("KALEM", move.primaryWord)
+        assertEquals(2, next.currentOwner)
+        assertTrue(SharedDictionaryService.practiceCandidates("tr", next.botRack).isNotEmpty())
+    }
+
+    @Test
     fun consecutivePassesFinishPractice() {
         val first = WordSiegePracticeEngine.pass(WordSiegePracticeEngine.newGame(), 1)
         val finished = WordSiegePracticeEngine.pass(first, 2)
