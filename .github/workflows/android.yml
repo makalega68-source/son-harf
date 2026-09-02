@@ -94,33 +94,3 @@ jobs:
         run: |
           gh release view final-test >/dev/null 2>&1 || gh release create final-test --title "Son Harf Final Test" --notes "Son Harf Android final test build."
           gh release upload final-test SonHarf-Final-Test.apk --clobber
-
-      - name: Publish direct-download APK in repository
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          mkdir -p dist
-          cp SonHarf-Final-Test.apk dist/SonHarf-Final-Test.apk
-          printf 'commit=%s\nbuilt_at=%s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/BUILD_OK.txt
-          rm -f dist/BUILD_FAIL.txt dist/BUILD_FAIL_LOG.txt
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/SonHarf-Final-Test.apk dist/BUILD_OK.txt
-          git add -u dist/BUILD_FAIL.txt dist/BUILD_FAIL_LOG.txt 2>/dev/null || true
-          git diff --cached --quiet || git commit -m "Publish final APK [skip ci]"
-          git push
-
-      - name: Publish build failure marker
-        if: failure() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          mkdir -p dist
-          printf 'commit=%s\nfailed_at=%s\n' "$GITHUB_SHA" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > dist/BUILD_FAIL.txt
-          if [ -f android-build.log ]; then
-            tail -n 350 android-build.log > dist/BUILD_FAIL_LOG.txt
-          else
-            printf 'android-build.log was not produced\n' > dist/BUILD_FAIL_LOG.txt
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add dist/BUILD_FAIL.txt dist/BUILD_FAIL_LOG.txt
-          git diff --cached --quiet || git commit -m "Record Android build failure with log [skip ci]"
-          git push
