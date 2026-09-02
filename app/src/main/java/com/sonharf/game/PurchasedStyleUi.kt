@@ -18,8 +18,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -77,18 +79,17 @@ private fun SafeStyleDrawable(
     contentScale: ContentScale = ContentScale.Fit,
     tint: Color? = null,
 ) {
-    val painter = try {
-        painterResource(drawable)
-    } catch (_: Throwable) {
-        null
+    val resources = LocalContext.current.resources
+    val bitmap = remember(resources, drawable) {
+        runCatching { ImageBitmap.imageResource(resources, drawable) }.getOrNull()
     }
-    if (painter != null) {
+    if (bitmap != null) {
         Image(
-            painter = painter,
+            bitmap = bitmap,
             contentDescription = null,
             modifier = modifier,
             contentScale = contentScale,
-            colorFilter = tint?.let(ColorFilter::tint),
+            colorFilter = tint?.let { ColorFilter.tint(it) },
         )
     } else {
         Icon(
