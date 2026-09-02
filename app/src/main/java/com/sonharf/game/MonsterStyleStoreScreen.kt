@@ -142,7 +142,7 @@ internal fun MonsterStyleStoreScreen() {
             item { ThemeSlotRow(equipped) }
 
             item { StoreSectionHeader(sh("PROFİL STYLE", "PROFILE STYLE"), sh("Çerçeve, plaka, arka plan ve rozet", "Frames, nameplates, backgrounds and badges")) }
-            item { PreviewRow(profileItems) }
+            item { PurchasedProfileFramesStoreRow() }
 
             item { StoreSectionHeader(sh("MAÇ STYLE", "MATCH STYLE"), sh("Sadece görsel efektler; rekabet avantajı yok", "Visual effects only; no competitive advantage")) }
             item { PreviewRow(matchItems) }
