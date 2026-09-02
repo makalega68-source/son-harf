@@ -3,6 +3,7 @@ package com.sonharf.game
 import com.sonharf.game.data.SharedDictionaryService
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -15,7 +16,7 @@ class WordSiegePracticeEngineTest {
             "tr",
             listOf(
                 "KAR", "MAL", "SEMA", "TER", "MASA", "KALEM", "KARA", "KALE", "ELMA", "SİMA",
-                "İSİM", "LİMAN", "MİNİ", "SİNEK", "PARA", "SEL", "KAT", "MAKALE", "KART", "KARE",
+                "İSİM", "LİMAN", "MİNİ", "SİNEK", "PARA", "SEL", "SER", "KAT", "MAKALE", "KART", "KARE",
                 "KASA", "SIR", "SIRA", "ARA", "ARI", "TARİH", "NAR", "NİSAN", "TERİM", "METİN",
                 "SİLİ", "LİSTE", "KİLİT", "KİRA", "KİRAZ", "KİTAP",
             ),
@@ -69,20 +70,17 @@ class WordSiegePracticeEngineTest {
     }
 
     @Test
-    fun practiceStillAcceptsKalemWithoutAnyCachedServerSnapshot() {
+    fun practiceDoesNotUseASeparateMiniDictionaryWhenCanonicalSnapshotIsMissing() {
         SharedDictionaryService.clearForTests()
-        val state = WordSiegePracticeEngine.newGame()
+        assertFalse(SharedDictionaryService.hasSnapshot("tr"))
+        assertFalse(SharedDictionaryService.isValidWordBlocking("KALEM", "tr"))
+        assertTrue(SharedDictionaryService.practiceCandidates("tr", "KALEMTR").isEmpty())
+    }
 
-        val (next, move) = WordSiegePracticeEngine.applyMove(
-            state,
-            1,
-            linkedMapOf(38 to 0, 39 to 1, 40 to 2, 41 to 3, 42 to 4),
-            true,
-        )
-
-        assertEquals("KALEM", move.primaryWord)
-        assertEquals(2, next.currentOwner)
-        assertTrue(SharedDictionaryService.practiceCandidates("tr", next.botRack).isNotEmpty())
+    @Test
+    fun canonicalSnapshotAcceptsSelAndSerLikeMainDictionary() {
+        assertTrue(SharedDictionaryService.isValidWordBlocking("SEL", "tr"))
+        assertTrue(SharedDictionaryService.isValidWordBlocking("SER", "tr"))
     }
 
     @Test
