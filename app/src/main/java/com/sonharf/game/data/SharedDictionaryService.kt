@@ -1,5 +1,6 @@
 package com.sonharf.game.data
 
+import android.content.Context
 import io.github.jan.supabase.postgrest.postgrest
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -16,39 +17,18 @@ private data class DictionarySnapshotDto(
 /**
  * Canonical dictionary gateway for every word-game mode.
  *
- * Online/server-backed modes use public.dictionary_words. A complete active snapshot is fetched once per
- * language and indexed as an in-memory HashSet. Local practice never requires network access: it uses an
- * already-cached canonical snapshot when available and otherwise falls back to a bundled practice lexicon.
- * Server-authoritative online moves continue to validate against the canonical table.
+ * The single source of truth is public.dictionary_words via get_dictionary_snapshot_v1.
+ * Once fetched, the complete active snapshot is kept in memory and persisted on-device so local
+ * practice can continue offline with the same vocabulary as the main game. There is deliberately
+ * no reduced practice-only lexicon: a missing canonical snapshot is an unavailable-dictionary state,
+ * never evidence that an otherwise valid Turkish word is invalid.
  */
 object SharedDictionaryService {
+    private const val PREFS = "son_harf_dictionary_snapshot_v1"
+    private const val WORDS_PREFIX = "words_"
     private val snapshots = ConcurrentHashMap<String, Set<String>>()
     private val turkishLocale = Locale.forLanguageTag("tr-TR")
     private val englishLocale = Locale.ENGLISH
-
-    private val offlinePracticeTurkish by lazy {
-        setOf(
-            "ada", "adım", "aile", "akıl", "alan", "altın", "ana", "anne", "ara", "arı", "at", "ateş",
-            "baba", "bağ", "bal", "baş", "bilgi", "bir", "biz", "bul", "buz",
-            "cam", "can", "cep", "çay", "çiçek", "çizgi", "çocuk",
-            "dal", "dam", "deniz", "ders", "dil", "dost", "duvar",
-            "el", "elma", "emek", "ev", "fikir", "gemi", "genç", "göl", "gün", "güneş",
-            "harf", "hava", "hayat", "hız", "ışık", "isim", "insan", "iş",
-            "kale", "kalem", "kalp", "kan", "kapı", "kar", "kart", "kedi", "kelam", "kelime", "kitap", "kol", "köprü", "kuş",
-            "masa", "masal", "mart", "merak", "metal", "mor", "mutlu", "nar", "not", "oda", "okul", "oyun",
-            "renk", "resim", "saat", "sana", "ses", "sıra", "sinema", "soru", "su", "tahta", "tam", "tarla", "ter", "top", "tur",
-            "umut", "uzun", "var", "yaz", "yeni", "yol", "yıldız", "zaman"
-        ).mapTo(hashSetOf()) { normalize(it, "tr") }
-    }
-
-    private val offlinePracticeEnglish by lazy {
-        setOf(
-            "air", "apple", "art", "book", "bridge", "card", "cat", "cloud", "day", "dear", "desk", "door",
-            "earth", "family", "game", "garden", "gain", "green", "hand", "home", "house", "idea", "lake", "late", "letter",
-            "light", "line", "music", "name", "orange", "page", "planet", "plan", "play", "rain", "read", "road", "room",
-            "star", "story", "table", "time", "tree", "water", "window", "word", "world"
-        ).mapTo(hashSetOf()) { normalize(it, "en") }
-    }
 
     fun canonicalLanguage(language: String): String = if (language.lowercase(Locale.ROOT) == "en") "en" else "tr"
 
@@ -58,8 +38,32 @@ object SharedDictionaryService {
         return if (lang == "tr") trimmed.lowercase(turkishLocale) else trimmed.lowercase(englishLocale)
     }
 
-    private fun offlinePracticeWords(language: String): Set<String> =
-        if (canonicalLanguage(language) == "en") offlinePracticeEnglish else offlinePracticeTurkish
+    fun hasSnapshot(language: String): Boolean = snapshots.containsKey(canonicalLanguage(language))
+
+    /** Restore the last complete canonical snapshot without network access. */
+    fun restorePersisted(context: Context, language: String): Boolean {
+        val lang = canonicalLanguage(language)
+        if (snapshots.containsKey(lang)) return true
+        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .getString(WORDS_PREFIX + lang, null)
+            .orEmpty()
+        if (raw.isBlank()) return false
+        val indexed = raw.lineSequence()
+            .map { normalize(it, lang) }
+            .filter { it.length in 3..12 }
+            .toHashSet()
+        if (indexed.isEmpty()) return false
+        snapshots[lang] = indexed
+        return true
+    }
+
+    private fun persist(context: Context, language: String, words: Set<String>) {
+        val lang = canonicalLanguage(language)
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit()
+            .putString(WORDS_PREFIX + lang, words.sorted().joinToString("\n"))
+            .apply()
+    }
 
     suspend fun preload(language: String): Set<String> {
         val lang = canonicalLanguage(language)
@@ -72,8 +76,18 @@ object SharedDictionaryService {
             .map { normalize(it, lang) }
             .filter { it.length in 3..12 }
             .toHashSet()
+        require(indexed.isNotEmpty()) { "canonical_dictionary_empty" }
         snapshots[lang] = indexed
         return indexed
+    }
+
+    /** Restore locally first; otherwise fetch and persist the complete canonical dictionary. */
+    suspend fun preloadCanonical(context: Context, language: String): Set<String> {
+        val lang = canonicalLanguage(language)
+        if (restorePersisted(context, lang)) return snapshots.getValue(lang)
+        val words = preload(lang)
+        persist(context, lang, words)
+        return words
     }
 
     suspend fun isValidWord(word: String, language: String): Boolean {
@@ -84,15 +98,14 @@ object SharedDictionaryService {
     }
 
     /**
-     * Deterministic, network-free bridge for local practice.
-     * A canonical snapshot already loaded by another mode is preferred. If none exists, the bundled
-     * practice lexicon is used and no Supabase/RPC call is attempted.
+     * Synchronous bridge used by the local practice engine after the screen has loaded/restored the
+     * canonical snapshot. With no snapshot we fail closed so UI can report dictionary-unavailable;
+     * we never consult a smaller, divergent word list.
      */
     fun isValidWordBlocking(word: String, language: String): Boolean {
         val normalized = normalize(word, language)
         if (normalized.length !in 3..12) return false
-        isValidCachedNormalized(normalized, language)?.let { return it }
-        return normalized in offlinePracticeWords(language)
+        return isValidCachedNormalized(normalized, language) ?: false
     }
 
     fun isValidCached(word: String, language: String): Boolean? {
@@ -106,10 +119,10 @@ object SharedDictionaryService {
         return snapshots[lang]?.contains(normalized)
     }
 
-    /** Bot candidates for local practice. This path is intentionally network-free. */
+    /** Bot candidates use exactly the same loaded canonical snapshot as human validation. */
     fun practiceCandidates(language: String, rack: String, limit: Int = 420): List<String> {
         val lang = canonicalLanguage(language)
-        val words = snapshots[lang] ?: offlinePracticeWords(lang)
+        val words = snapshots[lang] ?: return emptyList()
         val locale = if (lang == "tr") turkishLocale else englishLocale
         val rackUpper = rack.uppercase(locale)
         return words.asSequence()
