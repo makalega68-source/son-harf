@@ -118,7 +118,7 @@ class WordSiegeFinalRulesTest {
         assertTrue(engine.contains("SharedDictionaryService.isValidWordBlocking"))
         assertTrue(engine.contains("SharedDictionaryService.practiceCandidates"))
         assertTrue(!engine.contains("practiceDictionary"))
-        assertTrue(sharedDictionary.contains("get_dictionary_snapshot_v1"))
+        assertTrue(sharedDictionary.contains("get_dictionary_snapshot_v2"))
         assertTrue(!practice.contains("Yön otomatik algılanır"))
         assertTrue(!pan.contains("Yön otomatik algılanır"))
         assertTrue(practice.contains("Torba ${'$'}{state.bag.length}"))

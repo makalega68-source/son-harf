@@ -17,14 +17,16 @@ private data class DictionarySnapshotDto(
 /**
  * Canonical dictionary gateway for every word-game mode.
  *
- * The single source of truth is public.dictionary_words via get_dictionary_snapshot_v1.
+ * The single source of truth is public.dictionary_words via get_dictionary_snapshot_v2.
+ * The v2 RPC deliberately returns one PostgREST record (language + words[]) instead of a scalar
+ * jsonb object so supabase-kt decodeSingle has the same response contract as normal row queries.
  * Once fetched, the complete active snapshot is kept in memory and persisted on-device so local
  * practice can continue offline with the same vocabulary as the main game. There is deliberately
  * no reduced practice-only lexicon: a missing canonical snapshot is an unavailable-dictionary state,
  * never evidence that an otherwise valid Turkish word is invalid.
  */
 object SharedDictionaryService {
-    private const val PREFS = "son_harf_dictionary_snapshot_v1"
+    private const val PREFS = "son_harf_dictionary_snapshot_v2"
     private const val WORDS_PREFIX = "words_"
     private val snapshots = ConcurrentHashMap<String, Set<String>>()
     private val turkishLocale = Locale.forLanguageTag("tr-TR")
@@ -69,9 +71,10 @@ object SharedDictionaryService {
         val lang = canonicalLanguage(language)
         snapshots[lang]?.let { return it }
         val payload = SupabaseProvider.client.postgrest.rpc(
-            "get_dictionary_snapshot_v1",
+            "get_dictionary_snapshot_v2",
             buildJsonObject { put("p_language", lang) },
         ).decodeSingle<DictionarySnapshotDto>()
+        require(payload.language == lang) { "canonical_dictionary_language_mismatch" }
         val indexed = payload.words.asSequence()
             .map { normalize(it, lang) }
             .filter { it.length in 3..12 }

@@ -167,8 +167,6 @@ internal fun PurchasedProfileFrameOverlay(frameId: String?, modifier: Modifier =
     )
 }
 
-private val verifiedStagedFrameIds = setOf(PurchasedFrameCatalog.GREEN, PurchasedFrameCatalog.MINT)
-
 private fun legacyFrameSpec(item: ShopItemDto): PurchasedFrameSpec = PurchasedFrameSpec(
     id = item.id,
     titleTr = item.nameTr,
@@ -228,8 +226,10 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
             .filter { it.id !in PurchasedFrameCatalog.ids }
             .sortedBy { it.sortOrder }
             .map(::legacyFrameSpec)
+        // Staged frame_asset_* entries are recovery renderers only. The backend active catalog
+        // is authoritative for discovery/sales; preserve staged items only when already owned/equipped.
         val staged = purchasedFrameSpecs.filter { spec ->
-            spec.id in verifiedStagedFrameIds || spec.id in inventory || equippedId == spec.id
+            spec.id in inventory || equippedId == spec.id
         }
         (legacy + staged).distinctBy { it.id }
     }
