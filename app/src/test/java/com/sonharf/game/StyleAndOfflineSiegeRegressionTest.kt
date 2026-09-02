@@ -9,25 +9,31 @@ class StyleAndOfflineSiegeRegressionTest {
     private fun read(path: String) = File(path).readText()
 
     @Test
-    fun practiceActionsDoNotRequireDictionaryNetwork() {
+    fun practiceUsesPersistentCanonicalDictionaryWithoutDivergentFallback() {
         val dictionary = read("src/main/java/com/sonharf/game/data/SharedDictionaryService.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt")
 
-        assertTrue(dictionary.contains("offlinePracticeWords"))
-        assertTrue(dictionary.contains("snapshots[lang] ?: offlinePracticeWords(lang)"))
-        assertFalse(dictionary.substringAfter("fun isValidWordBlocking").substringBefore("fun isValidCached").contains("preload("))
-        assertTrue(practice.contains("runCatching { OnlineGameBackend() }.getOrNull()"))
+        assertTrue(dictionary.contains("get_dictionary_snapshot_v1"))
+        assertTrue(dictionary.contains("preloadCanonical"))
+        assertTrue(dictionary.contains("restorePersisted"))
+        assertFalse(dictionary.contains("offlinePracticeTurkish"))
+        assertFalse(dictionary.contains("offlinePracticeWords"))
+        assertTrue(practice.contains("SharedDictionaryService.preloadCanonical"))
+        assertTrue(practice.contains("dictionaryReady"))
+        assertTrue(practice.contains("ANA SÖZLÜK"))
         assertTrue(practice.contains("showRestart"))
         assertTrue(practice.contains("Mevcut alıştırmadaki ilerleme sıfırlanacak"))
     }
 
     @Test
-    fun styleNeverOverlaysBrokenImageAndGuardsUnavailableArtworkActions() {
+    fun styleShowsBackendProfileFramesAndNeverOverlaysBrokenImage() {
         val frames = read("src/main/java/com/sonharf/game/PurchasedStyleUi.kt")
 
         assertTrue(frames.contains("BitmapFactory.decodeStream"))
         assertTrue(frames.contains("SafeFrameArtwork"))
-        assertTrue(frames.contains("!assetReady -> Text"))
+        assertTrue(frames.contains("it.kind == \"profile_frame\""))
+        assertFalse(frames.contains("it.id in PurchasedFrameCatalog.ids"))
+        assertTrue(frames.contains("legacyFrameSpec"))
         assertTrue(frames.contains("equipped -> Icon(Icons.Rounded.CheckCircle"))
         assertFalse(frames.contains("BrokenImage"))
     }
