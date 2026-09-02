@@ -53,17 +53,29 @@ object SharedDictionaryService {
     suspend fun isValidWord(word: String, language: String): Boolean {
         val normalized = normalize(word, language)
         if (normalized.length !in 3..12) return false
+        isValidCachedNormalized(normalized, language)?.let { return it }
         return normalized in preload(language)
     }
 
-    /** Synchronous bridge for the deterministic local practice engine. The first lookup loads one snapshot. */
-    fun isValidWordBlocking(word: String, language: String): Boolean =
-        runBlocking(Dispatchers.IO) { isValidWord(word, language) }
+    /**
+     * Synchronous bridge for the deterministic local practice engine.
+     * Cached snapshots are resolved synchronously; IO is entered only for the first uncached language load.
+     */
+    fun isValidWordBlocking(word: String, language: String): Boolean {
+        val normalized = normalize(word, language)
+        if (normalized.length !in 3..12) return false
+        isValidCachedNormalized(normalized, language)?.let { return it }
+        return runBlocking(Dispatchers.IO) { normalized in preload(language) }
+    }
 
     fun isValidCached(word: String, language: String): Boolean? {
-        val lang = canonicalLanguage(language)
-        val normalized = normalize(word, lang)
+        val normalized = normalize(word, language)
         if (normalized.length !in 3..12) return false
+        return isValidCachedNormalized(normalized, language)
+    }
+
+    private fun isValidCachedNormalized(normalized: String, language: String): Boolean? {
+        val lang = canonicalLanguage(language)
         return snapshots[lang]?.contains(normalized)
     }
 
