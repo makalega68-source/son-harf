@@ -13,6 +13,9 @@ internal enum class WordSiegeBoardViewportMode { CLOSE, FIT }
 
 internal enum class WordSiegeBoardTapAction { PLACE, TOGGLE_VIEWPORT }
 
+internal const val WORD_SIEGE_DESIRED_SCREEN_BORDER_DP = 1.3f
+internal const val WORD_SIEGE_MIN_SCREEN_BORDER_DP = 1f
+
 internal fun WordSiegeBoardViewportMode.toggle(): WordSiegeBoardViewportMode =
     if (this == WordSiegeBoardViewportMode.CLOSE) WordSiegeBoardViewportMode.FIT
     else WordSiegeBoardViewportMode.CLOSE
@@ -151,6 +154,35 @@ internal fun wordSiegeCenteredClosePan(
         boardWidthPx = boardWidthPx,
         scale = scale,
     )
+}
+
+/** Screen-space cell center used by viewport overlays. */
+internal fun wordSiegeCellCenterInViewport(
+    index: Int,
+    transform: WordSiegeBoardTransform,
+    cellSizePx: Float,
+): Offset {
+    if (cellSizePx <= 0f || transform.scale <= 0f) return Offset.Zero
+    val safeIndex = index.coerceIn(0, WordSiegeBoardSpec.LastIndex)
+    val column = WordSiegeBoardSpec.column(safeIndex)
+    val row = WordSiegeBoardSpec.row(safeIndex)
+    return Offset(
+        x = transform.pan.x + (column + .5f) * cellSizePx * transform.scale,
+        y = transform.pan.y + (row + .5f) * cellSizePx * transform.scale,
+    )
+}
+
+/**
+ * Border is authored in board dp but must remain visually stable after board scaling.
+ * The returned board-space width renders at the requested screen-space width.
+ */
+internal fun wordSiegeBoardBorderWidthDp(
+    scale: Float,
+    desiredScreenWidthDp: Float = WORD_SIEGE_DESIRED_SCREEN_BORDER_DP,
+    minScreenWidthDp: Float = WORD_SIEGE_MIN_SCREEN_BORDER_DP,
+): Float {
+    val safeScreenWidth = maxOf(desiredScreenWidthDp, minScreenWidthDp)
+    return if (scale > 0f) safeScreenWidth / scale else safeScreenWidth
 }
 
 internal fun wordSiegeBoardIndexAt(
