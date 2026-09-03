@@ -202,7 +202,6 @@ private fun WordSiegePracticeBoardCell(
             .clip(RoundedCornerShape(7.dp))
             .background(if (letter != null) territory else MainUi.Surface)
             .combinedClickable(
-                enabled = enabled,
                 onDoubleClick = onDoubleClick,
                 onClick = { if (canPlace) onClick() },
             ),
