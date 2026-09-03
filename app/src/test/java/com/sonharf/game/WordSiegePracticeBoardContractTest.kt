@@ -12,12 +12,14 @@ class WordSiegePracticeBoardContractTest {
         val screen = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
 
         assertTrue(board.contains("PracticeSiegeCellSize = 52.dp"))
+        assertTrue(board.contains("WordSiegeBoardSpec.Size"))
         assertTrue(board.contains("detectDragGestures"))
         assertTrue(board.contains("combinedClickable"))
         assertTrue(board.contains("onDoubleClick = onDoubleClick"))
         assertFalse(board.contains("boardIndexAt"))
         assertFalse(board.contains("Çift dokun:"))
         assertTrue(board.contains("wordSiegeFitScale"))
+        assertTrue(board.contains("clampWordSiegeBoardPan"))
         assertTrue(board.contains("WordSiegeBoardAccessibility.BoardLetterPoint"))
         assertTrue(board.contains("WordSiegeBoardAccessibility.BoardBonus"))
         assertTrue(board.contains("WordSiegeBoardAccessibility.RackPoint"))
@@ -35,11 +37,14 @@ class WordSiegePracticeBoardContractTest {
         assertTrue(screen.contains("wordSiegePracticeMoveNotice"))
     }
 
-    @Test fun `new practice games deal from a shuffled pool instead of fixed racks`() {
+    @Test fun `new practice games deal from the canonical shuffled bag instead of fixed racks`() {
         val engine = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
-        assertTrue(engine.contains("shuffle(Random.Default)"))
+        val spec = projectFile("app/src/main/java/com/sonharf/game/WordSiegeBoardSpec.kt").readText()
+        assertTrue(engine.contains("WordSiegeBoardSpec.shuffledBag"))
         assertTrue(engine.contains("playerRack = shuffled.take(7)"))
         assertTrue(engine.contains("botRack = shuffled.drop(7).take(7)"))
+        assertTrue(spec.contains("canonicalBag"))
+        assertTrue(spec.contains("shuffle(random)"))
         assertFalse(engine.contains("playerRack = if (english) \"PLANETS\" else \"KALEMTR\""))
     }
 

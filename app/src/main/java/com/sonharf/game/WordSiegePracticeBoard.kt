@@ -50,7 +50,7 @@ internal fun WordSiegePracticeBoard(
 ) {
     val density = LocalDensity.current
     val tilePx = with(density) { PracticeSiegeCellSize.toPx() }
-    val boardPx = tilePx * 9f
+    val boardPx = tilePx * WordSiegeBoardSpec.Size
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     var pan by remember { mutableStateOf(Offset.Zero) }
     var initialized by remember { mutableStateOf(false) }
@@ -58,29 +58,29 @@ internal fun WordSiegePracticeBoard(
     val scale = if (mode == WordSiegeBoardViewportMode.FIT) {
         wordSiegeFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx)
     } else 1f
-    val scaledBoardPx = boardPx * scale
 
-    fun fitPan() = Offset(
-        ((viewport.width - scaledBoardPx) / 2f).coerceAtLeast(0f),
-        ((viewport.height - scaledBoardPx) / 2f).coerceAtLeast(0f),
+    fun fitPan(): Offset = wordSiegeFitPan(
+        viewport.width.toFloat(),
+        viewport.height.toFloat(),
+        boardPx,
+        scale,
     )
 
-    fun clamp(candidate: Offset): Offset {
-        if (viewport.width <= 0 || viewport.height <= 0) return candidate
-        if (mode == WordSiegeBoardViewportMode.FIT) return fitPan()
-        val x = if (scaledBoardPx <= viewport.width) (viewport.width - scaledBoardPx) / 2f
-        else candidate.x.coerceIn(viewport.width - scaledBoardPx, 0f)
-        val y = if (scaledBoardPx <= viewport.height) (viewport.height - scaledBoardPx) / 2f
-        else candidate.y.coerceIn(viewport.height - scaledBoardPx, 0f)
-        return Offset(x, y)
-    }
+    fun clamp(candidate: Offset): Offset = clampWordSiegeBoardPan(
+        candidate,
+        viewport.width.toFloat(),
+        viewport.height.toFloat(),
+        boardPx,
+        scale,
+    )
 
     fun center(): Offset {
         if (mode == WordSiegeBoardViewportMode.FIT) return fitPan()
+        val centerCoordinate = WordSiegeBoardSpec.Size / 2f
         return clamp(
             Offset(
-                viewport.width / 2f - 4.5f * tilePx,
-                viewport.height / 2f - 4.5f * tilePx,
+                viewport.width / 2f - centerCoordinate * tilePx,
+                viewport.height / 2f - centerCoordinate * tilePx,
             ),
         )
     }
@@ -96,7 +96,7 @@ internal fun WordSiegePracticeBoard(
             pan = center()
             initialized = true
         } else if (initialized) {
-            pan = clamp(pan)
+            pan = if (mode == WordSiegeBoardViewportMode.FIT) fitPan() else clamp(pan)
         }
     }
 
@@ -112,7 +112,7 @@ internal fun WordSiegePracticeBoard(
                 .clip(RoundedCornerShape(14.dp))
                 .onSizeChanged {
                     viewport = it
-                    pan = clamp(pan)
+                    pan = if (mode == WordSiegeBoardViewportMode.FIT) fitPan() else clamp(pan)
                 }
                 .pointerInput(mode, viewport, boardPx) {
                     if (mode == WordSiegeBoardViewportMode.CLOSE) {
@@ -125,7 +125,7 @@ internal fun WordSiegePracticeBoard(
         ) {
             Column(
                 Modifier
-                    .requiredSize(PracticeSiegeCellSize * 9)
+                    .requiredSize(PracticeSiegeCellSize * WordSiegeBoardSpec.Size)
                     .graphicsLayer {
                         translationX = pan.x
                         translationY = pan.y
@@ -134,10 +134,10 @@ internal fun WordSiegePracticeBoard(
                         transformOrigin = TransformOrigin(0f, 0f)
                     },
             ) {
-                repeat(9) { row ->
+                repeat(WordSiegeBoardSpec.Size) { row ->
                     Row {
-                        repeat(9) { col ->
-                            val index = row * 9 + col
+                        repeat(WordSiegeBoardSpec.Size) { column ->
+                            val index = WordSiegeBoardSpec.index(row, column)
                             WordSiegePracticeBoardCell(
                                 cell = board.getOrElse(index) { WordSiegeCellDto() },
                                 pendingLetter = placements[index]?.let(rack::getOrNull),

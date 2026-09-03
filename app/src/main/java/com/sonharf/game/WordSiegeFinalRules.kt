@@ -14,24 +14,26 @@ internal object WordSiegeFinalRules {
     ): WordSiegeOrientation {
         val indices = placementIndices.distinct().sorted()
         require(indices.isNotEmpty()) { "word_siege_invalid_placements" }
-        require(indices.all { it in 0..80 }) { "word_siege_invalid_cell" }
+        require(indices.all(WordSiegeBoardSpec::isValidIndex)) { "word_siege_invalid_cell" }
 
         if (indices.size > 1) {
             val anchor = indices.first()
-            val sameRow = indices.all { it / 9 == anchor / 9 }
-            val sameColumn = indices.all { it % 9 == anchor % 9 }
+            val sameRow = indices.all { WordSiegeBoardSpec.row(it) == WordSiegeBoardSpec.row(anchor) }
+            val sameColumn = indices.all { WordSiegeBoardSpec.column(it) == WordSiegeBoardSpec.column(anchor) }
             require(sameRow || sameColumn) { "word_siege_not_in_one_line" }
             return if (sameRow) WordSiegeOrientation.HORIZONTAL else WordSiegeOrientation.VERTICAL
         }
 
         val index = indices.single()
-        val row = index / 9
-        val col = index % 9
+        val row = WordSiegeBoardSpec.row(index)
+        val column = WordSiegeBoardSpec.column(index)
         fun occupied(candidate: Int): Boolean = board.getOrNull(candidate)?.letter != null
         val horizontalNeighbor =
-            (col > 0 && occupied(index - 1)) || (col < 8 && occupied(index + 1))
+            (column > 0 && occupied(index - WordSiegeBoardSpec.HorizontalDelta)) ||
+                (column < WordSiegeBoardSpec.Size - 1 && occupied(index + WordSiegeBoardSpec.HorizontalDelta))
         val verticalNeighbor =
-            (row > 0 && occupied(index - 9)) || (row < 8 && occupied(index + 9))
+            (row > 0 && occupied(index - WordSiegeBoardSpec.VerticalDelta)) ||
+                (row < WordSiegeBoardSpec.Size - 1 && occupied(index + WordSiegeBoardSpec.VerticalDelta))
 
         return when {
             verticalNeighbor && !horizontalNeighbor -> WordSiegeOrientation.VERTICAL
@@ -41,6 +43,9 @@ internal object WordSiegeFinalRules {
 
     fun cubeTransfer(cubesOwned: Int): Int =
         cubesOwned.coerceAtLeast(0) * CUBE_TRANSFER_POINTS
+
+    fun currentTerritoryScore(wordScore: Int, ownedCubes: Int): Int =
+        wordScore + cubeTransfer(ownedCubes)
 
     /**
      * Word points are permanent. Territory contributes only the value of cubes the player owns now.
