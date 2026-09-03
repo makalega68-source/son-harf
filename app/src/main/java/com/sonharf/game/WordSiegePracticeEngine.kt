@@ -217,23 +217,79 @@ internal object WordSiegePracticeEngine {
     fun forfeit(state: WordSiegePracticeState, owner: Int): WordSiegePracticeState =
         finish(state.copy(lastAction = "forfeit"), "forfeit", other(owner))
 
-    fun bestBotMove(state: WordSiegePracticeState): WordSiegePracticeMove? {
+    /**
+     * Picks a legal move from a skill percentile rather than always choosing the absolute best move.
+     * New/inexperienced players get a forgiving bot. Rating, record and the live score gradually raise
+     * or lower the target without ever making the practice bot perfect.
+     */
+    fun bestBotMove(
+        state: WordSiegePracticeState,
+        playerRating: Int = 1000,
+        playerWins: Int = 0,
+        playerLosses: Int = 0,
+    ): WordSiegePracticeMove? {
         if (state.currentOwner != 2 || state.status != "playing") return null
         val rack = state.botRack
-        var best: Pair<WordSiegePracticeState, WordSiegePracticeMove>? = null
+        val candidates = mutableListOf<WordSiegePracticeMove>()
         SharedDictionaryService.practiceCandidates(state.language, rack).forEach { word ->
             listOf(true, false).forEach { horizontal ->
                 (0..80).forEach startLoop@{ start ->
                     val placements = placementsForWord(state, rack, word, start, horizontal) ?: return@startLoop
                     val candidate = runCatching { applyMove(state, 2, placements) }.getOrNull() ?: return@startLoop
-                    if (best == null || candidate.second.wordScore + candidate.second.capturedCells * 2 > best!!.second.wordScore + best!!.second.capturedCells * 2) {
-                        best = candidate
-                    }
+                    candidates += candidate.second
                 }
             }
         }
-        return best?.second
+        if (candidates.isEmpty()) return null
+
+        val ordered = candidates
+            .distinctBy { it.placements }
+            .sortedWith(
+                compareBy<WordSiegePracticeMove> { moveStrength(it) }
+                    .thenBy { it.primaryWord }
+                    .thenBy { it.placements.keys.minOrNull() ?: -1 },
+            )
+        val percentile = botTargetPercentile(state, playerRating, playerWins, playerLosses)
+        val targetIndex = ((ordered.lastIndex * percentile) / 100).coerceIn(0, ordered.lastIndex)
+        return ordered[targetIndex]
     }
+
+    internal fun botTargetPercentile(
+        state: WordSiegePracticeState,
+        playerRating: Int,
+        playerWins: Int,
+        playerLosses: Int,
+    ): Int {
+        val wins = playerWins.coerceAtLeast(0)
+        val losses = playerLosses.coerceAtLeast(0)
+        val games = wins + losses
+        val winRate = if (games == 0) 50 else (wins * 100) / games
+        var target = when {
+            games < 3 -> 32
+            playerRating < 900 -> 36
+            playerRating < 1050 -> 45
+            playerRating < 1200 -> 57
+            playerRating < 1400 -> 69
+            else -> 81
+        }
+
+        if (games >= 5 && winRate >= 60) target += 7
+        if (games >= 5 && winRate <= 35) target -= 7
+
+        val botLead = totalScore(state, 2) - totalScore(state, 1)
+        when {
+            botLead >= 16 -> target -= 14
+            botLead >= 8 -> target -= 8
+            botLead <= -16 -> target += 7
+            botLead <= -8 -> target += 4
+        }
+        if (state.moveCount < 4) target -= 5
+
+        return target.coerceIn(25, 90)
+    }
+
+    private fun moveStrength(move: WordSiegePracticeMove): Int =
+        move.wordScore + WordSiegeFinalRules.cubeTransfer(move.capturedCells)
 
     private fun placementsForWord(
         state: WordSiegePracticeState,
