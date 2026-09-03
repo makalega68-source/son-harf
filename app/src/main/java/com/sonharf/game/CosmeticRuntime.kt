@@ -15,7 +15,7 @@ object SonHarfCosmetics {
     var emojiPackId by mutableStateOf<String?>(null)
 
     fun apply(e: EquippedCosmeticsDto?) {
-        profileFrameId = e?.profileFrameId
+        profileFrameId = e?.profileFrameId?.takeIf { it in PurchasedFrameCatalog.ids }
         nameStyleId = e?.nameStyleId
         gameThemeId = e?.gameThemeId
         keyboardThemeId = e?.keyboardThemeId
@@ -25,10 +25,13 @@ object SonHarfCosmetics {
 
     val profileAccent: Color
         get() = when (profileFrameId) {
-            "frame_gold", PurchasedFrameCatalog.GOLD -> SonHarfGold
-            "frame_neon", PurchasedFrameCatalog.MINT -> SonHarfCyan
-            "frame_starter", PurchasedFrameCatalog.PURPLE -> SonHarfPurple
+            PurchasedFrameCatalog.GOLD, PurchasedFrameCatalog.GOLD_CROWN -> SonHarfGold
+            PurchasedFrameCatalog.MINT -> SonHarfCyan
+            PurchasedFrameCatalog.PURPLE -> SonHarfPurple
             PurchasedFrameCatalog.GREEN -> Color(0xFF2FAE68)
+            PurchasedFrameCatalog.RED -> Color(0xFFD84C4C)
+            PurchasedFrameCatalog.CHRISTMAS -> Color(0xFFC73D3D)
+            PurchasedFrameCatalog.HALLOWEEN -> Color(0xFFEF7D22)
             else -> SonHarfMuted
         }
 
