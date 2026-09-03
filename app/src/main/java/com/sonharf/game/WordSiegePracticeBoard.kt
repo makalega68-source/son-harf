@@ -125,6 +125,9 @@ internal fun WordSiegePracticeBoard(
         ) {
             Column(
                 Modifier
+                    // Keep the oversized board's layout origin aligned with transform.pan.
+                    // Without this, requiredSize is coerced and Compose centers its layer implicitly.
+                    .wrapContentSize(Alignment.TopStart, unbounded = true)
                     .requiredSize(PracticeSiegeCellSize * WordSiegeBoardSpec.Size)
                     .graphicsLayer {
                         translationX = transform.pan.x
