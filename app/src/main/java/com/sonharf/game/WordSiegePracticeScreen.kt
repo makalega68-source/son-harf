@@ -138,12 +138,28 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
     BackHandler(onBack = onExit)
 
-    LaunchedEffect(state.currentOwner, state.moveCount, state.status, displayedPlayerScore, displayedBotScore, displayedOwner, dictionaryReady) {
+    LaunchedEffect(
+        state.currentOwner,
+        state.moveCount,
+        state.status,
+        displayedPlayerScore,
+        displayedBotScore,
+        displayedOwner,
+        dictionaryReady,
+        playerProfile?.rating,
+        playerProfile?.wins,
+        playerProfile?.losses,
+    ) {
         if (!dictionaryReady || state.status != "playing" || state.currentOwner != 2) return@LaunchedEffect
         if (displayedPlayerScore != playerTargetScore || displayedBotScore != botTargetScore || displayedOwner != 2) return@LaunchedEffect
         botThinking = true
         delay(950)
-        val planned = WordSiegePracticeEngine.bestBotMove(state)
+        val planned = WordSiegePracticeEngine.bestBotMove(
+            state = state,
+            playerRating = playerProfile?.rating ?: 1000,
+            playerWins = playerProfile?.wins ?: 0,
+            playerLosses = playerProfile?.losses ?: 0,
+        )
         if (planned == null) {
             state = WordSiegePracticeEngine.pass(state, 2)
             notice = sh("${botProfile.name} pas verdi. Sıra sende.", "${botProfile.name} passed. Your turn.")
