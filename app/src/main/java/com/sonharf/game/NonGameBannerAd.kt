@@ -40,7 +40,7 @@ internal object SonHarfAdPolicy {
  */
 @Composable
 fun SonHarfTopAdBanner(
-    visible: Boolean,
+    visible: Boolean = true,
     isPremium: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
@@ -55,7 +55,7 @@ fun SonHarfTopAdBanner(
     var loaded by remember(adUnitId) { mutableStateOf(false) }
     val widthDp = configuration.screenWidthDp.coerceAtLeast(1)
     val adView = remember(context, adUnitId) {
-        AdView(context.applicationContext).apply {
+        AdView(context).apply {
             this.adUnitId = adUnitId
             layoutParams = ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -94,7 +94,7 @@ fun SonHarfTopAdBanner(
 
     DisposableEffect(adView) {
         onDispose {
-            adView.adListener = null
+            adView.adListener = AdListener()
             adView.destroy()
         }
     }
