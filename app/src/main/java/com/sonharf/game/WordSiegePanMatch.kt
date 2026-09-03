@@ -483,9 +483,9 @@ private fun PanSiegeBoardCell(
                     Text(letter, color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Black)
                     Text(
                         panSiegeLetterValue(letter),
-                        color = Color.Black.copy(alpha = .68f),
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold,
+                        color = Color.Black.copy(alpha = .78f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
                     )
                 } else if (!cell.bonusUsed && cell.bonus != null) {
@@ -495,7 +495,7 @@ private fun PanSiegeBoardCell(
                             "2H", "3H" -> MainUi.Blue
                             else -> SiegePurple
                         },
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Black,
                     )
                 }
@@ -571,7 +571,7 @@ private fun PanSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
                 fontWeight = FontWeight.Black,
             )
             Text(
-                sh("Sonuç = kelime + kendi küp puanı - rakip küp puanı", "Result = word + own cube points - rival cube points"),
+                sh("Sonuç = kelime puanı + şu an sahip olunan küpler (küp başına 2)", "Result = word score + currently owned cubes (2 per cube)"),
                 color = MainUi.Muted,
                 fontSize = 9.sp,
             )
