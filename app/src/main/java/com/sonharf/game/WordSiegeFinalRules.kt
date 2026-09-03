@@ -39,16 +39,34 @@ internal object WordSiegeFinalRules {
         }
     }
 
-    fun cubeTransfer(cubesGained: Int): Int =
-        cubesGained.coerceAtLeast(0) * CUBE_TRANSFER_POINTS
+    fun cubeTransfer(cubesOwned: Int): Int =
+        cubesOwned.coerceAtLeast(0) * CUBE_TRANSFER_POINTS
 
-    fun netScore(wordScore: Int, earnedCubePoints: Int, opponentEarnedCubePoints: Int): Int =
-        wordScore + earnedCubePoints - opponentEarnedCubePoints
+    /**
+     * Word points are permanent. Territory contributes only the value of cubes the player owns now.
+     * The opponent value is kept in the signature for source compatibility with existing callers.
+     */
+    fun netScore(
+        wordScore: Int,
+        earnedCubePoints: Int,
+        @Suppress("UNUSED_PARAMETER") opponentEarnedCubePoints: Int,
+    ): Int = wordScore + earnedCubePoints.coerceAtLeast(0)
 
+    /**
+     * Returns the points represented by cubes currently owned by [playerId].
+     * Capturing a neutral cube by the rival does not reduce this value; only a rival capture of one
+     * of the player's cubes does. Each currently owned cube is worth exactly two points.
+     */
     fun earnedCubePoints(moves: Iterable<com.sonharf.game.data.WordSiegeMoveDto>, playerId: String?): Int {
         if (playerId == null) return 0
-        return moves.asSequence()
-            .filter { it.playerId == playerId }
-            .sumOf { cubeTransfer(it.neutralCaptured + it.opponentCaptured) }
+        var ownedCubes = 0
+        moves.forEach { move ->
+            if (move.playerId == playerId) {
+                ownedCubes += move.neutralCaptured + move.opponentCaptured
+            } else {
+                ownedCubes -= move.opponentCaptured
+            }
+        }
+        return cubeTransfer(ownedCubes)
     }
 }
