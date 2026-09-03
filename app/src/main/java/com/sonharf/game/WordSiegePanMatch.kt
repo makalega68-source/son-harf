@@ -196,7 +196,7 @@ internal fun WordSiegePanMatch(
                     }
                 }
             }
-            notice?.let { WordSiegeNotice(it) }
+            notice?.let { PanSiegeNotice(it) }
             return@Column
         }
 
@@ -259,7 +259,7 @@ internal fun WordSiegePanMatch(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 rackOrder.forEach { rackIndex ->
                     val letter = rack.getOrNull(rackIndex) ?: return@forEach
-                    WordSiegeRackTile(
+                    PanSiegeRackTile(
                         letter = letter,
                         selected = selectedRackIndex == rackIndex,
                         used = rackIndex in placements.values,
@@ -328,7 +328,7 @@ internal fun WordSiegePanMatch(
             PanSiegeFinishedCard(game, me)
         }
 
-        notice?.let { WordSiegeNotice(it) }
+        notice?.let { PanSiegeNotice(it) }
     }
 }
 
@@ -547,7 +547,6 @@ private fun PanSiegeBoardCell(
             .clip(RoundedCornerShape(7.dp))
             .background(baseColor)
             .combinedClickable(
-                enabled = enabled,
                 onClick = { if (canPlace) onClick() },
                 onDoubleClick = onDoubleClick,
             ),
@@ -583,7 +582,7 @@ private fun PanSiegeBoardCell(
 }
 
 @Composable
-private fun WordSiegeRackTile(
+private fun PanSiegeRackTile(
     letter: Char,
     selected: Boolean,
     used: Boolean,
@@ -616,7 +615,7 @@ private fun WordSiegeRackTile(
 }
 
 @Composable
-private fun WordSiegeNotice(message: String) {
+private fun PanSiegeNotice(message: String) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
