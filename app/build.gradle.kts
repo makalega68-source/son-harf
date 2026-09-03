@@ -7,13 +7,14 @@ plugins {
 
 val googleTestAdMobAppId = "ca-app-pub-3940256099942544~3347511713"
 val googleTestRewardedAdUnitId = "ca-app-pub-3940256099942544/5224354917"
+val googleTestAdaptiveBannerAdUnitId = "ca-app-pub-3940256099942544/9214589741"
 
 val adMobAppIdProvider = providers.gradleProperty("SON_HARF_ADMOB_APP_ID")
     .orElse(googleTestAdMobAppId)
 val rewardedAdUnitIdProvider = providers.gradleProperty("SON_HARF_ADMOB_REWARDED_ID")
     .orElse(googleTestRewardedAdUnitId)
 val bannerAdUnitIdProvider = providers.gradleProperty("SON_HARF_ADMOB_BANNER_ID")
-    .orElse("")
+    .orElse(googleTestAdaptiveBannerAdUnitId)
 
 android {
     namespace = "com.sonharf.game"
@@ -115,12 +116,16 @@ tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.co
     doFirst {
         val appId = adMobAppIdProvider.get()
         val rewardedId = rewardedAdUnitIdProvider.get()
+        val bannerId = bannerAdUnitIdProvider.get()
 
         check(appId.isNotBlank() && appId != googleTestAdMobAppId) {
             "Production release blocked: configure SON_HARF_ADMOB_APP_ID with the production AdMob app ID."
         }
         check(rewardedId.isNotBlank() && rewardedId != googleTestRewardedAdUnitId) {
             "Production release blocked: configure SON_HARF_ADMOB_REWARDED_ID with the production rewarded-ad unit ID."
+        }
+        check(bannerId.isNotBlank() && bannerId != googleTestAdaptiveBannerAdUnitId) {
+            "Production release blocked: configure SON_HARF_ADMOB_BANNER_ID with the production adaptive-banner unit ID."
         }
 
         val signingValues = listOf(
