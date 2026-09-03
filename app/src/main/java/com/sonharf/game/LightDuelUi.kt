@@ -31,9 +31,9 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -115,8 +115,11 @@ internal fun LightDuelLobby(
                         Spacer(Modifier.height(12.dp))
                         Text(if (matching) sh("RAKİP ARANIYOR", "SEARCHING OPPONENT") else "SON HARF", color = LBlue, fontSize = 32.sp, fontWeight = FontWeight.Black)
                         Text(
-                            if (matching) sh("Önce gerçek oyuncu • 15 sn sonra uygun BOT", "Real player first • suitable BOT after 15 sec") else sh("Kelimeyi Sürdür, Rakibini Geç", "Continue the word, beat your rival"),
-                            color = LMuted, fontSize = 11.sp, textAlign = TextAlign.Center,
+                            if (matching) sh("Önce gerçek oyuncu • 15 sn sonra uygun BOT", "Real player first • suitable BOT after 15 sec")
+                            else sh("Kelimeyi Sürdür, Rakibini Geç", "Continue the word, beat your rival"),
+                            color = LMuted,
+                            fontSize = 11.sp,
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -131,9 +134,17 @@ internal fun LightDuelLobby(
                 Button(
                     onClick = if (matching) onCancel else onRandom,
                     modifier = Modifier.fillMaxWidth().height(60.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = if (matching) Color(0xFFFFEEF2) else LBlue, contentColor = if (matching) LRed else Color.White),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (matching) Color(0xFFFFEEF2) else LBlue,
+                        contentColor = if (matching) LRed else Color.White,
+                    ),
                     shape = RoundedCornerShape(20.dp),
-                ) { Text(if (matching) sh("EŞLEŞMEYİ İPTAL ET", "CANCEL MATCHMAKING") else sh("DÜELLOYA GİR ⚡", "ENTER DUEL ⚡"), fontWeight = FontWeight.Black) }
+                ) {
+                    Text(
+                        if (matching) sh("EŞLEŞMEYİ İPTAL ET", "CANCEL MATCHMAKING") else sh("DÜELLOYA GİR ⚡", "ENTER DUEL ⚡"),
+                        fontWeight = FontWeight.Black,
+                    )
+                }
             }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -147,8 +158,16 @@ internal fun LightDuelLobby(
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(sh("ÖZEL ODA", "PRIVATE ROOM"), color = LText, fontWeight = FontWeight.Black)
                         Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) { Text(sh("VIP ODA OLUŞTUR", "CREATE VIP ROOM")) }
-                        OutlinedTextField(value = privateCode, onValueChange = onPrivateCode, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text(sh("6 haneli oda kodu", "6-character room code")) })
-                        OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6, modifier = Modifier.fillMaxWidth()) { Text(sh("ODA KODUYLA KATIL", "JOIN WITH ROOM CODE")) }
+                        OutlinedTextField(
+                            value = privateCode,
+                            onValueChange = onPrivateCode,
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            placeholder = { Text(sh("6 haneli oda kodu", "6-character room code")) },
+                        )
+                        OutlinedButton(onClick = onJoin, enabled = privateCode.length == 6, modifier = Modifier.fillMaxWidth()) {
+                            Text(sh("ODA KODUYLA KATIL", "JOIN WITH ROOM CODE"))
+                        }
                     }
                 }
             }
@@ -166,7 +185,11 @@ internal fun LightDuelLobby(
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                 Column(Modifier.weight(1f)) {
                                     Text(p.displayName, color = LText, fontWeight = FontWeight.Bold)
-                                    Text(if (p.presenceStatus == "online") sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"), color = LMuted, fontSize = 9.sp)
+                                    Text(
+                                        if (p.presenceStatus == "online") sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"),
+                                        color = LMuted,
+                                        fontSize = 9.sp,
+                                    )
                                 }
                                 Button(onClick = { onInvite(p.id) }, enabled = p.presenceStatus == "online") { Text(sh("Davet", "Invite")) }
                             }
@@ -221,18 +244,20 @@ internal fun LightDuelArena(
     val oppScore = if (host) room.guestScore else room.hostScore
     val myRounds = if (host) room.hostRounds else room.guestRounds
     val oppRounds = if (host) room.guestRounds else room.hostRounds
-    val myStreak = if (host) room.hostStreak else room.guestStreak
-    val oppStreak = if (host) room.guestStreak else room.hostStreak
+    val myWordStreak = if (host) room.hostStreak else room.guestStreak
+    val oppWordStreak = if (host) room.guestStreak else room.hostStreak
     val liveWordPhase = room.status in listOf("playing", "final", "sudden_death")
     val quizActive = room.status == "quiz" && triviaRound != null && triviaQuestion != null
     val myTurn = room.currentPlayerId == me && liveWordPhase
     val lastItem = words.lastOrNull()
     val lastWord = lastItem?.normalizedWord?.trim().orEmpty()
-    val required = lastWord.takeLast(1).takeIf(String::isNotBlank)?.let { gameUppercase(it, room.language) } ?: "•"
+    val required = lastWord.takeLast(1).takeIf { it.isNotBlank() }?.let { gameUppercase(it, room.language) } ?: "•"
     val inputMatches = ClassicCompetitionRules.inputStartsWithRequired(wordInput, required, room.language)
     val critical = ClassicCompetitionRules.isCritical(myScore, oppScore, room.finalMovesRemaining)
     val reducedMotion = remember {
-        runCatching { Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f }.getOrDefault(false)
+        runCatching {
+            Settings.Global.getFloat(context.contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) == 0f
+        }.getOrDefault(false)
     }
 
     if (room.status == "waiting") {
@@ -248,7 +273,6 @@ internal fun LightDuelArena(
             startingRating = playerRating,
             myRounds = myRounds,
             oppRounds = oppRounds,
-            myStreak = myStreak,
             words = words,
             isVip = isVip,
             language = room.language,
@@ -259,7 +283,7 @@ internal fun LightDuelArena(
     }
 
     val deadline = when {
-        quizActive && triviaRound?.resolvedAt != null -> triviaRound.resultUntil
+        quizActive && triviaRound?.resolvedAt != null -> triviaRound?.resultUntil
         quizActive -> triviaRound?.answerDeadline
         else -> room.turnDeadline
     }
@@ -288,10 +312,14 @@ internal fun LightDuelArena(
         val newWord = lastItem != null && lastItem.id != previousWordId
         val mine = newWord && lastItem?.playerId == me
         val opponent = newWord && !mine
-        val scoreDelta = if (mine) (myScore - previousMyScore).coerceAtLeast(0) else if (opponent) (oppScore - previousOppScore).coerceAtLeast(0) else 0
+        val scoreDelta = when {
+            mine -> (myScore - previousMyScore).coerceAtLeast(0)
+            opponent -> (oppScore - previousOppScore).coerceAtLeast(0)
+            else -> 0
+        }
         val wordText = lastItem?.word?.trim().takeUnless { it.isNullOrBlank() } ?: lastItem?.normalizedWord.orEmpty()
-        val streak = if (mine) myStreak else oppStreak
-        val combo = if (newWord) ClassicCompetitionRules.comboLabel(streak, room.language) else null
+        val wordStreak = if (mine) myWordStreak else oppWordStreak
+        val combo = if (newWord) ClassicCompetitionRules.comboLabel(wordStreak, room.language) else null
         val strong = newWord && ClassicCompetitionRules.isStrongScoreDelta(scoreDelta)
         val longWord = newWord && ClassicCompetitionRules.isLongWord(wordText)
 
@@ -357,7 +385,9 @@ internal fun LightDuelArena(
             timerPulse.snapTo(1f)
             timerPulse.animateTo(if (seconds <= 3) 1.12f else 1.07f, tween(half))
             timerPulse.animateTo(1f, tween(half))
-        } else timerPulse.snapTo(1f)
+        } else {
+            timerPulse.snapTo(1f)
+        }
     }
 
     val timerColor = when {
@@ -377,20 +407,33 @@ internal fun LightDuelArena(
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                CompetitivePlayerCard(playerName, playerAvatarPath, playerGender, playerRating, shownMyScore, myStreak, myTurn, LBlue, false, Modifier.weight(1f))
+                CompetitivePlayerCard(
+                    playerName, playerAvatarPath, playerGender, playerRating, shownMyScore,
+                    myTurn, LBlue, false, Modifier.weight(1f),
+                )
                 Surface(
-                    modifier = Modifier.size(78.dp).graphicsLayer { scaleX = timerPulse.value; scaleY = timerPulse.value },
+                    modifier = Modifier.size(78.dp).graphicsLayer {
+                        scaleX = timerPulse.value
+                        scaleY = timerPulse.value
+                    },
                     shape = CircleShape,
                     color = Color.White,
                     border = BorderStroke(if (ClassicCompetitionRules.isUrgent(seconds)) 4.dp else 2.dp, timerColor),
                     shadowElevation = if (ClassicCompetitionRules.isUrgent(seconds)) 5.dp else 2.dp,
                 ) {
-                    Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Column(
+                        Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
                         Text(seconds.toString(), color = LText, fontSize = 31.sp, fontWeight = FontWeight.Black)
                         Text(if (quizActive) "BONUS" else sh("SN", "SEC"), color = timerColor, fontSize = 8.sp, fontWeight = FontWeight.Black)
                     }
                 }
-                CompetitivePlayerCard(opponentName.removeSuffix(" BOT"), opponentAvatarPath, opponentGender, opponentRating, shownOppScore, oppStreak, !myTurn && liveWordPhase, LRed, room.isBot, Modifier.weight(1f))
+                CompetitivePlayerCard(
+                    opponentName.removeSuffix(" BOT"), opponentAvatarPath, opponentGender, opponentRating, shownOppScore,
+                    !myTurn && liveWordPhase, LRed, room.isBot, Modifier.weight(1f),
+                )
             }
 
             Surface(
@@ -399,7 +442,11 @@ internal fun LightDuelArena(
                 color = if (critical) Color(0xFFFFF8E8) else LBlueSoft,
                 border = BorderStroke(1.dp, if (critical) LGold.copy(alpha = .5f) else LBlue.copy(alpha = .2f)),
             ) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 7.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 7.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(
                         when {
                             quizActive -> sh("BONUS DÜELLOSU", "BONUS DUEL")
@@ -411,7 +458,12 @@ internal fun LightDuelArena(
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                     )
-                    Text(ClassicCompetitionRules.scoreDifferenceText(myScore, oppScore, room.language), color = if (myScore >= oppScore) LBlue else LRed, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        ClassicCompetitionRules.scoreDifferenceText(myScore, oppScore, room.language),
+                        color = if (myScore >= oppScore) LBlue else LRed,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                    )
                     if (critical) Text(sh("KRİTİK", "CRITICAL"), color = LOrange, fontSize = 9.sp, fontWeight = FontWeight.Black)
                 }
             }
@@ -422,12 +474,19 @@ internal fun LightDuelArena(
                 shape = RoundedCornerShape(24.dp),
                 border = BorderStroke(1.dp, if (myTurn) LBlue.copy(alpha = .45f) else LBorder),
             ) {
-                Column(Modifier.fillMaxSize().padding(horizontal = 15.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(
+                    Modifier.fillMaxSize().padding(horizontal = 15.dp, vertical = 10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
                     val lastDisplay = gameUppercase(lastWord, room.language)
                     Surface(shape = RoundedCornerShape(13.dp), color = Color(0xFFF7F9FC)) {
                         Text(
-                            if (lastDisplay.isBlank()) sh("İlk kelimeyi sen başlat", "You start the first word") else sh("RAKİBİN SON KELİMESİ: $lastDisplay", "OPPONENT LAST WORD: $lastDisplay"),
-                            Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = LMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold,
+                            if (lastDisplay.isBlank()) sh("İlk kelimeyi sen başlat", "You start the first word")
+                            else sh("SON KABUL EDİLEN KELİME: $lastDisplay", "LAST ACCEPTED WORD: $lastDisplay"),
+                            Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                            color = LMuted,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
                         )
                     }
                     Spacer(Modifier.weight(.12f))
@@ -435,7 +494,10 @@ internal fun LightDuelArena(
                     Text("↓", color = LGold, fontSize = 18.sp, fontWeight = FontWeight.Black)
                     Text(
                         required,
-                        modifier = Modifier.graphicsLayer { scaleX = letterPulse.value; scaleY = letterPulse.value },
+                        modifier = Modifier.graphicsLayer {
+                            scaleX = letterPulse.value
+                            scaleY = letterPulse.value
+                        },
                         color = LText,
                         fontSize = 78.sp,
                         lineHeight = 80.sp,
@@ -443,14 +505,22 @@ internal fun LightDuelArena(
                     )
                     Text(
                         if (required == "•") sh("SERBEST BAŞLANGIÇ", "FREE START") else sh("“$required” İLE BAŞLA", "START WITH “$required”"),
-                        color = LBlue, fontSize = 13.sp, fontWeight = FontWeight.Black,
+                        color = LBlue,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
                     )
                     Spacer(Modifier.weight(.12f))
                     if (words.isNotEmpty()) {
                         LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             items(words.takeLast(5)) { word ->
                                 Surface(shape = RoundedCornerShape(10.dp), color = LCard2) {
-                                    Text(gameUppercase(word.word.trim().ifBlank { word.normalizedWord.trim() }, room.language), Modifier.padding(horizontal = 9.dp, vertical = 6.dp), color = LMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    Text(
+                                        gameUppercase(word.word.trim().ifBlank { word.normalizedWord.trim() }, room.language),
+                                        Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                                        color = LMuted,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    )
                                 }
                             }
                         }
@@ -468,6 +538,7 @@ internal fun LightDuelArena(
                 value = wordInput,
                 required = required,
                 inputMatches = inputMatches,
+                feedbackWord = feedbackWord,
                 feedbackCorrect = feedbackCorrect,
                 notice = notice,
                 myTurn = myTurn,
@@ -503,25 +574,42 @@ internal fun LightDuelArena(
                 border = BorderStroke(2.dp, if (actionThreat) LRed.copy(alpha = .55f) else LBlue.copy(alpha = .55f)),
                 shadowElevation = 10.dp,
             ) {
-                Text(actionOverlay.orEmpty(), Modifier.padding(horizontal = 24.dp, vertical = 15.dp), color = if (actionThreat) LRed else LBlue, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text(
+                    actionOverlay.orEmpty(),
+                    Modifier.padding(horizontal = 24.dp, vertical = 15.dp),
+                    color = if (actionThreat) LRed else LBlue,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                )
             }
         }
 
-        if (quizActive) BonusDialog(
-            round = requireNotNull(triviaRound),
-            question = requireNotNull(triviaQuestion),
-            myAnswer = (if (host) triviaRound.hostAnswer else triviaRound.guestAnswer) ?: triviaSelection,
-            opponentAnswer = if (room.isBot) triviaRound.botAnswer else if (host) triviaRound.guestAnswer else triviaRound.hostAnswer,
-            myWon = triviaRound.winnerSide == if (host) "host" else "guest",
-            tied = triviaRound.winnerSide == "tie",
-            onTrivia = onTrivia,
-        )
+        if (quizActive) {
+            val activeRound = requireNotNull(triviaRound)
+            BonusDialog(
+                round = activeRound,
+                question = requireNotNull(triviaQuestion),
+                myAnswer = (if (host) activeRound.hostAnswer else activeRound.guestAnswer) ?: triviaSelection,
+                opponentAnswer = if (room.isBot) activeRound.botAnswer else if (host) activeRound.guestAnswer else activeRound.hostAnswer,
+                myWon = activeRound.winnerSide == if (host) "host" else "guest",
+                tied = activeRound.winnerSide == "tie",
+                onTrivia = onTrivia,
+            )
+        }
     }
 }
 
 @Composable
 private fun CompetitivePlayerCard(
-    name: String, avatarPath: String?, gender: String?, rating: Int, score: Int, streak: Int, active: Boolean, accent: Color, bot: Boolean, modifier: Modifier,
+    name: String,
+    avatarPath: String?,
+    gender: String?,
+    rating: Int,
+    score: Int,
+    active: Boolean,
+    accent: Color,
+    bot: Boolean,
+    modifier: Modifier,
 ) {
     val league = ratingLeagueProgress(rating).leagueName
     Card(
@@ -538,7 +626,6 @@ private fun CompetitivePlayerCard(
                 Text(name, color = LText, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(score.toString(), color = accent, fontSize = duelScoreFontSize(score).sp, lineHeight = 29.sp, fontWeight = FontWeight.Black, maxLines = 1)
                 Text("$league • $rating", color = LMuted, fontSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                if (streak > 1) Text("🔥 $streak ${sh("GALİBİYET SERİSİ", "WIN STREAK")}", color = LGold, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
             }
         }
     }
@@ -549,6 +636,7 @@ private fun CompetitiveInputBar(
     value: String,
     required: String,
     inputMatches: Boolean?,
+    feedbackWord: String?,
     feedbackCorrect: Boolean?,
     notice: String,
     myTurn: Boolean,
@@ -561,25 +649,51 @@ private fun CompetitiveInputBar(
     modifier: Modifier = Modifier,
 ) {
     val statusText = when {
+        feedbackWord != null && feedbackCorrect == true -> sh("✓ GEÇERLİ", "✓ VALID")
         value.isBlank() -> if (myTurn) sh("KELİMENİ YAZ", "TYPE YOUR WORD") else sh("KELİMEYİ HAZIRLA", "PREPARE YOUR WORD")
         inputMatches == false -> sh("✕ “$required” İLE BAŞLAMALI", "✕ MUST START WITH “$required”")
         feedbackCorrect == false -> "✕ ${notice.take(42)}"
         else -> sh("✓ BAŞLANGIÇ GEÇERLİ", "✓ VALID START")
     }
     val statusColor = when {
+        feedbackWord != null && feedbackCorrect == true -> LGreen
         inputMatches == false || feedbackCorrect == false -> LRed
         value.isNotBlank() -> LGreen
         else -> LMuted
     }
-    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = Color.White, border = BorderStroke(2.dp, if (myTurn && !quiz) statusColor.copy(alpha = .65f) else LBorder)) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = Color.White,
+        border = BorderStroke(2.dp, if (myTurn && !quiz) statusColor.copy(alpha = .65f) else LBorder),
+    ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                OutlinedButton(onClick = onVoice, enabled = myTurn && !busy && !quiz && voiceSupported && voiceUses < 5, modifier = Modifier.height(38.dp), contentPadding = PaddingValues(horizontal = 7.dp)) {
+                OutlinedButton(
+                    onClick = onVoice,
+                    enabled = myTurn && !busy && !quiz && voiceSupported && voiceUses < 5,
+                    modifier = Modifier.height(38.dp),
+                    contentPadding = PaddingValues(horizontal = 7.dp),
+                ) {
                     Text("🎙 ${5 - voiceUses}", fontSize = 10.sp, fontWeight = FontWeight.Black)
                 }
                 Spacer(Modifier.width(7.dp))
-                Text(value.ifBlank { sh("Kelimenizi yazın…", "Type your word…") }, color = if (value.isBlank()) LMuted else LText, fontSize = if (value.isBlank()) 13.sp else 20.sp, fontWeight = if (value.isBlank()) FontWeight.Medium else FontWeight.Black, modifier = Modifier.weight(1f), maxLines = 1)
-                Button(onClick = onSubmit, enabled = myTurn && value.isNotBlank() && inputMatches != false && !busy && !quiz, modifier = Modifier.height(40.dp), shape = RoundedCornerShape(12.dp)) { Text("➤", fontSize = 17.sp) }
+                Text(
+                    value.ifBlank { sh("Kelimenizi yazın…", "Type your word…") },
+                    color = if (value.isBlank()) LMuted else LText,
+                    fontSize = if (value.isBlank()) 13.sp else 20.sp,
+                    fontWeight = if (value.isBlank()) FontWeight.Medium else FontWeight.Black,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                )
+                Button(
+                    onClick = onSubmit,
+                    enabled = myTurn && value.isNotBlank() && inputMatches != false && !busy && !quiz,
+                    modifier = Modifier.height(40.dp),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Text("➤", fontSize = 17.sp)
+                }
             }
             Text(statusText, color = statusColor, fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1)
         }
@@ -587,23 +701,58 @@ private fun CompetitiveInputBar(
 }
 
 @Composable
-private fun GameKeyboard(value: String, language: String, enabled: Boolean, submitEnabled: Boolean, onValueChange: (String) -> Unit, onSubmit: () -> Unit, modifier: Modifier = Modifier) {
-    val rows = if (language.lowercase() == "en") listOf(
-        listOf("Q","W","E","R","T","Y","U","I","O","P"), listOf("A","S","D","F","G","H","J","K","L"), listOf("Z","X","C","V","B","N","M")
-    ) else listOf(
-        listOf("Q","W","E","R","T","Y","U","I","O","P","Ğ","Ü"), listOf("A","S","D","F","G","H","J","K","L","Ş","İ"), listOf("Z","X","C","V","B","N","M","Ö","Ç")
-    )
-    Surface(modifier = modifier.fillMaxWidth(), color = Color(0xFFF1F5F9), shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)) {
+private fun GameKeyboard(
+    value: String,
+    language: String,
+    enabled: Boolean,
+    submitEnabled: Boolean,
+    onValueChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val rows = if (language.lowercase() == "en") {
+        listOf(
+            listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
+            listOf("A", "S", "D", "F", "G", "H", "J", "K", "L"),
+            listOf("Z", "X", "C", "V", "B", "N", "M"),
+        )
+    } else {
+        listOf(
+            listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "Ğ", "Ü"),
+            listOf("A", "S", "D", "F", "G", "H", "J", "K", "L", "Ş", "İ"),
+            listOf("Z", "X", "C", "V", "B", "N", "M", "Ö", "Ç"),
+        )
+    }
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        color = Color(0xFFF1F5F9),
+        shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
+    ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             rows.forEachIndexed { index, row ->
-                Row(Modifier.fillMaxWidth().padding(horizontal = when(index){1->10.dp;2->28.dp;else->0.dp}), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    row.forEach { key -> KeyButton(key, enabled && value.length < 40, Modifier.weight(1f)) { SonHarfSoundFx.typingClick(); onValueChange((value + key).take(40)) } }
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = when (index) { 1 -> 10.dp; 2 -> 28.dp; else -> 0.dp }),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    row.forEach { key ->
+                        KeyButton(key, enabled && value.length < 40, Modifier.weight(1f)) {
+                            SonHarfSoundFx.typingClick()
+                            onValueChange((value + key).take(40))
+                        }
+                    }
                 }
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 KeyButton("⌫", enabled && value.isNotEmpty(), Modifier.weight(1f)) { onValueChange(value.dropLast(1)) }
                 KeyButton(sh("TEMİZLE", "CLEAR"), enabled && value.isNotEmpty(), Modifier.weight(1.35f)) { onValueChange("") }
-                Button(onClick = onSubmit, enabled = submitEnabled, modifier = Modifier.weight(1.7f).height(44.dp), shape = RoundedCornerShape(11.dp)) { Text(sh("GÖNDER", "SEND"), fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                Button(
+                    onClick = onSubmit,
+                    enabled = submitEnabled,
+                    modifier = Modifier.weight(1.7f).height(44.dp),
+                    shape = RoundedCornerShape(11.dp),
+                ) {
+                    Text(sh("GÖNDER", "SEND"), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
             }
         }
     }
@@ -614,27 +763,67 @@ private fun KeyButton(label: String, enabled: Boolean, modifier: Modifier, onCli
     val source = remember { MutableInteractionSource() }
     Surface(
         modifier = modifier.height(40.dp).clickable(enabled = enabled, interactionSource = source, indication = null, onClick = onClick),
-        shape = RoundedCornerShape(9.dp), color = Color.White, shadowElevation = 1.dp,
-    ) { Box(contentAlignment = Alignment.Center) { Text(label, color = if (enabled) LText else LMuted.copy(alpha = .4f), fontSize = if (label.length > 5) 9.sp else 13.sp, fontWeight = FontWeight.Bold) } }
+        shape = RoundedCornerShape(9.dp),
+        color = Color.White,
+        shadowElevation = 1.dp,
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                label,
+                color = if (enabled) LText else LMuted.copy(alpha = .4f),
+                fontSize = if (label.length > 5) 9.sp else 13.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
 }
 
 @Composable
 private fun CompetitiveResult(
-    room: GameRoomDto, me: String?, playerName: String, opponentName: String, startingRating: Int, myRounds: Int, oppRounds: Int, myStreak: Int, words: List<GameWordDto>, isVip: Boolean, language: String, onRematch: () -> Unit, onExit: () -> Unit,
+    room: GameRoomDto,
+    me: String?,
+    playerName: String,
+    opponentName: String,
+    startingRating: Int,
+    myRounds: Int,
+    oppRounds: Int,
+    words: List<GameWordDto>,
+    isVip: Boolean,
+    language: String,
+    onRematch: () -> Unit,
+    onExit: () -> Unit,
 ) {
     var confirmedRating by remember(room.id) { mutableStateOf<Int?>(null) }
     LaunchedEffect(room.id, room.status, me) {
-        if (room.status == "finished" && me != null) confirmedRating = runCatching { OnlineGameBackend().getProfile(me).rating }.getOrNull()
+        if (room.status == "finished" && me != null) {
+            confirmedRating = runCatching { OnlineGameBackend().getProfile(me).rating }.getOrNull()
+        }
     }
     val won = room.winnerId == me
     val draw = room.winnerId == null
     val delta = confirmedRating?.minus(startingRating)
     val progress = confirmedRating?.let(::ratingLeagueProgress)
-    val longest = words.map { it.word.trim().ifBlank { it.normalizedWord.trim() } }.filter(String::isNotBlank).maxByOrNull(String::length)?.let { gameUppercase(it, language) } ?: "—"
+    val longest = words
+        .map { it.word.trim().ifBlank { it.normalizedWord.trim() } }
+        .filter { it.isNotBlank() }
+        .maxByOrNull { it.length }
+        ?.let { gameUppercase(it, language) }
+        ?: "—"
+
     Box(Modifier.fillMaxSize().background(LBg).statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
-        Card(modifier = Modifier.fillMaxWidth(.9f), colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(28.dp), border = BorderStroke(1.dp, if (won) LBlue.copy(alpha=.4f) else if (draw) LGold.copy(alpha=.4f) else LRed.copy(alpha=.35f))) {
+        Card(
+            modifier = Modifier.fillMaxWidth(.9f),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(28.dp),
+            border = BorderStroke(1.dp, if (won) LBlue.copy(alpha = .4f) else if (draw) LGold.copy(alpha = .4f) else LRed.copy(alpha = .35f)),
+        ) {
             Column(Modifier.padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Text(if (draw) sh("BERABERE", "DRAW") else if (won) sh("ZAFER", "VICTORY") else sh("MAÇ BİTTİ", "MATCH OVER"), color = if (won) LBlue else if (draw) LGold else LRed, fontSize = 29.sp, fontWeight = FontWeight.Black)
+                Text(
+                    if (draw) sh("BERABERE", "DRAW") else if (won) sh("ZAFER", "VICTORY") else sh("MAÇ BİTTİ", "MATCH OVER"),
+                    color = if (won) LBlue else if (draw) LGold else LRed,
+                    fontSize = 29.sp,
+                    fontWeight = FontWeight.Black,
+                )
                 Text("$playerName  $myRounds : $oppRounds  $opponentName", color = LText, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 if (delta != null) {
                     Text("Rating ${if (delta >= 0) "+" else ""}$delta", color = if (delta >= 0) LGreen else LRed, fontSize = 21.sp, fontWeight = FontWeight.Black)
@@ -642,30 +831,74 @@ private fun CompetitiveResult(
                     Text(sh("Rating sonucu sunucudan doğrulanıyor…", "Confirming rating from server…"), color = LMuted, fontSize = 9.sp)
                 }
                 if (progress != null) {
-                    Text("${progress.leagueName} • ${confirmedRating}", color = LGold, fontWeight = FontWeight.Black)
-                    if (progress.nextAt != null) Text(sh("${progress.nextLeagueName} ligine ${progress.pointsToNext} puan", "${progress.pointsToNext} points to ${progress.nextLeagueName}"), color = LMuted, fontSize = 10.sp)
+                    Text("${progress.leagueName} • $confirmedRating", color = LGold, fontWeight = FontWeight.Black)
+                    if (progress.nextAt != null) {
+                        Text(
+                            sh("${progress.nextLeagueName} ligine ${progress.pointsToNext} puan", "${progress.pointsToNext} points to ${progress.nextLeagueName}"),
+                            color = LMuted,
+                            fontSize = 10.sp,
+                        )
+                    }
                 }
-                if (myStreak > 1) Text("🔥 $myStreak ${sh("GALİBİYET SERİSİ", "WIN STREAK")}", color = LOrange, fontWeight = FontWeight.Black)
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     ResultMetric(sh("KELİME", "WORDS"), words.size.toString(), Modifier.weight(1f))
                     ResultMetric(sh("EN UZUN", "LONGEST"), longest, Modifier.weight(1f))
                 }
-                if (isVip && words.isNotEmpty()) LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                    items(words) { w -> Surface(shape = RoundedCornerShape(9.dp), color = LBlueSoft) { Text(gameUppercase(w.word.trim().ifBlank { w.normalizedWord.trim() }, language), Modifier.padding(horizontal = 8.dp, vertical = 5.dp), fontSize = 8.sp, fontWeight = FontWeight.Bold) } }
+                if (isVip && words.isNotEmpty()) {
+                    LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        items(words) { w ->
+                            Surface(shape = RoundedCornerShape(9.dp), color = LBlueSoft) {
+                                Text(
+                                    gameUppercase(w.word.trim().ifBlank { w.normalizedWord.trim() }, language),
+                                    Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold,
+                                )
+                            }
+                        }
+                    }
                 }
-                Button(onClick = onRematch, modifier = Modifier.fillMaxWidth().height(58.dp), shape = RoundedCornerShape(18.dp), colors = ButtonDefaults.buttonColors(containerColor = LBlue)) { Text(sh("RÖVANŞ ⚡", "REMATCH ⚡"), fontSize = 17.sp, fontWeight = FontWeight.Black) }
-                OutlinedButton(onClick = onExit, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(16.dp)) { Text(sh("BİR MAÇ DAHA", "ONE MORE MATCH"), color = LText, fontWeight = FontWeight.Black) }
+                Button(
+                    onClick = onRematch,
+                    modifier = Modifier.fillMaxWidth().height(58.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = LBlue),
+                ) {
+                    Text(sh("RÖVANŞ ⚡", "REMATCH ⚡"), fontSize = 17.sp, fontWeight = FontWeight.Black)
+                }
+                OutlinedButton(onClick = onExit, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(16.dp)) {
+                    Text(sh("BİR MAÇ DAHA", "ONE MORE MATCH"), color = LText, fontWeight = FontWeight.Black)
+                }
             }
         }
     }
 }
 
-@Composable private fun ResultMetric(label: String, value: String, modifier: Modifier) { Surface(modifier.height(60.dp), shape = RoundedCornerShape(14.dp), color = LCard2) { Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) { Text(label, color = LMuted, fontSize = 8.sp); Text(value, color = LText, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis) } } }
+@Composable
+private fun ResultMetric(label: String, value: String, modifier: Modifier) {
+    Surface(modifier.height(60.dp), shape = RoundedCornerShape(14.dp), color = LCard2) {
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Text(label, color = LMuted, fontSize = 8.sp)
+            Text(value, color = LText, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
 
 @Composable
-private fun BonusDialog(round: TriviaRoundDto, question: TriviaQuestionDto, myAnswer: Long?, opponentAnswer: Long?, myWon: Boolean, tied: Boolean, onTrivia: (Long) -> Unit) {
-    Dialog(onDismissRequest = {}, properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false)) {
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.42f)).padding(18.dp), contentAlignment = Alignment.Center) {
+private fun BonusDialog(
+    round: TriviaRoundDto,
+    question: TriviaQuestionDto,
+    myAnswer: Long?,
+    opponentAnswer: Long?,
+    myWon: Boolean,
+    tied: Boolean,
+    onTrivia: (Long) -> Unit,
+) {
+    Dialog(
+        onDismissRequest = {},
+        properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
+    ) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .42f)).padding(18.dp), contentAlignment = Alignment.Center) {
             var value by remember(round.id) { mutableStateOf("") }
             val parsed = value.toLongOrNull()
             Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
@@ -673,12 +906,27 @@ private fun BonusDialog(round: TriviaRoundDto, question: TriviaQuestionDto, myAn
                     Text("★ BİL BAKALIM +${round.bonusPoints}", color = LGold, fontWeight = FontWeight.Black)
                     Text(question.question, color = LText, fontWeight = FontWeight.Bold)
                     if (round.resolvedAt == null && myAnswer == null) {
-                        OutlinedTextField(value = value, onValueChange = { value = it.filter(Char::isDigit).take(16) }, modifier = Modifier.fillMaxWidth(), keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
-                        Button(onClick = { parsed?.let(onTrivia) }, enabled = parsed != null, modifier = Modifier.fillMaxWidth()) { Text(sh("CEVABI KİLİTLE", "LOCK ANSWER")) }
-                    } else if (round.resolvedAt == null) Text(sh("Cevabın alındı.", "Answer received."), color = LBlue)
-                    else {
+                        OutlinedTextField(
+                            value = value,
+                            onValueChange = { value = it.filter(Char::isDigit).take(16) },
+                            modifier = Modifier.fillMaxWidth(),
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                        )
+                        Button(onClick = { parsed?.let(onTrivia) }, enabled = parsed != null, modifier = Modifier.fillMaxWidth()) {
+                            Text(sh("CEVABI KİLİTLE", "LOCK ANSWER"))
+                        }
+                    } else if (round.resolvedAt == null) {
+                        Text(sh("Cevabın alındı.", "Answer received."), color = LBlue)
+                    } else {
                         Text(sh("ASIL CEVAP ${round.correctAnswer ?: "—"}", "ACTUAL ANSWER ${round.correctAnswer ?: "—"}"), color = LText, fontWeight = FontWeight.Black)
-                        Text(if (tied) sh("BERABERE", "TIE") else if (myWon) sh("DOĞRU • $myAnswer", "CORRECT • $myAnswer") else sh("RAKİP DAHA YAKIN • $opponentAnswer", "OPPONENT CLOSER • $opponentAnswer"), color = if (myWon) LGreen else LRed, fontWeight = FontWeight.Bold)
+                        Text(
+                            if (tied) sh("BERABERE", "TIE")
+                            else if (myWon) sh("DOĞRU • $myAnswer", "CORRECT • $myAnswer")
+                            else sh("RAKİP DAHA YAKIN • $opponentAnswer", "OPPONENT CLOSER • $opponentAnswer"),
+                            color = if (myWon) LGreen else LRed,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
                 }
             }
@@ -686,8 +934,65 @@ private fun BonusDialog(round: TriviaRoundDto, question: TriviaQuestionDto, myAn
     }
 }
 
-@Composable private fun WaitingRoom(code: String, playerName: String, onExit: () -> Unit) { Box(Modifier.fillMaxSize().background(LBg).statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.Center) { Card(modifier = Modifier.fillMaxWidth(.86f)) { Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) { Text(playerName, fontWeight = FontWeight.Black); Text(sh("RAKİP BEKLENİYOR", "WAITING FOR OPPONENT"), color=LBlue, fontWeight=FontWeight.Black); Text(code, fontSize=32.sp, fontWeight=FontWeight.Black, letterSpacing=4.sp); CircularProgressIndicator(color=LBlue); OutlinedButton(onClick=onExit, modifier=Modifier.fillMaxWidth()){Text(sh("ODADAN ÇIK", "LEAVE ROOM"), color=LRed)} } } } }
-@Composable private fun SmallAction(label: String, accent: Color, modifier: Modifier, onClick: () -> Unit) { OutlinedButton(onClick=onClick, modifier=modifier.height(37.dp), shape=RoundedCornerShape(12.dp), border=BorderStroke(1.dp, accent.copy(alpha=.4f)), contentPadding=PaddingValues(2.dp)){Text(label, color=accent, fontSize=8.sp, fontWeight=FontWeight.Black, maxLines=1)} }
-@Composable private fun LobbyPill(selected: Boolean, text: String, modifier: Modifier, onClick: () -> Unit) { Surface(modifier.height(50.dp).clickable(onClick=onClick), shape=RoundedCornerShape(15.dp), color=if(selected)LBlueSoft else Color.White, border=BorderStroke(1.dp, if(selected)LBlue.copy(alpha=.4f) else LBorder)){Box(contentAlignment=Alignment.Center){Text(text, color=if(selected)LBlue else LText, fontWeight=FontWeight.Black, fontSize=11.sp)}} }
-@Composable private fun LobbyAction(icon: String, title: String, modifier: Modifier, onClick: () -> Unit) { Card(modifier.height(88.dp).clickable(onClick=onClick), colors=CardDefaults.cardColors(containerColor=Color.White), border=BorderStroke(1.dp,LBorder)){Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement=Arrangement.Center){Text(icon,fontSize=20.sp);Text(title,color=LText,fontWeight=FontWeight.Black,fontSize=11.sp)}} }
-@Composable private fun NoticeCard(notice: String) { Surface(Modifier.fillMaxWidth(), shape=RoundedCornerShape(13.dp), color=Color.White, border=BorderStroke(1.dp,LBorder)){Text(notice, Modifier.fillMaxWidth().padding(10.dp), color=LMuted, fontSize=9.sp, textAlign=TextAlign.Center, maxLines=2)} }
+@Composable
+private fun WaitingRoom(code: String, playerName: String, onExit: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(LBg).statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
+        Card(modifier = Modifier.fillMaxWidth(.86f)) {
+            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(playerName, fontWeight = FontWeight.Black)
+                Text(sh("RAKİP BEKLENİYOR", "WAITING FOR OPPONENT"), color = LBlue, fontWeight = FontWeight.Black)
+                Text(code, fontSize = 32.sp, fontWeight = FontWeight.Black, letterSpacing = 4.sp)
+                CircularProgressIndicator(color = LBlue)
+                OutlinedButton(onClick = onExit, modifier = Modifier.fillMaxWidth()) { Text(sh("ODADAN ÇIK", "LEAVE ROOM"), color = LRed) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SmallAction(label: String, accent: Color, modifier: Modifier, onClick: () -> Unit) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(37.dp),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = .4f)),
+        contentPadding = PaddingValues(2.dp),
+    ) {
+        Text(label, color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
+    }
+}
+
+@Composable
+private fun LobbyPill(selected: Boolean, text: String, modifier: Modifier, onClick: () -> Unit) {
+    Surface(
+        modifier.height(50.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(15.dp),
+        color = if (selected) LBlueSoft else Color.White,
+        border = BorderStroke(1.dp, if (selected) LBlue.copy(alpha = .4f) else LBorder),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Text(text, color = if (selected) LBlue else LText, fontWeight = FontWeight.Black, fontSize = 11.sp)
+        }
+    }
+}
+
+@Composable
+private fun LobbyAction(icon: String, title: String, modifier: Modifier, onClick: () -> Unit) {
+    Card(
+        modifier.height(88.dp).clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        border = BorderStroke(1.dp, LBorder),
+    ) {
+        Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.Center) {
+            Text(icon, fontSize = 20.sp)
+            Text(title, color = LText, fontWeight = FontWeight.Black, fontSize = 11.sp)
+        }
+    }
+}
+
+@Composable
+private fun NoticeCard(notice: String) {
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), color = Color.White, border = BorderStroke(1.dp, LBorder)) {
+        Text(notice, Modifier.fillMaxWidth().padding(10.dp), color = LMuted, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 2)
+    }
+}
