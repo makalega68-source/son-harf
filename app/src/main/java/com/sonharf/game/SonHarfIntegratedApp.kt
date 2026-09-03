@@ -79,6 +79,12 @@ fun SonHarfIntegratedApp() {
     Box(Modifier.fillMaxSize()) {
         Scaffold(
             containerColor = SonHarfBg,
+            topBar = {
+                SonHarfTopAdBanner(
+                    visible = screen != AppScreen.GAME,
+                    isPremium = false,
+                )
+            },
             bottomBar = { if (screen != AppScreen.LEADERBOARD) IntegratedBottomBar(screen) { screen = it } },
         ) { pad ->
             Box(
