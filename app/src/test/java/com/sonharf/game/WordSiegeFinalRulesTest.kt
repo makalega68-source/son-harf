@@ -63,7 +63,8 @@ class WordSiegeFinalRulesTest {
             this[40] = WordSiegeCellDto(letter = "A", owner = 2)
             this[41] = WordSiegeCellDto(letter = "R", owner = 2)
             this[42] = WordSiegeCellDto(letter = "A", owner = 2)
-            this[30] = WordSiegeCellDto(letter = "M", owner = 2)
+            // 39 is column 9 on a 15x15 board, so 24 is the directly adjacent cell above it.
+            this[24] = WordSiegeCellDto(letter = "M", owner = 2)
         }
         val before = state(board, rack = "KXXXXXX")
 
@@ -131,8 +132,14 @@ class WordSiegeFinalRulesTest {
 
     @Test fun orientationIsDetectedWithoutPlayerDirectionSelection() {
         val board = emptyBoard()
-        assertEquals(WordSiegeOrientation.HORIZONTAL, WordSiegeFinalRules.detectOrientation(board, listOf(39, 40, 41)))
-        assertEquals(WordSiegeOrientation.VERTICAL, WordSiegeFinalRules.detectOrientation(board, listOf(31, 40, 49)))
+        assertEquals(
+            WordSiegeOrientation.HORIZONTAL,
+            WordSiegeFinalRules.detectOrientation(board, listOf(111, 112, 113)),
+        )
+        assertEquals(
+            WordSiegeOrientation.VERTICAL,
+            WordSiegeFinalRules.detectOrientation(board, listOf(97, 112, 127)),
+        )
     }
 
     @Test fun botAndHumanUseSameApplyMoveValidationAndUiLocksFinalOwnershipColors() {
@@ -172,7 +179,8 @@ class WordSiegeFinalRulesTest {
         currentOwner = 1,
     )
 
-    private fun emptyBoard(): List<WordSiegeCellDto> = List(81) { WordSiegeCellDto() }
+    private fun emptyBoard(): List<WordSiegeCellDto> =
+        List(WordSiegeBoardSpec.CellCount) { WordSiegeCellDto() }
 
     private fun expectPracticeError(block: () -> Unit): WordSiegePracticeError {
         try {
