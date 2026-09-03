@@ -1,0 +1,218 @@
+name: Avatar Visual Validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/avatar-visual-validation
+      - main
+    paths:
+      - 'scripts/apply_avatar_visual_standardization.py'
+      - '.github/workflows/avatar-visual-validation.yml'
+      - 'app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt'
+      - 'app/src/main/java/com/sonharf/game/MainPlayerProfileScreen.kt'
+      - 'app/src/main/java/com/sonharf/game/LightDuelUi.kt'
+      - 'app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt'
+      - 'app/src/debug/**'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: avatar-visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-real-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Apply canonical avatar patch
+        run: python3 scripts/apply_avatar_visual_standardization.py
+
+      - name: Unit regression and build exact APK
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Prepare validation APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Avatar-Validated.apk
+
+      - name: Boot emulator, install exact APK, capture three real screens
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          script: |
+            set -euxo pipefail
+            adb install -r SonHarf-Avatar-Validated.apk
+            mkdir -p validation
+            for mode in profile normal_match siege; do
+              adb shell am force-stop com.sonharf.game
+              adb shell am start -W -n com.sonharf.game/.AvatarVisualValidationActivity --es mode "$mode"
+              sleep 5
+              case "$mode" in
+                profile) out=profile_avatar_validation ;;
+                normal_match) out=normal_match_avatar_validation ;;
+                siege) out=siege_avatar_validation ;;
+              esac
+              adb exec-out screencap -p > "validation/${out}.png"
+              adb shell uiautomator dump /sdcard/${out}.xml >/dev/null
+              adb pull /sdcard/${out}.xml "validation/${out}.xml"
+            done
+
+      - name: Build full-screen and close-up comparison evidence
+        run: |
+          python3 -m pip install --quiet pillow
+          python3 - <<'PY'
+          from PIL import Image, ImageDraw, ImageFont, ImageChops, ImageStat
+          from pathlib import Path
+          import re, xml.etree.ElementTree as ET
+
+          root = Path('validation')
+          specs = [
+              ('profile_avatar_validation', 'PROFİL'),
+              ('normal_match_avatar_validation', 'NORMAL MAÇ'),
+              ('siege_avatar_validation', 'KELİME KUŞATMASI'),
+          ]
+          font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
+          title_font = ImageFont.truetype(font_path, 30)
+          small_font = ImageFont.truetype(font_path, 24)
+
+          images = []
+          crops = []
+          bounds_report = []
+          for stem, label in specs:
+              image = Image.open(root / f'{stem}.png').convert('RGB')
+              images.append((image, label))
+              xml_path = root / f'{stem}.xml'
+              tree = ET.parse(xml_path)
+              candidates = []
+              for node in tree.iter('node'):
+                  desc = node.attrib.get('content-desc', '')
+                  if 'SON_HARF_AVATAR' not in desc:
+                      continue
+                  m = re.fullmatch(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.attrib.get('bounds',''))
+                  if not m:
+                      continue
+                  x1,y1,x2,y2 = map(int,m.groups())
+                  if x2>x1 and y2>y1:
+                      candidates.append((x1,y1,x2,y2))
+              if not candidates:
+                  raise SystemExit(f'No SON_HARF_AVATAR accessibility bounds in {stem}')
+              # The user avatar is the largest canonical circular avatar on each target screen.
+              b = max(candidates, key=lambda q: (q[2]-q[0])*(q[3]-q[1]))
+              x1,y1,x2,y2 = b
+              w,h=x2-x1,y2-y1
+              if abs(w-h) > 3:
+                  raise SystemExit(f'Avatar outer bounds not 1:1 in {stem}: {b}')
+              pad = max(12, int(w * .12))
+              box=(max(0,x1-pad),max(0,y1-pad),min(image.width,x2+pad),min(image.height,y2+pad))
+              crop=image.crop(box)
+              crops.append((crop,label,b))
+              bounds_report.append(f'{stem}: bounds={b}, size={w}x{h}')
+
+          # Full screenshots side by side, with labels above each real app capture.
+          max_h=max(im.height for im,_ in images)
+          total_w=sum(im.width for im,_ in images)
+          canvas=Image.new('RGB',(total_w,max_h+60),'white')
+          x=0
+          for im,label in images:
+              tw=title_font.getbbox(label)[2]
+              canvas.text((x+(im.width-tw)//2,12),label,font=title_font,fill='black')
+              canvas.paste(im,(x,60)); x+=im.width
+          canvas.save(root/'avatar_comparison.png')
+
+          # Normalize each close-up to a common square without changing its aspect ratio.
+          tile=520
+          header=70
+          close=Image.new('RGB',(tile*3,tile+header),'white')
+          normalized=[]
+          for i,(crop,label,b) in enumerate(crops):
+              side=max(crop.size)
+              sq=Image.new('RGB',(side,side),'white')
+              sq.paste(crop,((side-crop.width)//2,(side-crop.height)//2))
+              sq=sq.resize((tile,tile),Image.Resampling.LANCZOS)
+              normalized.append(sq)
+              tw=small_font.getbbox(label+' AVATARI')[2]
+              close.text((i*tile+(tile-tw)//2,18),label+' AVATARI',font=small_font,fill='black')
+              close.paste(sq,(i*tile,header))
+          close.save(root/'avatar_closeup_comparison.png')
+
+          # Proportional geometry sanity check after normalization. Anti-aliasing can differ by source size,
+          # so this is intentionally tolerant; human/model visual review remains mandatory.
+          diffs=[]
+          for i in (1,2):
+              diff=ImageChops.difference(normalized[0],normalized[i])
+              stat=ImageStat.Stat(diff)
+              mean=sum(stat.mean)/3
+              diffs.append(mean)
+              if mean > 70:
+                  raise SystemExit(f'Avatar normalized visual difference unexpectedly high: {mean:.2f}')
+          (root/'avatar_geometry_report.txt').write_text('\n'.join(bounds_report)+f'\nnormalized_mean_diffs={diffs}\n',encoding='utf-8')
+          PY
+
+      - name: Verify required evidence exists
+        run: |
+          set -eux
+          test -s validation/profile_avatar_validation.png
+          test -s validation/normal_match_avatar_validation.png
+          test -s validation/siege_avatar_validation.png
+          test -s validation/avatar_comparison.png
+          test -s validation/avatar_closeup_comparison.png
+          cat validation/avatar_geometry_report.txt
+
+      - name: Commit validated source changes on validation branch
+        if: github.ref == 'refs/heads/fix/avatar-visual-validation'
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt app/src/main/java/com/sonharf/game/MainPlayerProfileScreen.kt app/src/debug
+          if ! git diff --cached --quiet; then
+            git commit -m "Standardize avatar rendering across profile match and siege"
+            git push origin HEAD:fix/avatar-visual-validation
+          fi
+          git rev-parse HEAD > validation/validated_commit.txt
+
+      - name: Record main commit when validating main
+        if: github.ref == 'refs/heads/main'
+        run: git rev-parse HEAD > validation/validated_commit.txt
+
+      - name: Upload five visual evidence files
+        uses: actions/upload-artifact@v4
+        with:
+          name: avatar-visual-evidence-${{ github.run_number }}
+          path: |
+            validation/profile_avatar_validation.png
+            validation/normal_match_avatar_validation.png
+            validation/siege_avatar_validation.png
+            validation/avatar_comparison.png
+            validation/avatar_closeup_comparison.png
+            validation/avatar_geometry_report.txt
+            validation/validated_commit.txt
+          if-no-files-found: error
+
+      - name: Upload exact validated APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: son-harf-avatar-validated-apk-${{ github.run_number }}
+          path: SonHarf-Avatar-Validated.apk
+          if-no-files-found: error
