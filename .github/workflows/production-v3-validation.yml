@@ -7,10 +7,10 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  finalize-test-build:
+  validate-production-v3:
     if: github.actor != 'github-actions[bot]' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
@@ -19,24 +19,44 @@ jobs:
           ref: prod-frame-dictionary-tr-en-v3
           fetch-depth: 0
 
-      - name: Finalize purchased frame assets and source mappings
-        run: python3 scripts/finalize_production_v3.py
-
-      - name: Verify source diff
-        run: git diff --check
-
-      - name: Commit deterministic finalization
+      - name: Materialize and verify purchased frame assets
         run: |
-          if ! git diff --quiet; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add app/src/main/res/drawable-nodpi/style_frame_*.png \
-                    app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt \
-                    app/src/main/java/com/sonharf/game/data/SharedDictionaryService.kt \
-                    docs/DICTIONARY_FRAME_SOURCES_20260903.md
-            git commit -m "Finalize production v3 assets and dictionaries [skip ci]"
-            git push origin HEAD:prod-frame-dictionary-tr-en-v3
+          if [ -d tools/frame_assets_v3 ]; then
+            python3 scripts/finalize_frame_dictionary_v3.py
           fi
+          python3 - <<'PY'
+          from pathlib import Path
+          import hashlib
+          expected = {
+            'style_frame_red.png': 'fa2c79145b5857707a2e099689d3e727978787bca346a163687d57b63548aa2c',
+            'style_frame_green.png': '6af938fccced86f0532e413394a9cb3fc7dd0547701ed2ca3cb6a8d6587daaf4',
+            'style_frame_mint.png': '42e6ce85dbb5b7865b4d0a8b585b392736a11e4c1d1859dfb2e4274ded458006',
+            'style_frame_purple.png': '1fbf3e261b0aef85095c432cfca738f2f61af27d6a02bd77f28b89d1d642b729',
+            'style_frame_gold.png': 'cac4d53c168a52773822189d205880e959174011117700b5e563325c2bd813a8',
+            'style_frame_gold_crown.png': '1e955fe915d8b1b35045a21c1c4221521dfdfe4355c9321c591bd172b802ff05',
+            'style_frame_christmas.png': '48fa2d6afd6f95e25c0ac7ac8330a7e8d97a653fdb98f9c17e1a0b226e24082d',
+            'style_frame_halloween.png': '96598d5769d25f7520291e83248b1e9fa8f2984aa2822b41df3525bc63fbf62d',
+          }
+          root = Path('app/src/main/res/drawable-nodpi')
+          for name, want in expected.items():
+              p = root / name
+              assert p.is_file(), name
+              data = p.read_bytes()
+              assert data.startswith(b'\x89PNG\r\n\x1a\n'), name
+              got = hashlib.sha256(data).hexdigest()
+              assert got == want, (name, got, want)
+              print(name, len(data), got)
+          PY
+
+      - name: Verify V3 source contracts
+        run: |
+          git diff --check
+          grep -q 'get_dictionary_snapshot_v3' app/src/main/java/com/sonharf/game/data/SharedDictionaryService.kt
+          grep -q 'MIN_CANONICAL_LENGTH = 2' app/src/main/java/com/sonharf/game/data/SharedDictionaryService.kt
+          grep -q 'frame_asset_christmas' app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt
+          grep -q 'frame_asset_halloween' app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt
+          grep -q 'char_length(d.normalized_word) between 2 and 12' supabase/migrations/20260903093000_dictionary_snapshot_v3_and_purchased_frames_repair.sql
+          test -f docs/DICTIONARY_AND_FRAME_SOURCES.md
 
       - uses: actions/setup-java@v4
         with:
@@ -55,11 +75,10 @@ jobs:
           echo "/opt/gradle/gradle-8.14.4/bin" >> "$GITHUB_PATH"
 
       - name: Unit tests and debug build
-        run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug
+        run: gradle --no-daemon :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug
 
-      - name: Validate packaged purchased PNGs
+      - name: Validate APK archive
         run: |
-          python3 scripts/finalize_production_v3.py
           test -f app/build/outputs/apk/debug/app-debug.apk
           unzip -t app/build/outputs/apk/debug/app-debug.apk >/dev/null
 
