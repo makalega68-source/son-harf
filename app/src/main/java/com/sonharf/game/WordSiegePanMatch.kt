@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -16,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -31,8 +33,6 @@ import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.WordSiegeCellDto
 import com.sonharf.game.data.WordSiegeGameDto
 import com.sonharf.game.data.WordSiegeMoveDto
-import kotlin.math.max
-import kotlin.math.min
 import kotlinx.coroutines.delay
 
 private val PanSiegeTile = Color(0xFFFFE3A5)
@@ -81,7 +81,16 @@ internal fun WordSiegePanMatch(
     var displayedRivalScore by remember(game.id) { mutableIntStateOf(rivalTargetScore) }
     var displayedCurrentPlayerId by remember(game.id) { mutableStateOf(game.currentPlayerId) }
     var fallbackPracticeActive by remember(game.id) { mutableStateOf(false) }
+    var shuffleSeed by remember(game.id) { mutableIntStateOf(0) }
     val visualMyTurn = game.status == "playing" && displayedCurrentPlayerId == me
+    val rackOrder = remember(rack, shuffleSeed) {
+        if (shuffleSeed == 0) rack.indices.toList() else wordSiegeShuffledRackIndices(rack.length, shuffleSeed)
+    }
+    val readyFeedback = wordSiegeValidationFeedback(
+        placementsCount = placements.size,
+        turkish = !SonHarfUiState.isEnglish,
+    )
+    val previewCapturedCells = placements.keys.count { index -> game.board.getOrNull(index)?.owner != myOwner }
 
     LaunchedEffect(game.id, game.status) {
         if (game.status == "waiting") {
@@ -184,7 +193,10 @@ internal fun WordSiegePanMatch(
                     Text(sh("RAKİP ARANIYOR", "FINDING A RIVAL"), color = MainUi.Text, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        sh("15 saniye içinde rakip bulunmazsa botla hemen başlayacaksın. Gerçek rakip araması arka planda sürecek.", "If no rival is found within 15 seconds, practice starts immediately with a bot while real matchmaking continues in the background."),
+                        sh(
+                            "15 saniye içinde rakip bulunmazsa botla hemen başlayacaksın. Gerçek rakip araması arka planda sürecek.",
+                            "If no rival is found within 15 seconds, practice starts immediately with a bot while real matchmaking continues in the background.",
+                        ),
                         color = MainUi.Muted,
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center,
@@ -237,27 +249,70 @@ internal fun WordSiegePanMatch(
         }
 
         if (game.status == "playing") {
-            Text(
-                sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"),
-                color = MainUi.Muted,
-                fontSize = 8.sp,
-                modifier = Modifier.fillMaxWidth(),
-                textAlign = TextAlign.End,
-            )
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                if (placements.isNotEmpty()) {
+                    Text(
+                        readyFeedback.message,
+                        color = MainUi.Green,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        sh(
+                            "Alan +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS} • kelime puanı OYNA ile doğrulanır",
+                            "Area +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS} • word score is verified on PLAY",
+                        ),
+                        color = MainUi.Muted,
+                        fontSize = 8.sp,
+                        modifier = Modifier.weight(1f),
+                        textAlign = TextAlign.End,
+                    )
+                } else {
+                    Spacer(Modifier.weight(1f))
+                }
+                Text(sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"), color = MainUi.Muted, fontSize = 8.sp)
+            }
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                rack.forEachIndexed { index, letter ->
+                rackOrder.forEach { rackIndex ->
+                    val letter = rack.getOrNull(rackIndex) ?: return@forEach
                     WordSiegeRackTile(
                         letter = letter,
-                        selected = selectedRackIndex == index,
-                        used = index in placements.values,
+                        selected = selectedRackIndex == rackIndex,
+                        used = rackIndex in placements.values,
                         enabled = canAct,
                         modifier = Modifier.weight(1f),
-                        onClick = { onRackTile(index) },
+                        onClick = { onRackTile(rackIndex) },
                     )
                 }
                 repeat((7 - rack.length).coerceAtLeast(0)) {
                     Spacer(Modifier.weight(1f).height(48.dp))
+                }
+            }
+
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                OutlinedButton(
+                    onClick = {
+                        placements.keys.lastOrNull()?.let(onBoardCell)
+                    },
+                    enabled = canAct && placements.isNotEmpty(),
+                    modifier = Modifier.weight(1f).height(36.dp),
+                    contentPadding = PaddingValues(horizontal = 3.dp),
+                ) {
+                    Icon(Icons.Rounded.Undo, null, Modifier.size(14.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text(sh("GERİ AL", "UNDO"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                }
+                OutlinedButton(
+                    onClick = { shuffleSeed = if (shuffleSeed == Int.MAX_VALUE) 1 else shuffleSeed + 1 },
+                    enabled = canAct && rack.length > 1,
+                    modifier = Modifier.weight(1f).height(36.dp),
+                    contentPadding = PaddingValues(horizontal = 3.dp),
+                ) {
+                    Icon(Icons.Rounded.Shuffle, null, Modifier.size(14.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text(sh("KARIŞTIR", "SHUFFLE"), fontSize = 8.sp, fontWeight = FontWeight.Black)
                 }
             }
 
@@ -319,23 +374,36 @@ private fun PanSiegeBoard(
     var dragging by remember(gameId) { mutableStateOf(false) }
     var initialized by remember(gameId) { mutableStateOf(false) }
     var observedMoveId by remember(gameId) { mutableStateOf(lastMove?.id) }
+    var viewportMode by remember(gameId) { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
+
+    val boardScale = if (viewportMode == WordSiegeBoardViewportMode.FIT) {
+        wordSiegeFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx)
+    } else 1f
+    val scaledBoardPx = boardPx * boardScale
+
+    fun fitPan(): Offset = Offset(
+        x = ((viewport.width - scaledBoardPx) / 2f).coerceAtLeast(0f),
+        y = ((viewport.height - scaledBoardPx) / 2f).coerceAtLeast(0f),
+    )
 
     fun clampPan(candidate: Offset): Offset {
         if (viewport.width <= 0 || viewport.height <= 0) return candidate
-        val x = if (boardPx <= viewport.width) {
-            (viewport.width - boardPx) / 2f
+        if (viewportMode == WordSiegeBoardViewportMode.FIT) return fitPan()
+        val x = if (scaledBoardPx <= viewport.width) {
+            (viewport.width - scaledBoardPx) / 2f
         } else {
-            candidate.x.coerceIn(viewport.width - boardPx, 0f)
+            candidate.x.coerceIn(viewport.width - scaledBoardPx, 0f)
         }
-        val y = if (boardPx <= viewport.height) {
-            (viewport.height - boardPx) / 2f
+        val y = if (scaledBoardPx <= viewport.height) {
+            (viewport.height - scaledBoardPx) / 2f
         } else {
-            candidate.y.coerceIn(viewport.height - boardPx, 0f)
+            candidate.y.coerceIn(viewport.height - scaledBoardPx, 0f)
         }
         return Offset(x, y)
     }
 
     fun centerOn(index: Int): Offset {
+        if (viewportMode == WordSiegeBoardViewportMode.FIT) return fitPan()
         val safe = index.coerceIn(0, 80)
         val col = safe % 9
         val row = safe / 9
@@ -347,19 +415,26 @@ private fun PanSiegeBoard(
         )
     }
 
-    LaunchedEffect(viewport, gameId) {
+    fun toggleViewport() {
+        viewportMode = viewportMode.toggle()
+        pan = if (viewportMode == WordSiegeBoardViewportMode.FIT) fitPan() else centerOn(40)
+    }
+
+    LaunchedEffect(viewport, gameId, viewportMode) {
         if (!initialized && viewport.width > 0 && viewport.height > 0) {
             pan = centerOn(40)
             initialized = true
             observedMoveId = lastMove?.id
+        } else if (initialized) {
+            pan = clampPan(pan)
         }
     }
 
-    LaunchedEffect(lastMove?.id) {
+    LaunchedEffect(lastMove?.id, viewportMode) {
         val moveId = lastMove?.id
         if (initialized && moveId != null && moveId != observedMoveId) {
             observedMoveId = moveId
-            if (!dragging) {
+            if (!dragging && viewportMode == WordSiegeBoardViewportMode.CLOSE) {
                 val indices = lastMove.placedTiles.map { it.index }
                 if (indices.isNotEmpty()) {
                     val avgRow = indices.map { it / 9 }.average()
@@ -385,14 +460,19 @@ private fun PanSiegeBoard(
                     viewport = it
                     pan = clampPan(pan)
                 }
-                .pointerInput(gameId, viewport, boardPx) {
-                    detectDragGestures(
-                        onDragStart = { dragging = true },
-                        onDragCancel = { dragging = false },
-                        onDragEnd = { dragging = false },
-                    ) { change, dragAmount ->
-                        change.consume()
-                        pan = clampPan(pan + dragAmount)
+                .pointerInput(gameId, viewportMode, viewport) {
+                    detectTapGestures(onDoubleTap = { toggleViewport() })
+                }
+                .pointerInput(gameId, viewportMode, viewport, boardPx) {
+                    if (viewportMode == WordSiegeBoardViewportMode.CLOSE) {
+                        detectDragGestures(
+                            onDragStart = { dragging = true },
+                            onDragCancel = { dragging = false },
+                            onDragEnd = { dragging = false },
+                        ) { change, dragAmount ->
+                            change.consume()
+                            pan = clampPan(pan + dragAmount)
+                        }
                     }
                 },
         ) {
@@ -402,6 +482,9 @@ private fun PanSiegeBoard(
                     .graphicsLayer {
                         translationX = pan.x
                         translationY = pan.y
+                        scaleX = boardScale
+                        scaleY = boardScale
+                        transformOrigin = TransformOrigin(0f, 0f)
                     },
             ) {
                 repeat(9) { row ->
@@ -422,8 +505,27 @@ private fun PanSiegeBoard(
                 }
             }
 
+            Surface(
+                modifier = Modifier.align(Alignment.TopStart).padding(7.dp),
+                shape = RoundedCornerShape(99.dp),
+                color = Color.White.copy(alpha = .92f),
+                border = BorderStroke(1.dp, MainUi.Border),
+            ) {
+                Text(
+                    if (viewportMode == WordSiegeBoardViewportMode.FIT) sh("Çift dokun: yakın görünüm", "Double tap: close view")
+                    else sh("Çift dokun: tüm tahta", "Double tap: full board"),
+                    Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                    color = MainUi.Muted,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+
             SmallFloatingActionButton(
-                onClick = { pan = centerOn(40) },
+                onClick = {
+                    viewportMode = WordSiegeBoardViewportMode.CLOSE
+                    pan = centerOn(40)
+                },
                 modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
                 shape = CircleShape,
                 containerColor = Color.White.copy(alpha = .94f),
@@ -597,9 +699,6 @@ private fun PanSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
 
 private fun panSiegeWordScore(game: WordSiegeGameDto, owner: Int): Int =
     if (owner == 1) game.playerOneWordScore else game.playerTwoWordScore
-
-private fun panSiegeAreaScore(game: WordSiegeGameDto, owner: Int): Int =
-    if (owner == 1) game.playerOneAreaScore else game.playerTwoAreaScore
 
 private fun panSiegeAreaCount(game: WordSiegeGameDto, owner: Int): Int =
     if (owner == 1) game.playerOneArea else game.playerTwoArea

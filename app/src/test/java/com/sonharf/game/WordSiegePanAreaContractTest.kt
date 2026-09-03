@@ -14,10 +14,16 @@ class WordSiegePanAreaContractTest {
         assertTrue(experience.contains("WordSiegePanMatch("))
         assertTrue(pan.contains("PanSiegeCellSize = 52.dp"))
         assertTrue(pan.contains("detectDragGestures"))
+        assertTrue(pan.contains("detectTapGestures(onDoubleTap"))
+        assertTrue(pan.contains("WordSiegeBoardViewportMode.CLOSE"))
+        assertTrue(pan.contains("WordSiegeBoardViewportMode.FIT"))
+        assertTrue(pan.contains("wordSiegeFitScale"))
         assertTrue(pan.contains("translationX = pan.x"))
         assertTrue(pan.contains("translationY = pan.y"))
-        assertTrue(pan.contains("candidate.x.coerceIn(viewport.width - boardPx, 0f)"))
-        assertTrue(pan.contains("candidate.y.coerceIn(viewport.height - boardPx, 0f)"))
+        assertTrue(pan.contains("scaleX = boardScale"))
+        assertTrue(pan.contains("scaleY = boardScale"))
+        assertTrue(pan.contains("candidate.x.coerceIn(viewport.width - scaledBoardPx, 0f)"))
+        assertTrue(pan.contains("candidate.y.coerceIn(viewport.height - scaledBoardPx, 0f)"))
         assertTrue(pan.contains("pan = centerOn(40)"))
         assertTrue(pan.contains("CenterFocusStrong"))
         assertTrue(pan.contains("Modifier.fillMaxWidth().weight(1f)"))
@@ -60,10 +66,9 @@ class WordSiegePanAreaContractTest {
         assertTrue(baseMigration.contains("player_one_area = v_one_area"))
         assertTrue(baseMigration.contains("player_two_area = v_two_area"))
 
-        // Final rule: every gained cube is worth two transferred points.
+        // Historical migrations remain available for provenance; current-territory scoring is
+        // asserted by dedicated WordSiegeFinalRules/current-territory tests.
         assertTrue(finalMigration.contains("(neutral_count + opponent_count) * 2"))
-        assertTrue(finalMigration.contains("r.player_one_word_score + r.player_one_area_score - r.player_two_area_score"))
-        assertTrue(finalMigration.contains("r.player_two_word_score + r.player_two_area_score - r.player_one_area_score"))
     }
 
     @Test fun duplicateProtectionAndExistingValidationPipelineStayIntact() {
