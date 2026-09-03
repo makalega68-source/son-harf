@@ -2,9 +2,8 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,69 +55,48 @@ internal fun WordSiegePracticeBoard(
     var pan by remember { mutableStateOf(Offset.Zero) }
     var initialized by remember { mutableStateOf(false) }
     var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
+    val scale = if (mode == WordSiegeBoardViewportMode.FIT) {
+        wordSiegeFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx)
+    } else 1f
+    val scaledBoardPx = boardPx * scale
 
-    fun scaleFor(targetMode: WordSiegeBoardViewportMode): Float =
-        if (targetMode == WordSiegeBoardViewportMode.FIT) {
-            wordSiegeFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx)
-        } else 1f
+    fun fitPan() = Offset(
+        ((viewport.width - scaledBoardPx) / 2f).coerceAtLeast(0f),
+        ((viewport.height - scaledBoardPx) / 2f).coerceAtLeast(0f),
+    )
 
-    fun fitPanFor(targetScale: Float): Offset {
-        val scaled = boardPx * targetScale
-        return Offset(
-            (viewport.width - scaled) / 2f,
-            (viewport.height - scaled) / 2f,
-        )
-    }
-
-    fun clampClose(candidate: Offset): Offset {
+    fun clamp(candidate: Offset): Offset {
         if (viewport.width <= 0 || viewport.height <= 0) return candidate
-        val x = if (boardPx <= viewport.width) (viewport.width - boardPx) / 2f
-        else candidate.x.coerceIn(viewport.width - boardPx, 0f)
-        val y = if (boardPx <= viewport.height) (viewport.height - boardPx) / 2f
-        else candidate.y.coerceIn(viewport.height - boardPx, 0f)
+        if (mode == WordSiegeBoardViewportMode.FIT) return fitPan()
+        val x = if (scaledBoardPx <= viewport.width) (viewport.width - scaledBoardPx) / 2f
+        else candidate.x.coerceIn(viewport.width - scaledBoardPx, 0f)
+        val y = if (scaledBoardPx <= viewport.height) (viewport.height - scaledBoardPx) / 2f
+        else candidate.y.coerceIn(viewport.height - scaledBoardPx, 0f)
         return Offset(x, y)
     }
 
-    fun centeredClosePan(): Offset = clampClose(
-        Offset(
-            viewport.width / 2f - 4.5f * tilePx,
-            viewport.height / 2f - 4.5f * tilePx,
-        ),
-    )
-
-    fun panFor(targetMode: WordSiegeBoardViewportMode): Offset {
-        val targetScale = scaleFor(targetMode)
-        return if (targetMode == WordSiegeBoardViewportMode.FIT) fitPanFor(targetScale) else centeredClosePan()
+    fun center(): Offset {
+        if (mode == WordSiegeBoardViewportMode.FIT) return fitPan()
+        return clamp(
+            Offset(
+                viewport.width / 2f - 4.5f * tilePx,
+                viewport.height / 2f - 4.5f * tilePx,
+            ),
+        )
     }
 
     fun toggleMode() {
         val nextMode = mode.toggle()
         mode = nextMode
-        pan = panFor(nextMode)
+        pan = if (nextMode == WordSiegeBoardViewportMode.FIT) fitPan() else center()
     }
 
-    fun boardIndexAt(tap: Offset): Int? {
-        val currentScale = scaleFor(mode)
-        if (currentScale <= 0f) return null
-        val x = (tap.x - pan.x) / currentScale
-        val y = (tap.y - pan.y) / currentScale
-        if (x < 0f || y < 0f || x >= boardPx || y >= boardPx) return null
-        val col = (x / tilePx).toInt()
-        val row = (y / tilePx).toInt()
-        return (row * 9 + col).takeIf { it in 0..80 }
-    }
-
-    val scale = scaleFor(mode)
-
-    LaunchedEffect(viewport) {
-        if (viewport.width <= 0 || viewport.height <= 0) return@LaunchedEffect
-        pan = if (!initialized) {
+    LaunchedEffect(viewport, mode) {
+        if (!initialized && viewport.width > 0 && viewport.height > 0) {
+            pan = center()
             initialized = true
-            centeredClosePan()
-        } else if (mode == WordSiegeBoardViewportMode.FIT) {
-            fitPanFor(scaleFor(WordSiegeBoardViewportMode.FIT))
-        } else {
-            clampClose(pan)
+        } else if (initialized) {
+            pan = clamp(pan)
         }
     }
 
@@ -132,23 +110,15 @@ internal fun WordSiegePracticeBoard(
             Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(14.dp))
-                .onSizeChanged { viewport = it }
-                .pointerInput(mode, viewport, enabled, board, placements, rack) {
-                    detectTapGestures(
-                        onDoubleTap = { toggleMode() },
-                        onTap = { tap ->
-                            if (!enabled) return@detectTapGestures
-                            val index = boardIndexAt(tap) ?: return@detectTapGestures
-                            val cell = board.getOrNull(index) ?: return@detectTapGestures
-                            if (cell.letter == null || placements.containsKey(index)) onCell(index)
-                        },
-                    )
+                .onSizeChanged {
+                    viewport = it
+                    pan = clamp(pan)
                 }
                 .pointerInput(mode, viewport, boardPx) {
                     if (mode == WordSiegeBoardViewportMode.CLOSE) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
-                            pan = clampClose(pan + dragAmount)
+                            pan = clamp(pan + dragAmount)
                         }
                     }
                 },
@@ -173,33 +143,20 @@ internal fun WordSiegePracticeBoard(
                                 pendingLetter = placements[index]?.let(rack::getOrNull),
                                 pending = placements.containsKey(index),
                                 myOwner = myOwner,
+                                enabled = enabled,
                                 size = PracticeSiegeCellSize,
+                                onClick = { onCell(index) },
+                                onDoubleClick = ::toggleMode,
                             )
                         }
                     }
                 }
             }
 
-            Surface(
-                modifier = Modifier.align(Alignment.TopStart).padding(7.dp),
-                shape = RoundedCornerShape(99.dp),
-                color = Color.White.copy(alpha = .92f),
-                border = BorderStroke(1.dp, MainUi.Border),
-            ) {
-                Text(
-                    if (mode == WordSiegeBoardViewportMode.FIT) sh("Çift dokun: yakın", "Double tap: close")
-                    else sh("Çift dokun: tüm tahta", "Double tap: full board"),
-                    Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                    color = MainUi.Muted,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-            }
-
             SmallFloatingActionButton(
                 onClick = {
                     mode = WordSiegeBoardViewportMode.CLOSE
-                    pan = centeredClosePan()
+                    pan = center()
                 },
                 modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
                 shape = CircleShape,
@@ -218,7 +175,10 @@ private fun WordSiegePracticeBoardCell(
     pendingLetter: Char?,
     pending: Boolean,
     myOwner: Int,
+    enabled: Boolean,
     size: Dp,
+    onClick: () -> Unit,
+    onDoubleClick: () -> Unit,
 ) {
     val owner = if (pending) myOwner else cell.owner
     val territory = when {
@@ -233,13 +193,18 @@ private fun WordSiegePracticeBoardCell(
         else -> MainUi.Border
     }
     val letter = pendingLetter?.toString() ?: cell.letter
+    val canPlace = enabled && (cell.letter == null || pending)
 
     Box(
         Modifier
             .size(size)
             .padding(1.5.dp)
             .clip(RoundedCornerShape(7.dp))
-            .background(if (letter != null) territory else MainUi.Surface),
+            .background(if (letter != null) territory else MainUi.Surface)
+            .combinedClickable(
+                onDoubleClick = onDoubleClick,
+                onClick = { if (canPlace) onClick() },
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
@@ -281,7 +246,7 @@ internal fun WordSiegePracticeRackTile(
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = modifier.height(48.dp).clickable(enabled = enabled, onClick = onClick),
+        modifier = modifier.height(48.dp).combinedClickable(onClick = onClick, enabled = enabled),
         color = when {
             used -> MainUi.SurfaceSoft
             selected -> PracticeSiegeTile

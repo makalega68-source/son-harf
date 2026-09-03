@@ -3,6 +3,7 @@ package com.sonharf.game
 import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.WordSiegeCellDto
 import java.util.Locale
+import kotlin.random.Random
 
 internal const val WordSiegePracticeYou = "practice-you"
 internal const val WordSiegePracticeBot = "practice-bot"
@@ -43,6 +44,12 @@ internal object WordSiegePracticeEngine {
     fun newGame(language: String = "tr"): WordSiegePracticeState {
         val lang = SharedDictionaryService.canonicalLanguage(language)
         val english = lang == "en"
+        val pool = if (english) {
+            "PLANETSREADINGWATERHOUSELIGHTGARDENBRIDGEORANGEWINDOWMUSICPLAYERSTORYCLOUD"
+        } else {
+            "KALEMTRMASASİNELMALİSTEKARTONURBİLGİSAYARÇİÇEKDENİZKÖPRÜYILDIZTURUNCU"
+        }
+        val shuffled = pool.toMutableList().apply { shuffle(Random.Default) }
         return WordSiegePracticeState(
             board = List(81) { index ->
                 WordSiegeCellDto(
@@ -55,13 +62,9 @@ internal object WordSiegePracticeEngine {
                     },
                 )
             },
-            playerRack = if (english) "PLANETS" else "KALEMTR",
-            botRack = if (english) "READING" else "MASASİN",
-            bag = if (english) {
-                "WATERHOUSELIGHTGARDENBRIDGEORANGEWINDOWMUSICPLAYERSTORYCLOUD"
-            } else {
-                "ELMALİSTEKARTONURBİLGİSAYARÇİÇEKDENİZKÖPRÜYILDIZTURUNCU"
-            },
+            playerRack = shuffled.take(7).joinToString(""),
+            botRack = shuffled.drop(7).take(7).joinToString(""),
+            bag = shuffled.drop(14).joinToString(""),
             language = lang,
         )
     }
