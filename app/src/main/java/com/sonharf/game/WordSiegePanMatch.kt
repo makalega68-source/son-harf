@@ -41,6 +41,10 @@ private val PanSiegeBoardSurface = Color(0xFFE7EDF5)
 private val PanSiegeNeutral = Color(0xFFF7F8FA)
 private val PanSiegeMine = Color(0xFF35C878)
 private val PanSiegeRival = Color(0xFFFF5F57)
+private val PanSiegeNeutralBorder = Color(0xFF7890A8)
+private val PanSiegeBonusBorder = Color(0xFF5279A6)
+private val PanSiegeMineBorder = Color(0xFF147A48)
+private val PanSiegeRivalBorder = Color(0xFFB72E35)
 private val PanSiegeCellSize = 52.dp
 internal const val WORD_SIEGE_BOT_FALLBACK_DELAY_MS = 15_000L
 
@@ -368,6 +372,7 @@ private fun PanSiegeBoard(
             )
         }
     }
+    val boardBorderWidth = wordSiegeBoardBorderWidthDp(transform.scale).dp
 
     fun clampClosePan(candidate: Offset): Offset = clampWordSiegeBoardPan(
         candidate,
@@ -432,6 +437,18 @@ private fun PanSiegeBoard(
             emptySet()
         }
     }
+    val actionVfxEvents = remember(gameId, placements, actionVfxMoveId, resolvedIndices) {
+        buildList {
+            placements.toSortedMap().forEach { (index, rackIndex) ->
+                if (WordSiegeBoardSpec.isValidIndex(index)) {
+                    add(PurchasedBoardVfxEvent("placement:$gameId:$index:$rackIndex", index, PurchasedBoardVfxKind.PLACEMENT))
+                }
+            }
+            resolvedIndices.sorted().forEach { index ->
+                add(PurchasedBoardVfxEvent("resolved:$actionVfxMoveId:$index", index, PurchasedBoardVfxKind.RESOLVED))
+            }
+        }
+    }
 
     Surface(
         modifier = modifier,
@@ -478,7 +495,6 @@ private fun PanSiegeBoard(
                             val index = WordSiegeBoardSpec.index(row, column)
                             val pendingRackIndex = placements[index]
                             val pending = pendingRackIndex != null
-                            val resolved = index in resolvedIndices
                             PanSiegeBoardCell(
                                 cell = board.getOrElse(index) { WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index)) },
                                 pendingLetter = pendingRackIndex?.let(rack::getOrNull),
@@ -486,16 +502,7 @@ private fun PanSiegeBoard(
                                 myOwner = myOwner,
                                 enabled = enabled,
                                 size = PanSiegeCellSize,
-                                actionVfxKey = when {
-                                    pending -> "placement:$gameId:$index:$pendingRackIndex"
-                                    resolved -> "resolved:$actionVfxMoveId:$index"
-                                    else -> null
-                                },
-                                actionVfxKind = when {
-                                    pending -> PurchasedBoardVfxKind.PLACEMENT
-                                    resolved -> PurchasedBoardVfxKind.RESOLVED
-                                    else -> null
-                                },
+                                borderWidth = boardBorderWidth,
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleViewport,
                             )
@@ -503,6 +510,13 @@ private fun PanSiegeBoard(
                     }
                 }
             }
+
+            PurchasedBoardActionVfxOverlay(
+                events = actionVfxEvents,
+                transform = transform,
+                cellSizePx = tilePx,
+                modifier = Modifier.matchParentSize(),
+            )
 
             SmallFloatingActionButton(
                 onClick = {
@@ -551,8 +565,7 @@ private fun PanSiegeBoardCell(
     myOwner: Int,
     enabled: Boolean,
     size: Dp,
-    actionVfxKey: String?,
-    actionVfxKind: PurchasedBoardVfxKind?,
+    borderWidth: Dp,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
 ) {
@@ -564,9 +577,10 @@ private fun PanSiegeBoardCell(
     }
     val border = when {
         pending -> PanSiegeTileBorder
-        owner == myOwner -> MainUi.Green
-        owner != 0 -> MainUi.Red
-        else -> MainUi.Border
+        owner == myOwner -> PanSiegeMineBorder
+        owner != 0 -> PanSiegeRivalBorder
+        !cell.bonusUsed && cell.bonus != null -> PanSiegeBonusBorder
+        else -> PanSiegeNeutralBorder
     }
     val letter = pendingLetter?.toString() ?: cell.letter
     val canPlace = enabled && (cell.letter == null || pending)
@@ -601,7 +615,7 @@ private fun PanSiegeBoardCell(
             modifier = Modifier.fillMaxSize(),
             color = if (pending) PanSiegeTile.copy(alpha = .76f) else Color.Transparent,
             shape = RoundedCornerShape(7.dp),
-            border = BorderStroke(if (pending) 2.dp else 1.dp, border.copy(alpha = .78f)),
+            border = BorderStroke(if (pending) maxOf(2.dp, borderWidth) else borderWidth, border.copy(alpha = .96f)),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (letter != null) {
@@ -622,13 +636,6 @@ private fun PanSiegeBoardCell(
                     )
                 }
             }
-        }
-        if (actionVfxKey != null && actionVfxKind != null) {
-            PurchasedBoardActionVfx(
-                eventKey = actionVfxKey,
-                kind = actionVfxKind,
-                modifier = Modifier.matchParentSize(),
-            )
         }
     }
 }
