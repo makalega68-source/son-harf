@@ -22,8 +22,10 @@ class BonusFlowReliabilityContractTest {
         assertTrue(secureBackend.contains("trigger_bilbakalim_bonus_v2"))
         assertTrue(arena.contains("KeyboardType.Number"))
         assertTrue(arena.contains("ASIL CEVAP"))
-        assertTrue(arena.contains("Rakibin cevabı sonuçtan önce gizli"))
-        assertTrue(arena.contains("triviaResolved -> 3"))
+        assertTrue(arena.contains("round.resolvedAt == null"))
+        assertTrue(arena.contains("triviaRound?.resultUntil"))
+        assertTrue(arena.contains("triviaRound?.answerDeadline"))
+        assertTrue(arena.contains("onTriviaTimeout()"))
     }
 
     @Test
