@@ -94,7 +94,6 @@ fun SonHarfTopAdBanner(
 
     DisposableEffect(adView) {
         onDispose {
-            adView.adListener = AdListener()
             adView.destroy()
         }
     }
