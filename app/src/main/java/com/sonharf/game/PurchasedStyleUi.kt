@@ -38,8 +38,10 @@ internal object PurchasedFrameCatalog {
     const val GREEN = "frame_asset_green"
     const val RED = "frame_asset_red"
     const val GOLD_CROWN = "frame_asset_gold_crown"
+    const val CHRISTMAS = "frame_asset_christmas"
+    const val HALLOWEEN = "frame_asset_halloween"
 
-    val ids = setOf(GOLD, MINT, PURPLE, GREEN, RED, GOLD_CROWN)
+    val ids = setOf(GOLD, MINT, PURPLE, GREEN, RED, GOLD_CROWN, CHRISTMAS, HALLOWEEN)
 
     fun drawable(id: String?): Int? = when (id) {
         GOLD -> R.drawable.style_frame_gold
@@ -48,6 +50,8 @@ internal object PurchasedFrameCatalog {
         GREEN -> R.drawable.style_frame_green
         RED -> R.drawable.style_frame_red
         GOLD_CROWN -> R.drawable.style_frame_gold_crown
+        CHRISTMAS -> R.drawable.style_frame_christmas
+        HALLOWEEN -> R.drawable.style_frame_halloween
         else -> null
     }
 
@@ -58,6 +62,8 @@ internal object PurchasedFrameCatalog {
         PURPLE -> Color(0xFF7257D8)
         GOLD -> Color(0xFFD7A72E)
         GOLD_CROWN -> Color(0xFFE0A51C)
+        CHRISTMAS -> Color(0xFFC73D3D)
+        HALLOWEEN -> Color(0xFFEF7D22)
         "frame_neon", "frame_modern_neon" -> Color(0xFF1677FF)
         "frame_starter", "frame_ice", "frame_crystal" -> Color(0xFF32BFB3)
         "frame_gold", "frame_royal_gold" -> Color(0xFFD7A72E)
@@ -87,6 +93,8 @@ private val purchasedFrameSpecs = listOf(
     PurchasedFrameSpec(PurchasedFrameCatalog.PURPLE, "Mor Spektrum", "Violet Spectrum", "Premium mor profil vurgusu", "Premium violet profile accent", R.drawable.style_frame_purple, Color(0xFF7257D8), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
     PurchasedFrameSpec(PurchasedFrameCatalog.GOLD, "Altın Hat", "Gold Line", "VIP ve prestij koleksiyonuna uygun metalik çerçeve", "Metallic frame for VIP and prestige collection", R.drawable.style_frame_gold, Color(0xFFD7A72E), "VIP / PREMIUM", "VIP / PREMIUM", R.drawable.style_icon_trophy),
     PurchasedFrameSpec(PurchasedFrameCatalog.GOLD_CROWN, "Altın Taç", "Gold Crown", "Yüksek lig ve prestij ödülü", "High-league prestige reward", R.drawable.style_frame_gold_crown, Color(0xFFE0A51C), "LİG ÖDÜLÜ", "LEAGUE REWARD", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.CHRISTMAS, "Yılbaşı", "Christmas", "Sezonluk yılbaşı etkinlik çerçevesi", "Seasonal Christmas event frame", R.drawable.style_frame_christmas, Color(0xFFC73D3D), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.HALLOWEEN, "Halloween", "Halloween", "Sezonluk Halloween etkinlik çerçevesi", "Seasonal Halloween event frame", R.drawable.style_frame_halloween, Color(0xFFEF7D22), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
 )
 
 /**
@@ -140,7 +148,7 @@ private fun SafeFrameArtwork(
             bitmap = bitmap,
             contentDescription = null,
             modifier = modifier,
-            contentScale = ContentScale.FillBounds,
+            contentScale = ContentScale.Fit,
         )
         return true
     }
@@ -222,16 +230,18 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
     }
 
     val displaySpecs = remember(shopItems, inventory, equippedId) {
-        val legacy = shopItems.values
-            .filter { it.id !in PurchasedFrameCatalog.ids }
+        val knownById = purchasedFrameSpecs.associateBy { it.id }
+        // Backend active shop_items is authoritative for discovery and pricing. Known purchased
+        // package IDs receive their verified artwork; unknown/legacy IDs keep procedural rendering.
+        val activeCatalog = shopItems.values
             .sortedBy { it.sortOrder }
-            .map(::legacyFrameSpec)
-        // Staged frame_asset_* entries are recovery renderers only. The backend active catalog
-        // is authoritative for discovery/sales; preserve staged items only when already owned/equipped.
-        val staged = purchasedFrameSpecs.filter { spec ->
-            spec.id in inventory || equippedId == spec.id
+            .map { item -> knownById[item.id] ?: legacyFrameSpec(item) }
+        // Inactive reward/event items must not appear for sale, but an already-owned or equipped
+        // item remains renderable even when it is absent from the active backend catalogue.
+        val recoveryOwned = purchasedFrameSpecs.filter { spec ->
+            spec.id !in shopItems && (spec.id in inventory || equippedId == spec.id)
         }
-        (legacy + staged).distinctBy { it.id }
+        (activeCatalog + recoveryOwned).distinctBy { it.id }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -272,7 +282,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                         bitmap = frameBitmap,
                                         contentDescription = null,
                                         modifier = Modifier.size(86.dp),
-                                        contentScale = ContentScale.FillBounds,
+                                        contentScale = ContentScale.Fit,
                                     )
                                 } else {
                                     Box(
