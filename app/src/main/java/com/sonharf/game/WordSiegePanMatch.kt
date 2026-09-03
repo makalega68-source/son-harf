@@ -14,12 +14,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -329,6 +330,7 @@ internal fun WordSiegePanMatch(
         }
 
         notice?.let { PanSiegeNotice(it) }
+        lastMove?.let { PanSiegeLastMoveInfo(it) }
     }
 }
 
@@ -348,57 +350,56 @@ private fun PanSiegeBoard(
     val tilePx = with(density) { PanSiegeCellSize.toPx() }
     val boardPx = tilePx * WordSiegeBoardSpec.Size
     var viewport by remember(gameId) { mutableStateOf(IntSize.Zero) }
-    var pan by remember(gameId) { mutableStateOf(Offset.Zero) }
+    var closePan by remember(gameId) { mutableStateOf(Offset.Zero) }
     var dragging by remember(gameId) { mutableStateOf(false) }
     var initialized by remember(gameId) { mutableStateOf(false) }
     var observedMoveId by remember(gameId) { mutableStateOf(lastMove?.id) }
     var viewportMode by remember(gameId) { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
 
-    val boardScale = if (viewportMode == WordSiegeBoardViewportMode.FIT) {
-        wordSiegeFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx)
-    } else 1f
+    val transform by remember(viewportMode, viewport, boardPx, closePan) {
+        derivedStateOf {
+            wordSiegeBoardTransform(
+                mode = viewportMode,
+                viewportWidthPx = viewport.width.toFloat(),
+                viewportHeightPx = viewport.height.toFloat(),
+                boardWidthPx = boardPx,
+                closePan = closePan,
+            )
+        }
+    }
 
-    fun fitPan(): Offset = wordSiegeFitPan(
-        viewport.width.toFloat(),
-        viewport.height.toFloat(),
-        boardPx,
-        boardScale,
-    )
-
-    fun clampPan(candidate: Offset): Offset = clampWordSiegeBoardPan(
+    fun clampClosePan(candidate: Offset): Offset = clampWordSiegeBoardPan(
         candidate,
         viewport.width.toFloat(),
         viewport.height.toFloat(),
         boardPx,
-        boardScale,
+        1f,
     )
 
-    fun centerOn(index: Int): Offset {
-        if (viewportMode == WordSiegeBoardViewportMode.FIT) return fitPan()
-        val safe = index.coerceIn(0, WordSiegeBoardSpec.LastIndex)
-        val column = WordSiegeBoardSpec.column(safe)
-        val row = WordSiegeBoardSpec.row(safe)
-        return clampPan(
-            Offset(
-                x = viewport.width / 2f - (column + .5f) * tilePx,
-                y = viewport.height / 2f - (row + .5f) * tilePx,
-            ),
+    fun centerCloseOn(index: Int): Offset =
+        wordSiegeCenteredClosePan(
+            index = index,
+            viewportWidthPx = viewport.width.toFloat(),
+            viewportHeightPx = viewport.height.toFloat(),
+            boardWidthPx = boardPx,
+            cellSizePx = tilePx,
         )
-    }
 
     fun toggleViewport() {
         val nextMode = viewportMode.toggle()
+        if (nextMode == WordSiegeBoardViewportMode.CLOSE) {
+            closePan = centerCloseOn(WordSiegeBoardSpec.CenterIndex)
+        }
         viewportMode = nextMode
-        pan = if (nextMode == WordSiegeBoardViewportMode.FIT) fitPan() else centerOn(WordSiegeBoardSpec.CenterIndex)
     }
 
-    LaunchedEffect(viewport, gameId, viewportMode) {
+    LaunchedEffect(viewport, gameId, boardPx) {
         if (!initialized && viewport.width > 0 && viewport.height > 0) {
-            pan = centerOn(WordSiegeBoardSpec.CenterIndex)
+            closePan = centerCloseOn(WordSiegeBoardSpec.CenterIndex)
             initialized = true
             observedMoveId = lastMove?.id
         } else if (initialized) {
-            pan = if (viewportMode == WordSiegeBoardViewportMode.FIT) fitPan() else clampPan(pan)
+            closePan = clampClosePan(closePan)
         }
     }
 
@@ -415,14 +416,14 @@ private fun PanSiegeBoard(
                         avgRow.toInt().coerceIn(0, WordSiegeBoardSpec.Size - 1),
                         avgColumn.toInt().coerceIn(0, WordSiegeBoardSpec.Size - 1),
                     )
-                    pan = centerOn(targetIndex)
+                    closePan = centerCloseOn(targetIndex)
                 }
             }
         }
     }
 
     Surface(
-        modifier = modifier.heightIn(min = 150.dp),
+        modifier = modifier,
         color = PanSiegeBoardSurface,
         shape = RoundedCornerShape(14.dp),
         border = BorderStroke(1.dp, MainUi.Border),
@@ -431,10 +432,8 @@ private fun PanSiegeBoard(
             Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(14.dp))
-                .onSizeChanged {
-                    viewport = it
-                    pan = if (viewportMode == WordSiegeBoardViewportMode.FIT) fitPan() else clampPan(pan)
-                }
+                .clipToBounds()
+                .onGloballyPositioned { viewport = it.size }
                 .pointerInput(gameId, viewportMode, viewport, boardPx) {
                     if (viewportMode == WordSiegeBoardViewportMode.CLOSE) {
                         detectDragGestures(
@@ -443,7 +442,7 @@ private fun PanSiegeBoard(
                             onDragEnd = { dragging = false },
                         ) { change, dragAmount ->
                             change.consume()
-                            pan = clampPan(pan + dragAmount)
+                            closePan = clampClosePan(closePan + dragAmount)
                         }
                     }
                 },
@@ -452,10 +451,10 @@ private fun PanSiegeBoard(
                 Modifier
                     .requiredSize(PanSiegeCellSize * WordSiegeBoardSpec.Size)
                     .graphicsLayer {
-                        translationX = pan.x
-                        translationY = pan.y
-                        scaleX = boardScale
-                        scaleY = boardScale
+                        translationX = transform.pan.x
+                        translationY = transform.pan.y
+                        scaleX = transform.scale
+                        scaleY = transform.scale
                         transformOrigin = TransformOrigin(0f, 0f)
                     },
             ) {
@@ -481,7 +480,7 @@ private fun PanSiegeBoard(
             SmallFloatingActionButton(
                 onClick = {
                     viewportMode = WordSiegeBoardViewportMode.CLOSE
-                    pan = centerOn(WordSiegeBoardSpec.CenterIndex)
+                    closePan = centerCloseOn(WordSiegeBoardSpec.CenterIndex)
                 },
                 modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
                 shape = CircleShape,
@@ -491,26 +490,29 @@ private fun PanSiegeBoard(
                 Icon(Icons.Rounded.CenterFocusStrong, sh("Merkeze dön", "Center board"), Modifier.size(19.dp))
             }
 
-            lastMove?.let { move ->
-                Surface(
-                    modifier = Modifier.align(Alignment.BottomStart).padding(7.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color.White.copy(alpha = .94f),
-                    border = BorderStroke(1.dp, MainUi.Border),
-                ) {
-                    Text(
-                        sh(
-                            "Kelime +${move.wordScore}  •  Alan +${move.areaScore}  •  Toplam +${move.totalScore}",
-                            "Word +${move.wordScore}  •  Area +${move.areaScore}  •  Total +${move.totalScore}",
-                        ),
-                        Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
-                        color = MainUi.Text,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-            }
         }
+    }
+}
+
+@Composable
+private fun PanSiegeLastMoveInfo(move: WordSiegeMoveDto) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        color = MainUi.Surface,
+        border = BorderStroke(1.dp, MainUi.Border),
+    ) {
+        Text(
+            sh(
+                "Kelime +${move.wordScore}  •  Alan +${move.areaScore}  •  Toplam +${move.totalScore}",
+                "Word +${move.wordScore}  •  Area +${move.areaScore}  •  Total +${move.totalScore}",
+            ),
+            Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+            color = MainUi.Text,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
@@ -547,8 +549,22 @@ private fun PanSiegeBoardCell(
             .clip(RoundedCornerShape(7.dp))
             .background(baseColor)
             .combinedClickable(
-                onClick = { if (canPlace) onClick() },
-                onDoubleClick = onDoubleClick,
+                onClick = {
+                    dispatchWordSiegeBoardTap(
+                        WordSiegeBoardTapAction.PLACE,
+                        canPlace,
+                        onClick,
+                        onDoubleClick,
+                    )
+                },
+                onDoubleClick = {
+                    dispatchWordSiegeBoardTap(
+                        WordSiegeBoardTapAction.TOGGLE_VIEWPORT,
+                        canPlace,
+                        onClick,
+                        onDoubleClick,
+                    )
+                },
             ),
         contentAlignment = Alignment.Center,
     ) {

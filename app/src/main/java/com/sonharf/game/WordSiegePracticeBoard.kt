@@ -17,12 +17,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -52,51 +53,52 @@ internal fun WordSiegePracticeBoard(
     val tilePx = with(density) { PracticeSiegeCellSize.toPx() }
     val boardPx = tilePx * WordSiegeBoardSpec.Size
     var viewport by remember { mutableStateOf(IntSize.Zero) }
-    var pan by remember { mutableStateOf(Offset.Zero) }
+    var closePan by remember { mutableStateOf(Offset.Zero) }
     var initialized by remember { mutableStateOf(false) }
     var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
-    val scale = if (mode == WordSiegeBoardViewportMode.FIT) {
-        wordSiegeFitScale(viewport.width.toFloat(), viewport.height.toFloat(), boardPx)
-    } else 1f
+    val transform by remember(mode, viewport, boardPx, closePan) {
+        derivedStateOf {
+            wordSiegeBoardTransform(
+                mode = mode,
+                viewportWidthPx = viewport.width.toFloat(),
+                viewportHeightPx = viewport.height.toFloat(),
+                boardWidthPx = boardPx,
+                closePan = closePan,
+            )
+        }
+    }
 
-    fun fitPan(): Offset = wordSiegeFitPan(
-        viewport.width.toFloat(),
-        viewport.height.toFloat(),
-        boardPx,
-        scale,
-    )
-
-    fun clamp(candidate: Offset): Offset = clampWordSiegeBoardPan(
+    fun clampClosePan(candidate: Offset): Offset = clampWordSiegeBoardPan(
         candidate,
         viewport.width.toFloat(),
         viewport.height.toFloat(),
         boardPx,
-        scale,
+        1f,
     )
 
-    fun center(): Offset {
-        if (mode == WordSiegeBoardViewportMode.FIT) return fitPan()
-        val centerCoordinate = WordSiegeBoardSpec.Size / 2f
-        return clamp(
-            Offset(
-                viewport.width / 2f - centerCoordinate * tilePx,
-                viewport.height / 2f - centerCoordinate * tilePx,
-            ),
+    fun centerClose(): Offset =
+        wordSiegeCenteredClosePan(
+            index = WordSiegeBoardSpec.CenterIndex,
+            viewportWidthPx = viewport.width.toFloat(),
+            viewportHeightPx = viewport.height.toFloat(),
+            boardWidthPx = boardPx,
+            cellSizePx = tilePx,
         )
-    }
 
     fun toggleMode() {
         val nextMode = mode.toggle()
+        if (nextMode == WordSiegeBoardViewportMode.CLOSE) {
+            closePan = centerClose()
+        }
         mode = nextMode
-        pan = if (nextMode == WordSiegeBoardViewportMode.FIT) fitPan() else center()
     }
 
-    LaunchedEffect(viewport, mode) {
+    LaunchedEffect(viewport, boardPx) {
         if (!initialized && viewport.width > 0 && viewport.height > 0) {
-            pan = center()
+            closePan = centerClose()
             initialized = true
         } else if (initialized) {
-            pan = if (mode == WordSiegeBoardViewportMode.FIT) fitPan() else clamp(pan)
+            closePan = clampClosePan(closePan)
         }
     }
 
@@ -110,15 +112,13 @@ internal fun WordSiegePracticeBoard(
             Modifier
                 .fillMaxSize()
                 .clip(RoundedCornerShape(14.dp))
-                .onSizeChanged {
-                    viewport = it
-                    pan = if (mode == WordSiegeBoardViewportMode.FIT) fitPan() else clamp(pan)
-                }
+                .clipToBounds()
+                .onGloballyPositioned { viewport = it.size }
                 .pointerInput(mode, viewport, boardPx) {
                     if (mode == WordSiegeBoardViewportMode.CLOSE) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
-                            pan = clamp(pan + dragAmount)
+                            closePan = clampClosePan(closePan + dragAmount)
                         }
                     }
                 },
@@ -127,10 +127,10 @@ internal fun WordSiegePracticeBoard(
                 Modifier
                     .requiredSize(PracticeSiegeCellSize * WordSiegeBoardSpec.Size)
                     .graphicsLayer {
-                        translationX = pan.x
-                        translationY = pan.y
-                        scaleX = scale
-                        scaleY = scale
+                        translationX = transform.pan.x
+                        translationY = transform.pan.y
+                        scaleX = transform.scale
+                        scaleY = transform.scale
                         transformOrigin = TransformOrigin(0f, 0f)
                     },
             ) {
@@ -156,7 +156,7 @@ internal fun WordSiegePracticeBoard(
             SmallFloatingActionButton(
                 onClick = {
                     mode = WordSiegeBoardViewportMode.CLOSE
-                    pan = center()
+                    closePan = centerClose()
                 },
                 modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
                 shape = CircleShape,
@@ -202,8 +202,22 @@ private fun WordSiegePracticeBoardCell(
             .clip(RoundedCornerShape(7.dp))
             .background(if (letter != null) territory else MainUi.Surface)
             .combinedClickable(
-                onDoubleClick = onDoubleClick,
-                onClick = { if (canPlace) onClick() },
+                onClick = {
+                    dispatchWordSiegeBoardTap(
+                        WordSiegeBoardTapAction.PLACE,
+                        canPlace,
+                        onClick,
+                        onDoubleClick,
+                    )
+                },
+                onDoubleClick = {
+                    dispatchWordSiegeBoardTap(
+                        WordSiegeBoardTapAction.TOGGLE_VIEWPORT,
+                        canPlace,
+                        onClick,
+                        onDoubleClick,
+                    )
+                },
             ),
         contentAlignment = Alignment.Center,
     ) {
