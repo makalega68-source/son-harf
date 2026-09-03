@@ -24,7 +24,7 @@ concurrency:
 
 jobs:
   validate-real-apk:
-    runs-on: ubuntu-latest
+    runs-on: macos-15-intel
     steps:
       - uses: actions/checkout@v4
         with:
@@ -60,6 +60,7 @@ jobs:
           arch: x86_64
           profile: pixel_6
           disable-animations: true
+          emulator-boot-timeout: 900
           emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           script: |
             set -euxo pipefail
@@ -93,9 +94,18 @@ jobs:
               ('normal_match_avatar_validation', 'NORMAL MAÇ'),
               ('siege_avatar_validation', 'KELİME KUŞATMASI'),
           ]
-          font_path = '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf'
-          title_font = ImageFont.truetype(font_path, 30)
-          small_font = ImageFont.truetype(font_path, 24)
+          font_candidates = [
+              '/System/Library/Fonts/Supplemental/Arial Bold.ttf',
+              '/Library/Fonts/Arial Bold.ttf',
+              '/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf',
+          ]
+          font_path = next((p for p in font_candidates if Path(p).exists()), None)
+          if font_path:
+              title_font = ImageFont.truetype(font_path, 30)
+              small_font = ImageFont.truetype(font_path, 24)
+          else:
+              title_font = ImageFont.load_default()
+              small_font = ImageFont.load_default()
 
           images = []
           crops = []
@@ -118,7 +128,6 @@ jobs:
                       candidates.append((x1,y1,x2,y2))
               if not candidates:
                   raise SystemExit(f'No SON_HARF_AVATAR accessibility bounds in {stem}')
-              # The user avatar is the largest canonical circular avatar on each target screen.
               b = max(candidates, key=lambda q: (q[2]-q[0])*(q[3]-q[1]))
               x1,y1,x2,y2 = b
               w,h=x2-x1,y2-y1
@@ -130,7 +139,6 @@ jobs:
               crops.append((crop,label,b))
               bounds_report.append(f'{stem}: bounds={b}, size={w}x{h}')
 
-          # Full screenshots side by side, with labels above each real app capture.
           max_h=max(im.height for im,_ in images)
           total_w=sum(im.width for im,_ in images)
           canvas=Image.new('RGB',(total_w,max_h+60),'white')
@@ -141,7 +149,6 @@ jobs:
               canvas.paste(im,(x,60)); x+=im.width
           canvas.save(root/'avatar_comparison.png')
 
-          # Normalize each close-up to a common square without changing its aspect ratio.
           tile=520
           header=70
           close=Image.new('RGB',(tile*3,tile+header),'white')
@@ -157,8 +164,6 @@ jobs:
               close.paste(sq,(i*tile,header))
           close.save(root/'avatar_closeup_comparison.png')
 
-          # Proportional geometry sanity check after normalization. Anti-aliasing can differ by source size,
-          # so this is intentionally tolerant; human/model visual review remains mandatory.
           diffs=[]
           for i in (1,2):
               diff=ImageChops.difference(normalized[0],normalized[i])
