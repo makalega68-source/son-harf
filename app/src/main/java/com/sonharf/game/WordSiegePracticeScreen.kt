@@ -190,8 +190,6 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
             modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 4.dp),
         ) {
             val compact = maxHeight < 700.dp
-            val chromeHeight = if (compact) 226.dp else 246.dp
-            val boardSize = minOf(maxWidth, (maxHeight - chromeHeight).coerceAtLeast(238.dp))
 
             Column(
                 modifier = Modifier.fillMaxSize(),
@@ -283,7 +281,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     }
                 }
 
-                Box(Modifier.fillMaxWidth().height(boardSize), contentAlignment = Alignment.Center) {
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
                     WordSiegePracticeBoard(
                         board = state.board,
                         rack = state.playerRack,
