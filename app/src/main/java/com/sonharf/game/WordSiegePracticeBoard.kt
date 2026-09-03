@@ -46,6 +46,8 @@ internal fun WordSiegePracticeBoard(
     placements: Map<Int, Int>,
     myOwner: Int,
     enabled: Boolean,
+    moveEventKey: Int? = null,
+    resolvedIndices: Set<Int> = emptySet(),
     modifier: Modifier = Modifier,
     onCell: (Int) -> Unit,
 ) {
@@ -141,13 +143,26 @@ internal fun WordSiegePracticeBoard(
                     Row {
                         repeat(WordSiegeBoardSpec.Size) { column ->
                             val index = WordSiegeBoardSpec.index(row, column)
+                            val pendingRackIndex = placements[index]
+                            val pending = pendingRackIndex != null
+                            val resolved = moveEventKey != null && index in resolvedIndices
                             WordSiegePracticeBoardCell(
                                 cell = board.getOrElse(index) { WordSiegeCellDto() },
-                                pendingLetter = placements[index]?.let(rack::getOrNull),
-                                pending = placements.containsKey(index),
+                                pendingLetter = pendingRackIndex?.let(rack::getOrNull),
+                                pending = pending,
                                 myOwner = myOwner,
                                 enabled = enabled,
                                 size = PracticeSiegeCellSize,
+                                actionVfxKey = when {
+                                    pending -> "placement:$index:$pendingRackIndex"
+                                    resolved -> "resolved:$moveEventKey:$index"
+                                    else -> null
+                                },
+                                actionVfxKind = when {
+                                    pending -> PurchasedBoardVfxKind.PLACEMENT
+                                    resolved -> PurchasedBoardVfxKind.RESOLVED
+                                    else -> null
+                                },
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleMode,
                             )
@@ -180,6 +195,8 @@ private fun WordSiegePracticeBoardCell(
     myOwner: Int,
     enabled: Boolean,
     size: Dp,
+    actionVfxKey: String?,
+    actionVfxKind: PurchasedBoardVfxKind?,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
 ) {
@@ -249,6 +266,13 @@ private fun WordSiegePracticeBoardCell(
                     )
                 }
             }
+        }
+        if (actionVfxKey != null && actionVfxKind != null) {
+            PurchasedBoardActionVfx(
+                eventKey = actionVfxKey,
+                kind = actionVfxKind,
+                modifier = Modifier.matchParentSize(),
+            )
         }
     }
 }

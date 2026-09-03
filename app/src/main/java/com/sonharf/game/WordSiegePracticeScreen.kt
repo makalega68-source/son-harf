@@ -66,6 +66,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     var showExchange by remember { mutableStateOf(false) }
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var shuffleSeed by remember { mutableIntStateOf(0) }
+    var actionVfxEvent by remember { mutableIntStateOf(0) }
 
     val playerTargetScore = WordSiegePracticeEngine.totalScore(state, 1)
     val botTargetScore = WordSiegePracticeEngine.totalScore(state, 2)
@@ -125,6 +126,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
         botProfile = WordSiegePracticeBots.random()
         lastMove = null
         shuffleSeed = 0
+        actionVfxEvent = 0
         notice = sh("İlk hamle sende. Ortadaki 2K karesinden geç.", "Your first move must cover the center 2W cell.")
         clearSelection()
     }
@@ -138,6 +140,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
             .onSuccess { (next, move) ->
                 state = next
                 lastMove = move
+                actionVfxEvent += 1
                 notice = wordSiegePracticeMoveNotice(move, turkish = !SonHarfUiState.isEnglish)
                 clearSelection()
                 SonHarfSoundFx.wordAccepted()
@@ -179,6 +182,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
             val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements)
             state = next
             lastMove = move
+            actionVfxEvent += 1
             notice = sh("${botProfile.name} ${move.primaryWord} oynadı • +${move.wordScore}", "${botProfile.name} played ${move.primaryWord} • +${move.wordScore}")
             SonHarfSoundFx.scoreTick()
         }
@@ -288,6 +292,8 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                         placements = placements,
                         myOwner = 1,
                         enabled = canPlayerAct,
+                        moveEventKey = actionVfxEvent.takeIf { it > 0 },
+                        resolvedIndices = lastMove?.placements?.keys ?: emptySet(),
                         modifier = Modifier.fillMaxSize(),
                         onCell = { boardIndex ->
                             if (!canPlayerAct) return@WordSiegePracticeBoard

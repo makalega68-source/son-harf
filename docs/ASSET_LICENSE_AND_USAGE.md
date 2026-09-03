@@ -13,9 +13,10 @@
 - Project record: CC0 1.0 / commercial use permitted.
 
 ## Eric Wang VFX – Game VFX: UI & Interaction Effects Bundle
-- Source package: `game_vfx_ui_interaction_effects.unitypackage`.
-- Integrated texture subset: `twink_01.png` only. Other Unity-prefab/shader resources remain outside the Android build.
-- Unity prefabs/shaders are not embedded. Texture is adapted to a bounded native Jetpack Compose victory overlay.
+- Source package: `game_vfx_ui_interaction_effects (2).unitypackage`.
+- Integrated texture subset: `twink_01.png` only (SHA-256 `4ed0e0f0c12df51c56f2145720031a55ca9db59a20d851d6fe47c1d632397b28`). Other Unity-prefab/shader resources remain outside the Android build.
+- Unity prefabs/shaders are not embedded. The texture is adapted to bounded native Jetpack Compose victory, tile-placement and resolved-move overlays.
+- Board effects are one-shot (360–620 ms), clipped to their cell and contain no input handlers or infinite animation.
 - Usage is cosmetic only and isolated from scoring, rating, turn, timer and matchmaking state.
 
 ## Mobile Game UI FREE version

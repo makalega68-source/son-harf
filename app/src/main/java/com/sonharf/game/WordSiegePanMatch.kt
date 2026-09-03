@@ -354,6 +354,7 @@ private fun PanSiegeBoard(
     var dragging by remember(gameId) { mutableStateOf(false) }
     var initialized by remember(gameId) { mutableStateOf(false) }
     var observedMoveId by remember(gameId) { mutableStateOf(lastMove?.id) }
+    var actionVfxMoveId by remember(gameId) { mutableStateOf<Long?>(null) }
     var viewportMode by remember(gameId) { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
 
     val transform by remember(viewportMode, viewport, boardPx, closePan) {
@@ -407,6 +408,7 @@ private fun PanSiegeBoard(
         val moveId = lastMove?.id
         if (initialized && moveId != null && moveId != observedMoveId) {
             observedMoveId = moveId
+            actionVfxMoveId = moveId
             if (!dragging && viewportMode == WordSiegeBoardViewportMode.CLOSE) {
                 val indices = lastMove.placedTiles.map { it.index }.filter(WordSiegeBoardSpec::isValidIndex)
                 if (indices.isNotEmpty()) {
@@ -419,6 +421,15 @@ private fun PanSiegeBoard(
                     closePan = centerCloseOn(targetIndex)
                 }
             }
+        }
+    }
+
+    val resolvedIndices = remember(actionVfxMoveId, lastMove?.id) {
+        val move = lastMove
+        if (move != null && actionVfxMoveId == move.id) {
+            move.placedTiles.map { it.index }.filter(WordSiegeBoardSpec::isValidIndex).toSet()
+        } else {
+            emptySet()
         }
     }
 
@@ -465,13 +476,26 @@ private fun PanSiegeBoard(
                     Row {
                         repeat(WordSiegeBoardSpec.Size) { column ->
                             val index = WordSiegeBoardSpec.index(row, column)
+                            val pendingRackIndex = placements[index]
+                            val pending = pendingRackIndex != null
+                            val resolved = index in resolvedIndices
                             PanSiegeBoardCell(
                                 cell = board.getOrElse(index) { WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index)) },
-                                pendingLetter = placements[index]?.let(rack::getOrNull),
-                                pending = placements.containsKey(index),
+                                pendingLetter = pendingRackIndex?.let(rack::getOrNull),
+                                pending = pending,
                                 myOwner = myOwner,
                                 enabled = enabled,
                                 size = PanSiegeCellSize,
+                                actionVfxKey = when {
+                                    pending -> "placement:$gameId:$index:$pendingRackIndex"
+                                    resolved -> "resolved:$actionVfxMoveId:$index"
+                                    else -> null
+                                },
+                                actionVfxKind = when {
+                                    pending -> PurchasedBoardVfxKind.PLACEMENT
+                                    resolved -> PurchasedBoardVfxKind.RESOLVED
+                                    else -> null
+                                },
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleViewport,
                             )
@@ -527,6 +551,8 @@ private fun PanSiegeBoardCell(
     myOwner: Int,
     enabled: Boolean,
     size: Dp,
+    actionVfxKey: String?,
+    actionVfxKind: PurchasedBoardVfxKind?,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
 ) {
@@ -596,6 +622,13 @@ private fun PanSiegeBoardCell(
                     )
                 }
             }
+        }
+        if (actionVfxKey != null && actionVfxKind != null) {
+            PurchasedBoardActionVfx(
+                eventKey = actionVfxKey,
+                kind = actionVfxKind,
+                modifier = Modifier.matchParentSize(),
+            )
         }
     }
 }
