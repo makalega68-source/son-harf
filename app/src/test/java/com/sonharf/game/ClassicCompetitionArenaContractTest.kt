@@ -46,11 +46,20 @@ class ClassicCompetitionArenaContractTest {
         assertFalse(overlaySection.contains("clickable("))
     }
 
-    @Test fun resultRatingIsRefetchedFromBackendInsteadOfInvented() {
+    @Test fun resultRatingIsRefetchedAndMissingMetaIsNotFabricated() {
         val text = source("LightDuelUi.kt")
         assertTrue(text.contains("OnlineGameBackend().getProfile(me).rating"))
         assertTrue(text.contains("Rating sonucu sunucudan doğrulanıyor"))
         assertFalse(text.contains("SEN 3–2 RAKİP"))
+        assertFalse(text.contains("GALİBİYET SERİSİ"))
+        assertFalse(text.contains("WIN STREAK"))
+    }
+
+    @Test fun roomStreakIsOnlyUsedAsAcceptedWordComboState() {
+        val text = source("LightDuelUi.kt")
+        assertTrue(text.contains("myWordStreak"))
+        assertTrue(text.contains("oppWordStreak"))
+        assertTrue(text.contains("ClassicCompetitionRules.comboLabel(wordStreak"))
     }
 
     @Test fun compactArenaTargetsPortrait360x800WithoutImeDependency() {
