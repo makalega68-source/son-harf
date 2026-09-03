@@ -12,7 +12,7 @@ ASSETS = {
     "red": ("style_frame_red.png", ["red.00.part", "red.01.part", "red.02.part"], "fa2c79145b5857707a2e099689d3e727978787bca346a163687d57b63548aa2c"),
     "gold_crown": ("style_frame_gold_crown.png", [f"gold_crown.{i:02d}.part" for i in range(6)], "1e955fe915d8b1b35045a21c1c4221521dfdfe4355c9321c591bd172b802ff05"),
     "christmas": ("style_frame_christmas.png", ["christmas.00.part", "christmas.01.part", "christmas.02a.part", "christmas.02b.part", "christmas.03.part", "christmas.04.part", "christmas.05.part"], "48fa2d6afd6f95e25c0ac7ac8330a7e8d97a653fdb98f9c17e1a0b226e24082d"),
-    "halloween": ("style_frame_halloween.png", ["halloween.00.part", "halloween.01.part", "halloween.02.part", "halloween.03.part", "halloween.04a.part", "halloween.04b.part"], "96598d5769d25f7520291e83248b1e9fa8f2984aa2822b41df3525bc63fbf62d"),
+    "halloween": ("style_frame_halloween.png", ["halloween.00.part", "halloween.01.part", "halloween.02a.exact", "halloween.02b.exact", "halloween.03a.exact", "halloween.03b.exact", "halloween.03c.exact", "halloween.04aa.exact", "halloween.04ab.exact", "halloween.04b.part"], "96598d5769d25f7520291e83248b1e9fa8f2984aa2822b41df3525bc63fbf62d"),
 }
 
 def verify_png(data: bytes) -> None:
