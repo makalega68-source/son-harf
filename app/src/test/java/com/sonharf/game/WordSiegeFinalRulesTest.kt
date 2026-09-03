@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.WordSiegeCellDto
+import com.sonharf.game.data.WordSiegeMoveDto
 import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -93,11 +94,39 @@ class WordSiegeFinalRulesTest {
         assertEquals("KARA", connectedMove.primaryWord)
     }
 
-    @Test fun cubeTransferIsTwoPointsEachAndNetScoreTransfersFromRival() {
+    @Test fun cubeTransferIsTwoPointsEachAndWordScoreNeverDropsForRivalNeutralCubes() {
         assertEquals(2, WordSiegeFinalRules.cubeTransfer(1))
         assertEquals(8, WordSiegeFinalRules.cubeTransfer(4))
         assertEquals(42, WordSiegeFinalRules.netScore(wordScore = 34, earnedCubePoints = 8, opponentEarnedCubePoints = 0))
-        assertEquals(23, WordSiegeFinalRules.netScore(wordScore = 31, earnedCubePoints = 0, opponentEarnedCubePoints = 8))
+        assertEquals(31, WordSiegeFinalRules.netScore(wordScore = 31, earnedCubePoints = 0, opponentEarnedCubePoints = 8))
+
+        val first = WordSiegeMoveDto(
+            id = 1,
+            gameId = "game",
+            playerId = "me",
+            primaryWord = "KARA",
+            neutralCaptured = 3,
+        )
+        val rivalNeutral = WordSiegeMoveDto(
+            id = 2,
+            gameId = "game",
+            playerId = "rival",
+            primaryWord = "MASA",
+            neutralCaptured = 4,
+        )
+        val rivalTakesMine = WordSiegeMoveDto(
+            id = 3,
+            gameId = "game",
+            playerId = "rival",
+            primaryWord = "KALEM",
+            opponentCaptured = 1,
+        )
+
+        assertEquals(6, WordSiegeFinalRules.earnedCubePoints(listOf(first), "me"))
+        assertEquals(6, WordSiegeFinalRules.earnedCubePoints(listOf(first, rivalNeutral), "me"))
+        assertEquals(4, WordSiegeFinalRules.earnedCubePoints(listOf(first, rivalNeutral, rivalTakesMine), "me"))
+        assertEquals(36, WordSiegeFinalRules.netScore(30, 6, 8))
+        assertEquals(34, WordSiegeFinalRules.netScore(30, 4, 10))
     }
 
     @Test fun orientationIsDetectedWithoutPlayerDirectionSelection() {
