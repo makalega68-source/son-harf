@@ -160,7 +160,6 @@ internal object WordSiegePracticeEngine {
         val nextRack = remainingRack + draw
         val nextBag = state.bag.drop(draw.length)
         val gainedCells = board.indices.count { index -> state.board[index].owner != owner && board[index].owner == owner }
-        val areaTransfer = WordSiegeFinalRules.cubeTransfer(gainedCells)
         val playerArea = board.count { it.owner == 1 }
         val botArea = board.count { it.owner == 2 }
         val next = state.copy(
@@ -171,8 +170,8 @@ internal object WordSiegePracticeEngine {
             currentOwner = other(owner),
             playerWordScore = state.playerWordScore + if (owner == 1) score else 0,
             botWordScore = state.botWordScore + if (owner == 2) score else 0,
-            playerAreaScore = state.playerAreaScore + if (owner == 1) areaTransfer else 0,
-            botAreaScore = state.botAreaScore + if (owner == 2) areaTransfer else 0,
+            playerAreaScore = WordSiegeFinalRules.cubeTransfer(playerArea),
+            botAreaScore = WordSiegeFinalRules.cubeTransfer(botArea),
             playerArea = playerArea,
             botArea = botArea,
             consecutivePasses = 0,
