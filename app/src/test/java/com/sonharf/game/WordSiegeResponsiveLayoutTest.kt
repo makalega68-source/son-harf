@@ -15,7 +15,7 @@ class WordSiegeResponsiveLayoutTest {
         assertTrue(source.contains("val compact = maxHeight < 700.dp"))
         assertTrue(source.contains("val boardSize = minOf(maxWidth"))
         assertTrue(source.contains("Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()"))
-        assertTrue(source.contains("WordSiegeBoard("))
+        assertTrue(source.contains("WordSiegePracticeBoard("))
         assertTrue(source.contains("showPass = true"))
         assertTrue(source.contains("showExchange = true"))
         assertTrue(source.contains("onClick = ::applyPlayerMove"))

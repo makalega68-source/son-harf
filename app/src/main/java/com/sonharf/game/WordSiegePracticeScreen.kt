@@ -65,12 +65,23 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     var showRestart by remember { mutableStateOf(false) }
     var showExchange by remember { mutableStateOf(false) }
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    var shuffleSeed by remember { mutableIntStateOf(0) }
 
     val playerTargetScore = WordSiegePracticeEngine.totalScore(state, 1)
     val botTargetScore = WordSiegePracticeEngine.totalScore(state, 2)
     var displayedPlayerScore by remember { mutableIntStateOf(playerTargetScore) }
     var displayedBotScore by remember { mutableIntStateOf(botTargetScore) }
     var displayedOwner by remember { mutableIntStateOf(state.currentOwner) }
+    val canPlayerAct = dictionaryReady && state.status == "playing" && state.currentOwner == 1 && !botThinking
+    val rackOrder = remember(state.playerRack, shuffleSeed) {
+        if (shuffleSeed == 0) state.playerRack.indices.toList()
+        else wordSiegeShuffledRackIndices(state.playerRack.length, shuffleSeed)
+    }
+    val readyFeedback = wordSiegeValidationFeedback(
+        placementsCount = placements.size,
+        turkish = !SonHarfUiState.isEnglish,
+    )
+    val previewCapturedCells = placements.keys.count { index -> state.board.getOrNull(index)?.owner != 1 }
 
     LaunchedEffect(me, backend) {
         val b = backend ?: return@LaunchedEffect
@@ -113,6 +124,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
         state = WordSiegePracticeEngine.newGame(state.language)
         botProfile = WordSiegePracticeBots.random()
         lastMove = null
+        shuffleSeed = 0
         notice = sh("İlk hamle sende. Ortadaki 2K karesinden geç.", "Your first move must cover the center 2W cell.")
         clearSelection()
     }
@@ -126,7 +138,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
             .onSuccess { (next, move) ->
                 state = next
                 lastMove = move
-                notice = sh("+${move.wordScore} kelime • ${move.capturedCells} küp • +${move.capturedCells * 2}/-${move.capturedCells * 2} transfer", "+${move.wordScore} word • ${move.capturedCells} cubes • +${move.capturedCells * 2}/-${move.capturedCells * 2} transfer")
+                notice = wordSiegePracticeMoveNotice(move, turkish = !SonHarfUiState.isEnglish)
                 clearSelection()
                 SonHarfSoundFx.wordAccepted()
             }
@@ -272,52 +284,60 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                 }
 
                 Box(Modifier.fillMaxWidth().height(boardSize), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(boardSize)) {
-                        WordSiegeBoard(
-                            board = state.board,
-                            rack = state.playerRack,
-                            placements = placements,
-                            myOwner = 1,
-                            enabled = dictionaryReady && state.status == "playing" && state.currentOwner == 1 && !botThinking,
-                            onCell = { boardIndex ->
-                                if (!dictionaryReady || state.status != "playing" || state.currentOwner != 1 || botThinking) return@WordSiegeBoard
-                                if (placements.containsKey(boardIndex)) {
-                                    selectedRackIndex = placements.getValue(boardIndex)
-                                    placements = placements - boardIndex
-                                } else if (state.board[boardIndex].letter == null) {
-                                    val rackIndex = selectedRackIndex ?: return@WordSiegeBoard
-                                    if (rackIndex !in placements.values) {
-                                        placements = placements + (boardIndex to rackIndex)
-                                        selectedRackIndex = null
-                                    }
+                    WordSiegePracticeBoard(
+                        board = state.board,
+                        rack = state.playerRack,
+                        placements = placements,
+                        myOwner = 1,
+                        enabled = canPlayerAct,
+                        modifier = Modifier.fillMaxSize(),
+                        onCell = { boardIndex ->
+                            if (!canPlayerAct) return@WordSiegePracticeBoard
+                            if (placements.containsKey(boardIndex)) {
+                                selectedRackIndex = placements.getValue(boardIndex)
+                                placements = placements - boardIndex
+                            } else if (state.board[boardIndex].letter == null) {
+                                val rackIndex = selectedRackIndex ?: return@WordSiegePracticeBoard
+                                if (rackIndex !in placements.values) {
+                                    placements = placements + (boardIndex to rackIndex)
+                                    selectedRackIndex = null
                                 }
-                            },
-                        )
-                    }
+                            }
+                        },
+                    )
                 }
 
                 if (state.status == "playing") {
-                    Text(
-                        sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"),
-                        color = MainUi.Muted,
-                        fontSize = 8.sp,
-                        modifier = Modifier.fillMaxWidth(),
-                        textAlign = TextAlign.End,
-                        maxLines = 1,
-                    )
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        if (placements.isNotEmpty()) {
+                            Text(readyFeedback.message, color = MainUi.Green, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                sh(
+                                    "Alan +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
+                                    "Area +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
+                                ),
+                                color = MainUi.Muted,
+                                fontSize = 8.sp,
+                            )
+                        }
+                        Spacer(Modifier.weight(1f))
+                        Text(sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"), color = MainUi.Muted, fontSize = 8.sp, maxLines = 1)
+                    }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                        state.playerRack.forEachIndexed { index, letter ->
-                            WordSiegeRackTile(
+                        rackOrder.forEach { rackIndex ->
+                            val letter = state.playerRack.getOrNull(rackIndex) ?: return@forEach
+                            WordSiegePracticeRackTile(
                                 letter = letter,
-                                selected = selectedRackIndex == index,
-                                used = index in placements.values,
-                                enabled = dictionaryReady && state.currentOwner == 1 && !botThinking,
+                                selected = selectedRackIndex == rackIndex,
+                                used = rackIndex in placements.values,
+                                enabled = canPlayerAct,
                                 modifier = Modifier.weight(1f),
                                 onClick = {
-                                    val pending = placements.entries.firstOrNull { it.value == index }?.key
+                                    val pending = placements.entries.firstOrNull { it.value == rackIndex }?.key
                                     if (pending != null) placements = placements - pending
-                                    selectedRackIndex = if (selectedRackIndex == index) null else index
+                                    selectedRackIndex = if (selectedRackIndex == rackIndex) null else rackIndex
                                 },
                             )
                         }
@@ -325,19 +345,47 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        OutlinedButton(onClick = { showPass = true }, enabled = dictionaryReady && state.currentOwner == 1 && !botThinking, modifier = Modifier.weight(1f).height(if (compact) 40.dp else 43.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                placements.keys.lastOrNull()?.let { boardIndex ->
+                                    selectedRackIndex = placements[boardIndex]
+                                    placements = wordSiegeUndoPendingPlacement(placements, boardIndex)
+                                }
+                            },
+                            enabled = canPlayerAct && placements.isNotEmpty(),
+                            modifier = Modifier.weight(1f).height(34.dp),
+                            contentPadding = PaddingValues(horizontal = 3.dp),
+                        ) {
+                            Icon(Icons.Rounded.Undo, null, Modifier.size(13.dp))
+                            Spacer(Modifier.width(3.dp))
+                            Text(sh("GERİ AL", "UNDO"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        }
+                        OutlinedButton(
+                            onClick = { shuffleSeed = if (shuffleSeed == Int.MAX_VALUE) 1 else shuffleSeed + 1 },
+                            enabled = canPlayerAct && state.playerRack.length > 1,
+                            modifier = Modifier.weight(1f).height(34.dp),
+                            contentPadding = PaddingValues(horizontal = 3.dp),
+                        ) {
+                            Icon(Icons.Rounded.Shuffle, null, Modifier.size(13.dp))
+                            Spacer(Modifier.width(3.dp))
+                            Text(sh("KARIŞTIR", "SHUFFLE"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                        OutlinedButton(onClick = { showPass = true }, enabled = canPlayerAct, modifier = Modifier.weight(1f).height(if (compact) 40.dp else 43.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
                             Text(sh("PAS", "PASS"), fontSize = 9.sp, fontWeight = FontWeight.Black)
                         }
                         OutlinedButton(
                             onClick = { exchangeSelection = emptySet(); showExchange = true },
-                            enabled = dictionaryReady && state.currentOwner == 1 && !botThinking && state.bag.isNotEmpty(),
+                            enabled = canPlayerAct && state.bag.isNotEmpty(),
                             modifier = Modifier.weight(1.25f).height(if (compact) 40.dp else 43.dp),
                             border = BorderStroke(1.dp, SiegePurple),
                             contentPadding = PaddingValues(horizontal = 4.dp),
                         ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = 8.sp, fontWeight = FontWeight.Black) }
                         Button(
                             onClick = ::applyPlayerMove,
-                            enabled = dictionaryReady && state.currentOwner == 1 && placements.isNotEmpty() && !botThinking,
+                            enabled = canPlayerAct && placements.isNotEmpty(),
                             modifier = Modifier.weight(1.35f).height(if (compact) 40.dp else 43.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MainUi.Blue,
@@ -433,7 +481,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     Text(sh("Seçtiğin harfler torbaya döner ve turun biter.", "Selected tiles return to the bag and your turn ends."), color = MainUi.Muted, fontSize = 12.sp)
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         state.playerRack.forEachIndexed { index, letter ->
-                            WordSiegeRackTile(letter, index in exchangeSelection, false, true, Modifier.weight(1f)) {
+                            WordSiegePracticeRackTile(letter, index in exchangeSelection, false, true, Modifier.weight(1f)) {
                                 exchangeSelection = if (index in exchangeSelection) exchangeSelection - index else exchangeSelection + index
                             }
                         }
