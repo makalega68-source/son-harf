@@ -42,6 +42,7 @@ private val PanSiegeNeutral = Color(0xFFF7F8FA)
 private val PanSiegeMine = Color(0xFF35C878)
 private val PanSiegeRival = Color(0xFFFF5F57)
 private val PanSiegeCellSize = 52.dp
+internal const val WORD_SIEGE_BOT_FALLBACK_DELAY_MS = 15_000L
 
 @Composable
 internal fun WordSiegePanMatch(
@@ -79,7 +80,22 @@ internal fun WordSiegePanMatch(
     var displayedMyScore by remember(game.id) { mutableIntStateOf(myTargetScore) }
     var displayedRivalScore by remember(game.id) { mutableIntStateOf(rivalTargetScore) }
     var displayedCurrentPlayerId by remember(game.id) { mutableStateOf(game.currentPlayerId) }
+    var fallbackPracticeActive by remember(game.id) { mutableStateOf(false) }
     val visualMyTurn = game.status == "playing" && displayedCurrentPlayerId == me
+
+    LaunchedEffect(game.id, game.status) {
+        if (game.status == "waiting") {
+            delay(WORD_SIEGE_BOT_FALLBACK_DELAY_MS)
+            fallbackPracticeActive = true
+        } else {
+            fallbackPracticeActive = false
+        }
+    }
+
+    if (fallbackPracticeActive && game.status == "waiting") {
+        WordSiegePracticeScreen(onExit = { fallbackPracticeActive = false })
+        return
+    }
 
     LaunchedEffect(myTargetScore, rivalTargetScore, game.currentPlayerId) {
         while (displayedMyScore != myTargetScore || displayedRivalScore != rivalTargetScore) {
@@ -168,7 +184,7 @@ internal fun WordSiegePanMatch(
                     Text(sh("RAKİP ARANIYOR", "FINDING A RIVAL"), color = MainUi.Text, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        sh("Beklerken çıkabilirsin. Rakip bulunduğunda oyun listende görünür.", "You can leave while waiting. The match will stay in your game list."),
+                        sh("15 saniye içinde rakip bulunmazsa botla hemen başlayacaksın. Gerçek rakip araması arka planda sürecek.", "If no rival is found within 15 seconds, practice starts immediately with a bot while real matchmaking continues in the background."),
                         color = MainUi.Muted,
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center,
