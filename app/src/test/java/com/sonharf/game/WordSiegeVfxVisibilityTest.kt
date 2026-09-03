@@ -82,8 +82,8 @@ class WordSiegeVfxVisibilityTest {
     fun `action VFX visibility thresholds stay within acceptance ranges`() {
         assertTrue(PURCHASED_BOARD_PLACE_VFX_MS in 600..700)
         assertTrue(PURCHASED_BOARD_RESOLVE_VFX_MS in 750..850)
-        assertTrue(PURCHASED_BOARD_PLACE_MAX_ALPHA in .80f..90f)
-        assertTrue(PURCHASED_BOARD_RESOLVE_MAX_ALPHA in .80f..90f)
+        assertTrue(PURCHASED_BOARD_PLACE_MAX_ALPHA in 0.80f..0.90f)
+        assertTrue(PURCHASED_BOARD_RESOLVE_MAX_ALPHA in 0.80f..0.90f)
         assertEquals(4, PURCHASED_BOARD_PLACE_STAR_COUNT)
         assertTrue(PURCHASED_BOARD_RESOLVE_STAR_COUNT in 4..6)
         assertTrue(PURCHASED_BOARD_PLACE_MIN_STAR_DP >= 12f)
