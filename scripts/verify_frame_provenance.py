@@ -15,6 +15,17 @@ MANIFEST = ROOT / "assets" / "frame_provenance_manifest.json"
 DRAWABLE_DIR = ROOT / "app" / "src" / "main" / "res" / "drawable-nodpi"
 CATALOG = ROOT / "app" / "src" / "main" / "java" / "com" / "sonharf" / "game" / "PurchasedStyleUi.kt"
 
+CATALOG_CONSTANTS = {
+    "frame_asset_red": "RED",
+    "frame_asset_green": "GREEN",
+    "frame_asset_mint": "MINT",
+    "frame_asset_purple": "PURPLE",
+    "frame_asset_gold": "GOLD",
+    "frame_asset_gold_crown": "GOLD_CROWN",
+    "frame_asset_christmas": "CHRISTMAS",
+    "frame_asset_halloween": "HALLOWEEN",
+}
+
 
 def sha256(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
@@ -63,12 +74,15 @@ def verify_drawables(manifest: dict):
 def verify_catalog(manifest: dict):
     source = CATALOG.read_text(encoding="utf-8")
     for spec in manifest["assets"]:
+        frame_id = spec["frame_id"]
+        constant = CATALOG_CONSTANTS[frame_id]
         drawable_name = pathlib.Path(spec["drawable"]).stem
-        pattern = re.compile(rf"\b(?:GOLD|MINT|PURPLE|GREEN|RED|GOLD_CROWN|CHRISTMAS|HALLOWEEN)\s*->\s*R\.drawable\.{re.escape(drawable_name)}\b")
-        if f'"{spec["frame_id"]}"' not in source:
-            raise AssertionError(f"Catalog missing frame ID {spec['frame_id']}")
-        if not pattern.search(source):
-            raise AssertionError(f"Catalog mapping missing drawable {drawable_name} for {spec['frame_id']}")
+        id_pattern = re.compile(rf"const\s+val\s+{constant}\s*=\s*\"{re.escape(frame_id)}\"")
+        map_pattern = re.compile(rf"\b{constant}\s*->\s*R\.drawable\.{re.escape(drawable_name)}\b")
+        if not id_pattern.search(source):
+            raise AssertionError(f"Catalog constant {constant} is not pinned to {frame_id}")
+        if not map_pattern.search(source):
+            raise AssertionError(f"Catalog mapping {constant} -> R.drawable.{drawable_name} is missing or swapped")
     if "contentScale = ContentScale.Fit" not in source:
         raise AssertionError("Purchased frame artwork must use ContentScale.Fit")
 
