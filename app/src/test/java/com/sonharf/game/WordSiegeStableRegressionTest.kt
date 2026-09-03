@@ -37,7 +37,8 @@ class WordSiegeStableRegressionTest {
         assertTrue(sharedDictionary.contains("MIN_CANONICAL_LENGTH = 2"))
         assertTrue(sharedDictionary.contains("ConcurrentHashMap"))
         assertTrue(rules.contains("CUBE_TRANSFER_POINTS: Int = 2"))
-        assertTrue(rules.contains("wordScore + earnedCubePoints - opponentEarnedCubePoints"))
+        assertTrue(rules.contains("wordScore + earnedCubePoints.coerceAtLeast(0)"))
+        assertTrue(rules.contains("ownedCubes -= move.opponentCaptured"))
         assertTrue(backend.contains("WordSiege"))
     }
 
