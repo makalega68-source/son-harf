@@ -38,6 +38,10 @@ private val PracticeSiegeTileBorder = Color(0xFFD99818)
 private val PracticeSiegeBoardSurface = Color(0xFFE7EDF5)
 private val PracticeSiegeMine = Color(0xFF35C878)
 private val PracticeSiegeRival = Color(0xFFFF5F57)
+private val PracticeSiegeNeutralBorder = Color(0xFF7890A8)
+private val PracticeSiegeBonusBorder = Color(0xFF5279A6)
+private val PracticeSiegeMineBorder = Color(0xFF147A48)
+private val PracticeSiegeRivalBorder = Color(0xFFB72E35)
 
 @Composable
 internal fun WordSiegePracticeBoard(
@@ -67,6 +71,23 @@ internal fun WordSiegePracticeBoard(
                 boardWidthPx = boardPx,
                 closePan = closePan,
             )
+        }
+    }
+    val boardBorderWidth = wordSiegeBoardBorderWidthDp(transform.scale).dp
+    val actionVfxEvents = remember(placements, moveEventKey, resolvedIndices) {
+        buildList {
+            placements.toSortedMap().forEach { (index, rackIndex) ->
+                if (WordSiegeBoardSpec.isValidIndex(index)) {
+                    add(PurchasedBoardVfxEvent("placement:$index:$rackIndex", index, PurchasedBoardVfxKind.PLACEMENT))
+                }
+            }
+            if (moveEventKey != null) {
+                resolvedIndices.sorted().forEach { index ->
+                    if (WordSiegeBoardSpec.isValidIndex(index)) {
+                        add(PurchasedBoardVfxEvent("resolved:$moveEventKey:$index", index, PurchasedBoardVfxKind.RESOLVED))
+                    }
+                }
+            }
         }
     }
 
@@ -145,7 +166,6 @@ internal fun WordSiegePracticeBoard(
                             val index = WordSiegeBoardSpec.index(row, column)
                             val pendingRackIndex = placements[index]
                             val pending = pendingRackIndex != null
-                            val resolved = moveEventKey != null && index in resolvedIndices
                             WordSiegePracticeBoardCell(
                                 cell = board.getOrElse(index) { WordSiegeCellDto() },
                                 pendingLetter = pendingRackIndex?.let(rack::getOrNull),
@@ -153,16 +173,7 @@ internal fun WordSiegePracticeBoard(
                                 myOwner = myOwner,
                                 enabled = enabled,
                                 size = PracticeSiegeCellSize,
-                                actionVfxKey = when {
-                                    pending -> "placement:$index:$pendingRackIndex"
-                                    resolved -> "resolved:$moveEventKey:$index"
-                                    else -> null
-                                },
-                                actionVfxKind = when {
-                                    pending -> PurchasedBoardVfxKind.PLACEMENT
-                                    resolved -> PurchasedBoardVfxKind.RESOLVED
-                                    else -> null
-                                },
+                                borderWidth = boardBorderWidth,
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleMode,
                             )
@@ -170,6 +181,13 @@ internal fun WordSiegePracticeBoard(
                     }
                 }
             }
+
+            PurchasedBoardActionVfxOverlay(
+                events = actionVfxEvents,
+                transform = transform,
+                cellSizePx = tilePx,
+                modifier = Modifier.matchParentSize(),
+            )
 
             SmallFloatingActionButton(
                 onClick = {
@@ -195,8 +213,7 @@ private fun WordSiegePracticeBoardCell(
     myOwner: Int,
     enabled: Boolean,
     size: Dp,
-    actionVfxKey: String?,
-    actionVfxKind: PurchasedBoardVfxKind?,
+    borderWidth: Dp,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
 ) {
@@ -208,9 +225,10 @@ private fun WordSiegePracticeBoardCell(
     }
     val border = when {
         pending -> PracticeSiegeTileBorder
-        owner == myOwner -> MainUi.Green
-        owner != 0 -> MainUi.Red
-        else -> MainUi.Border
+        owner == myOwner -> PracticeSiegeMineBorder
+        owner != 0 -> PracticeSiegeRivalBorder
+        !cell.bonusUsed && cell.bonus != null -> PracticeSiegeBonusBorder
+        else -> PracticeSiegeNeutralBorder
     }
     val letter = pendingLetter?.toString() ?: cell.letter
     val canPlace = enabled && (cell.letter == null || pending)
@@ -245,7 +263,7 @@ private fun WordSiegePracticeBoardCell(
             modifier = Modifier.fillMaxSize(),
             color = if (pending) PracticeSiegeTile.copy(alpha = .82f) else Color.Transparent,
             shape = RoundedCornerShape(7.dp),
-            border = BorderStroke(if (pending) 2.dp else 1.dp, border.copy(alpha = .8f)),
+            border = BorderStroke(if (pending) maxOf(2.dp, borderWidth) else borderWidth, border.copy(alpha = .96f)),
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (letter != null) {
@@ -266,13 +284,6 @@ private fun WordSiegePracticeBoardCell(
                     )
                 }
             }
-        }
-        if (actionVfxKey != null && actionVfxKind != null) {
-            PurchasedBoardActionVfx(
-                eventKey = actionVfxKey,
-                kind = actionVfxKind,
-                modifier = Modifier.matchParentSize(),
-            )
         }
     }
 }
