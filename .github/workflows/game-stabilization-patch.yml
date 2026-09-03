@@ -1,0 +1,72 @@
+name: Son Harf Stabilization Patch
+
+on:
+  push:
+    branches:
+      - feat/sonharf-game-stabilization-20260903
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-commit:
+    if: ${{ !contains(github.event.head_commit.message, '[stabilization-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/sonharf-game-stabilization-20260903
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Apply stabilization patch
+        shell: python
+        run: |
+          from pathlib import Path
+
+          def replace(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f'Expected block not found: {path}')
+              p.write_text(text.replace(old, new, 1))
+
+          ui = 'app/src/main/java/com/sonharf/game/LightDuelUi.kt'
+          replace(ui,
+          '''            enabled = !busy && !quizActive,\n            submitEnabled = myTurn && wordInput.isNotBlank() && !busy && !quizActive,''',
+          '''            enabled = myTurn && !busy && !quizActive,\n            submitEnabled = myTurn && wordInput.isNotBlank() && !busy && !quizActive,''')
+
+          replace(ui,
+          '''                LightSpecialKey(\n                    label = sh("TEMİZLE", "CLEAR"),\n                    enabled = enabled && value.isNotEmpty(),\n                    modifier = Modifier.weight(1.45f),\n                ) { onValueChange("") }\n                Button(''',
+          '''                Spacer(Modifier.weight(1.45f))\n                Button(''')
+
+          replace(ui,
+          '''                Text(\n                    when {\n                        quizActive -> sh("BONUS DÜELLOSU", "BONUS DUEL")\n                        myTurn -> sh("SIRA SENDE", "YOUR TURN")\n                        room.isBot && room.botTurn -> sh("BOT DÜŞÜNÜYOR", "BOT IS THINKING")\n                        else -> sh("RAKİBİN HAMLESİ", "OPPONENT'S MOVE")\n                    },\n                    color = when {\n                        quizActive -> LGold\n                        myTurn -> LBlue\n                        else -> LMuted\n                    },\n                    fontSize = 13.sp,\n                    fontWeight = FontWeight.Black,\n                )''',
+          '''                Surface(\n                    shape = RoundedCornerShape(14.dp),\n                    color = when {\n                        quizActive -> Color(0xFFFFF5D9)\n                        myTurn -> LBlueSoft\n                        else -> Color(0xFFFFEEF2)\n                    },\n                    border = BorderStroke(\n                        1.dp,\n                        when {\n                            quizActive -> LGold.copy(alpha = .55f)\n                            myTurn -> LBlue.copy(alpha = .55f)\n                            else -> LRed.copy(alpha = .45f)\n                        }\n                    ),\n                ) {\n                    Text(\n                        when {\n                            quizActive -> sh("★ BONUS DÜELLOSU", "★ BONUS DUEL")\n                            myTurn -> sh("● SENİN SIRAN • ŞİMDİ OYNA", "● YOUR TURN • PLAY NOW")\n                            room.isBot && room.botTurn -> sh("● BOT DÜŞÜNÜYOR", "● BOT IS THINKING")\n                            else -> sh("● RAKİBİN SIRASI • BEKLE", "● OPPONENT'S TURN • WAIT")\n                        },\n                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),\n                        color = when {\n                            quizActive -> LGold\n                            myTurn -> LBlue\n                            else -> LRed\n                        },\n                        fontSize = 13.sp,\n                        fontWeight = FontWeight.Black,\n                    )\n                }''')
+
+          backend = 'app/src/main/java/com/sonharf/game/data/OnlineGameBackend.kt'
+          replace(backend,
+          '''    suspend fun claimTurnTimeout(roomId: String): GameRoomDto =\n        supabase.postgrest.rpc("claim_turn_timeout", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()''',
+          '''    suspend fun claimTurnTimeout(roomId: String, expectedPlayerId: String?, expectedDeadline: String): GameRoomDto =\n        supabase.postgrest.rpc(\n            "claim_turn_timeout_v2",\n            buildJsonObject {\n                put("p_room_id", roomId)\n                expectedPlayerId?.let { put("p_expected_player_id", it) }\n                put("p_expected_deadline", expectedDeadline)\n            },\n        ).decodeSingle()''')
+
+          screen = 'app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt'
+          replace(screen,
+          '''                        runCatching { backend.claimTurnTimeout(active.id) }''',
+          '''                        val expectedDeadlineValue = expectedDeadline ?: return@launch\n                        runCatching { backend.claimTurnTimeout(active.id, expectedPlayer, expectedDeadlineValue) }''')
+
+          print('Stabilization patch applied')
+      - name: Unit tests and debug build
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace
+      - name: Commit patched source
+        run: |
+          if git diff --quiet; then
+            echo 'No source changes to commit.'
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/sonharf/game/LightDuelUi.kt app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt app/src/main/java/com/sonharf/game/data/OnlineGameBackend.kt
+          git commit -m 'Stabilize duel turn timeout and keyboard [stabilization-patched]'
+          git push origin HEAD:feat/sonharf-game-stabilization-20260903
