@@ -1,9 +1,11 @@
 package com.sonharf.game
 
 import com.sonharf.game.data.SharedDictionaryService
+import kotlin.random.Random
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -27,13 +29,13 @@ class WordSiegePracticeEngineTest {
     fun clearDictionaryFixture() = SharedDictionaryService.clearForTests()
 
     @Test
-    fun firstPracticeMoveCoversCenterAndUsesBonus() {
-        val state = WordSiegePracticeEngine.newGame().copy(playerRack = "KALEMTR")
+    fun firstPracticeMoveCovers15x15CenterAndUsesBonus() {
+        val state = WordSiegePracticeEngine.newGame(random = Random(1)).copy(playerRack = "KALEMTR")
 
         val (next, move) = WordSiegePracticeEngine.applyMove(
             state = state,
             owner = 1,
-            placements = linkedMapOf(38 to 0, 39 to 1, 40 to 2, 41 to 3, 42 to 4),
+            placements = linkedMapOf(110 to 0, 111 to 1, 112 to 2, 113 to 3, 114 to 4),
             horizontal = true,
         )
 
@@ -41,19 +43,33 @@ class WordSiegePracticeEngineTest {
         assertEquals(12, move.wordScore)
         assertEquals(5, next.playerArea)
         assertEquals(2, next.currentOwner)
-        assertTrue(next.board[40].bonusUsed)
+        assertTrue(next.board[WordSiegeBoardSpec.CenterIndex].bonusUsed)
+    }
+
+    @Test
+    fun newGameHas225CellsAndFreshRackComesFromCanonicalBag() {
+        val first = WordSiegePracticeEngine.newGame(random = Random(11))
+        val second = WordSiegePracticeEngine.newGame(random = Random(29))
+
+        assertEquals(225, first.board.size)
+        assertEquals(7, first.playerRack.length)
+        assertNotEquals(first.playerRack, second.playerRack)
+        assertEquals(
+            WordSiegeBoardSpec.canonicalBag("tr").toList().sorted(),
+            (first.playerRack + first.botRack + first.bag).toList().sorted(),
+        )
     }
 
     @Test
     fun botCanFindMoveAndCaptureAnExistingTile() {
-        val initial = WordSiegePracticeEngine.newGame().copy(
+        val initial = WordSiegePracticeEngine.newGame(random = Random(1)).copy(
             playerRack = "KALEMTR",
             botRack = "MASASİN",
         )
         val opened = WordSiegePracticeEngine.applyMove(
             initial,
             1,
-            linkedMapOf(38 to 0, 39 to 1, 40 to 2, 41 to 3, 42 to 4),
+            linkedMapOf(110 to 0, 111 to 1, 112 to 2, 113 to 3, 114 to 4),
             true,
         ).first
         val planned = WordSiegePracticeEngine.bestBotMove(opened)
@@ -89,7 +105,7 @@ class WordSiegePracticeEngineTest {
 
     @Test
     fun consecutivePassesFinishPractice() {
-        val first = WordSiegePracticeEngine.pass(WordSiegePracticeEngine.newGame(), 1)
+        val first = WordSiegePracticeEngine.pass(WordSiegePracticeEngine.newGame(random = Random(1)), 1)
         val finished = WordSiegePracticeEngine.pass(first, 2)
 
         assertEquals("finished", finished.status)
@@ -98,7 +114,7 @@ class WordSiegePracticeEngineTest {
 
     @Test
     fun exchangeKeepsTileCountsAndChangesTurn() {
-        val state = WordSiegePracticeEngine.newGame()
+        val state = WordSiegePracticeEngine.newGame(random = Random(1))
         val next = WordSiegePracticeEngine.exchange(state, 1, setOf(0, 2))
 
         assertEquals(7, next.playerRack.length)
