@@ -26,6 +26,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.sonharf.game.data.FriendshipDto
 import com.sonharf.game.data.GameInviteDto
 import com.sonharf.game.data.GameRoomDto
@@ -624,7 +626,7 @@ internal fun LightDuelArena(
 
         if (quizActive) {
             val activeTrivia = requireNotNull(triviaRound)
-            LightBonusCard(
+            LightBonusOverlay(
                 round = activeTrivia,
                 question = requireNotNull(triviaQuestion),
                 myAnswer = (if (host) activeTrivia.hostAnswer else activeTrivia.guestAnswer) ?: triviaSelection,
@@ -632,7 +634,6 @@ internal fun LightDuelArena(
                 myWon = activeTrivia.winnerSide == if (host) "host" else "guest",
                 tied = activeTrivia.winnerSide == "tie",
                 onTrivia = onTrivia,
-                modifier = Modifier.padding(horizontal = 12.dp),
             )
         }
 
@@ -769,6 +770,45 @@ private fun LightVipWordHistory(
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun LightBonusOverlay(
+    round: TriviaRoundDto,
+    question: TriviaQuestionDto,
+    myAnswer: Long?,
+    opponentAnswer: Long?,
+    myWon: Boolean,
+    tied: Boolean,
+    onTrivia: (Long) -> Unit,
+) {
+    Dialog(
+        onDismissRequest = {},
+        properties = DialogProperties(
+            dismissOnBackPress = false,
+            dismissOnClickOutside = false,
+            usePlatformDefaultWidth = false,
+        ),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = .46f))
+                .padding(horizontal = 18.dp, vertical = 24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            LightBonusCard(
+                round = round,
+                question = question,
+                myAnswer = myAnswer,
+                opponentAnswer = opponentAnswer,
+                myWon = myWon,
+                tied = tied,
+                onTrivia = onTrivia,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
@@ -1162,6 +1202,29 @@ private fun LightWaitingRoom(code: String, playerName: String, onExit: () -> Uni
 }
 
 @Composable
+private fun LightResultMetric(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.height(62.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = LCard2,
+        border = BorderStroke(1.dp, LBorder),
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 7.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(label, color = LMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+            Text(value, color = LText, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
 private fun LightResult(
     won: Boolean,
     draw: Boolean,
@@ -1201,6 +1264,27 @@ private fun LightResult(
                     fontWeight = FontWeight.Black,
                 )
                 Text("$playerName  $myRounds : $oppRounds  $opponentName", color = LText, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                val longestWord = words
+                    .map { it.word.trim().ifBlank { it.normalizedWord.trim() } }
+                    .filter { it.isNotBlank() }
+                    .maxByOrNull { it.length }
+                    ?.let { gameUppercase(it, language) }
+                    ?: "—"
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    LightResultMetric(
+                        label = sh("GEÇERLİ KELİME", "VALID WORDS"),
+                        value = words.size.toString(),
+                        modifier = Modifier.weight(1f),
+                    )
+                    LightResultMetric(
+                        label = sh("EN UZUN KELİME", "LONGEST WORD"),
+                        value = longestWord,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
                 if (isVip && words.isNotEmpty()) {
                     Text(sh("VIP • TAM KELİME GEÇMİŞİ", "VIP • FULL WORD HISTORY"), color = LGold, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
