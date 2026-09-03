@@ -7,6 +7,17 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
+private val supportedProfileFrameIds = setOf(
+    "frame_asset_red",
+    "frame_asset_green",
+    "frame_asset_mint",
+    "frame_asset_purple",
+    "frame_asset_gold",
+    "frame_asset_gold_crown",
+    "frame_asset_christmas",
+    "frame_asset_halloween",
+)
+
 @Serializable
 data class ShopItemDto(
     val id: String,
@@ -41,7 +52,10 @@ data class EquippedCosmeticsDto(
 
 suspend fun OnlineGameBackend.getShopItems(): List<ShopItemDto> =
     SupabaseProvider.client.from("shop_items").select().decodeList<ShopItemDto>()
-        .filter { it.active }.sortedBy { it.sortOrder }
+        .filter { item ->
+            item.active && (item.kind != "profile_frame" || item.id in supportedProfileFrameIds)
+        }
+        .sortedBy { it.sortOrder }
 
 suspend fun OnlineGameBackend.getInventory(): Set<String> {
     val me = currentUserId() ?: return emptySet()
