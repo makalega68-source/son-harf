@@ -2,9 +2,8 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -87,8 +86,9 @@ internal fun WordSiegePracticeBoard(
     }
 
     fun toggleMode() {
-        mode = mode.toggle()
-        pan = if (mode == WordSiegeBoardViewportMode.FIT) fitPan() else center()
+        val nextMode = mode.toggle()
+        mode = nextMode
+        pan = if (nextMode == WordSiegeBoardViewportMode.FIT) fitPan() else center()
     }
 
     LaunchedEffect(viewport, mode) {
@@ -113,9 +113,6 @@ internal fun WordSiegePracticeBoard(
                 .onSizeChanged {
                     viewport = it
                     pan = clamp(pan)
-                }
-                .pointerInput(mode, viewport) {
-                    detectTapGestures(onDoubleTap = { toggleMode() })
                 }
                 .pointerInput(mode, viewport, boardPx) {
                     if (mode == WordSiegeBoardViewportMode.CLOSE) {
@@ -149,26 +146,11 @@ internal fun WordSiegePracticeBoard(
                                 enabled = enabled,
                                 size = PracticeSiegeCellSize,
                                 onClick = { onCell(index) },
+                                onDoubleClick = ::toggleMode,
                             )
                         }
                     }
                 }
-            }
-
-            Surface(
-                modifier = Modifier.align(Alignment.TopStart).padding(7.dp),
-                shape = RoundedCornerShape(99.dp),
-                color = Color.White.copy(alpha = .92f),
-                border = BorderStroke(1.dp, MainUi.Border),
-            ) {
-                Text(
-                    if (mode == WordSiegeBoardViewportMode.FIT) sh("Çift dokun: yakın", "Double tap: close")
-                    else sh("Çift dokun: tüm tahta", "Double tap: full board"),
-                    Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                    color = MainUi.Muted,
-                    fontSize = 8.sp,
-                    fontWeight = FontWeight.Bold,
-                )
             }
 
             SmallFloatingActionButton(
@@ -196,6 +178,7 @@ private fun WordSiegePracticeBoardCell(
     enabled: Boolean,
     size: Dp,
     onClick: () -> Unit,
+    onDoubleClick: () -> Unit,
 ) {
     val owner = if (pending) myOwner else cell.owner
     val territory = when {
@@ -210,6 +193,7 @@ private fun WordSiegePracticeBoardCell(
         else -> MainUi.Border
     }
     val letter = pendingLetter?.toString() ?: cell.letter
+    val canPlace = enabled && (cell.letter == null || pending)
 
     Box(
         Modifier
@@ -217,7 +201,10 @@ private fun WordSiegePracticeBoardCell(
             .padding(1.5.dp)
             .clip(RoundedCornerShape(7.dp))
             .background(if (letter != null) territory else MainUi.Surface)
-            .clickable(enabled = enabled && (cell.letter == null || pending), onClick = onClick),
+            .combinedClickable(
+                onDoubleClick = onDoubleClick,
+                onClick = { if (canPlace) onClick() },
+            ),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
@@ -259,7 +246,7 @@ internal fun WordSiegePracticeRackTile(
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = modifier.height(48.dp).clickable(enabled = enabled, onClick = onClick),
+        modifier = modifier.height(48.dp).combinedClickable(onClick = onClick, enabled = enabled),
         color = when {
             used -> MainUi.SurfaceSoft
             selected -> PracticeSiegeTile
