@@ -13,7 +13,8 @@ class StyleAndOfflineSiegeRegressionTest {
         val dictionary = read("src/main/java/com/sonharf/game/data/SharedDictionaryService.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt")
 
-        assertTrue(dictionary.contains("get_dictionary_snapshot_v2"))
+        assertTrue(dictionary.contains("get_dictionary_snapshot_v3"))
+        assertTrue(dictionary.contains("MIN_CANONICAL_LENGTH = 2"))
         assertTrue(dictionary.contains("preloadCanonical"))
         assertTrue(dictionary.contains("restorePersisted"))
         assertFalse(dictionary.contains("offlinePracticeTurkish"))
@@ -32,6 +33,8 @@ class StyleAndOfflineSiegeRegressionTest {
         assertTrue(frames.contains("BitmapFactory.decodeStream"))
         assertTrue(frames.contains("SafeFrameArtwork"))
         assertTrue(frames.contains("it.kind == \"profile_frame\""))
+        assertTrue(frames.contains("frame_asset_christmas"))
+        assertTrue(frames.contains("frame_asset_halloween"))
         assertFalse(frames.contains("it.id in PurchasedFrameCatalog.ids"))
         assertTrue(frames.contains("legacyFrameSpec"))
         assertFalse(frames.contains("verifiedStagedFrameIds"))

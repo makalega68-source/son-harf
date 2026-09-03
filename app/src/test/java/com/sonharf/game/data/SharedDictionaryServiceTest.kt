@@ -10,13 +10,13 @@ class SharedDictionaryServiceTest {
     fun cleanup() = SharedDictionaryService.clearForTests()
 
     @Test
-    fun turkishNormalizationAndCanonicalParity() {
+    fun turkishNormalizationAndCanonicalParityIncludesTwoLetterWords() {
         SharedDictionaryService.installSnapshotForTests(
             "tr",
-            listOf("kar", "mal", "sema", "ter", "masa", "kalem", "kara", "sel", "ser"),
+            listOf("ar", "al", "el", "kar", "mal", "sema", "ter", "masa", "kalem", "kara", "sel", "ser"),
         )
 
-        listOf("KAR", "Kar", "kar", "MAL", "SEMA", "TER", "MASA", "KALEM", "KARA", "SEL", "SER").forEach { word ->
+        listOf("AR", "AL", "EL", "KAR", "Kar", "kar", "MAL", "SEMA", "TER", "MASA", "KALEM", "KARA", "SEL", "SER").forEach { word ->
             assertTrue("Expected valid: $word", SharedDictionaryService.isValidCached(word, "tr") == true)
             assertTrue("Expected blocking canonical valid: $word", SharedDictionaryService.isValidWordBlocking(word, "tr"))
         }
@@ -37,12 +37,27 @@ class SharedDictionaryServiceTest {
     }
 
     @Test
-    fun englishUsesSameApiWithSeparateDataset() {
-        SharedDictionaryService.installSnapshotForTests("en", listOf("apple", "table", "water", "planet", "reading"))
+    fun englishUsesSameApiWithSeparateProductionDataset() {
+        SharedDictionaryService.installSnapshotForTests(
+            "en",
+            listOf("cat", "dog", "house", "game", "word", "play", "water", "light", "world", "friend"),
+        )
 
-        listOf("APPLE", "Apple", "table", "WATER").forEach { word ->
+        listOf("CAT", "DOG", "HOUSE", "GAME", "WORD", "PLAY", "WATER", "LIGHT", "WORLD", "FRIEND").forEach { word ->
             assertTrue("Expected valid: $word", SharedDictionaryService.isValidCached(word, "en") == true)
+            assertTrue("Expected blocking canonical valid: $word", SharedDictionaryService.isValidWordBlocking(word, "en"))
         }
         assertFalse(SharedDictionaryService.isValidCached("MAKALEB", "en") == true)
+    }
+
+    @Test
+    fun turkishAndEnglishSnapshotsNeverCrossFallback() {
+        SharedDictionaryService.installSnapshotForTests("tr", listOf("el", "sel", "ışık"))
+        SharedDictionaryService.installSnapshotForTests("en", listOf("cat", "word", "light"))
+
+        assertTrue(SharedDictionaryService.isValidCached("EL", "tr") == true)
+        assertFalse(SharedDictionaryService.isValidCached("EL", "en") == true)
+        assertTrue(SharedDictionaryService.isValidCached("CAT", "en") == true)
+        assertFalse(SharedDictionaryService.isValidCached("CAT", "tr") == true)
     }
 }

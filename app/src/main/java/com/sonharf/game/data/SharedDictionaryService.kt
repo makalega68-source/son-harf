@@ -15,19 +15,18 @@ private data class DictionarySnapshotDto(
 )
 
 /**
- * Canonical dictionary gateway for every word-game mode.
+ * Canonical dictionary gateway shared by every word-game mode.
  *
- * The single source of truth is public.dictionary_words via get_dictionary_snapshot_v2.
- * The v2 RPC deliberately returns one PostgREST record (language + words[]) instead of a scalar
- * jsonb object so supabase-kt decodeSingle has the same response contract as normal row queries.
- * Once fetched, the complete active snapshot is kept in memory and persisted on-device so local
- * practice can continue offline with the same vocabulary as the main game. There is deliberately
- * no reduced practice-only lexicon: a missing canonical snapshot is an unavailable-dictionary state,
- * never evidence that an otherwise valid Turkish word is invalid.
+ * public.dictionary_words is authoritative via get_dictionary_snapshot_v3. The complete active,
+ * game-allowed snapshot is cached independently per language. A persisted snapshot is restored first
+ * for offline continuity, then a network refresh is attempted so a stale cache never becomes
+ * permanently authoritative. There is no reduced practice-only fallback lexicon.
  */
 object SharedDictionaryService {
-    private const val PREFS = "son_harf_dictionary_snapshot_v2"
+    private const val PREFS = "son_harf_dictionary_snapshot_v3"
     private const val WORDS_PREFIX = "words_"
+    private const val MIN_CANONICAL_LENGTH = 2
+    private const val MAX_CANONICAL_LENGTH = 32
     private val snapshots = ConcurrentHashMap<String, Set<String>>()
     private val turkishLocale = Locale.forLanguageTag("tr-TR")
     private val englishLocale = Locale.ENGLISH
@@ -39,6 +38,8 @@ object SharedDictionaryService {
         val trimmed = word.trim()
         return if (lang == "tr") trimmed.lowercase(turkishLocale) else trimmed.lowercase(englishLocale)
     }
+
+    private fun inCanonicalLength(word: String): Boolean = word.length in MIN_CANONICAL_LENGTH..MAX_CANONICAL_LENGTH
 
     fun hasSnapshot(language: String): Boolean = snapshots.containsKey(canonicalLanguage(language))
 
@@ -52,7 +53,7 @@ object SharedDictionaryService {
         if (raw.isBlank()) return false
         val indexed = raw.lineSequence()
             .map { normalize(it, lang) }
-            .filter { it.length in 3..12 }
+            .filter(::inCanonicalLength)
             .toHashSet()
         if (indexed.isEmpty()) return false
         snapshots[lang] = indexed
@@ -67,53 +68,63 @@ object SharedDictionaryService {
             .apply()
     }
 
-    suspend fun preload(language: String): Set<String> {
+    private suspend fun fetchCanonical(language: String): Set<String> {
         val lang = canonicalLanguage(language)
-        snapshots[lang]?.let { return it }
         val payload = SupabaseProvider.client.postgrest.rpc(
-            "get_dictionary_snapshot_v2",
+            "get_dictionary_snapshot_v3",
             buildJsonObject { put("p_language", lang) },
         ).decodeSingle<DictionarySnapshotDto>()
         require(payload.language == lang) { "canonical_dictionary_language_mismatch" }
         val indexed = payload.words.asSequence()
             .map { normalize(it, lang) }
-            .filter { it.length in 3..12 }
+            .filter(::inCanonicalLength)
             .toHashSet()
         require(indexed.isNotEmpty()) { "canonical_dictionary_empty" }
         snapshots[lang] = indexed
         return indexed
     }
 
-    /** Restore locally first; otherwise fetch and persist the complete canonical dictionary. */
+    suspend fun preload(language: String): Set<String> {
+        val lang = canonicalLanguage(language)
+        snapshots[lang]?.let { return it }
+        return fetchCanonical(lang)
+    }
+
+    /**
+     * Restore locally first for instant/offline availability, then refresh from the authoritative
+     * backend. If refresh fails, the previously verified local snapshot remains usable.
+     */
     suspend fun preloadCanonical(context: Context, language: String): Set<String> {
         val lang = canonicalLanguage(language)
-        if (restorePersisted(context, lang)) return snapshots.getValue(lang)
-        val words = preload(lang)
-        persist(context, lang, words)
-        return words
+        restorePersisted(context, lang)
+        val refreshed = runCatching { fetchCanonical(lang) }.getOrNull()
+        if (refreshed != null) {
+            persist(context, lang, refreshed)
+            return refreshed
+        }
+        return snapshots[lang] ?: throw IllegalStateException("canonical_dictionary_unavailable")
     }
 
     suspend fun isValidWord(word: String, language: String): Boolean {
         val normalized = normalize(word, language)
-        if (normalized.length !in 3..12) return false
+        if (!inCanonicalLength(normalized)) return false
         isValidCachedNormalized(normalized, language)?.let { return it }
         return normalized in preload(language)
     }
 
     /**
-     * Synchronous bridge used by the local practice engine after the screen has loaded/restored the
-     * canonical snapshot. With no snapshot we fail closed so UI can report dictionary-unavailable;
-     * we never consult a smaller, divergent word list.
+     * Synchronous bridge used by local practice after the screen has loaded/restored the canonical
+     * snapshot. With no snapshot we fail closed and let UI report dictionary-unavailable.
      */
     fun isValidWordBlocking(word: String, language: String): Boolean {
         val normalized = normalize(word, language)
-        if (normalized.length !in 3..12) return false
+        if (!inCanonicalLength(normalized)) return false
         return isValidCachedNormalized(normalized, language) ?: false
     }
 
     fun isValidCached(word: String, language: String): Boolean? {
         val normalized = normalize(word, language)
-        if (normalized.length !in 3..12) return false
+        if (!inCanonicalLength(normalized)) return false
         return isValidCachedNormalized(normalized, language)
     }
 
@@ -129,7 +140,7 @@ object SharedDictionaryService {
         val locale = if (lang == "tr") turkishLocale else englishLocale
         val rackUpper = rack.uppercase(locale)
         return words.asSequence()
-            .filter { it.length in 3..7 }
+            .filter { it.length in 2..7 }
             .map { it.uppercase(locale) }
             .filter { candidate -> missingLetters(candidate, rackUpper) <= 1 }
             .sortedWith(compareByDescending<String> { it.length }.thenBy { it })
@@ -149,7 +160,10 @@ object SharedDictionaryService {
 
     internal fun installSnapshotForTests(language: String, words: Collection<String>) {
         val lang = canonicalLanguage(language)
-        snapshots[lang] = words.asSequence().map { normalize(it, lang) }.filter { it.length in 3..12 }.toHashSet()
+        snapshots[lang] = words.asSequence()
+            .map { normalize(it, lang) }
+            .filter(::inCanonicalLength)
+            .toHashSet()
     }
 
     internal fun clearForTests() = snapshots.clear()
