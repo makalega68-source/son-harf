@@ -47,7 +47,8 @@ object ProductCatalog {
         COINS_8000,
     )
 
-    val activeOneTimeProducts = listOf(
+    // Active offers only. Legacy restore ids intentionally stay outside this list.
+    val oneTimeProducts = listOf(
         COINS_500,
         COINS_1500,
         COINS_3500,
@@ -58,9 +59,9 @@ object ProductCatalog {
         VIP_WELCOME_PACK,
     )
 
-    val oneTimeProducts = activeOneTimeProducts + THEME_NEON
+    val activeOneTimeProducts = oneTimeProducts
 
-    val restorableProductIds = (subscriptions + oneTimeProducts).toSet()
+    val restorableProductIds = (subscriptions + oneTimeProducts + listOf(THEME_NEON)).toSet()
 
     fun isVip(productId: String): Boolean =
         productId == VIP_MONTHLY || productId == VIP_YEARLY
