@@ -147,18 +147,18 @@ internal fun MainPlayerProfileScreen(
                                 meta?.selectedTitle ?: g?.nextTitle ?: sh("ÇAYLAK", "ROOKIE"),
                                 Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                                 color = MainUi.Blue,
-                                fontSize = 9.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                             )
                         }
                         if (p?.isVip == true) {
                             Surface(shape = RoundedCornerShape(9.dp), color = MainUi.Gold.copy(alpha = .14f)) {
-                                Text("VIP", Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                Text("VIP", Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = MainUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
                             }
                         }
                     }
                     TextButton(onClick = onEdit) {
-                        Text(sh("PROFİLİ DÜZENLE", "EDIT PROFILE"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                        Text(sh("PROFİLİ DÜZENLE", "EDIT PROFILE"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 13.sp)
                     }
                 }
             }
@@ -172,8 +172,8 @@ internal fun MainPlayerProfileScreen(
             ) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${sh("SEVİYE", "LEVEL")} ${g?.level ?: 1}", color = MainUi.Blue, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                        Text("${g?.xp ?: 0} XP", color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("${sh("SEVİYE", "LEVEL")} ${g?.level ?: 1}", color = MainUi.Blue, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                        Text("${g?.xp ?: 0} XP", color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                     LinearProgressIndicator(
                         progress = { xpProgress },
@@ -184,7 +184,7 @@ internal fun MainPlayerProfileScreen(
                     Text(
                         "${g?.levelProgress ?: 0}/${g?.levelTarget ?: 500} ${sh("sonraki seviyeye", "to next level")}",
                         color = MainUi.Muted,
-                        fontSize = 9.sp,
+                        fontSize = 13.sp,
                     )
                 }
             }
@@ -261,7 +261,7 @@ internal fun MainPlayerProfileScreen(
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text("${friends.size} ${sh("arkadaş", "friends")}", color = MainUi.Text, fontWeight = FontWeight.Black)
-                        Text("$onlineFriends ${sh("çevrimiçi", "online")}", color = if (onlineFriends > 0) MainUi.Green else MainUi.Muted, fontSize = 10.sp)
+                        Text("$onlineFriends ${sh("çevrimiçi", "online")}", color = if (onlineFriends > 0) MainUi.Green else MainUi.Muted, fontSize = 13.sp)
                     }
                     Icon(Icons.Rounded.ChevronRight, null, tint = MainUi.Muted)
                 }
@@ -272,7 +272,7 @@ internal fun MainPlayerProfileScreen(
             MainSectionTitle(sh("BAŞARIMLAR", "ACHIEVEMENTS"))
             Spacer(Modifier.height(8.dp))
             if (achievements.isEmpty()) {
-                Text(sh("Başarım ilerlemesi henüz oluşmadı.", "Achievement progress is not available yet."), color = MainUi.Muted, fontSize = 10.sp)
+                Text(sh("Başarım ilerlemesi henüz oluşmadı.", "Achievement progress is not available yet."), color = MainUi.Muted, fontSize = 13.sp)
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     achievements.take(4).forEach { achievement ->
@@ -289,11 +289,11 @@ internal fun MainPlayerProfileScreen(
                                     Text(
                                         if (SonHarfUiState.isEnglish) achievement.titleEn else achievement.titleTr,
                                         color = MainUi.Text,
-                                        fontSize = 11.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.weight(1f),
                                     )
-                                    Text(if (achievement.unlocked) "✓" else "${achievement.currentValue}/${achievement.target}", color = if (achievement.unlocked) MainUi.Green else MainUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    Text(if (achievement.unlocked) "✓" else "${achievement.currentValue}/${achievement.target}", color = if (achievement.unlocked) MainUi.Green else MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                 }
                                 LinearProgressIndicator(
                                     progress = { progress },
@@ -328,7 +328,7 @@ internal fun MainPlayerProfileScreen(
                 ) {
                     Icon(Icons.Rounded.Settings, null, tint = MainUi.Blue, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(5.dp))
-                    Text(sh("AYARLAR", "SETTINGS"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    Text(sh("AYARLAR", "SETTINGS"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
                 }
             }
         }
@@ -340,7 +340,7 @@ internal fun MainPlayerProfileScreen(
 private fun MainInlineStat(value: String, label: String, accent: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.widthIn(min = 72.dp)) {
         Text(value, color = accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
-        Text(label, color = MainUi.Muted, fontSize = 8.sp, textAlign = TextAlign.Center)
+        Text(label, color = MainUi.Muted, fontSize = 13.sp, textAlign = TextAlign.Center)
     }
 }
 
@@ -350,9 +350,9 @@ private fun MainRecordLine(icon: String, label: String, value: String, detail: S
         Text(icon, fontSize = 22.sp)
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Text(value, color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(detail, color = MainUi.Muted, fontSize = 9.sp)
+        Text(detail, color = MainUi.Muted, fontSize = 13.sp)
     }
 }
