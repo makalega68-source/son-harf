@@ -1,9 +1,13 @@
 package com.sonharf.game
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,11 +17,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
@@ -31,6 +36,13 @@ private enum class ProductionStoreCategory(val tr: String, val en: String, val i
     PACKS("PAKETLER", "PACKS", Icons.Rounded.Inventory2),
     KASA("KASA", "PIGGY BANK", Icons.Rounded.Savings),
     EVENT("ETKİNLİK", "EVENT", Icons.Rounded.EventAvailable),
+}
+
+private enum class StyleSection(val tr: String, val en: String, val kinds: Set<String>) {
+    THEMES("TEMALAR", "THEMES", setOf("game_theme", "keyboard_theme")),
+    PROFILE("PROFİL STYLE", "PROFILE STYLE", setOf("avatar_background", "nameplate", "badge", "name_style")),
+    MATCH("MAÇ STYLE", "MATCH STYLE", setOf("vs_intro", "word_effect", "victory_effect", "emote", "emoji_pack")),
+    PRESTIGE("PRESTİJ", "PRESTIGE", setOf("title")),
 }
 
 @Composable
@@ -50,9 +62,7 @@ internal fun MonsterStyleStoreScreen() {
         runCatching { backend?.trackStoreEvent("store_view") }
     }
 
-    Column(
-        Modifier.fillMaxSize().background(SonHarfTheme.Background).statusBarsPadding(),
-    ) {
+    Column(Modifier.fillMaxSize().background(SonHarfTheme.Background).statusBarsPadding()) {
         StoreProductionHeader(balance)
         Row(
             Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 10.dp),
@@ -96,13 +106,9 @@ private fun StoreProductionHeader(balance: Int) {
             Text(sh("SON HARF MAĞAZASI", "SON HARF STORE"), color = SonHarfTheme.TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Black)
             Text(sh("Style • koleksiyon • üyelik • sezon", "Style • collection • membership • season"), color = SonHarfTheme.TextSecondary, fontSize = 9.sp)
         }
-        Surface(
-            shape = RoundedCornerShape(99.dp),
-            color = SonHarfTheme.SurfaceSecondary,
-            border = BorderStroke(1.dp, SonHarfTheme.Border),
-        ) {
+        Surface(shape = RoundedCornerShape(99.dp), color = SonHarfTheme.SurfaceSecondary, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
             Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Toll, contentDescription = null, tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(17.dp))
+                Icon(Icons.Rounded.Toll, contentDescription = sh("Son Coin bakiyesi", "Son Coin balance"), tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(17.dp))
                 Spacer(Modifier.width(6.dp))
                 Text("$balance SC", color = SonHarfTheme.PrimaryBlue, fontWeight = FontWeight.Black)
             }
@@ -175,7 +181,7 @@ private fun StyleCatalogCategoryScreen(
 ) {
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
-    var items by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
+    var shopItems by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
     var equipped by remember { mutableStateOf<EquippedCosmeticsDto?>(null) }
     var loading by remember { mutableStateOf(true) }
@@ -198,7 +204,7 @@ private fun StyleCatalogCategoryScreen(
         }
         runCatching {
             profile = b.getProfile(id)
-            items = b.getShopItems()
+            shopItems = b.getShopItems()
             owned = b.getInventory()
             equipped = b.getEquippedCosmetics()
             SonHarfCosmetics.apply(equipped)
@@ -212,8 +218,8 @@ private fun StyleCatalogCategoryScreen(
         "profile_frame", "avatar_background", "nameplate", "badge", "title", "name_style",
         "game_theme", "keyboard_theme", "vs_intro", "word_effect", "victory_effect", "emote", "emoji_pack",
     )
-    val visible = items.filter { it.kind in supportedKinds }.filter {
-        if (eventOnly) it.rarity in setOf("EVENT", "SEASON") else it.rarity !in setOf("EVENT")
+    val visible = shopItems.filter { it.kind in supportedKinds }.filter {
+        if (eventOnly) it.rarity in setOf("EVENT", "SEASON") else it.rarity != "EVENT"
     }
 
     fun isEquipped(item: ShopItemDto): Boolean = when (item.kind) {
@@ -233,7 +239,7 @@ private fun StyleCatalogCategoryScreen(
         else -> false
     }
 
-    androidx.compose.foundation.lazy.LazyColumn(
+    LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -247,61 +253,82 @@ private fun StyleCatalogCategoryScreen(
                 fontSize = 10.sp,
             )
         }
+
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-        if (!loading && visible.isEmpty()) item {
-            StoreEmptyState(
-                if (eventOnly) sh("Şu anda aktif etkinlik koleksiyonu yok.", "There is no active event collection right now.")
-                else sh("Aktif Style ürünü bulunamadı.", "No active Style items were found."),
-            )
+
+        if (!eventOnly) {
+            item {
+                StoreSectionHeader(sh("PROFİL STYLE", "PROFILE STYLE"), sh("Gerçek profil üzerinde paketlenmiş çerçeve önizlemesi", "Packaged frame preview on a real profile composition"))
+                Spacer(Modifier.height(8.dp))
+                PurchasedProfileFramesStoreRow(backend = backend)
+            }
         }
-        items(visible.size, key = { visible[it].id }) { index ->
-            val item = visible[index]
-            val mine = item.id in owned
-            val active = isEquipped(item)
-            StyleProductCard(
-                item = item,
-                owned = mine,
-                active = active,
-                vipActive = profile?.isVip == true,
-                busy = busy == item.id,
-                onPrimary = {
-                    val b = backend ?: return@StyleProductCard
-                    scope.launch {
-                        busy = item.id
-                        runCatching {
-                            if (!mine) b.purchaseShopItem(item.id) else if (!active) b.equipShopItem(item.id)
-                        }.onSuccess {
-                            runCatching { b.trackStoreEvent(if (mine) "equip" else "purchase_success", item.id) }
-                            reload(); onChanged()
-                        }.onFailure { error ->
-                            notice = when {
-                                "insufficient_diamonds" in error.message.orEmpty() -> sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
-                                "vip_required" in error.message.orEmpty() -> sh("Bu Style VIP üyelerine özel.", "This Style is VIP-only.")
-                                else -> sh("Style işlemi tamamlanamadı.", "Style action could not be completed.")
+
+        val groupedItems = if (eventOnly) {
+            listOf(sh("ETKİNLİK KOLEKSİYONU", "EVENT COLLECTION") to visible)
+        } else {
+            StyleSection.entries.map { section ->
+                (if (SonHarfUiState.isEnglish) section.en else section.tr) to visible.filter { it.kind in section.kinds }
+            }
+        }
+
+        groupedItems.forEach { (title, sectionItems) ->
+            if (sectionItems.isNotEmpty()) {
+                item { StoreSectionHeader(title, sh("Güç vermeyen görünüm ve koleksiyon ürünleri", "Appearance and collection items with no gameplay power")) }
+                items(sectionItems, key = { it.id }) { item ->
+                    val mine = item.id in owned
+                    val active = isEquipped(item)
+                    StyleProductCard(
+                        item = item,
+                        profile = profile,
+                        owned = mine,
+                        active = active,
+                        vipActive = profile?.isVip == true,
+                        busy = busy == item.id,
+                        onPrimary = {
+                            val b = backend ?: return@StyleProductCard
+                            scope.launch {
+                                busy = item.id
+                                runCatching {
+                                    if (!mine) b.purchaseShopItem(item.id) else if (!active) b.equipShopItem(item.id)
+                                }.onSuccess {
+                                    runCatching { b.trackStoreEvent(if (mine) "equip" else "purchase_success", item.id) }
+                                    reload(); onChanged()
+                                }.onFailure { error ->
+                                    notice = when {
+                                        "insufficient_diamonds" in error.message.orEmpty() -> sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                                        "vip_required" in error.message.orEmpty() -> sh("Bu Style VIP üyelerine özel.", "This Style is VIP-only.")
+                                        else -> sh("Style işlemi tamamlanamadı.", "Style action could not be completed.")
+                                    }
+                                }
+                                busy = null
                             }
-                        }
-                        busy = null
-                    }
-                },
-                onTrial = if (!mine && item.trialMode in setOf("match", "minutes") && (item.trialValue ?: 0) > 0) {
-                    {
-                        val b = backend ?: return@StyleProductCard
-                        scope.launch {
-                            busy = item.id
-                            runCatching { b.startStyleTrial(item.id); b.equipRewardTrial() }
-                                .onSuccess {
-                                    runCatching { b.trackStoreEvent("preview_start", item.id) }
-                                    notice = if (item.trialMode == "match") sh("1 maçlık deneme etkin.", "1-match trial is active.") else sh("30 dakikalık deneme etkin.", "30-minute trial is active.")
-                                    reload()
+                        },
+                        onTrial = if (!mine && item.trialMode in setOf("match", "minutes") && (item.trialValue ?: 0) > 0) {
+                            {
+                                val b = backend ?: return@StyleProductCard
+                                scope.launch {
+                                    busy = item.id
+                                    runCatching { b.startStyleTrial(item.id); b.equipRewardTrial() }
+                                        .onSuccess {
+                                            runCatching { b.trackStoreEvent("preview_start", item.id) }
+                                            notice = if (item.trialMode == "match") sh("1 maçlık deneme etkin.", "1-match trial is active.") else sh("30 dakikalık deneme etkin.", "30-minute trial is active.")
+                                            reload()
+                                        }
+                                        .onFailure { error ->
+                                            notice = if ("trial_daily_limit_reached" in error.message.orEmpty()) sh("Bu ürünün bugünkü denemesi kullanıldı.", "Today's trial for this item has been used.") else sh("Deneme başlatılamadı.", "Trial could not be started.")
+                                        }
+                                    busy = null
                                 }
-                                .onFailure { error ->
-                                    notice = if ("trial_daily_limit_reached" in error.message.orEmpty()) sh("Bu ürünün bugünkü denemesi kullanıldı.", "Today's trial for this item has been used.") else sh("Deneme başlatılamadı.", "Trial could not be started.")
-                                }
-                            busy = null
-                        }
-                    }
-                } else null,
-            )
+                            }
+                        } else null,
+                    )
+                }
+            }
+        }
+
+        if (!loading && visible.isEmpty() && (eventOnly || shopItems.none { it.kind == "profile_frame" })) {
+            item { StoreEmptyState(if (eventOnly) sh("Şu anda aktif etkinlik koleksiyonu yok.", "There is no active event collection right now.") else sh("Aktif Style ürünü bulunamadı.", "No active Style items were found.")) }
         }
         notice?.let { message -> item { StoreNoticeCard(message) } }
         item { Spacer(Modifier.height(24.dp)) }
@@ -309,8 +336,17 @@ private fun StyleCatalogCategoryScreen(
 }
 
 @Composable
+private fun StoreSectionHeader(title: String, subtitle: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Text(title, color = SonHarfTheme.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Black)
+        Text(subtitle, color = SonHarfTheme.TextSecondary, fontSize = 9.sp)
+    }
+}
+
+@Composable
 private fun StyleProductCard(
     item: ShopItemDto,
+    profile: ProfileDto?,
     owned: Boolean,
     active: Boolean,
     vipActive: Boolean,
@@ -320,21 +356,20 @@ private fun StyleProductCard(
 ) {
     val name = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
     val description = if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr
-    val rarityLabel = item.rarity.uppercase()
     Card(
         colors = CardDefaults.cardColors(containerColor = SonHarfTheme.Surface),
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(if (active) 2.dp else 1.dp, if (active) SonHarfTheme.PrimaryBlue else SonHarfTheme.Border),
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            StyleLivePreview(item)
+            StyleLivePreview(item, profile)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
                     Text(name, color = SonHarfTheme.TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                    Text(description, color = SonHarfTheme.TextSecondary, fontSize = 9.sp, maxLines = 2)
+                    Text(description, color = SonHarfTheme.TextSecondary, fontSize = 9.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 }
                 Surface(color = SonHarfTheme.SurfaceSecondary, shape = RoundedCornerShape(9.dp)) {
-                    Text(rarityLabel, Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = if (item.rarity == "VIP") SonHarfGold else SonHarfTheme.PrimaryBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Text(item.rarity.uppercase(), Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = if (item.rarity == "VIP") SonHarfGold else SonHarfTheme.PrimaryBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
                 }
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -362,10 +397,7 @@ private fun StyleProductCard(
                 OutlinedButton(onClick = onTrial, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) {
                     Icon(Icons.Rounded.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(7.dp))
-                    Text(
-                        if (item.trialMode == "match") sh("1 MAÇ DENE", "TRY 1 MATCH") else sh("30 DAKİKA DENE", "TRY 30 MINUTES"),
-                        fontWeight = FontWeight.Black,
-                    )
+                    Text(if (item.trialMode == "match") sh("1 MAÇ DENE", "TRY 1 MATCH") else sh("30 DAKİKA DENE", "TRY 30 MINUTES"), fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -373,7 +405,9 @@ private fun StyleProductCard(
 }
 
 @Composable
-private fun StyleLivePreview(item: ShopItemDto) {
+private fun StyleLivePreview(item: ShopItemDto, profile: ProfileDto?) {
+    val reveal = remember(item.id) { Animatable(0f) }
+    LaunchedEffect(item.id) { reveal.snapTo(0f); reveal.animateTo(1f, tween(520)) }
     Surface(
         modifier = Modifier.fillMaxWidth().height(122.dp),
         color = SonHarfTheme.SurfaceSecondary,
@@ -381,23 +415,18 @@ private fun StyleLivePreview(item: ShopItemDto) {
     ) {
         Box(Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.Center) {
             when (item.kind) {
-                "profile_frame" -> Box(
-                    Modifier.size(78.dp).background(SonHarfTheme.PrimaryBlue.copy(alpha = .12f), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Surface(shape = CircleShape, color = SonHarfTheme.Surface, border = BorderStroke(5.dp, if (item.vipOnly) SonHarfGold else SonHarfTheme.PrimaryBlue)) {
-                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Person, contentDescription = null, tint = SonHarfTheme.TextPrimary) }
-                    }
+                "profile_frame" -> Box(contentAlignment = Alignment.Center) {
+                    ProfilePhotoAvatarWithGender(
+                        avatarPath = profile?.avatarPath,
+                        gender = profile?.gender,
+                        displayName = profile?.displayName ?: sh("Oyuncu", "Player"),
+                        size = 64.dp,
+                        accent = SonHarfTheme.PrimaryBlue,
+                        visible = profile?.avatarVisibility != "hidden",
+                    )
+                    PurchasedProfileFrameOverlay(item.id, Modifier.size(92.dp))
                 }
-                "game_theme" -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                    repeat(3) { row ->
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                            repeat(5) { col ->
-                                Box(Modifier.weight(1f).height(24.dp).background(if ((row + col) % 3 == 0) SonHarfTheme.PrimaryBlue.copy(alpha = .22f) else SonHarfTheme.Surface, RoundedCornerShape(6.dp)))
-                            }
-                        }
-                    }
-                }
+                "game_theme" -> StoreThemeGameplayPreview(item.id)
                 "keyboard_theme" -> Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                     repeat(3) {
                         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -405,16 +434,40 @@ private fun StyleLivePreview(item: ShopItemDto) {
                         }
                     }
                 }
-                "name_style", "nameplate", "title" -> Text(sh("OYUNCU", "PLAYER"), color = SonHarfTheme.PrimaryBlue, fontSize = 25.sp, fontWeight = FontWeight.Black)
-                "victory_effect" -> Icon(Icons.Rounded.Celebration, contentDescription = null, tint = SonHarfGold, modifier = Modifier.size(58.dp))
-                "vs_intro" -> Text("VS", color = SonHarfTheme.PrimaryBlue, fontSize = 44.sp, fontWeight = FontWeight.Black)
-                "word_effect" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                "name_style", "nameplate", "title" -> Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = SonHarfTheme.PrimaryBlue, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                "victory_effect" -> Icon(Icons.Rounded.Celebration, contentDescription = sh("Zafer efekti önizlemesi", "Victory effect preview"), tint = SonHarfGold, modifier = Modifier.size(58.dp).alpha(reveal.value))
+                "vs_intro" -> Text("VS", color = SonHarfTheme.PrimaryBlue, fontSize = (34 + (10 * reveal.value)).sp, fontWeight = FontWeight.Black, modifier = Modifier.alpha(reveal.value))
+                "word_effect" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.alpha(reveal.value)) {
                     Text(sh("KELİME", "WORD"), fontWeight = FontWeight.Black); Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = SonHarfTheme.PrimaryBlue)
                 }
-                "badge" -> Icon(Icons.Rounded.Verified, contentDescription = null, tint = SonHarfGold, modifier = Modifier.size(56.dp))
-                "avatar_background" -> Icon(Icons.Rounded.Wallpaper, contentDescription = null, tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(56.dp))
-                "emote", "emoji_pack" -> Icon(Icons.Rounded.Forum, contentDescription = null, tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(54.dp))
-                else -> Icon(Icons.Rounded.Palette, contentDescription = null, tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(54.dp))
+                "badge" -> Icon(Icons.Rounded.Verified, contentDescription = sh("Rozet önizlemesi", "Badge preview"), tint = SonHarfGold, modifier = Modifier.size(56.dp))
+                "avatar_background" -> Icon(Icons.Rounded.Wallpaper, contentDescription = sh("Avatar arka planı önizlemesi", "Avatar background preview"), tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(56.dp))
+                "emote", "emoji_pack" -> Icon(Icons.Rounded.Forum, contentDescription = sh("İfade önizlemesi", "Emote preview"), tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(54.dp))
+                else -> Icon(Icons.Rounded.Palette, contentDescription = sh("Style önizlemesi", "Style preview"), tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(54.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun StoreThemeGameplayPreview(themeId: String) {
+    val accent = if (themeId == "theme_monster_blue") Color(0xFF1677FF) else SonHarfTheme.PrimaryBlue
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Text(sh("OYUNCU", "PLAYER"), color = SonHarfTheme.TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Text("VS", color = accent, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(sh("RAKİP", "RIVAL"), color = SonHarfTheme.TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.Black)
+        }
+        repeat(2) { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                repeat(7) { col ->
+                    Surface(
+                        modifier = Modifier.weight(1f).height(27.dp),
+                        shape = RoundedCornerShape(6.dp),
+                        color = if ((row + col) % 4 == 0) accent.copy(alpha = .18f) else SonHarfTheme.Surface,
+                        border = BorderStroke(1.dp, if ((row + col) % 4 == 0) accent.copy(alpha = .38f) else SonHarfTheme.Border),
+                    ) { Box(contentAlignment = Alignment.Center) { if (col in 2..4 && row == 0) Text("SON"[col - 2].toString(), color = SonHarfTheme.TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.Black) } }
+                }
             }
         }
     }
