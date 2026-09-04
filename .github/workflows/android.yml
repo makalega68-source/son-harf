@@ -34,14 +34,10 @@ jobs:
         with:
           gradle-version: '8.14.4'
 
-      - name: Test and build debug APK
-        shell: bash
-        run: |
-          set -o pipefail
-          gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all 2>&1 | tee android-build.log
+      - name: Build debug APK with tests
+        run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
-      - name: Prepare QA APK name
-        if: success()
+      - name: Prepare test APK artifact
         run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Final-Test.apk
 
       - name: Upload debug APK artifact
