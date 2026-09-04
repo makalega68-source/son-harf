@@ -16,6 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -152,15 +153,23 @@ private fun MonsterHomeScreen(
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().statusBarsPadding(),
+        modifier = Modifier.fillMaxSize().background(
+            Brush.verticalGradient(
+                listOf(Color(0xFFF5F8FF), SonHarfTheme.BrandPurpleSoft.copy(alpha = .55f), SonHarfTheme.Background)
+            )
+        ).statusBarsPadding(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("SON HARF", color = MonsterUi.Text, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                    Text(sh("KELİMEYİ SÜRDÜR, RAKİBİNİ GEÇ", "KEEP THE WORD GOING, BEAT YOUR RIVAL"), color = MonsterUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    SonHarfBrandLogo(size = 48.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text("SON HARF", color = MonsterUi.Text, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                        Text(sh("KELİMEYİ SÜRDÜR, RAKİBİNİ GEÇ", "KEEP THE WORD GOING, BEAT YOUR RIVAL"), color = MonsterUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
                 MonsterIconButton(Icons.Rounded.Notifications, onTasks)
                 Spacer(Modifier.width(7.dp))
@@ -187,49 +196,68 @@ private fun MonsterHomeScreen(
 
 @Composable
 private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, onPlay: () -> Unit) {
-    Surface(shape = RoundedCornerShape(22.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MonsterUi.Border)) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    Surface(shape = RoundedCornerShape(28.dp), color = Color.Transparent, border = BorderStroke(1.dp, SonHarfTheme.BrandPurple.copy(alpha = .35f)), shadowElevation = 8.dp) {
+        Column(
+            Modifier.background(
+                Brush.linearGradient(listOf(Color(0xFF111936), Color(0xFF241A50), Color(0xFF10162F)))
+            ).padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(7.dp).clip(CircleShape).background(MonsterUi.Live))
                 Spacer(Modifier.width(6.dp))
-                Text(sh("STANDART DÜELLO", "STANDARD DUEL"), color = MonsterUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                Text(sh("STANDART DÜELLO", "STANDARD DUEL"), color = Color(0xFFC8D4EF), fontSize = 13.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.weight(1f))
-                Text("1v1", color = MonsterUi.Text, fontWeight = FontWeight.Black)
+                Surface(shape = RoundedCornerShape(9.dp), color = MonsterUi.Gold.copy(alpha = .18f)) {
+                    Text("1v1", Modifier.padding(horizontal = 9.dp, vertical = 4.dp), color = MonsterUi.Gold, fontWeight = FontWeight.Black)
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
+                ProfilePhotoAvatarRectWithGender(profile?.avatarPath, profile?.gender, profile?.displayName ?: sh("OYUNCU", "PLAYER"), 54.dp, 68.dp, MonsterUi.Accent)
+                Spacer(Modifier.width(9.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.EmojiEvents, null, tint = MonsterUi.Gold, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("${stats.rating} rating", color = MonsterUi.Gold, fontSize = 13.sp)
                     }
                 }
-                Text("VS", color = MonsterUi.Text, fontSize = 34.sp, fontWeight = FontWeight.Black)
+                Text("VS", color = MonsterUi.Gold, fontSize = 30.sp, fontWeight = FontWeight.Black)
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-                    Text(sh("RAKİP", "RIVAL"), color = MonsterUi.Muted, fontWeight = FontWeight.Black, fontSize = 15.sp)
-                    Text(sh("Eşleşme bekliyor", "Waiting"), color = MonsterUi.Muted, fontSize = 13.sp)
+                    Icon(Icons.Rounded.PersonSearch, null, Modifier.size(30.dp), tint = Color(0xFFFF6F91))
+                    Text(sh("RAKİP", "RIVAL"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    Text(sh("Eşleşme bekliyor", "Waiting"), color = Color(0xFFAAB5CE), fontSize = 13.sp)
                 }
             }
             Button(
                 onClick = onPlay,
                 modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MonsterUi.Accent, contentColor = MonsterUi.AccentText),
-            ) { Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 18.sp) }
+                shape = RoundedCornerShape(18.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MonsterUi.Gold, contentColor = Color(0xFF241500)),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 7.dp, pressedElevation = 2.dp),
+            ) {
+                Icon(Icons.Rounded.SportsEsports, null, Modifier.size(22.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 19.sp)
+            }
         }
     }
 }
 
 @Composable
 private fun MonsterQuickCard(title: String, subtitle: String, icon: ImageVector, accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier = modifier.heightIn(min = 96.dp).clickable(onClick = onClick), shape = RoundedCornerShape(20.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MonsterUi.Border)) {
-        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
-            Column {
+    Surface(modifier = modifier.heightIn(min = 104.dp).clickable(onClick = onClick), shape = RoundedCornerShape(22.dp), color = Color.Transparent, border = BorderStroke(1.dp, SonHarfTheme.BrandPurple.copy(alpha = .32f))) {
+        Row(Modifier.background(Brush.horizontalGradient(listOf(Color.White, SonHarfTheme.BrandPurpleSoft))).padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = RoundedCornerShape(17.dp), color = accent.copy(alpha = .16f)) {
+                Icon(icon, null, tint = accent, modifier = Modifier.padding(13.dp).size(30.dp))
+            }
+            Spacer(Modifier.width(13.dp))
+            Column(Modifier.weight(1f)) {
                 Text(title, color = MonsterUi.Text, fontSize = 14.sp, lineHeight = 15.sp, fontWeight = FontWeight.Black)
                 Text(subtitle, color = MonsterUi.Muted, fontSize = 13.sp)
             }
+            Icon(Icons.Rounded.ArrowForward, null, tint = SonHarfTheme.BrandPurple, modifier = Modifier.size(24.dp))
         }
     }
 }
