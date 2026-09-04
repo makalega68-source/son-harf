@@ -1,0 +1,33 @@
+name: Apply Active Screen Fix
+
+on:
+  push:
+    branches:
+      - fix/active-screen-authority-20260904
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: fix/active-screen-authority-20260904
+
+      - name: Apply guarded patch
+        run: python3 tools/apply_active_screen_fix.py
+
+      - name: Verify patch formatting
+        run: git diff --check
+
+      - name: Commit persistent source changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main app/src/test .github/workflows/android.yml
+          git diff --cached --exit-code || git commit -m "fix(game): repair active match and siege screens"
+          git push origin HEAD:fix/active-screen-authority-20260904
