@@ -72,12 +72,15 @@ data class EquippedCosmeticsDto(
     @SerialName("emote_id") val emoteId: String? = null,
 )
 
-suspend fun OnlineGameBackend.getShopItems(): List<ShopItemDto> =
-    SupabaseProvider.client.from("shop_items").select().decodeList<ShopItemDto>()
+suspend fun OnlineGameBackend.getShopItems(): List<ShopItemDto> {
+    val owned = getInventory()
+    return SupabaseProvider.client.from("shop_items").select().decodeList<ShopItemDto>()
         .filter { item ->
-            item.active && (item.kind != "profile_frame" || item.id in supportedProfileFrameIds)
+            (item.active || item.id in owned) &&
+                (item.kind != "profile_frame" || item.id in supportedProfileFrameIds)
         }
         .sortedBy { it.sortOrder }
+}
 
 suspend fun OnlineGameBackend.getStoreCatalogConfig(): List<StoreCatalogConfigDto> =
     SupabaseProvider.client.from("store_catalog_config").select().decodeList<StoreCatalogConfigDto>()
