@@ -1488,7 +1488,7 @@ private fun AuroraArena(
                     Button(
                         onClick = onSubmit,
                         enabled = myTurn && wordInput.isNotBlank() && !busy,
-                        modifier = Modifier.height(40.dp),
+                        modifier = Modifier.height(48.dp),
                         shape = RoundedCornerShape(13.dp),
                         contentPadding = PaddingValues(horizontal = 15.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -1525,7 +1525,7 @@ private fun ArenaActionButton(
 ) {
     OutlinedButton(
         onClick = onClick,
-        modifier = modifier.height(36.dp),
+        modifier = modifier.height(48.dp),
         border = BorderStroke(1.dp, accent.copy(alpha = .48f)),
         shape = RoundedCornerShape(13.dp),
         colors = ButtonDefaults.outlinedButtonColors(contentColor = accent),
