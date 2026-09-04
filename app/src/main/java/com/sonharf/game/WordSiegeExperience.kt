@@ -412,6 +412,13 @@ private fun WordSiegeGamesList(
                 IconButton(onClick = onBack) {
                     Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                 }
+                Surface(shape = RoundedCornerShape(16.dp), color = SonHarfTheme.BrandPurpleSoft, border = BorderStroke(1.dp, SiegePurple.copy(alpha = .28f))) {
+                    Box(Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.GridView, null, Modifier.size(30.dp), tint = SiegePurple)
+                        Icon(Icons.Rounded.AutoAwesome, null, Modifier.align(Alignment.TopEnd).size(14.dp), tint = MainUi.Gold)
+                    }
+                }
+                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
                     Text(
@@ -796,7 +803,7 @@ private fun WordSiegeMatch(
                 }
             }
         } else {
-            item { WordSiegeFinishedCard(game, me) }
+            item { WordSiegeFinishedCard(game, me, mine, opponent) }
         }
 
         notice?.let { item { WordSiegeNotice(it) } }
@@ -835,14 +842,14 @@ private fun WordSiegePlayerCard(
         color = if (active) accent.copy(alpha = .08f) else MainUi.Surface,
         border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) accent else MainUi.Border),
     ) {
-        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            ProfilePhotoAvatarWithGender(
+        Row(Modifier.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            ProfilePhotoAvatarRectWithGender(
                 avatarPath = profile?.avatarPath,
                 gender = profile?.gender,
                 name = profile?.displayName ?: fallbackName,
-                size = 36.dp,
+                width = 48.dp,
+                height = 58.dp,
                 accent = accent,
-                visible = profile?.avatarVisibility != "hidden",
             )
             Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f)) {
@@ -949,7 +956,7 @@ private fun WordSiegeBoardCell(
                     Text(
                         wordSiegeLetterValue(letter),
                         color = MainUi.Muted,
-                        fontSize = 5.sp,
+                        fontSize = 10.sp,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp),
                     )
                 } else if (!cell.bonusUsed && cell.bonus != null) {
@@ -1001,7 +1008,7 @@ internal fun WordSiegeRackTile(
 }
 
 @Composable
-private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
+private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?, mine: ProfileDto?, opponent: ProfileDto?) {
     val won = game.winnerId == me
     val draw = game.winnerId == null
     val accent = when { draw -> MainUi.Gold; won -> MainUi.Green; else -> MainUi.Red }
@@ -1023,7 +1030,22 @@ private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
                 color = MainUi.Muted,
                 fontSize = 13.sp,
             )
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                SiegeResultProfile(mine, sh("Sen", "You"), MainUi.Blue)
+                Text("VS", color = MainUi.Gold, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                SiegeResultProfile(opponent, sh("Rakip", "Rival"), SiegePurple)
+            }
         }
+    }
+}
+
+@Composable
+private fun SiegeResultProfile(profile: ProfileDto?, fallback: String, accent: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        ProfilePhotoAvatarRectWithGender(profile?.avatarPath, profile?.gender, profile?.displayName ?: fallback, 66.dp, 76.dp, accent)
+        Text(profile?.displayName ?: fallback, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp, maxLines = 1)
+        Text("${profile?.rating ?: 1000} rating", color = accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
     }
 }
 
