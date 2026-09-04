@@ -37,7 +37,7 @@ create or replace function public.apply_verified_play_purchase_v2(
 returns jsonb
 language plpgsql
 security definer
-set search_path=public,pg_temp
+set search_path=''
 as $$
 declare
   v_purchase_id uuid;
@@ -65,7 +65,6 @@ begin
   elsif p_play_state in ('SUBSCRIPTION_STATE_ON_HOLD','SUBSCRIPTION_STATE_PAUSED') then
     v_entitlement_status := 'hold';
   elsif p_play_state in ('SUBSCRIPTION_STATE_CANCELED') then
-    -- Google cancellation normally keeps access until expiry.
     v_entitlement_status := case when p_expires_at is not null and p_expires_at>now() then 'canceled' else 'expired' end;
   elsif p_play_state in ('SUBSCRIPTION_STATE_EXPIRED') then
     v_entitlement_status := 'expired';
@@ -73,6 +72,7 @@ begin
     v_entitlement_status := 'pending';
   end if;
 
+  -- INSERT ... DO NOTHING + FOUND is stable and does not depend on PostgreSQL system columns.
   insert into public.purchases(
     user_id,product_id,purchase_token,order_id,status,purchased_at,verified_at,
     purchase_type,play_state,acknowledgement_state,last_checked_at,expires_at
@@ -81,14 +81,26 @@ begin
     case when v_is_vip or v_is_season then 'subscription' else 'one_time' end,
     p_play_state,p_acknowledgement_state,now(),p_expires_at
   )
-  on conflict(purchase_token) do update set
-    order_id=coalesce(excluded.order_id,public.purchases.order_id),
-    status=excluded.status,
-    play_state=excluded.play_state,
-    acknowledgement_state=coalesce(excluded.acknowledgement_state,public.purchases.acknowledgement_state),
+  on conflict(purchase_token) do nothing
+  returning id into v_purchase_id;
+  v_inserted := found;
+
+  if not v_inserted then
+    select id into v_purchase_id
+    from public.purchases
+    where purchase_token=trim(p_purchase_token)
+    for update;
+    if v_purchase_id is null then raise exception 'purchase_reconciliation_race'; end if;
+  end if;
+
+  update public.purchases set
+    order_id=coalesce(nullif(trim(p_order_id),''),order_id),
+    status=v_status,
+    play_state=p_play_state,
+    acknowledgement_state=coalesce(p_acknowledgement_state,acknowledgement_state),
     last_checked_at=now(),
-    expires_at=coalesce(excluded.expires_at,public.purchases.expires_at)
-  returning id,(xmax=0) into v_purchase_id,v_inserted;
+    expires_at=coalesce(p_expires_at,expires_at)
+  where id=v_purchase_id;
 
   if v_is_vip then
     if p_expires_at is null then raise exception 'invalid_subscription_expiry'; end if;
@@ -186,7 +198,7 @@ create or replace function public.reconcile_play_entitlement_v1(
 returns jsonb
 language plpgsql
 security definer
-set search_path=public,pg_temp
+set search_path=''
 as $$
 declare
   v_purchase public.purchases%rowtype;
