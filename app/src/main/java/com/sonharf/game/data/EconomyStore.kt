@@ -106,6 +106,10 @@ suspend fun OnlineGameBackend.equipShopItem(itemId: String) {
     SupabaseProvider.client.postgrest.rpc("equip_shop_item", buildJsonObject { put("p_item_id", itemId) })
 }
 
+suspend fun OnlineGameBackend.startStyleTrial(itemId: String) {
+    SupabaseProvider.client.postgrest.rpc("start_style_trial_v2", buildJsonObject { put("p_item_id", itemId) })
+}
+
 suspend fun OnlineGameBackend.claimVipMonthlyDiamonds() {
     SupabaseProvider.client.postgrest.rpc("claim_vip_monthly_diamonds")
 }
