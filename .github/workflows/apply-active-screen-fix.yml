@@ -23,6 +23,7 @@ jobs:
           python3 tools/apply_active_screen_fix.py
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           board = Path('app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt')
           text = board.read_text()
@@ -41,10 +42,7 @@ jobs:
               state_anchor + '    var showMoreMenu by remember(room.id) { mutableStateOf(false) }\n',
               1,
           )
-          old = '''                CompetitivePlayerCard(
-                    opponentName.removeSuffix(" BOT"), opponentAvatarPath, opponentGender, opponentRating, shownOppScore,
-                    !myTurn && liveWordPhase, LRed, room.isBot, Modifier.weight(1f),
-                )'''
+          pattern = re.compile(r'''\s{16}CompetitivePlayerCard\(\n\s+opponentName\.removeSuffix\(" BOT"\), opponentAvatarPath, opponentGender, opponentRating, shownOppScore,\n\s+!myTurn && liveWordPhase, LRed, room\.isBot, Modifier\.weight\(1f\),\n\s+\)''')
           new = '''                Box(Modifier.weight(1f)) {
                     CompetitivePlayerCard(
                         opponentName.removeSuffix(" BOT"), opponentAvatarPath, opponentGender, opponentRating, shownOppScore,
@@ -72,8 +70,8 @@ jobs:
                         }
                     }
                 }'''
-          assert text.count(old) == 1
-          text = text.replace(old, new, 1)
+          text, count = pattern.subn(new, text, count=1)
+          assert count == 1, f'opponent card matches={count}'
           duel.write_text(text)
 
           contract = Path('app/src/test/java/com/sonharf/game/ActiveScreenRegressionContractTest.kt')
