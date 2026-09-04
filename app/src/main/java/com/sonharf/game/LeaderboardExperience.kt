@@ -9,6 +9,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -115,8 +117,8 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(shape = RoundedCornerShape(14.dp), color = SonHarfBlue.copy(alpha = .12f), border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .26f))) {
-                                Text("◆", Modifier.padding(horizontal = 15.dp, vertical = 11.dp), color = SonHarfBlue, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                            Surface(shape = RoundedCornerShape(16.dp), color = SonHarfTheme.BrandGoldSoft, border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .32f))) {
+                                Icon(Icons.Rounded.EmojiEvents, null, Modifier.padding(14.dp).size(28.dp), tint = SonHarfGold)
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
@@ -194,7 +196,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
             ) {
                 Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
                     Surface(shape = RoundedCornerShape(9.dp), color = accent.copy(alpha = .10f)) {
-                        Text("${index + 1}", Modifier.width(34.dp).padding(vertical = 8.dp), color = accent, textAlign = TextAlign.Center, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        Icon(if (index < 3) Icons.Rounded.MilitaryTech else Icons.Rounded.Leaderboard, null, Modifier.padding(8.dp).size(20.dp), tint = accent)
                     }
                     Spacer(Modifier.width(9.dp))
                     ProfilePhotoAvatar(
@@ -228,13 +230,11 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
 
         if (!loading && rows.isEmpty()) item {
             Surface(shape = RoundedCornerShape(16.dp), color = SonHarfSurface, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .12f))) {
-                Text(
-                    if (error) sh("Liderlik verisi alınamadı.", "Leaderboard data could not be loaded.") else sh("Bu dönemde sıralama henüz oluşmadı.", "No ranking for this period yet."),
-                    Modifier.fillMaxWidth().padding(26.dp),
-                    color = SonHarfMuted,
-                    textAlign = TextAlign.Center,
-                    fontSize = 13.sp,
-                )
+                Column(Modifier.fillMaxWidth().padding(28.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Icon(Icons.Rounded.EmojiEvents, null, Modifier.size(44.dp), tint = SonHarfGold)
+                    Text(sh("LİG YOLCULUĞUN BAŞLIYOR", "YOUR LEAGUE JOURNEY STARTS"), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    Text(if (error) sh("Sıralama şu an yenileniyor; biraz sonra tekrar kontrol et.", "Ranking is refreshing; check again shortly.") else sh("İlk maçını oynadığında sıran ve rakiplerin burada görünecek.", "Play your first match to reveal your rank and rivals."), color = SonHarfMuted, textAlign = TextAlign.Center, fontSize = 13.sp)
+                }
             }
         }
         item { Spacer(Modifier.height(6.dp)) }
