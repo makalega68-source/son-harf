@@ -7,11 +7,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -102,7 +106,12 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
                         fontSize = 9.sp,
                     )
                 }
-                Text("🏆", fontSize = 26.sp)
+                Icon(
+                    Icons.Rounded.EmojiEvents,
+                    contentDescription = sh("Sezon ödülleri", "Season rewards"),
+                    tint = SonHarfGold,
+                    modifier = Modifier.size(30.dp),
+                )
             }
 
             Text(
