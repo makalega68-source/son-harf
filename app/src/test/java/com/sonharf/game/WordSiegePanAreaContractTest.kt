@@ -15,19 +15,22 @@ class WordSiegePanAreaContractTest {
         assertTrue(experience.contains("WordSiegePanMatch("))
         assertTrue(pan.contains("PanSiegeCellSize = 52.dp"))
         assertTrue(pan.contains("WordSiegeBoardSpec.Size"))
-        assertTrue(pan.contains("detectDragGestures"))
+        assertTrue(pan.contains("detectTransformGestures"))
+        assertTrue(pan.contains("WORD_SIEGE_MIN_CLOSE_SCALE"))
+        assertTrue(pan.contains("WORD_SIEGE_MAX_CLOSE_SCALE"))
         assertTrue(pan.contains("combinedClickable"))
         assertTrue(pan.contains("onDoubleClick = ::toggleViewport"))
         assertTrue(pan.contains("WordSiegeBoardViewportMode.CLOSE"))
         assertTrue(viewport.contains("WordSiegeBoardViewportMode.FIT"))
         assertTrue(viewport.contains("wordSiegeFitScale"))
+        assertTrue(viewport.contains("WORD_SIEGE_DEFAULT_CLOSE_SCALE = 0.86f"))
         assertTrue(pan.contains("translationX = transform.pan.x"))
         assertTrue(pan.contains("translationY = transform.pan.y"))
         assertTrue(pan.contains("scaleX = transform.scale"))
         assertTrue(pan.contains("scaleY = transform.scale"))
         assertTrue(pan.contains("clampWordSiegeBoardPan"))
         assertTrue(viewport.contains("value.coerceIn(viewportPx - renderedPx, 0f)"))
-        assertTrue(pan.contains("centerCloseOn(WordSiegeBoardSpec.CenterIndex)"))
+        assertTrue(pan.contains("centerCloseOn(WordSiegeBoardSpec.CenterIndex, WORD_SIEGE_DEFAULT_CLOSE_SCALE)"))
         assertTrue(pan.contains("clipToBounds"))
         assertTrue(pan.contains("onGloballyPositioned"))
         assertTrue(pan.contains("CenterFocusStrong"))
@@ -68,16 +71,12 @@ class WordSiegePanAreaContractTest {
         assertTrue(backend.contains("area_score"))
         assertTrue(backend.contains("total_score"))
 
-        // Preserve the original transactional/ownership pipeline.
         assertTrue(baseMigration.contains("before_owner = 0 and after_owner = p_owner"))
         assertTrue(baseMigration.contains("before_owner not in (0, p_owner) and after_owner = p_owner"))
         assertTrue(baseMigration.contains("player_one_area_score = player_one_area_score +"))
         assertTrue(baseMigration.contains("player_two_area_score = player_two_area_score +"))
         assertTrue(baseMigration.contains("player_one_area = v_one_area"))
         assertTrue(baseMigration.contains("player_two_area = v_two_area"))
-
-        // Historical migrations remain available for provenance; current-territory scoring is
-        // asserted by dedicated WordSiegeFinalRules/current-territory tests.
         assertTrue(finalMigration.contains("(neutral_count + opponent_count) * 2"))
     }
 
