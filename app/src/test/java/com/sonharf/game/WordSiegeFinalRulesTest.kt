@@ -6,6 +6,7 @@ import com.sonharf.game.data.WordSiegeMoveDto
 import java.io.File
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
@@ -165,8 +166,10 @@ class WordSiegeFinalRulesTest {
         assertTrue(pan.contains("0xFFFF5F57"))
         assertTrue(experience.contains("0xFF35C878"))
         assertTrue(experience.contains("0xFFFF5F57"))
-        assertTrue(practice.contains("delay(28)"))
-        assertTrue(pan.contains("delay(28)"))
+        assertTrue(practice.contains("animateIntAsState"))
+        assertTrue(pan.contains("animateIntAsState"))
+        assertFalse(practice.contains("delay(28)"))
+        assertFalse(pan.contains("delay(28)"))
         assertTrue(sql.contains("(neutral_count + opponent_count) * 2"))
         assertTrue(sql.contains("r.player_one_word_score + r.player_one_area_score - r.player_two_area_score"))
     }
