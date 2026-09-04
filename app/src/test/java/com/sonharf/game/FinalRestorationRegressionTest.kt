@@ -61,14 +61,16 @@ class FinalRestorationRegressionTest {
         assertTrue(siegeExperience.contains("WordSiegeFinalRules.detectOrientation"))
         assertTrue(siegeRules.contains("CUBE_TRANSFER_POINTS: Int = 2"))
 
-        // Style remains cosmetic-only while preserving the real theme purchase/equip backend.
-        assertTrue(style.contains("theme_monster_blue"))
+        // Store remains cosmetic-only while preserving real purchase/equip operations and required categories.
         assertTrue(style.contains("purchaseShopItem"))
         assertTrue(style.contains("equipShopItem"))
-        assertTrue(style.contains("PROFILE STYLE"))
-        assertTrue(style.contains("MATCH STYLE"))
-        assertTrue(style.contains("PRESTIGE"))
-        assertTrue(style.contains("BUNDLES"))
+        listOf("VIP", "STYLE", "SON COIN", "SEZON PASS", "PAKETLER", "KASA", "ETKİNLİK").forEach {
+            assertTrue("missing store category: $it", style.contains(it))
+        }
+        listOf("profile_frame", "nameplate", "badge", "title", "game_theme", "vs_intro", "word_effect", "victory_effect").forEach {
+            assertTrue("missing Style kind: $it", style.contains("\"$it\""))
+        }
+        assertTrue(style.contains("Hiçbir Style ürünü oyun gücü vermez"))
 
         // Admin remains fail-closed, RPC-backed and on the unified light palette.
         assertTrue(admin.contains("backend.getAdminDashboard()"))
