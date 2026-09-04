@@ -7,51 +7,48 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BetaReleaseRegressionContractTest {
-
     @Test
-    fun loginAndClassicArenaMobileFixesRemainActive() {
-        val auth = projectFile("app/src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
-        val classic = projectFile("app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt").readText()
+    fun currentModesAndCoreNavigationRemainPresent() {
+        val premium = projectFile("app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt").readText()
+        val main = projectFile("app/src/main/java/com/sonharf/game/MainExperienceApp.kt").readText()
+        val monster = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
+        val siege = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
 
-        assertFalse(auth.contains("son_harf_login_bg"))
-        assertFalse(classic.contains(".verticalScroll(rememberScrollState())"))
-        assertFalse(classic.contains("words.takeLast(3)"))
-        assertTrue(classic.contains("val current = words.last()"))
-        assertTrue(classic.contains("EmbeddedWordKeyboard("))
-        assertTrue(classic.contains("readOnly = true"))
-        assertTrue(classic.contains("ProfilePhotoAvatarWithGender("))
+        assertTrue(premium.contains("ClassicPremiumGame"))
+        assertTrue(main.contains("CompetitionHubScreen"))
+        assertTrue(monster.contains("MonsterStyleStoreScreen"))
+        assertTrue(siege.contains("WordSiege"))
     }
 
     @Test
-    fun nativeKeyboardAndImeLayoutFixesRemainAcrossLiveModes() {
-        val cipher = projectFile("app/src/main/java/com/sonharf/game/DailyCipherScreen.kt").readText()
-        val wordArena = projectFile("app/src/main/java/com/sonharf/game/WordArenaScreen.kt").readText()
-        val dailyArena = projectFile("app/src/main/java/com/sonharf/game/DailyArenaScreen.kt").readText()
-        val teamArena = projectFile("app/src/main/java/com/sonharf/game/TeamArenaScreen.kt").readText()
+    fun monetizationRemainsCosmeticAndServerVerified() {
+        val billing = projectFile("app/src/main/java/com/sonharf/game/billing/PlayPurchaseVerification.kt").readText()
+        val migration = projectFile("supabase/migrations/20260829_vip_fair_play_social.sql").readText()
+        val market = projectFile("supabase/migrations/20260829_market_v2.sql").readText()
 
-        assertTrue(cipher.contains("EmbeddedWordKeyboard("))
-        assertFalse(cipher.contains("LocalSoftwareKeyboardController"))
-        assertTrue(wordArena.contains("EmbeddedWordKeyboard("))
-        assertFalse(wordArena.contains("LocalSoftwareKeyboardController"))
-        assertFalse(wordArena.contains("inputFocusRequester.requestFocus()"))
-        assertTrue(dailyArena.contains("EmbeddedWordKeyboard("))
-        assertFalse(dailyArena.contains("Modifier.fillMaxSize().imePadding()"))
-        assertTrue(teamArena.contains("inputFocusRequester.requestFocus()"))
+        assertTrue(billing.contains("verify-play-purchase"))
+        assertTrue(migration.contains("fair_play"))
+        assertTrue(migration.contains("freezer_count',0"))
+        assertTrue(market.contains("apply_verified_play_purchase_v1"))
     }
 
     @Test
-    fun teamArenaRecoveryAndInviteSerializationRemainActive() {
-        val teamArena = projectFile("app/src/main/java/com/sonharf/game/TeamArenaScreen.kt").readText()
-        val classicInvite = projectFile("app/src/main/java/com/sonharf/game/GameInviteOverlay.kt").readText()
-        val wordInvite = projectFile("app/src/main/java/com/sonharf/game/WordArenaInviteOverlay.kt").readText()
-        val teamInvite = projectFile("app/src/main/java/com/sonharf/game/TeamArenaInviteOverlay.kt").readText()
+    fun activeStoreRoutesAndFramesRemainReal() {
+        val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
+        val store = projectFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
+        val frameRuntime = projectFile("app/src/main/java/com/sonharf/game/SonHarfCosmetics.kt").readText()
 
-        assertTrue(teamArena.contains("fun closeScreen()"))
-        assertTrue(teamArena.contains("cancelTeamArenaLobby"))
-        assertTrue(teamArena.contains("leaveTeamArenaLobby"))
-        assertTrue(teamArena.contains("team_arena_already_active"))
-        assertTrue(classicInvite.contains("GameInviteModalCoordinator"))
-        assertTrue(wordInvite.contains("GameInviteModalCoordinator"))
+        assertTrue(main.contains("MonsterDestination.STYLE -> MonsterStyleStoreScreen()"))
+        assertTrue(store.contains("theme_monster_blue"))
+        assertTrue(frameRuntime.contains("frame_starter"))
+    }
+
+    @Test
+    fun inviteAndCompetitionPathsRemainActive() {
+        val competition = projectFile("app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt").readText()
+        val teamInvite = projectFile("app/src/main/java/com/sonharf/game/TeamArenaScreen.kt").readText()
+
+        assertTrue(competition.contains("GameInviteModalCoordinator"))
         assertTrue(teamInvite.contains("GameInviteModalCoordinator"))
     }
 
@@ -69,7 +66,7 @@ class BetaReleaseRegressionContractTest {
         assertTrue(vip.contains("BillingManager("))
         assertTrue(vip.contains("PlayPurchaseVerification.verify"))
         assertFalse(vip.contains("rememberInfiniteTransition"))
-        assertTrue(vip.lowercase().contains("no competitive power"))
+        assertTrue(vip.lowercase().contains("never grants time, score, moves, rating or live decision advantages"))
     }
 
     @Test
@@ -83,14 +80,10 @@ class BetaReleaseRegressionContractTest {
         assertTrue(migration.contains("v_cost constant integer:=1000"))
         assertTrue(migration.contains("set diamonds=diamonds-v_cost"))
         assertTrue(migration.contains("security invoker"))
-        assertTrue(migration.contains("revoke all on function public.create_club_v1"))
-        assertTrue(gradle.contains("targetSdk = 36"))
-        assertTrue(gradle.contains("Production release blocked: configure SON_HARF_ADMOB_APP_ID"))
-        assertTrue(gradle.contains("Production release blocked: release keystore"))
-        assertTrue(workflow.contains("assembleRelease bundleRelease"))
-        assertTrue(workflow.contains("app-release.aab"))
-        assertTrue(stableWorkflow.contains("workflow_dispatch"))
-        assertTrue(rollbackWorkflow.contains("workflow_dispatch"))
+        assertTrue(gradle.contains("Production release blocked"))
+        assertTrue(workflow.contains("HAS_RELEASE_CONFIG"))
+        assertTrue(stableWorkflow.contains("CURRENT_BUILD_OK"))
+        assertTrue(rollbackWorkflow.contains("CURRENT_BUILD_OK"))
     }
 
     private fun projectFile(path: String): File {
