@@ -118,7 +118,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                 }
                 Column(Modifier.weight(1f)) {
                     Text(sh("KELİME AVI", "WORD HUNT"), color = CipherText, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Günün 5 harfli kelimesi", "Today's five-letter word"), color = CipherMuted, fontSize = 9.sp)
+                    Text(sh("Günün 5 harfli kelimesi", "Today's five-letter word"), color = CipherMuted, fontSize = 13.sp)
                 }
                 Text("1×", color = CipherGold, fontWeight = FontWeight.Black)
             }
@@ -206,7 +206,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                     }
 
                     if (notice.isNotBlank()) {
-                        Text(notice, Modifier.fillMaxWidth(), color = CipherGold, textAlign = TextAlign.Center, fontSize = 10.sp)
+                        Text(notice, Modifier.fillMaxWidth(), color = CipherGold, textAlign = TextAlign.Center, fontSize = 13.sp)
                     }
                 }
             }
