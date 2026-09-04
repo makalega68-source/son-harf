@@ -51,8 +51,8 @@ class MainExperienceContractTest {
         assertTrue(main.contains("SonHarfTheme.PrimaryBlue"))
         assertFalse(main.contains("Color(0xFF07111F)"))
         assertFalse(main.contains("Color(0xFF111D2E)"))
-        assertTrue(store.contains("theme_monster_blue"))
-        assertTrue(store.contains("Mavi Beyaz Arena"))
+        assertTrue(store.contains("\"game_theme\""))
+        assertTrue(store.contains("StyleLivePreview(item)"))
         assertTrue(store.contains("SATIN AL"))
         assertTrue(cosmetics.contains("monsterBlueTheme"))
         assertTrue(cosmetics.contains("gameThemeId == \"theme_monster_blue\""))
@@ -84,9 +84,11 @@ class MainExperienceContractTest {
         val store = projectFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
         val catalog = projectFile("app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt").readText()
         val offeredProducts = catalog.substringAfter("val oneTimeProducts = listOf(")
+            .substringBefore("val activeOneTimeProducts")
 
         assertTrue(main.contains("MonsterDestination.STYLE -> MonsterStyleStoreScreen()"))
-        assertTrue(store.contains("theme_monster_blue"))
+        assertTrue(store.contains("ProductionStoreCategory.STYLE"))
+        assertTrue(store.contains("StyleCatalogCategoryScreen"))
         assertFalse(store.contains("theme_aurora"))
         assertFalse(store.contains("theme_midnight"))
         assertFalse(store.contains("theme_neon"))
@@ -122,7 +124,7 @@ class MainExperienceContractTest {
 
     private fun File.sha256(): String = MessageDigest.getInstance("SHA-256")
         .digest(readBytes())
-        .joinToString("") { "%02x".format(it) }
+        .joinToString("") { "%02x".format(it.toInt() and 0xff) }
 
     private fun projectFile(path: String): File {
         val candidates = listOf(File(path), File("../$path"))
