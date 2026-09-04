@@ -52,7 +52,7 @@ class MainExperienceContractTest {
         assertFalse(main.contains("Color(0xFF07111F)"))
         assertFalse(main.contains("Color(0xFF111D2E)"))
         assertTrue(store.contains("\"game_theme\""))
-        assertTrue(store.contains("StyleLivePreview(item)"))
+        assertTrue(store.contains("StyleLivePreview(item"))
         assertTrue(store.contains("SATIN AL"))
         assertTrue(cosmetics.contains("monsterBlueTheme"))
         assertTrue(cosmetics.contains("gameThemeId == \"theme_monster_blue\""))
