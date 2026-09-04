@@ -39,7 +39,7 @@ class FinalRestorationRegressionTest {
         // Duel keeps separate player/rival photos and the approved light Son Harf palette.
         assertTrue(duel.contains("playerAvatarPath"))
         assertTrue(duel.contains("opponentAvatarPath"))
-        assertTrue(duel.contains("ProfilePhotoAvatarWithGender"))
+        assertTrue(duel.contains("ProfilePhotoAvatarRectWithGender"))
         assertTrue(duel.contains("Color(0xFFF7F9FC)"))
         assertTrue(duel.contains("Color(0xFF1769E0)"))
         assertTrue(duel.contains("Color.White"))
