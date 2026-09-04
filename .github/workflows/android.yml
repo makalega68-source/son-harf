@@ -36,7 +36,9 @@ jobs:
 
       - name: Apply targeted turn, timer, camera and readability fixes
         if: github.event_name == 'pull_request' && github.head_ref == 'fix/turn-timer-siege-camera-readability-20260904'
-        run: python3 tools/apply_turn_timer_siege_fix.py
+        run: |
+          python3 tools/apply_turn_timer_siege_fix.py
+          python3 tools/apply_turn_timer_siege_followup.py
 
       - name: Test and build debug APK
         shell: bash
