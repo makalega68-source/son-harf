@@ -2,10 +2,9 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -14,268 +13,359 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
 
-private val StoreBg = SonHarfTheme.Background
-private val StoreSurface = SonHarfTheme.Surface
-private val StoreAlt = SonHarfTheme.SurfaceSecondary
-private val StoreBlue = SonHarfTheme.PrimaryBlue
-private val StoreBlue2 = Color(0xFF1687F8)
-private val StoreText = SonHarfTheme.TextPrimary
-private val StoreMuted = SonHarfTheme.TextSecondary
-private val StoreBorder = SonHarfTheme.Border
-private val StoreGreen = SonHarfTheme.Success
-private val StoreGold = SonHarfTheme.Warning
-private const val STORE_LOAD_TIMEOUT_MS = 12_000L
-
-private data class StylePreview(
-    val titleTr: String,
-    val titleEn: String,
-    val subtitleTr: String,
-    val subtitleEn: String,
-    val icon: ImageVector,
-    val accent: Color,
-)
+private enum class ProductionStoreCategory(val tr: String, val en: String, val icon: ImageVector) {
+    VIP("VIP", "VIP", Icons.Rounded.WorkspacePremium),
+    STYLE("STYLE", "STYLE", Icons.Rounded.Palette),
+    SON_COIN("SON COIN", "SON COIN", Icons.Rounded.Toll),
+    SEASON("SEZON PASS", "SEASON PASS", Icons.Rounded.ConfirmationNumber),
+    PACKS("PAKETLER", "PACKS", Icons.Rounded.Inventory2),
+    KASA("KASA", "PIGGY BANK", Icons.Rounded.Savings),
+    EVENT("ETKİNLİK", "EVENT", Icons.Rounded.EventAvailable),
+}
 
 @Composable
 internal fun MonsterStyleStoreScreen() {
-    // One remembered Style backend only. Child sections receive this same instance.
-    // Any constructor/configuration failure degrades to an offline/fallback store instead of crashing composition.
-    val backend = remember {
-        if (SupabaseProvider.configured) runCatching { OnlineGameBackend() }.getOrNull() else null
+    val backend = remember { if (SupabaseProvider.configured) runCatching { OnlineGameBackend() }.getOrNull() else null }
+    var category by remember { mutableStateOf(ProductionStoreCategory.STYLE) }
+    var balance by remember { mutableIntStateOf(0) }
+    val scope = rememberCoroutineScope()
+
+    suspend fun reloadBalance() {
+        val id = backend?.currentUserId() ?: return
+        runCatching { backend.getProfile(id) }.onSuccess { balance = it.diamonds }
     }
+
+    LaunchedEffect(backend) {
+        reloadBalance()
+        runCatching { backend?.trackStoreEvent("store_view") }
+    }
+
+    Column(
+        Modifier.fillMaxSize().background(SonHarfTheme.Background).statusBarsPadding(),
+    ) {
+        StoreProductionHeader(balance)
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            ProductionStoreCategory.entries.forEach { item ->
+                FilterChip(
+                    selected = category == item,
+                    onClick = {
+                        category = item
+                        scope.launch { runCatching { backend?.trackStoreEvent("product_view", item.name.lowercase()) } }
+                    },
+                    leadingIcon = { Icon(item.icon, contentDescription = null, modifier = Modifier.size(17.dp)) },
+                    label = { Text(if (SonHarfUiState.isEnglish) item.en else item.tr, fontSize = 10.sp, fontWeight = FontWeight.Black) },
+                    modifier = Modifier.heightIn(min = 48.dp),
+                )
+            }
+        }
+
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            when (category) {
+                ProductionStoreCategory.VIP -> VipStoreCategoryScreen(onChanged = { scope.launch { reloadBalance() } })
+                ProductionStoreCategory.STYLE -> StyleCatalogCategoryScreen(backend = backend, eventOnly = false, onChanged = { scope.launch { reloadBalance() } })
+                ProductionStoreCategory.SON_COIN -> StoreSingleCardScroll { GooglePlayCoinProductsCard { scope.launch { reloadBalance() } } }
+                ProductionStoreCategory.SEASON -> StoreSingleCardScroll { SeasonPassPurchaseCard { scope.launch { reloadBalance() } } }
+                ProductionStoreCategory.PACKS -> StoreSingleCardScroll { GooglePlayPackProductsCard { scope.launch { reloadBalance() } } }
+                ProductionStoreCategory.KASA -> RewardCenterScreen(showKasaOnly = true)
+                ProductionStoreCategory.EVENT -> StyleCatalogCategoryScreen(backend = backend, eventOnly = true, onChanged = { scope.launch { reloadBalance() } })
+            }
+        }
+    }
+}
+
+@Composable
+private fun StoreProductionHeader(balance: Int) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(sh("SON HARF MAĞAZASI", "SON HARF STORE"), color = SonHarfTheme.TextPrimary, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            Text(sh("Style • koleksiyon • üyelik • sezon", "Style • collection • membership • season"), color = SonHarfTheme.TextSecondary, fontSize = 9.sp)
+        }
+        Surface(
+            shape = RoundedCornerShape(99.dp),
+            color = SonHarfTheme.SurfaceSecondary,
+            border = BorderStroke(1.dp, SonHarfTheme.Border),
+        ) {
+            Row(Modifier.padding(horizontal = 12.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Toll, contentDescription = null, tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(17.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("$balance SC", color = SonHarfTheme.PrimaryBlue, fontWeight = FontWeight.Black)
+            }
+        }
+    }
+}
+
+@Composable
+private fun StoreSingleCardScroll(content: @Composable () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp).verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        content()
+        Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun VipStoreCategoryScreen(onChanged: () -> Unit) {
+    var showDialog by remember { mutableStateOf(false) }
+    StoreSingleCardScroll {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFEAF3FF)),
+            shape = RoundedCornerShape(24.dp),
+            border = BorderStroke(1.dp, SonHarfTheme.PrimaryBlue.copy(alpha = .28f)),
+        ) {
+            Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Icon(Icons.Rounded.WorkspacePremium, contentDescription = null, tint = SonHarfGold, modifier = Modifier.size(42.dp))
+                Text("SON HARF VIP", color = SonHarfTheme.PrimaryBlue, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                Text(sh("Daha kolay. Daha detaylı. Daha kişisel.", "Easier. More detailed. More personal."), color = SonHarfTheme.TextSecondary)
+                Text(
+                    sh(
+                        "Arkadaş Listesi • Otomatik Puan Hesabı • Maç Kelimeleri • Gelişmiş İstatistik • Reklamsızlık • VIP Style",
+                        "Friend List • Automatic Score Breakdown • Match Words • Advanced Statistics • Ad-free • VIP Style",
+                    ),
+                    color = SonHarfTheme.TextPrimary,
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp,
+                )
+                Surface(color = SonHarfTheme.Success.copy(alpha = .10f), shape = RoundedCornerShape(14.dp)) {
+                    Text(
+                        sh(
+                            "VIP ranked maçta süre, puan, hamle, rating, eşleşme veya canlı karar avantajı vermez.",
+                            "VIP gives no time, score, move, rating, matchmaking or live-decision advantage in ranked play.",
+                        ),
+                        Modifier.padding(12.dp),
+                        color = SonHarfTheme.Success,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Button(
+                    onClick = { showDialog = true },
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 54.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.PrimaryBlue),
+                    shape = RoundedCornerShape(16.dp),
+                ) { Text(sh("VIP PLANLARINI GÖR", "VIEW VIP PLANS"), fontWeight = FontWeight.Black) }
+            }
+        }
+    }
+    if (showDialog) VipPurchaseDialog(onVerified = { onChanged(); showDialog = false }, onDismiss = { showDialog = false })
+}
+
+@Composable
+private fun StyleCatalogCategoryScreen(
+    backend: OnlineGameBackend?,
+    eventOnly: Boolean,
+    onChanged: () -> Unit,
+) {
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
-    var theme by remember { mutableStateOf<ShopItemDto?>(null) }
-    var owned by remember { mutableStateOf(false) }
-    var equipped by remember { mutableStateOf(false) }
-    var busy by remember { mutableStateOf(false) }
+    var items by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
+    var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var equipped by remember { mutableStateOf<EquippedCosmeticsDto?>(null) }
     var loading by remember { mutableStateOf(true) }
+    var busy by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     suspend fun reload() {
         loading = true
         val b = backend
         if (b == null) {
-            notice = sh("Style mağazası şu anda çevrimdışı kullanılabilir. Sunucu bağlantısı kurulamadı.", "Style is available in offline mode. The server connection is unavailable.")
+            notice = sh("Mağaza sunucu bağlantısı olmadan satın alma yapmaz.", "The store does not make purchases without a server connection.")
             loading = false
             return
         }
-
-        val id = runCatching { b.currentUserId() }.getOrNull()
-        if (id.isNullOrBlank()) {
-            notice = sh("Oturum doğrulanamadı. Style kataloğu güvenli modda gösteriliyor.", "Session could not be verified. The Style catalog is shown in safe mode.")
+        val id = b.currentUserId()
+        if (id == null) {
+            notice = sh("Oyuncu oturumu hazırlanamadı.", "Player session is not ready.")
             loading = false
             return
         }
-
         runCatching {
-            withTimeout(STORE_LOAD_TIMEOUT_MS) {
-                val p = b.getProfile(id)
-                val shop = b.getShopItems()
-                val inventory = b.getInventory()
-                val eq = b.getEquippedCosmetics()
-                profile = p
-                theme = shop.firstOrNull { it.id == "theme_monster_blue" && it.active }
-                owned = "theme_monster_blue" in inventory
-                equipped = eq?.gameThemeId == "theme_monster_blue"
-                SonHarfCosmetics.apply(eq)
-            }
-        }.onFailure {
-            notice = sh("Style verileri alınamadı. Katalog güvenli modda açık kalacak; daha sonra tekrar deneyebilirsin.", "Style data could not be loaded. The catalog will remain open in safe mode; try again later.")
-        }
+            profile = b.getProfile(id)
+            items = b.getShopItems()
+            owned = b.getInventory()
+            equipped = b.getEquippedCosmetics()
+            SonHarfCosmetics.apply(equipped)
+        }.onFailure { notice = sh("Style kataloğu yüklenemedi.", "Style catalog could not be loaded.") }
         loading = false
     }
 
-    LaunchedEffect(backend) {
-        runCatching { reload() }.onFailure {
-            loading = false
-            notice = sh("Style mağazası geçici olarak kullanılamıyor; ekran güvenli modda açık tutuldu.", "Style is temporarily unavailable; the screen remains open in safe mode.")
-        }
+    LaunchedEffect(backend, eventOnly) { reload() }
+
+    val supportedKinds = setOf(
+        "profile_frame", "avatar_background", "nameplate", "badge", "title", "name_style",
+        "game_theme", "keyboard_theme", "vs_intro", "word_effect", "victory_effect", "emote", "emoji_pack",
+    )
+    val visible = items.filter { it.kind in supportedKinds }.filter {
+        if (eventOnly) it.rarity in setOf("EVENT", "SEASON") else it.rarity !in setOf("EVENT")
     }
 
-    val matchItems = listOf(
-        StylePreview("VS Giriş Efekti", "VS Intro", "Maç açılışında güç vermeyen görsel intro", "Visual match intro with no gameplay power", Icons.Rounded.Bolt, StoreBlue),
-        StylePreview("Kelime Gönderme", "Word Send Effect", "Kelime kabulünde kısa premium efekt", "Short premium effect on accepted words", Icons.Rounded.AutoAwesome, Color(0xFF7A62D3)),
-        StylePreview("Zafer Konfetisi", "Victory Confetti", "Galibiyet ekranı kutlama efekti", "Victory screen celebration effect", Icons.Rounded.Celebration, StoreGold),
-    )
-    val prestigeItems = listOf(
-        StylePreview("Usta", "Master", "Güç vermeyen prestij ünvanı", "Prestige title with no power", Icons.Rounded.MilitaryTech, StoreGold),
-        StylePreview("Kelime Avcısı", "Word Hunter", "Koleksiyonluk profil etiketi", "Collectible profile label", Icons.Rounded.EmojiEvents, StoreBlue),
-        StylePreview("Sezon Rozeti", "Season Badge", "Geçmiş sezon başarısını sergile", "Show past season achievement", Icons.Rounded.WorkspacePremium, Color(0xFF6C63D9)),
-    )
+    fun isEquipped(item: ShopItemDto): Boolean = when (item.kind) {
+        "profile_frame" -> equipped?.profileFrameId == item.id
+        "avatar_background" -> equipped?.avatarBackgroundId == item.id
+        "nameplate" -> equipped?.nameplateId == item.id
+        "badge" -> equipped?.badgeId == item.id
+        "title" -> equipped?.titleStyleId == item.id
+        "name_style" -> equipped?.nameStyleId == item.id
+        "game_theme" -> equipped?.gameThemeId == item.id
+        "keyboard_theme" -> equipped?.keyboardThemeId == item.id
+        "vs_intro" -> equipped?.vsIntroId == item.id
+        "word_effect" -> equipped?.wordEffectId == item.id
+        "victory_effect" -> equipped?.victoryEffectId == item.id
+        "emote" -> equipped?.emoteId == item.id
+        "emoji_pack" -> equipped?.emojiPackId == item.id
+        else -> false
+    }
 
-    Surface(Modifier.fillMaxSize(), color = StoreBg) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize().statusBarsPadding(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 108.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            item { StoreHeader(profile?.diamonds ?: 0) }
-            item { StoreCategoryRail() }
-            if (loading) item { StoreNotice(sh("Style yükleniyor…", "Loading Style…")) }
-            item {
-                StoreSectionHeader(
-                    sh("ÖNE ÇIKANLAR", "FEATURED"),
-                    sh("Tema • yeni • sınırlı süreli slotlar", "Theme • new • limited-time slots"),
-                )
-            }
-            item {
-                FeaturedThemeCard(
-                    theme = theme,
-                    owned = owned,
-                    equipped = equipped,
-                    busy = busy,
-                    onAction = {
-                        val b = backend ?: return@FeaturedThemeCard
-                        scope.launch {
-                            busy = true
-                            try {
-                                runCatching {
-                                    withTimeout(STORE_LOAD_TIMEOUT_MS) {
-                                        if (!owned) b.purchaseShopItem("theme_monster_blue")
-                                        b.equipShopItem("theme_monster_blue")
-                                    }
-                                }.onSuccess {
-                                    notice = sh("Mavi Beyaz Arena etkinleştirildi.", "Blue White Arena equipped.")
-                                    reload()
-                                }.onFailure {
-                                    val raw = it.message.orEmpty()
-                                    notice = if ("insufficient_diamonds" in raw) {
-                                        sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
-                                    } else {
-                                        sh("Tema işlemi tamamlanamadı. Daha sonra tekrar dene.", "Theme action could not be completed. Try again later.")
-                                    }
-                                }
-                            } finally {
-                                busy = false
+    androidx.compose.foundation.lazy.LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        item {
+            Text(if (eventOnly) sh("ETKİNLİK STYLE", "EVENT STYLE") else "STYLE", color = SonHarfTheme.PrimaryBlue, fontSize = 27.sp, fontWeight = FontWeight.Black)
+            Text(
+                if (eventOnly) sh("Yalnız aktif sezon ve etkinlik koleksiyonları gösterilir.", "Only active season and event collections are shown.")
+                else sh("Görünüm, prestij ve koleksiyon. Hiçbir Style ürünü oyun gücü vermez.", "Appearance, prestige and collection. No Style item grants gameplay power."),
+                color = SonHarfTheme.TextSecondary,
+                fontSize = 10.sp,
+            )
+        }
+        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
+        if (!loading && visible.isEmpty()) item {
+            StoreEmptyState(
+                if (eventOnly) sh("Şu anda aktif etkinlik koleksiyonu yok.", "There is no active event collection right now.")
+                else sh("Aktif Style ürünü bulunamadı.", "No active Style items were found."),
+            )
+        }
+        items(visible.size, key = { visible[it].id }) { index ->
+            val item = visible[index]
+            val mine = item.id in owned
+            val active = isEquipped(item)
+            StyleProductCard(
+                item = item,
+                owned = mine,
+                active = active,
+                vipActive = profile?.isVip == true,
+                busy = busy == item.id,
+                onPrimary = {
+                    val b = backend ?: return@StyleProductCard
+                    scope.launch {
+                        busy = item.id
+                        runCatching {
+                            if (!mine) b.purchaseShopItem(item.id) else if (!active) b.equipShopItem(item.id)
+                        }.onSuccess {
+                            runCatching { b.trackStoreEvent(if (mine) "equip" else "purchase_success", item.id) }
+                            reload(); onChanged()
+                        }.onFailure { error ->
+                            notice = when {
+                                "insufficient_diamonds" in error.message.orEmpty() -> sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
+                                "vip_required" in error.message.orEmpty() -> sh("Bu Style VIP üyelerine özel.", "This Style is VIP-only.")
+                                else -> sh("Style işlemi tamamlanamadı.", "Style action could not be completed.")
                             }
                         }
-                    },
-                )
-            }
-            notice?.let { message -> item { StoreNotice(message) } }
-            item { FairPlayStoreNotice() }
-
-            item { StoreSectionHeader(sh("TEMALAR", "THEMES"), sh("Uygulamanın tüm görsel sistemini değiştir", "Change the app-wide visual system")) }
-            item { ThemeSlotRow(equipped) }
-
-            item { StoreSectionHeader(sh("PROFİL STYLE", "PROFILE STYLE"), sh("Çerçeve, plaka, arka plan ve rozet", "Frames, nameplates, backgrounds and badges")) }
-            item { PurchasedProfileFramesStoreRow(backend = backend) }
-
-            item { StoreSectionHeader(sh("MAÇ STYLE", "MATCH STYLE"), sh("Sadece görsel efektler; rekabet avantajı yok", "Visual effects only; no competitive advantage")) }
-            item { PreviewRow(matchItems) }
-
-            item { StoreSectionHeader(sh("PRESTİJ", "PRESTIGE"), sh("Ünvan, sezon rozeti ve koleksiyon etiketleri", "Titles, season badges and collectible labels")) }
-            item { PreviewRow(prestigeItems) }
-
-            item { StoreSectionHeader(sh("PAKETLER", "BUNDLES"), sh("Birbiriyle uyumlu Style setleri", "Matching Style collections")) }
-            item { BundleRow() }
-
-            item { StoreSectionHeader("SON COIN", sh("Tek ve sade Style para birimi", "One simple Style currency")) }
-            item { SonCoinReadyCard(profile?.diamonds ?: 0) }
+                        busy = null
+                    }
+                },
+                onTrial = if (!mine && item.trialMode in setOf("match", "minutes") && (item.trialValue ?: 0) > 0) {
+                    {
+                        val b = backend ?: return@StyleProductCard
+                        scope.launch {
+                            busy = item.id
+                            runCatching { b.startStyleTrial(item.id); b.equipRewardTrial() }
+                                .onSuccess {
+                                    runCatching { b.trackStoreEvent("preview_start", item.id) }
+                                    notice = if (item.trialMode == "match") sh("1 maçlık deneme etkin.", "1-match trial is active.") else sh("30 dakikalık deneme etkin.", "30-minute trial is active.")
+                                    reload()
+                                }
+                                .onFailure { error ->
+                                    notice = if ("trial_daily_limit_reached" in error.message.orEmpty()) sh("Bu ürünün bugünkü denemesi kullanıldı.", "Today's trial for this item has been used.") else sh("Deneme başlatılamadı.", "Trial could not be started.")
+                                }
+                            busy = null
+                        }
+                    }
+                } else null,
+            )
         }
+        notice?.let { message -> item { StoreNoticeCard(message) } }
+        item { Spacer(Modifier.height(24.dp)) }
     }
 }
 
 @Composable
-private fun StoreHeader(balance: Int) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Column(Modifier.weight(1f)) {
-            Text("STYLE", color = StoreText, fontSize = 29.sp, fontWeight = FontWeight.Black)
-            Text(sh("Görünüm • koleksiyon • prestij", "Appearance • collection • prestige"), color = StoreMuted, fontSize = 10.sp)
-        }
-        Surface(shape = RoundedCornerShape(99.dp), color = StoreAlt, border = BorderStroke(1.dp, Color(0xFFBED5F5))) {
-            Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Toll, null, Modifier.size(17.dp), tint = StoreBlue)
-                Spacer(Modifier.width(6.dp))
-                Text("$balance SC", color = StoreBlue, fontWeight = FontWeight.Black)
-            }
-        }
-    }
-}
-
-@Composable
-private fun StoreCategoryRail() {
-    val categories = listOf(
-        sh("Öne Çıkanlar", "Featured"), sh("Temalar", "Themes"), sh("Profil", "Profile"),
-        sh("Maç", "Match"), sh("Prestij", "Prestige"), sh("Paketler", "Bundles"), "Son Coin",
-    )
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        items(categories) { label ->
-            Surface(shape = RoundedCornerShape(99.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
-                Text(label, Modifier.padding(horizontal = 13.dp, vertical = 9.dp), color = StoreText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
-private fun StoreSectionHeader(title: String, subtitle: String) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Text(title, color = StoreText, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = .5.sp)
-        Text(subtitle, color = StoreMuted, fontSize = 9.sp)
-    }
-}
-
-@Composable
-private fun FeaturedThemeCard(theme: ShopItemDto?, owned: Boolean, equipped: Boolean, busy: Boolean, onAction: () -> Unit) {
+private fun StyleProductCard(
+    item: ShopItemDto,
+    owned: Boolean,
+    active: Boolean,
+    vipActive: Boolean,
+    busy: Boolean,
+    onPrimary: () -> Unit,
+    onTrial: (() -> Unit)?,
+) {
+    val name = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
+    val description = if (SonHarfUiState.isEnglish) item.descriptionEn else item.descriptionTr
+    val rarityLabel = item.rarity.uppercase()
     Card(
-        colors = CardDefaults.cardColors(containerColor = StoreSurface),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(if (equipped) 2.dp else 1.dp, if (equipped) StoreBlue else StoreBorder),
+        colors = CardDefaults.cardColors(containerColor = SonHarfTheme.Surface),
+        shape = RoundedCornerShape(22.dp),
+        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) SonHarfTheme.PrimaryBlue else SonHarfTheme.Border),
     ) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Box {
-                MonsterBlueThemePreview()
-                Surface(
-                    modifier = Modifier.align(Alignment.TopStart).padding(9.dp),
-                    color = StoreText.copy(alpha = .88f),
-                    shape = RoundedCornerShape(8.dp),
-                ) {
-                    Text(sh("ÖNE ÇIKAN TEMA", "FEATURED THEME"), Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                }
-            }
-            Row(verticalAlignment = Alignment.Top) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            StyleLivePreview(item)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
-                    Text(sh("Mavi Beyaz Arena", "Blue White Arena"), color = StoreText, fontSize = 19.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Beyaz yüzeyler, buz mavisi katmanlar ve güçlü modern mavi vurgular.", "White surfaces, ice-blue layers and a strong modern-blue accent."), color = StoreMuted, fontSize = 10.sp)
+                    Text(name, color = SonHarfTheme.TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                    Text(description, color = SonHarfTheme.TextSecondary, fontSize = 9.sp, maxLines = 2)
                 }
-                if (equipped) Icon(Icons.Rounded.CheckCircle, null, tint = StoreGreen, modifier = Modifier.size(25.dp))
+                Surface(color = SonHarfTheme.SurfaceSecondary, shape = RoundedCornerShape(9.dp)) {
+                    Text(rarityLabel, Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = if (item.rarity == "VIP") SonHarfGold else SonHarfTheme.PrimaryBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                }
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                val price = theme?.diamondPrice ?: 600
                 Column(Modifier.weight(1f)) {
                     Text(
-                        when { equipped -> sh("AKTİF", "ACTIVE"); owned -> sh("SAHİPSİN", "OWNED"); else -> "$price SC" },
-                        color = if (owned || equipped) StoreGreen else StoreBlue,
+                        when { active -> sh("AKTİF", "ACTIVE"); owned -> sh("SAHİPSİN", "OWNED"); else -> "${item.diamondPrice} SC" },
+                        color = if (active || owned) SonHarfTheme.Success else SonHarfTheme.PrimaryBlue,
                         fontWeight = FontWeight.Black,
-                        fontSize = 15.sp,
                     )
-                    Text(sh("Gerçek önizleme • kalıcı sahiplik", "Real preview • permanent ownership"), color = StoreMuted, fontSize = 8.sp)
+                    if (item.vipOnly) Text("VIP", color = SonHarfGold, fontSize = 8.sp, fontWeight = FontWeight.Black)
                 }
                 Button(
-                    enabled = !busy && !equipped && theme != null,
-                    onClick = onAction,
-                    colors = ButtonDefaults.buttonColors(containerColor = StoreBlue, contentColor = Color.White, disabledContainerColor = Color(0xFFDDE7F3), disabledContentColor = Color(0xFF66758A)),
-                    shape = RoundedCornerShape(13.dp),
+                    onClick = onPrimary,
+                    enabled = !busy && !active && (!item.vipOnly || vipActive),
+                    modifier = Modifier.heightIn(min = 48.dp),
+                    shape = RoundedCornerShape(14.dp),
                 ) {
-                    Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(if (busy) "…" else if (owned) sh("KULLAN", "EQUIP") else if (equipped) sh("AKTİF", "ACTIVE") else sh("SATIN AL", "BUY"), fontWeight = FontWeight.Black)
+                    Text(
+                        when { busy -> sh("İŞLENİYOR", "PROCESSING"); active -> sh("AKTİF", "ACTIVE"); owned -> sh("KULLAN", "EQUIP"); else -> sh("SATIN AL", "BUY") },
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+            }
+            if (onTrial != null) {
+                OutlinedButton(onClick = onTrial, enabled = !busy, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), shape = RoundedCornerShape(14.dp)) {
+                    Icon(Icons.Rounded.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        if (item.trialMode == "match") sh("1 MAÇ DENE", "TRY 1 MATCH") else sh("30 DAKİKA DENE", "TRY 30 MINUTES"),
+                        fontWeight = FontWeight.Black,
+                    )
                 }
             }
         }
@@ -283,131 +373,66 @@ private fun FeaturedThemeCard(theme: ShopItemDto?, owned: Boolean, equipped: Boo
 }
 
 @Composable
-private fun ThemeSlotRow(equipped: Boolean) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        item {
-            SmallThemeCard(sh("Mavi Beyaz Arena", "Blue White Arena"), if (equipped) sh("Aktif", "Active") else sh("Mağazada", "In shop"), StoreBlue, true)
-        }
-        item { SmallThemeCard(sh("Yeni Tema Slotu", "New Theme Slot"), sh("Yakında", "Coming soon"), Color(0xFF6C63D9), false) }
-        item { SmallThemeCard(sh("Sezon Teması", "Season Theme"), sh("Gelecek sezon", "Future season"), Color(0xFF31A6A6), false) }
-    }
-}
-
-@Composable
-private fun SmallThemeCard(title: String, state: String, accent: Color, live: Boolean) {
-    Surface(modifier = Modifier.width(180.dp), shape = RoundedCornerShape(18.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
-        Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.fillMaxWidth().height(70.dp).clip(RoundedCornerShape(13.dp)).background(Brush.linearGradient(listOf(accent.copy(alpha = .16f), StoreSurface)))) {
-                Box(Modifier.align(Alignment.Center).size(38.dp).clip(RoundedCornerShape(11.dp)).background(accent))
-            }
-            Text(title, color = StoreText, fontSize = 11.sp, fontWeight = FontWeight.Black)
-            Text(state, color = if (live) StoreGreen else StoreMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
-private fun PreviewRow(previews: List<StylePreview>) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        items(previews, key = { "${it.titleEn}:${it.subtitleEn}" }) { preview -> StylePreviewCard(preview) }
-    }
-}
-
-@Composable
-private fun StylePreviewCard(preview: StylePreview) {
-    Surface(modifier = Modifier.width(178.dp), shape = RoundedCornerShape(18.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
-        Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Box(Modifier.fillMaxWidth().height(72.dp).clip(RoundedCornerShape(13.dp)).background(preview.accent.copy(alpha = .09f)), contentAlignment = Alignment.Center) {
-                Surface(shape = CircleShape, color = preview.accent.copy(alpha = .15f)) {
-                    Icon(preview.icon, null, Modifier.padding(13.dp).size(28.dp), tint = preview.accent)
+private fun StyleLivePreview(item: ShopItemDto) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().height(122.dp),
+        color = SonHarfTheme.SurfaceSecondary,
+        shape = RoundedCornerShape(18.dp),
+    ) {
+        Box(Modifier.fillMaxSize().padding(12.dp), contentAlignment = Alignment.Center) {
+            when (item.kind) {
+                "profile_frame" -> Box(
+                    Modifier.size(78.dp).background(SonHarfTheme.PrimaryBlue.copy(alpha = .12f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Surface(shape = CircleShape, color = SonHarfTheme.Surface, border = BorderStroke(5.dp, if (item.vipOnly) SonHarfGold else SonHarfTheme.PrimaryBlue)) {
+                        Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Person, contentDescription = null, tint = SonHarfTheme.TextPrimary) }
+                    }
                 }
-            }
-            Text(sh(preview.titleTr, preview.titleEn), color = StoreText, fontSize = 11.sp, fontWeight = FontWeight.Black)
-            Text(sh(preview.subtitleTr, preview.subtitleEn), color = StoreMuted, fontSize = 8.sp, minLines = 2)
-            Surface(shape = RoundedCornerShape(99.dp), color = StoreAlt) {
-                Text(sh("YAKINDA", "COMING SOON"), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = StoreBlue, fontSize = 7.sp, fontWeight = FontWeight.Black)
-            }
-        }
-    }
-}
-
-@Composable
-private fun BundleRow() {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        item(key = "starter_bundle") { BundleCard(sh("Başlangıç Style Paketi", "Starter Style Bundle"), Icons.Rounded.RocketLaunch, StoreBlue) }
-        item(key = "premium_bundle") { BundleCard(sh("Premium Style Paketi", "Premium Style Bundle"), Icons.Rounded.Diamond, Color(0xFF6C63D9)) }
-        item(key = "season_bundle") { BundleCard(sh("Sezon Style Paketi", "Season Style Bundle"), Icons.Rounded.CalendarMonth, StoreGold) }
-    }
-}
-
-@Composable
-private fun BundleCard(title: String, icon: ImageVector, accent: Color) {
-    Surface(modifier = Modifier.width(190.dp), shape = RoundedCornerShape(18.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(11.dp), color = accent.copy(alpha = .12f)) { Icon(icon, null, Modifier.padding(9.dp).size(23.dp), tint = accent) }
-                Spacer(Modifier.width(8.dp))
-                Text(title, Modifier.weight(1f), color = StoreText, fontSize = 10.sp, fontWeight = FontWeight.Black)
-            }
-            Text(sh("Son Harf tasarımına uyarlanmış, güç vermeyen Style koleksiyonu", "Son Harf-adapted cosmetic Style collection"), color = StoreMuted, fontSize = 8.sp)
-            Text(sh("YAKINDA", "COMING SOON"), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black)
-        }
-    }
-}
-
-@Composable
-private fun SonCoinReadyCard(balance: Int) {
-    Surface(shape = RoundedCornerShape(20.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
-        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = CircleShape, color = StoreAlt) { Icon(Icons.Rounded.Toll, null, Modifier.padding(10.dp).size(24.dp), tint = StoreBlue) }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("$balance Son Coin", color = StoreText, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Tek para birimi • sade ekonomi", "Single currency • simple economy"), color = StoreMuted, fontSize = 9.sp)
+                "game_theme" -> Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    repeat(3) { row ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            repeat(5) { col ->
+                                Box(Modifier.weight(1f).height(24.dp).background(if ((row + col) % 3 == 0) SonHarfTheme.PrimaryBlue.copy(alpha = .22f) else SonHarfTheme.Surface, RoundedCornerShape(6.dp)))
+                            }
+                        }
+                    }
                 }
-            }
-            Text(sh("Google Play Billing coin paketleri için alan hazırdır. Gerçek para işlemi bağlanmadan sahte satın alma butonu gösterilmez.", "The area is ready for Google Play Billing coin packs. No fake purchase button is shown before real-money billing is connected."), color = StoreMuted, fontSize = 9.sp)
-        }
-    }
-}
-
-@Composable
-private fun FairPlayStoreNotice() {
-    Surface(color = Color(0xFFEAF3FF), shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, Color(0xFFC7DCF7))) {
-        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.VerifiedUser, null, Modifier.size(19.dp), tint = StoreBlue)
-            Spacer(Modifier.width(8.dp))
-            Text(sh("Style ürünleri yalnız görünüm, koleksiyon ve prestij içindir. Rating, süre, harf, joker veya maç kazanma gücü vermez.", "Style items are appearance, collection and prestige only. They never grant rating, timer, tile, joker or match-winning power."), color = Color(0xFF31506F), fontSize = 9.sp, modifier = Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun StoreNotice(message: String) {
-    Surface(color = StoreSurface, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, StoreBorder)) {
-        Text(message, Modifier.fillMaxWidth().padding(11.dp), color = StoreText, fontSize = 10.sp, textAlign = TextAlign.Center)
-    }
-}
-
-@Composable
-private fun MonsterBlueThemePreview() {
-    Surface(modifier = Modifier.fillMaxWidth().height(154.dp), color = Color(0xFFF4F8FE), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, StoreBorder)) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Surface(Modifier.size(34.dp), shape = RoundedCornerShape(10.dp), color = StoreBlue) {}
-                Spacer(Modifier.width(8.dp))
-                Column(Modifier.weight(1f)) {
-                    Box(Modifier.fillMaxWidth(.55f).height(8.dp).background(StoreText, RoundedCornerShape(99.dp)))
-                    Spacer(Modifier.height(5.dp))
-                    Box(Modifier.fillMaxWidth(.35f).height(6.dp).background(Color(0xFF9AAAC0), RoundedCornerShape(99.dp)))
+                "keyboard_theme" -> Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    repeat(3) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            repeat(6) { Surface(shape = RoundedCornerShape(6.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) { Box(Modifier.size(30.dp, 22.dp)) } }
+                        }
+                    }
                 }
+                "name_style", "nameplate", "title" -> Text(sh("OYUNCU", "PLAYER"), color = SonHarfTheme.PrimaryBlue, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                "victory_effect" -> Icon(Icons.Rounded.Celebration, contentDescription = null, tint = SonHarfGold, modifier = Modifier.size(58.dp))
+                "vs_intro" -> Text("VS", color = SonHarfTheme.PrimaryBlue, fontSize = 44.sp, fontWeight = FontWeight.Black)
+                "word_effect" -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(sh("KELİME", "WORD"), fontWeight = FontWeight.Black); Icon(Icons.Rounded.AutoAwesome, contentDescription = null, tint = SonHarfTheme.PrimaryBlue)
+                }
+                "badge" -> Icon(Icons.Rounded.Verified, contentDescription = null, tint = SonHarfGold, modifier = Modifier.size(56.dp))
+                "avatar_background" -> Icon(Icons.Rounded.Wallpaper, contentDescription = null, tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(56.dp))
+                "emote", "emoji_pack" -> Icon(Icons.Rounded.Forum, contentDescription = null, tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(54.dp))
+                else -> Icon(Icons.Rounded.Palette, contentDescription = null, tint = SonHarfTheme.PrimaryBlue, modifier = Modifier.size(54.dp))
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Surface(Modifier.weight(1f).height(57.dp), color = Color.White, shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, StoreBorder)) {}
-                Surface(Modifier.weight(1f).height(57.dp), color = StoreAlt, shape = RoundedCornerShape(13.dp), border = BorderStroke(1.dp, Color(0xFFB9D4FA))) {}
-            }
-            Box(Modifier.fillMaxWidth().height(24.dp).background(Brush.horizontalGradient(listOf(StoreBlue, StoreBlue2)), RoundedCornerShape(10.dp)))
         }
+    }
+}
+
+@Composable
+private fun StoreEmptyState(message: String) {
+    Surface(color = SonHarfTheme.Surface, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, SonHarfTheme.Border)) {
+        Column(Modifier.fillMaxWidth().padding(18.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Rounded.Inventory2, contentDescription = null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(32.dp))
+            Text(message, color = SonHarfTheme.TextSecondary, textAlign = TextAlign.Center, fontSize = 10.sp)
+        }
+    }
+}
+
+@Composable
+private fun StoreNoticeCard(message: String) {
+    Surface(color = SonHarfTheme.SurfaceSecondary, shape = RoundedCornerShape(14.dp)) {
+        Text(message, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfTheme.TextSecondary, fontSize = 10.sp, textAlign = TextAlign.Center)
     }
 }
