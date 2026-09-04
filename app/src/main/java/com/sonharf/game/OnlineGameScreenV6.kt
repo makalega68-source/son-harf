@@ -613,7 +613,7 @@ private fun AuroraDuelLobby(
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(playerName, color = gameText, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Hazır oyuncu", "Ready player"), color = gameMuted, fontSize = 9.sp)
+                        Text(sh("Hazır oyuncu", "Ready player"), color = gameMuted, fontSize = 13.sp)
                     }
                     Surface(
                         shape = RoundedCornerShape(16.dp),
@@ -626,7 +626,7 @@ private fun AuroraDuelLobby(
                         ) {
                             Text("🏆", fontSize = 15.sp)
                             Spacer(Modifier.width(5.dp))
-                            Text(sh("DÜELLO", "DUEL"), color = gameGold, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                            Text(sh("DÜELLO", "DUEL"), color = gameGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -745,7 +745,7 @@ private fun AuroraDuelLobby(
                                     if (matching) sh("Önce gerçek oyuncu, sonra BOT", "Real player first, then BOT")
                                     else sh("Kelimeyi sürdür, rakibini geç", "Continue the word, beat your rival"),
                                     color = gameMuted,
-                                    fontSize = 9.sp,
+                                    fontSize = 13.sp,
                                     textAlign = TextAlign.Center,
                                 )
                             }
@@ -837,7 +837,7 @@ private fun AuroraDuelLobby(
                         notice,
                         Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
                         color = gameMuted,
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                         textAlign = TextAlign.Center,
                         maxLines = 2,
                     )
@@ -918,7 +918,7 @@ private fun AuroraDuelLobby(
                                     Text(
                                         if (p.presenceStatus == "online") sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"),
                                         color = if (p.presenceStatus == "online") gameCyan else gameMuted,
-                                        fontSize = 9.sp,
+                                        fontSize = 13.sp,
                                     )
                                 }
                                 Button(
@@ -991,7 +991,7 @@ private fun GameLobbyAction(
             Text(icon, fontSize = 22.sp)
             Column {
                 Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
-                Text(subtitle, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(subtitle, color = accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -1207,7 +1207,7 @@ private fun AuroraArena(
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("$seconds", color = arenaText, fontSize = 29.sp, fontWeight = FontWeight.Black)
-                            Text(sh("SN", "SEC"), color = timerAccent, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Text(sh("SN", "SEC"), color = timerAccent, fontSize = 13.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -1268,7 +1268,7 @@ private fun AuroraArena(
                                 Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                 color = if (room.status == "sudden_death") opponentAccent else arenaText,
                                 fontWeight = FontWeight.Black,
-                                fontSize = 11.sp,
+                                fontSize = 13.sp,
                             )
                         }
 
@@ -1347,7 +1347,7 @@ private fun AuroraArena(
                             contentAlignment = Alignment.Center,
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(sh("SON HARF", "LAST LETTER"), color = arenaMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Text(sh("SON HARF", "LAST LETTER"), color = arenaMuted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                 Text(required, color = arenaText, fontSize = 70.sp, fontWeight = FontWeight.Black)
                             }
                         }
@@ -1359,7 +1359,7 @@ private fun AuroraArena(
                         if (last == null) sh("İlk kelimeyi sen başlat.", "Start with the first word.")
                         else sh("$required ile başlayan kelimeyi kur", "Build a word starting with $required"),
                         color = arenaMuted,
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                     )
 
@@ -1370,7 +1370,7 @@ private fun AuroraArena(
                             Text(
                                 sh("KELİME ZİNCİRİ", "WORD CHAIN"),
                                 color = arenaMuted,
-                                fontSize = 8.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                             )
                             Spacer(Modifier.height(5.dp))
@@ -1390,7 +1390,7 @@ private fun AuroraArena(
                                             Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                             color = Color.White,
                                             fontWeight = FontWeight.Black,
-                                            fontSize = 10.sp,
+                                            fontSize = 13.sp,
                                             maxLines = 1,
                                         )
                                     }
@@ -1419,7 +1419,7 @@ private fun AuroraArena(
                 notice,
                 Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp),
                 color = if (warningNotice) Color(0xFFFFA9B6) else arenaMuted,
-                fontSize = 9.sp,
+                fontSize = 13.sp,
                 textAlign = TextAlign.Center,
                 maxLines = 1,
             )
@@ -1433,8 +1433,8 @@ private fun AuroraArena(
                 border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .55f)),
             ) {
                 Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("★ BONUS +${triviaRound.bonusPoints}", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 11.sp)
-                    Text(triviaQuestion.question, color = arenaText, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Text("★ BONUS +${triviaRound.bonusPoints}", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                    Text(triviaQuestion.question, color = arenaText, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     val options = listOf(triviaQuestion.optionA, triviaQuestion.optionB, triviaQuestion.optionC, triviaQuestion.optionD)
                     options.chunked(2).forEachIndexed { rowIndex, pair ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1445,7 +1445,7 @@ private fun AuroraArena(
                                     border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .65f)),
                                     contentPadding = PaddingValues(horizontal = 6.dp, vertical = 3.dp),
                                 ) {
-                                    Text(option, color = arenaText, fontSize = 9.sp, maxLines = 2)
+                                    Text(option, color = arenaText, fontSize = 13.sp, maxLines = 2)
                                 }
                             }
                         }
@@ -1531,7 +1531,7 @@ private fun ArenaActionButton(
         colors = ButtonDefaults.outlinedButtonColors(contentColor = accent),
         contentPadding = PaddingValues(horizontal = 4.dp),
     ) {
-        Text(label, fontSize = 9.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        Text(label, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
     }
 }
 
@@ -1597,7 +1597,7 @@ private fun AuroraPlayerCard(
                         modifier = Modifier.weight(1f),
                         maxLines = 1,
                         color = Color(0xFFF7F8FF),
-                        fontSize = 9.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                     )
                     if (active) {
@@ -1611,19 +1611,19 @@ private fun AuroraPlayerCard(
                     fontWeight = FontWeight.Black,
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🏆", fontSize = 8.sp)
+                    Text("🏆", fontSize = 13.sp)
                     Spacer(Modifier.width(3.dp))
                     Text(
                         rating.toString(),
                         color = Color(0xFFFFC247),
-                        fontSize = 8.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.width(7.dp))
                     Text(
                         "$rounds R",
                         color = Color(0xFF95A4BE),
-                        fontSize = 7.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -1669,7 +1669,7 @@ private fun ArenaEnergyBackdrop(
         title = { Text(sh("SOHBET", "CHAT"), fontWeight = FontWeight.Black) },
         text = {
             Column(Modifier.heightIn(max = 420.dp)) {
-                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) { items(chat.takeLast(30)) { m -> Surface(color = if (m.senderId == me) SonHarfPurple.copy(alpha = .14f) else SonHarfSurface2, shape = RoundedCornerShape(12.dp)) { Text(m.body, Modifier.padding(9.dp), fontSize = 11.sp) } } }
+                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) { items(chat.takeLast(30)) { m -> Surface(color = if (m.senderId == me) SonHarfPurple.copy(alpha = .14f) else SonHarfSurface2, shape = RoundedCornerShape(12.dp)) { Text(m.body, Modifier.padding(9.dp), fontSize = 13.sp) } } }
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(input, onInput, modifier = Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) })
             }
