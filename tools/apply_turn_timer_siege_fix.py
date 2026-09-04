@@ -17,7 +17,7 @@ def patch(path: str, fn):
 
 
 def replace_once(text: str, old: str, new: str, label: str) -> str:
-    if new in text:
+    if new and new in text:
         return text
     count = text.count(old)
     if count != 1:
@@ -94,7 +94,6 @@ def patch_target(text: str) -> str:
         "                    fontSize = GameTypography.Action,\n                    fontWeight = FontWeight.Black,",
         "Target turn pill typography",
     )
-    # Top player cards and timer readability without changing their symmetry.
     text = replace_all(text, "                        size = 36.dp,", "                        size = 50.dp,", "Target arena avatar sizes", minimum=2)
     text = replace_all(text, "fontWeight = FontWeight.Black, fontSize = 11.sp, maxLines = 1", "fontWeight = FontWeight.SemiBold, fontSize = GameTypography.PlayerName, maxLines = 1", "Target player names", minimum=2)
     text = replace_all(text, "color = TGmuted, fontSize = 8.sp, maxLines = 1", "color = TGmuted, fontSize = GameTypography.Metadata, maxLines = 1", "Target score metadata", minimum=2)
@@ -143,8 +142,6 @@ def patch_siege(text: str) -> str:
     text = replace_all(text, "score = displayedRivalScore,", "score = rivalTargetScore,", "Siege rival score target")
     text = replace_all(text, "active = displayedCurrentPlayerId == me,", "active = game.currentPlayerId == me,", "Siege my active")
     text = replace_all(text, "active = displayedCurrentPlayerId == opponentId,", "active = game.currentPlayerId == opponentId,", "Siege rival active")
-
-    # Camera state and one shared last-move pulse, not one animation per cube.
     text = replace_once(
         text,
         "    var closePan by remember(gameId) { mutableStateOf(Offset.Zero) }\n    var dragging by remember(gameId) { mutableStateOf(false) }",
@@ -221,7 +218,6 @@ def patch_siege(text: str) -> str:
         '''            color = when {\n                pending -> PanSiegeTile.copy(alpha = .76f)\n                lastMoveHighlightAlpha > 0f -> Color.White.copy(alpha = .07f * lastMoveHighlightAlpha)\n                else -> Color.Transparent\n            },\n            shape = RoundedCornerShape(7.dp),\n            border = BorderStroke(\n                when {\n                    pending -> maxOf(2.dp, borderWidth)\n                    lastMoveHighlightAlpha > 0f -> highlightBorderWidth\n                    else -> borderWidth\n                },\n                border.copy(alpha = (.96f + .04f * lastMoveHighlightAlpha).coerceAtMost(1f)),\n            ),''',
         "Siege minimal last move highlight",
     )
-    # Readability tokens on gameplay controls.
     replacements = {
         'fontSize = 10.sp,\n                    fontWeight = FontWeight.Black,': 'fontSize = GameTypography.Secondary,\n                    fontWeight = FontWeight.Black,',
         'fontSize = 8.sp, fontWeight = FontWeight.Black)': 'fontSize = GameTypography.Metadata, fontWeight = FontWeight.Black)',
