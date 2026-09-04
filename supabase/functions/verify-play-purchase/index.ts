@@ -46,6 +46,21 @@ Deno.serve(async (req: Request) => {
   const { data: userData, error: userError } = await userClient.auth.getUser();
   if (userError || !userData.user) return response(401, { error: "invalid_session" });
 
+  const admin = createClient(url, serviceRole, { auth: { autoRefreshToken: false, persistSession: false } });
+
+  // Remote catalog is a production kill-switch, never a price source. A configured row with
+  // enabled=false must fail closed before contacting Play or granting anything. Missing rows are
+  // allowed for legacy restore ids that predate the remote catalog.
+  const { data: catalogRows, error: catalogError } = await admin
+    .from("store_catalog_config")
+    .select("enabled")
+    .eq("product_id", productId)
+    .limit(1);
+  if (catalogError) return response(503, { error: "store_catalog_unavailable" });
+  if (catalogRows?.length && catalogRows[0]?.enabled !== true) {
+    return response(409, { error: "product_disabled" });
+  }
+
   let credentials: Record<string, unknown>;
   try { credentials = JSON.parse(serviceAccountJson); } catch { return response(500, { error: "invalid_google_service_account_json" }); }
 
@@ -94,7 +109,6 @@ Deno.serve(async (req: Request) => {
     acknowledgementState = playBody.acknowledgementState || null;
   }
 
-  const admin = createClient(url, serviceRole, { auth: { autoRefreshToken: false, persistSession: false } });
   const { data: grantData, error: grantError } = await admin.rpc("apply_verified_play_purchase_v2", {
     p_user_id: userData.user.id,
     p_product_id: productId,
