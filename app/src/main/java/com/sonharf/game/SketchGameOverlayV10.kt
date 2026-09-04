@@ -534,12 +534,12 @@ private fun PlayerV10(name: String, gender: String?, avatarPath: String?, score:
                 val male = gender?.lowercase() in setOf("erkek", "male", "man")
                 if (female || male) {
                     Surface(modifier = Modifier.align(Alignment.BottomEnd).size(17.dp), shape = CircleShape, color = Color.White, border = BorderStroke(1.dp, if (female) Color(0xFFEF6FA7) else Color(0xFF3C9EEB))) {
-                        Box(contentAlignment = Alignment.Center) { Text(if (female) "♀" else "♂", color = if (female) Color(0xFFEF6FA7) else Color(0xFF3C9EEB), fontSize = 11.sp, fontWeight = FontWeight.Black) }
+                        Box(contentAlignment = Alignment.Center) { Text(if (female) "♀" else "♂", color = if (female) Color(0xFFEF6FA7) else Color(0xFF3C9EEB), fontSize = 13.sp, fontWeight = FontWeight.Black) }
                     }
                 }
             }
             Spacer(Modifier.width(5.dp))
-            Column(Modifier.weight(1f)) { Text(name, maxLines=1, color=if(active) accent else SonHarfMuted, fontSize=10.sp, fontWeight=FontWeight.Bold); Text(score.toString(), fontWeight=FontWeight.Black, fontSize=21.sp); Text("$rounds round", color=SonHarfMuted, fontSize=9.sp) }
+            Column(Modifier.weight(1f)) { Text(name, maxLines=1, color=if(active) accent else SonHarfMuted, fontSize = 13.sp, fontWeight=FontWeight.Bold); Text(score.toString(), fontWeight=FontWeight.Black, fontSize=21.sp); Text("$rounds round", color=SonHarfMuted, fontSize = 13.sp) }
         }
     }
 }
