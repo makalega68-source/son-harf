@@ -779,7 +779,7 @@ private fun KeyButton(label: String, enabled: Boolean, modifier: Modifier, onCli
 }
 
 @Composable
-private fun CompetitiveResult(
+internal fun CompetitiveResult(
     room: GameRoomDto,
     me: String?,
     playerName: String,
@@ -885,7 +885,7 @@ private fun ResultMetric(label: String, value: String, modifier: Modifier) {
 }
 
 @Composable
-private fun BonusDialog(
+internal fun BonusDialog(
     round: TriviaRoundDto,
     question: TriviaQuestionDto,
     myAnswer: Long?,
@@ -935,7 +935,7 @@ private fun BonusDialog(
 }
 
 @Composable
-private fun WaitingRoom(code: String, playerName: String, onExit: () -> Unit) {
+internal fun WaitingRoom(code: String, playerName: String, onExit: () -> Unit) {
     Box(Modifier.fillMaxSize().background(LBg).statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
         Card(modifier = Modifier.fillMaxWidth(.86f)) {
             Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {

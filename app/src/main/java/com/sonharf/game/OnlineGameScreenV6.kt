@@ -63,6 +63,8 @@ fun OnlineGameScreenV6() {
     var notice by remember { mutableStateOf(sh("Hazır", "Ready")) }
     var feedbackWord by remember { mutableStateOf<String?>(null) }
     var feedbackCorrect by remember { mutableStateOf<Boolean?>(null) }
+    var duelEvent by remember { mutableStateOf<DuelTransientEvent?>(null) }
+    var duelEventSerial by remember { mutableLongStateOf(0L) }
     var busy by remember { mutableStateOf(false) }
     var matchmakingState by remember { mutableStateOf(MatchmakingUiState.Idle) }
     val matching = matchmakingState == MatchmakingUiState.Searching
@@ -75,22 +77,51 @@ fun OnlineGameScreenV6() {
     var wordsJob by remember { mutableStateOf<Job?>(null) }
     var chatJob by remember { mutableStateOf<Job?>(null) }
     var matchJob by remember { mutableStateOf<Job?>(null) }
+    var lastReadChatId by remember { mutableLongStateOf(0L) }
     var voiceUses by remember { mutableIntStateOf(0) }
     var voiceRequestId by remember { mutableStateOf<String?>(null) }
     val voiceInput = rememberVoiceWordInput(language) { recognized, requestId ->
-        wordInput = recognized.take(40)
+        wordInput = gameUppercase(recognized.filter(Char::isLetter).take(40), language)
         voiceRequestId = requestId
+        feedbackWord = null
+        feedbackCorrect = null
+        if (duelEvent?.tone == DuelEventTone.Error) duelEvent = null
         notice = sh("Ses tanındı. Kelimeyi kontrol edip GÖNDER'e bas.", "Voice recognized. Check the word, then press SEND.")
     }
 
-    fun friendly(raw: String) = when {
+    fun publishDuelEvent(text: String, tone: DuelEventTone, durationMs: Long = 1_150L) {
+        duelEventSerial += 1L
+        duelEvent = DuelTransientEvent(
+            id = duelEventSerial,
+            text = text,
+            tone = tone,
+            durationMs = durationMs,
+        )
+    }
+
+    LaunchedEffect(duelEvent?.id) {
+        val shown = duelEvent ?: return@LaunchedEffect
+        delay(shown.durationMs)
+        if (duelEvent?.id == shown.id) {
+            duelEvent = null
+            if (shown.tone == DuelEventTone.Error) {
+                feedbackWord = null
+                feedbackCorrect = null
+            }
+        }
+    }
+
+    fun friendly(raw: String, submittedWord: String? = null) = when {
         "player_already_in_game" in raw -> sh("Aktif maçına dönülüyor…", "Returning to your active match…")
         "not_your_turn" in raw -> sh("Sıra rakibinde.", "It is your opponent's turn.")
         "word_already_used" in raw -> sh("Bu kelime daha önce kullanıldı.", "This word has already been used.")
         "wrong_start_letter" in raw -> sh("Kelime son harfle başlamalı.", "The word must start with the last letter.")
         "not_in_dictionary" in raw -> sh("Bu kelime sözlükte bulunamadı.", "This word was not found in the dictionary.")
+        "ends_with_soft_g" in raw && submittedWord != null &&
+            shouldShowSoftGReasonFromFailure(raw, submittedWord, language) ->
+            sh("Ğ ile biten kelimeler kullanılamaz.", "Words ending with Ğ cannot be used.")
+        "ends_with_soft_g" in raw -> sh("Bu kelime geçerli değil.", "This word is not valid.")
         "invalid_word" in raw -> sh("Bu kelime geçerli değil.", "This word is not valid.")
-        "ends_with_soft_g" in raw -> sh("Ğ ile biten kelimeler kullanılamaz.", "Words ending with Ğ cannot be used.")
         "turn_expired" in raw -> sh("Süren doldu. −1 puan.", "Your time expired. −1 point.")
         "vip_required" in raw -> sh("Özel oda açmak için VIP gerekli.", "VIP is required to create a private room.")
         "maintenance_mode" in raw -> sh("Oyun kısa süreli bakımda. Lütfen biraz sonra tekrar dene.", "The game is under brief maintenance. Please try again shortly.")
@@ -100,13 +131,18 @@ fun OnlineGameScreenV6() {
         "answer_already_submitted" in raw -> sh("Bonus cevabın zaten kilitlendi.", "Your bonus answer is already locked.")
         else -> sh("İşlem tekrar deneniyor.", "Retrying the action.")
     }
-    fun failedEvent(e: String?) = e in setOf("word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "ends_with_soft_g", "turn_expired")
-    fun eventMessage(e: String?) = when (e) {
+    fun eventMessage(e: String?, eventPlayerId: String?, currentPlayerId: String?, submittedWord: String) = when (e) {
         "word_already_used" -> sh("Bu kelime daha önce kullanıldı.", "This word has already been used.")
         "wrong_start_letter" -> sh("Kelime son harfle başlamalı.", "The word must start with the last letter.")
         "not_in_dictionary" -> sh("Bu kelime sözlükte bulunamadı.", "This word was not found in the dictionary.")
         "invalid_word" -> sh("Bu kelime geçerli değil.", "This word is not valid.")
-        "ends_with_soft_g" -> sh("Ğ ile biten kelimeler kullanılamaz.", "Words ending with Ğ cannot be used.")
+        "ends_with_soft_g" -> if (
+            shouldShowSoftGReason(e, eventPlayerId, currentPlayerId, submittedWord, language)
+        ) {
+            sh("Ğ ile biten kelimeler kullanılamaz.", "Words ending with Ğ cannot be used.")
+        } else {
+            sh("Bu kelime geçerli değil.", "This word is not valid.")
+        }
         "turn_expired" -> sh("Süren doldu. −1 puan.", "Your time expired. −1 point.")
         else -> sh("Hamle işlenemedi.", "The move could not be processed.")
     }
@@ -149,6 +185,7 @@ fun OnlineGameScreenV6() {
     }
     fun observe(r: GameRoomDto) {
         roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); matchJob?.cancel(); matchmakingState = MatchmakingUiState.Matched
+        lastReadChatId = -1L
         scope.launch { refreshOpponent(r) }
         roomJob = scope.launch {
             backend.observeRoom(r.id)
@@ -180,6 +217,7 @@ fun OnlineGameScreenV6() {
                             room?.language ?: language,
                         )
                         feedbackCorrect = true
+                        if (duelEvent?.tone == DuelEventTone.Error) duelEvent = null
                     }
                     if (
                         notice.contains("İşlem tekrar deneniyor", true) ||
@@ -189,7 +227,16 @@ fun OnlineGameScreenV6() {
                     }
                 }
         }
-        if (!r.isBot) chatJob = scope.launch { backend.observeChat(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { chat = it } }
+        if (!r.isBot) chatJob = scope.launch {
+            backend.observeChat(r.id)
+                .catch { notice = friendly(it.message.orEmpty()) }
+                .collect { messages ->
+                    if (lastReadChatId < 0L) {
+                        lastReadChatId = messages.maxOfOrNull { it.id } ?: 0L
+                    }
+                    chat = messages
+                }
+        }
     }
 
     LaunchedEffect(Unit) {
@@ -327,7 +374,7 @@ fun OnlineGameScreenV6() {
                 }
             }
         }
-        LightDuelArena(
+        PremiumDuelArena(
             room = active, me = me, playerName = profile?.displayName ?: sh("Sen", "You"), playerAvatarPath = profile?.avatarPath?.takeIf { profile?.avatarVisibility != "hidden" }, playerGender = profile?.gender, playerRating = profile?.rating ?: 1000,
             opponentName = if (active.isBot) "${active.botName ?: if (active.language == "en") "WordBot" else "KelimeBot"} BOT" else opponentProfile?.displayName ?: sh("Rakip", "Opponent"),
             opponentAvatarPath = if (active.isBot) null else opponentProfile?.avatarPath?.takeIf { opponentProfile?.avatarVisibility != "hidden" }, opponentGender = if (active.isBot) botGenderForName(active.botName.orEmpty()) else opponentProfile?.gender, opponentRating = if (active.isBot) 1000 else opponentProfile?.rating ?: 1000,
@@ -335,8 +382,14 @@ fun OnlineGameScreenV6() {
             isVip = profile?.isVip == true,
             feedbackWord = feedbackWord,
             feedbackCorrect = feedbackCorrect,
+            transientEvent = duelEvent,
             wordInput = wordInput,
-            onWordInput = { wordInput = it.take(40) },
+            onWordInput = { next ->
+                wordInput = gameUppercase(next.filter(Char::isLetter).take(40), active.language)
+                feedbackWord = null
+                feedbackCorrect = null
+                if (duelEvent?.tone == DuelEventTone.Error) duelEvent = null
+            },
             notice = notice,
             busy = busy,
             triviaRound = triviaRound,
@@ -344,6 +397,12 @@ fun OnlineGameScreenV6() {
             triviaSelection = triviaSelection?.takeIf { it.first == triviaRound?.id }?.second,
             voiceSupported = voiceInput.supported,
             voiceUses = voiceUses,
+            chatEnabled = !active.isBot &&
+                profile?.allowMatchChat != false &&
+                opponentProfile?.allowMatchChat != false,
+            unreadChatCount = if (showChat || active.isBot) 0 else chat.count { message ->
+                message.senderId != me && message.id > lastReadChatId
+            },
             onSubmit = {
                 scope.launch {
                     val submitted = wordInput.trim()
@@ -358,28 +417,48 @@ fun OnlineGameScreenV6() {
                         else backend.submitWord(active.id, submitted)
                     }
                         .onSuccess { result ->
-                            room = result
                             if (voiceToken != null) {
                                 wordInput = ""
                                 voiceRequestId = null
                                 voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(voiceUses + 1)
                             }
-                            if (failedEvent(result.lastEvent) && result.lastEventPlayerId == me) {
+                            if (
+                                shouldTreatSubmissionAsFailure(
+                                    previousValidWordCount = active.validWordCount,
+                                    resultValidWordCount = result.validWordCount,
+                                    eventCode = result.lastEvent,
+                                    eventPlayerId = result.lastEventPlayerId,
+                                    currentPlayerId = me,
+                                )
+                            ) {
                                 feedbackWord = shownWord
                                 feedbackCorrect = false
-                                notice = eventMessage(result.lastEvent)
+                                val message = eventMessage(
+                                    result.lastEvent,
+                                    result.lastEventPlayerId,
+                                    me,
+                                    submitted,
+                                )
+                                notice = message
+                                publishDuelEvent(message, DuelEventTone.Error)
                                 SonHarfSoundFx.warning()
                             } else {
                                 feedbackWord = shownWord
                                 feedbackCorrect = true
+                                duelEvent = null
                                 notice = sh("Kelime kabul edildi: $shownWord", "Word accepted: $shownWord")
                                 SonHarfSoundFx.wordAccepted()
                             }
+                            // Publish local feedback before exposing the new score to
+                            // the arena so an invalid move cannot also queue a lead event.
+                            room = result
                         }
                         .onFailure {
                             feedbackWord = shownWord
                             feedbackCorrect = false
-                            notice = friendly(it.message.orEmpty())
+                            val message = friendly(it.message.orEmpty(), submitted)
+                            notice = message
+                            publishDuelEvent(message, DuelEventTone.Error)
                             SonHarfSoundFx.warning()
                         }
                     busy = false
@@ -474,7 +553,12 @@ fun OnlineGameScreenV6() {
                     }
                 }
             },
-            onChat = { showChat = true },
+            onChat = {
+                if (!active.isBot) {
+                    lastReadChatId = chat.maxOfOrNull { it.id } ?: lastReadChatId
+                    showChat = true
+                }
+            },
             onForfeit = {
                 scope.launch {
                     busy = true
@@ -495,21 +579,24 @@ fun OnlineGameScreenV6() {
             onExit = {
                 roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); matchJob?.cancel()
                 voiceRequestId = null; voiceUses = 0; triviaRound = null; triviaQuestion = null; triviaSelection = null
-                room = null; words = emptyList(); chat = emptyList(); feedbackWord = null; feedbackCorrect = null
+                room = null; words = emptyList(); chat = emptyList(); feedbackWord = null; feedbackCorrect = null; duelEvent = null; lastReadChatId = 0L
                 notice = sh("Yeni düelloya hazırsın.", "You are ready for a new duel.")
             },
             onRematch = { scope.launch {
                 runCatching { if (active.isBot) backend.restartBotMatch(active.id) else backend.requestRematch(active.id) }
                     .onSuccess {
                         voiceRequestId = null; voiceUses = 0; triviaRound = null; triviaQuestion = null; triviaSelection = null
-                        feedbackWord = null; feedbackCorrect = null; wordInput = ""
+                        feedbackWord = null; feedbackCorrect = null; duelEvent = null; wordInput = ""; lastReadChatId = 0L
                         room = it; words = emptyList(); chat = emptyList()
                         if (it.id != active.id) observe(it)
                     }
                     .onFailure { notice = friendly(it.message.orEmpty()) }
             } }
         )
-        if (showChat && !active.isBot) AuroraChatDialog(chat, me, chatInput, { chatInput = it.take(300) }, { showChat = false }) {
+        if (showChat && !active.isBot) AuroraChatDialog(chat, me, chatInput, { chatInput = it.take(300) }, {
+            lastReadChatId = chat.maxOfOrNull { it.id } ?: lastReadChatId
+            showChat = false
+        }) {
             scope.launch {
                 runCatching { backend.sendChat(active.id, chatInput) }
                     .onSuccess { chatInput = "" }

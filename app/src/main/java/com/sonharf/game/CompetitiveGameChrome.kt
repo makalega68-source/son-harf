@@ -3,8 +3,6 @@ package com.sonharf.game
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -170,15 +168,14 @@ internal fun CompetitionLeadStrip(
         if (!action.isNullOrBlank()) {
             Text(action, modifier = Modifier.fillMaxWidth(), color = PortalMuted, fontSize = 8.sp, textAlign = TextAlign.Center, maxLines = 1)
         }
-        AnimatedVisibility(visible = announcement != null, enter = fadeIn(), exit = fadeOut()) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                color = if (leader >= 0) PortalBlue.copy(alpha = .10f) else PortalRed.copy(alpha = .10f),
-            ) {
+        Box(
+            modifier = Modifier.fillMaxWidth().height(24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            announcement?.let { current ->
                 Text(
-                    announcement.orEmpty(),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                    current,
+                    modifier = Modifier.fillMaxWidth(),
                     color = if (leader >= 0) PortalBlue else PortalRed,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Black,

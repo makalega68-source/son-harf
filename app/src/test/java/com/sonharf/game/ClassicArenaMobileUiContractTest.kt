@@ -18,24 +18,26 @@ class ClassicArenaMobileUiContractTest {
     }
 
     @Test
-    fun classicArenaStaysSingleScreenAndShowsOnlyCurrentWord() {
-        val arena = projectFile("app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt").readText()
+    fun activeArenaStaysSingleScreenAndKeepsTheWholeWordChain() {
+        val arena = projectFile("app/src/main/java/com/sonharf/game/PremiumDuelArena.kt").readText()
 
         assertFalse(arena.contains(".verticalScroll(rememberScrollState())"))
-        assertFalse(arena.contains("words.takeLast(3)"))
-        assertTrue(arena.contains("val current = words.last()"))
-        assertTrue(arena.contains("Modifier.fillMaxWidth().weight(1f, fill = true)"))
-        assertTrue(arena.contains("Sıradaki kelime bununla başlar"))
+        assertFalse(arena.contains("words.takeLast("))
+        assertTrue(arena.contains("items(items = words, key = { it.id })"))
+        assertTrue(arena.contains("PremiumMatchWordHistory("))
+        assertTrue(arena.contains("KELİME ZİNCİRİ"))
     }
 
     @Test
-    fun classicArenaKeepsFixedKeyboardAndPlayerPhotosInMatch() {
-        val arena = projectFile("app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt").readText()
+    fun activeArenaKeepsFixedKeyboardSymmetricPhotosAndVisibleChat() {
+        val arena = projectFile("app/src/main/java/com/sonharf/game/PremiumDuelArena.kt").readText()
 
-        assertTrue(arena.contains("EmbeddedWordKeyboard("))
-        assertTrue(arena.contains("readOnly = true"))
-        assertFalse(arena.contains("keyboard?.show()"))
-        assertTrue(arena.contains("ProfilePhotoAvatarWithGender("))
+        assertTrue(arena.contains("PremiumAndroidGameKeyboard("))
+        assertFalse(arena.contains("LocalSoftwareKeyboardController"))
+        assertTrue(arena.contains("ProfilePhotoAvatarRectWithGender("))
+        assertTrue(arena.contains("ChatBubbleOutline"))
+        assertTrue(arena.contains("SOHBET"))
+        assertTrue(arena.contains("MoreVert"))
     }
 
     private fun projectFile(path: String): File {
