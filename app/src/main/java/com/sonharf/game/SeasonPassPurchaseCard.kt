@@ -31,6 +31,7 @@ import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.claimStoreSeasonReward
 import com.sonharf.game.data.equipShopItem
 import com.sonharf.game.data.getStoreSeason
+import com.sonharf.game.data.trackStoreEvent
 import kotlinx.coroutines.launch
 
 @Composable
@@ -248,7 +249,7 @@ private fun SeasonRewardRow(reward: StoreSeasonRewardDto, busy: Boolean, onActio
                 Text(
                     "${sh("SV.", "LV.")} ${reward.level} • ${reward.track.uppercase()}",
                     color = SonHarfTheme.TextPrimary,
-                    fontSize = 9.dp.value.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Black,
                 )
                 Text(seasonRewardLabel(reward), color = SonHarfTheme.TextSecondary, fontSize = 8.5.sp)
