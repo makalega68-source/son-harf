@@ -84,7 +84,7 @@ class ActiveScreenRegressionContractTest {
 
     @Test fun scoringStillUsesTwoPointTransferWithoutWordRollback() {
         assertEquals(2, WordSiegeFinalRules.CUBE_TRANSFER_POINTS)
-        assertEquals(24, WordSiegeFinalRules.netScore(wordScore = 20, earnedCubePoints = 4, ignoredOpponentEarnedCubePoints = 99))
+        assertEquals(24, WordSiegeFinalRules.netScore(wordScore = 20, earnedCubePoints = 4, opponentEarnedCubePoints = 99))
         assertEquals(16, WordSiegeFinalRules.currentTerritoryScore(wordScore = 10, ownedCubes = 3))
     }
 }
