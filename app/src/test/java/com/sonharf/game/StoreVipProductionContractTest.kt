@@ -66,6 +66,10 @@ class StoreVipProductionContractTest {
         assertTrue(reconcile.contains("on conflict(purchase_token) do nothing"))
         assertTrue(reconcile.contains("v_inserted := found"))
         assertTrue(reconcile.contains("if v_inserted then"))
+        assertTrue(reconcile.contains("purchase_token_user_mismatch"))
+        assertTrue(reconcile.contains("purchase_token_product_mismatch"))
+        assertTrue(reconcile.contains("v_purchase_user_id<>p_user_id"))
+        assertTrue(reconcile.contains("v_purchase_product_id<>p_product_id"))
         assertTrue(reconcile.contains("grant execute on function public.apply_verified_play_purchase_v2"))
     }
 
