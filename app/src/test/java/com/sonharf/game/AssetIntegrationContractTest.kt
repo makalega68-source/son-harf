@@ -16,11 +16,11 @@ class AssetIntegrationContractTest {
         assertTrue(src.contains("only change appearance") || src.contains("yalnızca görünümü"))
     }
 
-    @Test fun styleStoreUsesOneRememberedBackendAndSharesItWithFrames() {
+    @Test fun styleStoreUsesOneRememberedBackendAndSharesItWithCatalog() {
         val shop = read("src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt")
         val frames = read("src/main/java/com/sonharf/game/PurchasedStyleUi.kt")
         assertTrue(shop.contains("runCatching { OnlineGameBackend() }.getOrNull()"))
-        assertTrue(shop.contains("PurchasedProfileFramesStoreRow(backend = backend)"))
+        assertTrue(shop.contains("StyleCatalogCategoryScreen(backend = backend"))
         assertTrue(frames.contains("PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?)"))
         assertFalse(frames.contains("OnlineGameBackend()"))
     }
