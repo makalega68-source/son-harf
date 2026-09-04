@@ -8,8 +8,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Analytics
 import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Dashboard
 import androidx.compose.material.icons.rounded.Schedule
-import androidx.compose.material.icons.rounded.Territory
 import androidx.compose.material.icons.rounded.TextFields
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -145,7 +145,7 @@ private fun VipAnalysisContent(analysis: VipMatchAnalysisDto) {
 
     if (analysis.mode == "siege") {
         VipAnalysisMetric(
-            icon = Icons.Rounded.Territory,
+            icon = Icons.Rounded.Dashboard,
             title = sh("Alan hareketi", "Territory movement"),
             value = sh(
                 "+${analysis.territoryGained} kazanılan • -${analysis.territoryLost} rakibe kaybedilen küp",
