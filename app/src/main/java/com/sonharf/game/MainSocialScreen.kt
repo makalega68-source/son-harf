@@ -76,6 +76,7 @@ internal fun MainSocialScreen(
 
     val onlineCount = friends.count { it.second.presenceStatus == "online" }
     val incomingCount = requests.size + invites.size
+    val me = backend.currentUserId()
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -394,7 +395,7 @@ internal fun MainSocialScreen(
                                 Text(sh("EZELİ RAKİP", "ARCH RIVAL"), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(shape = CircleShape, color = MainUi.Gold.copy(alpha = .12f)) {
-                                        Icon(Icons.Rounded.Swords, contentDescription = null, tint = MainUi.Gold, modifier = Modifier.padding(10.dp).size(23.dp))
+                                        Text("⚔", Modifier.padding(10.dp), fontSize = 23.sp)
                                     }
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
