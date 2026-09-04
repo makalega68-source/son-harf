@@ -150,6 +150,19 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
         }
 
         item {
+            LeagueRoadmap(
+                currentLeague = leagueProgress.leagueName,
+                nextLeague = leagueProgress.nextLeagueName,
+                pointsToNext = leagueProgress.pointsToNext,
+                progress = leagueProgress.progress,
+            )
+        }
+
+        if (rows.isNotEmpty()) {
+            item { LeaguePodium(rows.take(3), profiles, me) }
+        }
+
+        item {
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(13.dp)).background(SonHarfSurface).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 listOf(
                     "season" to sh("SEZON", "SEASON"),
@@ -163,7 +176,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                         shape = RoundedCornerShape(10.dp),
                         color = if (selected) SonHarfBlue else Color.Transparent,
                     ) {
-                        Text(title, Modifier.padding(vertical = 9.dp), color = if (selected) Color.White else SonHarfMuted, fontSize = 8.5.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                        Text(title, Modifier.padding(vertical = 11.dp), color = if (selected) Color.White else SonHarfMuted, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -213,7 +226,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                             if (mine) {
                                 Spacer(Modifier.width(6.dp))
                                 Surface(shape = RoundedCornerShape(6.dp), color = SonHarfBlue.copy(alpha = .12f)) {
-                                    Text(sh("SEN", "YOU"), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = SonHarfBlue, fontSize = 6.5.sp, fontWeight = FontWeight.Black)
+                                    Text(sh("SEN", "YOU"), Modifier.padding(horizontal = 6.dp, vertical = 3.dp), color = SonHarfBlue, fontSize = 12.sp, fontWeight = FontWeight.Black)
                                 }
                             }
                         }
@@ -222,7 +235,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(row.rating.toString(), color = SonHarfText, fontSize = 15.sp, fontWeight = FontWeight.Black)
-                        Text("RATING", color = SonHarfBlue, fontSize = 6.5.sp, fontWeight = FontWeight.Black)
+                        Text("RATING", color = SonHarfBlue, fontSize = 12.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -238,6 +251,85 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
             }
         }
         item { Spacer(Modifier.height(6.dp)) }
+    }
+}
+
+@Composable
+private fun LeagueRoadmap(currentLeague: String, nextLeague: String?, pointsToNext: Int, progress: Float) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, SonHarfTheme.BrandPurple.copy(alpha = .30f)),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().background(
+                Brush.horizontalGradient(listOf(Color(0xFF151B3B), Color(0xFF30225F), Color(0xFF121A36)))
+            ).padding(15.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Route, null, Modifier.size(23.dp), tint = SonHarfGold)
+                Spacer(Modifier.width(8.dp))
+                Text(sh("LİG YOLCULUĞU", "LEAGUE JOURNEY"), color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.weight(1f))
+                Text("${(progress * 100).toInt()}%", color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                LeagueRoadmapNode(currentLeague, Icons.Rounded.Shield, SonHarfBlue, true, Modifier.weight(1f))
+                LinearProgressIndicator(
+                    progress = { progress },
+                    modifier = Modifier.weight(.8f).height(5.dp).clip(CircleShape),
+                    color = SonHarfGold,
+                    trackColor = Color.White.copy(alpha = .12f),
+                )
+                LeagueRoadmapNode(nextLeague ?: sh("ZİRVE", "SUMMIT"), Icons.Rounded.WorkspacePremium, SonHarfGold, false, Modifier.weight(1f))
+            }
+            Text(
+                if (nextLeague == null) sh("En üst ligdesin", "You are in the top league") else sh("$nextLeague için $pointsToNext puan kaldı", "$pointsToNext points to $nextLeague"),
+                color = Color(0xFFBDC7DE),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.fillMaxWidth(),
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@Composable
+private fun LeagueRoadmapNode(label: String, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, active: Boolean, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Surface(shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = if (active) .25f else .12f), border = BorderStroke(1.dp, accent.copy(alpha = .55f))) {
+            Icon(icon, null, Modifier.padding(8.dp).size(21.dp), tint = accent)
+        }
+        Text(label, color = if (active) Color.White else Color(0xFFBDC7DE), fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+    }
+}
+
+@Composable
+private fun LeaguePodium(rows: List<LeaderboardV2Row>, profiles: Map<String, ProfileDto?>, me: String?) {
+    Surface(shape = RoundedCornerShape(22.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(sh("HAFTANIN ZİRVESİ", "TOP OF THE WEEK"), color = SonHarfText, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
+                rows.forEachIndexed { index, row ->
+                    val accent = when (index) { 0 -> SonHarfGold; 1 -> Color(0xFF9EA9BA); else -> Color(0xFFCD8D5C) }
+                    Surface(
+                        modifier = Modifier.weight(1f).height(if (index == 0) 142.dp else 126.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        color = accent.copy(alpha = .10f),
+                        border = BorderStroke(if (row.userId == me) 2.dp else 1.dp, if (row.userId == me) SonHarfBlue else accent.copy(alpha = .35f)),
+                    ) {
+                        Column(Modifier.fillMaxSize().padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                            Text("#${index + 1}", color = accent, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                            ProfilePhotoAvatarRectWithGender(profiles[row.userId]?.avatarPath, profiles[row.userId]?.gender, row.displayName, 50.dp, 61.dp, accent, profiles[row.userId]?.avatarVisibility != "hidden")
+                            Text(row.displayName, color = SonHarfText, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text("${row.rating}", color = accent, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
