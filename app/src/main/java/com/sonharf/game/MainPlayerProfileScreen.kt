@@ -110,11 +110,12 @@ internal fun MainPlayerProfileScreen(
                 ) {
                     Box(contentAlignment = Alignment.BottomEnd) {
                         Box(contentAlignment = Alignment.Center) {
-                            ProfilePhotoAvatarWithGender(
+                            ProfilePhotoAvatarRectWithGender(
                                 avatarPath = p?.avatarPath,
                                 gender = p?.gender,
                                 name = p?.displayName ?: sh("Oyuncu", "Player"),
-                                size = 106.dp,
+                                width = 104.dp,
+                                height = 116.dp,
                                 accent = if (p?.isVip == true) MainUi.Gold else MainUi.Blue,
                             )
                             PurchasedProfileFrameOverlay(
@@ -123,7 +124,7 @@ internal fun MainPlayerProfileScreen(
                             )
                         }
                         Surface(
-                            modifier = Modifier.size(37.dp).clickable(onClick = onEdit),
+                            modifier = Modifier.size(48.dp).clickable(onClick = onEdit),
                             shape = CircleShape,
                             color = MainUi.Blue,
                             border = BorderStroke(2.dp, Color.White),
