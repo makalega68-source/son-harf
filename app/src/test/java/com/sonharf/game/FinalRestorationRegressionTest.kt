@@ -50,7 +50,7 @@ class FinalRestorationRegressionTest {
         // Word Siege keeps actions/profiles while direction remains automatic without technical helper text.
         assertTrue(siege.contains("onPass"))
         assertTrue(siege.contains("onExchange"))
-        assertTrue(siege.contains("ProfilePhotoAvatarWithGender"))
+        assertTrue(siege.contains("ProfilePhotoAvatarRectWithGender"))
         assertFalse(siege.contains("Yön otomatik algılanır"))
         assertTrue(siege.contains("Torba ${'$'}{game.bag.length}"))
         assertTrue(siege.contains("WordSiegeFinalRules.netScore"))
