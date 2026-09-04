@@ -200,15 +200,16 @@ internal fun ProfilePhotoAvatar(
         gender = ProfilePhotoRuntime.genderForAvatar(avatarPath)
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+    val avatarShape = RoundedCornerShape(14.dp)
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
+            Modifier.size(size).clip(avatarShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (bitmap != null) {
-                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(avatarShape), contentScale = ContentScale.Crop)
             } else {
-                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
+                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(avatarShape), accent)
             }
         }
         Box(Modifier.align(Alignment.BottomEnd)) {
@@ -231,15 +232,16 @@ internal fun ProfilePhotoAvatarWithGender(
         bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+    val avatarShape = RoundedCornerShape(14.dp)
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
         Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
+            Modifier.size(size).clip(avatarShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (bitmap != null) {
-                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+                Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(avatarShape), contentScale = ContentScale.Crop)
             } else {
-                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
+                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(avatarShape), accent)
             }
         }
         Box(Modifier.align(Alignment.BottomEnd)) {
