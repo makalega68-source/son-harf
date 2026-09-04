@@ -41,6 +41,8 @@ set search_path=''
 as $$
 declare
   v_purchase_id uuid;
+  v_purchase_user_id uuid;
+  v_purchase_product_id text;
   v_inserted boolean := false;
   v_delta integer := 0;
   v_balance integer;
@@ -53,6 +55,7 @@ begin
   if p_user_id is null or nullif(trim(p_purchase_token),'') is null or length(trim(p_purchase_token))<8 then
     raise exception 'invalid_purchase';
   end if;
+  if nullif(trim(p_product_id),'') is null then raise exception 'invalid_product'; end if;
   if not exists(select 1 from public.profiles where id=p_user_id) then
     raise exception 'profile_not_found';
   end if;
@@ -82,15 +85,20 @@ begin
     p_play_state,p_acknowledgement_state,now(),p_expires_at
   )
   on conflict(purchase_token) do nothing
-  returning id into v_purchase_id;
+  returning id,user_id,product_id into v_purchase_id,v_purchase_user_id,v_purchase_product_id;
   v_inserted := found;
 
   if not v_inserted then
-    select id into v_purchase_id
+    select id,user_id,product_id into v_purchase_id,v_purchase_user_id,v_purchase_product_id
     from public.purchases
     where purchase_token=trim(p_purchase_token)
     for update;
     if v_purchase_id is null then raise exception 'purchase_reconciliation_race'; end if;
+
+    -- A Play token is permanently bound to the first verified account and product. This closes
+    -- subscription-token replay across Son Harf accounts while preserving idempotent restore.
+    if v_purchase_user_id<>p_user_id then raise exception 'purchase_token_user_mismatch'; end if;
+    if v_purchase_product_id<>p_product_id then raise exception 'purchase_token_product_mismatch'; end if;
   end if;
 
   update public.purchases set
