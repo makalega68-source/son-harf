@@ -104,8 +104,20 @@ begin
     raise exception 'invalid_season_duration';
   end if;
 
-  -- Existing profile level is display progression; it never changes ranked power.
-  select greatest(1,coalesce(level,1)) into v_level from public.profiles where id=v_uid;
+  -- Reuse the canonical level formula from get_growth_dashboard_v1. There is deliberately
+  -- no parallel profiles.level column and this display progression never changes ranked power.
+  select greatest(1,(
+    (
+      coalesce(p.wins,0)*120 +
+      coalesce(p.losses,0)*35 +
+      coalesce(p.valid_words,0)*3 +
+      coalesce(p.total_rounds,0)*5
+    ) / 500
+  ) + 1)::int
+  into v_level
+  from public.profiles p
+  where p.id=v_uid;
+
   select exists(
     select 1 from public.season_pass_entitlements e
     where e.user_id=v_uid and e.status in ('active','grace','canceled') and e.expires_at>now()
@@ -161,7 +173,20 @@ begin
   limit 1;
   if v_reward.season_id is null then raise exception 'reward_not_found'; end if;
 
-  select greatest(1,coalesce(level,1)) into v_level from public.profiles where id=v_uid for update;
+  -- Lock the profile row and use the same canonical level formula as the Growth dashboard.
+  select greatest(1,(
+    (
+      coalesce(p.wins,0)*120 +
+      coalesce(p.losses,0)*35 +
+      coalesce(p.valid_words,0)*3 +
+      coalesce(p.total_rounds,0)*5
+    ) / 500
+  ) + 1)::int
+  into v_level
+  from public.profiles p
+  where p.id=v_uid
+  for update;
+
   if v_level<v_reward.level then raise exception 'reward_locked'; end if;
   if v_reward.track='premium' then
     select exists(select 1 from public.season_pass_entitlements e
