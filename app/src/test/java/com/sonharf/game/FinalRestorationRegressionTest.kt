@@ -40,7 +40,7 @@ class FinalRestorationRegressionTest {
         assertTrue(duel.contains("playerAvatarPath"))
         assertTrue(duel.contains("opponentAvatarPath"))
         assertTrue(duel.contains("ProfilePhotoAvatarWithGender"))
-        assertTrue(duel.contains("Color(0xFFF7F9FC)"))
+        assertTrue(duel.contains("Color(0xFFF4F7FB)"))
         assertTrue(duel.contains("Color(0xFF1769E0)"))
         assertTrue(duel.contains("Color.White"))
         assertFalse(duel.contains("Color(0xFF101114)"))
