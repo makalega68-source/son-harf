@@ -63,7 +63,6 @@ class WordSiegeFinalRulesTest {
             this[40] = WordSiegeCellDto(letter = "A", owner = 2)
             this[41] = WordSiegeCellDto(letter = "R", owner = 2)
             this[42] = WordSiegeCellDto(letter = "A", owner = 2)
-            // 39 is column 9 on a 15x15 board, so 24 is the directly adjacent cell above it.
             this[24] = WordSiegeCellDto(letter = "M", owner = 2)
         }
         val before = state(board, rack = "KXXXXXX")
@@ -166,7 +165,8 @@ class WordSiegeFinalRulesTest {
         assertTrue(experience.contains("0xFF35C878"))
         assertTrue(experience.contains("0xFFFF5F57"))
         assertTrue(practice.contains("delay(28)"))
-        assertTrue(pan.contains("delay(28)"))
+        assertTrue(pan.contains("animateIntAsState"))
+        assertTrue(!pan.contains("while (displayedMyScore != myTargetScore"))
         assertTrue(sql.contains("(neutral_count + opponent_count) * 2"))
         assertTrue(sql.contains("r.player_one_word_score + r.player_one_area_score - r.player_two_area_score"))
     }
