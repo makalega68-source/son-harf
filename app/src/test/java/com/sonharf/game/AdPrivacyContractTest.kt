@@ -30,7 +30,9 @@ class AdPrivacyContractTest {
         assertTrue(banner.contains("AdPrivacyManager.adsAllowed"))
         assertFalse(banner.contains("MobileAds.initialize"))
 
-        assertTrue(rewardCenter.contains("LaunchedEffect(adsAllowed)"))
+        assertTrue(rewardCenter.contains("val adsAllowed = AdPrivacyManager.adsAllowed"))
+        assertTrue(rewardCenter.contains("LaunchedEffect(adsAllowed"))
+        assertTrue(rewardCenter.contains("if (adsAllowed && !showKasaOnly)"))
         assertTrue(rewardCenter.contains("adController.clear()"))
     }
 
