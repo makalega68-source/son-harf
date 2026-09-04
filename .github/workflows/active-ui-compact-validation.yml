@@ -1,0 +1,12 @@
+name: Active UI Compact Validation
+
+on:
+  push:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Smoke
+        run: echo active-ui-validation-ready

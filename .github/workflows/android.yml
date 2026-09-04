@@ -43,6 +43,27 @@ jobs:
           git diff --exit-code
           test -z "$(git status --porcelain --untracked-files=no)"
 
+      - name: Apply requested active UI patch
+        if: github.event_name == 'pull_request' && github.head_ref == 'fix/active-ui-compact-20260905'
+        run: |
+          python3 scripts/active_ui_compact_patch_20260905.py
+          python3 scripts/active_ui_contract_repair_20260905.py
+          git diff --check
+          python3 - <<'PY'
+          import subprocess
+          allowed = {
+              'app/src/main/java/com/sonharf/game/LightDuelUi.kt',
+              'app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt',
+              'app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt',
+          }
+          changed = set(subprocess.check_output(['git','diff','--name-only'], text=True).splitlines())
+          if changed != allowed:
+              raise SystemExit(f'UI scope violation: {sorted(changed)}')
+          PY
+          grep -q 'LightDuelArena(' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          grep -q 'WordSiegePracticeScreen(' app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt
+          ! git diff --name-only | grep -E '(^|/)(data|supabase)/|OnlineGameBackend|WordSiegeBackend|ClassicCompetitionRules|WordSiegeFinalRules'
+
       - name: Build debug APK with tests
         run: gradle clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
@@ -56,6 +77,8 @@ jobs:
           sha256sum SonHarf-Final-Test.apk | tee SonHarf-Final-Test.sha256
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
           "$APKSIGNER" verify --verbose --print-certs SonHarf-Final-Test.apk
+          unzip -t SonHarf-Final-Test.apk >/dev/null
+          unzip -l SonHarf-Final-Test.apk | grep -q 'classes.dex'
 
       - name: Upload debug APK artifact
         if: success()
@@ -66,6 +89,29 @@ jobs:
             SonHarf-Final-Test.apk
             SonHarf-Final-Test.sha256
           if-no-files-found: error
+
+      - name: Persist validated active UI only
+        if: success() && github.event_name == 'pull_request' && github.head_ref == 'fix/active-ui-compact-20260905'
+        run: |
+          git checkout 7488d727f87894cc76fd9a55a17e7db8c552f89b -- .github/workflows/android.yml
+          rm -f .github/workflows/active-ui-compact-validation.yml scripts/active_ui_compact_patch_20260905.py scripts/active_ui_contract_repair_20260905.py
+          git add -A
+          python3 - <<'PY'
+          import subprocess
+          base = '7488d727f87894cc76fd9a55a17e7db8c552f89b'
+          allowed = {
+              'app/src/main/java/com/sonharf/game/LightDuelUi.kt',
+              'app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt',
+              'app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt',
+          }
+          changed = set(subprocess.check_output(['git','diff','--cached','--name-only',base], text=True).splitlines())
+          if changed != allowed:
+              raise SystemExit(f'final tree scope violation: {sorted(changed)}')
+          PY
+          git config user.name 'sonharf-ui-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git commit -m 'fix(ui): compact active duel and siege screens'
+          git push origin HEAD:${{ github.head_ref }}
 
       - name: Build signed release APK and AAB
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'
