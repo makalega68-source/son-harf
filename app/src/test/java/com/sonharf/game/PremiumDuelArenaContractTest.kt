@@ -37,7 +37,7 @@ class PremiumDuelArenaContractTest {
         val messageBlock = premium.substringAfter("private fun DuelTransientMessage(")
             .substringBefore("private fun DuelBalanceBar(")
         val sharedChrome = source("CompetitiveGameChrome.kt")
-        val sharedAnnouncement = sharedChrome.substringAfter("AnimatedVisibility(\n                visible = announcement")
+        val sharedAnnouncement = sharedChrome.substringAfter("announcement?.let { current ->")
             .substringBefore("@Composable\ninternal fun CompetitionMatchIntro")
 
         assertTrue(messageBlock.contains("Text("))
