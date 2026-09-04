@@ -4,6 +4,7 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
@@ -30,6 +31,20 @@ data class ShopItemDto(
     @SerialName("vip_only") val vipOnly: Boolean = false,
     val active: Boolean = true,
     @SerialName("sort_order") val sortOrder: Int = 0,
+    val rarity: String = "STANDARD",
+    @SerialName("preview_asset_key") val previewAssetKey: String? = null,
+    @SerialName("collection_key") val collectionKey: String? = null,
+    @SerialName("trial_mode") val trialMode: String? = null,
+    @SerialName("trial_value") val trialValue: Int? = null,
+)
+
+@Serializable
+data class StoreCatalogConfigDto(
+    @SerialName("product_id") val productId: String,
+    val enabled: Boolean = true,
+    @SerialName("badge_tr") val badgeTr: String? = null,
+    @SerialName("badge_en") val badgeEn: String? = null,
+    @SerialName("sort_order") val sortOrder: Int = 100,
 )
 
 @Serializable
@@ -48,6 +63,13 @@ data class EquippedCosmeticsDto(
     @SerialName("victory_effect_id") val victoryEffectId: String? = null,
     @SerialName("emoji_pack_id") val emojiPackId: String? = null,
     @SerialName("mascot_id") val mascotId: String? = null,
+    @SerialName("avatar_background_id") val avatarBackgroundId: String? = null,
+    @SerialName("nameplate_id") val nameplateId: String? = null,
+    @SerialName("badge_id") val badgeId: String? = null,
+    @SerialName("title_style_id") val titleStyleId: String? = null,
+    @SerialName("vs_intro_id") val vsIntroId: String? = null,
+    @SerialName("word_effect_id") val wordEffectId: String? = null,
+    @SerialName("emote_id") val emoteId: String? = null,
 )
 
 suspend fun OnlineGameBackend.getShopItems(): List<ShopItemDto> =
@@ -55,6 +77,11 @@ suspend fun OnlineGameBackend.getShopItems(): List<ShopItemDto> =
         .filter { item ->
             item.active && (item.kind != "profile_frame" || item.id in supportedProfileFrameIds)
         }
+        .sortedBy { it.sortOrder }
+
+suspend fun OnlineGameBackend.getStoreCatalogConfig(): List<StoreCatalogConfigDto> =
+    SupabaseProvider.client.from("store_catalog_config").select().decodeList<StoreCatalogConfigDto>()
+        .filter { it.enabled }
         .sortedBy { it.sortOrder }
 
 suspend fun OnlineGameBackend.getInventory(): Set<String> {
@@ -81,4 +108,19 @@ suspend fun OnlineGameBackend.equipShopItem(itemId: String) {
 
 suspend fun OnlineGameBackend.claimVipMonthlyDiamonds() {
     SupabaseProvider.client.postgrest.rpc("claim_vip_monthly_diamonds")
+}
+
+suspend fun OnlineGameBackend.trackStoreEvent(
+    eventName: String,
+    productId: String? = null,
+    metadata: JsonObject = buildJsonObject {},
+) {
+    SupabaseProvider.client.postgrest.rpc(
+        "track_store_event_v1",
+        buildJsonObject {
+            put("p_event_name", eventName)
+            if (productId != null) put("p_product_id", productId)
+            put("p_metadata", metadata)
+        },
+    )
 }
