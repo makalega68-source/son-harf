@@ -342,7 +342,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                     Text(
                         sh("Torba: ${game.bag.length} harf", "Bag: ${game.bag.length} tiles"),
                         color = MainUi.Muted,
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                     )
                 }
             },
@@ -417,7 +417,7 @@ private fun WordSiegeGamesList(
                     Text(
                         sh("Süre yok • 1v1 • En fazla 10 devam eden oyun", "No timer • 1v1 • Up to 10 ongoing games"),
                         color = MainUi.Muted,
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                     )
                 }
                 IconButton(onClick = onRefresh, enabled = !loading) {
@@ -431,7 +431,7 @@ private fun WordSiegeGamesList(
                 Text(
                     sh("OYUN SEÇ", "CHOOSE A GAME"),
                     color = MainUi.Gold,
-                    fontSize = 10.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = .8.sp,
                 )
@@ -481,7 +481,7 @@ private fun WordSiegeGamesList(
                             Text(
                                 sh("Bonuslar sadece yeni harfte çalışır; rakibin karesini kelimene katarsan alan sana geçer.", "Bonuses work on new tiles; use a rival tile in your word to capture its territory."),
                                 color = MainUi.Muted,
-                                fontSize = 10.sp,
+                                fontSize = 13.sp,
                             )
                         }
                     }
@@ -496,7 +496,7 @@ private fun WordSiegeGamesList(
                     Text(
                         section.label(),
                         color = section.color(),
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = .8.sp,
                     )
@@ -537,7 +537,7 @@ private fun WordSiegeModeCard(
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 val contentColor = if (color == MainUi.BlueSoft) MainUi.Text else Color.White
                 Text(title, color = contentColor, fontWeight = FontWeight.Black, fontSize = 13.sp, lineHeight = 15.sp)
-                Text(subtitle, color = contentColor.copy(alpha = .72f), fontWeight = FontWeight.SemiBold, fontSize = 9.sp)
+                Text(subtitle, color = contentColor.copy(alpha = .72f), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             }
         }
     }
@@ -580,12 +580,12 @@ private fun WordSiegeGameCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(game.cardStatus(me), color = game.listSection(me).color(), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(game.cardStatus(me), color = game.listSection(me).color(), fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 if (game.status != "waiting") {
                     Text(
                         sh("Sen $myTotal • Rakip $rivalTotal • ${game.moveCount} tur", "You $myTotal • Rival $rivalTotal • ${game.moveCount} turns"),
                         color = MainUi.Muted,
-                        fontSize = 9.sp,
+                        fontSize = 13.sp,
                     )
                 }
             }
@@ -637,7 +637,7 @@ private fun WordSiegeMatch(
                             if (myTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")
                         } else game.statusLabel(me),
                         color = if (myTurn) MainUi.Blue else SiegePurple,
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                     )
                 }
@@ -646,7 +646,7 @@ private fun WordSiegeMatch(
                         sh("SÜRE YOK", "NO TIMER"),
                         Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
                         color = SiegePurple,
-                        fontSize = 8.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                     )
                 }
@@ -724,7 +724,7 @@ private fun WordSiegeMatch(
                 ) {
                     Icon(Icons.Rounded.Chat, null, Modifier.size(16.dp), tint = MainUi.Blue)
                     Spacer(Modifier.width(4.dp))
-                    Text(sh("SOHBET", "CHAT"), color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(sh("SOHBET", "CHAT"), color = MainUi.Blue, fontSize = 13.sp, fontWeight = FontWeight.Black)
                 }
                 OutlinedButton(
                     onClick = onForfeit,
@@ -735,14 +735,14 @@ private fun WordSiegeMatch(
                 ) {
                     Icon(Icons.Rounded.Flag, null, Modifier.size(16.dp), tint = MainUi.Red)
                     Spacer(Modifier.width(4.dp))
-                    Text(sh("PES ET", "FORFEIT"), color = MainUi.Red, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(sh("PES ET", "FORFEIT"), color = MainUi.Red, fontSize = 13.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
 
         if (game.status == "playing") {
             item {
-                Text(sh("Yön otomatik algılanır • Torba ${game.bag.length}", "Direction is detected automatically • Bag ${game.bag.length}"), color = MainUi.Muted, fontSize = 9.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End)
+                Text(sh("Yön otomatik algılanır • Torba ${game.bag.length}", "Direction is detected automatically • Bag ${game.bag.length}"), color = MainUi.Muted, fontSize = 13.sp, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End)
             }
 
             item {
@@ -770,14 +770,14 @@ private fun WordSiegeMatch(
                         enabled = canAct,
                         modifier = Modifier.weight(1f).height(46.dp),
                         contentPadding = PaddingValues(horizontal = 3.dp),
-                    ) { Text(sh("PAS", "PASS"), fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                    ) { Text(sh("PAS", "PASS"), fontSize = 13.sp, fontWeight = FontWeight.Black) }
                     OutlinedButton(
                         onClick = onExchange,
                         enabled = canAct && game.bag.isNotEmpty(),
                         modifier = Modifier.weight(1.15f).height(46.dp),
                         border = BorderStroke(1.dp, SiegePurple),
                         contentPadding = PaddingValues(horizontal = 3.dp),
-                    ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                    ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = 13.sp, fontWeight = FontWeight.Black) }
                     Button(
                         onClick = onSubmit,
                         enabled = canAct && placements.isNotEmpty(),
@@ -809,7 +809,7 @@ private fun WordSiegeMatch(
                         "Last move: ${lastMove.formedWords.joinToString(" + ")} • +${lastMove.wordScore} word • ${lastMove.capturedCells} territory",
                     ),
                     color = MainUi.Muted,
-                    fontSize = 9.sp,
+                    fontSize = 13.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -849,7 +849,7 @@ private fun WordSiegePlayerCard(
                 Text(
                     profile?.displayName ?: fallbackName,
                     color = MainUi.Text,
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -858,7 +858,7 @@ private fun WordSiegePlayerCard(
                 Text(
                     sh("Kelime $wordScore • Alan $area", "Word $wordScore • Area $area"),
                     color = MainUi.Muted,
-                    fontSize = 7.sp,
+                    fontSize = 13.sp,
                     maxLines = 1,
                 )
             }
@@ -959,7 +959,7 @@ private fun WordSiegeBoardCell(
                             "2H", "3H" -> MainUi.Blue
                             else -> SiegePurple
                         },
-                        fontSize = 7.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                     )
                 }
@@ -993,7 +993,7 @@ internal fun WordSiegeRackTile(
             Text(
                 wordSiegeLetterValue(letter.toString()),
                 color = MainUi.Muted,
-                fontSize = 7.sp,
+                fontSize = 13.sp,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
             )
         }
@@ -1021,7 +1021,7 @@ private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
             Text(
                 sh("Sonuç = kelime puanı + sahip olunan alan", "Result = word score + owned territory"),
                 color = MainUi.Muted,
-                fontSize = 10.sp,
+                fontSize = 13.sp,
             )
         }
     }
@@ -1035,7 +1035,7 @@ internal fun WordSiegeNotice(message: String) {
         color = SiegePurpleSoft,
         border = BorderStroke(1.dp, SiegePurple.copy(alpha = .25f)),
     ) {
-        Text(message, Modifier.padding(horizontal = 12.dp, vertical = 9.dp), color = MainUi.Text, fontSize = 11.sp)
+        Text(message, Modifier.padding(horizontal = 12.dp, vertical = 9.dp), color = MainUi.Text, fontSize = 13.sp)
     }
 }
 
@@ -1087,7 +1087,7 @@ private fun WordSiegeChatDialog(
                                     color = if (message.senderId == me) SiegeBlueSoft else SiegePurpleSoft,
                                     shape = RoundedCornerShape(12.dp),
                                 ) {
-                                    Text(message.body, Modifier.padding(9.dp), color = MainUi.Text, fontSize = 11.sp)
+                                    Text(message.body, Modifier.padding(9.dp), color = MainUi.Text, fontSize = 13.sp)
                                 }
                             }
                         }
