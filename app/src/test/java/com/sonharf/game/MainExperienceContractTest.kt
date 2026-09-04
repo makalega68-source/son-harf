@@ -112,7 +112,8 @@ class MainExperienceContractTest {
         assertTrue(online.contains("You must FORFEIT before returning home."))
         assertTrue(online.contains("SonHarfUiState.homeRequest += 1"))
         assertTrue(arena.contains("gameUppercase("))
-        assertTrue(arena.contains("duelScoreFontSize(score).sp"))
+        assertTrue(arena.contains("Text(score.toString(), color = LText, fontSize = 25.sp"))
+        assertTrue(arena.contains("maxLines = 1"))
         assertEquals(
             "Frozen keyboard changed",
             "f5143f6701c3bff95119aa6ce61d5f64acc15f8803fd2c6b48bcee4b5625d4a2",
