@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import com.sonharf.game.data.GameRoomDto
+import java.time.Instant
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -8,6 +9,7 @@ import org.junit.Test
 
 class ClassicTurnAuthorityTest {
     private val me = "me"
+    private val turnStartEpochMs = Instant.parse("2026-09-04T12:00:00Z").toEpochMilli()
 
     private fun room(
         player: String? = me,
@@ -30,7 +32,7 @@ class ClassicTurnAuthorityTest {
     @Test fun countdownFlowsTenToZeroFromFakeClock() {
         val anchor = classicDeadlineAnchor(
             "2026-09-04T12:00:10Z",
-            wallEpochMsNow = 1_767_528_000_000L,
+            wallEpochMsNow = turnStartEpochMs,
             elapsedRealtimeMsNow = 50_000L,
         )!!
         val shown = (0L..10_000L step 1_000L).map { delta ->
@@ -42,7 +44,7 @@ class ClassicTurnAuthorityTest {
     @Test fun deviceWallClockChangeAfterAnchorCannotIncreaseTimer() {
         val anchor = classicDeadlineAnchor(
             "2026-09-04T12:00:10Z",
-            wallEpochMsNow = 1_767_528_000_000L,
+            wallEpochMsNow = turnStartEpochMs,
             elapsedRealtimeMsNow = 100L,
         )!!
         assertEquals(7_000L, classicRemainingMs(anchor, 3_100L))
