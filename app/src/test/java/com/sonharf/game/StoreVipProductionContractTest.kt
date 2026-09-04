@@ -63,7 +63,8 @@ class StoreVipProductionContractTest {
         val reconcile = projectFile("supabase/migrations/20260904090500_play_entitlement_reconciliation.sql").readText()
         assertTrue(base.contains("son_coin_ledger_is_immutable"))
         assertTrue(base.contains("revoke all on public.purchases from anon, authenticated"))
-        assertTrue(reconcile.contains("on conflict(purchase_token) do update"))
+        assertTrue(reconcile.contains("on conflict(purchase_token) do nothing"))
+        assertTrue(reconcile.contains("v_inserted := found"))
         assertTrue(reconcile.contains("if v_inserted then"))
         assertTrue(reconcile.contains("grant execute on function public.apply_verified_play_purchase_v2"))
     }
