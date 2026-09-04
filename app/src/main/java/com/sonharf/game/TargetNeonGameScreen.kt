@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
@@ -81,6 +82,8 @@ fun TargetNeonGameScreen(
     var wordsJob by remember { mutableStateOf<Job?>(null) }
     var chatJob by remember { mutableStateOf<Job?>(null) }
     var matchJob by remember { mutableStateOf<Job?>(null) }
+    var submittingTurnToken by remember { mutableStateOf<ClassicTurnToken?>(null) }
+    var timeoutRequestToken by remember { mutableStateOf<ClassicTurnToken?>(null) }
     var autoStartConsumed by remember(autoStartMatchmaking) { mutableStateOf(false) }
 
     fun friendly(raw: String) = when {
@@ -127,7 +130,16 @@ fun TargetNeonGameScreen(
         roomJob?.cancel(); wordsJob?.cancel(); chatJob?.cancel(); matchJob?.cancel(); matching = false
         notice = sh("Düello başladı", "Duel started")
         scope.launch { refreshOpponent(r) }
-        roomJob = scope.launch { backend.observeRoom(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { room = it; refreshOpponent(it) } }
+        roomJob = scope.launch {
+            backend.observeRoom(r.id)
+                .catch { notice = friendly(it.message.orEmpty()) }
+                .collect { next ->
+                    if (classicShouldAcceptRoom(room, next)) {
+                        room = next
+                        refreshOpponent(next)
+                    }
+                }
+        }
         wordsJob = scope.launch { backend.observeWords(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { words = it } }
         chatJob = scope.launch { backend.observeChat(r.id).catch { notice = friendly(it.message.orEmpty()) }.collect { chatMessages = it } }
     }
@@ -222,7 +234,7 @@ fun TargetNeonGameScreen(
                     if (current.status == "finished" || current.status == "cancelled") break
                     if (!current.isBot && current.status != "waiting") {
                         runCatching { backend.heartbeatRoom(current.id) }
-                            .onSuccess { room = it }
+                            .onSuccess { next -> if (classicShouldAcceptRoom(room, next)) room = next }
                             .onFailure { notice = friendly(it.message.orEmpty()) }
                     }
                     delay(5000)
@@ -231,7 +243,9 @@ fun TargetNeonGameScreen(
             LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount) {
                 if (active.isBot && active.botTurn && active.status in listOf("playing", "final", "sudden_death")) {
                     delay(1500L + (active.validWordCount % 4) * 300L)
-                    runCatching { backend.botTakeTurn(active.id) }.onSuccess { room = it }.onFailure { notice = friendly(it.message.orEmpty()) }
+                    runCatching { backend.botTakeTurn(active.id) }
+                        .onSuccess { next -> if (classicShouldAcceptRoom(room, next)) room = next }
+                        .onFailure { notice = friendly(it.message.orEmpty()) }
                 }
             }
             TargetArena(
@@ -256,24 +270,47 @@ fun TargetNeonGameScreen(
                 },
                 notice = notice,
                 busy = busy,
-                onSubmit = {
+                submittingTurnToken = submittingTurnToken,
+                onSubmit = submit@{
+                    val submitted = wordInput.trim()
+                    val token = classicTurnToken(active)
+                    if (submitted.isBlank() || busy || submittingTurnToken == token || active.currentPlayerId != me) return@submit
+                    submittingTurnToken = token
                     scope.launch {
-                        val submitted = wordInput.trim(); if (submitted.isBlank()) return@launch
                         wordInput = ""
                         busy = true
                         runCatching { backend.submitWord(active.id, submitted) }
                             .onSuccess { updated ->
-                                room = updated
+                                if (classicShouldAcceptRoom(room, updated)) room = updated
                                 val rejected = updated.lastEventPlayerId == me && updated.lastEvent in setOf(
                                     "word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "turn_expired"
                                 )
                                 notice = if (rejected) friendly(updated.lastEvent.orEmpty()) else "${submitted.uppercase()} kabul edildi"
                             }
-                            .onFailure { notice = friendly(it.message.orEmpty()) }
+                            .onFailure { error ->
+                                if (room?.let(::classicTurnToken) == token) notice = friendly(error.message.orEmpty())
+                            }
+                        if (submittingTurnToken == token) submittingTurnToken = null
                         busy = false
                     }
                 },
-                onTimeout = { scope.launch { runCatching { backend.claimTurnTimeout(active.id) }.onSuccess { room = it } } },
+                onTimeout = timeout@{
+                    val token = classicTurnToken(active)
+                    if (timeoutRequestToken == token) return@timeout
+                    timeoutRequestToken = token
+                    scope.launch {
+                        runCatching { backend.claimTurnTimeout(active.id) }
+                            .onSuccess { updated ->
+                                if (classicShouldAcceptRoom(room, updated)) room = updated
+                            }
+                            .onFailure {
+                                if (room?.let(::classicTurnToken) == token) {
+                                    timeoutRequestToken = null
+                                    notice = sh("Senkronize ediliyor…", "Synchronizing…")
+                                }
+                            }
+                    }
+                },
                 onForfeit = {
                     scope.launch {
                         runCatching { backend.forfeit(active.id) }
@@ -432,6 +469,7 @@ private fun TargetArena(
     onWordInput: (String) -> Unit,
     notice: String,
     busy: Boolean,
+    submittingTurnToken: ClassicTurnToken?,
     onSubmit: () -> Unit,
     onTimeout: () -> Unit,
     onForfeit: () -> Unit,
@@ -444,8 +482,10 @@ private fun TargetArena(
     val oppScore = if (host) room.guestScore else room.hostScore
     val myRounds = if (host) room.hostRounds else room.guestRounds
     val oppRounds = if (host) room.guestRounds else room.hostRounds
-    val myTurn = room.currentPlayerId == me && room.status in listOf("playing", "final", "sudden_death")
-    var seconds by remember(room.turnDeadline) { mutableStateOf(45) }
+    val turnPhase = classicTurnPhase(room, me, submittingTurnToken)
+    val myTurn = turnPhase == ClassicTurnPhase.MY_TURN
+    var seconds by remember(room.id, room.turnDeadline, room.currentPlayerId) { mutableIntStateOf(0) }
+    var synchronizing by remember(room.id, room.turnDeadline, room.currentPlayerId) { mutableStateOf(false) }
     var showChat by remember { mutableStateOf(false) }
     var showChain by remember { mutableStateOf(false) }
     var chatInput by remember { mutableStateOf("") }
@@ -457,16 +497,33 @@ private fun TargetArena(
 
     BackHandler(enabled = room.status != "finished") { confirmForfeit = true }
 
-    LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.status) {
-        while (room.turnDeadline != null && room.status in listOf("playing", "final", "sudden_death")) {
-            seconds = runCatching {
-                (Instant.parse(room.turnDeadline).epochSecond - Instant.now().epochSecond).toInt().coerceAtLeast(0)
-            }.getOrDefault(45)
-            if (seconds <= 0) {
-                onTimeout()
+    LaunchedEffect(room.id, room.turnDeadline, room.currentPlayerId, room.status) {
+        val anchor = classicDeadlineAnchor(
+            serverEndsAt = room.turnDeadline,
+            wallEpochMsNow = System.currentTimeMillis(),
+            elapsedRealtimeMsNow = SystemClock.elapsedRealtime(),
+        )
+        if (anchor == null || room.status !in listOf("playing", "final", "sudden_death")) {
+            seconds = 0
+            synchronizing = false
+            return@LaunchedEffect
+        }
+        var timeoutRequested = false
+        while (true) {
+            val remainingMs = classicRemainingMs(anchor, SystemClock.elapsedRealtime())
+            seconds = classicShownSeconds(remainingMs)
+            if (remainingMs <= 0L) {
+                synchronizing = true
+                if (!timeoutRequested) {
+                    timeoutRequested = true
+                    // This only asks the server to resolve an expired turn. The UI
+                    // does not switch players until an accepted server snapshot arrives.
+                    onTimeout()
+                }
                 break
             }
-            delay(1000)
+            synchronizing = false
+            delay(minOf(250L, remainingMs))
         }
     }
 
@@ -573,13 +630,13 @@ private fun TargetArena(
                         avatarPath = playerAvatarPath,
                         gender = playerGender,
                         name = playerName,
-                        size = 36.dp,
+                        size = 50.dp,
                         accent = TGblue,
                     )
                     Spacer(Modifier.width(7.dp))
                     Column {
-                        Text(playerName, color = TGblue, fontWeight = FontWeight.Black, fontSize = 11.sp, maxLines = 1)
-                        Text("🏆 $myScore • $myRounds " + sh("tur", "round"), color = TGmuted, fontSize = 8.sp, maxLines = 1)
+                        Text(playerName, color = TGblue, fontWeight = FontWeight.SemiBold, fontSize = GameTypography.PlayerName, maxLines = 1)
+                        Text("🏆 $myScore • $myRounds " + sh("tur", "round"), color = TGmuted, fontSize = GameTypography.Metadata, maxLines = 1)
                     }
                 }
                 Box(
@@ -593,7 +650,7 @@ private fun TargetArena(
                     Box(Modifier.fillMaxSize().clip(CircleShape).background(Color.White), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text("$seconds", color = TGtext, fontWeight = FontWeight.Black, fontSize = 28.sp)
-                            Text(sh("sn", "sec"), color = TGmuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                            Text(sh("sn", "sec"), color = TGmuted, fontSize = GameTypography.Metadata, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -603,15 +660,15 @@ private fun TargetArena(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     Column(horizontalAlignment = Alignment.End) {
-                        Text(opponentName, color = TGpink, fontWeight = FontWeight.Black, fontSize = 11.sp, maxLines = 1)
-                        Text("🏆 $oppScore • $oppRounds " + sh("tur", "round"), color = TGmuted, fontSize = 8.sp, maxLines = 1)
+                        Text(opponentName, color = TGpink, fontWeight = FontWeight.SemiBold, fontSize = GameTypography.PlayerName, maxLines = 1)
+                        Text("🏆 $oppScore • $oppRounds " + sh("tur", "round"), color = TGmuted, fontSize = GameTypography.Metadata, maxLines = 1)
                     }
                     Spacer(Modifier.width(7.dp))
                     ProfilePhotoAvatarWithGender(
                         avatarPath = opponentAvatarPath,
                         gender = opponentGender,
                         name = opponentName,
-                        size = 36.dp,
+                        size = 50.dp,
                         accent = TGpink,
                     )
                 }
@@ -641,13 +698,18 @@ private fun TargetArena(
         )
         Spacer(Modifier.height(7.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("TUR ${room.roundNo}/3", color = TGmuted, fontWeight = FontWeight.Black, fontSize = 10.sp)
+            Text("TUR ${room.roundNo}/3", color = TGmuted, fontWeight = FontWeight.Black, fontSize = GameTypography.Secondary)
             Surface(shape = RoundedCornerShape(99.dp), color = (if (myTurn) TGblue else TGpink).copy(alpha = .08f)) {
                 Text(
-                    if (myTurn) sh("SIRA SENDE", "YOUR TURN") else sh("SIRA RAKİPTE", "RIVAL'S TURN"),
+                    when {
+                        synchronizing -> sh("SENKRONİZE EDİLİYOR…", "SYNCHRONIZING…")
+                        turnPhase == ClassicTurnPhase.SUBMITTING -> sh("GÖNDERİLİYOR…", "SUBMITTING…")
+                        myTurn -> sh("SIRA SENDE", "YOUR TURN")
+                        else -> sh("SIRA RAKİPTE", "RIVAL'S TURN")
+                    },
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                     color = if (myTurn) TGblue else TGpink,
-                    fontSize = 9.sp,
+                    fontSize = GameTypography.Action,
                     fontWeight = FontWeight.Black,
                 )
             }
@@ -676,7 +738,7 @@ private fun TargetArena(
                     val upper = current.word.uppercase()
                     val prefix = upper.dropLast(1)
                     val last = upper.takeLast(1)
-                    Text(sh("SON KELİME", "CURRENT WORD"), color = TGmuted, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Text(sh("SON KELİME", "CURRENT WORD"), color = TGmuted, fontSize = GameTypography.Metadata, fontWeight = FontWeight.Black)
                     Row(verticalAlignment = Alignment.Bottom) {
                         Text(prefix, color = TGtext, fontSize = if (upper.length > 12) 23.sp else 30.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
                         Text(last, color = TGblue, fontSize = if (upper.length > 12) 23.sp else 30.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
@@ -695,8 +757,8 @@ private fun TargetArena(
                                 horizontalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
                                 Column {
-                                    Text(sh("SON HARF", "LAST LETTER"), color = TGmuted, fontSize = 7.sp, fontWeight = FontWeight.Black)
-                                    Text(sh("Sıradaki kelime bununla başlar", "Next word starts here"), color = TGmuted, fontSize = 7.sp)
+                                    Text(sh("SON HARF", "LAST LETTER"), color = TGmuted, fontSize = GameTypography.Metadata, fontWeight = FontWeight.Black)
+                                    Text(sh("Sıradaki kelime bununla başlar", "Next word starts here"), color = TGmuted, fontSize = GameTypography.Metadata)
                                 }
                                 Surface(shape = RoundedCornerShape(12.dp), color = TGblue) {
                                     Text(
@@ -721,12 +783,12 @@ private fun TargetArena(
                 enabled = !room.isBot,
                 modifier = Modifier.weight(1f),
                 border = BorderStroke(1.dp, TGcyan.copy(alpha = .55f)),
-            ) { Text(if (room.isBot) sh("BOTTA SOHBET YOK", "NO BOT CHAT") else sh("💬 SOHBET", "💬 CHAT"), color = TGcyan, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+            ) { Text(if (room.isBot) sh("BOTTA SOHBET YOK", "NO BOT CHAT") else sh("💬 SOHBET", "💬 CHAT"), color = TGcyan, fontWeight = FontWeight.Bold, fontSize = GameTypography.Action) }
             OutlinedButton(
                 onClick = { showChain = true },
                 modifier = Modifier.weight(1f),
                 border = BorderStroke(1.dp, TGblue.copy(alpha = .45f)),
-            ) { Text(sh("⛓ KELİME ZİNCİRİ", "⛓ WORD CHAIN"), color = TGblue, fontWeight = FontWeight.Bold, fontSize = 11.sp) }
+            ) { Text(sh("⛓ KELİME ZİNCİRİ", "⛓ WORD CHAIN"), color = TGblue, fontWeight = FontWeight.Bold, fontSize = GameTypography.Action) }
         }
         Spacer(Modifier.height(10.dp))
 
@@ -737,8 +799,8 @@ private fun TargetArena(
             readOnly = true,
             singleLine = true,
             modifier = Modifier.fillMaxWidth().height(52.dp),
-            textStyle = LocalTextStyle.current.copy(fontSize = 18.sp, fontWeight = FontWeight.SemiBold),
-            label = { Text(sh("Kelimen", "Your word"), fontSize = 11.sp) },
+            textStyle = LocalTextStyle.current.copy(fontSize = GameTypography.Input, fontWeight = FontWeight.SemiBold),
+            label = { Text(sh("Kelimen", "Your word"), fontSize = GameTypography.Metadata) },
             placeholder = {
                 Text(
                     if (!myTurn) sh("Rakibin sırası…", "Rival's turn…")
@@ -772,7 +834,7 @@ private fun TargetArena(
                 modifier = Modifier.weight(1f).height(40.dp),
                 border = BorderStroke(1.dp, TGpink),
                 shape = RoundedCornerShape(13.dp),
-            ) { Text("⚑ PES ET", color = TGpink, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+            ) { Text("⚑ PES ET", color = TGpink, fontSize = GameTypography.Action, fontWeight = FontWeight.Bold) }
             Surface(
                 modifier = Modifier.weight(1f).height(40.dp),
                 color = TGpanel2,
@@ -780,7 +842,7 @@ private fun TargetArena(
                 border = BorderStroke(1.dp, Color(0xFFD5DEE9)),
             ) {
                 Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
-                    Text(notice, color = TGmuted, fontSize = 9.sp, lineHeight = 11.sp, textAlign = TextAlign.Center, maxLines = 2)
+                    Text(notice, color = TGmuted, fontSize = GameTypography.Metadata, lineHeight = 16.sp, textAlign = TextAlign.Center, maxLines = 2)
                 }
             }
         }
@@ -820,7 +882,7 @@ private fun TargetArena(
                 title = { Text("KELİME ZİNCİRİ") },
                 text = {
                     LazyColumn(Modifier.fillMaxWidth().heightIn(max = 360.dp)) {
-                        items(words.takeLast(30)) { w ->
+                        items(items = words.takeLast(30), key = { it.id }) { w ->
                             Text(w.word.uppercase(), modifier = Modifier.fillMaxWidth().padding(vertical = 7.dp), color = TGtext, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                             HorizontalDivider(color = TGmuted.copy(alpha = .14f))
                         }
@@ -836,7 +898,7 @@ private fun TargetArena(
                 text = {
                     Column(Modifier.fillMaxWidth().heightIn(max = 440.dp)) {
                         LazyColumn(Modifier.weight(1f, fill = false).fillMaxWidth().heightIn(min = 120.dp, max = 300.dp)) {
-                            items(chatMessages.takeLast(40)) { message ->
+                            items(items = chatMessages.takeLast(40), key = { it.id }) { message ->
                                 val mine = message.senderId == me
                                 Column(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalAlignment = if (mine) Alignment.End else Alignment.Start) {
                                     Text(if (mine) "Sen" else opponentName, color = if (mine) TGcyan else TGpink, fontSize = 9.sp, fontWeight = FontWeight.Bold)

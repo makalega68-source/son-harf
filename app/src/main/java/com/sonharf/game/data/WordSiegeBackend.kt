@@ -1,5 +1,6 @@
 package com.sonharf.game.data
 
+import androidx.compose.runtime.Immutable
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
@@ -9,6 +10,7 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.put
 
+@Immutable
 @Serializable
 data class WordSiegeCellDto(
     val letter: String? = null,
@@ -17,6 +19,7 @@ data class WordSiegeCellDto(
     @SerialName("bonus_used") val bonusUsed: Boolean = false,
 )
 
+@Immutable
 @Serializable
 data class WordSiegeGameDto(
     val id: String,
@@ -47,6 +50,7 @@ data class WordSiegeGameDto(
     @SerialName("finished_at") val finishedAt: String? = null,
 )
 
+@Immutable
 @Serializable
 data class WordSiegeMoveDto(
     val id: Long,
@@ -64,6 +68,7 @@ data class WordSiegeMoveDto(
     @SerialName("created_at") val createdAt: String = "",
 )
 
+@Immutable
 @Serializable
 data class WordSiegePlacedTileDto(
     val index: Int,
@@ -71,6 +76,7 @@ data class WordSiegePlacedTileDto(
     val owner: Int,
 )
 
+@Immutable
 @Serializable
 data class WordSiegeMessageDto(
     val id: Long,

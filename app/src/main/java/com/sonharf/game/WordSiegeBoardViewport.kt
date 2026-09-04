@@ -15,6 +15,9 @@ internal enum class WordSiegeBoardTapAction { PLACE, TOGGLE_VIEWPORT }
 
 internal const val WORD_SIEGE_DESIRED_SCREEN_BORDER_DP = 1.3f
 internal const val WORD_SIEGE_MIN_SCREEN_BORDER_DP = 1f
+internal const val WORD_SIEGE_DEFAULT_CLOSE_SCALE = 0.86f
+internal const val WORD_SIEGE_MIN_CLOSE_SCALE = 0.78f
+internal const val WORD_SIEGE_MAX_CLOSE_SCALE = 1.24f
 
 internal fun WordSiegeBoardViewportMode.toggle(): WordSiegeBoardViewportMode =
     if (this == WordSiegeBoardViewportMode.CLOSE) WordSiegeBoardViewportMode.FIT
