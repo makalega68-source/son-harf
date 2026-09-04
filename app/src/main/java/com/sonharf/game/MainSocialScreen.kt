@@ -111,7 +111,7 @@ internal fun MainSocialScreen(
                 ) {
                     Icon(Icons.Rounded.SportsEsports, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(sh("MAÇA DAVET", "GAME INVITE"), fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    Text(sh("MAÇA DAVET", "GAME INVITE"), fontWeight = FontWeight.Black, fontSize = 13.sp)
                 }
                 OutlinedButton(
                     onClick = onPlay,
@@ -121,7 +121,7 @@ internal fun MainSocialScreen(
                 ) {
                     Icon(Icons.Rounded.Lock, null, tint = MainUi.Gold, modifier = Modifier.size(17.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(sh("ÖZEL ODA", "PRIVATE ROOM"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    Text(sh("ÖZEL ODA", "PRIVATE ROOM"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
                 }
             }
         }
@@ -143,11 +143,11 @@ internal fun MainSocialScreen(
                         onClick = { tab = index },
                         text = {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(label, color = if (tab == index) MainUi.Blue else MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                Text(label, color = if (tab == index) MainUi.Blue else MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Black)
                                 if (index == 1 && incomingCount > 0) {
                                     Spacer(Modifier.width(5.dp))
                                     Surface(shape = CircleShape, color = MainUi.Red) {
-                                        Text(incomingCount.toString(), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                                        Text(incomingCount.toString(), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
                                     }
                                 }
                             }
@@ -209,11 +209,11 @@ internal fun MainSocialScreen(
                             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 friends.map { it.second }.sortedByDescending { it.rating }.take(8).forEachIndexed { index, friend ->
                                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                        Text("${index + 1}", color = MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(22.dp))
+                                        Text("${index + 1}", color = MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(22.dp))
                                         ProfilePhotoAvatar(friend.avatarPath, friend.displayName, 30.dp, visible = friend.avatarVisibility != "hidden", accent = if (friend.isVip) MainUi.Gold else MainUi.Blue)
                                         Spacer(Modifier.width(8.dp))
-                                        Text(friend.displayName, color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
-                                        Text(friend.rating.toString(), color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                        Text(friend.displayName, color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
+                                        Text(friend.rating.toString(), color = MainUi.Blue, fontSize = 13.sp, fontWeight = FontWeight.Black)
                                     }
                                 }
                             }
@@ -232,7 +232,7 @@ internal fun MainSocialScreen(
                                 onValueChange = { query = it.take(24) },
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
-                                placeholder = { Text(sh("En az 2 harf yaz", "Type at least 2 characters"), fontSize = 11.sp) },
+                                placeholder = { Text(sh("En az 2 harf yaz", "Type at least 2 characters"), fontSize = 13.sp) },
                                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                                 shape = RoundedCornerShape(14.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
@@ -269,7 +269,7 @@ internal fun MainSocialScreen(
                             Spacer(Modifier.width(9.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(player.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("${ratingLeagueProgress(player.rating).leagueName} • ${player.rating}", color = MainUi.Muted, fontSize = 9.sp)
+                                Text("${ratingLeagueProgress(player.rating).leagueName} • ${player.rating}", color = MainUi.Muted, fontSize = 13.sp)
                             }
                             Button(
                                 onClick = {
@@ -292,7 +292,7 @@ internal fun MainSocialScreen(
                                         "pending" -> sh("BEKLİYOR", "PENDING")
                                         else -> if (busyKey == player.id) "…" else sh("EKLE", "ADD")
                                     },
-                                    fontSize = 8.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Black,
                                 )
                             }
@@ -344,7 +344,7 @@ internal fun MainSocialScreen(
                                 Spacer(Modifier.width(9.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(sender?.displayName ?: sh("Maç daveti", "Game invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                                    Text(if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
+                                    Text(if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 13.sp)
                                 }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -359,7 +359,7 @@ internal fun MainSocialScreen(
                                         }
                                     },
                                     modifier = Modifier.weight(1f),
-                                ) { Text(sh("REDDET", "DECLINE"), color = MainUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                                ) { Text(sh("REDDET", "DECLINE"), color = MainUi.Red, fontSize = 13.sp, fontWeight = FontWeight.Black) }
                                 Button(
                                     onClick = {
                                         if (busyKey != null) return@Button
@@ -373,7 +373,7 @@ internal fun MainSocialScreen(
                                     },
                                     modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                                ) { Text(if (busyKey == invite.id) "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                                ) { Text(if (busyKey == invite.id) "…" else sh("KABUL ET", "ACCEPT"), fontSize = 13.sp, fontWeight = FontWeight.Black) }
                             }
                         }
                     }
@@ -381,7 +381,7 @@ internal fun MainSocialScreen(
 
                 if (requests.isEmpty() && invites.isEmpty() && results.isEmpty() && !loading) {
                     item {
-                        Text(sh("Bekleyen istek veya davet yok.", "There are no pending requests or invitations."), Modifier.fillMaxWidth().padding(vertical = 12.dp), color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+                        Text(sh("Bekleyen istek veya davet yok.", "There are no pending requests or invitations."), Modifier.fillMaxWidth().padding(vertical = 12.dp), color = MainUi.Muted, fontSize = 13.sp, textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -391,7 +391,7 @@ internal fun MainSocialScreen(
                     item {
                         Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .48f))) {
                             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                                Text(sh("EZELİ RAKİP", "ARCH RIVAL"), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                Text(sh("EZELİ RAKİP", "ARCH RIVAL"), color = MainUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(shape = CircleShape, color = MainUi.Gold.copy(alpha = .12f)) {
                                         Text("⚔", Modifier.padding(10.dp), fontSize = 23.sp)
@@ -399,7 +399,7 @@ internal fun MainSocialScreen(
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(rival.displayName, color = MainUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                                        Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L", color = MainUi.Muted, fontSize = 9.sp)
+                                        Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L", color = MainUi.Muted, fontSize = 13.sp)
                                     }
                                     Text("${rival.myPoints}:${rival.theirPoints}", color = MainUi.Text, fontSize = 22.sp, fontWeight = FontWeight.Black)
                                 }
@@ -441,7 +441,7 @@ internal fun MainSocialScreen(
                                 shape = RoundedCornerShape(11.dp),
                                 contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp),
                             ) {
-                                Text(if (busyKey == rival.opponentId) "…" else sh("RÖVANŞ", "REMATCH"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                Text(if (busyKey == rival.opponentId) "…" else sh("RÖVANŞ", "REMATCH"), fontSize = 13.sp, fontWeight = FontWeight.Black)
                             }
                         }
                     }
@@ -458,7 +458,7 @@ internal fun MainSocialScreen(
                                     when { won -> "G"; draw -> "B"; else -> "M" },
                                     Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
                                     color = when { won -> MainUi.Green; draw -> MainUi.Gold; else -> MainUi.Red },
-                                    fontSize = 10.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Black,
                                 )
                             }
@@ -489,7 +489,7 @@ internal fun MainSocialScreen(
         notice?.let { message ->
             item {
                 Surface(shape = RoundedCornerShape(14.dp), color = MainUi.BlueSoft) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = MainUi.Text, fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = MainUi.Text, fontSize = 13.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -520,22 +520,22 @@ private fun MainFriendCard(
                     Text(friend.displayName, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     if (friend.isVip) {
                         Spacer(Modifier.width(5.dp))
-                        Text("VIP", color = MainUi.Gold, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                        Text("VIP", color = MainUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
                     }
                 }
                 Text(
                     if (online) sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"),
                     color = if (online) MainUi.Green else MainUi.Muted,
-                    fontSize = 9.sp,
+                    fontSize = 13.sp,
                 )
-                Text("${ratingLeagueProgress(friend.rating).leagueName} • ${friend.rating}", color = MainUi.Muted, fontSize = 8.sp)
+                Text("${ratingLeagueProgress(friend.rating).leagueName} • ${friend.rating}", color = MainUi.Muted, fontSize = 13.sp)
             }
             Button(
                 onClick = onInvite,
                 enabled = !busy,
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp),
-            ) { Text(if (busy) "…" else sh("DAVET", "INVITE"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
+            ) { Text(if (busy) "…" else sh("DAVET", "INVITE"), fontSize = 13.sp, fontWeight = FontWeight.Black) }
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, sh("Daha fazla", "More"), tint = MainUi.Muted) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
@@ -564,7 +564,7 @@ private fun MainSocialEmpty(
                 Icon(icon, null, tint = MainUi.Blue, modifier = Modifier.padding(12.dp).size(28.dp))
             }
             Text(title, color = MainUi.Text, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-            Text(body, color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+            Text(body, color = MainUi.Muted, fontSize = 13.sp, textAlign = TextAlign.Center)
             TextButton(onClick = onAction) { Text(action, color = MainUi.Blue, fontWeight = FontWeight.Black) }
         }
     }
