@@ -14,6 +14,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -624,7 +626,7 @@ private fun AuroraDuelLobby(
                             Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("🏆", fontSize = 15.sp)
+                            Icon(Icons.Rounded.SportsEsports, null, Modifier.size(18.dp), tint = gameGold)
                             Spacer(Modifier.width(5.dp))
                             Text(sh("DÜELLO", "DUEL"), color = gameGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
                         }
@@ -783,7 +785,9 @@ private fun AuroraDuelLobby(
                         ),
                         border = BorderStroke(1.dp, gamePink.copy(alpha = .55f)),
                     ) {
-                        Text(sh("✕  EŞLEŞMEYİ İPTAL ET", "✕  CANCEL MATCHMAKING"), fontWeight = FontWeight.Black)
+                        Icon(Icons.Rounded.Close, null, Modifier.size(20.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(sh("EŞLEŞMEYİ İPTAL ET", "CANCEL MATCHMAKING"), fontWeight = FontWeight.Black)
                     }
                 } else {
                     Button(
@@ -797,7 +801,7 @@ private fun AuroraDuelLobby(
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp, pressedElevation = 2.dp),
                     ) {
                         Text(
-                            sh("⚡  DÜELLOYA GİR", "⚡  ENTER DUEL"),
+                            sh("DÜELLOYA GİR", "ENTER DUEL"),
                             fontWeight = FontWeight.Black,
                             fontSize = 19.sp,
                         )
@@ -808,7 +812,7 @@ private fun AuroraDuelLobby(
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     GameLobbyAction(
-                        icon = "👥",
+                        icon = Icons.Rounded.Groups,
                         title = sh("ARKADAŞ", "FRIENDS"),
                         subtitle = sh("Davet et", "Invite"),
                         accent = gameCyan,
@@ -816,7 +820,7 @@ private fun AuroraDuelLobby(
                         onClick = onFriends,
                     )
                     GameLobbyAction(
-                        icon = "♛",
+                        icon = Icons.Rounded.MeetingRoom,
                         title = sh("ÖZEL ODA", "PRIVATE ROOM"),
                         subtitle = sh("Kodla gir", "Join by code"),
                         accent = gameViolet,
@@ -968,7 +972,7 @@ private fun GameLanguagePill(
 
 @Composable
 private fun GameLobbyAction(
-    icon: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
     accent: Color,
@@ -988,7 +992,9 @@ private fun GameLobbyAction(
             Modifier.fillMaxSize().padding(12.dp),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            Text(icon, fontSize = 22.sp)
+            Surface(shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = .16f)) {
+                Icon(icon, null, Modifier.padding(9.dp).size(24.dp), tint = accent)
+            }
             Column {
                 Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
                 Text(subtitle, color = accent, fontSize = 13.sp, fontWeight = FontWeight.Bold)
@@ -1125,13 +1131,11 @@ private fun AuroraArena(
                         fontSize = 30.sp,
                         fontWeight = FontWeight.Black,
                     )
-                    Text(
-                        if (draw) "$playerName  •  $opponentName" else if (won) playerName else opponentName,
-                        color = arenaText,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    )
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ResultPlayerProfile(playerName, playerAvatarPath, playerGender, playerRating, myAccent, Modifier.weight(1f))
+                        Text("VS", color = arenaGold, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                        ResultPlayerProfile(opponentName, opponentAvatarPath, opponentGender, opponentRating, opponentAccent, Modifier.weight(1f))
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text("$myRounds", color = myAccent, fontSize = 46.sp, fontWeight = FontWeight.Black)
                         Text("   :   ", color = arenaMuted, fontSize = 22.sp)
@@ -1570,14 +1574,8 @@ private fun AuroraPlayerCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (avatarPath == null && name.contains("BOT", ignoreCase = true)) {
-                Box(
-                    Modifier
-                        .size(48.dp)
-                        .clip(CircleShape)
-                        .background(accent.copy(alpha = .20f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("🤖", fontSize = 25.sp)
+                Surface(Modifier.size(48.dp, 58.dp), shape = RoundedCornerShape(14.dp), color = accent.copy(alpha = .20f), border = BorderStroke(1.dp, accent.copy(alpha = .55f))) {
+                    Box(contentAlignment = Alignment.Center) { Icon(Icons.Rounded.SmartToy, null, Modifier.size(28.dp), tint = accent) }
                 }
             } else {
                 ProfilePhotoAvatarWithGender(
@@ -1628,6 +1626,30 @@ private fun AuroraPlayerCard(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun ResultPlayerProfile(
+    name: String,
+    avatarPath: String?,
+    gender: String?,
+    rating: Int,
+    accent: Color,
+    modifier: Modifier,
+) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (avatarPath == null && name.contains("BOT", ignoreCase = true)) {
+            SyntheticBotPortrait(name, gender ?: botGenderForName(name), 72.dp, 82.dp, accent)
+        } else {
+            ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 72.dp, 82.dp, accent)
+        }
+        Text(name, color = Color(0xFFF7F8FF), fontWeight = FontWeight.Black, fontSize = 14.sp, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.EmojiEvents, null, Modifier.size(16.dp), tint = SonHarfGold)
+            Spacer(Modifier.width(4.dp))
+            Text(rating.toString(), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
