@@ -718,7 +718,7 @@ private fun WordSiegeMatch(
                 OutlinedButton(
                     onClick = onChat,
                     enabled = game.playerTwoId != null,
-                    modifier = Modifier.weight(1f).height(40.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                     border = BorderStroke(1.dp, MainUi.Blue),
                     contentPadding = PaddingValues(horizontal = 6.dp),
                 ) {
@@ -729,7 +729,7 @@ private fun WordSiegeMatch(
                 OutlinedButton(
                     onClick = onForfeit,
                     enabled = game.status == "playing" && !busy,
-                    modifier = Modifier.weight(1f).height(40.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
                     border = BorderStroke(1.dp, MainUi.Red),
                     contentPadding = PaddingValues(horizontal = 6.dp),
                 ) {
@@ -768,20 +768,20 @@ private fun WordSiegeMatch(
                     OutlinedButton(
                         onClick = onPass,
                         enabled = canAct,
-                        modifier = Modifier.weight(1f).height(46.dp),
+                        modifier = Modifier.weight(1f).height(48.dp),
                         contentPadding = PaddingValues(horizontal = 3.dp),
                     ) { Text(sh("PAS", "PASS"), fontSize = 13.sp, fontWeight = FontWeight.Black) }
                     OutlinedButton(
                         onClick = onExchange,
                         enabled = canAct && game.bag.isNotEmpty(),
-                        modifier = Modifier.weight(1.15f).height(46.dp),
+                        modifier = Modifier.weight(1.15f).height(48.dp),
                         border = BorderStroke(1.dp, SiegePurple),
                         contentPadding = PaddingValues(horizontal = 3.dp),
                     ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = 13.sp, fontWeight = FontWeight.Black) }
                     Button(
                         onClick = onSubmit,
                         enabled = canAct && placements.isNotEmpty(),
-                        modifier = Modifier.weight(1.45f).height(46.dp),
+                        modifier = Modifier.weight(1.45f).height(48.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MainUi.Blue,
                             contentColor = Color.White,
