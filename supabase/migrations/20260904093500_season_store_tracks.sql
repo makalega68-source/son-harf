@@ -37,6 +37,13 @@ for select to authenticated using ((select auth.uid())=user_id);
 grant select on public.season_store_claims to authenticated;
 revoke insert,update,delete on public.season_store_claims from anon,authenticated;
 
+-- Keep the catalog constraint aligned with all visual-only Style kinds supported by equipment/trials.
+alter table public.shop_items drop constraint if exists shop_items_kind_check;
+alter table public.shop_items add constraint shop_items_kind_check check (kind in (
+  'profile_frame','name_style','game_theme','keyboard_theme','victory_effect','emoji_pack','mascot',
+  'avatar_background','nameplate','badge','title','vs_intro','word_effect','emote'
+));
+
 -- Seed the current season only when it exists. Existing competitive rewards remain untouched.
 insert into public.season_store_rewards(season_id,level,track,reward_type,reward_key,amount,sort_order)
 select s.id,v.level,v.track,v.reward_type,v.reward_key,v.amount,v.sort_order
