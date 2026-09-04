@@ -38,11 +38,12 @@ class ClassicArenaMobileUiContractTest {
     fun activeClassicArenaKeepsAllWordsAndFixedKeyboard() {
         val arena = projectFile("app/src/main/java/com/sonharf/game/LightDuelUi.kt").readText()
         val liveSection = arena.substring(arena.indexOf("internal fun LightDuelArena"), arena.indexOf("private fun CompetitiveResult"))
+        val historySection = liveSection.substring(liveSection.indexOf("private fun MatchWordHistory"), liveSection.indexOf("private fun DuelOverflowMenu"))
 
-        assertFalse(liveSection.contains("takeLast("))
-        assertTrue(liveSection.contains("LazyRow("))
-        assertTrue(liveSection.contains("items(items = words, key = { it.id })"))
-        assertTrue(liveSection.contains("animateScrollToItem(words.lastIndex)"))
+        assertFalse(historySection.contains("takeLast("))
+        assertTrue(historySection.contains("LazyRow("))
+        assertTrue(historySection.contains("items(items = words, key = { it.id })"))
+        assertTrue(historySection.contains("animateScrollToItem(words.lastIndex)"))
         assertTrue(liveSection.contains("listOf(\"Q\", \"W\", \"E\", \"R\", \"T\", \"Y\", \"U\", \"I\", \"O\", \"P\", \"Ğ\", \"Ü\")"))
         assertTrue(liveSection.contains("sh(\"SİL\", \"DELETE\")"))
         assertTrue(liveSection.contains("sh(\"TEMİZLE\", \"CLEAR\")"))
