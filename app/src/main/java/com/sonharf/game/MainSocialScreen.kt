@@ -46,6 +46,7 @@ internal fun MainSocialScreen(
     var notice by remember { mutableStateOf<String?>(null) }
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<ProfileDto>>(emptyList()) }
+    var analysisMatch by remember { mutableStateOf<MatchHistoryDto?>(null) }
 
     suspend fun reload() = coroutineScope {
         loading = true
@@ -75,7 +76,6 @@ internal fun MainSocialScreen(
 
     val onlineCount = friends.count { it.second.presenceStatus == "online" }
     val incomingCount = requests.size + invites.size
-    val me = backend.currentUserId()
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -394,7 +394,7 @@ internal fun MainSocialScreen(
                                 Text(sh("EZELİ RAKİP", "ARCH RIVAL"), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(shape = CircleShape, color = MainUi.Gold.copy(alpha = .12f)) {
-                                        Text("⚔", Modifier.padding(10.dp), fontSize = 23.sp)
+                                        Icon(Icons.Rounded.Swords, contentDescription = null, tint = MainUi.Gold, modifier = Modifier.padding(10.dp).size(23.dp))
                                     }
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
@@ -467,7 +467,18 @@ internal fun MainSocialScreen(
                                 Text(match.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1)
                                 Text("${match.myScore}-${match.theirScore} • ${if (match.ratingDelta >= 0) "+" else ""}${match.ratingDelta} rating", color = MainUi.Muted, fontSize = 8.5.sp)
                             }
-                            if (match.isFriend) Icon(Icons.Rounded.People, null, tint = MainUi.Blue, modifier = Modifier.size(17.dp))
+                            if (match.isFriend) {
+                                Icon(Icons.Rounded.People, null, tint = MainUi.Blue, modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            TextButton(
+                                onClick = { analysisMatch = match },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            ) {
+                                Icon(Icons.Rounded.Analytics, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(sh("ANALİZ", "ANALYSIS"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            }
                         }
                     }
                 }
@@ -494,6 +505,14 @@ internal fun MainSocialScreen(
             }
         }
         item { Spacer(Modifier.height(6.dp)) }
+    }
+
+    analysisMatch?.let { match ->
+        VipMatchAnalysisDialog(
+            backend = backend,
+            match = match,
+            onDismiss = { analysisMatch = null },
+        )
     }
 }
 
