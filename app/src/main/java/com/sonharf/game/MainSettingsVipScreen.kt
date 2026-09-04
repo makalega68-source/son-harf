@@ -124,7 +124,7 @@ internal fun MainSettingsScreen(
                 Text(
                     sh("Dil değişikliği açık ekranlarda hemen uygulanır.", "Language changes apply immediately to open screens."),
                     color = MainUi.Muted,
-                    fontSize = 9.sp,
+                    fontSize = 13.sp,
                 )
             }
         }
@@ -173,7 +173,7 @@ internal fun MainSettingsScreen(
                 Text(
                     sh("Gizli olduğunda fotoğraf yerine adının baş harfi görünür.", "When hidden, your initial appears instead of the photo."),
                     color = MainUi.Muted,
-                    fontSize = 9.sp,
+                    fontSize = 13.sp,
                 )
             }
         }
@@ -200,7 +200,7 @@ internal fun MainSettingsScreen(
             MainSettingsGroup(sh("HESAP", "ACCOUNT")) {
                 val email = runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.currentUserOrNull()?.email }.getOrNull().orEmpty()
                 if (email.isNotBlank()) {
-                    Text(email, color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(email, color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(3.dp))
                 }
                 MainSettingsLink(Icons.Rounded.ManageAccounts, sh("Hesap ve gizlilik", "Account & privacy"), sh("Engellenenler ve hesap silme", "Blocked users and account deletion"), onAccount)
@@ -212,7 +212,7 @@ internal fun MainSettingsScreen(
         notice?.let { message ->
             item {
                 Surface(shape = RoundedCornerShape(14.dp), color = MainUi.BlueSoft) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 }
             }
         }
@@ -222,7 +222,7 @@ internal fun MainSettingsScreen(
                 "Son Harf ${BuildConfig.VERSION_NAME} • Android",
                 Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 color = MainUi.Muted,
-                fontSize = 9.sp,
+                fontSize = 13.sp,
                 textAlign = TextAlign.Center,
             )
         }
@@ -329,7 +329,7 @@ internal fun MainVipScreen(
                     Text(
                         if (active) profile?.displayName.orEmpty() else sh("Google Play ile güvenli üyelik", "Secure membership through Google Play"),
                         color = Color.White.copy(alpha = .75f),
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                     )
                 }
             }
@@ -354,14 +354,14 @@ internal fun MainVipScreen(
         item {
             Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Green.copy(alpha = .08f), border = BorderStroke(1.dp, MainUi.Green.copy(alpha = .30f))) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(sh("REKABET ADALETİ", "COMPETITIVE FAIRNESS"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(sh("REKABET ADALETİ", "COMPETITIVE FAIRNESS"), color = MainUi.Green, fontSize = 13.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh(
                             "VIP; ekstra süre, ek puan, güçlü joker, rating koruması veya kazanma avantajı vermez.",
                             "VIP never grants extra time, points, stronger jokers, rating protection or a winning advantage.",
                         ),
                         color = MainUi.Text,
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -402,7 +402,7 @@ internal fun MainVipScreen(
                 sh("Ödeme ve iptal Google Play hesabın üzerinden yönetilir.", "Payment and cancellation are managed through your Google Play account."),
                 Modifier.fillMaxWidth(),
                 color = MainUi.Muted,
-                fontSize = 9.sp,
+                fontSize = 13.sp,
                 textAlign = TextAlign.Center,
             )
         }
@@ -421,7 +421,7 @@ internal fun MainVipScreen(
 private fun MainSettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Text(title, color = MainUi.Blue, fontSize = 13.sp, fontWeight = FontWeight.Black)
             content()
         }
     }
@@ -478,7 +478,7 @@ private fun MainVipBenefit(icon: ImageVector, title: String, subtitle: String) {
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
-            Text(subtitle, color = MainUi.Muted, fontSize = 9.sp)
+            Text(subtitle, color = MainUi.Muted, fontSize = 13.sp)
         }
         Icon(Icons.Rounded.CheckCircle, null, tint = MainUi.Green, modifier = Modifier.size(18.dp))
     }
