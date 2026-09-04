@@ -64,6 +64,8 @@ fun OnlineGameScreenV6() {
     var feedbackWord by remember { mutableStateOf<String?>(null) }
     var feedbackCorrect by remember { mutableStateOf<Boolean?>(null) }
     var busy by remember { mutableStateOf(false) }
+    var submitInFlightKey by remember { mutableStateOf<String?>(null) }
+    var timeoutClaimKey by remember { mutableStateOf<String?>(null) }
     var matchmakingState by remember { mutableStateOf(MatchmakingUiState.Idle) }
     val matching = matchmakingState == MatchmakingUiState.Searching
     var showPrivate by remember { mutableStateOf(false) }
@@ -99,6 +101,10 @@ fun OnlineGameScreenV6() {
         "voice_limit_reached" in raw -> sh("Bu maçtaki 5 sesli cevap hakkın doldu.", "You have used all 5 voice answers for this match.")
         "answer_already_submitted" in raw -> sh("Bonus cevabın zaten kilitlendi.", "Your bonus answer is already locked.")
         else -> sh("İşlem tekrar deneniyor.", "Retrying the action.")
+    }
+    fun acceptServerRoom(next: GameRoomDto) {
+        val current = room
+        if (current == null || shouldAcceptClassicSnapshot(current, next)) room = next
     }
     fun failedEvent(e: String?) = e in setOf("word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word", "ends_with_soft_g", "turn_expired")
     fun eventMessage(e: String?) = when (e) {
@@ -154,7 +160,7 @@ fun OnlineGameScreenV6() {
             backend.observeRoom(r.id)
                 .catch { notice = friendly(it.message.orEmpty()) }
                 .collect {
-                    room = it
+                    acceptServerRoom(it)
                     refreshQuiz(it)
                     refreshOpponent(it)
                     if (
@@ -255,9 +261,12 @@ fun OnlineGameScreenV6() {
             notice = message
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
-        LaunchedEffect(active.currentPlayerId, active.validWordCount, active.roundNo) {
+        LaunchedEffect(active.currentPlayerId, active.validWordCount, active.roundNo, active.turnDeadline) {
             wordInput = ""
             voiceRequestId = null
+            val eventKey = classicDeadlineEventKey(active)
+            if (timeoutClaimKey != null && timeoutClaimKey != eventKey) timeoutClaimKey = null
+            if (submitInFlightKey != null && !busy) submitInFlightKey = null
         }
         LaunchedEffect(active.id) {
             voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(0)
@@ -348,6 +357,9 @@ fun OnlineGameScreenV6() {
                 scope.launch {
                     val submitted = wordInput.trim()
                     if (submitted.isBlank()) return@launch
+                    val submitKey = "${active.id}|${active.roundNo}|${active.validWordCount}|${active.currentPlayerId}|${active.turnDeadline}|$submitted"
+                    if (submitInFlightKey == submitKey || busy) return@launch
+                    submitInFlightKey = submitKey
                     val shownWord = gameUppercase(submitted, active.language)
                     val voiceToken = voiceRequestId
                     if (voiceToken == null) wordInput = ""
@@ -358,7 +370,7 @@ fun OnlineGameScreenV6() {
                         else backend.submitWord(active.id, submitted)
                     }
                         .onSuccess { result ->
-                            room = result
+                            acceptServerRoom(result)
                             if (voiceToken != null) {
                                 wordInput = ""
                                 voiceRequestId = null
@@ -383,34 +395,18 @@ fun OnlineGameScreenV6() {
                             SonHarfSoundFx.warning()
                         }
                     busy = false
+                    submitInFlightKey = null
                 }
             },
             onTimeout = {
                 scope.launch {
-                    val expectedDeadline = active.turnDeadline
-                    val expectedPlayer = active.currentPlayerId
-                    val expectedBotTurn = active.botTurn
-                    while (true) {
-                        val latest = room ?: return@launch
-                        if (
-                            latest.id != active.id ||
-                            latest.turnDeadline != expectedDeadline ||
-                            latest.status !in listOf("playing", "final", "sudden_death")
-                        ) return@launch
-
-                        runCatching { backend.claimTurnTimeout(active.id) }
-                            .onSuccess {
-                                room = it
-                                if (
-                                    it.turnDeadline != expectedDeadline ||
-                                    it.currentPlayerId != expectedPlayer ||
-                                    it.botTurn != expectedBotTurn ||
-                                    it.status != active.status
-                                ) return@launch
-                            }
-                            .onFailure { notice = friendly(it.message.orEmpty()) }
-                        delay(1200L)
-                    }
+                    val claimKey = classicDeadlineEventKey(active)
+                    if (timeoutClaimKey == claimKey) return@launch
+                    timeoutClaimKey = claimKey
+                    notice = sh("Senkronize ediliyor…", "Synchronizing…")
+                    runCatching { backend.claimTurnTimeout(active.id) }
+                        .onSuccess { acceptServerRoom(it) }
+                        .onFailure { notice = friendly(it.message.orEmpty()) }
                 }
             },
             onBonus = {

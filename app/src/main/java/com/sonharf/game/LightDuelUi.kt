@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import android.provider.Settings
+import android.os.SystemClock
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -39,7 +40,6 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sonharf.game.data.*
-import java.time.Instant
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
@@ -287,7 +287,10 @@ internal fun LightDuelArena(
         quizActive -> triviaRound?.answerDeadline
         else -> room.turnDeadline
     }
-    var seconds by remember(deadline, room.status) { mutableIntStateOf(if (deadline == null) 0 else 10) }
+    var seconds by remember(deadline, room.status) { mutableIntStateOf(0) }
+    var timerSynchronizing by remember(room.id) { mutableStateOf(false) }
+    var timeoutSignalKey by remember(room.id) { mutableStateOf<String?>(null) }
+    var showMoreMenu by remember(room.id) { mutableStateOf(false) }
     var lastSignalledSecond by remember(deadline) { mutableIntStateOf(Int.MIN_VALUE) }
     val timerPulse = remember(deadline) { Animatable(1f) }
     val letterPulse = remember(room.id) { Animatable(1f) }
@@ -305,6 +308,8 @@ internal fun LightDuelArena(
             letterPulse.animateTo(1f, tween(220, easing = FastOutSlowInEasing))
         }
     }
+
+    LaunchedEffect(room.roundNo) { actionOverlay = null }
 
     LaunchedEffect(myScore, oppScore, lastItem?.id) {
         val leader = ClassicCompetitionRules.leader(myScore, oppScore)
@@ -355,17 +360,31 @@ internal fun LightDuelArena(
         previousWordId = lastItem?.id
     }
 
-    LaunchedEffect(deadline, room.currentPlayerId, room.status) {
-        val endMs = runCatching { deadline?.let { Instant.parse(it).toEpochMilli() } }.getOrNull() ?: return@LaunchedEffect
+    LaunchedEffect(deadline, room.currentPlayerId, room.status, triviaRound?.id) {
+        val endMs = classicDeadlineEpochMs(deadline) ?: run {
+            seconds = 0
+            timerSynchronizing = false
+            return@LaunchedEffect
+        }
+        val anchor = ClassicMonotonicDeadlineAnchor(
+            serverDeadlineEpochMs = endMs,
+            wallEpochMsAtAnchor = System.currentTimeMillis(),
+            elapsedRealtimeMsAtAnchor = SystemClock.elapsedRealtime(),
+        )
+        val eventKey = if (quizActive) "quiz:${triviaRound?.id}:$deadline" else classicDeadlineEventKey(room)
+        if (timeoutSignalKey != eventKey) timerSynchronizing = false
         while (true) {
-            val remaining = endMs - Instant.now().toEpochMilli()
+            val remaining = anchor.remainingMs(SystemClock.elapsedRealtime())
+            val shown = anchor.displaySeconds(SystemClock.elapsedRealtime())
+            seconds = shown
             if (remaining <= 0L) {
-                seconds = 0
-                if (quizActive && triviaRound?.resolvedAt == null) onTriviaTimeout() else if (!quizActive) onTimeout()
+                timerSynchronizing = true
+                if (timeoutSignalKey != eventKey) {
+                    timeoutSignalKey = eventKey
+                    if (quizActive && triviaRound?.resolvedAt == null) onTriviaTimeout() else if (!quizActive) onTimeout()
+                }
                 break
             }
-            val shown = ceil(remaining / 1000.0).toInt().coerceAtLeast(1)
-            seconds = shown
             if (!quizActive && shown <= ClassicCompetitionRules.URGENT_SECONDS && shown != lastSignalledSecond) {
                 lastSignalledSecond = shown
                 if (SonHarfPreferences.soundEnabled(context)) {
@@ -375,7 +394,14 @@ internal fun LightDuelArena(
                     haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                 }
             }
-            delay(minOf(100L, remaining))
+            delay(minOf(225L, remaining.coerceAtLeast(1L)))
+        }
+    }
+
+    LaunchedEffect(room.turnDeadline, room.currentPlayerId, room.validWordCount, room.roundNo, room.status) {
+        val currentKey = classicDeadlineEventKey(room)
+        if (timeoutSignalKey != null && timeoutSignalKey != currentKey) {
+            timerSynchronizing = false
         }
     }
 
@@ -430,10 +456,33 @@ internal fun LightDuelArena(
                         Text(if (quizActive) "BONUS" else sh("SN", "SEC"), color = timerColor, fontSize = 8.sp, fontWeight = FontWeight.Black)
                     }
                 }
-                CompetitivePlayerCard(
-                    opponentName.removeSuffix(" BOT"), opponentAvatarPath, opponentGender, opponentRating, shownOppScore,
-                    !myTurn && liveWordPhase, LRed, room.isBot, Modifier.weight(1f),
-                )
+                Box(Modifier.weight(1f)) {
+          CompetitivePlayerCard(
+              opponentName.removeSuffix(" BOT"), opponentAvatarPath, opponentGender, opponentRating, shownOppScore,
+              !myTurn && liveWordPhase, LRed, room.isBot, Modifier.fillMaxWidth(),
+          )
+          Box(Modifier.align(Alignment.TopEnd)) {
+              IconButton(
+                  onClick = { showMoreMenu = true },
+                  modifier = Modifier.size(38.dp),
+              ) {
+                  Icon(Icons.Rounded.MoreVert, sh("Diğer seçenekler", "More options"), tint = LText)
+              }
+              DropdownMenu(
+                  expanded = showMoreMenu,
+                  onDismissRequest = { showMoreMenu = false },
+              ) {
+                  DropdownMenuItem(
+                      text = { Text(sh("PES ET", "FORFEIT"), fontSize = 14.sp, fontWeight = FontWeight.Bold) },
+                      onClick = {
+                          showMoreMenu = false
+                          onForfeit()
+                      },
+                      leadingIcon = { Icon(Icons.Rounded.Flag, null, tint = LRed) },
+                  )
+              }
+          }
+      }
             }
 
             Surface(
@@ -450,6 +499,7 @@ internal fun LightDuelArena(
                     Text(
                         when {
                             quizActive -> sh("BONUS DÜELLOSU", "BONUS DUEL")
+                            timerSynchronizing && !quizActive -> sh("Senkronize ediliyor…", "Synchronizing…")
                             myTurn -> sh("● SIRA SENDE", "● YOUR TURN")
                             room.isBot && room.botTurn -> sh("● BOT DÜŞÜNÜYOR", "● BOT THINKING")
                             else -> sh("● RAKİBİN SIRASI", "● OPPONENT TURN")
@@ -512,7 +562,7 @@ internal fun LightDuelArena(
                     Spacer(Modifier.weight(.12f))
                     if (words.isNotEmpty()) {
                         LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(words.takeLast(5)) { word ->
+                            items(words.takeLast(5), key = { it.id }) { word ->
                                 Surface(shape = RoundedCornerShape(10.dp), color = LCard2) {
                                     Text(
                                         gameUppercase(word.word.trim().ifBlank { word.normalizedWord.trim() }, room.language),
@@ -613,7 +663,7 @@ private fun CompetitivePlayerCard(
 ) {
     val league = ratingLeagueProgress(rating).leagueName
     Card(
-        modifier = modifier.height(108.dp),
+        modifier = modifier.heightIn(min = 112.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(if (active) 3.dp else 1.dp, if (active) accent else LBorder),
@@ -623,9 +673,9 @@ private fun CompetitivePlayerCard(
             else ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 52.dp, 70.dp, accent)
             Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                Text(name, color = LText, fontSize = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(name, color = LText, fontSize = 15.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Text(score.toString(), color = accent, fontSize = duelScoreFontSize(score).sp, lineHeight = 29.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                Text("$league • $rating", color = LMuted, fontSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                Text("$league • $rating", color = LMuted, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
     }
@@ -681,7 +731,7 @@ private fun CompetitiveInputBar(
                 Text(
                     value.ifBlank { sh("Kelimenizi yazın…", "Type your word…") },
                     color = if (value.isBlank()) LMuted else LText,
-                    fontSize = if (value.isBlank()) 13.sp else 20.sp,
+                    fontSize = if (value.isBlank()) 16.sp else 20.sp,
                     fontWeight = if (value.isBlank()) FontWeight.Medium else FontWeight.Black,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
@@ -695,7 +745,7 @@ private fun CompetitiveInputBar(
                     Text("➤", fontSize = 17.sp)
                 }
             }
-            Text(statusText, color = statusColor, fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1)
+            Text(statusText, color = statusColor, fontSize = 14.sp, lineHeight = 16.sp, fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -743,7 +793,7 @@ private fun GameKeyboard(
                 }
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                KeyButton("⌫", enabled && value.isNotEmpty(), Modifier.weight(1f)) { onValueChange(value.dropLast(1)) }
+                KeyButton(sh("SİL", "DELETE"), enabled && value.isNotEmpty(), Modifier.weight(1f)) { onValueChange(value.dropLast(1)) }
                 KeyButton(sh("TEMİZLE", "CLEAR"), enabled && value.isNotEmpty(), Modifier.weight(1.35f)) { onValueChange("") }
                 Button(
                     onClick = onSubmit,
@@ -751,7 +801,7 @@ private fun GameKeyboard(
                     modifier = Modifier.weight(1.7f).height(44.dp),
                     shape = RoundedCornerShape(11.dp),
                 ) {
-                    Text(sh("GÖNDER", "SEND"), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(sh("GÖNDER", "SEND"), fontSize = 14.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -771,7 +821,7 @@ private fun KeyButton(label: String, enabled: Boolean, modifier: Modifier, onCli
             Text(
                 label,
                 color = if (enabled) LText else LMuted.copy(alpha = .4f),
-                fontSize = if (label.length > 5) 9.sp else 13.sp,
+                fontSize = if (label.length > 5) 14.sp else 14.sp,
                 fontWeight = FontWeight.Bold,
             )
         }

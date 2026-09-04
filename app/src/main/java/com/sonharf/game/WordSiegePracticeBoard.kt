@@ -1,9 +1,13 @@
 package com.sonharf.game
 
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,19 +60,37 @@ internal fun WordSiegePracticeBoard(
     val boardPx = tilePx * WordSiegeBoardSpec.Size
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     var closePan by remember { mutableStateOf(Offset.Zero) }
+    var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_CLOSE_SCALE) }
     var initialized by remember { mutableStateOf(false) }
     var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
-    val transform by remember(mode, viewport, boardPx, closePan) {
+    val transform by remember(mode, viewport, boardPx, closePan, closeScale) {
         derivedStateOf {
             wordSiegeBoardTransform(
                 mode = mode,
                 viewportWidthPx = viewport.width.toFloat(),
                 viewportHeightPx = viewport.height.toFloat(),
                 boardWidthPx = boardPx,
+                closeScale = closeScale,
                 closePan = closePan,
             )
         }
     }
+    var consumedHighlightKey by remember { mutableStateOf(moveEventKey) }
+    var highlightedIndices by remember { mutableStateOf<Set<Int>>(emptySet()) }
+    val highlightAlpha = remember { Animatable(0f) }
+    LaunchedEffect(moveEventKey, resolvedIndices) {
+        val key = moveEventKey
+        if (key != null && key != consumedHighlightKey) {
+            consumedHighlightKey = key
+            highlightedIndices = resolvedIndices.filter(WordSiegeBoardSpec::isValidIndex).toSet()
+            highlightAlpha.snapTo(0f)
+            highlightAlpha.animateTo(1f, tween(WORD_SIEGE_LAST_MOVE_ENTER_MS))
+            delay(WORD_SIEGE_LAST_MOVE_HOLD_MS.toLong())
+            highlightAlpha.animateTo(0f, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
+            highlightedIndices = emptySet()
+        }
+    }
+
     val actionVfxEvents = remember(placements, moveEventKey, resolvedIndices) {
         buildList {
             placements.toSortedMap().forEach { (index, rackIndex) ->
@@ -91,7 +113,7 @@ internal fun WordSiegePracticeBoard(
         viewport.width.toFloat(),
         viewport.height.toFloat(),
         boardPx,
-        1f,
+        closeScale,
     )
 
     fun centerClose(): Offset =
@@ -101,6 +123,7 @@ internal fun WordSiegePracticeBoard(
             viewportHeightPx = viewport.height.toFloat(),
             boardWidthPx = boardPx,
             cellSizePx = tilePx,
+            scale = closeScale,
         )
 
     fun toggleMode() {
@@ -130,11 +153,21 @@ internal fun WordSiegePracticeBoard(
                 .clip(RoundedCornerShape(14.dp))
                 .clipToBounds()
                 .onGloballyPositioned { viewport = it.size }
-                .pointerInput(mode, viewport, boardPx) {
+                .pointerInput(mode, viewport, boardPx, closeScale) {
                     if (mode == WordSiegeBoardViewportMode.CLOSE) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
-                            closePan = clampClosePan(closePan + dragAmount)
+                        detectTransformGestures { centroid, pan, zoom, _ ->
+                            val oldScale = closeScale
+                            val newScale = (oldScale * zoom).coerceIn(WORD_SIEGE_PRACTICE_MIN_SCALE, WORD_SIEGE_PRACTICE_MAX_SCALE)
+                            val ratio = if (oldScale > 0f) newScale / oldScale else 1f
+                            val candidate = centroid + (closePan - centroid) * ratio + pan
+                            closeScale = newScale
+                            closePan = clampWordSiegeBoardPan(
+                                candidate,
+                                viewport.width.toFloat(),
+                                viewport.height.toFloat(),
+                                boardPx,
+                                newScale,
+                            )
                         }
                     }
                 },
@@ -162,6 +195,7 @@ internal fun WordSiegePracticeBoard(
                                 pending = pendingRackIndex != null,
                                 myOwner = myOwner,
                                 enabled = enabled,
+                                lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleMode,
                             )
@@ -180,6 +214,7 @@ internal fun WordSiegePracticeBoard(
             SmallFloatingActionButton(
                 onClick = {
                     mode = WordSiegeBoardViewportMode.CLOSE
+                    closeScale = WORD_SIEGE_PRACTICE_CLOSE_SCALE
                     closePan = centerClose()
                 },
                 modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
@@ -200,6 +235,7 @@ private fun WordSiegePracticeBoardCell(
     pending: Boolean,
     myOwner: Int,
     enabled: Boolean,
+    lastMoveHighlight: Float,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
 ) {
@@ -223,6 +259,11 @@ private fun WordSiegePracticeBoardCell(
             .padding(1.6.dp)
             .clip(RoundedCornerShape(7.dp))
             .background(cellColor)
+            .border(
+                width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
+                color = Color.White.copy(alpha = .25f + .65f * lastMoveHighlight),
+                shape = RoundedCornerShape(7.dp),
+            )
             .combinedClickable(
                 onClick = {
                     dispatchWordSiegeBoardTap(
@@ -243,6 +284,7 @@ private fun WordSiegePracticeBoardCell(
             ),
         contentAlignment = Alignment.Center,
     ) {
+        if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(Color.White.copy(alpha = .06f * lastMoveHighlight)))
         if (letter != null) {
             Text(letter, color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Black)
             Text(

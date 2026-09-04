@@ -1,6 +1,10 @@
 package com.sonharf.game
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -34,6 +38,7 @@ import com.sonharf.game.data.WordSiegeCellDto
 import com.sonharf.game.data.WordSiegeGameDto
 import com.sonharf.game.data.WordSiegeMoveDto
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val PanSiegeTile = Color(0xFFFFE3A5)
 private val PanSiegeTileBorder = Color(0xFFD99818)
@@ -81,9 +86,9 @@ internal fun WordSiegePanMatch(
     val rivalEarnedCubePoints = WordSiegeFinalRules.earnedCubePoints(moves, opponentId)
     val myTargetScore = WordSiegeFinalRules.netScore(panSiegeWordScore(game, myOwner), myEarnedCubePoints, rivalEarnedCubePoints)
     val rivalTargetScore = WordSiegeFinalRules.netScore(panSiegeWordScore(game, rivalOwner), rivalEarnedCubePoints, myEarnedCubePoints)
-    var displayedMyScore by remember(game.id) { mutableIntStateOf(myTargetScore) }
-    var displayedRivalScore by remember(game.id) { mutableIntStateOf(rivalTargetScore) }
-    var displayedCurrentPlayerId by remember(game.id) { mutableStateOf(game.currentPlayerId) }
+    val displayedMyScore by animateIntAsState(myTargetScore, tween(260), label = "siege-my-score")
+    val displayedRivalScore by animateIntAsState(rivalTargetScore, tween(260), label = "siege-rival-score")
+    val displayedCurrentPlayerId = game.currentPlayerId
     var fallbackPracticeActive by remember(game.id) { mutableStateOf(false) }
     var shuffleSeed by remember(game.id) { mutableIntStateOf(0) }
     val visualMyTurn = game.status == "playing" && displayedCurrentPlayerId == me
@@ -110,14 +115,6 @@ internal fun WordSiegePanMatch(
         return
     }
 
-    LaunchedEffect(myTargetScore, rivalTargetScore, game.currentPlayerId) {
-        while (displayedMyScore != myTargetScore || displayedRivalScore != rivalTargetScore) {
-            displayedMyScore += (myTargetScore - displayedMyScore).coerceIn(-1, 1)
-            displayedRivalScore += (rivalTargetScore - displayedRivalScore).coerceIn(-1, 1)
-            delay(28)
-        }
-        displayedCurrentPlayerId = game.currentPlayerId
-    }
 
     Column(
         Modifier
@@ -359,6 +356,8 @@ private fun PanSiegeBoard(
     var initialized by remember(gameId) { mutableStateOf(false) }
     var observedMoveId by remember(gameId) { mutableStateOf(lastMove?.id) }
     var actionVfxMoveId by remember(gameId) { mutableStateOf<Long?>(null) }
+    var highlightedIndices by remember(gameId) { mutableStateOf<Set<Int>>(emptySet()) }
+    val highlightAlpha = remember(gameId) { Animatable(0f) }
     var viewportMode by remember(gameId) { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
 
     val transform by remember(viewportMode, viewport, boardPx, closePan) {
@@ -414,6 +413,14 @@ private fun PanSiegeBoard(
         if (initialized && moveId != null && moveId != observedMoveId) {
             observedMoveId = moveId
             actionVfxMoveId = moveId
+            highlightedIndices = lastMove.placedTiles.map { it.index }.filter(WordSiegeBoardSpec::isValidIndex).toSet()
+            highlightAlpha.snapTo(0f)
+            launch {
+                highlightAlpha.animateTo(1f, tween(WORD_SIEGE_LAST_MOVE_ENTER_MS))
+                delay(WORD_SIEGE_LAST_MOVE_HOLD_MS.toLong())
+                highlightAlpha.animateTo(0f, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
+                highlightedIndices = emptySet()
+            }
             if (!dragging && viewportMode == WordSiegeBoardViewportMode.CLOSE) {
                 val indices = lastMove.placedTiles.map { it.index }.filter(WordSiegeBoardSpec::isValidIndex)
                 if (indices.isNotEmpty()) {
@@ -503,6 +510,7 @@ private fun PanSiegeBoard(
                                 enabled = enabled,
                                 size = PanSiegeCellSize,
                                 borderWidth = boardBorderWidth,
+                                lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleViewport,
                             )
@@ -566,6 +574,7 @@ private fun PanSiegeBoardCell(
     enabled: Boolean,
     size: Dp,
     borderWidth: Dp,
+    lastMoveHighlight: Float,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
 ) {
@@ -591,6 +600,11 @@ private fun PanSiegeBoardCell(
             .padding(1.5.dp)
             .clip(RoundedCornerShape(7.dp))
             .background(baseColor)
+            .border(
+                width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
+                color = Color.White.copy(alpha = .25f + .65f * lastMoveHighlight),
+                shape = RoundedCornerShape(7.dp),
+            )
             .combinedClickable(
                 onClick = {
                     dispatchWordSiegeBoardTap(
@@ -618,6 +632,7 @@ private fun PanSiegeBoardCell(
             border = BorderStroke(if (pending) maxOf(2.dp, borderWidth) else borderWidth, border.copy(alpha = .96f)),
         ) {
             Box(contentAlignment = Alignment.Center) {
+                if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(Color.White.copy(alpha = .06f * lastMoveHighlight)))
                 if (letter != null) {
                     Text(letter, color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Black)
                     Text(
