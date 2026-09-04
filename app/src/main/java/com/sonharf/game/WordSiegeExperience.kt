@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -408,27 +409,36 @@ private fun WordSiegeGamesList(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Row(Modifier.padding(top = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
-                }
-                Surface(shape = RoundedCornerShape(16.dp), color = SonHarfTheme.BrandPurpleSoft, border = BorderStroke(1.dp, SiegePurple.copy(alpha = .28f))) {
-                    Box(Modifier.padding(10.dp), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Rounded.GridView, null, Modifier.size(30.dp), tint = SiegePurple)
-                        Icon(Icons.Rounded.AutoAwesome, null, Modifier.align(Alignment.TopEnd).size(14.dp), tint = MainUi.Gold)
+            Surface(
+                shape = RoundedCornerShape(26.dp),
+                color = Color.Transparent,
+                border = BorderStroke(1.dp, SiegePurple.copy(alpha = .45f)),
+                shadowElevation = 6.dp,
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().background(
+                        Brush.horizontalGradient(listOf(Color(0xFF17133B), Color(0xFF312064), Color(0xFF101831)))
+                    ).padding(14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = Color.White)
                     }
-                }
-                Spacer(Modifier.width(10.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                    Text(
-                        sh("Süre yok • 1v1 • En fazla 10 devam eden oyun", "No timer • 1v1 • Up to 10 ongoing games"),
-                        color = MainUi.Muted,
-                        fontSize = 13.sp,
-                    )
-                }
-                IconButton(onClick = onRefresh, enabled = !loading) {
-                    Icon(Icons.Rounded.Refresh, sh("Yenile", "Refresh"), tint = MainUi.Blue)
+                    Surface(shape = RoundedCornerShape(18.dp), color = SiegePurple.copy(alpha = .28f), border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .65f))) {
+                        Box(Modifier.padding(11.dp), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Castle, null, Modifier.size(34.dp), tint = MainUi.Gold)
+                            Icon(Icons.Rounded.AutoAwesome, null, Modifier.align(Alignment.TopEnd).size(14.dp), tint = Color.White)
+                        }
+                    }
+                    Spacer(Modifier.width(11.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(sh("KELİME\nKUŞATMASI", "WORD\nSIEGE"), color = Color.White, fontSize = 22.sp, lineHeight = 22.sp, fontWeight = FontWeight.Black)
+                        Spacer(Modifier.height(4.dp))
+                        Text(sh("KELİMELERLE ALANI ELE GEÇİR", "CAPTURE THE BOARD WITH WORDS"), color = MainUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                    }
+                    IconButton(onClick = onRefresh, enabled = !loading, modifier = Modifier.size(48.dp)) {
+                        Icon(Icons.Rounded.Refresh, sh("Yenile", "Refresh"), tint = Color.White)
+                    }
                 }
             }
         }
@@ -529,21 +539,30 @@ private fun WordSiegeModeCard(
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = modifier.height(112.dp).clickable(enabled = enabled, onClick = onClick),
+        modifier = modifier.height(132.dp).clickable(enabled = enabled, onClick = onClick),
         shape = RoundedCornerShape(20.dp),
-        color = if (color == MainUi.BlueSoft) MainUi.SurfaceSoft else color,
-        shadowElevation = 2.dp,
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, if (color == MainUi.BlueSoft) SiegePurple.copy(alpha = .24f) else MainUi.Gold.copy(alpha = .42f)),
+        shadowElevation = 5.dp,
     ) {
-        Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
+        Column(
+            Modifier.fillMaxSize().background(
+                if (color == MainUi.BlueSoft) Brush.linearGradient(listOf(Color.White, SiegePurpleSoft))
+                else Brush.linearGradient(listOf(Color(0xFF1769E0), Color(0xFF684AD7)))
+            ).padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 val contentColor = if (color == MainUi.BlueSoft) MainUi.Blue else Color.White
-                Icon(icon, null, tint = contentColor, modifier = Modifier.size(24.dp))
+                Surface(shape = RoundedCornerShape(13.dp), color = contentColor.copy(alpha = .15f)) {
+                    Icon(icon, null, tint = contentColor, modifier = Modifier.padding(8.dp).size(25.dp))
+                }
                 if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = contentColor, strokeWidth = 2.dp)
                 else Icon(Icons.Rounded.ArrowForward, null, tint = contentColor.copy(alpha = .82f), modifier = Modifier.size(18.dp))
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 val contentColor = if (color == MainUi.BlueSoft) MainUi.Text else Color.White
-                Text(title, color = contentColor, fontWeight = FontWeight.Black, fontSize = 13.sp, lineHeight = 15.sp)
+                Text(title, color = contentColor, fontWeight = FontWeight.Black, fontSize = 15.sp, lineHeight = 17.sp)
                 Text(subtitle, color = contentColor.copy(alpha = .72f), fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
             }
         }
@@ -569,11 +588,12 @@ private fun WordSiegeGameCard(
         border = BorderStroke(1.dp, MainUi.Border),
     ) {
         Row(Modifier.fillMaxWidth().padding(13.dp), verticalAlignment = Alignment.CenterVertically) {
-            ProfilePhotoAvatarWithGender(
+            ProfilePhotoAvatarRectWithGender(
                 avatarPath = opponent?.avatarPath,
                 gender = opponent?.gender,
                 name = opponent?.displayName ?: sh("Rakip", "Rival"),
-                size = 44.dp,
+                width = 52.dp,
+                height = 64.dp,
                 accent = SiegePurple,
                 visible = opponent?.avatarVisibility != "hidden",
             )
@@ -588,6 +608,9 @@ private fun WordSiegeGameCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(game.cardStatus(me), color = game.listSection(me).color(), fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                if (opponent != null) {
+                    Text("${ratingLeagueProgress(opponent.rating).leagueName} • ${opponent.rating} rating", color = MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                }
                 if (game.status != "waiting") {
                     Text(
                         sh("Sen $myTotal • Rakip $rivalTotal • ${game.moveCount} tur", "You $myTotal • Rival $rivalTotal • ${game.moveCount} turns"),
@@ -956,7 +979,7 @@ private fun WordSiegeBoardCell(
                     Text(
                         wordSiegeLetterValue(letter),
                         color = MainUi.Muted,
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp),
                     )
                 } else if (!cell.bonusUsed && cell.bonus != null) {
