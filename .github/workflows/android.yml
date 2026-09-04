@@ -34,11 +34,9 @@ jobs:
         with:
           gradle-version: '8.14.4'
 
-      - name: Apply targeted turn, timer, camera and readability fixes
+      - name: Apply actual practice screen fixes
         if: github.event_name == 'pull_request' && github.head_ref == 'fix/turn-timer-siege-camera-readability-20260904'
-        run: |
-          python3 tools/apply_turn_timer_siege_fix.py
-          python3 tools/apply_turn_timer_siege_followup.py
+        run: python3 tools/apply_practice_screen_fix.py
 
       - name: Test and build debug APK
         shell: bash
@@ -58,7 +56,7 @@ jobs:
           path: SonHarf-Final-Test.apk
           if-no-files-found: error
 
-      - name: Persist verified targeted source changes
+      - name: Persist verified practice source changes
         if: success() && github.event_name == 'pull_request' && github.head_ref == 'fix/turn-timer-siege-camera-readability-20260904'
         shell: bash
         run: |
@@ -66,15 +64,12 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git fetch origin "${GITHUB_HEAD_REF}:${GITHUB_HEAD_REF}"
           git checkout "${GITHUB_HEAD_REF}"
-          if git diff --quiet -- app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt app/src/main/java/com/sonharf/game/WordSiegeBoardViewport.kt app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt; then
-            echo "Targeted source files are already persisted."
+          if git diff --quiet -- app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt; then
+            echo "Practice source files are already persisted."
             exit 0
           fi
-          git add app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt \
-                  app/src/main/java/com/sonharf/game/WordSiegeBoardViewport.kt \
-                  app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt \
-                  app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt
-          git commit -m "fix(game): stabilize turns timer siege camera and readability"
+          git add app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt
+          git commit -m "fix(siege): update actual bot practice screen"
           git push origin "${GITHUB_HEAD_REF}"
 
       - name: Build signed release APK and AAB
@@ -107,15 +102,3 @@ jobs:
             app/build/outputs/apk/release/app-release.apk
             app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
-
-      - name: Report missing release secrets
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG != 'true'
-        run: echo "::warning::Debug build passed, but signed release AAB was skipped because release signing and/or production AdMob secrets (including banner ID) are not configured."
-
-      - name: Publish stable final-test release
-        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release view final-test >/dev/null 2>&1 || gh release create final-test --title "Son Harf Final Test" --notes "Son Harf Android final test build."
-          gh release upload final-test SonHarf-Final-Test.apk --clobber
