@@ -9,15 +9,14 @@ import org.junit.Test
 class PremiumDuelArenaContractTest {
 
     @Test
-    fun activeRouteUsesPremiumArenaWhileLegacyArenaCannotBeCalled() {
+    fun activeRouteUsesPremiumArenaWhileLatestFallbackRemainsAvailable() {
         val online = source("OnlineGameScreenV6.kt")
         val premium = source("PremiumDuelArena.kt")
         val legacy = source("LightDuelUi.kt")
 
-        assertTrue(online.contains("LightDuelArena("))
-        assertTrue(premium.contains("internal fun LightDuelArena("))
-        assertTrue(legacy.contains("private fun LegacyLightDuelArena("))
-        assertFalse(legacy.contains("internal fun LightDuelArena("))
+        assertTrue(online.contains("PremiumDuelArena("))
+        assertTrue(premium.contains("internal fun PremiumDuelArena("))
+        assertTrue(legacy.contains("internal fun LightDuelArena("))
     }
 
     @Test

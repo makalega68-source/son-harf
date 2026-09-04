@@ -44,27 +44,58 @@ class AssetIntegrationContractTest {
         assertTrue(frames.contains("!assetReady && !owned -> Text"))
     }
 
-    @Test fun purchasedVfxIsCosmeticAndBounded() {
+    @Test fun purchasedVfxIsVisibleOneShotAndInputTransparent() {
         val src = read("src/main/java/com/sonharf/game/PurchasedVfxOverlay.kt")
         assertTrue(src.contains("1050"))
         assertTrue(src.contains("Cosmetic-only"))
-        assertTrue(src.contains("PURCHASED_BOARD_PLACE_VFX_MS = 360"))
-        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_VFX_MS = 620"))
+        assertTrue(src.contains("PURCHASED_BOARD_PLACE_VFX_MS = 650"))
+        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_VFX_MS = 800"))
+        assertTrue(src.contains("PURCHASED_BOARD_PLACE_MAX_ALPHA = .86f"))
+        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .88f"))
+        assertTrue(src.contains("PURCHASED_BOARD_PLACE_STAR_COUNT = 4"))
+        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_STAR_COUNT = 5"))
+        assertTrue(src.contains("PURCHASED_BOARD_PLACE_MIN_STAR_DP = 12f"))
+        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_MIN_STAR_DP = 13f"))
+        assertTrue(src.contains("PurchasedBoardActionVfxOverlay"))
+        assertTrue(src.contains("wordSiegeCellCenterInViewport"))
         assertTrue(src.contains("clipToBounds()"))
         assertTrue(src.contains("R.drawable.vfx_twinkle"))
         assertFalse(src.contains("infiniteRepeatable"))
         assertFalse(src.contains("pointerInput"))
+        assertFalse(src.contains("combinedClickable"))
+        assertFalse(src.contains("clickable"))
     }
 
-    @Test fun purchasedBoardVfxIsWiredToOnlineAndPracticeSiegeCells() {
+    @Test fun purchasedBoardVfxIsWiredAsViewportOverlayForOnlineAndPracticeSiege() {
         val online = read("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
         listOf(online, practice).forEach { source ->
-            assertTrue(source.contains("PurchasedBoardActionVfx("))
+            assertTrue(source.contains("PurchasedBoardActionVfxOverlay("))
             assertTrue(source.contains("PurchasedBoardVfxKind.PLACEMENT"))
             assertTrue(source.contains("PurchasedBoardVfxKind.RESOLVED"))
-            assertTrue(source.contains("Modifier.matchParentSize()"))
+            assertFalse(source.contains("PurchasedBoardActionVfx("))
         }
+        assertTrue(online.contains("wordSiegeBoardBorderWidthDp(transform.scale)"))
+        assertFalse(practice.contains("wordSiegeBoardBorderWidthDp(transform.scale)"))
+    }
+
+    @Test fun onlineSiegeKeepsBorderPaletteWhilePracticeUsesCalmBorderlessSeparation() {
+        val online = read("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
+        val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
+
+        listOf("0xFF7890A8", "0xFF5279A6", "0xFF147A48", "0xFFB72E35", "0xFFD99818").forEach {
+            assertTrue(online.contains(it))
+        }
+        assertTrue(online.contains("border.copy(alpha = .96f)"))
+
+        assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFDDE6EB)"))
+        assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFF8FAF9)"))
+        assertTrue(practice.contains(".padding(1.6.dp)"))
+        val cellStart = practice.indexOf("private fun WordSiegePracticeBoardCell")
+        val rackStart = practice.indexOf("internal fun WordSiegePracticeRackTile")
+        assertTrue(cellStart >= 0 && rackStart > cellStart)
+        val cellSection = practice.substring(cellStart, rackStart)
+        assertFalse(cellSection.contains("BorderStroke("))
     }
 
     @Test fun purchasedVfxTextureMatchesRegisteredPackageAsset() {

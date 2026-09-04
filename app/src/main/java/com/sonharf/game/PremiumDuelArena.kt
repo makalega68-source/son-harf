@@ -68,7 +68,7 @@ private object PremiumDuelUi {
 }
 
 @Composable
-internal fun LightDuelArena(
+internal fun PremiumDuelArena(
     room: GameRoomDto,
     me: String?,
     playerName: String,
@@ -128,15 +128,16 @@ internal fun LightDuelArena(
     }
 
     if (room.status == "waiting") {
-        LightWaitingRoom(room.code, playerName, onExit)
+        WaitingRoom(room.code, playerName, onExit)
         return
     }
     if (room.status == "finished") {
-        LightResult(
-            won = room.winnerId == me,
-            draw = room.winnerId == null,
+        CompetitiveResult(
+            room = room,
+            me = me,
             playerName = playerName,
             opponentName = opponentName,
+            startingRating = playerRating,
             myRounds = myRounds,
             oppRounds = opponentRounds,
             words = words,
@@ -364,7 +365,7 @@ internal fun LightDuelArena(
 
         if (quizActive) {
             val activeTrivia = requireNotNull(triviaRound)
-            LightBonusOverlay(
+            BonusDialog(
                 round = activeTrivia,
                 question = requireNotNull(triviaQuestion),
                 myAnswer = (if (host) activeTrivia.hostAnswer else activeTrivia.guestAnswer)
