@@ -413,7 +413,7 @@ private fun ArenaV10(
                             Text(sh("GENEL KÜLTÜR • +${triviaRound.bonusPoints}", "TRIVIA • +${triviaRound.bonusPoints}"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
                             Text(triviaQuestion.question, fontWeight = FontWeight.Bold, fontSize = 17.sp, textAlign = TextAlign.Center)
                             listOf(triviaQuestion.optionA, triviaQuestion.optionB, triviaQuestion.optionC, triviaQuestion.optionD).forEachIndexed { i, option ->
-                                OutlinedButton(onClick = { onTrivia(i) }, modifier = Modifier.fillMaxWidth().heightIn(min = 43.dp), contentPadding = PaddingValues(5.dp)) { Text(option, fontSize = 14.sp, textAlign = TextAlign.Center) }
+                                OutlinedButton(onClick = { onTrivia(i) }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp), contentPadding = PaddingValues(5.dp)) { Text(option, fontSize = 14.sp, textAlign = TextAlign.Center) }
                             }
                         }
                     } else {
@@ -517,8 +517,8 @@ private fun ArenaV10(
             ),
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick=onForfeit, modifier=Modifier.weight(1f).height(44.dp), border=BorderStroke(1.dp, SonHarfPink.copy(alpha=.55f))) { Text(sh("⚑ PES ET", "⚑ FORFEIT"), color=SonHarfPink, fontWeight=FontWeight.Bold, fontSize=14.sp) }
-            OutlinedButton(onClick=onChat, modifier=Modifier.weight(1f).height(44.dp), border=BorderStroke(1.dp, SonHarfCyan.copy(alpha=.55f))) { Text(if (isVip) sh("● SOHBET", "● CHAT") else sh("🔒 SOHBET • VIP", "🔒 CHAT • VIP"), color=if (isVip) SonHarfCyan else SonHarfGold, fontWeight=FontWeight.Bold, fontSize=14.sp) }
+            OutlinedButton(onClick=onForfeit, modifier=Modifier.weight(1f).height(48.dp), border=BorderStroke(1.dp, SonHarfPink.copy(alpha=.55f))) { Text(sh("⚑ PES ET", "⚑ FORFEIT"), color=SonHarfPink, fontWeight=FontWeight.Bold, fontSize=14.sp) }
+            OutlinedButton(onClick=onChat, modifier=Modifier.weight(1f).height(48.dp), border=BorderStroke(1.dp, SonHarfCyan.copy(alpha=.55f))) { Text(if (isVip) sh("● SOHBET", "● CHAT") else sh("🔒 SOHBET • VIP", "🔒 CHAT • VIP"), color=if (isVip) SonHarfCyan else SonHarfGold, fontWeight=FontWeight.Bold, fontSize=14.sp) }
         }
     }
 }
