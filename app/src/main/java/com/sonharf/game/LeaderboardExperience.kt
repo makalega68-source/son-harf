@@ -94,13 +94,13 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(sh("LİG & SIRALAMA", "LEAGUE & RANKING"), color = SonHarfText, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Canlı rekabet tablosu", "Live competition table"), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(sh("Canlı rekabet tablosu", "Live competition table"), color = SonHarfMuted, fontSize = 13.sp)
                 }
                 Surface(shape = RoundedCornerShape(10.dp), color = SonHarfPink.copy(alpha = .14f)) {
                     Row(Modifier.padding(horizontal = 9.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(6.dp).clip(CircleShape).background(SonHarfPink))
                         Spacer(Modifier.width(5.dp))
-                        Text("LIVE", color = SonHarfPink, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        Text("LIVE", color = SonHarfPink, fontSize = 13.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -121,11 +121,11 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(if (SonHarfUiState.isEnglish) "${leagueProgress.leagueName} LEAGUE" else "${leagueProgress.leagueName} LİGİ", color = SonHarfText, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                                Text("$currentRating RATING", color = SonHarfBlue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                Text("$currentRating RATING", color = SonHarfBlue, fontSize = 13.sp, fontWeight = FontWeight.Black)
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(if (myIndex >= 0) "#${myIndex + 1}" else "—", color = SonHarfText, fontSize = 25.sp, fontWeight = FontWeight.Black)
-                                Text(sh("SIRAN", "YOUR RANK"), color = SonHarfMuted, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                                Text(sh("SIRAN", "YOUR RANK"), color = SonHarfMuted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                         LinearProgressIndicator(
@@ -138,9 +138,9 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                             Text(
                                 if (leagueProgress.nextAt == null) sh("En üst lig", "Top league") else sh("Sonraki lige ${leagueProgress.pointsToNext} puan", "${leagueProgress.pointsToNext} points to next league"),
                                 color = SonHarfMuted,
-                                fontSize = 8.sp,
+                                fontSize = 13.sp,
                             )
-                            Text(if (period == "season") sh("SEZON", "SEASON") else sh("AKTİF", "ACTIVE"), color = SonHarfBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Text(if (period == "season") sh("SEZON", "SEASON") else sh("AKTİF", "ACTIVE"), color = SonHarfBlue, fontSize = 13.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -179,7 +179,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(sh("OYUNCULAR", "PLAYERS"), color = SonHarfText, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                Text(sh("RATING", "RATING"), color = SonHarfMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Text(sh("RATING", "RATING"), color = SonHarfMuted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -194,7 +194,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
             ) {
                 Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
                     Surface(shape = RoundedCornerShape(9.dp), color = accent.copy(alpha = .10f)) {
-                        Text("${index + 1}", Modifier.width(34.dp).padding(vertical = 8.dp), color = accent, textAlign = TextAlign.Center, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        Text("${index + 1}", Modifier.width(34.dp).padding(vertical = 8.dp), color = accent, textAlign = TextAlign.Center, fontWeight = FontWeight.Black, fontSize = 13.sp)
                     }
                     Spacer(Modifier.width(9.dp))
                     ProfilePhotoAvatar(
@@ -216,7 +216,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                             }
                         }
                         val rate = if (row.winRate % 1.0 == 0.0) row.winRate.toInt().toString() else String.format("%.1f", row.winRate)
-                        Text("${row.leagueName}  •  ${row.wins}W ${row.losses}L  •  %$rate", color = SonHarfMuted, fontSize = 8.sp, maxLines = 1)
+                        Text("${row.leagueName}  •  ${row.wins}W ${row.losses}L  •  %$rate", color = SonHarfMuted, fontSize = 13.sp, maxLines = 1)
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(row.rating.toString(), color = SonHarfText, fontSize = 15.sp, fontWeight = FontWeight.Black)
@@ -233,7 +233,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     Modifier.fillMaxWidth().padding(26.dp),
                     color = SonHarfMuted,
                     textAlign = TextAlign.Center,
-                    fontSize = 10.sp,
+                    fontSize = 13.sp,
                 )
             }
         }
@@ -249,6 +249,6 @@ private fun LeagueLanguagePill(label: String, selected: Boolean, modifier: Modif
         color = if (selected) SonHarfSurface2 else SonHarfSurface,
         border = BorderStroke(1.dp, if (selected) SonHarfBlue.copy(alpha = .40f) else SonHarfMuted.copy(alpha = .10f)),
     ) {
-        Text(label, Modifier.padding(vertical = 9.dp), color = if (selected) SonHarfBlue else SonHarfMuted, textAlign = TextAlign.Center, fontSize = 9.sp, fontWeight = FontWeight.Black)
+        Text(label, Modifier.padding(vertical = 9.dp), color = if (selected) SonHarfBlue else SonHarfMuted, textAlign = TextAlign.Center, fontSize = 13.sp, fontWeight = FontWeight.Black)
     }
 }
