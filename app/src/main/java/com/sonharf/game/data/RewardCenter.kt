@@ -58,4 +58,4 @@ suspend fun OnlineGameBackend.openPiggyBank(): RewardClaimDto =
     SupabaseProvider.client.postgrest.rpc("open_piggy_bank_v2").decodeSingle()
 
 suspend fun OnlineGameBackend.equipRewardTrial(): RewardClaimDto =
-    SupabaseProvider.client.postgrest.rpc("equip_style_trial_v1").decodeSingle()
+    SupabaseProvider.client.postgrest.rpc("equip_style_trial_v2").decodeSingle()
