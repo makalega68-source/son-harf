@@ -47,6 +47,7 @@ jobs:
         if: github.event_name == 'pull_request' && github.head_ref == 'fix/active-ui-compact-20260905'
         run: |
           python3 scripts/active_ui_compact_patch_20260905.py
+          python3 scripts/active_ui_contract_repair_20260905.py
           git diff --check
           python3 - <<'PY'
           import subprocess
@@ -93,7 +94,7 @@ jobs:
         if: success() && github.event_name == 'pull_request' && github.head_ref == 'fix/active-ui-compact-20260905'
         run: |
           git checkout 7488d727f87894cc76fd9a55a17e7db8c552f89b -- .github/workflows/android.yml
-          rm -f .github/workflows/active-ui-compact-validation.yml scripts/active_ui_compact_patch_20260905.py
+          rm -f .github/workflows/active-ui-compact-validation.yml scripts/active_ui_compact_patch_20260905.py scripts/active_ui_contract_repair_20260905.py
           git add -A
           python3 - <<'PY'
           import subprocess
