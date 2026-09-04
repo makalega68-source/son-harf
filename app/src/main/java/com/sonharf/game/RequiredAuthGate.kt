@@ -343,7 +343,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {
                                 TextButton(onClick = { showPassword = !showPassword }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                    Text(if (showPassword) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                    Text(if (showPassword) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                 }
                             },
                         )
@@ -357,7 +357,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 visualTransformation = if (showPassword2) VisualTransformation.None else PasswordVisualTransformation(),
                                 trailingIcon = {
                                     TextButton(onClick = { showPassword2 = !showPassword2 }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                        Text(if (showPassword2) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                        Text(if (showPassword2) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                     }
                                 },
                             )
