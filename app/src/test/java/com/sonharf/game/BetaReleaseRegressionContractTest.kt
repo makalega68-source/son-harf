@@ -11,15 +11,14 @@ class BetaReleaseRegressionContractTest {
     @Test
     fun loginAndClassicArenaMobileFixesRemainActive() {
         val auth = projectFile("app/src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
-        val classic = projectFile("app/src/main/java/com/sonharf/game/TargetNeonGameScreen.kt").readText()
+        val classic = projectFile("app/src/main/java/com/sonharf/game/PremiumDuelArena.kt").readText()
 
         assertFalse(auth.contains("son_harf_login_bg"))
         assertFalse(classic.contains(".verticalScroll(rememberScrollState())"))
-        assertFalse(classic.contains("words.takeLast(3)"))
-        assertTrue(classic.contains("val current = words.last()"))
-        assertTrue(classic.contains("EmbeddedWordKeyboard("))
-        assertTrue(classic.contains("readOnly = true"))
-        assertTrue(classic.contains("ProfilePhotoAvatarWithGender("))
+        assertFalse(classic.contains("words.takeLast("))
+        assertTrue(classic.contains("items(items = words, key = { it.id })"))
+        assertTrue(classic.contains("PremiumAndroidGameKeyboard("))
+        assertTrue(classic.contains("ProfilePhotoAvatarRectWithGender("))
     }
 
     @Test

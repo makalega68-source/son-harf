@@ -170,15 +170,18 @@ internal fun CompetitionLeadStrip(
         if (!action.isNullOrBlank()) {
             Text(action, modifier = Modifier.fillMaxWidth(), color = PortalMuted, fontSize = 8.sp, textAlign = TextAlign.Center, maxLines = 1)
         }
-        AnimatedVisibility(visible = announcement != null, enter = fadeIn(), exit = fadeOut()) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(10.dp),
-                color = if (leader >= 0) PortalBlue.copy(alpha = .10f) else PortalRed.copy(alpha = .10f),
+        Box(
+            modifier = Modifier.fillMaxWidth().height(24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            AnimatedVisibility(
+                visible = announcement != null,
+                enter = fadeIn() + scaleIn(initialScale = .97f),
+                exit = fadeOut() + scaleOut(targetScale = .98f),
             ) {
                 Text(
                     announcement.orEmpty(),
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 5.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     color = if (leader >= 0) PortalBlue else PortalRed,
                     textAlign = TextAlign.Center,
                     fontWeight = FontWeight.Black,

@@ -339,7 +339,7 @@ internal fun LightDuelLobby(
 }
 
 @Composable
-internal fun LightDuelArena(
+private fun LegacyLightDuelArena(
     room: GameRoomDto,
     me: String?,
     playerName: String,
@@ -775,7 +775,7 @@ private fun LightVipWordHistory(
 }
 
 @Composable
-private fun LightBonusOverlay(
+internal fun LightBonusOverlay(
     round: TriviaRoundDto,
     question: TriviaQuestionDto,
     myAnswer: Long?,
@@ -1168,7 +1168,7 @@ private fun LightNotice(
 }
 
 @Composable
-private fun LightWaitingRoom(code: String, playerName: String, onExit: () -> Unit) {
+internal fun LightWaitingRoom(code: String, playerName: String, onExit: () -> Unit) {
     Box(
         Modifier
             .fillMaxSize()
@@ -1225,7 +1225,7 @@ private fun LightResultMetric(
 }
 
 @Composable
-private fun LightResult(
+internal fun LightResult(
     won: Boolean,
     draw: Boolean,
     playerName: String,
