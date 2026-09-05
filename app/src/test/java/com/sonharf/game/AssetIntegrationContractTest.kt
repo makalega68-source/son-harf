@@ -66,15 +66,21 @@ class AssetIntegrationContractTest {
         assertFalse(src.contains("clickable"))
     }
 
-    @Test fun purchasedBoardVfxIsWiredAsViewportOverlayForOnlineAndPracticeSiege() {
+    @Test fun purchasedBoardVfxIsWiredOnlineAndExplicitlyDisabledForPracticeSiege() {
         val online = read("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
-        listOf(online, practice).forEach { source ->
-            assertTrue(source.contains("PurchasedBoardActionVfxOverlay("))
-            assertTrue(source.contains("PurchasedBoardVfxKind.PLACEMENT"))
-            assertTrue(source.contains("PurchasedBoardVfxKind.RESOLVED"))
-            assertFalse(source.contains("PurchasedBoardActionVfx("))
-        }
+
+        assertTrue(online.contains("PurchasedBoardActionVfxOverlay("))
+        assertTrue(online.contains("PurchasedBoardVfxKind.PLACEMENT"))
+        assertTrue(online.contains("PurchasedBoardVfxKind.RESOLVED"))
+        assertFalse(online.contains("PurchasedBoardActionVfx("))
+
+        assertTrue(practice.contains("PurchasedBoardActionVfxOverlay("))
+        assertTrue(practice.contains("emptyList<PurchasedBoardVfxEvent>()"))
+        assertFalse(practice.contains("PurchasedBoardVfxKind.PLACEMENT"))
+        assertFalse(practice.contains("PurchasedBoardVfxKind.RESOLVED"))
+        assertFalse(practice.contains("PurchasedBoardActionVfx("))
+
         assertTrue(online.contains("wordSiegeBoardBorderWidthDp(transform.scale)"))
         assertFalse(practice.contains("wordSiegeBoardBorderWidthDp(transform.scale)"))
     }
@@ -90,6 +96,7 @@ class AssetIntegrationContractTest {
 
         assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFDDE6EB)"))
         assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFF8FAF9)"))
+        assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFFFF7E6)"))
         assertTrue(practice.contains(".padding(1.6.dp)"))
         val cellStart = practice.indexOf("private fun WordSiegePracticeBoardCell")
         val rackStart = practice.indexOf("internal fun WordSiegePracticeRackTile")
