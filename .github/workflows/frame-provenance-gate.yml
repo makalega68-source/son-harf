@@ -28,10 +28,6 @@ jobs:
         run: python -m pip install --disable-pip-version-check pillow==11.3.0
       - name: Verify repository drawables and exact catalog mapping
         run: python scripts/verify_frame_provenance.py
-      - name: Apply Word Siege UI stabilization
-        run: |
-          python scripts/apply_word_siege_ui_fix_20260905.py
-          git diff --check
       - name: Verify committed home lobby source
         run: |
           grep -q 'SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
