@@ -367,7 +367,7 @@ private fun PanSiegeBoard(
                 viewportWidthPx = viewport.width.toFloat(),
                 viewportHeightPx = viewport.height.toFloat(),
                 boardWidthPx = boardPx,
-                closeScale = .86f,
+                closeScale = .72f,
                 closePan = closePan,
             )
         }
@@ -379,7 +379,7 @@ private fun PanSiegeBoard(
         viewport.width.toFloat(),
         viewport.height.toFloat(),
         boardPx,
-        1f,
+        .72f,
     )
 
     fun centerCloseOn(index: Int): Offset =
@@ -389,6 +389,7 @@ private fun PanSiegeBoard(
             viewportHeightPx = viewport.height.toFloat(),
             boardWidthPx = boardPx,
             cellSizePx = tilePx,
+            scale = .72f,
         )
 
     fun toggleViewport() {
@@ -532,7 +533,7 @@ private fun PanSiegeBoard(
                     viewportMode = WordSiegeBoardViewportMode.CLOSE
                     closePan = centerCloseOn(WordSiegeBoardSpec.CenterIndex)
                 },
-                modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
+                modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(48.dp),
                 shape = CircleShape,
                 containerColor = Color.White.copy(alpha = .94f),
                 contentColor = MainUi.Blue,
