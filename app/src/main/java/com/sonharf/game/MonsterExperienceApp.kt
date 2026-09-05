@@ -279,7 +279,7 @@ private fun MonsterSiegeQuickCard(modifier: Modifier, onClick: () -> Unit) {
         ) {
             Image(
                 painter = painterResource(R.drawable.kelime_kusatma_logo),
-                contentDescription = sh("Kelime Kuşatması", "Word Siege"),
+                contentDescription = sh("KELİME\nKUŞATMASI", "WORD\nSIEGE"),
                 modifier = Modifier.size(72.dp),
                 contentScale = ContentScale.Fit,
             )
