@@ -62,6 +62,7 @@ internal fun MonsterStyleStoreScreen() {
     var busy by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var selectedCategory by remember { mutableStateOf("featured") }
 
     suspend fun reload() {
         loading = true
@@ -122,8 +123,12 @@ internal fun MonsterStyleStoreScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { StoreHeader(profile?.diamonds ?: 0) }
-            item { StoreCategoryRail() }
+            item { StoreCategoryRail(selectedCategory) { selectedCategory = it } }
             if (loading) item { StoreNotice(sh("Style yükleniyor…", "Loading Style…")) }
+            item { FairPlayStoreNotice() }
+            notice?.let { message -> item { StoreNotice(message) } }
+
+            if (selectedCategory == "featured") {
             item {
                 StoreSectionHeader(
                     sh("ÖNE ÇIKANLAR", "FEATURED"),
@@ -164,26 +169,37 @@ internal fun MonsterStyleStoreScreen() {
                     },
                 )
             }
-            notice?.let { message -> item { StoreNotice(message) } }
-            item { FairPlayStoreNotice() }
+            }
 
+            if (selectedCategory == "themes") {
             item { StoreSectionHeader(sh("TEMALAR", "THEMES"), sh("Uygulamanın tüm görsel sistemini değiştir", "Change the app-wide visual system")) }
             item { ThemeSlotRow(equipped) }
+            }
 
+            if (selectedCategory == "profile") {
             item { StoreSectionHeader(sh("PROFİL STYLE", "PROFILE STYLE"), sh("Çerçeve, plaka, arka plan ve rozet", "Frames, nameplates, backgrounds and badges")) }
             item { PurchasedProfileFramesStoreRow(backend = backend) }
+            }
 
+            if (selectedCategory == "match") {
             item { StoreSectionHeader(sh("MAÇ STYLE", "MATCH STYLE"), sh("Sadece görsel efektler; rekabet avantajı yok", "Visual effects only; no competitive advantage")) }
             item { PreviewRow(matchItems) }
+            }
 
+            if (selectedCategory == "prestige") {
             item { StoreSectionHeader(sh("PRESTİJ", "PRESTIGE"), sh("Ünvan, sezon rozeti ve koleksiyon etiketleri", "Titles, season badges and collectible labels")) }
             item { PreviewRow(prestigeItems) }
+            }
 
+            if (selectedCategory == "bundles") {
             item { StoreSectionHeader(sh("PAKETLER", "BUNDLES"), sh("Birbiriyle uyumlu Style setleri", "Matching Style collections")) }
             item { BundleRow() }
+            }
 
+            if (selectedCategory == "coin") {
             item { StoreSectionHeader("SON COIN", sh("Tek ve sade Style para birimi", "One simple Style currency")) }
             item { SonCoinReadyCard(profile?.diamonds ?: 0) }
+            }
         }
     }
 }
@@ -193,7 +209,7 @@ private fun StoreHeader(balance: Int) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text("STYLE", color = StoreText, fontSize = 29.sp, fontWeight = FontWeight.Black)
-            Text(sh("Görünüm • koleksiyon • prestij", "Appearance • collection • prestige"), color = StoreMuted, fontSize = 10.sp)
+            Text(sh("Görünüm • koleksiyon • prestij", "Appearance • collection • prestige"), color = StoreMuted, fontSize = 13.sp)
         }
         Surface(shape = RoundedCornerShape(99.dp), color = StoreAlt, border = BorderStroke(1.dp, Color(0xFFBED5F5))) {
             Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -206,18 +222,25 @@ private fun StoreHeader(balance: Int) {
 }
 
 @Composable
-private fun StoreCategoryRail() {
+private fun StoreCategoryRail(selected: String, onSelected: (String) -> Unit) {
     val categories = listOf(
-        sh("Öne Çıkanlar", "Featured"), sh("Temalar", "Themes"), sh("Profil", "Profile"),
-        sh("Maç", "Match"), sh("Prestij", "Prestige"), sh("Paketler", "Bundles"), "Son Coin",
+        "featured" to sh("Öne Çıkanlar", "Featured"), "themes" to sh("Temalar", "Themes"), "profile" to sh("Profil", "Profile"),
+        "match" to sh("Maç", "Match"), "prestige" to sh("Prestij", "Prestige"), "bundles" to sh("Paketler", "Bundles"), "coin" to "Son Coin",
     )
     LazyRow(
         contentPadding = PaddingValues(horizontal = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(categories) { label ->
-            Surface(shape = RoundedCornerShape(99.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
-                Text(label, Modifier.padding(horizontal = 13.dp, vertical = 9.dp), color = StoreText, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        items(categories, key = { it.first }) { (key, label) ->
+            val active = selected == key
+            Surface(
+                modifier = Modifier.heightIn(min = 48.dp),
+                onClick = { onSelected(key) },
+                shape = RoundedCornerShape(99.dp),
+                color = if (active) StoreBlue else StoreSurface,
+                border = BorderStroke(1.dp, if (active) StoreBlue else StoreBorder),
+            ) {
+                Text(label, Modifier.padding(horizontal = 13.dp, vertical = 12.dp), color = if (active) Color.White else StoreText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -227,7 +250,7 @@ private fun StoreCategoryRail() {
 private fun StoreSectionHeader(title: String, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
         Text(title, color = StoreText, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = .5.sp)
-        Text(subtitle, color = StoreMuted, fontSize = 9.sp)
+        Text(subtitle, color = StoreMuted, fontSize = 13.sp)
     }
 }
 
@@ -246,13 +269,13 @@ private fun FeaturedThemeCard(theme: ShopItemDto?, owned: Boolean, equipped: Boo
                     color = StoreText.copy(alpha = .88f),
                     shape = RoundedCornerShape(8.dp),
                 ) {
-                    Text(sh("ÖNE ÇIKAN TEMA", "FEATURED THEME"), Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Text(sh("ÖNE ÇIKAN TEMA", "FEATURED THEME"), Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
                 }
             }
             Row(verticalAlignment = Alignment.Top) {
                 Column(Modifier.weight(1f)) {
                     Text(sh("Mavi Beyaz Arena", "Blue White Arena"), color = StoreText, fontSize = 19.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Beyaz yüzeyler, buz mavisi katmanlar ve güçlü modern mavi vurgular.", "White surfaces, ice-blue layers and a strong modern-blue accent."), color = StoreMuted, fontSize = 10.sp)
+                    Text(sh("Beyaz yüzeyler, buz mavisi katmanlar ve güçlü modern mavi vurgular.", "White surfaces, ice-blue layers and a strong modern-blue accent."), color = StoreMuted, fontSize = 13.sp)
                 }
                 if (equipped) Icon(Icons.Rounded.CheckCircle, null, tint = StoreGreen, modifier = Modifier.size(25.dp))
             }
@@ -265,7 +288,7 @@ private fun FeaturedThemeCard(theme: ShopItemDto?, owned: Boolean, equipped: Boo
                         fontWeight = FontWeight.Black,
                         fontSize = 15.sp,
                     )
-                    Text(sh("Gerçek önizleme • kalıcı sahiplik", "Real preview • permanent ownership"), color = StoreMuted, fontSize = 8.sp)
+                    Text(sh("Gerçek önizleme • kalıcı sahiplik", "Real preview • permanent ownership"), color = StoreMuted, fontSize = 13.sp)
                 }
                 Button(
                     enabled = !busy && !equipped && theme != null,
@@ -300,8 +323,8 @@ private fun SmallThemeCard(title: String, state: String, accent: Color, live: Bo
             Box(Modifier.fillMaxWidth().height(70.dp).clip(RoundedCornerShape(13.dp)).background(Brush.linearGradient(listOf(accent.copy(alpha = .16f), StoreSurface)))) {
                 Box(Modifier.align(Alignment.Center).size(38.dp).clip(RoundedCornerShape(11.dp)).background(accent))
             }
-            Text(title, color = StoreText, fontSize = 11.sp, fontWeight = FontWeight.Black)
-            Text(state, color = if (live) StoreGreen else StoreMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = StoreText, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(state, color = if (live) StoreGreen else StoreMuted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -322,10 +345,10 @@ private fun StylePreviewCard(preview: StylePreview) {
                     Icon(preview.icon, null, Modifier.padding(13.dp).size(28.dp), tint = preview.accent)
                 }
             }
-            Text(sh(preview.titleTr, preview.titleEn), color = StoreText, fontSize = 11.sp, fontWeight = FontWeight.Black)
-            Text(sh(preview.subtitleTr, preview.subtitleEn), color = StoreMuted, fontSize = 8.sp, minLines = 2)
+            Text(sh(preview.titleTr, preview.titleEn), color = StoreText, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(sh(preview.subtitleTr, preview.subtitleEn), color = StoreMuted, fontSize = 13.sp, minLines = 2)
             Surface(shape = RoundedCornerShape(99.dp), color = StoreAlt) {
-                Text(sh("YAKINDA", "COMING SOON"), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = StoreBlue, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                Text(sh("YAKINDA", "COMING SOON"), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = StoreBlue, fontSize = 13.sp, fontWeight = FontWeight.Black)
             }
         }
     }
@@ -347,10 +370,10 @@ private fun BundleCard(title: String, icon: ImageVector, accent: Color) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(shape = RoundedCornerShape(11.dp), color = accent.copy(alpha = .12f)) { Icon(icon, null, Modifier.padding(9.dp).size(23.dp), tint = accent) }
                 Spacer(Modifier.width(8.dp))
-                Text(title, Modifier.weight(1f), color = StoreText, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Text(title, Modifier.weight(1f), color = StoreText, fontSize = 13.sp, fontWeight = FontWeight.Black)
             }
-            Text(sh("Son Harf tasarımına uyarlanmış, güç vermeyen Style koleksiyonu", "Son Harf-adapted cosmetic Style collection"), color = StoreMuted, fontSize = 8.sp)
-            Text(sh("YAKINDA", "COMING SOON"), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            Text(sh("Son Harf tasarımına uyarlanmış, güç vermeyen Style koleksiyonu", "Son Harf-adapted cosmetic Style collection"), color = StoreMuted, fontSize = 13.sp)
+            Text(sh("YAKINDA", "COMING SOON"), color = accent, fontSize = 13.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -364,10 +387,10 @@ private fun SonCoinReadyCard(balance: Int) {
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text("$balance Son Coin", color = StoreText, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Tek para birimi • sade ekonomi", "Single currency • simple economy"), color = StoreMuted, fontSize = 9.sp)
+                    Text(sh("Tek para birimi • sade ekonomi", "Single currency • simple economy"), color = StoreMuted, fontSize = 13.sp)
                 }
             }
-            Text(sh("Google Play Billing coin paketleri için alan hazırdır. Gerçek para işlemi bağlanmadan sahte satın alma butonu gösterilmez.", "The area is ready for Google Play Billing coin packs. No fake purchase button is shown before real-money billing is connected."), color = StoreMuted, fontSize = 9.sp)
+            Text(sh("Google Play Billing coin paketleri için alan hazırdır. Gerçek para işlemi bağlanmadan sahte satın alma butonu gösterilmez.", "The area is ready for Google Play Billing coin packs. No fake purchase button is shown before real-money billing is connected."), color = StoreMuted, fontSize = 13.sp)
         }
     }
 }
@@ -378,7 +401,7 @@ private fun FairPlayStoreNotice() {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.VerifiedUser, null, Modifier.size(19.dp), tint = StoreBlue)
             Spacer(Modifier.width(8.dp))
-            Text(sh("Style ürünleri yalnız görünüm, koleksiyon ve prestij içindir. Rating, süre, harf, joker veya maç kazanma gücü vermez.", "Style items are appearance, collection and prestige only. They never grant rating, timer, tile, joker or match-winning power."), color = Color(0xFF31506F), fontSize = 9.sp, modifier = Modifier.weight(1f))
+            Text(sh("Style ürünleri yalnız görünüm, koleksiyon ve prestij içindir. Rating, süre, harf, joker veya maç kazanma gücü vermez.", "Style items are appearance, collection and prestige only. They never grant rating, timer, tile, joker or match-winning power."), color = Color(0xFF31506F), fontSize = 13.sp, modifier = Modifier.weight(1f))
         }
     }
 }
@@ -386,7 +409,7 @@ private fun FairPlayStoreNotice() {
 @Composable
 private fun StoreNotice(message: String) {
     Surface(color = StoreSurface, shape = RoundedCornerShape(14.dp), border = BorderStroke(1.dp, StoreBorder)) {
-        Text(message, Modifier.fillMaxWidth().padding(11.dp), color = StoreText, fontSize = 10.sp, textAlign = TextAlign.Center)
+        Text(message, Modifier.fillMaxWidth().padding(11.dp), color = StoreText, fontSize = 13.sp, textAlign = TextAlign.Center)
     }
 }
 

@@ -24,7 +24,7 @@ internal object MainUi {
     val Text = SonHarfTheme.TextPrimary
     val Muted = SonHarfTheme.TextSecondary
     val Blue = SonHarfTheme.PrimaryBlue
-    val BlueDeep = Color(0xFF0A66D8)
+    val BlueDeep = SonHarfTheme.PrimaryBlue
     val BlueSoft = SonHarfTheme.PrimaryBlueSoft
     val Border = SonHarfTheme.Border
     val Green = SonHarfTheme.Success
@@ -63,9 +63,9 @@ internal fun MainSectionTitle(title: String, action: String, onAction: () -> Uni
         Text(
             text = action,
             color = MainUi.Blue,
-            fontSize = 9.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Black,
-            modifier = Modifier.clickable(onClick = onAction).padding(vertical = 4.dp),
+            modifier = Modifier.clickable(onClick = onAction).heightIn(min = 48.dp).wrapContentHeight(),
         )
     }
 }
@@ -89,7 +89,7 @@ internal fun MainScreenHeader(
         Column(Modifier.weight(1f)) {
             Text(title, color = MainUi.Text, fontSize = 22.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(2.dp))
-            Text(subtitle, color = MainUi.Muted, fontSize = 10.sp)
+            Text(subtitle, color = MainUi.Muted, fontSize = 13.sp)
         }
         if (actionIcon != null && onAction != null) {
             Surface(onClick = onAction, shape = RoundedCornerShape(12.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MainUi.Border)) {
@@ -105,7 +105,7 @@ internal fun MainMetricCard(value: String, label: String, modifier: Modifier = M
         Column(Modifier.padding(12.dp)) {
             Text(value, color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(3.dp))
-            Text(label, color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

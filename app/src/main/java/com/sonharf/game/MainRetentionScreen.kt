@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +25,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
+private enum class RetentionSection { MISSIONS, MASTERY, ACHIEVEMENTS, RECORDS }
+
 @Composable
 internal fun MainRetentionScreen(
     backend: OnlineGameBackend,
@@ -43,6 +46,7 @@ internal fun MainRetentionScreen(
     var loading by remember { mutableStateOf(true) }
     var busyKey by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var section by remember { mutableStateOf(RetentionSection.MISSIONS) }
 
     suspend fun reload() = coroutineScope {
         loading = true
@@ -106,9 +110,13 @@ internal fun MainRetentionScreen(
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
                             Text("${sh("SEVİYE", "LEVEL")} ${g?.level ?: 1}", color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                            Text("${g?.xp ?: 0} XP • ${m?.selectedTitle ?: g?.nextTitle.orEmpty()}", color = MainUi.Muted, fontSize = 9.sp)
+                            Text("${g?.xp ?: 0} XP • ${m?.selectedTitle ?: g?.nextTitle.orEmpty()}", color = MainUi.Muted, fontSize = 13.sp)
                         }
-                        Text("${m?.dailyPlayStreak ?: 0} 🔥", color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.LocalFireDepartment, null, tint = MainUi.Red)
+                            Spacer(Modifier.width(4.dp))
+                            Text("${m?.dailyPlayStreak ?: 0}", color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        }
                     }
                     LinearProgressIndicator(
                         progress = { xpProgress },
@@ -117,11 +125,11 @@ internal fun MainRetentionScreen(
                         trackColor = Color.White,
                     )
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${g?.levelProgress ?: 0}/${g?.levelTarget ?: 500}", color = MainUi.Muted, fontSize = 9.sp)
+                        Text("${g?.levelProgress ?: 0}/${g?.levelTarget ?: 500}", color = MainUi.Muted, fontSize = 13.sp)
                         Text(
                             sh("En iyi günlük seri: ${m?.bestDailyPlayStreak ?: 0}", "Best daily streak: ${m?.bestDailyPlayStreak ?: 0}"),
                             color = MainUi.Muted,
-                            fontSize = 9.sp,
+                            fontSize = 13.sp,
                         )
                     }
                 }
@@ -163,7 +171,9 @@ internal fun MainRetentionScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold, contentColor = Color(0xFF3C2700)),
                             shape = RoundedCornerShape(14.dp),
                         ) {
-                            Text(if (g?.dailyClaimed == true) "✓ ${sh("ALINDI", "CLAIMED")}" else "🎁 +${g?.dailyReward ?: 40} SC", fontWeight = FontWeight.Black, fontSize = 10.sp)
+                            Icon(if (g?.dailyClaimed == true) Icons.Rounded.CheckCircle else Icons.Rounded.CardGiftcard, null)
+                            Spacer(Modifier.width(5.dp))
+                            Text(if (g?.dailyClaimed == true) sh("ALINDI", "CLAIMED") else "+${g?.dailyReward ?: 40} SC", fontWeight = FontWeight.Black, fontSize = 13.sp)
                         }
                         OutlinedButton(
                             onClick = onDailyChallenge,
@@ -171,14 +181,14 @@ internal fun MainRetentionScreen(
                             shape = RoundedCornerShape(14.dp),
                             border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .38f)),
                         ) {
-                            Text(sh("GÜNÜN KELİMESİ", "DAILY WORD"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                            Text(sh("GÜNÜN KELİMESİ", "DAILY WORD"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 13.sp)
                         }
                     }
 
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(sh("3 düello tamamla", "Complete 3 duels"), color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text("${(g?.matchesToday ?: 0).coerceAtMost(3)}/3", color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                            Text(sh("3 düello tamamla", "Complete 3 duels"), color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("${(g?.matchesToday ?: 0).coerceAtMost(3)}/3", color = MainUi.Blue, fontSize = 13.sp, fontWeight = FontWeight.Black)
                         }
                         LinearProgressIndicator(
                             progress = { ((g?.matchesToday ?: 0).coerceAtMost(3) / 3f) },
@@ -204,7 +214,7 @@ internal fun MainRetentionScreen(
                             shape = RoundedCornerShape(12.dp),
                             contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp),
                         ) {
-                            Text(if (g?.dailyChallengeClaimed == true) sh("ALINDI", "CLAIMED") else "+30 SC", fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text(if (g?.dailyChallengeClaimed == true) sh("ALINDI", "CLAIMED") else "+30 SC", fontSize = 13.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
@@ -218,7 +228,7 @@ internal fun MainRetentionScreen(
                 color = MainUi.BlueSoft,
             ) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(sh("YAKIN HEDEF", "NEARBY GOAL"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(sh("YAKIN HEDEF", "NEARBY GOAL"), color = MainUi.Blue, fontSize = 13.sp, fontWeight = FontWeight.Black)
                     Text(
                         if (league.nextAt == null) sh("En üst ligdesin", "You are in the top league")
                         else sh("${league.nextLeagueName} için ${league.pointsToNext} puan", "${league.pointsToNext} points to ${league.nextLeagueName}"),
@@ -232,11 +242,14 @@ internal fun MainRetentionScreen(
                         color = MainUi.Blue,
                         trackColor = Color.White,
                     )
-                    Text(sh("Bir maç daha oynayarak hedefe yaklaş", "Play one more match to move closer"), color = MainUi.Muted, fontSize = 9.sp)
+                    Text(sh("Bir maç daha oynayarak hedefe yaklaş", "Play one more match to move closer"), color = MainUi.Muted, fontSize = 13.sp)
                 }
             }
         }
 
+        item { RetentionSectionRail(section) { section = it } }
+
+        if (section == RetentionSection.MISSIONS) {
         item { MainSectionTitle(sh("GÖREV ROTASI", "MISSION ROUTE")) }
 
         if (missions.isEmpty() && goals.isEmpty() && !loading) {
@@ -245,13 +258,13 @@ internal fun MainRetentionScreen(
                     sh("Yeni görevler sunucuda hazırlanıyor.", "New missions are being prepared on the server."),
                     Modifier.fillMaxWidth().padding(vertical = 18.dp),
                     color = MainUi.Muted,
-                    fontSize = 11.sp,
+                    fontSize = 13.sp,
                     textAlign = TextAlign.Center,
                 )
             }
         }
 
-        items(missions, key = { it.missionId }) { mission ->
+        items(missions.sortedByDescending { it.progress.toFloat() / it.target.coerceAtLeast(1) }, key = { it.missionId }) { mission ->
             MainUnifiedMissionCard(
                 mission = mission,
                 busy = busyKey == mission.missionId,
@@ -274,7 +287,7 @@ internal fun MainRetentionScreen(
         }
 
         if (missions.isEmpty()) {
-            items(goals, key = { it.id }) { goal ->
+            items(goals.sortedByDescending { it.progress.toFloat() / it.target.coerceAtLeast(1) }, key = { it.id }) { goal ->
                 MainLegacyGoalCard(
                     goal = goal,
                     busy = busyKey == goal.id,
@@ -293,11 +306,13 @@ internal fun MainRetentionScreen(
                 )
             }
         }
+        }
 
+        if (section == RetentionSection.MASTERY) {
         item { MainSectionTitle(sh("KELİME USTALIĞI", "WORD MASTERY")) }
 
         if (mastery.isEmpty() && !loading) {
-            item { Text(sh("Ustalık yolu ilk maçlarınla açılır.", "The mastery path unlocks with your first matches."), color = MainUi.Muted, fontSize = 10.sp) }
+            item { Text(sh("Ustalık yolu ilk maçlarınla açılır.", "The mastery path unlocks with your first matches."), color = MainUi.Muted, fontSize = 13.sp) }
         }
 
         items(mastery.take(6), key = { it.id }) { milestone ->
@@ -314,9 +329,9 @@ internal fun MainRetentionScreen(
                         Spacer(Modifier.width(9.dp))
                         Column(Modifier.weight(1f)) {
                             Text(if (SonHarfUiState.isEnglish) milestone.titleEn else milestone.titleTr, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                            Text(if (SonHarfUiState.isEnglish) milestone.descriptionEn else milestone.descriptionTr, color = MainUi.Muted, fontSize = 9.sp)
+                            Text(if (SonHarfUiState.isEnglish) milestone.descriptionEn else milestone.descriptionTr, color = MainUi.Muted, fontSize = 13.sp)
                         }
-                        Text("+${milestone.rewardCoins} SC", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        Text("+${milestone.rewardCoins} SC", color = MainUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
                     }
                     LinearProgressIndicator(
                         progress = { (milestone.progress.toFloat() / milestone.target.coerceAtLeast(1)).coerceIn(0f, 1f) },
@@ -337,12 +352,14 @@ internal fun MainRetentionScreen(
                                 }
                             },
                             modifier = Modifier.align(Alignment.End),
-                        ) { Text(sh("ÖDÜLÜ AL", "CLAIM"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                        ) { Text(sh("ÖDÜLÜ AL", "CLAIM"), color = MainUi.Blue, fontSize = 13.sp, fontWeight = FontWeight.Black) }
                     }
                 }
             }
         }
+        }
 
+        if (section == RetentionSection.ACHIEVEMENTS) {
         item {
             MainSectionTitle(sh("BAŞARIMLAR", "ACHIEVEMENTS"))
             Spacer(Modifier.height(8.dp))
@@ -359,22 +376,24 @@ internal fun MainRetentionScreen(
                     }
                     achievements.take(5).forEach { achievement ->
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(achievement.icon, fontSize = 18.sp)
+                            Icon(Icons.Rounded.EmojiEvents, null, tint = if (achievement.unlocked) MainUi.Gold else MainUi.Muted)
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 if (SonHarfUiState.isEnglish) achievement.titleEn else achievement.titleTr,
                                 color = if (achievement.unlocked) MainUi.Text else MainUi.Muted,
-                                fontSize = 10.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.weight(1f),
                             )
-                            Text(if (achievement.unlocked) "✓" else "${achievement.currentValue}/${achievement.target}", color = if (achievement.unlocked) MainUi.Green else MainUi.Muted, fontSize = 9.sp)
+                            Text(if (achievement.unlocked) "✓" else "${achievement.currentValue}/${achievement.target}", color = if (achievement.unlocked) MainUi.Green else MainUi.Muted, fontSize = 13.sp)
                         }
                     }
                 }
             }
         }
+        }
 
+        if (section == RetentionSection.RECORDS) {
         records?.let { r ->
             item {
                 MainSectionTitle(sh("KİŞİSEL REKORLAR", "PERSONAL RECORDS"))
@@ -386,11 +405,15 @@ internal fun MainRetentionScreen(
                 }
             }
         }
+        if (records == null && !loading) item {
+            Text(sh("Kişisel rekorlar ilk maçlarınla oluşur.", "Personal records appear after your first matches."), color = MainUi.Muted, fontSize = 13.sp)
+        }
+        }
 
         notice?.let { message ->
             item {
                 Surface(shape = RoundedCornerShape(14.dp), color = MainUi.BlueSoft) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 }
             }
         }
@@ -408,6 +431,30 @@ internal fun MainRetentionScreen(
             }
         }
         item { Spacer(Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun RetentionSectionRail(selected: RetentionSection, onSelected: (RetentionSection) -> Unit) {
+    val tabs = listOf(
+        RetentionSection.MISSIONS to sh("GÖREVLER", "MISSIONS"),
+        RetentionSection.MASTERY to sh("USTALIK", "MASTERY"),
+        RetentionSection.ACHIEVEMENTS to sh("BAŞARIM", "ACHIEVEMENTS"),
+        RetentionSection.RECORDS to sh("REKOR", "RECORDS"),
+    )
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(MainUi.Surface).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        tabs.forEach { (key, label) ->
+            val active = selected == key
+            Surface(
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp).clickable { onSelected(key) },
+                shape = RoundedCornerShape(11.dp),
+                color = if (active) MainUi.Blue else Color.Transparent,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(label, color = if (active) Color.White else MainUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, maxLines = 2)
+                }
+            }
+        }
     }
 }
 
@@ -430,9 +477,9 @@ private fun MainUnifiedMissionCard(
                 Spacer(Modifier.width(9.dp))
                 Column(Modifier.weight(1f)) {
                     Text(if (SonHarfUiState.isEnglish) mission.titleEn else mission.titleTr, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                    Text(mission.scope.uppercase(), color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(mission.scope.uppercase(), color = MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                 }
-                Text("+${mission.rewardCoins} SC", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text("+${mission.rewardCoins} SC", color = MainUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
             }
             LinearProgressIndicator(
                 progress = { (mission.progress.toFloat() / mission.target.coerceAtLeast(1)).coerceIn(0f, 1f) },
@@ -441,11 +488,11 @@ private fun MainUnifiedMissionCard(
                 trackColor = MainUi.SurfaceSoft,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("${mission.progress.coerceAtMost(mission.target)}/${mission.target}", color = MainUi.Muted, fontSize = 9.sp)
+                Text("${mission.progress.coerceAtMost(mission.target)}/${mission.target}", color = MainUi.Muted, fontSize = 13.sp)
                 when {
-                    mission.claimed -> Text(sh("ALINDI", "CLAIMED"), color = MainUi.Green, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    complete -> Button(onClick = onClaim, enabled = !busy, contentPadding = PaddingValues(horizontal = 13.dp, vertical = 6.dp), shape = RoundedCornerShape(11.dp)) { Text(if (busy) "…" else sh("ÖDÜLÜ AL", "CLAIM"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
-                    else -> TextButton(onClick = onPlay, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) { Text(sh("OYNA", "PLAY"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                    mission.claimed -> Text(sh("ALINDI", "CLAIMED"), color = MainUi.Green, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    complete -> Button(onClick = onClaim, enabled = !busy, contentPadding = PaddingValues(horizontal = 13.dp, vertical = 6.dp), shape = RoundedCornerShape(11.dp)) { Text(if (busy) "…" else sh("ÖDÜLÜ AL", "CLAIM"), fontSize = 13.sp, fontWeight = FontWeight.Black) }
+                    else -> TextButton(onClick = onPlay, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) { Text(sh("OYNA", "PLAY"), color = MainUi.Blue, fontSize = 13.sp, fontWeight = FontWeight.Black) }
                 }
             }
         }
@@ -464,9 +511,9 @@ private fun MainLegacyGoalCard(
         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(if (SonHarfUiState.isEnglish) goal.titleEn else goal.titleTr, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
-                Text("+${goal.rewardDiamonds} SC", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text("+${goal.rewardDiamonds} SC", color = MainUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
             }
-            Text(if (SonHarfUiState.isEnglish) goal.descriptionEn else goal.descriptionTr, color = MainUi.Muted, fontSize = 9.sp)
+            Text(if (SonHarfUiState.isEnglish) goal.descriptionEn else goal.descriptionTr, color = MainUi.Muted, fontSize = 13.sp)
             LinearProgressIndicator(
                 progress = { (goal.progress.toFloat() / goal.target.coerceAtLeast(1)).coerceIn(0f, 1f) },
                 modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
@@ -474,11 +521,11 @@ private fun MainLegacyGoalCard(
                 trackColor = MainUi.SurfaceSoft,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("${goal.progress.coerceAtMost(goal.target)}/${goal.target}", color = MainUi.Muted, fontSize = 9.sp)
+                Text("${goal.progress.coerceAtMost(goal.target)}/${goal.target}", color = MainUi.Muted, fontSize = 13.sp)
                 when {
-                    goal.claimed -> Text(sh("ALINDI", "CLAIMED"), color = MainUi.Green, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    complete -> TextButton(onClick = onClaim, enabled = !busy) { Text(if (busy) "…" else sh("ÖDÜLÜ AL", "CLAIM"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                    else -> TextButton(onClick = onPlay) { Text(sh("OYNA", "PLAY"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                    goal.claimed -> Text(sh("ALINDI", "CLAIMED"), color = MainUi.Green, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    complete -> TextButton(onClick = onClaim, enabled = !busy) { Text(if (busy) "…" else sh("ÖDÜLÜ AL", "CLAIM"), fontSize = 13.sp, fontWeight = FontWeight.Black) }
+                    else -> TextButton(onClick = onPlay) { Text(sh("OYNA", "PLAY"), fontSize = 13.sp, fontWeight = FontWeight.Black) }
                 }
             }
         }

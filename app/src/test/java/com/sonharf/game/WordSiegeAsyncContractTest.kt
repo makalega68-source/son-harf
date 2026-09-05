@@ -18,7 +18,7 @@ class WordSiegeAsyncContractTest {
         assertTrue(ui.contains("SIRA SENDE"))
         assertTrue(ui.contains("RAKİPTE"))
         assertTrue(ui.contains("UYUYAN OYUNLAR"))
-        assertTrue(ui.contains("ProfilePhotoAvatarWithGender"))
+        assertTrue(ui.contains("ProfilePhotoAvatarRectWithGender"))
         assertTrue(ui.contains("SOHBET"))
         assertTrue(ui.contains("PES ET"))
         assertTrue(sql.contains("'2H'"))

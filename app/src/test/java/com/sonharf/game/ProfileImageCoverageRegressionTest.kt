@@ -19,9 +19,9 @@ class ProfileImageCoverageRegressionTest {
         assertTrue(runtime.contains("name.take(1).uppercase()"))
         assertTrue(duel.contains("playerAvatarPath"))
         assertTrue(duel.contains("opponentAvatarPath"))
-        assertTrue(duel.contains("ProfilePhotoAvatarWithGender"))
-        assertTrue(siege.contains("ProfilePhotoAvatarWithGender"))
-        assertTrue(siege.contains("avatarVisibility"))
+        assertTrue(duel.contains("ProfilePhotoAvatarRectWithGender"))
+        assertTrue(siege.contains("ProfilePhotoAvatarRectWithGender"))
+        assertTrue(siege.contains("PanSiegeResultProfile"))
         assertTrue(competition.contains("ProfilePhotoAvatar"))
     }
 

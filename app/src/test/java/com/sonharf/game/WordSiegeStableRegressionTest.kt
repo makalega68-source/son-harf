@@ -21,7 +21,7 @@ class WordSiegeStableRegressionTest {
         assertTrue(experience.contains("WordSiegeFinalRules.detectOrientation"))
         assertTrue(experience.contains("ProfileDto"))
         assertTrue(experience.contains("statusBarsPadding"))
-        assertTrue(pan.contains("ProfilePhotoAvatarWithGender"))
+        assertTrue(pan.contains("ProfilePhotoAvatarRectWithGender"))
         assertTrue(!pan.contains("Yön otomatik algılanır"))
         assertTrue(pan.contains("Torba ${'$'}{game.bag.length}"))
         assertTrue(practice.contains("showPass"))

@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -17,11 +18,11 @@ class BonusFlowReliabilityContractTest {
         assertTrue(screen.contains("backend.finishTriviaResult(q.id)"))
         assertTrue(screen.contains("backend.claimTriviaTimeout(expectedRound)"))
         assertTrue(screen.contains("backend.answerBilBakalimNumeric(q.id, estimate)"))
-        assertTrue(screen.contains("backend.triggerBilBakalimBonus(active.id)"))
+        assertFalse(screen.contains("backend.triggerBilBakalimBonus(active.id)"))
         assertTrue(secureBackend.contains("answer_bilbakalim_numeric_v4"))
         assertTrue(secureBackend.contains("trigger_bilbakalim_bonus_v2"))
         assertTrue(arena.contains("KeyboardType.Number"))
-        assertTrue(arena.contains("ASIL CEVAP"))
+        assertTrue(arena.contains("DOĞRU CEVAP"))
         assertTrue(arena.contains("round.resolvedAt == null"))
         assertTrue(arena.contains("triviaRound?.resultUntil"))
         assertTrue(arena.contains("triviaRound?.answerDeadline"))

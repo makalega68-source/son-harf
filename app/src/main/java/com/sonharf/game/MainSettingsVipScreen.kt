@@ -111,20 +111,20 @@ internal fun MainSettingsScreen(
                     FilterChip(
                         selected = language == "tr",
                         onClick = { language = "tr"; SonHarfPreferences.setLanguage(context, "tr") },
-                        label = { Text("🇹🇷 TÜRKÇE", fontWeight = FontWeight.Bold) },
+                        label = { Text("TR • TÜRKÇE", fontWeight = FontWeight.Bold) },
                         modifier = Modifier.weight(1f),
                     )
                     FilterChip(
                         selected = language == "en",
                         onClick = { language = "en"; SonHarfPreferences.setLanguage(context, "en") },
-                        label = { Text("🇬🇧 ENGLISH", fontWeight = FontWeight.Bold) },
+                        label = { Text("EN • ENGLISH", fontWeight = FontWeight.Bold) },
                         modifier = Modifier.weight(1f),
                     )
                 }
                 Text(
                     sh("Dil değişikliği açık ekranlarda hemen uygulanır.", "Language changes apply immediately to open screens."),
                     color = MainUi.Muted,
-                    fontSize = 9.sp,
+                    fontSize = 13.sp,
                 )
             }
         }
@@ -173,7 +173,7 @@ internal fun MainSettingsScreen(
                 Text(
                     sh("Gizli olduğunda fotoğraf yerine adının baş harfi görünür.", "When hidden, your initial appears instead of the photo."),
                     color = MainUi.Muted,
-                    fontSize = 9.sp,
+                    fontSize = 13.sp,
                 )
             }
         }
@@ -197,10 +197,10 @@ internal fun MainSettingsScreen(
         }
 
         item {
-            MainSettingsGroup(sh("HESAP", "ACCOUNT")) {
+            MainSettingsGroup(sh("HESAP İŞLEMLERİ", "ACCOUNT ACTIONS")) {
                 val email = runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.currentUserOrNull()?.email }.getOrNull().orEmpty()
                 if (email.isNotBlank()) {
-                    Text(email, color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(email, color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(3.dp))
                 }
                 MainSettingsLink(Icons.Rounded.ManageAccounts, sh("Hesap ve gizlilik", "Account & privacy"), sh("Engellenenler ve hesap silme", "Blocked users and account deletion"), onAccount)
@@ -212,7 +212,7 @@ internal fun MainSettingsScreen(
         notice?.let { message ->
             item {
                 Surface(shape = RoundedCornerShape(14.dp), color = MainUi.BlueSoft) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 }
             }
         }
@@ -222,7 +222,7 @@ internal fun MainSettingsScreen(
                 "Son Harf ${BuildConfig.VERSION_NAME} • Android",
                 Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 color = MainUi.Muted,
-                fontSize = 9.sp,
+                fontSize = 13.sp,
                 textAlign = TextAlign.Center,
             )
         }
@@ -329,39 +329,31 @@ internal fun MainVipScreen(
                     Text(
                         if (active) profile?.displayName.orEmpty() else sh("Google Play ile güvenli üyelik", "Secure membership through Google Play"),
                         color = Color.White.copy(alpha = .75f),
-                        fontSize = 10.sp,
+                        fontSize = 13.sp,
                     )
                 }
             }
         }
 
-        item { MainSectionTitle(sh("VIP AYRICALIKLARI", "VIP BENEFITS")) }
+        item { MainSectionTitle(sh("FREE – VIP KARŞILAŞTIRMASI", "FREE – VIP COMPARISON")) }
 
         item {
             Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                    MainVipBenefit(Icons.Rounded.Block, sh("Reklamsız deneyim", "Ad-free experience"), sh("Maç dışında da sade ve kesintisiz", "Clean and uninterrupted outside matches"))
-                    MainVipBenefit(Icons.Rounded.Verified, sh("VIP profil rozeti", "VIP profile badge"), sh("Profil ve sosyal alanlarda görünür", "Visible on profile and social surfaces"))
-                    MainVipBenefit(Icons.Rounded.Checkroom, sh("Özel Style içerikleri", "Exclusive Style content"), sh("Profil çerçevesi ve kişiselleştirme", "Profile frames and personalization"))
-                    MainVipBenefit(Icons.Rounded.History, sh("Kelime geçmişi", "Word history"), sh("Düelloda son kelimeleri gör", "See recent words during a duel"))
-                    MainVipBenefit(Icons.Rounded.Insights, sh("Gelişmiş istatistikler", "Advanced statistics"), sh("Performansını daha ayrıntılı incele", "Review performance in more detail"))
-                    MainVipBenefit(Icons.Rounded.Lock, sh("Özel oda oluşturma", "Create private rooms"), sh("Arkadaşlarınla kodlu oda aç", "Open coded rooms with friends"))
-                    MainVipBenefit(Icons.Rounded.Storefront, sh("VIP Style görünümü", "VIP Style view"), sh("Üyelere özel ürünleri keşfet", "Discover member-only items"))
-                }
+                VipComparisonTable()
             }
         }
 
         item {
             Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Green.copy(alpha = .08f), border = BorderStroke(1.dp, MainUi.Green.copy(alpha = .30f))) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(sh("REKABET ADALETİ", "COMPETITIVE FAIRNESS"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(sh("REKABET ADALETİ", "COMPETITIVE FAIRNESS"), color = MainUi.Green, fontSize = 13.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh(
                             "VIP; ekstra süre, ek puan, güçlü joker, rating koruması veya kazanma avantajı vermez.",
                             "VIP never grants extra time, points, stronger jokers, rating protection or a winning advantage.",
                         ),
                         color = MainUi.Text,
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                     )
                 }
@@ -402,7 +394,7 @@ internal fun MainVipScreen(
                 sh("Ödeme ve iptal Google Play hesabın üzerinden yönetilir.", "Payment and cancellation are managed through your Google Play account."),
                 Modifier.fillMaxWidth(),
                 color = MainUi.Muted,
-                fontSize = 9.sp,
+                fontSize = 13.sp,
                 textAlign = TextAlign.Center,
             )
         }
@@ -421,7 +413,7 @@ internal fun MainVipScreen(
 private fun MainSettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
     Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Text(title, color = MainUi.Blue, fontSize = 13.sp, fontWeight = FontWeight.Black)
             content()
         }
     }
@@ -443,7 +435,7 @@ private fun MainToggleSetting(
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = MainUi.Muted, fontSize = 8.5.sp)
+            Text(subtitle, color = MainUi.Muted, fontSize = 13.sp)
         }
         Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
     }
@@ -463,7 +455,7 @@ private fun MainSettingsLink(
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = MainUi.Muted, fontSize = 8.5.sp)
+            Text(subtitle, color = MainUi.Muted, fontSize = 13.sp)
         }
         Icon(Icons.Rounded.ChevronRight, null, tint = MainUi.Muted)
     }
@@ -478,8 +470,34 @@ private fun MainVipBenefit(icon: ImageVector, title: String, subtitle: String) {
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
-            Text(subtitle, color = MainUi.Muted, fontSize = 9.sp)
+            Text(subtitle, color = MainUi.Muted, fontSize = 13.sp)
         }
         Icon(Icons.Rounded.CheckCircle, null, tint = MainUi.Green, modifier = Modifier.size(18.dp))
+    }
+}
+
+@Composable
+private fun VipComparisonTable() {
+    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(sh("ÖZELLİK", "FEATURE"), color = MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+            Text("FREE", color = MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.width(58.dp))
+            Text("VIP", color = MainUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, modifier = Modifier.width(58.dp))
+        }
+        HorizontalDivider(color = MainUi.Border)
+        VipComparisonRow(sh("Temel oyun", "Core game"), true, true)
+        VipComparisonRow(sh("Reklamsız deneyim", "Ad-free experience"), false, true)
+        VipComparisonRow(sh("Özel Style", "Exclusive Style"), false, true)
+        VipComparisonRow(sh("Kelime geçmişi", "Word history"), false, true)
+        VipComparisonRow(sh("Özel oda", "Private room"), false, true)
+    }
+}
+
+@Composable
+private fun VipComparisonRow(label: String, free: Boolean, vip: Boolean) {
+    Row(Modifier.fillMaxWidth().heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        Icon(if (free) Icons.Rounded.CheckCircle else Icons.Rounded.RemoveCircleOutline, null, tint = if (free) MainUi.Green else MainUi.Muted, modifier = Modifier.width(58.dp))
+        Icon(if (vip) Icons.Rounded.CheckCircle else Icons.Rounded.RemoveCircleOutline, null, tint = if (vip) MainUi.Green else MainUi.Muted, modifier = Modifier.width(58.dp))
     }
 }

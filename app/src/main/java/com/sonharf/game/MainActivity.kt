@@ -23,17 +23,17 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
 import kotlinx.coroutines.withTimeoutOrNull
 
-internal val SonHarfBg: Color get() = Color(0xFFF5F8FC)
-internal val SonHarfSurface: Color get() = Color.White
-internal val SonHarfSurface2: Color get() = Color(0xFFEEF5FF)
-internal val SonHarfPurple = Color(0xFF6B4FD3)
-internal val SonHarfCyan = Color(0xFF1687F8)
-internal val SonHarfBlue = Color(0xFF1677FF)
-internal val SonHarfGold = Color(0xFFF6C453)
-internal val SonHarfGreen = Color(0xFF35C878)
-internal val SonHarfText: Color get() = Color(0xFF142033)
-internal val SonHarfMuted: Color get() = Color(0xFF6F7C8D)
-internal val SonHarfPink = Color(0xFFFF5F57)
+internal val SonHarfBg: Color get() = SonHarfTheme.Background
+internal val SonHarfSurface: Color get() = SonHarfTheme.Surface
+internal val SonHarfSurface2: Color get() = SonHarfTheme.SurfaceSecondary
+internal val SonHarfPurple: Color get() = SonHarfTheme.BrandPurple
+internal val SonHarfCyan: Color get() = SonHarfTheme.PrimaryBlue
+internal val SonHarfBlue: Color get() = SonHarfTheme.PrimaryBlue
+internal val SonHarfGold: Color get() = SonHarfTheme.BrandGold
+internal val SonHarfGreen: Color get() = SonHarfTheme.Success
+internal val SonHarfText: Color get() = SonHarfTheme.TextPrimary
+internal val SonHarfMuted: Color get() = SonHarfTheme.TextSecondary
+internal val SonHarfPink: Color get() = SonHarfTheme.Error
 
 private val SonHarfTypography = Typography(
     bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 25.sp),
@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
                 colorScheme = lightColorScheme(
                     primary = SonHarfBlue,
                     secondary = SonHarfCyan,
-                    tertiary = SonHarfGreen,
+                    tertiary = SonHarfPurple,
                     background = SonHarfBg,
                     surface = SonHarfSurface,
                     surfaceVariant = SonHarfSurface2,

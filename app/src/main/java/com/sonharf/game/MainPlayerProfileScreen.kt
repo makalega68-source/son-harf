@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,6 +40,9 @@ internal fun MainPlayerProfileScreen(
     var achievements by remember { mutableStateOf<List<AchievementProgressDto>>(emptyList()) }
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
+    var recordsExpanded by remember { mutableStateOf(false) }
+    var friendsExpanded by remember { mutableStateOf(false) }
+    var achievementsExpanded by remember { mutableStateOf(false) }
 
     suspend fun reload() = coroutineScope {
         loading = true
@@ -110,20 +114,21 @@ internal fun MainPlayerProfileScreen(
                 ) {
                     Box(contentAlignment = Alignment.BottomEnd) {
                         Box(contentAlignment = Alignment.Center) {
-                            ProfilePhotoAvatarWithGender(
+                            ProfilePhotoAvatarRectWithGender(
                                 avatarPath = p?.avatarPath,
                                 gender = p?.gender,
                                 name = p?.displayName ?: sh("Oyuncu", "Player"),
-                                size = 106.dp,
+                                width = 104.dp,
+                                height = 116.dp,
                                 accent = if (p?.isVip == true) MainUi.Gold else MainUi.Blue,
                             )
                             PurchasedProfileFrameOverlay(
                                 frameId = SonHarfCosmetics.profileFrameId,
-                                modifier = Modifier.size(126.dp),
+                                modifier = Modifier.width(124.dp).height(136.dp),
                             )
                         }
                         Surface(
-                            modifier = Modifier.size(37.dp).clickable(onClick = onEdit),
+                            modifier = Modifier.size(48.dp).clickable(onClick = onEdit),
                             shape = CircleShape,
                             color = MainUi.Blue,
                             border = BorderStroke(2.dp, Color.White),
@@ -147,18 +152,25 @@ internal fun MainPlayerProfileScreen(
                                 meta?.selectedTitle ?: g?.nextTitle ?: sh("ÇAYLAK", "ROOKIE"),
                                 Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                                 color = MainUi.Blue,
-                                fontSize = 9.sp,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                             )
                         }
                         if (p?.isVip == true) {
                             Surface(shape = RoundedCornerShape(9.dp), color = MainUi.Gold.copy(alpha = .14f)) {
-                                Text("VIP", Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                Text("VIP", Modifier.padding(horizontal = 9.dp, vertical = 5.dp), color = MainUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
                             }
                         }
                     }
-                    TextButton(onClick = onEdit) {
-                        Text(sh("PROFİLİ DÜZENLE", "EDIT PROFILE"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    Button(
+                        onClick = onEdit,
+                        modifier = Modifier.fillMaxWidth(.78f).height(50.dp),
+                        shape = RoundedCornerShape(15.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
+                    ) {
+                        Icon(Icons.Rounded.Edit, null)
+                        Spacer(Modifier.width(7.dp))
+                        Text(sh("PROFİLİ DÜZENLE", "EDIT PROFILE"), fontWeight = FontWeight.Black, fontSize = 14.sp)
                     }
                 }
             }
@@ -172,8 +184,8 @@ internal fun MainPlayerProfileScreen(
             ) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("${sh("SEVİYE", "LEVEL")} ${g?.level ?: 1}", color = MainUi.Blue, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                        Text("${g?.xp ?: 0} XP", color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("${sh("SEVİYE", "LEVEL")} ${g?.level ?: 1}", color = MainUi.Blue, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                        Text("${g?.xp ?: 0} XP", color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                     }
                     LinearProgressIndicator(
                         progress = { xpProgress },
@@ -184,7 +196,7 @@ internal fun MainPlayerProfileScreen(
                     Text(
                         "${g?.levelProgress ?: 0}/${g?.levelTarget ?: 500} ${sh("sonraki seviyeye", "to next level")}",
                         color = MainUi.Muted,
-                        fontSize = 9.sp,
+                        fontSize = 13.sp,
                     )
                 }
             }
@@ -223,30 +235,28 @@ internal fun MainPlayerProfileScreen(
             }
         }
 
-        records?.let { r ->
+        item {
+            ProfileDisclosureHeader(sh("KİŞİSEL REKORLAR", "PERSONAL RECORDS"), recordsExpanded) { recordsExpanded = !recordsExpanded }
+        }
+        if (recordsExpanded) records?.let { r ->
             item {
-                MainSectionTitle(sh("KİŞİSEL REKORLAR", "PERSONAL RECORDS"))
-                Spacer(Modifier.height(8.dp))
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = MainUi.Surface,
                     border = BorderStroke(1.dp, MainUi.Border),
                 ) {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        MainRecordLine("🔤", sh("En uzun kelime", "Longest word"), r.longestWord.ifBlank { "—" }.uppercase(), "${r.longestWordLength} ${sh("harf", "letters")}")
-                        MainRecordLine("⚡", sh("En iyi skor", "Best score"), r.bestClassicScore.toString(), sh("Son Harf düellosu", "Son Harf duel"))
-                        MainRecordLine("↗", sh("En büyük fark", "Biggest margin"), "+${r.biggestWinMargin}", sh("Galibiyet farkı", "Winning margin"))
+                        MainRecordLine(Icons.Rounded.Spellcheck, sh("En uzun kelime", "Longest word"), r.longestWord.ifBlank { "—" }.uppercase(), "${r.longestWordLength} ${sh("harf", "letters")}")
+                        MainRecordLine(Icons.Rounded.Bolt, sh("En iyi skor", "Best score"), r.bestClassicScore.toString(), sh("Son Harf düellosu", "Son Harf duel"))
+                        MainRecordLine(Icons.Rounded.TrendingUp, sh("En büyük fark", "Biggest margin"), "+${r.biggestWinMargin}", sh("Galibiyet farkı", "Winning margin"))
                     }
                 }
             }
         }
 
         item {
-            MainSectionTitle(
-                sh("ARKADAŞLAR", "FRIENDS"),
-                sh("TÜMÜNÜ GÖR", "VIEW ALL"),
-                onSocial,
-            )
+            ProfileDisclosureHeader(sh("ARKADAŞLAR", "FRIENDS"), friendsExpanded) { friendsExpanded = !friendsExpanded }
+            if (friendsExpanded) {
             Spacer(Modifier.height(8.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth().clickable(onClick = onSocial),
@@ -261,18 +271,20 @@ internal fun MainPlayerProfileScreen(
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text("${friends.size} ${sh("arkadaş", "friends")}", color = MainUi.Text, fontWeight = FontWeight.Black)
-                        Text("$onlineFriends ${sh("çevrimiçi", "online")}", color = if (onlineFriends > 0) MainUi.Green else MainUi.Muted, fontSize = 10.sp)
+                        Text("$onlineFriends ${sh("çevrimiçi", "online")}", color = if (onlineFriends > 0) MainUi.Green else MainUi.Muted, fontSize = 13.sp)
                     }
                     Icon(Icons.Rounded.ChevronRight, null, tint = MainUi.Muted)
                 }
             }
+            }
         }
 
         item {
-            MainSectionTitle(sh("BAŞARIMLAR", "ACHIEVEMENTS"))
+            ProfileDisclosureHeader(sh("BAŞARIMLAR", "ACHIEVEMENTS"), achievementsExpanded) { achievementsExpanded = !achievementsExpanded }
+            if (achievementsExpanded) {
             Spacer(Modifier.height(8.dp))
             if (achievements.isEmpty()) {
-                Text(sh("Başarım ilerlemesi henüz oluşmadı.", "Achievement progress is not available yet."), color = MainUi.Muted, fontSize = 10.sp)
+                Text(sh("Başarım ilerlemesi henüz oluşmadı.", "Achievement progress is not available yet."), color = MainUi.Muted, fontSize = 13.sp)
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
                     achievements.take(4).forEach { achievement ->
@@ -284,16 +296,16 @@ internal fun MainPlayerProfileScreen(
                         ) {
                             Column(Modifier.fillMaxWidth().padding(11.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text(achievement.icon, fontSize = 20.sp)
+                                    Icon(Icons.Rounded.EmojiEvents, null, tint = if (achievement.unlocked) MainUi.Gold else MainUi.Muted)
                                     Spacer(Modifier.width(8.dp))
                                     Text(
                                         if (SonHarfUiState.isEnglish) achievement.titleEn else achievement.titleTr,
                                         color = MainUi.Text,
-                                        fontSize = 11.sp,
+                                        fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold,
                                         modifier = Modifier.weight(1f),
                                     )
-                                    Text(if (achievement.unlocked) "✓" else "${achievement.currentValue}/${achievement.target}", color = if (achievement.unlocked) MainUi.Green else MainUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    Text(if (achievement.unlocked) "✓" else "${achievement.currentValue}/${achievement.target}", color = if (achievement.unlocked) MainUi.Green else MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                 }
                                 LinearProgressIndicator(
                                     progress = { progress },
@@ -306,13 +318,13 @@ internal fun MainPlayerProfileScreen(
                     }
                 }
             }
+            }
         }
 
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                OutlinedButton(
+            OutlinedButton(
                     onClick = onVip,
-                    modifier = Modifier.weight(1f),
+                    modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(15.dp),
                     border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f)),
                 ) {
@@ -320,17 +332,6 @@ internal fun MainPlayerProfileScreen(
                     Spacer(Modifier.width(5.dp))
                     Text("VIP", color = MainUi.Text, fontWeight = FontWeight.Black)
                 }
-                OutlinedButton(
-                    onClick = onSettings,
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(15.dp),
-                    border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .35f)),
-                ) {
-                    Icon(Icons.Rounded.Settings, null, tint = MainUi.Blue, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(5.dp))
-                    Text(sh("AYARLAR", "SETTINGS"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 10.sp)
-                }
-            }
         }
         item { Spacer(Modifier.height(5.dp)) }
     }
@@ -340,19 +341,36 @@ internal fun MainPlayerProfileScreen(
 private fun MainInlineStat(value: String, label: String, accent: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.widthIn(min = 72.dp)) {
         Text(value, color = accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
-        Text(label, color = MainUi.Muted, fontSize = 8.sp, textAlign = TextAlign.Center)
+        Text(label, color = MainUi.Muted, fontSize = 13.sp, textAlign = TextAlign.Center)
     }
 }
 
 @Composable
-private fun MainRecordLine(icon: String, label: String, value: String, detail: String) {
+private fun MainRecordLine(icon: ImageVector, label: String, value: String, detail: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(icon, fontSize = 22.sp)
+        Surface(shape = RoundedCornerShape(11.dp), color = MainUi.BlueSoft) {
+            Icon(icon, null, Modifier.padding(8.dp).size(20.dp), tint = MainUi.Blue)
+        }
         Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
-            Text(label, color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             Text(value, color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text(detail, color = MainUi.Muted, fontSize = 9.sp)
+        Text(detail, color = MainUi.Muted, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun ProfileDisclosureHeader(title: String, expanded: Boolean, onToggle: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(onClick = onToggle),
+        shape = RoundedCornerShape(15.dp),
+        color = MainUi.Surface,
+        border = BorderStroke(1.dp, MainUi.Border),
+    ) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+            Icon(if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, null, tint = MainUi.Blue)
+        }
     }
 }

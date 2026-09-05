@@ -4,7 +4,9 @@ import android.content.Intent
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Share
@@ -118,7 +120,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                 }
                 Column(Modifier.weight(1f)) {
                     Text(sh("KELİME AVI", "WORD HUNT"), color = CipherText, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Günün 5 harfli kelimesi", "Today's five-letter word"), color = CipherMuted, fontSize = 9.sp)
+                    Text(sh("Günün 5 harfli kelimesi", "Today's five-letter word"), color = CipherMuted, fontSize = 13.sp)
                 }
                 Text("1×", color = CipherGold, fontWeight = FontWeight.Black)
             }
@@ -206,7 +208,7 @@ fun DailyCipherScreen(onBack: () -> Unit) {
                     }
 
                     if (notice.isNotBlank()) {
-                        Text(notice, Modifier.fillMaxWidth(), color = CipherGold, textAlign = TextAlign.Center, fontSize = 10.sp)
+                        Text(notice, Modifier.fillMaxWidth(), color = CipherGold, textAlign = TextAlign.Center, fontSize = 13.sp)
                     }
                 }
             }
@@ -235,13 +237,18 @@ private fun CipherHowToCard(compact: Boolean) {
 @Composable
 private fun CipherLegend(letter: String, color: Color, label: String, compact: Boolean) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Surface(shape = RoundedCornerShape(8.dp), color = color) {
-            Box(Modifier.size(if (compact) 28.dp else 34.dp), contentAlignment = Alignment.Center) {
+        val stateShape = when (letter) {
+            "A" -> CircleShape
+            "R" -> CutCornerShape(9.dp)
+            else -> RoundedCornerShape(8.dp)
+        }
+        Surface(shape = stateShape, color = color, border = BorderStroke(1.dp, CipherText.copy(alpha = .16f))) {
+            Box(Modifier.size(if (compact) 34.dp else 40.dp), contentAlignment = Alignment.Center) {
                 Text(letter, color = CipherText, fontWeight = FontWeight.Black)
             }
         }
         Spacer(Modifier.height(if (compact) 2.dp else 4.dp))
-        Text(label, color = CipherMuted, fontSize = if (compact) 6.sp else 7.sp)
+        Text(label, color = CipherMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
     }
 }
 
@@ -257,13 +264,17 @@ private fun CipherGuessRow(word: String, feedback: String, compact: Boolean) {
                 else -> Color.Transparent
             }
             val cellModifier = if (compact) {
-                Modifier.weight(1f).height(38.dp)
+                Modifier.weight(1f).height(48.dp)
             } else {
                 Modifier.weight(1f).aspectRatio(1f)
             }
             Surface(
                 modifier = cellModifier,
-                shape = RoundedCornerShape(11.dp),
+                shape = when (marker) {
+                    'G' -> CircleShape
+                    'Y' -> CutCornerShape(12.dp)
+                    else -> RoundedCornerShape(11.dp)
+                },
                 color = color,
                 border = BorderStroke(1.dp, if (marker == null) CipherMuted.copy(alpha = .35f) else color),
             ) {

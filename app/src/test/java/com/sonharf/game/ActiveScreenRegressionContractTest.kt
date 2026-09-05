@@ -32,9 +32,9 @@ class ActiveScreenRegressionContractTest {
     @Test fun practiceViewportContract() {
         val viewport = src("WordSiegeBoardViewport.kt")
         val board = src("WordSiegePracticeBoard.kt")
-        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.86f"))
-        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_MIN_SCALE = 0.78f"))
-        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_MAX_SCALE = 1.24f"))
+        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.72f"))
+        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_MIN_SCALE = 0.62f"))
+        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_MAX_SCALE = 1.12f"))
         assertTrue(board.contains("detectTransformGestures"))
         assertTrue(board.contains("closeScale = WORD_SIEGE_PRACTICE_CLOSE_SCALE"))
         assertTrue(board.contains("clampWordSiegeBoardPan"))
@@ -64,11 +64,13 @@ class ActiveScreenRegressionContractTest {
         assertTrue(classic.contains("sh(\"SİL\", \"DELETE\")"))
         assertTrue(classic.contains("sh(\"TEMİZLE\", \"CLEAR\")"))
         assertTrue(classic.contains("sh(\"GÖNDER\", \"SEND\")"))
-        assertTrue(classic.contains("● SOHBET"))
-        assertTrue(classic.contains("★ BONUS"))
+        assertTrue(classic.contains("Icons.Rounded.Chat"))
+        assertTrue(classic.contains("Icons.Rounded.AutoAwesome"))
         assertTrue(classic.contains("Icons.Rounded.MoreVert"))
         assertTrue(classic.contains("DropdownMenu("))
         assertFalse(classic.contains("BasicTextField"))
+        assertFalse(classic.contains("Kelimenizi yazın"))
+        assertFalse(classic.contains("KELİMENİ YAZ"))
     }
 
     @Test fun typographyContractTargetsArePresent() {
@@ -76,7 +78,7 @@ class ActiveScreenRegressionContractTest {
         val practice = src("WordSiegePracticeScreen.kt")
         assertTrue(classic.contains("fontSize = 15.sp"))
         assertTrue(classic.contains("fontSize = 12.sp"))
-        assertTrue(classic.contains("fontSize = if (value.isBlank()) 16.sp else 20.sp"))
+        assertTrue(classic.contains("fontSize = 20.sp"))
         assertTrue(practice.contains("size = 50.dp"))
         assertTrue(practice.contains("fontSize = 30.sp"))
         assertTrue(practice.contains("fontSize = 15.sp"))

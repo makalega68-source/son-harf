@@ -9,6 +9,8 @@ import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -21,8 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Flag
-import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -44,10 +45,10 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sonharf.game.data.*
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 import kotlin.math.ceil
 
 private val LBg = Color(0xFFF4F7FB)
-private val LCard = Color.White
 private val LCard2 = Color(0xFFF0F4F8)
 private val LText = Color(0xFF182235)
 private val LMuted = Color(0xFF718096)
@@ -84,7 +85,11 @@ internal fun LightDuelLobby(
     onInvite: (String) -> Unit,
     onInviteResponse: (String, Boolean) -> Unit,
 ) {
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, LBg))).statusBarsPadding()) {
+    val lobbyBg = Color(0xFF060817)
+    val lobbyCard = Color(0xFF10162D)
+    val lobbyText = Color(0xFFF7F8FF)
+    val lobbyMuted = Color(0xFFAAB5CE)
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(lobbyBg, Color(0xFF11102B), lobbyBg))).statusBarsPadding()) {
         LazyColumn(
             Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
@@ -92,36 +97,46 @@ internal fun LightDuelLobby(
         ) {
             item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    ProfilePhotoAvatarWithGender(playerAvatarPath, playerGender, playerName, 48.dp, LBlue)
+                    ProfilePhotoAvatarRectWithGender(playerAvatarPath, playerGender, playerName, 48.dp, 60.dp, Color(0xFF5B9DFF))
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(playerName, color = LText, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Düelloya hazırsın", "Ready to duel"), color = LMuted, fontSize = 10.sp)
+                        Text(playerName, color = lobbyText, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                        Text(sh("Düelloya hazırsın", "Ready to duel"), color = lobbyMuted, fontSize = 13.sp)
                     }
-                    Surface(shape = RoundedCornerShape(18.dp), color = LBlueSoft) {
-                        Text(sh("DÜELLO", "DUEL"), Modifier.padding(horizontal = 14.dp, vertical = 9.dp), color = LBlue, fontWeight = FontWeight.Black)
+                    Surface(shape = RoundedCornerShape(18.dp), color = LPurple.copy(alpha = .25f), border = BorderStroke(1.dp, LGold.copy(alpha = .45f))) {
+                        Row(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.SportsEsports, null, Modifier.size(19.dp), tint = LGold)
+                            Spacer(Modifier.width(6.dp))
+                            Text(sh("DÜELLO", "DUEL"), color = lobbyText, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
             }
             item {
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = LCard),
+                    colors = CardDefaults.cardColors(containerColor = lobbyCard),
                     shape = RoundedCornerShape(28.dp),
-                    border = BorderStroke(1.dp, LBorder),
+                    border = BorderStroke(1.dp, LPurple.copy(alpha = .55f)),
                 ) {
                     Column(
-                        Modifier.fillMaxWidth().height(280.dp).padding(20.dp),
+                        Modifier.fillMaxWidth().height(300.dp).padding(20.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        if (matching) CircularProgressIndicator(color = LBlue, strokeWidth = 3.dp)
-                        Spacer(Modifier.height(12.dp))
-                        Text(if (matching) sh("RAKİP ARANIYOR", "SEARCHING OPPONENT") else "SON HARF", color = LBlue, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                            DuelSearchProfile(playerName, playerAvatarPath, playerGender, Color(0xFF5B9DFF), false)
+                            Surface(shape = CircleShape, color = LGold) {
+                                Text("VS", Modifier.padding(13.dp), color = Color(0xFF271700), fontSize = 18.sp, fontWeight = FontWeight.Black)
+                            }
+                            DuelSearchProfile(sh("RAKİP", "RIVAL"), null, null, LRed, matching)
+                        }
+                        Spacer(Modifier.height(18.dp))
+                        Text(if (matching) sh("RAKİP ARANIYOR", "SEARCHING OPPONENT") else "SON HARF", color = if (matching) LGold else lobbyText, fontSize = 29.sp, fontWeight = FontWeight.Black)
                         Text(
                             if (matching) sh("Önce gerçek oyuncu • 15 sn sonra uygun BOT", "Real player first • suitable BOT after 15 sec")
                             else sh("Kelimeyi Sürdür, Rakibini Geç", "Continue the word, beat your rival"),
-                            color = LMuted,
-                            fontSize = 11.sp,
+                            color = lobbyMuted,
+                            fontSize = 13.sp,
                             textAlign = TextAlign.Center,
                         )
                     }
@@ -129,8 +144,8 @@ internal fun LightDuelLobby(
             }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LobbyPill(language == "tr", "🇹🇷 TÜRKÇE", Modifier.weight(1f)) { onLanguage("tr") }
-                    LobbyPill(language == "en", "🇬🇧 ENGLISH", Modifier.weight(1f)) { onLanguage("en") }
+                    LobbyPill(language == "tr", "TR • TÜRKÇE", Modifier.weight(1f)) { onLanguage("tr") }
+                    LobbyPill(language == "en", "EN • ENGLISH", Modifier.weight(1f)) { onLanguage("en") }
                 }
             }
             item {
@@ -151,8 +166,8 @@ internal fun LightDuelLobby(
             }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    LobbyAction("👥", sh("ARKADAŞ", "FRIENDS"), Modifier.weight(1f), onFriends)
-                    LobbyAction("♛", sh("ÖZEL ODA", "PRIVATE ROOM"), Modifier.weight(1f), onPrivate)
+                    LobbyAction(Icons.Rounded.Groups, sh("ARKADAŞ", "FRIENDS"), Modifier.weight(1f), onFriends)
+                    LobbyAction(Icons.Rounded.MeetingRoom, sh("ÖZEL ODA", "PRIVATE ROOM"), Modifier.weight(1f), onPrivate)
                 }
             }
             item { NoticeCard(notice) }
@@ -191,7 +206,7 @@ internal fun LightDuelLobby(
                                     Text(
                                         if (p.presenceStatus == "online") sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"),
                                         color = LMuted,
-                                        fontSize = 9.sp,
+                                        fontSize = 12.sp,
                                     )
                                 }
                                 Button(onClick = { onInvite(p.id) }, enabled = p.presenceStatus == "online") { Text(sh("Davet", "Invite")) }
@@ -222,7 +237,6 @@ internal fun LightDuelArena(
     feedbackCorrect: Boolean?,
     wordInput: String,
     onWordInput: (String) -> Unit,
-    notice: String,
     busy: Boolean,
     triviaRound: TriviaRoundDto?,
     triviaQuestion: TriviaQuestionDto?,
@@ -231,7 +245,6 @@ internal fun LightDuelArena(
     voiceUses: Int,
     onSubmit: () -> Unit,
     onTimeout: () -> Unit,
-    onBonus: () -> Unit,
     onVoice: () -> Unit,
     onTrivia: (Long) -> Unit,
     onTriviaTimeout: () -> Unit,
@@ -272,7 +285,12 @@ internal fun LightDuelArena(
             room = room,
             me = me,
             playerName = playerName,
+            playerAvatarPath = playerAvatarPath,
+            playerGender = playerGender,
             opponentName = opponentName,
+            opponentAvatarPath = opponentAvatarPath,
+            opponentGender = opponentGender,
+            opponentRating = opponentRating,
             startingRating = playerRating,
             myRounds = myRounds,
             oppRounds = oppRounds,
@@ -455,8 +473,13 @@ internal fun LightDuelArena(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Text(seconds.toString(), color = LText, fontSize = 31.sp, fontWeight = FontWeight.Black)
-                        Text(if (quizActive) "BONUS" else sh("SN", "SEC"), color = timerColor, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        Text(
+                            if (timerSynchronizing && !quizActive) "—" else seconds.toString(),
+                            color = LText,
+                            fontSize = 31.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Text(if (quizActive) "BONUS" else sh("SN", "SEC"), color = timerColor, fontSize = 12.sp, fontWeight = FontWeight.Black)
                     }
                 }
                 Box(Modifier.weight(1f)) {
@@ -467,7 +490,7 @@ internal fun LightDuelArena(
           Box(Modifier.align(Alignment.TopEnd)) {
               IconButton(
                   onClick = { showMoreMenu = true },
-                  modifier = Modifier.size(38.dp),
+                  modifier = Modifier.size(48.dp),
               ) {
                   Icon(Icons.Rounded.MoreVert, sh("Diğer seçenekler", "More options"), tint = LText)
               }
@@ -499,25 +522,31 @@ internal fun LightDuelArena(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        when {
-                            quizActive -> sh("BONUS DÜELLOSU", "BONUS DUEL")
-                            timerSynchronizing && !quizActive -> sh("Senkronize ediliyor…", "Synchronizing…")
-                            myTurn -> sh("● SIRA SENDE", "● YOUR TURN")
-                            room.isBot && room.botTurn -> sh("● BOT DÜŞÜNÜYOR", "● BOT THINKING")
-                            else -> sh("● RAKİBİN SIRASI", "● OPPONENT TURN")
-                        },
-                        color = if (myTurn) LBlue else if (quizActive) LPurple else LRed,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (timerSynchronizing && !quizActive) {
+                            CircularProgressIndicator(Modifier.size(16.dp), color = LBlue, strokeWidth = 2.dp)
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text(
+                            when {
+                                quizActive -> sh("BONUS DÜELLOSU", "BONUS DUEL")
+                                timerSynchronizing && !quizActive -> sh("Senkronize ediliyor…", "Synchronizing…")
+                                myTurn -> sh("● SIRA SENDE", "● YOUR TURN")
+                                room.isBot && room.botTurn -> sh("● BOT DÜŞÜNÜYOR", "● BOT THINKING")
+                                else -> sh("● RAKİBİN SIRASI", "● OPPONENT TURN")
+                            },
+                            color = if (myTurn || timerSynchronizing) LBlue else if (quizActive) LPurple else LRed,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
                     Text(
                         ClassicCompetitionRules.scoreDifferenceText(myScore, oppScore, room.language),
                         color = if (myScore >= oppScore) LBlue else LRed,
-                        fontSize = 11.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                     )
-                    if (critical) Text(sh("KRİTİK", "CRITICAL"), color = LOrange, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    if (critical) Text(sh("KRİTİK", "CRITICAL"), color = LOrange, fontSize = 12.sp, fontWeight = FontWeight.Black)
                 }
             }
 
@@ -533,18 +562,48 @@ internal fun LightDuelArena(
                 ) {
                     val lastDisplay = gameUppercase(lastWord, room.language)
                     Surface(shape = RoundedCornerShape(13.dp), color = Color(0xFFF7F9FC)) {
-                        Text(
-                            if (lastDisplay.isBlank()) sh("İlk kelimeyi sen başlat", "You start the first word")
-                            else sh("SON KABUL EDİLEN KELİME: $lastDisplay", "LAST ACCEPTED WORD: $lastDisplay"),
-                            Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                            color = LMuted,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        Column(
+                            Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 7.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            if (lastDisplay.isBlank()) {
+                                Text(sh("İlk kelimeyi sen başlat", "You start the first word"), color = LText, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                            } else {
+                                Text(sh("SON KABUL EDİLEN KELİME", "LAST ACCEPTED WORD"), color = LMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(lastDisplay, color = LText, fontSize = 18.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
                     }
-                    Spacer(Modifier.weight(.12f))
-                    Text(sh("SIRADAKİ ZORUNLU HARF", "NEXT REQUIRED LETTER"), color = LBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    Text("↓", color = LGold, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    AnimatedVisibility(
+                        visible = actionOverlay != null,
+                        enter = fadeIn(tween(170)) + scaleIn(initialScale = .88f, animationSpec = tween(240, easing = FastOutSlowInEasing)),
+                        exit = fadeOut(tween(180)) + scaleOut(targetScale = 1.04f, animationSpec = tween(180)),
+                    ) {
+                        val comboMoment = actionOverlay.orEmpty().contains("SERİ") || actionOverlay.orEmpty().contains("STREAK")
+                        Row(
+                            Modifier.fillMaxWidth().padding(top = 8.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                if (actionThreat) Icons.Rounded.TrendingDown else Icons.Rounded.AutoAwesome,
+                                null,
+                                Modifier.size(22.dp),
+                                tint = if (actionThreat) LRed else if (comboMoment) LGreen else LGold,
+                            )
+                            Spacer(Modifier.width(7.dp))
+                            Text(
+                                actionOverlay.orEmpty(),
+                                color = if (actionThreat) LRed else if (comboMoment) LGreen else LBlue,
+                                fontSize = if (comboMoment) 18.sp else 16.sp,
+                                lineHeight = 20.sp,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(9.dp))
+                    Text(sh("SIRADAKİ ZORUNLU HARF", "NEXT REQUIRED LETTER"), color = LBlue, fontSize = 13.sp, fontWeight = FontWeight.Black)
                     Text(
                         required,
                         modifier = Modifier.graphicsLayer {
@@ -552,17 +611,17 @@ internal fun LightDuelArena(
                             scaleY = letterPulse.value
                         },
                         color = LText,
-                        fontSize = 78.sp,
-                        lineHeight = 80.sp,
+                        fontSize = 60.sp,
+                        lineHeight = 62.sp,
                         fontWeight = FontWeight.Black,
                     )
                     Text(
                         if (required == "•") sh("SERBEST BAŞLANGIÇ", "FREE START") else sh("“$required” İLE BAŞLA", "START WITH “$required”"),
                         color = LBlue,
-                        fontSize = 13.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Black,
                     )
-                    Spacer(Modifier.weight(.12f))
+                    Spacer(Modifier.height(9.dp))
                     if (words.isNotEmpty()) {
                         LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             items(words.takeLast(5), key = { it.id }) { word ->
@@ -571,7 +630,7 @@ internal fun LightDuelArena(
                                         gameUppercase(word.word.trim().ifBlank { word.normalizedWord.trim() }, room.language),
                                         Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
                                         color = LMuted,
-                                        fontSize = 9.sp,
+                                        fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                     )
                                 }
@@ -582,25 +641,21 @@ internal fun LightDuelArena(
             }
 
             Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                SmallAction(sh("⚑ PES ET", "⚑ FORFEIT"), LRed, Modifier.weight(1f), onForfeit)
-                SmallAction(sh("● SOHBET", "● CHAT"), LBlue, Modifier.weight(1f), onChat)
-                SmallAction("★ BONUS", LGold, Modifier.weight(1f), onBonus)
+                SmallAction(Icons.Rounded.Flag, sh("PES ET", "FORFEIT"), LRed, Modifier.weight(1f), onForfeit)
+                SmallAction(Icons.Rounded.Chat, sh("SOHBET", "CHAT"), LBlue, Modifier.weight(1f), onChat)
             }
 
             CompetitiveInputBar(
                 value = wordInput,
-                required = required,
                 inputMatches = inputMatches,
                 feedbackWord = feedbackWord,
                 feedbackCorrect = feedbackCorrect,
-                notice = notice,
                 myTurn = myTurn,
                 busy = busy,
                 quiz = quizActive,
                 voiceSupported = voiceSupported,
                 voiceUses = voiceUses,
                 onVoice = onVoice,
-                onSubmit = onSubmit,
                 modifier = Modifier.padding(horizontal = 10.dp),
             )
 
@@ -613,28 +668,6 @@ internal fun LightDuelArena(
                 onSubmit = onSubmit,
                 modifier = Modifier.navigationBarsPadding(),
             )
-        }
-
-        AnimatedVisibility(
-            visible = actionOverlay != null,
-            modifier = Modifier.align(Alignment.Center),
-            enter = fadeIn(tween(120)),
-            exit = fadeOut(tween(180)),
-        ) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = if (actionThreat) Color(0xFFFDE8ED) else Color(0xFFE7F2FF),
-                border = BorderStroke(2.dp, if (actionThreat) LRed.copy(alpha = .55f) else LBlue.copy(alpha = .55f)),
-                shadowElevation = 10.dp,
-            ) {
-                Text(
-                    actionOverlay.orEmpty(),
-                    Modifier.padding(horizontal = 24.dp, vertical = 15.dp),
-                    color = if (actionThreat) LRed else LBlue,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Black,
-                )
-            }
         }
 
         if (quizActive) {
@@ -666,20 +699,22 @@ private fun CompetitivePlayerCard(
 ) {
     val league = ratingLeagueProgress(rating).leagueName
     Card(
-        modifier = modifier.heightIn(min = 112.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        modifier = modifier.height(94.dp),
+        colors = CardDefaults.cardColors(containerColor = if (active) accent.copy(alpha = .07f) else Color.White),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(if (active) 3.dp else 1.dp, if (active) accent else LBorder),
     ) {
-        Row(Modifier.fillMaxSize().padding(7.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (bot) SyntheticBotPortrait(name, gender ?: botGenderForName(name), 52.dp, 70.dp, accent)
-            else ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 52.dp, 70.dp, accent)
-            Spacer(Modifier.width(6.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                Text(name, color = LText, fontSize = 15.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(score.toString(), color = accent, fontSize = duelScoreFontSize(score).sp, lineHeight = 29.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                Text("$league • $rating", color = LMuted, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(Modifier.fillMaxWidth().weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                if (bot) SyntheticBotPortrait(name, gender ?: botGenderForName(name), 42.dp, 52.dp, accent)
+                else ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 42.dp, 52.dp, accent)
+                Spacer(Modifier.width(6.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                    Text(name, color = LText, fontSize = 14.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(score.toString(), color = accent, fontSize = duelScoreFontSize(score).sp, lineHeight = 29.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                }
             }
+            Text("$league • $rating", color = LMuted, fontSize = 12.sp, lineHeight = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
 }
@@ -687,68 +722,76 @@ private fun CompetitivePlayerCard(
 @Composable
 private fun CompetitiveInputBar(
     value: String,
-    required: String,
     inputMatches: Boolean?,
     feedbackWord: String?,
     feedbackCorrect: Boolean?,
-    notice: String,
     myTurn: Boolean,
     busy: Boolean,
     quiz: Boolean,
     voiceSupported: Boolean,
     voiceUses: Int,
     onVoice: () -> Unit,
-    onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val statusText = when {
-        feedbackWord != null && feedbackCorrect == true -> sh("✓ GEÇERLİ", "✓ VALID")
-        value.isBlank() -> if (myTurn) sh("KELİMENİ YAZ", "TYPE YOUR WORD") else sh("KELİMEYİ HAZIRLA", "PREPARE YOUR WORD")
-        inputMatches == false -> sh("✕ “$required” İLE BAŞLAMALI", "✕ MUST START WITH “$required”")
-        feedbackCorrect == false -> "✕ ${notice.take(42)}"
-        else -> sh("✓ BAŞLANGIÇ GEÇERLİ", "✓ VALID START")
-    }
+    val feedbackVisible = feedbackWord != null && feedbackCorrect != null && value.isBlank()
+    val displayedValue = if (feedbackVisible) feedbackWord.orEmpty() else value
     val statusColor = when {
-        feedbackWord != null && feedbackCorrect == true -> LGreen
-        inputMatches == false || feedbackCorrect == false -> LRed
-        value.isNotBlank() -> LGreen
+        feedbackVisible && feedbackCorrect == true -> LGreen
+        feedbackVisible && feedbackCorrect == false -> LRed
+        inputMatches == false -> LRed
+        myTurn && !quiz -> LGold
         else -> LMuted
+    }
+    val borderColor = when {
+        feedbackVisible -> statusColor
+        inputMatches == false -> LRed
+        myTurn && !quiz -> LGold
+        else -> LBorder
     }
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        color = Color.White,
-        border = BorderStroke(2.dp, if (myTurn && !quiz) statusColor.copy(alpha = .65f) else LBorder),
+        color = if (myTurn && !quiz) Color(0xFFFFF8DD) else Color.White,
+        border = BorderStroke(if (myTurn && !quiz) 3.dp else 2.dp, borderColor),
+        shadowElevation = if (myTurn && !quiz) 8.dp else 0.dp,
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(
                     onClick = onVoice,
                     enabled = myTurn && !busy && !quiz && voiceSupported && voiceUses < 5,
-                    modifier = Modifier.height(38.dp),
+                    modifier = Modifier.height(48.dp),
                     contentPadding = PaddingValues(horizontal = 7.dp),
                 ) {
-                    Text("🎙 ${5 - voiceUses}", fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Icon(Icons.Rounded.Mic, null, Modifier.size(19.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("${5 - voiceUses}", fontSize = 12.sp, fontWeight = FontWeight.Black)
                 }
                 Spacer(Modifier.width(7.dp))
                 Text(
-                    value.ifBlank { sh("Kelimenizi yazın…", "Type your word…") },
-                    color = if (value.isBlank()) LMuted else LText,
-                    fontSize = if (value.isBlank()) 16.sp else 20.sp,
-                    fontWeight = if (value.isBlank()) FontWeight.Medium else FontWeight.Black,
+                    displayedValue,
+                    color = if (feedbackVisible) statusColor else LText,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                 )
-                Button(
-                    onClick = onSubmit,
-                    enabled = myTurn && value.isNotBlank() && inputMatches != false && !busy && !quiz,
-                    modifier = Modifier.height(40.dp),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text("➤", fontSize = 17.sp)
+                if (feedbackVisible) {
+                    Icon(
+                        if (feedbackCorrect == true) Icons.Rounded.CheckCircle else Icons.Rounded.Cancel,
+                        if (feedbackCorrect == true) sh("Doğru", "Correct") else sh("Yanlış", "Wrong"),
+                        Modifier.size(26.dp),
+                        tint = statusColor,
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        if (feedbackCorrect == true) sh("DOĞRU", "CORRECT") else sh("YANLIŞ", "WRONG"),
+                        color = statusColor,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                } else if (myTurn && !quiz) {
+                    Icon(Icons.Rounded.Bolt, sh("Sıra sende", "Your turn"), Modifier.size(24.dp), tint = LGold)
                 }
-            }
-            Text(statusText, color = statusColor, fontSize = 14.sp, lineHeight = 16.sp, fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
         }
     }
 }
@@ -815,7 +858,7 @@ private fun GameKeyboard(
 private fun KeyButton(label: String, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val source = remember { MutableInteractionSource() }
     Surface(
-        modifier = modifier.height(40.dp).clickable(enabled = enabled, interactionSource = source, indication = null, onClick = onClick),
+        modifier = modifier.height(48.dp).clickable(enabled = enabled, interactionSource = source, indication = null, onClick = onClick),
         shape = RoundedCornerShape(9.dp),
         color = Color.White,
         shadowElevation = 1.dp,
@@ -836,7 +879,12 @@ private fun CompetitiveResult(
     room: GameRoomDto,
     me: String?,
     playerName: String,
+    playerAvatarPath: String?,
+    playerGender: String?,
     opponentName: String,
+    opponentAvatarPath: String?,
+    opponentGender: String?,
+    opponentRating: Int,
     startingRating: Int,
     myRounds: Int,
     oppRounds: Int,
@@ -877,11 +925,18 @@ private fun CompetitiveResult(
                     fontSize = 29.sp,
                     fontWeight = FontWeight.Black,
                 )
-                Text("$playerName  $myRounds : $oppRounds  $opponentName", color = LText, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    DuelResultProfile(playerName, playerAvatarPath, playerGender, startingRating, LBlue, Modifier.weight(1f))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("$myRounds : $oppRounds", color = LText, fontSize = 27.sp, fontWeight = FontWeight.Black)
+                        Text("VS", color = LGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    }
+                    DuelResultProfile(opponentName, opponentAvatarPath, opponentGender, opponentRating, LRed, Modifier.weight(1f))
+                }
                 if (delta != null) {
                     Text("Rating ${if (delta >= 0) "+" else ""}$delta", color = if (delta >= 0) LGreen else LRed, fontSize = 21.sp, fontWeight = FontWeight.Black)
                 } else {
-                    Text(sh("Rating sonucu sunucudan doğrulanıyor…", "Confirming rating from server…"), color = LMuted, fontSize = 9.sp)
+                    Text(sh("Rating sonucu sunucudan doğrulanıyor…", "Confirming rating from server…"), color = LMuted, fontSize = 12.sp)
                 }
                 if (progress != null) {
                     Text("${progress.leagueName} • $confirmedRating", color = LGold, fontWeight = FontWeight.Black)
@@ -889,7 +944,7 @@ private fun CompetitiveResult(
                         Text(
                             sh("${progress.nextLeagueName} ligine ${progress.pointsToNext} puan", "${progress.pointsToNext} points to ${progress.nextLeagueName}"),
                             color = LMuted,
-                            fontSize = 10.sp,
+                            fontSize = 12.sp,
                         )
                     }
                 }
@@ -904,7 +959,7 @@ private fun CompetitiveResult(
                                 Text(
                                     gameUppercase(w.word.trim().ifBlank { w.normalizedWord.trim() }, language),
                                     Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                    fontSize = 8.sp,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                 )
                             }
@@ -917,7 +972,9 @@ private fun CompetitiveResult(
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = LBlue),
                 ) {
-                    Text(sh("RÖVANŞ ⚡", "REMATCH ⚡"), fontSize = 17.sp, fontWeight = FontWeight.Black)
+                    Icon(Icons.Rounded.Bolt, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(sh("RÖVANŞ", "REMATCH"), fontSize = 17.sp, fontWeight = FontWeight.Black)
                 }
                 OutlinedButton(onClick = onExit, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(16.dp)) {
                     Text(sh("BİR MAÇ DAHA", "ONE MORE MATCH"), color = LText, fontWeight = FontWeight.Black)
@@ -931,7 +988,7 @@ private fun CompetitiveResult(
 private fun ResultMetric(label: String, value: String, modifier: Modifier) {
     Surface(modifier.height(60.dp), shape = RoundedCornerShape(14.dp), color = LCard2) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-            Text(label, color = LMuted, fontSize = 8.sp)
+            Text(label, color = LMuted, fontSize = 12.sp)
             Text(value, color = LText, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -951,13 +1008,28 @@ private fun BonusDialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false),
     ) {
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .42f)).padding(18.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().background(Color(0xFF0B0718).copy(alpha = .72f)).padding(18.dp), contentAlignment = Alignment.Center) {
             var value by remember(round.id) { mutableStateOf("") }
             val parsed = value.toLongOrNull()
-            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text("★ BİL BAKALIM +${round.bonusPoints}", color = LGold, fontWeight = FontWeight.Black)
-                    Text(question.question, color = LText, fontWeight = FontWeight.Bold)
+            Card(
+                modifier = Modifier.fillMaxWidth().heightIn(min = 390.dp),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFF21163F)),
+                shape = RoundedCornerShape(28.dp),
+                border = BorderStroke(1.dp, LPurple.copy(alpha = .7f)),
+            ) {
+                Column(
+                    Modifier.fillMaxWidth().padding(horizontal = 22.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Surface(shape = RoundedCornerShape(50), color = LGold.copy(alpha = .14f)) {
+                        Row(Modifier.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.AutoAwesome, null, Modifier.size(20.dp), tint = LGold)
+                            Spacer(Modifier.width(7.dp))
+                            Text("BİL BAKALIM  +${round.bonusPoints}", color = LGold, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                    Text(question.question, color = Color.White, fontSize = 20.sp, lineHeight = 27.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     if (round.resolvedAt == null && myAnswer == null) {
                         OutlinedTextField(
                             value = value,
@@ -965,24 +1037,69 @@ private fun BonusDialog(
                             modifier = Modifier.fillMaxWidth(),
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             singleLine = true,
+                            textStyle = LocalTextStyle.current.copy(color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center),
+                            placeholder = { Text(sh("Tahminini yaz", "Enter your estimate"), color = Color.White.copy(alpha = .5f), modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center) },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = LGold,
+                                unfocusedBorderColor = LPurple,
+                                cursorColor = LGold,
+                            ),
                         )
-                        Button(onClick = { parsed?.let(onTrivia) }, enabled = parsed != null, modifier = Modifier.fillMaxWidth()) {
-                            Text(sh("CEVABI KİLİTLE", "LOCK ANSWER"))
+                        Button(
+                            onClick = { parsed?.let(onTrivia) },
+                            enabled = parsed != null,
+                            modifier = Modifier.fillMaxWidth().height(56.dp),
+                            shape = RoundedCornerShape(17.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = LPurple, contentColor = Color.White),
+                        ) {
+                            Text(sh("TAHMİNİ KİLİTLE", "LOCK ESTIMATE"), fontSize = 16.sp, fontWeight = FontWeight.Black)
                         }
                     } else if (round.resolvedAt == null) {
-                        Text(sh("Cevabın alındı.", "Answer received."), color = LBlue)
+                        CircularProgressIndicator(color = LGold)
+                        Text(sh("Tahminin alındı • Rakip bekleniyor", "Estimate received • Waiting for opponent"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                     } else {
-                        Text(sh("ASIL CEVAP ${round.correctAnswer ?: "—"}", "ACTUAL ANSWER ${round.correctAnswer ?: "—"}"), color = LText, fontWeight = FontWeight.Black)
+                        val correct = round.correctAnswer
+                        val estimates = listOfNotNull(
+                            myAnswer?.let { Triple(sh("SEN", "YOU"), it, correct?.let { answer -> abs(it - answer) }) },
+                            opponentAnswer?.let { Triple(sh("RAKİP", "OPPONENT"), it, correct?.let { answer -> abs(it - answer) }) },
+                        ).sortedByDescending { it.second }
+                        val bestDistance = estimates.mapNotNull { it.third }.minOrNull()
+                        estimates.filter { correct == null || it.second >= correct }.forEach { (label, estimate, distance) ->
+                            QuizEstimateResult(label, estimate, distance != null && distance == bestDistance, tied)
+                        }
+                        Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = LGold.copy(alpha = .13f), border = BorderStroke(1.dp, LGold.copy(alpha = .55f))) {
+                            Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text(sh("DOĞRU CEVAP", "CORRECT ANSWER"), color = LGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                                Text(correct?.toString() ?: "—", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                        estimates.filter { correct != null && it.second < correct }.forEach { (label, estimate, distance) ->
+                            QuizEstimateResult(label, estimate, distance != null && distance == bestDistance, tied)
+                        }
                         Text(
-                            if (tied) sh("BERABERE", "TIE")
-                            else if (myWon) sh("DOĞRU • $myAnswer", "CORRECT • $myAnswer")
-                            else sh("RAKİP DAHA YAKIN • $opponentAnswer", "OPPONENT CLOSER • $opponentAnswer"),
-                            color = if (myWon) LGreen else LRed,
-                            fontWeight = FontWeight.Bold,
+                            if (tied) sh("AYNI YAKINLIK • BERABERE", "EQUALLY CLOSE • TIE") else if (myWon) sh("EN YAKIN TAHMİN SENİN", "YOU HAD THE CLOSEST ESTIMATE") else sh("RAKİP DAHA YAKINDI", "OPPONENT WAS CLOSER"),
+                            color = if (tied) LGold else if (myWon) LGreen else LRed,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            textAlign = TextAlign.Center,
                         )
                     }
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun QuizEstimateResult(label: String, estimate: Long, closest: Boolean, tied: Boolean) {
+    val accent = if (closest || tied) LGreen else LRed
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = accent.copy(alpha = .12f), border = BorderStroke(1.dp, accent.copy(alpha = .55f))) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(if (closest || tied) Icons.Rounded.CheckCircle else Icons.Rounded.Cancel, null, Modifier.size(22.dp), tint = accent)
+            Spacer(Modifier.width(9.dp))
+            Text(label, color = Color.White.copy(alpha = .72f), fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.weight(1f))
+            Text(estimate.toString(), color = accent, fontSize = 22.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -1003,15 +1120,27 @@ private fun WaitingRoom(code: String, playerName: String, onExit: () -> Unit) {
 }
 
 @Composable
-private fun SmallAction(label: String, accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.height(37.dp),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = .4f)),
-        contentPadding = PaddingValues(2.dp),
+private fun SmallAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, accent: Color, modifier: Modifier, onClick: () -> Unit) {
+    Box(
+        modifier = modifier.height(48.dp).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        Text(label, color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        Surface(
+            modifier = Modifier.fillMaxWidth().height(38.dp),
+            shape = RoundedCornerShape(11.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, accent.copy(alpha = .4f)),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(icon, null, Modifier.size(16.dp), tint = accent)
+                Spacer(Modifier.width(4.dp))
+                Text(label, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            }
+        }
     }
 }
 
@@ -1024,28 +1153,51 @@ private fun LobbyPill(selected: Boolean, text: String, modifier: Modifier, onCli
         border = BorderStroke(1.dp, if (selected) LBlue.copy(alpha = .4f) else LBorder),
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(text, color = if (selected) LBlue else LText, fontWeight = FontWeight.Black, fontSize = 11.sp)
+            Text(text, color = if (selected) LBlue else LText, fontWeight = FontWeight.Black, fontSize = 12.sp)
         }
     }
 }
 
 @Composable
-private fun LobbyAction(icon: String, title: String, modifier: Modifier, onClick: () -> Unit) {
+private fun LobbyAction(icon: androidx.compose.ui.graphics.vector.ImageVector, title: String, modifier: Modifier, onClick: () -> Unit) {
     Card(
         modifier.height(88.dp).clickable(onClick = onClick),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         border = BorderStroke(1.dp, LBorder),
     ) {
         Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.Center) {
-            Text(icon, fontSize = 20.sp)
-            Text(title, color = LText, fontWeight = FontWeight.Black, fontSize = 11.sp)
+            Icon(icon, null, Modifier.size(24.dp), tint = LBlue)
+            Text(title, color = LText, fontWeight = FontWeight.Black, fontSize = 12.sp)
         }
+    }
+}
+
+@Composable
+private fun DuelSearchProfile(name: String, avatarPath: String?, gender: String?, accent: Color, loading: Boolean) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Surface(shape = RoundedCornerShape(20.dp), color = accent.copy(alpha = .15f), border = BorderStroke(2.dp, accent.copy(alpha = .7f))) {
+            Box(Modifier.size(74.dp, 92.dp), contentAlignment = Alignment.Center) {
+                if (avatarPath != null) ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 68.dp, 86.dp, accent)
+                else if (loading) CircularProgressIndicator(Modifier.size(32.dp), color = accent, strokeWidth = 3.dp)
+                else Icon(Icons.Rounded.PersonSearch, null, Modifier.size(36.dp), tint = accent)
+            }
+        }
+        Text(name, color = Color(0xFFF7F8FF), fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1)
+    }
+}
+
+@Composable
+private fun DuelResultProfile(name: String, avatarPath: String?, gender: String?, rating: Int, accent: Color, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 68.dp, 84.dp, accent)
+        Text(name, color = LText, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text("${ratingLeagueProgress(rating).leagueName} • $rating", color = accent, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 
 @Composable
 private fun NoticeCard(notice: String) {
     Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), color = Color.White, border = BorderStroke(1.dp, LBorder)) {
-        Text(notice, Modifier.fillMaxWidth().padding(10.dp), color = LMuted, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 2)
+        Text(notice, Modifier.fillMaxWidth().padding(10.dp), color = LMuted, fontSize = 12.sp, textAlign = TextAlign.Center, maxLines = 2)
     }
 }

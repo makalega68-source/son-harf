@@ -217,7 +217,7 @@ internal fun WordSiegePracticeBoard(
                     closeScale = WORD_SIEGE_PRACTICE_CLOSE_SCALE
                     closePan = centerClose()
                 },
-                modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
+                modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(48.dp),
                 shape = CircleShape,
                 containerColor = Color.White.copy(alpha = .94f),
                 contentColor = MainUi.Blue,

@@ -8,11 +8,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.MarkEmailUnread
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -65,6 +67,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         if (SonHarfPreferences.rememberLogin(context)) RememberedCredentialVault.load(context) else null
     }
     var register by remember { mutableStateOf(true) }
+    var registerStep by remember { mutableIntStateOf(1) }
     var displayName by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
     var email by remember {
@@ -320,10 +323,23 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 ) {
                     Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            FilterChip(selected = register, onClick = { register = true; notice = "" }, label = { Text("ÜYE OL", fontSize = 15.sp) }, modifier = Modifier.weight(1f))
-                            FilterChip(selected = !register, onClick = { register = false; notice = "" }, label = { Text("GİRİŞ YAP", fontSize = 15.sp) }, modifier = Modifier.weight(1f))
+                            FilterChip(selected = register, onClick = { register = true; registerStep = 1; notice = "" }, label = { Text("ÜYE OL", fontSize = 15.sp) }, modifier = Modifier.weight(1f))
+                            FilterChip(selected = !register, onClick = { register = false; registerStep = 1; notice = "" }, label = { Text("GİRİŞ YAP", fontSize = 15.sp) }, modifier = Modifier.weight(1f))
                         }
                         if (register) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text(sh("KAYIT", "REGISTER"), color = authColors.primary, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                                Spacer(Modifier.weight(1f))
+                                Text("$registerStep / 2", color = authColors.onSurfaceVariant, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            }
+                            LinearProgressIndicator(
+                                progress = { registerStep / 2f },
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                                color = authColors.secondary,
+                                trackColor = authColors.surfaceVariant,
+                            )
+                        }
+                        if (register && registerStep == 1) {
                             OutlinedTextField(displayName, { displayName = it.take(24) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Oyuncu adı") })
                             Text(sh("Bu ad oyuncu profilinde kalıcı olarak görünür.", "This name will remain on your player profile."), color = authColors.onSurfaceVariant, fontSize = 12.sp)
                             Text(sh("Profil seçimi", "Profile selection"), color = authColors.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
@@ -333,6 +349,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 }
                             }
                         }
+                        if (!register || registerStep == 2) {
                         OutlinedTextField(email, { email = it.trim().take(120) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("E-posta") })
                         OutlinedTextField(
                             password,
@@ -343,7 +360,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                             trailingIcon = {
                                 TextButton(onClick = { showPassword = !showPassword }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                    Text(if (showPassword) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                    Text(if (showPassword) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                 }
                             },
                         )
@@ -357,7 +374,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 visualTransformation = if (showPassword2) VisualTransformation.None else PasswordVisualTransformation(),
                                 trailingIcon = {
                                     TextButton(onClick = { showPassword2 = !showPassword2 }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                        Text(if (showPassword2) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                        Text(if (showPassword2) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                     }
                                 },
                             )
@@ -409,9 +426,17 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 Text(sh("Şifremi unuttum", "Forgot password"), color = Color(0xFF1769E0), fontWeight = FontWeight.Bold)
                             }
                         }
+                        }
                         Button(
                             onClick = {
                                 if (busy) return@Button
+                                if (register && registerStep == 1) {
+                                    if (displayName.trim().length < 2) { notice = "Oyuncu adı en az 2 karakter olmalı."; return@Button }
+                                    if (gender.isBlank()) { notice = "Kadın, Erkek veya Diğer seçeneklerinden birini seç."; return@Button }
+                                    notice = ""
+                                    registerStep = 2
+                                    return@Button
+                                }
                                 if (!email.contains("@") || password.length < 6) { notice = "Geçerli e-posta ve en az 6 karakterli şifre gir."; return@Button }
                                 if (register && displayName.trim().length < 2) { notice = "Oyuncu adı en az 2 karakter olmalı."; return@Button }
                                 if (register && gender.isBlank()) { notice = "Kadın, Erkek veya Diğer seçeneklerinden birini seç."; return@Button }
@@ -523,10 +548,17 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             colors = ButtonDefaults.buttonColors(containerColor = if (register) Color(0xFF6A4FD8) else Color(0xFF1769E0), contentColor = Color.White),
                         ) {
                             Text(
-                                if (busy) "…" else if (register) sh("KAYIT OL", "REGISTER") else sh("GİRİŞ YAP", "SIGN IN"),
+                                if (busy) "…" else if (register && registerStep == 1) sh("DEVAM ET", "CONTINUE") else if (register) sh("KAYIT OL", "REGISTER") else sh("GİRİŞ YAP", "SIGN IN"),
                                 fontWeight = FontWeight.Black,
                                 fontSize = 17.sp,
                             )
+                        }
+                        if (register && registerStep == 2) {
+                            TextButton(onClick = { registerStep = 1; notice = "" }, modifier = Modifier.align(Alignment.Start)) {
+                                Icon(Icons.Rounded.ArrowBack, null)
+                                Spacer(Modifier.width(5.dp))
+                                Text(sh("Oyuncu bilgilerine dön", "Back to player details"), fontWeight = FontWeight.Bold)
+                            }
                         }
                         if (notice.isNotBlank()) {
                             Surface(color = if (success) Color(0xFFE8F7EE) else Color(0xFFFFF4E5), shape = RoundedCornerShape(14.dp)) {

@@ -22,8 +22,18 @@ class ClassicCompetitionArenaContractTest {
         assertTrue(text.contains("SIRA SENDE"))
         assertTrue(text.contains("RAKİBİN SIRASI"))
         assertTrue(text.contains("KRİTİK"))
-        assertTrue(text.contains("RÖVANŞ ⚡"))
+        assertTrue(text.contains("Icons.Rounded.Bolt"))
+        assertTrue(text.contains("RÖVANŞ"))
         assertTrue(text.contains("BİR MAÇ DAHA"))
+        assertFalse(text.contains("✕ “\$required” İLE BAŞLAMALI"))
+        assertTrue(text.contains("comboMoment"))
+        assertTrue(text.contains("LGreen"))
+        assertTrue(text.contains("Color(0xFFFFF8DD)"))
+        assertTrue(text.contains("QuizEstimateResult"))
+        assertTrue(text.contains("DOĞRU"))
+        assertTrue(text.contains("YANLIŞ"))
+        assertTrue(text.contains("Color(0xFF21163F)"))
+        assertFalse(text.contains("SmallAction(Icons.Rounded.AutoAwesome, \"BONUS\""))
     }
 
     @Test fun urgencyRespectsUserSoundAndHapticPreferences() {
