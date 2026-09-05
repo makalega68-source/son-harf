@@ -9,6 +9,10 @@ import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -620,11 +624,9 @@ internal fun LightDuelArena(
 
             CompetitiveInputBar(
                 value = wordInput,
-                required = required,
                 inputMatches = inputMatches,
                 feedbackWord = feedbackWord,
                 feedbackCorrect = feedbackCorrect,
-                notice = notice,
                 myTurn = myTurn,
                 busy = busy,
                 quiz = quizActive,
@@ -648,20 +650,27 @@ internal fun LightDuelArena(
         AnimatedVisibility(
             visible = actionOverlay != null,
             modifier = Modifier.align(Alignment.Center),
-            enter = fadeIn(tween(120)),
-            exit = fadeOut(tween(180)),
+            enter = fadeIn(tween(170)) +
+                scaleIn(initialScale = .72f, animationSpec = tween(280, easing = FastOutSlowInEasing)) +
+                slideInVertically(initialOffsetY = { it / 3 }, animationSpec = tween(260, easing = FastOutSlowInEasing)),
+            exit = fadeOut(tween(220)) +
+                scaleOut(targetScale = 1.12f, animationSpec = tween(220, easing = FastOutSlowInEasing)) +
+                slideOutVertically(targetOffsetY = { -it / 4 }, animationSpec = tween(220, easing = FastOutSlowInEasing)),
         ) {
-            Surface(
-                shape = RoundedCornerShape(20.dp),
-                color = if (actionThreat) Color(0xFFFDE8ED) else Color(0xFFE7F2FF),
-                border = BorderStroke(2.dp, if (actionThreat) LRed.copy(alpha = .55f) else LBlue.copy(alpha = .55f)),
-                shadowElevation = 10.dp,
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(5.dp),
             ) {
+                Icon(
+                    if (actionThreat) Icons.Rounded.TrendingDown else Icons.Rounded.AutoAwesome,
+                    null,
+                    Modifier.size(34.dp),
+                    tint = if (actionThreat) LRed else LGold,
+                )
                 Text(
                     actionOverlay.orEmpty(),
-                    Modifier.padding(horizontal = 24.dp, vertical = 15.dp),
                     color = if (actionThreat) LRed else LBlue,
-                    fontSize = 18.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Black,
                 )
             }
@@ -719,11 +728,9 @@ private fun CompetitivePlayerCard(
 @Composable
 private fun CompetitiveInputBar(
     value: String,
-    required: String,
     inputMatches: Boolean?,
     feedbackWord: String?,
     feedbackCorrect: Boolean?,
-    notice: String,
     myTurn: Boolean,
     busy: Boolean,
     quiz: Boolean,
@@ -732,11 +739,6 @@ private fun CompetitiveInputBar(
     onVoice: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val errorText = when {
-        inputMatches == false -> sh("✕ “$required” İLE BAŞLAMALI", "✕ MUST START WITH “$required”")
-        feedbackCorrect == false -> "✕ ${notice.take(42)}"
-        else -> null
-    }
     val statusColor = when {
         feedbackWord != null && feedbackCorrect == true -> LGreen
         inputMatches == false || feedbackCorrect == false -> LRed
@@ -749,8 +751,7 @@ private fun CompetitiveInputBar(
         color = Color.White,
         border = BorderStroke(2.dp, if (myTurn && !quiz) statusColor.copy(alpha = .65f) else LBorder),
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
-            Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(
                     onClick = onVoice,
                     enabled = myTurn && !busy && !quiz && voiceSupported && voiceUses < 5,
@@ -770,10 +771,6 @@ private fun CompetitiveInputBar(
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                 )
-            }
-            errorText?.let {
-                Text(it, color = LRed, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
         }
     }
 }
