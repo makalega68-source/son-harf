@@ -1,0 +1,81 @@
+name: Sync Royal Validation
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/sync-royal-style-20260905
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-royal-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Verify protected source state
+        run: |
+          echo "SOURCE_SHA=$(git rev-parse HEAD)"
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Verify Royal Collection assets
+        run: |
+          sha256sum app/src/main/res/drawable-nodpi/style_frame_red.png | grep 0b2d98881c859fdfa7f51098b5cd97d8de50b15c8cdedcd886bbd34843602051
+          sha256sum app/src/main/res/drawable-nodpi/style_frame_green.png | grep a1ab27e0cd3dfcb9c2d8851d0db41a75e329522fca87c19c34a25b81047e34ae
+          sha256sum app/src/main/res/drawable-nodpi/style_frame_mint.png | grep 31a7c32a706c983cdca54312b8ea7496993a55668a09fa8f5f779f87068b0f3e
+          sha256sum app/src/main/res/drawable-nodpi/style_frame_purple.png | grep 1fa03d2b0f83d0f7abd004a8aef26773bb830783aacc8308ff8fb18c7506f6e6
+          sha256sum app/src/main/res/drawable-nodpi/style_frame_gold.png | grep a11f91b1fd8ae0fd2f2463bdb662de02140979fcf766f322ca3fc8319c222804
+          grep -q 'CC0 1.0' assets/kenney_fantasy_ui_borders_CC0.txt
+
+      - name: Apply approved active-screen UI patch
+        run: python3 scripts/apply_active_screen_ui_20260905.py
+
+      - name: Apply synchronization and Royal Style patch
+        run: |
+          python3 scripts/apply_sync_royal_20260905.py
+          git diff --check
+          grep -q 'repeat(12) { attempt ->' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          grep -q 'Royal Gold' app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt
+
+      - name: Build and run regression tests
+        run: gradle clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Prepare and verify APK
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Senkron-Royal.apk
+          sha256sum SonHarf-Senkron-Royal.apk | tee SonHarf-Senkron-Royal.sha256
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose --print-certs SonHarf-Senkron-Royal.apk
+          unzip -t SonHarf-Senkron-Royal.apk >/dev/null
+
+      - name: Upload verified APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: son-harf-sync-royal-debug
+          path: |
+            SonHarf-Senkron-Royal.apk
+            SonHarf-Senkron-Royal.sha256
+          if-no-files-found: error
