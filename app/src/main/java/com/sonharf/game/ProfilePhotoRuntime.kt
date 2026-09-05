@@ -225,6 +225,7 @@ internal fun ProfilePhotoAvatarWithGender(
     size: Dp,
     accent: Color = SonHarfCyan,
     visible: Boolean = true,
+    showGenderBadge: Boolean = true,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(avatarPath, visible) {
@@ -242,8 +243,10 @@ internal fun ProfilePhotoAvatarWithGender(
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, size)
+        if (showGenderBadge) {
+            Box(Modifier.align(Alignment.BottomEnd)) {
+                FramelessGenderSymbol(gender, size)
+            }
         }
     }
 }
@@ -256,6 +259,7 @@ internal fun ProfilePhotoAvatarRectWithGender(
     width: Dp,
     height: Dp,
     accent: Color = SonHarfCyan,
+    showGenderBadge: Boolean = true,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(avatarPath) {
@@ -290,8 +294,10 @@ internal fun ProfilePhotoAvatarRectWithGender(
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(shape), accent)
             }
         }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, height)
+        if (showGenderBadge) {
+            Box(Modifier.align(Alignment.BottomEnd)) {
+                FramelessGenderSymbol(gender, height)
+            }
         }
     }
 }

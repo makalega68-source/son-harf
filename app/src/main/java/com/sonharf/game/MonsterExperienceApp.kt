@@ -255,8 +255,17 @@ private fun MonsterPlayerCommandCard(profile: ProfileDto?, stats: MonsterHomeSta
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(modifier = Modifier.clickable(onClick = onProfile), shape = CircleShape, color = Color.White.copy(alpha = .17f)) {
-                    Icon(Icons.Rounded.Person, null, tint = Color.White, modifier = Modifier.padding(10.dp).size(25.dp))
+                Box(modifier = Modifier.clickable(onClick = onProfile), contentAlignment = Alignment.Center) {
+                    FramedProfilePhotoAvatar(
+                        avatarPath = profile?.avatarPath,
+                        gender = profile?.gender,
+                        name = profile?.displayName ?: sh("OYUNCU", "PLAYER"),
+                        size = 44.dp,
+                        frameId = SonHarfCosmetics.profileFrameId,
+                        accent = Color.White,
+                        visible = profile?.avatarVisibility != "hidden",
+                        showGenderBadge = false,
+                    )
                 }
                 Spacer(Modifier.width(11.dp))
                 Column(Modifier.weight(1f)) {

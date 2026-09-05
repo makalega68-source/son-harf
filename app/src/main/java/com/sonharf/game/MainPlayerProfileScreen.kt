@@ -109,19 +109,16 @@ internal fun MainPlayerProfileScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     Box(contentAlignment = Alignment.BottomEnd) {
-                        Box(contentAlignment = Alignment.Center) {
-                            ProfilePhotoAvatarWithGender(
-                                avatarPath = p?.avatarPath,
-                                gender = p?.gender,
-                                name = p?.displayName ?: sh("Oyuncu", "Player"),
-                                size = 106.dp,
-                                accent = if (p?.isVip == true) MainUi.Gold else MainUi.Blue,
-                            )
-                            PurchasedProfileFrameOverlay(
-                                frameId = SonHarfCosmetics.profileFrameId,
-                                modifier = Modifier.size(126.dp),
-                            )
-                        }
+                        FramedProfilePhotoAvatar(
+                            avatarPath = p?.avatarPath,
+                            gender = p?.gender,
+                            name = p?.displayName ?: sh("Oyuncu", "Player"),
+                            size = 106.dp,
+                            frameId = SonHarfCosmetics.profileFrameId,
+                            accent = if (p?.isVip == true) MainUi.Gold else MainUi.Blue,
+                            visible = p?.avatarVisibility != "hidden",
+                            showGenderBadge = false,
+                        )
                         Surface(
                             modifier = Modifier.size(37.dp).clickable(onClick = onEdit),
                             shape = CircleShape,

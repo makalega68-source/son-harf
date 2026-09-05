@@ -66,6 +66,7 @@ internal fun LightDuelLobby(
     playerName: String,
     playerAvatarPath: String?,
     playerGender: String?,
+    playerFrameId: String?,
     language: String,
     matching: Boolean,
     notice: String,
@@ -93,7 +94,15 @@ internal fun LightDuelLobby(
         ) {
             item {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    ProfilePhotoAvatarWithGender(playerAvatarPath, playerGender, playerName, 48.dp, LBlue)
+                    FramedProfilePhotoAvatar(
+                        avatarPath = playerAvatarPath,
+                        gender = playerGender,
+                        name = playerName,
+                        size = 48.dp,
+                        frameId = playerFrameId,
+                        accent = LBlue,
+                        showGenderBadge = false,
+                    )
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(playerName, color = LText, fontSize = 18.sp, fontWeight = FontWeight.Black)
@@ -216,6 +225,7 @@ internal fun LightDuelArena(
     playerName: String,
     playerAvatarPath: String?,
     playerGender: String?,
+    playerFrameId: String?,
     playerRating: Int,
     opponentName: String,
     opponentAvatarPath: String?,
@@ -447,7 +457,7 @@ internal fun LightDuelArena(
             ) {
                 CompetitivePlayerCard(
                     playerName, playerAvatarPath, playerGender, playerRating, shownMyScore,
-                    myTurn, LBlue, false, Modifier.weight(1f),
+                    myTurn, LBlue, false, Modifier.weight(1f), frameId = playerFrameId,
                 )
                 Surface(
                     modifier = Modifier.size(78.dp).graphicsLayer {
@@ -724,6 +734,7 @@ private fun CompetitivePlayerCard(
     accent: Color,
     bot: Boolean,
     modifier: Modifier,
+    frameId: String? = null,
 ) {
     val league = ratingLeagueProgress(rating).leagueName
     Card(
@@ -733,8 +744,21 @@ private fun CompetitivePlayerCard(
         border = BorderStroke(if (active) 3.dp else 1.dp, if (active) accent else LBorder),
     ) {
         Row(Modifier.fillMaxSize().padding(7.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (bot) SyntheticBotPortrait(name, gender ?: botGenderForName(name), 46.dp, 62.dp, accent)
-            else ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 46.dp, 62.dp, accent)
+            if (bot) {
+                SyntheticBotPortrait(name, gender ?: botGenderForName(name), 46.dp, 62.dp, accent)
+            } else if (!frameId.isNullOrBlank()) {
+                FramedProfilePhotoAvatar(
+                    avatarPath = avatarPath,
+                    gender = gender,
+                    name = name,
+                    size = 46.dp,
+                    frameId = frameId,
+                    accent = accent,
+                    showGenderBadge = false,
+                )
+            } else {
+                ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 46.dp, 62.dp, accent, showGenderBadge = false)
+            }
             Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                 Text(name, color = LText, fontSize = 15.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
