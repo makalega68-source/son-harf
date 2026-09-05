@@ -35,7 +35,7 @@ class HomeLobbyGameificationContractTest {
         assertTrue(app.contains("MonsterWeeklyTopThree(weeklyTop, onLeague)"))
         assertTrue(app.contains("BUGÜNKÜ HEDEF"))
         assertTrue(app.contains("backend.getGoals()"))
-        assertTrue(app.contains("SC ${profile?.diamonds ?: 0}"))
+        assertTrue(app.contains("SC \${profile?.diamonds ?: 0}"))
     }
 
     @Test
