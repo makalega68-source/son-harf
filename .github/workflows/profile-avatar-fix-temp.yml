@@ -34,12 +34,13 @@ jobs:
           grep -q 'FramedProfilePhotoAvatar' app/src/main/java/com/sonharf/game/LightDuelUi.kt
           grep -q 'playerFrameId = SonHarfCosmetics.profileFrameId' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           grep -q 'showGenderBadge: Boolean = true' app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt
+          grep -q 'FramedProfilePhotoAvatar' app/src/test/java/com/sonharf/game/ProfileImageCoverageRegressionTest.kt
       - name: Build and test
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
       - name: Commit product changes
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/java/com/sonharf/game
+          git add app/src/main/java/com/sonharf/game app/src/test/java/com/sonharf/game
           git commit -m 'Fix profile photo and frame consistency'
           git push origin HEAD:fix/profile-frames-avatars-20260906
