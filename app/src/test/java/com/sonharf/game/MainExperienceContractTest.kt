@@ -35,8 +35,11 @@ class MainExperienceContractTest {
         assertTrue(main.contains("MonsterLiveMatchCard("))
         assertTrue(main.contains("KELİME\\nKUŞATMASI"))
         assertTrue(main.contains("LİG &\\nRATING"))
-        assertTrue(main.contains("Günlük görevler"))
-        assertTrue(main.contains("Sosyal & arkadaşlar"))
+        assertTrue(main.contains("HAFTANIN EN İYİLERİ"))
+        assertTrue(main.contains("BUGÜNKÜ HEDEF"))
+        assertTrue(main.contains("backend.getGoals()"))
+        assertTrue(main.contains("backend.getLeaderboardV2(SonHarfUiState.language, \"week\", 3)"))
+        assertFalse(main.contains("OYUNCU MERKEZİ"))
         assertTrue(classic.isFile)
     }
 
