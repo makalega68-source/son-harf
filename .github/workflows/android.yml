@@ -49,6 +49,13 @@ jobs:
           git diff --check
           git diff -- app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt
 
+      - name: Verify committed home lobby contract
+        run: |
+          grep -q 'SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'HAFTANIN EN İYİLERİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'KLASİK' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          ! grep -q 'OYUNCU MERKEZİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+
       - name: Build debug APK with tests
         run: gradle clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 

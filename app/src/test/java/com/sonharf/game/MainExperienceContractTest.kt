@@ -33,10 +33,14 @@ class MainExperienceContractTest {
         val classic = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt")
 
         assertTrue(main.contains("MonsterLiveMatchCard("))
+        assertTrue(main.contains("KLASİK"))
         assertTrue(main.contains("KELİME\\nKUŞATMASI"))
-        assertTrue(main.contains("LİG &\\nRATING"))
-        assertTrue(main.contains("Günlük görevler"))
-        assertTrue(main.contains("Sosyal & arkadaşlar"))
+        assertTrue(main.contains("LİG & RATING"))
+        assertTrue(main.contains("HAFTANIN EN İYİLERİ"))
+        assertTrue(main.contains("BUGÜNKÜ HEDEF"))
+        assertTrue(main.contains("backend.getGoals()"))
+        assertTrue(main.contains("backend.getLeaderboardV2(SonHarfUiState.language, \"week\", 3)"))
+        assertFalse(main.contains("OYUNCU MERKEZİ"))
         assertTrue(classic.isFile)
     }
 

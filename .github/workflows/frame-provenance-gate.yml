@@ -32,6 +32,12 @@ jobs:
         run: |
           python scripts/apply_word_siege_ui_fix_20260905.py
           git diff --check
+      - name: Verify committed home lobby source
+        run: |
+          grep -q 'SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'HAFTANIN EN İYİLERİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'KLASİK' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          ! grep -q 'OYUNCU MERKEZİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
       - name: Test and build debug APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
       - name: Verify compiled APK pixels against immutable purchased-source manifest
