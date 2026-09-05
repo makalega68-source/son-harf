@@ -20,27 +20,10 @@ jobs:
           set -euo pipefail
           python scripts/apply_word_siege_ui_fix_20260905.py
           git diff --check
-      - name: Remove runtime patch calls and proven-unused one-shot scripts
+      - name: Delete proven-unused one-shot scripts
         shell: python
         run: |
           from pathlib import Path
-          import re
-
-          workflows = [
-              Path('.github/workflows/android.yml'),
-              Path('.github/workflows/final-unified-validation.yml'),
-              Path('.github/workflows/frame-provenance-gate.yml'),
-          ]
-          step = re.compile(
-              r"\n      - name: Apply Word Siege UI stabilization\n        run: \|\n          python scripts/apply_word_siege_ui_fix_20260905\.py\n          git diff --check(?:\n          git diff -- app/src/main/java/com/sonharf/game/WordSiegePracticeScreen\.kt app/src/main/java/com/sonharf/game/WordSiegePracticeBoard\.kt)?\n",
-              re.M,
-          )
-          for path in workflows:
-              text = path.read_text()
-              text2, count = step.subn('\n', text, count=1)
-              if count != 1:
-                  raise SystemExit(f'Expected runtime patch step not found exactly once in {path}')
-              path.write_text(text2)
 
           candidates = [
               'scripts/apply_action_ui_pack.py',
@@ -73,21 +56,19 @@ jobs:
               Path(candidate).unlink()
 
           Path('scripts/apply_word_siege_ui_fix_20260905.py').unlink()
-          Path(temp_workflow).unlink()
-      - name: Verify cleanup invariants
+      - name: Verify product cleanup invariants
         run: |
           set -euo pipefail
-          ! grep -R -n 'apply_word_siege_ui_fix_20260905.py' .github scripts app README.md README_HOME_LOBBY.md
           test ! -f scripts/apply_word_siege_ui_fix_20260905.py
           test -f scripts/verify_frame_provenance.py
           grep -q 'modifier = modifier.height(if (compact) 70.dp else 78.dp)' app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt
           grep -q 'var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }' app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt
           git diff --check
-      - name: Commit cleanup
+      - name: Commit product cleanup
         run: |
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -A
-          git commit -m 'Remove obsolete runtime patch system and one-shot scripts'
+          git add app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt scripts
+          git commit -m 'Make Word Siege stabilization permanent and remove obsolete patch scripts'
           git push origin HEAD:cleanup-runtime-patches
