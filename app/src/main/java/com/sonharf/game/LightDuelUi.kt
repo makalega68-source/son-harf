@@ -473,7 +473,12 @@ internal fun LightDuelArena(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Text(seconds.toString(), color = LText, fontSize = 31.sp, fontWeight = FontWeight.Black)
+                        Text(
+                            if (timerSynchronizing && !quizActive) "—" else seconds.toString(),
+                            color = LText,
+                            fontSize = 31.sp,
+                            fontWeight = FontWeight.Black,
+                        )
                         Text(if (quizActive) "BONUS" else sh("SN", "SEC"), color = timerColor, fontSize = 12.sp, fontWeight = FontWeight.Black)
                     }
                 }
@@ -517,18 +522,24 @@ internal fun LightDuelArena(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        when {
-                            quizActive -> sh("BONUS DÜELLOSU", "BONUS DUEL")
-                            timerSynchronizing && !quizActive -> sh("Senkronize ediliyor…", "Synchronizing…")
-                            myTurn -> sh("● SIRA SENDE", "● YOUR TURN")
-                            room.isBot && room.botTurn -> sh("● BOT DÜŞÜNÜYOR", "● BOT THINKING")
-                            else -> sh("● RAKİBİN SIRASI", "● OPPONENT TURN")
-                        },
-                        color = if (myTurn) LBlue else if (quizActive) LPurple else LRed,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Black,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (timerSynchronizing && !quizActive) {
+                            CircularProgressIndicator(Modifier.size(16.dp), color = LBlue, strokeWidth = 2.dp)
+                            Spacer(Modifier.width(6.dp))
+                        }
+                        Text(
+                            when {
+                                quizActive -> sh("BONUS DÜELLOSU", "BONUS DUEL")
+                                timerSynchronizing && !quizActive -> sh("Senkronize ediliyor…", "Synchronizing…")
+                                myTurn -> sh("● SIRA SENDE", "● YOUR TURN")
+                                room.isBot && room.botTurn -> sh("● BOT DÜŞÜNÜYOR", "● BOT THINKING")
+                                else -> sh("● RAKİBİN SIRASI", "● OPPONENT TURN")
+                            },
+                            color = if (myTurn || timerSynchronizing) LBlue else if (quizActive) LPurple else LRed,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
                     Text(
                         ClassicCompetitionRules.scoreDifferenceText(myScore, oppScore, room.language),
                         color = if (myScore >= oppScore) LBlue else LRed,
@@ -551,18 +562,20 @@ internal fun LightDuelArena(
                 ) {
                     val lastDisplay = gameUppercase(lastWord, room.language)
                     Surface(shape = RoundedCornerShape(13.dp), color = Color(0xFFF7F9FC)) {
-                        Text(
-                            if (lastDisplay.isBlank()) sh("İlk kelimeyi sen başlat", "You start the first word")
-                            else sh("SON KABUL EDİLEN KELİME: $lastDisplay", "LAST ACCEPTED WORD: $lastDisplay"),
-                            Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                            color = LMuted,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        Column(
+                            Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 7.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            if (lastDisplay.isBlank()) {
+                                Text(sh("İlk kelimeyi sen başlat", "You start the first word"), color = LText, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                            } else {
+                                Text(sh("SON KABUL EDİLEN KELİME", "LAST ACCEPTED WORD"), color = LMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(lastDisplay, color = LText, fontSize = 18.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
                     }
-                    Spacer(Modifier.weight(.12f))
+                    Spacer(Modifier.height(9.dp))
                     Text(sh("SIRADAKİ ZORUNLU HARF", "NEXT REQUIRED LETTER"), color = LBlue, fontSize = 13.sp, fontWeight = FontWeight.Black)
-                    Text("↓", color = LGold, fontSize = 18.sp, fontWeight = FontWeight.Black)
                     Text(
                         required,
                         modifier = Modifier.graphicsLayer {
@@ -570,17 +583,17 @@ internal fun LightDuelArena(
                             scaleY = letterPulse.value
                         },
                         color = LText,
-                        fontSize = 78.sp,
-                        lineHeight = 80.sp,
+                        fontSize = 60.sp,
+                        lineHeight = 62.sp,
                         fontWeight = FontWeight.Black,
                     )
                     Text(
                         if (required == "•") sh("SERBEST BAŞLANGIÇ", "FREE START") else sh("“$required” İLE BAŞLA", "START WITH “$required”"),
                         color = LBlue,
-                        fontSize = 13.sp,
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Black,
                     )
-                    Spacer(Modifier.weight(.12f))
+                    Spacer(Modifier.height(9.dp))
                     if (words.isNotEmpty()) {
                         LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             items(words.takeLast(5), key = { it.id }) { word ->
@@ -618,7 +631,6 @@ internal fun LightDuelArena(
                 voiceSupported = voiceSupported,
                 voiceUses = voiceUses,
                 onVoice = onVoice,
-                onSubmit = onSubmit,
                 modifier = Modifier.padding(horizontal = 10.dp),
             )
 
@@ -689,15 +701,17 @@ private fun CompetitivePlayerCard(
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(if (active) 3.dp else 1.dp, if (active) accent else LBorder),
     ) {
-        Row(Modifier.fillMaxWidth().padding(7.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (bot) SyntheticBotPortrait(name, gender ?: botGenderForName(name), 46.dp, 60.dp, accent)
-            else ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 46.dp, 60.dp, accent)
-            Spacer(Modifier.width(6.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                Text(name, color = LText, fontSize = 15.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(score.toString(), color = accent, fontSize = duelScoreFontSize(score).sp, lineHeight = 29.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                Text("$league • $rating", color = LMuted, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column(Modifier.fillMaxSize().padding(horizontal = 7.dp, vertical = 5.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(Modifier.fillMaxWidth().weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                if (bot) SyntheticBotPortrait(name, gender ?: botGenderForName(name), 42.dp, 52.dp, accent)
+                else ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 42.dp, 52.dp, accent)
+                Spacer(Modifier.width(6.dp))
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                    Text(name, color = LText, fontSize = 14.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(score.toString(), color = accent, fontSize = duelScoreFontSize(score).sp, lineHeight = 29.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                }
             }
+            Text("$league • $rating", color = LMuted, fontSize = 12.sp, lineHeight = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
 }
@@ -716,15 +730,12 @@ private fun CompetitiveInputBar(
     voiceSupported: Boolean,
     voiceUses: Int,
     onVoice: () -> Unit,
-    onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val statusText = when {
-        feedbackWord != null && feedbackCorrect == true -> sh("✓ GEÇERLİ", "✓ VALID")
-        value.isBlank() -> if (myTurn) sh("KELİMENİ YAZ", "TYPE YOUR WORD") else sh("KELİMEYİ HAZIRLA", "PREPARE YOUR WORD")
+    val errorText = when {
         inputMatches == false -> sh("✕ “$required” İLE BAŞLAMALI", "✕ MUST START WITH “$required”")
         feedbackCorrect == false -> "✕ ${notice.take(42)}"
-        else -> sh("✓ BAŞLANGIÇ GEÇERLİ", "✓ VALID START")
+        else -> null
     }
     val statusColor = when {
         feedbackWord != null && feedbackCorrect == true -> LGreen
@@ -738,8 +749,8 @@ private fun CompetitiveInputBar(
         color = Color.White,
         border = BorderStroke(2.dp, if (myTurn && !quiz) statusColor.copy(alpha = .65f) else LBorder),
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
+            Row(Modifier.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(
                     onClick = onVoice,
                     enabled = myTurn && !busy && !quiz && voiceSupported && voiceUses < 5,
@@ -752,23 +763,17 @@ private fun CompetitiveInputBar(
                 }
                 Spacer(Modifier.width(7.dp))
                 Text(
-                    value.ifBlank { sh("Kelimenizi yazın…", "Type your word…") },
-                    color = if (value.isBlank()) LMuted else LText,
-                    fontSize = if (value.isBlank()) 16.sp else 20.sp,
-                    fontWeight = if (value.isBlank()) FontWeight.Medium else FontWeight.Black,
+                    value,
+                    color = LText,
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
                 )
-                Button(
-                    onClick = onSubmit,
-                    enabled = myTurn && value.isNotBlank() && inputMatches != false && !busy && !quiz,
-                    modifier = Modifier.height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Icon(Icons.Rounded.Send, sh("Gönder", "Send"), Modifier.size(20.dp))
-                }
             }
-            Text(statusText, color = statusColor, fontSize = 14.sp, lineHeight = 16.sp, fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            errorText?.let {
+                Text(it, color = LRed, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Black, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }
@@ -1036,16 +1041,26 @@ private fun WaitingRoom(code: String, playerName: String, onExit: () -> Unit) {
 
 @Composable
 private fun SmallAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    OutlinedButton(
-        onClick = onClick,
-        modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = .4f)),
-        contentPadding = PaddingValues(2.dp),
+    Box(
+        modifier = modifier.height(48.dp).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, null, Modifier.size(17.dp), tint = accent)
-        Spacer(Modifier.width(4.dp))
-        Text(label, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        Surface(
+            modifier = Modifier.fillMaxWidth().height(38.dp),
+            shape = RoundedCornerShape(11.dp),
+            color = Color.White,
+            border = BorderStroke(1.dp, accent.copy(alpha = .4f)),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(icon, null, Modifier.size(16.dp), tint = accent)
+                Spacer(Modifier.width(4.dp))
+                Text(label, color = accent, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            }
+        }
     }
 }
 
