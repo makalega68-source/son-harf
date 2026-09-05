@@ -9,12 +9,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CenterFocusStrong
-import androidx.compose.material3.Icon
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -40,6 +36,7 @@ private val PracticeSiegeTile = Color(0xFFFFE3A5)
 private val PracticeSiegeTileBorder = Color(0xFFD99818)
 internal val PracticeSiegeBoardSurface = Color(0xFFDDE6EB)
 internal val PracticeSiegeNeutral = Color(0xFFF8FAF9)
+private val PracticeSiegeEmpty = Color(0xFFFFF7E6)
 private val PracticeSiegeMine = Color(0xFF35C878)
 private val PracticeSiegeRival = Color(0xFFFF5F57)
 
@@ -62,7 +59,7 @@ internal fun WordSiegePracticeBoard(
     var closePan by remember { mutableStateOf(Offset.Zero) }
     var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_CLOSE_SCALE) }
     var initialized by remember { mutableStateOf(false) }
-    var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
+    var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     val transform by remember(mode, viewport, boardPx, closePan, closeScale) {
         derivedStateOf {
             wordSiegeBoardTransform(
@@ -91,22 +88,7 @@ internal fun WordSiegePracticeBoard(
         }
     }
 
-    val actionVfxEvents = remember(placements, moveEventKey, resolvedIndices) {
-        buildList {
-            placements.toSortedMap().forEach { (index, rackIndex) ->
-                if (WordSiegeBoardSpec.isValidIndex(index)) {
-                    add(PurchasedBoardVfxEvent("placement:$index:$rackIndex", index, PurchasedBoardVfxKind.PLACEMENT))
-                }
-            }
-            if (moveEventKey != null) {
-                resolvedIndices.sorted().forEach { index ->
-                    if (WordSiegeBoardSpec.isValidIndex(index)) {
-                        add(PurchasedBoardVfxEvent("resolved:$moveEventKey:$index", index, PurchasedBoardVfxKind.RESOLVED))
-                    }
-                }
-            }
-        }
-    }
+    val actionVfxEvents = emptyList<PurchasedBoardVfxEvent>()
 
     fun clampClosePan(candidate: Offset): Offset = clampWordSiegeBoardPan(
         candidate,
@@ -211,19 +193,6 @@ internal fun WordSiegePracticeBoard(
                 modifier = Modifier.matchParentSize(),
             )
 
-            SmallFloatingActionButton(
-                onClick = {
-                    mode = WordSiegeBoardViewportMode.CLOSE
-                    closeScale = WORD_SIEGE_PRACTICE_CLOSE_SCALE
-                    closePan = centerClose()
-                },
-                modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
-                shape = CircleShape,
-                containerColor = Color.White.copy(alpha = .94f),
-                contentColor = MainUi.Blue,
-            ) {
-                Icon(Icons.Rounded.CenterFocusStrong, sh("Merkeze dön", "Center board"), Modifier.size(19.dp))
-            }
         }
     }
 }
@@ -250,7 +219,7 @@ private fun WordSiegePracticeBoardCell(
     val cellColor = when {
         pending -> PracticeSiegeTile
         letter != null -> territory
-        else -> PracticeSiegeNeutral
+        else -> PracticeSiegeEmpty
     }
 
     Box(

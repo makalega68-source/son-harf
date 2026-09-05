@@ -406,17 +406,22 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     }
                 }
 
-                notice?.let { message ->
-                    WordSiegeNotice(message)
-                } ?: lastMove?.let { move ->
-                    Text(
-                        sh("Son: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}", "Last: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}"),
-                        color = MainUi.Muted,
-                        fontSize = 8.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 1,
-                    )
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(if (compact) 34.dp else 40.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    notice?.let { message ->
+                        WordSiegeNotice(message)
+                    } ?: lastMove?.let { move ->
+                        Text(
+                            sh("Son: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}", "Last: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}"),
+                            color = MainUi.Muted,
+                            fontSize = 8.sp,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }
@@ -513,7 +518,7 @@ private fun WordSiegePracticeScoreCard(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.height(if (compact) 70.dp else 78.dp),
         color = if (active) accent.copy(alpha = .09f) else MainUi.Surface,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
         border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) accent else MainUi.Border),
@@ -523,14 +528,14 @@ private fun WordSiegePracticeScoreCard(
                 avatarPath = avatarPath,
                 gender = gender,
                 name = name,
-                size = 50.dp,
+                size = 46.dp,
                 accent = accent,
                 visible = avatarVisible,
             )
             Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 15.sp, lineHeight = 18.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp, lineHeight = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (isBot) {
                         Spacer(Modifier.width(4.dp))
                         Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(99.dp), color = accent.copy(alpha = .12f)) {
@@ -539,9 +544,9 @@ private fun WordSiegePracticeScoreCard(
                     }
                 }
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text("$score", color = accent, fontWeight = FontWeight.Black, fontSize = 30.sp, lineHeight = 32.sp, maxLines = 1)
+                    Text("$score", color = accent, fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 27.sp, maxLines = 1)
                     Spacer(Modifier.width(5.dp))
-                    Text(sh("Alan $area", "Area $area"), color = MainUi.Muted, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(sh("Alan $area", "Area $area"), color = MainUi.Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
