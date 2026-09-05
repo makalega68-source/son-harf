@@ -22,7 +22,8 @@ class ClassicCompetitionArenaContractTest {
         assertTrue(text.contains("SIRA SENDE"))
         assertTrue(text.contains("RAKİBİN SIRASI"))
         assertTrue(text.contains("KRİTİK"))
-        assertTrue(text.contains("RÖVANŞ ⚡"))
+        assertTrue(text.contains("Icons.Rounded.Bolt"))
+        assertTrue(text.contains("RÖVANŞ"))
         assertTrue(text.contains("BİR MAÇ DAHA"))
     }
 
