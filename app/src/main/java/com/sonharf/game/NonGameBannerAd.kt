@@ -45,8 +45,9 @@ internal object SonHarfAdPolicy {
 
 /**
  * Anchored adaptive banner for non-game surfaces only.
- * The view is retained while navigating between eligible screens, paused/hidden during gameplay,
- * and reserves a thin, labelled slot while the network banner is loading.
+ * The banner slot can exist before consent/ad availability, but the Google AdView itself
+ * is not constructed until policy allows an ad request. This keeps authentication-to-home
+ * navigation independent from the ads SDK lifecycle.
  */
 @Composable
 fun SonHarfTopAdBanner(
@@ -65,47 +66,62 @@ fun SonHarfTopAdBanner(
 
     var loaded by remember(adUnitId) { mutableStateOf(false) }
     val widthDp = configuration.screenWidthDp.coerceAtLeast(1)
-    val adView = remember(context, adUnitId) {
-        AdView(context).apply {
-            this.adUnitId = adUnitId
-            layoutParams = ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            )
+    val adView = remember(context, adUnitId, canLoadAd) {
+        if (!canLoadAd) {
+            null
+        } else {
+            runCatching {
+                AdView(context).apply {
+                    this.adUnitId = adUnitId
+                    layoutParams = ViewGroup.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                    )
+                }
+            }.getOrNull()
         }
     }
 
     LaunchedEffect(adView, widthDp, canLoadAd) {
-        if (!canLoadAd) {
-            adView.pause()
+        val view = adView ?: run {
+            loaded = false
             return@LaunchedEffect
         }
-        adView.resume()
-        if (!loaded) {
-            adView.setAdSize(
-                AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, widthDp),
-            )
-            adView.adListener = object : AdListener() {
-                override fun onAdLoaded() {
-                    loaded = true
-                    SonHarfBannerAnalytics.onImpressionReady()
-                }
+        if (!canLoadAd) {
+            view.pause()
+            loaded = false
+            return@LaunchedEffect
+        }
+        runCatching {
+            view.resume()
+            if (!loaded) {
+                view.setAdSize(
+                    AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(context, widthDp),
+                )
+                view.adListener = object : AdListener() {
+                    override fun onAdLoaded() {
+                        loaded = true
+                        SonHarfBannerAnalytics.onImpressionReady()
+                    }
 
-                override fun onAdFailedToLoad(error: LoadAdError) {
-                    loaded = false
-                }
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        loaded = false
+                    }
 
-                override fun onAdClicked() {
-                    SonHarfBannerAnalytics.onClick()
+                    override fun onAdClicked() {
+                        SonHarfBannerAnalytics.onClick()
+                    }
                 }
+                view.loadAd(AdRequest.Builder().build())
             }
-            adView.loadAd(AdRequest.Builder().build())
+        }.onFailure {
+            loaded = false
         }
     }
 
     DisposableEffect(adView) {
         onDispose {
-            adView.destroy()
+            runCatching { adView?.destroy() }
         }
     }
 
@@ -119,7 +135,7 @@ fun SonHarfTopAdBanner(
             .background(Color(0xFFF1F4F8)),
         contentAlignment = Alignment.Center,
     ) {
-        if (loaded && canLoadAd) {
+        if (loaded && canLoadAd && adView != null) {
             AndroidView(
                 factory = { adView },
                 modifier = Modifier.fillMaxWidth(),
