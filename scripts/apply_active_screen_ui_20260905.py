@@ -87,10 +87,12 @@ def patch_duel() -> None:
 
     text = replace_once(text, "Modifier.fillMaxSize().padding(horizontal = 15.dp, vertical = 10.dp)", "Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 6.dp)", "game-card padding")
     text = replace_once(text, "color = LMuted,\n                            fontSize = 10.sp,\n                            fontWeight = FontWeight.Bold,", "color = LText,\n                            fontSize = 15.sp,\n                            lineHeight = 18.sp,\n                            fontWeight = FontWeight.Black,", "last accepted word emphasis")
-    text = replace_once(text, "Spacer(Modifier.weight(.12f))", "Spacer(Modifier.weight(.06f))", "upper game-card spacer")
+    spacer = "Spacer(Modifier.weight(.12f))"
+    if text.count(spacer) != 2:
+        raise RuntimeError(f"game-card spacers: expected exactly two matches, found {text.count(spacer)}")
+    text = text.replace(spacer, "Spacer(Modifier.weight(.06f))", 2)
     text = replace_once(text, "fontSize = 78.sp,\n                        lineHeight = 80.sp,", "fontSize = 62.sp,\n                        lineHeight = 64.sp,", "mandatory letter size")
     text = replace_once(text, "fontSize = 13.sp,\n                        fontWeight = FontWeight.Black,", "fontSize = 17.sp,\n                        lineHeight = 20.sp,\n                        fontWeight = FontWeight.Black,\n                        maxLines = 1,", "mandatory-letter guidance")
-    text = replace_once(text, "Spacer(Modifier.weight(.12f))", "Spacer(Modifier.weight(.06f))", "lower game-card spacer")
     text = replace_once(
         text,
         '''                Text("$league • $rating", color = LMuted, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)''',
