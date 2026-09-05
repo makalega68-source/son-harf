@@ -20,9 +20,11 @@ class AdBannerPolicyContractTest {
     fun bannerIsAdaptiveVisibleWhileLoadingAndLifecycleManaged() {
         val banner = source("src/main/java/com/sonharf/game/NonGameBannerAd.kt")
         assertTrue(banner.contains("getCurrentOrientationAnchoredAdaptiveBannerAdSize"))
-        assertTrue(banner.contains("if (!policyAllows) return"))
+        assertTrue(banner.contains("canReserveBanner"))
+        assertTrue(banner.contains("val canLoadAd = policyAllows && adUnitId.isNotBlank()"))
+        assertTrue(banner.contains("if (!slotVisible) return"))
         assertTrue(banner.contains(".height(50.dp)"))
-        assertTrue(banner.contains("if (loaded)"))
+        assertTrue(banner.contains("if (loaded && canLoadAd)"))
         assertTrue(banner.contains("sh(\"REKLAM\", \"AD\")"))
         assertTrue(banner.contains("adView.pause()"))
         assertTrue(banner.contains("adView.resume()"))

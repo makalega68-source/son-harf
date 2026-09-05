@@ -38,6 +38,9 @@ internal object SonHarfAdPolicy {
 
     fun canShowBanner(isGameplay: Boolean): Boolean =
         adsEnabled && !isPremium && !isGameplay && AdPrivacyManager.adsAllowed
+
+    fun canReserveBanner(isGameplay: Boolean): Boolean =
+        adsEnabled && !isPremium && !isGameplay
 }
 
 /**
@@ -56,8 +59,9 @@ fun SonHarfTopAdBanner(
     SonHarfAdPolicy.isPremium = isPremium
 
     val adUnitId = BuildConfig.ADMOB_BANNER_AD_UNIT_ID
+    val slotVisible = SonHarfAdPolicy.canReserveBanner(isGameplay = !visible)
     val policyAllows = SonHarfAdPolicy.canShowBanner(isGameplay = !visible)
-    if (adUnitId.isBlank()) return
+    val canLoadAd = policyAllows && adUnitId.isNotBlank()
 
     var loaded by remember(adUnitId) { mutableStateOf(false) }
     val widthDp = configuration.screenWidthDp.coerceAtLeast(1)
@@ -71,8 +75,8 @@ fun SonHarfTopAdBanner(
         }
     }
 
-    LaunchedEffect(adView, widthDp, policyAllows) {
-        if (!policyAllows) {
+    LaunchedEffect(adView, widthDp, canLoadAd) {
+        if (!canLoadAd) {
             adView.pause()
             return@LaunchedEffect
         }
@@ -105,7 +109,7 @@ fun SonHarfTopAdBanner(
         }
     }
 
-    if (!policyAllows) return
+    if (!slotVisible) return
 
     Box(
         modifier = modifier
@@ -115,7 +119,7 @@ fun SonHarfTopAdBanner(
             .background(Color(0xFFF1F4F8)),
         contentAlignment = Alignment.Center,
     ) {
-        if (loaded) {
+        if (loaded && canLoadAd) {
             AndroidView(
                 factory = { adView },
                 modifier = Modifier.fillMaxWidth(),

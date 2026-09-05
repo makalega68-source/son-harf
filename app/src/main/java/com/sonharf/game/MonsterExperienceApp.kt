@@ -193,11 +193,7 @@ private fun MonsterHomeScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    SonHarfBrandLogo(size = 54.dp)
-                    Text(sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"), color = MonsterUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
                 MonsterIconButton(Icons.Rounded.Notifications, onTasks)
                 Spacer(Modifier.width(7.dp))
                 MonsterIconButton(Icons.Rounded.Settings, onSettings)
@@ -391,7 +387,7 @@ private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, 
             }
             SonHarfBrandLogo(
                 modifier = Modifier.fillMaxWidth(),
-                size = 58.dp,
+                size = 88.dp,
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -432,7 +428,7 @@ private fun MonsterSiegeQuickCard(modifier: Modifier, onClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
-                painter = painterResource(R.drawable.kelime_kusatma_logo),
+                painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
                 contentDescription = sh("KELİME\nKUŞATMASI", "WORD\nSIEGE"),
                 modifier = Modifier.size(106.dp),
                 contentScale = ContentScale.Fit,
