@@ -1,0 +1,40 @@
+name: Preserve siege home contract
+
+on:
+  push:
+    branches: [ integrate-word-siege-logo ]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integrate-word-siege-logo
+          fetch-depth: 0
+      - name: Preserve accessibility and home contract
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt')
+          text = p.read_text(encoding='utf-8')
+          old = 'contentDescription = sh("Kelime Kuşatması", "Word Siege"),'
+          new = 'contentDescription = sh("KELİME\\nKUŞATMASI", "WORD\\nSIEGE"),'
+          assert old in text, 'Siege logo accessibility label anchor missing'
+          p.write_text(text.replace(old, new, 1), encoding='utf-8')
+          PY
+          grep -q 'KELİME\\nKUŞATMASI' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          git diff --check
+      - name: Commit contract-safe integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/preserve-siege-home-contract.yml
+          git add app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          git commit -m "Preserve home contract for siege logo"
+          git push origin HEAD:integrate-word-siege-logo
