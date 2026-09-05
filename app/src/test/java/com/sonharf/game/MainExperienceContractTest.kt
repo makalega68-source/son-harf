@@ -33,8 +33,9 @@ class MainExperienceContractTest {
         val classic = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt")
 
         assertTrue(main.contains("MonsterLiveMatchCard("))
+        assertTrue(main.contains("KLASİK"))
         assertTrue(main.contains("KELİME\\nKUŞATMASI"))
-        assertTrue(main.contains("LİG &\\nRATING"))
+        assertTrue(main.contains("LİG & RATING"))
         assertTrue(main.contains("HAFTANIN EN İYİLERİ"))
         assertTrue(main.contains("BUGÜNKÜ HEDEF"))
         assertTrue(main.contains("backend.getGoals()"))
