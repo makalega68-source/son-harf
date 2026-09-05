@@ -1,0 +1,61 @@
+package com.sonharf.game
+
+import java.io.File
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class HomeLobbyGameificationContractTest {
+    private fun projectFile(pathFromApp: String): File {
+        val direct = File(pathFromApp)
+        if (direct.exists()) return direct
+        val underApp = File("app", pathFromApp)
+        if (underApp.exists()) return underApp
+        error("Could not resolve project file: $pathFromApp from ${File(".").absolutePath}")
+    }
+
+    private fun source(path: String): String = projectFile(path).readText()
+
+    @Test
+    fun activeV1ShellUsesOneGlobalBannerAndExcludesGameplay() {
+        val app = source("src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
+        assertTrue(app.contains("SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium)"))
+        assertTrue(app.contains("MonsterDestination.GAME, MonsterDestination.WORD_SIEGE, MonsterDestination.DAILY_CHALLENGE"))
+        assertTrue(app.contains("isPremium = runCatching { backend.getProfile(id).isVip }"))
+    }
+
+    @Test
+    fun homeLobbyIsGameFirstAndUsesLiveWeeklyData() {
+        val app = source("src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
+        assertTrue(app.contains("Kelimeyi Sürdür, Rakibini Geç"))
+        assertTrue(app.contains("OYUN MODLARI"))
+        assertTrue(app.contains("KELİME\\nKUŞATMASI"))
+        assertTrue(app.contains("HAFTANIN EN İYİLERİ"))
+        assertTrue(app.contains("getLeaderboardV2(SonHarfUiState.language, \"week\", 3)"))
+        assertTrue(app.contains("MonsterWeeklyTopThree(weeklyTop, onLeague)"))
+        assertTrue(app.contains("BUGÜNKÜ HEDEF"))
+        assertTrue(app.contains("backend.getGoals()"))
+        assertTrue(app.contains("SC ${profile?.diamonds ?: 0}"))
+    }
+
+    @Test
+    fun dashboardNoiseAndFakeZeroStatsAreRemovedFromHome() {
+        val app = source("src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
+        val homeStart = app.indexOf("private fun MonsterHomeScreen(")
+        val nextFunction = app.indexOf("private fun MonsterLiveMatchCard", homeStart)
+        assertTrue(homeStart >= 0 && nextFunction > homeStart)
+        val home = app.substring(homeStart, nextFunction)
+        assertFalse(home.contains("OYUNCU MERKEZİ"))
+        assertFalse(home.contains("MonsterStatCard("))
+        assertFalse(home.contains("MonsterHubRow("))
+        assertFalse(home.contains("VIP"))
+    }
+
+    @Test
+    fun playButtonRemainsPrimaryAndTouchResponsive() {
+        val app = source("src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
+        assertTrue(app.contains("modifier = Modifier.fillMaxWidth().height(64.dp)"))
+        assertTrue(app.contains("pressedElevation = 1.dp"))
+        assertTrue(app.contains("Text(sh(\"OYNA\", \"PLAY\"), fontWeight = FontWeight.Black, fontSize = 20.sp"))
+    }
+}
