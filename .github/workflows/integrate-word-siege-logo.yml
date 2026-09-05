@@ -89,21 +89,11 @@ jobs:
           assert old in text, 'Siege resource import anchor missing'
           text = text.replace(old, new, 1)
 
-          anchor = '''                IconButton(onClick = onRefresh, enabled = !loading) {
-                      Icon(Icons.Rounded.Refresh, sh("Yenile", "Refresh"), tint = MainUi.Blue)
-                  }
-              }
-          }
-
-          item {
-              Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {'''
-          replacement = '''                IconButton(onClick = onRefresh, enabled = !loading) {
-                      Icon(Icons.Rounded.Refresh, sh("Yenile", "Refresh"), tint = MainUi.Blue)
-                  }
-              }
-          }
-
-          item {
+          marker = '                    sh("OYUN SEÇ", "CHOOSE A GAME"),'
+          idx = text.index(marker)
+          item_start = text.rfind('        item {', 0, idx)
+          assert item_start >= 0, 'Word Siege game selector item missing'
+          logo_item = '''        item {
               Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                   Image(
                       painter = painterResource(R.drawable.kelime_kusatma_logo),
@@ -114,10 +104,8 @@ jobs:
               }
           }
 
-          item {
-              Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {'''
-          assert anchor in text, 'Word Siege list header anchor missing'
-          text = text.replace(anchor, replacement, 1)
+          '''
+          text = text[:item_start] + logo_item + text[item_start:]
           siege.write_text(text, encoding='utf-8')
           PY
 
