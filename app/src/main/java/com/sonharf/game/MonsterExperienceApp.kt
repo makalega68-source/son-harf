@@ -16,11 +16,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -47,9 +50,13 @@ internal object MonsterUi {
 
 private data class MonsterHomeStats(
     val rating: Int = 1000,
+    val leagueName: String = "BRONZ",
+    val pointsToNext: Int = 0,
+    val currentWinStreak: Int = 0,
+    val onlineFriends: Int = 0,
 )
 
-private enum class MonsterDestination { HOME, GAME, WORD_SIEGE, LEAGUE, SOCIAL, STYLE, PROFILE, TASKS, VIP, SETTINGS, PROFILE_DETAILS, ACCOUNT, DAILY_CHALLENGE }
+private enum class MonsterDestination { HOME, GAME, WORD_SIEGE, LEAGUE, COMPETITION, SOCIAL, STYLE, PROFILE, TASKS, VIP, SETTINGS, PROFILE_DETAILS, ACCOUNT, DAILY_CHALLENGE }
 
 @Composable
 fun MonsterExperienceApp(onSignedOut: () -> Unit) {
@@ -101,6 +108,7 @@ fun MonsterExperienceApp(onSignedOut: () -> Unit) {
                     { destination = MonsterDestination.GAME },
                     { destination = MonsterDestination.WORD_SIEGE },
                     { destination = MonsterDestination.LEAGUE },
+                    { destination = MonsterDestination.COMPETITION },
                     { destination = MonsterDestination.SOCIAL },
                     { destination = MonsterDestination.STYLE },
                     { destination = MonsterDestination.PROFILE },
@@ -111,6 +119,7 @@ fun MonsterExperienceApp(onSignedOut: () -> Unit) {
                 MonsterDestination.GAME -> OnlineGameScreenV6()
                 MonsterDestination.WORD_SIEGE -> WordSiegeExperienceScreen { destination = MonsterDestination.HOME }
                 MonsterDestination.LEAGUE -> LeaderboardExperienceScreen { destination = MonsterDestination.HOME }
+                MonsterDestination.COMPETITION -> CompetitionHubScreen { destination = MonsterDestination.HOME }
                 MonsterDestination.SOCIAL -> MainSocialScreen(backend = backend, onPlay = { destination = MonsterDestination.GAME })
                 MonsterDestination.STYLE -> MonsterStyleStoreScreen()
                 MonsterDestination.PROFILE -> MainPlayerProfileScreen(backend, { destination = MonsterDestination.PROFILE_DETAILS }, { destination = MonsterDestination.VIP }, { destination = MonsterDestination.SETTINGS }, { destination = MonsterDestination.SOCIAL })
@@ -131,6 +140,7 @@ private fun MonsterHomeScreen(
     onPlay: () -> Unit,
     onSiege: () -> Unit,
     onLeague: () -> Unit,
+    onCompetition: () -> Unit,
     onSocial: () -> Unit,
     onStyle: () -> Unit,
     onProfile: () -> Unit,
@@ -142,6 +152,9 @@ private fun MonsterHomeScreen(
     var stats by remember { mutableStateOf(MonsterHomeStats()) }
     var weeklyTop by remember { mutableStateOf<List<LeaderboardV2Row>>(emptyList()) }
     var goals by remember { mutableStateOf<List<GoalRowDto>>(emptyList()) }
+    var archRival by remember { mutableStateOf<ArchRivalDto?>(null) }
+    var tournament by remember { mutableStateOf<WeeklyTournamentDto?>(null) }
+    var socialPreview by remember { mutableStateOf<List<SocialProfileDto>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         val id = backend.currentUserId()
@@ -151,6 +164,23 @@ private fun MonsterHomeScreen(
                 stats = stats.copy(rating = row.rating)
             }
         }
+        runCatching { backend.getGrowthDashboard() }.onSuccess { growth ->
+            stats = stats.copy(
+                currentWinStreak = growth.currentWinStreak,
+                leagueName = growth.leagueName,
+            )
+        }
+        runCatching { backend.getCompetitiveSeason() }.onSuccess { season ->
+            stats = stats.copy(
+                rating = season.rating,
+                leagueName = season.leagueName,
+                pointsToNext = season.pointsToNext,
+            )
+        }
+        socialPreview = runCatching { backend.getAcceptedFriendProfiles().map { it.second } }.getOrDefault(emptyList())
+        stats = stats.copy(onlineFriends = socialPreview.count { it.presenceStatus == "online" })
+        archRival = runCatching { backend.getArchRival() }.getOrNull()
+        tournament = runCatching { backend.getWeeklyTournament() }.getOrNull()
         weeklyTop = runCatching { backend.getLeaderboardV2(SonHarfUiState.language, "week", 3) }.getOrDefault(emptyList())
         goals = runCatching { backend.getGoals() }.getOrDefault(emptyList())
     }
@@ -159,14 +189,14 @@ private fun MonsterHomeScreen(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("SON HARF", color = MonsterUi.Text, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"), color = MonsterUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text("SON HARF", color = MonsterUi.Text, fontSize = 28.sp, fontWeight = FontWeight.Black, letterSpacing = (-.6).sp)
+                    Text(sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"), color = MonsterUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
                 MonsterIconButton(Icons.Rounded.Notifications, onTasks)
                 Spacer(Modifier.width(7.dp))
@@ -174,25 +204,11 @@ private fun MonsterHomeScreen(
             }
         }
         item {
-            Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onProfile), shape = RoundedCornerShape(17.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MonsterUi.Border)) {
-                Row(Modifier.padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = MonsterUi.Accent.copy(alpha = .12f)) {
-                        Icon(Icons.Rounded.Person, null, tint = MonsterUi.Accent, modifier = Modifier.padding(8.dp).size(21.dp))
-                    }
-                    Spacer(Modifier.width(9.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp, maxLines = 1)
-                        Text("🏆 ${stats.rating} RP", color = MonsterUi.Muted, fontSize = 8.sp)
-                    }
-                    Surface(shape = RoundedCornerShape(99.dp), color = MonsterUi.Gold.copy(alpha = .12f)) {
-                        Text("SC ${profile?.diamonds ?: 0}", Modifier.padding(horizontal = 9.dp, vertical = 6.dp), color = MonsterUi.Text, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    }
-                }
-            }
+            MonsterPlayerCommandCard(profile, stats, onProfile, onLeague)
         }
         item { MonsterLiveMatchCard(profile, stats, onPlay) }
         item {
-            Text(sh("OYUN MODLARI", "GAME MODES"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 11.sp)
+            Text(sh("ARENANI SEÇ", "CHOOSE YOUR ARENA"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp)
             Spacer(Modifier.height(7.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MonsterQuickCard(sh("KLASİK", "CLASSIC"), sh("Kelime düellosu", "Word duel"), Icons.Rounded.SportsEsports, MonsterUi.Accent, Modifier.weight(1f), onPlay)
@@ -200,6 +216,11 @@ private fun MonsterHomeScreen(
             }
             Spacer(Modifier.height(8.dp))
             MonsterLeagueCard(stats.rating, onLeague)
+        }
+        item {
+            MonsterSectionTitle(sh("REKABET MERKEZİ", "COMPETITION HUB"), sh("SOSYAL", "SOCIAL"), onSocial)
+            Spacer(Modifier.height(8.dp))
+            MonsterCompetitionStrip(tournament, archRival, stats.onlineFriends, onCompetition, onPlay, onSocial)
         }
         item {
             MonsterSectionTitle(sh("HAFTANIN EN İYİLERİ", "BEST THIS WEEK"), sh("TÜM SIRALAMA", "FULL RANKING"), onLeague)
@@ -228,25 +249,158 @@ private fun MonsterHomeScreen(
 }
 
 @Composable
+private fun MonsterPlayerCommandCard(profile: ProfileDto?, stats: MonsterHomeStats, onProfile: () -> Unit, onLeague: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(22.dp)),
+        shape = RoundedCornerShape(22.dp),
+        color = Color.Transparent,
+    ) {
+        Column(
+            Modifier.background(
+                Brush.linearGradient(listOf(Color(0xFF102B58), Color(0xFF165FC3), Color(0xFF1687F8)))
+            ).padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(modifier = Modifier.clickable(onClick = onProfile), shape = CircleShape, color = Color.White.copy(alpha = .17f)) {
+                    Icon(Icons.Rounded.Person, null, tint = Color.White, modifier = Modifier.padding(10.dp).size(25.dp))
+                }
+                Spacer(Modifier.width(11.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp, maxLines = 1)
+                    Text(sh("${stats.leagueName} LİGİ", "${stats.leagueName} LEAGUE"), color = Color.White.copy(alpha = .78f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                }
+                Surface(shape = RoundedCornerShape(99.dp), color = MonsterUi.Gold) {
+                    Text("SC ${profile?.diamonds ?: 0}", Modifier.padding(horizontal = 12.dp, vertical = 7.dp), color = Color(0xFF132342), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MonsterHeroStat("🏆", "${stats.rating}", "RP", Modifier.weight(1f))
+                MonsterHeroDivider()
+                MonsterHeroStat("🔥", "${stats.currentWinStreak}", sh("SERİ", "STREAK"), Modifier.weight(1f))
+                MonsterHeroDivider()
+                MonsterHeroStat("👥", "${stats.onlineFriends}", sh("ÇEVRİM İÇİ", "ONLINE"), Modifier.weight(1f))
+            }
+            val nextTarget = (stats.rating + stats.pointsToNext).takeIf { stats.pointsToNext > 0 }
+            Row(Modifier.fillMaxWidth().clickable(onClick = onLeague), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    if (nextTarget == null) sh("Lig yolunu aç", "Open league path") else sh("Sonraki lige ${stats.pointsToNext} RP", "${stats.pointsToNext} RP to next league"),
+                    color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f),
+                )
+                Icon(Icons.Rounded.ArrowForward, null, tint = Color.White, modifier = Modifier.size(18.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonsterHeroStat(icon: String, value: String, label: String, modifier: Modifier) {
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text("$icon $value", color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black)
+        Text(label, color = Color.White.copy(alpha = .68f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun MonsterHeroDivider() {
+    Box(Modifier.width(1.dp).height(30.dp).background(Color.White.copy(alpha = .20f)))
+}
+
+@Composable
+private fun MonsterCompetitionStrip(
+    tournament: WeeklyTournamentDto?,
+    rival: ArchRivalDto?,
+    onlineFriends: Int,
+    onTournament: () -> Unit,
+    onRematch: () -> Unit,
+    onSocial: () -> Unit,
+) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        MonsterCompetitionTile(
+            icon = Icons.Rounded.EmojiEvents,
+            eyebrow = sh("HAFTALIK", "WEEKLY"),
+            title = tournament?.name ?: sh("Turnuva", "Tournament"),
+            detail = tournament?.let {
+                if (it.myRank > 0) sh("#${it.myRank} sıradasın", "Rank #${it.myRank}")
+                else sh("${it.playerCount} oyuncu", "${it.playerCount} players")
+            } ?: sh("Arenaya katıl", "Join arena"),
+            accent = MonsterUi.Gold,
+            modifier = Modifier.weight(1f),
+            onClick = onTournament,
+        )
+        MonsterCompetitionTile(
+            icon = Icons.Rounded.Bolt,
+            eyebrow = sh("EZELİ RAKİP", "ARCH RIVAL"),
+            title = rival?.displayName ?: sh("Rakip bekliyor", "Rival awaits"),
+            detail = rival?.let { sh("${it.wins}-${it.losses} • Rövanş", "${it.wins}-${it.losses} • Rematch") }
+                ?: sh("İlk rekabeti başlat", "Start a rivalry"),
+            accent = MonsterUi.Coral,
+            modifier = Modifier.weight(1f),
+            onClick = onRematch,
+        )
+        MonsterCompetitionTile(
+            icon = Icons.Rounded.Groups,
+            eyebrow = sh("ARKADAŞLAR", "FRIENDS"),
+            title = sh("$onlineFriends çevrim içi", "$onlineFriends online"),
+            detail = sh("Meydan oku", "Challenge"),
+            accent = MonsterUi.Green,
+            modifier = Modifier.weight(1f),
+            onClick = onSocial,
+        )
+    }
+}
+
+@Composable
+private fun MonsterCompetitionTile(
+    icon: ImageVector,
+    eyebrow: String,
+    title: String,
+    detail: String,
+    accent: Color,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier.height(132.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        color = accent.copy(alpha = .08f),
+        border = BorderStroke(1.dp, accent.copy(alpha = .28f)),
+    ) {
+        Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(5.dp))
+                Text(eyebrow, color = accent, fontSize = 10.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            }
+            Column {
+                Text(title, color = MonsterUi.Text, fontSize = 12.sp, lineHeight = 15.sp, fontWeight = FontWeight.Black, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Spacer(Modifier.height(3.dp))
+                Text(detail, color = MonsterUi.Muted, fontSize = 11.sp, lineHeight = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+@Composable
 private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, onPlay: () -> Unit) {
-    Surface(shape = RoundedCornerShape(22.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MonsterUi.Border)) {
+    Surface(modifier = Modifier.shadow(8.dp, RoundedCornerShape(24.dp)), shape = RoundedCornerShape(24.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MonsterUi.Accent.copy(alpha = .22f))) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(7.dp).clip(CircleShape).background(MonsterUi.Live))
                 Spacer(Modifier.width(6.dp))
-                Text(sh("CANLI EŞLEŞME", "LIVE MATCH"), color = MonsterUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text(sh("CANLI EŞLEŞME", "LIVE MATCH"), color = MonsterUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.weight(1f))
                 Text("1v1", color = MonsterUi.Text, fontWeight = FontWeight.Black)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 15.sp)
-                    Text("🏆 ${stats.rating}", color = MonsterUi.Gold, fontSize = 9.sp)
+                    Text("🏆 ${stats.rating} RP", color = MonsterUi.Gold, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 Text("VS", color = MonsterUi.Text, fontSize = 34.sp, fontWeight = FontWeight.Black)
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
                     Text(sh("RAKİP", "RIVAL"), color = MonsterUi.Muted, fontWeight = FontWeight.Black, fontSize = 15.sp)
-                    Text(sh("Eşleşme bekliyor", "Waiting"), color = MonsterUi.Muted, fontSize = 8.sp)
+                    Text(sh("Eşleşme bekliyor", "Waiting"), color = MonsterUi.Muted, fontSize = 12.sp)
                 }
             }
             Button(
@@ -300,7 +454,7 @@ private fun MonsterQuickCard(title: String, subtitle: String, icon: ImageVector,
             Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
             Column {
                 Text(title, color = MonsterUi.Text, fontSize = 14.sp, lineHeight = 15.sp, fontWeight = FontWeight.Black)
-                Text(subtitle, color = MonsterUi.Muted, fontSize = 8.sp)
+                Text(subtitle, color = MonsterUi.Muted, fontSize = 12.sp)
             }
         }
     }
@@ -313,8 +467,8 @@ private fun MonsterLeagueCard(rating: Int, onClick: () -> Unit) {
             Icon(Icons.Rounded.EmojiEvents, null, tint = MonsterUi.Accent, modifier = Modifier.size(22.dp))
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh("LİG & RATING", "LEAGUE & RATING"), color = MonsterUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                Text("$rating RP", color = MonsterUi.Muted, fontSize = 9.sp)
+                Text(sh("LİG & RATING", "LEAGUE & RATING"), color = MonsterUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                Text("$rating RP", color = MonsterUi.Muted, fontSize = 12.sp)
             }
             Icon(Icons.Rounded.ChevronRight, null, tint = MonsterUi.Muted, modifier = Modifier.size(18.dp))
         }
@@ -325,7 +479,7 @@ private fun MonsterLeagueCard(rating: Int, onClick: () -> Unit) {
 private fun MonsterWeeklyTopThree(rows: List<LeaderboardV2Row>, onClick: () -> Unit) {
     if (rows.isEmpty()) {
         Surface(modifier = Modifier.fillMaxWidth().clickable(onClick = onClick), shape = RoundedCornerShape(17.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MonsterUi.Border)) {
-            Text(sh("Bu hafta sıralama henüz oluşmadı. İlk galibiyetini al!", "Weekly ranking has not formed yet. Get the first win!"), Modifier.padding(15.dp), color = MonsterUi.Muted, fontSize = 9.sp)
+            Text(sh("Bu hafta sıralama henüz oluşmadı. İlk galibiyetini al!", "Weekly ranking has not formed yet. Get the first win!"), Modifier.padding(15.dp), color = MonsterUi.Muted, fontSize = 12.sp)
         }
         return
     }
@@ -336,8 +490,8 @@ private fun MonsterWeeklyTopThree(rows: List<LeaderboardV2Row>, onClick: () -> U
             Surface(modifier = Modifier.weight(1f).height(if (index == 0) 112.dp else 104.dp).clickable(onClick = onClick), shape = RoundedCornerShape(17.dp), color = accent.copy(alpha = if (index == 0) .12f else .06f), border = BorderStroke(1.dp, accent.copy(alpha = if (index == 0) .40f else .20f))) {
                 Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
                     Text(medal, fontSize = if (index == 0) 24.sp else 21.sp)
-                    Text(row.displayName, color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 9.sp, maxLines = 1)
-                    Text(sh("${row.wins} haftalık galibiyet", "${row.wins} weekly wins"), color = MonsterUi.Muted, fontSize = 7.sp, maxLines = 1)
+                    Text(row.displayName, color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 12.sp, maxLines = 1)
+                    Text(sh("${row.wins} galibiyet", "${row.wins} wins"), color = MonsterUi.Muted, fontSize = 11.sp, maxLines = 1)
                 }
             }
         }
@@ -362,8 +516,8 @@ private fun MonsterHubRow(icon: ImageVector, title: String, value: String, accen
 @Composable
 private fun MonsterSectionTitle(title: String, action: String, onAction: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 11.sp, modifier = Modifier.weight(1f))
-        Text(action, color = MonsterUi.Accent, fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.clickable(onClick = onAction))
+        Text(title, color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text(action, color = MonsterUi.Accent, fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.clickable(onClick = onAction))
     }
 }
 
