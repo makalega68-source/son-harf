@@ -77,7 +77,7 @@ class ActiveScreenRegressionContractTest {
         val classic = src("LightDuelUi.kt")
         val practice = src("WordSiegePracticeScreen.kt")
         assertTrue(classic.contains("fontSize = 15.sp"))
-        assertTrue(classic.contains("fontSize = 12.sp"))
+        assertTrue(classic.contains("fontSize = 9.sp"))
         assertTrue(classic.contains("fontSize = if (value.isBlank()) 16.sp else 20.sp"))
         assertTrue(practice.contains("size = 46.dp"))
         assertTrue(practice.contains("fontSize = 24.sp"))
