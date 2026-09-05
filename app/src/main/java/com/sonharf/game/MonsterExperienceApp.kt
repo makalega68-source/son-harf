@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,6 +18,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -193,7 +196,7 @@ private fun MonsterHomeScreen(
             Spacer(Modifier.height(7.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 MonsterQuickCard(sh("KLASİK", "CLASSIC"), sh("Kelime düellosu", "Word duel"), Icons.Rounded.SportsEsports, MonsterUi.Accent, Modifier.weight(1f), onPlay)
-                MonsterQuickCard(sh("KELİME\nKUŞATMASI", "WORD\nSIEGE"), sh("Alanı ele geçir", "Capture territory"), Icons.Rounded.GridView, MonsterUi.Gold, Modifier.weight(1f), onSiege)
+                MonsterSiegeQuickCard(Modifier.weight(1f), onSiege)
             }
             Spacer(Modifier.height(8.dp))
             MonsterLeagueCard(stats.rating, onLeague)
@@ -257,6 +260,35 @@ private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, 
                 Spacer(Modifier.width(7.dp))
                 Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 20.sp, letterSpacing = .8.sp)
             }
+        }
+    }
+}
+
+@Composable
+private fun MonsterSiegeQuickCard(modifier: Modifier, onClick: () -> Unit) {
+    Surface(
+        modifier = modifier.height(128.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        color = MonsterUi.SurfaceRaised,
+        border = BorderStroke(1.dp, MonsterUi.Border),
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(11.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.kelime_kusatma_logo),
+                contentDescription = sh("KELİME\nKUŞATMASI", "WORD\nSIEGE"),
+                modifier = Modifier.size(72.dp),
+                contentScale = ContentScale.Fit,
+            )
+            Text(
+                sh("Alanı ele geçir", "Capture territory"),
+                color = MonsterUi.Muted,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+            )
         }
     }
 }
