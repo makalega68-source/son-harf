@@ -142,8 +142,8 @@ internal fun LightDuelLobby(
             }
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LobbyPill(language == "tr", "🇹🇷 TÜRKÇE", Modifier.weight(1f)) { onLanguage("tr") }
-                    LobbyPill(language == "en", "🇬🇧 ENGLISH", Modifier.weight(1f)) { onLanguage("en") }
+                    LobbyPill(language == "tr", "TR • TÜRKÇE", Modifier.weight(1f)) { onLanguage("tr") }
+                    LobbyPill(language == "en", "EN • ENGLISH", Modifier.weight(1f)) { onLanguage("en") }
                 }
             }
             item {
@@ -954,7 +954,9 @@ private fun CompetitiveResult(
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = LBlue),
                 ) {
-                    Text(sh("RÖVANŞ ⚡", "REMATCH ⚡"), fontSize = 17.sp, fontWeight = FontWeight.Black)
+                    Icon(Icons.Rounded.Bolt, null)
+                    Spacer(Modifier.width(6.dp))
+                    Text(sh("RÖVANŞ", "REMATCH"), fontSize = 17.sp, fontWeight = FontWeight.Black)
                 }
                 OutlinedButton(onClick = onExit, modifier = Modifier.fillMaxWidth().height(50.dp), shape = RoundedCornerShape(16.dp)) {
                     Text(sh("BİR MAÇ DAHA", "ONE MORE MATCH"), color = LText, fontWeight = FontWeight.Black)
