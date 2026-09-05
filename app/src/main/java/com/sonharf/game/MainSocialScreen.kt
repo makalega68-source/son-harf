@@ -210,7 +210,7 @@ internal fun MainSocialScreen(
                                 friends.map { it.second }.sortedByDescending { it.rating }.take(8).forEachIndexed { index, friend ->
                                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                         Text("${index + 1}", color = MainUi.Muted, fontSize = 13.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(22.dp))
-                                        ProfilePhotoAvatar(friend.avatarPath, friend.displayName, 30.dp, visible = friend.avatarVisibility != "hidden", accent = if (friend.isVip) MainUi.Gold else MainUi.Blue)
+                                        ProfilePhotoAvatarRectWithGender(friend.avatarPath, friend.gender, friend.displayName, 28.dp, 34.dp, if (friend.isVip) MainUi.Gold else MainUi.Blue, friend.avatarVisibility != "hidden")
                                         Spacer(Modifier.width(8.dp))
                                         Text(friend.displayName, color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
                                         Text(friend.rating.toString(), color = MainUi.Blue, fontSize = 13.sp, fontWeight = FontWeight.Black)
@@ -340,7 +340,7 @@ internal fun MainSocialScreen(
                     Surface(shape = RoundedCornerShape(17.dp), color = MainUi.BlueSoft, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .25f))) {
                         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = MainUi.Blue)
+                                ProfilePhotoAvatarRectWithGender(sender?.avatarPath, sender?.gender, sender?.displayName ?: sh("Oyuncu", "Player"), 38.dp, 46.dp, MainUi.Blue, sender?.avatarVisibility != "hidden")
                                 Spacer(Modifier.width(9.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(sender?.displayName ?: sh("Maç daveti", "Game invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
@@ -394,12 +394,12 @@ internal fun MainSocialScreen(
                                 Text(sh("EZELİ RAKİP", "ARCH RIVAL"), color = MainUi.Gold, fontSize = 13.sp, fontWeight = FontWeight.Black)
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Surface(shape = CircleShape, color = MainUi.Gold.copy(alpha = .12f)) {
-                                        Text("⚔", Modifier.padding(10.dp), fontSize = 23.sp)
+                                        Icon(Icons.Rounded.MilitaryTech, null, Modifier.padding(10.dp).size(24.dp), tint = MainUi.Gold)
                                     }
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
                                         Text(rival.displayName, color = MainUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                                        Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L", color = MainUi.Muted, fontSize = 13.sp)
+                                        Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins} ${sh("galibiyet", "wins")} • ${rival.losses} ${sh("mağlubiyet", "losses")}", color = MainUi.Muted, fontSize = 13.sp, maxLines = 2)
                                     }
                                     Text("${rival.myPoints}:${rival.theirPoints}", color = MainUi.Text, fontSize = 22.sp, fontWeight = FontWeight.Black)
                                 }
@@ -418,7 +418,7 @@ internal fun MainSocialScreen(
                             Spacer(Modifier.width(9.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(rival.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1)
-                                Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L • ${rival.myPoints}:${rival.theirPoints}", color = MainUi.Muted, fontSize = 8.5.sp)
+                                Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins} ${sh("galibiyet", "wins")} • ${rival.losses} ${sh("mağlubiyet", "losses")} • ${rival.myPoints}:${rival.theirPoints}", color = MainUi.Muted, fontSize = 13.sp, maxLines = 2)
                             }
                             Button(
                                 onClick = {
@@ -465,7 +465,7 @@ internal fun MainSocialScreen(
                             Spacer(Modifier.width(9.dp))
                             Column(Modifier.weight(1f)) {
                                 Text(match.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1)
-                                Text("${match.myScore}-${match.theirScore} • ${if (match.ratingDelta >= 0) "+" else ""}${match.ratingDelta} rating", color = MainUi.Muted, fontSize = 8.5.sp)
+                                Text("${match.myScore}-${match.theirScore} • ${if (match.ratingDelta >= 0) "+" else ""}${match.ratingDelta} rating", color = MainUi.Muted, fontSize = 13.sp)
                             }
                             if (match.isFriend) Icon(Icons.Rounded.People, null, tint = MainUi.Blue, modifier = Modifier.size(17.dp))
                         }
@@ -509,7 +509,7 @@ private fun MainFriendCard(
     Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, if (online) MainUi.Green.copy(alpha = .28f) else MainUi.Border)) {
         Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
             Box {
-                ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 48.dp, accent = if (friend.isVip) MainUi.Gold else MainUi.Blue, visible = friend.avatarVisibility != "hidden")
+                ProfilePhotoAvatarRectWithGender(friend.avatarPath, friend.gender, friend.displayName, 44.dp, 54.dp, if (friend.isVip) MainUi.Gold else MainUi.Blue, friend.avatarVisibility != "hidden")
                 Box(
                     Modifier.align(Alignment.BottomEnd).size(12.dp).clip(CircleShape).background(if (online) MainUi.Green else MainUi.Muted),
                 )
