@@ -29,6 +29,10 @@ class HomeLobbyGameificationContractTest {
         val app = source("src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
         assertTrue(app.contains("Kelimeyi Sürdür, Rakibini Geç"))
         assertTrue(app.contains("ARENANI SEÇ"))
+        assertFalse(app.contains("MonsterQuickCard("))
+        assertTrue(app.contains("MonsterSiegeQuickCard(Modifier.fillMaxWidth(), onSiege)"))
+        assertTrue(app.contains("SonHarfBrandLogo("))
+        assertTrue(app.contains("R.drawable.kelime_kusatma_logo"))
         assertTrue(app.contains("KELİME\\nKUŞATMASI"))
         assertTrue(app.contains("REKABET MERKEZİ"))
         assertTrue(app.contains("MonsterCompetitionStrip(tournament, archRival, stats.onlineFriends"))
@@ -72,5 +76,15 @@ class HomeLobbyGameificationContractTest {
         assertTrue(app.contains("modifier = Modifier.fillMaxWidth().height(64.dp)"))
         assertTrue(app.contains("pressedElevation = 1.dp"))
         assertTrue(app.contains("Text(sh(\"OYNA\", \"PLAY\"), fontWeight = FontWeight.Black, fontSize = 20.sp"))
+    }
+
+    @Test
+    fun classicArenaKeepsCompactCardsAndReconnectStateVisible() {
+        val arena = source("src/main/java/com/sonharf/game/LightDuelUi.kt")
+        assertTrue(arena.contains("Modifier.fillMaxWidth().height(110.dp)"))
+        assertTrue(arena.contains("modifier = modifier.height(96.dp)"))
+        assertTrue(arena.contains("heightIn(max = 220.dp)"))
+        assertTrue(arena.contains("BAĞLANTI YENİDEN KURULUYOR"))
+        assertTrue(arena.contains("timerSynchronizing && !quizActive && seconds <= 0"))
     }
 }

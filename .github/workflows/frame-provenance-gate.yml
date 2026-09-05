@@ -32,7 +32,9 @@ jobs:
         run: |
           grep -q 'SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
           grep -q 'HAFTANIN EN İYİLERİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          grep -q 'KLASİK' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          ! grep -q 'MonsterQuickCard(' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'MonsterSiegeQuickCard(Modifier.fillMaxWidth(), onSiege)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'SonHarfBrandLogo(' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
           ! grep -q 'OYUNCU MERKEZİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
       - name: Test and build debug APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all

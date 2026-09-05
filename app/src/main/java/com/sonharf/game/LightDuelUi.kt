@@ -43,6 +43,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.sonharf.game.data.*
+import java.time.Instant
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
@@ -116,7 +117,11 @@ internal fun LightDuelLobby(
                     ) {
                         if (matching) CircularProgressIndicator(color = LBlue, strokeWidth = 3.dp)
                         Spacer(Modifier.height(12.dp))
-                        Text(if (matching) sh("RAKİP ARANIYOR", "SEARCHING OPPONENT") else "SON HARF", color = LBlue, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                        if (matching) {
+                            Text(sh("RAKİP ARANIYOR", "SEARCHING OPPONENT"), color = LBlue, fontSize = 32.sp, fontWeight = FontWeight.Black)
+                        } else {
+                            SonHarfBrandLogo(size = 88.dp)
+                        }
                         Text(
                             if (matching) sh("Önce gerçek oyuncu • 15 sn sonra uygun BOT", "Real player first • suitable BOT after 15 sec")
                             else sh("Kelimeyi Sürdür, Rakibini Geç", "Continue the word, beat your rival"),
@@ -284,6 +289,10 @@ internal fun LightDuelArena(
         )
         return
     }
+    if (room.status == "paused" || room.disconnectedPlayerId != null) {
+        LightDuelReconnect(room = room, me = me, onForfeit = onForfeit)
+        return
+    }
 
     val deadline = when {
         quizActive && triviaRound?.resolvedAt != null -> triviaRound?.resultUntil
@@ -366,7 +375,7 @@ internal fun LightDuelArena(
     LaunchedEffect(deadline, room.currentPlayerId, room.status, triviaRound?.id) {
         val endMs = classicDeadlineEpochMs(deadline) ?: run {
             seconds = 0
-            timerSynchronizing = false
+            timerSynchronizing = !quizActive && liveWordPhase
             return@LaunchedEffect
         }
         val anchor = ClassicMonotonicDeadlineAnchor(
@@ -432,7 +441,7 @@ internal fun LightDuelArena(
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, LBg))).statusBarsPadding()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),
+                Modifier.fillMaxWidth().height(110.dp).padding(horizontal = 10.dp, vertical = 7.dp),
                 horizontalArrangement = Arrangement.spacedBy(7.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -455,8 +464,14 @@ internal fun LightDuelArena(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center,
                     ) {
-                        Text(seconds.toString(), color = LText, fontSize = 31.sp, fontWeight = FontWeight.Black)
-                        Text(if (quizActive) "BONUS" else sh("SN", "SEC"), color = timerColor, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        if (timerSynchronizing && !quizActive && seconds <= 0) {
+                            CircularProgressIndicator(Modifier.size(25.dp), color = LBlue, strokeWidth = 2.5.dp)
+                            Spacer(Modifier.height(3.dp))
+                            Text(sh("SENKRON", "SYNC"), color = LBlue, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                        } else {
+                            Text(seconds.toString(), color = LText, fontSize = 31.sp, fontWeight = FontWeight.Black)
+                            Text(if (quizActive) "BONUS" else sh("SN", "SEC"), color = timerColor, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
                 Box(Modifier.weight(1f)) {
@@ -522,7 +537,7 @@ internal fun LightDuelArena(
             }
 
             Card(
-                modifier = Modifier.fillMaxWidth().weight(1f).padding(horizontal = 10.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = 220.dp).padding(horizontal = 10.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 shape = RoundedCornerShape(24.dp),
                 border = BorderStroke(1.dp, if (myTurn) LBlue.copy(alpha = .45f) else LBorder),
@@ -552,8 +567,8 @@ internal fun LightDuelArena(
                             scaleY = letterPulse.value
                         },
                         color = LText,
-                        fontSize = 78.sp,
-                        lineHeight = 80.sp,
+                        fontSize = 62.sp,
+                        lineHeight = 64.sp,
                         fontWeight = FontWeight.Black,
                     )
                     Text(
@@ -653,6 +668,52 @@ internal fun LightDuelArena(
 }
 
 @Composable
+private fun LightDuelReconnect(room: GameRoomDto, me: String?, onForfeit: () -> Unit) {
+    var seconds by remember(room.reconnectDeadline) { mutableIntStateOf(60) }
+    LaunchedEffect(room.reconnectDeadline) {
+        while (true) {
+            val deadline = runCatching { room.reconnectDeadline?.let(Instant::parse) }.getOrNull()
+            seconds = deadline?.epochSecond?.minus(Instant.now().epochSecond)?.toInt()?.coerceAtLeast(0) ?: 0
+            if (deadline == null || seconds <= 0) break
+            delay(1_000)
+        }
+    }
+
+    Box(
+        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, LBg))).statusBarsPadding(),
+        contentAlignment = Alignment.Center,
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(20.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(26.dp),
+            border = BorderStroke(1.dp, LGold.copy(alpha = .5f)),
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                SonHarfBrandLogo(size = 76.dp)
+                CircularProgressIndicator(color = LBlue, strokeWidth = 3.dp)
+                Text(sh("BAĞLANTI YENİDEN KURULUYOR", "RECONNECTING"), color = LText, fontSize = 18.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                Text(
+                    if (room.disconnectedPlayerId == me) sh("Bağlantın geri geldiğinde maç otomatik devam edecek.", "The match will resume automatically when your connection returns.")
+                    else sh("Rakibin yeniden bağlanması bekleniyor.", "Waiting for your opponent to reconnect."),
+                    color = LMuted,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                )
+                if (seconds > 0) Text("$seconds ${sh("sn", "sec")}", color = LBlue, fontSize = 30.sp, fontWeight = FontWeight.Black)
+                OutlinedButton(onClick = onForfeit, border = BorderStroke(1.dp, LRed.copy(alpha = .5f))) {
+                    Text(sh("PES ET", "FORFEIT"), color = LRed, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun CompetitivePlayerCard(
     name: String,
     avatarPath: String?,
@@ -666,19 +727,19 @@ private fun CompetitivePlayerCard(
 ) {
     val league = ratingLeagueProgress(rating).leagueName
     Card(
-        modifier = modifier.heightIn(min = 112.dp),
+        modifier = modifier.height(96.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(if (active) 3.dp else 1.dp, if (active) accent else LBorder),
     ) {
         Row(Modifier.fillMaxSize().padding(7.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (bot) SyntheticBotPortrait(name, gender ?: botGenderForName(name), 52.dp, 70.dp, accent)
-            else ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 52.dp, 70.dp, accent)
+            if (bot) SyntheticBotPortrait(name, gender ?: botGenderForName(name), 46.dp, 62.dp, accent)
+            else ProfilePhotoAvatarRectWithGender(avatarPath, gender, name, 46.dp, 62.dp, accent)
             Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                Text(name, color = LText, fontSize = 15.sp, lineHeight = 18.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Text(score.toString(), color = accent, fontSize = duelScoreFontSize(score).sp, lineHeight = 29.sp, fontWeight = FontWeight.Black, maxLines = 1)
-                Text("$league • $rating", color = LMuted, fontSize = 12.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(name, color = LText, fontSize = 15.sp, lineHeight = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(score.toString(), color = accent, fontSize = duelScoreFontSize(score).sp, lineHeight = 25.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                Text("$league • $rating", color = LMuted, fontSize = 9.sp, lineHeight = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip)
             }
         }
     }

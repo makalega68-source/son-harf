@@ -1,11 +1,14 @@
 package com.sonharf.game
 
 import android.view.ViewGroup
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.statusBars
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -15,8 +18,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
@@ -36,7 +43,7 @@ internal object SonHarfAdPolicy {
 /**
  * Anchored adaptive banner for non-game surfaces only.
  * The view is retained while navigating between eligible screens, paused/hidden during gameplay,
- * and occupies no layout space until a banner has actually loaded.
+ * and reserves a thin, labelled slot while the network banner is loading.
  */
 @Composable
 fun SonHarfTopAdBanner(
@@ -98,18 +105,29 @@ fun SonHarfTopAdBanner(
         }
     }
 
-    if (!policyAllows || !loaded) return
+    if (!policyAllows) return
 
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.statusBars),
+            .windowInsetsPadding(WindowInsets.statusBars)
+            .height(50.dp)
+            .background(Color(0xFFF1F4F8)),
         contentAlignment = Alignment.Center,
     ) {
-        AndroidView(
-            factory = { adView },
-            modifier = Modifier.fillMaxWidth(),
-        )
+        if (loaded) {
+            AndroidView(
+                factory = { adView },
+                modifier = Modifier.fillMaxWidth(),
+            )
+        } else {
+            Text(
+                text = sh("REKLAM", "AD"),
+                color = Color(0xFF718096),
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
     }
 }
 
