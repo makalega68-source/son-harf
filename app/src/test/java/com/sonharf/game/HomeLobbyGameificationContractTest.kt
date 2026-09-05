@@ -28,14 +28,29 @@ class HomeLobbyGameificationContractTest {
     fun homeLobbyIsGameFirstAndUsesLiveWeeklyData() {
         val app = source("src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
         assertTrue(app.contains("Kelimeyi Sürdür, Rakibini Geç"))
-        assertTrue(app.contains("OYUN MODLARI"))
+        assertTrue(app.contains("ARENANI SEÇ"))
         assertTrue(app.contains("KELİME\\nKUŞATMASI"))
+        assertTrue(app.contains("REKABET MERKEZİ"))
+        assertTrue(app.contains("MonsterCompetitionStrip(tournament, archRival, stats.onlineFriends"))
+        assertTrue(app.contains("getGrowthDashboard()"))
+        assertTrue(app.contains("getCompetitiveSeason()"))
+        assertTrue(app.contains("getAcceptedFriendProfiles()"))
+        assertTrue(app.contains("getArchRival()"))
+        assertTrue(app.contains("getWeeklyTournament()"))
         assertTrue(app.contains("HAFTANIN EN İYİLERİ"))
         assertTrue(app.contains("getLeaderboardV2(SonHarfUiState.language, \"week\", 3)"))
         assertTrue(app.contains("MonsterWeeklyTopThree(weeklyTop, onLeague)"))
         assertTrue(app.contains("BUGÜNKÜ HEDEF"))
         assertTrue(app.contains("backend.getGoals()"))
         assertTrue(app.contains("SC \${profile?.diamonds ?: 0}"))
+    }
+
+    @Test
+    fun tournamentAndSocialCardsOpenExistingRealDestinations() {
+        val app = source("src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
+        assertTrue(app.contains("MonsterDestination.COMPETITION -> CompetitionHubScreen"))
+        assertTrue(app.contains("MonsterDestination.SOCIAL -> MainSocialScreen"))
+        assertTrue(app.contains("MonsterDestination.WORD_SIEGE -> WordSiegeExperienceScreen"))
     }
 
     @Test
