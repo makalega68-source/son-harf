@@ -40,8 +40,14 @@ internal object PurchasedFrameCatalog {
     const val GOLD_CROWN = "frame_asset_gold_crown"
     const val CHRISTMAS = "frame_asset_christmas"
     const val HALLOWEEN = "frame_asset_halloween"
+    const val ARCANE_SAPPHIRE = "frame_premium_arcane_sapphire"
+    const val IMPERIAL_GOLD = "frame_premium_imperial_gold"
+    const val FROZEN_HALO = "frame_premium_frozen_halo"
 
-    val ids = setOf(GOLD, MINT, PURPLE, GREEN, RED, GOLD_CROWN, CHRISTMAS, HALLOWEEN)
+    val ids = setOf(
+        GOLD, MINT, PURPLE, GREEN, RED, GOLD_CROWN, CHRISTMAS, HALLOWEEN,
+        ARCANE_SAPPHIRE, IMPERIAL_GOLD, FROZEN_HALO,
+    )
 
     fun drawable(id: String?): Int? = when (id) {
         GOLD -> R.drawable.style_frame_gold
@@ -52,6 +58,9 @@ internal object PurchasedFrameCatalog {
         GOLD_CROWN -> R.drawable.style_frame_gold_crown
         CHRISTMAS -> R.drawable.style_frame_christmas
         HALLOWEEN -> R.drawable.style_frame_halloween
+        ARCANE_SAPPHIRE -> R.drawable.premium_frame_arcane_sapphire
+        IMPERIAL_GOLD -> R.drawable.premium_frame_imperial_gold
+        FROZEN_HALO -> R.drawable.premium_frame_frozen_halo
         else -> null
     }
 
@@ -64,6 +73,9 @@ internal object PurchasedFrameCatalog {
         GOLD_CROWN -> Color(0xFFE0A51C)
         CHRISTMAS -> Color(0xFFC73D3D)
         HALLOWEEN -> Color(0xFFEF7D22)
+        ARCANE_SAPPHIRE -> Color(0xFF247FD1)
+        IMPERIAL_GOLD -> Color(0xFFD49A25)
+        FROZEN_HALO -> Color(0xFF63B8C2)
         "frame_neon", "frame_modern_neon" -> Color(0xFF1677FF)
         "frame_starter", "frame_ice", "frame_crystal" -> Color(0xFF32BFB3)
         "frame_gold", "frame_royal_gold" -> Color(0xFFD7A72E)
@@ -86,6 +98,12 @@ private data class PurchasedFrameSpec(
     val sourceIcon: Int,
 )
 
+private val premiumStage1Ids = setOf(
+    PurchasedFrameCatalog.ARCANE_SAPPHIRE,
+    PurchasedFrameCatalog.IMPERIAL_GOLD,
+    PurchasedFrameCatalog.FROZEN_HALO,
+)
+
 private val purchasedFrameSpecs = listOf(
     PurchasedFrameSpec(PurchasedFrameCatalog.RED, "Kırmızı Hat", "Red Line", "Sade başlangıç ve günlük kullanım çerçevesi", "Clean starter and everyday frame", R.drawable.style_frame_red, Color(0xFFD84C4C), "SIRADAN", "STANDARD", R.drawable.style_icon_user),
     PurchasedFrameSpec(PurchasedFrameCatalog.GREEN, "Zümrüt Hat", "Emerald Line", "Dengeli zümrüt profil çerçevesi", "Balanced emerald profile frame", R.drawable.style_frame_green, Color(0xFF2FAE68), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
@@ -95,6 +113,9 @@ private val purchasedFrameSpecs = listOf(
     PurchasedFrameSpec(PurchasedFrameCatalog.GOLD_CROWN, "Altın Taç", "Gold Crown", "Yüksek lig ve prestij ödülü", "High-league prestige reward", R.drawable.style_frame_gold_crown, Color(0xFFE0A51C), "LİG ÖDÜLÜ", "LEAGUE REWARD", R.drawable.style_icon_trophy),
     PurchasedFrameSpec(PurchasedFrameCatalog.CHRISTMAS, "Yılbaşı", "Christmas", "Sezonluk yılbaşı etkinlik çerçevesi", "Seasonal Christmas event frame", R.drawable.style_frame_christmas, Color(0xFFC73D3D), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
     PurchasedFrameSpec(PurchasedFrameCatalog.HALLOWEEN, "Halloween", "Halloween", "Sezonluk Halloween etkinlik çerçevesi", "Seasonal Halloween event frame", R.drawable.style_frame_halloween, Color(0xFFEF7D22), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.ARCANE_SAPPHIRE, "Arcane Sapphire", "Arcane Sapphire", "Mavi kristal premium profil çerçevesi", "Blue crystal premium profile frame", R.drawable.premium_frame_arcane_sapphire, Color(0xFF247FD1), "ÖNİZLEME", "PREVIEW", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.IMPERIAL_GOLD, "Imperial Gold", "Imperial Gold", "Altın paladin premium profil çerçevesi", "Gold paladin premium profile frame", R.drawable.premium_frame_imperial_gold, Color(0xFFD49A25), "ÖNİZLEME", "PREVIEW", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.FROZEN_HALO, "Frozen Halo", "Frozen Halo", "Buz ve gümüş premium profil çerçevesi", "Ice and silver premium profile frame", R.drawable.premium_frame_frozen_halo, Color(0xFF63B8C2), "ÖNİZLEME", "PREVIEW", R.drawable.style_icon_trophy),
 )
 
 /**
@@ -131,7 +152,6 @@ private fun SafeStyleDrawable(
             colorFilter = tint?.let { ColorFilter.tint(it) },
         )
     } else {
-        // Never paint a broken-image glyph over user content. A missing decorative icon is harmless.
         Spacer(modifier)
     }
 }
@@ -153,7 +173,6 @@ private fun SafeFrameArtwork(
         return true
     }
 
-    // Fail-safe visual frame: avatar stays visible and usable even if the packaged PNG cannot decode.
     val accent = PurchasedFrameCatalog.accent(frameId)
     Box(
         modifier = modifier
@@ -231,17 +250,18 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
 
     val displaySpecs = remember(shopItems, inventory, equippedId) {
         val knownById = purchasedFrameSpecs.associateBy { it.id }
-        // Backend active shop_items is authoritative for discovery and pricing. Known purchased
-        // package IDs receive their verified artwork; unknown/legacy IDs keep procedural rendering.
         val activeCatalog = shopItems.values
             .sortedBy { it.sortOrder }
             .map { item -> knownById[item.id] ?: legacyFrameSpec(item) }
-        // Inactive reward/event items must not appear for sale, but an already-owned or equipped
-        // item remains renderable even when it is absent from the active backend catalogue.
         val recoveryOwned = purchasedFrameSpecs.filter { spec ->
             spec.id !in shopItems && (spec.id in inventory || equippedId == spec.id)
         }
-        (activeCatalog + recoveryOwned).distinctBy { it.id }
+        val stage1Preview = if (BuildConfig.DEBUG) {
+            purchasedFrameSpecs.filter { it.id in premiumStage1Ids && it.id !in shopItems }
+        } else {
+            emptyList()
+        }
+        (activeCatalog + recoveryOwned + stage1Preview).distinctBy { it.id }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -318,7 +338,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                             )
                         }
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            if (!owned && !equipped && assetReady) {
+                            if (!owned && !equipped && assetReady && item != null) {
                                 SafeStyleDrawable(drawable = R.drawable.style_icon_coin, modifier = Modifier.size(15.dp), tint = spec.accent)
                                 Spacer(Modifier.width(4.dp))
                             }
@@ -336,6 +356,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                             )
                             when {
                                 equipped -> Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF2FAE68), modifier = Modifier.size(22.dp))
+                                item == null -> Text(sh("TEST", "TEST"), color = Color(0xFF8A97A8), fontSize = 7.sp, fontWeight = FontWeight.Black)
                                 !assetReady && !owned -> Text(sh("KAPALI", "LOCKED"), color = Color(0xFF8A97A8), fontSize = 7.sp, fontWeight = FontWeight.Black)
                                 else -> Button(
                                     onClick = {
