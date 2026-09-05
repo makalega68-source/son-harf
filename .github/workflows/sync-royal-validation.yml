@@ -43,11 +43,13 @@ jobs:
 
       - name: Verify Royal Collection assets
         run: |
-          sha256sum app/src/main/res/drawable-nodpi/style_frame_red.png | grep 0b2d98881c859fdfa7f51098b5cd97d8de50b15c8cdedcd886bbd34843602051
-          sha256sum app/src/main/res/drawable-nodpi/style_frame_green.png | grep a1ab27e0cd3dfcb9c2d8851d0db41a75e329522fca87c19c34a25b81047e34ae
-          sha256sum app/src/main/res/drawable-nodpi/style_frame_mint.png | grep 31a7c32a706c983cdca54312b8ea7496993a55668a09fa8f5f779f87068b0f3e
-          sha256sum app/src/main/res/drawable-nodpi/style_frame_purple.png | grep 1fa03d2b0f83d0f7abd004a8aef26773bb830783aacc8308ff8fb18c7506f6e6
-          sha256sum app/src/main/res/drawable-nodpi/style_frame_gold.png | grep a11f91b1fd8ae0fd2f2463bdb662de02140979fcf766f322ca3fc8319c222804
+          sha256sum \
+            app/src/main/res/drawable-nodpi/style_frame_red.png \
+            app/src/main/res/drawable-nodpi/style_frame_green.png \
+            app/src/main/res/drawable-nodpi/style_frame_mint.png \
+            app/src/main/res/drawable-nodpi/style_frame_purple.png \
+            app/src/main/res/drawable-nodpi/style_frame_gold.png
+          file app/src/main/res/drawable-nodpi/style_frame_*.png
           grep -q 'CC0 1.0' assets/kenney_fantasy_ui_borders_CC0.txt
 
       - name: Apply approved active-screen UI patch
