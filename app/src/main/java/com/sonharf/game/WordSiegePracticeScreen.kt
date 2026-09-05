@@ -98,7 +98,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
             runCatching { SharedDictionaryService.preloadCanonical(context, state.language) }
                 .onSuccess {
                     dictionaryReady = true
-                    notice = sh("Ana sözlük hazır. Çevrimdışı alıştırmada da aynı sözlük kullanılacak.", "Main dictionary ready. The same dictionary will be used for offline practice.")
+                    notice = null
                 }
                 .onFailure {
                     dictionaryReady = false
@@ -204,7 +204,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                                 dictionaryReady -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK", "BOT PRACTICE • MAIN DICTIONARY")
                                 else -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK GEREKLİ", "BOT PRACTICE • MAIN DICTIONARY REQUIRED")
                             },
-                            color = MainUi.Blue, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1,
+                            color = MainUi.Blue, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1,
                         )
                     }
                     IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(48.dp)) {
@@ -305,7 +305,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                 if (state.status == "playing") {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         if (placements.isNotEmpty()) {
-                            Text(readyFeedback.message, color = MainUi.Green, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text(readyFeedback.message, color = MainUi.Green, fontSize = 12.sp, fontWeight = FontWeight.Black)
                             Spacer(Modifier.width(5.dp))
                             Text(
                                 sh(
@@ -313,11 +313,11 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                                     "Area +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
                                 ),
                                 color = MainUi.Muted,
-                                fontSize = 8.sp,
+                                fontSize = 12.sp,
                             )
                         }
                         Spacer(Modifier.weight(1f))
-                        Text(sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"), color = MainUi.Muted, fontSize = 8.sp, maxLines = 1)
+                        Text(sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"), color = MainUi.Muted, fontSize = 12.sp, maxLines = 1)
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -348,40 +348,40 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                                 }
                             },
                             enabled = canPlayerAct && placements.isNotEmpty(),
-                            modifier = Modifier.weight(1f).height(34.dp),
+                            modifier = Modifier.weight(1f).height(48.dp),
                             contentPadding = PaddingValues(horizontal = 3.dp),
                         ) {
-                            Icon(Icons.Rounded.Undo, null, Modifier.size(13.dp))
+                            Icon(Icons.Rounded.Undo, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(3.dp))
-                            Text(sh("GERİ AL", "UNDO"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Text(sh("GERİ AL", "UNDO"), fontSize = 12.sp, fontWeight = FontWeight.Black)
                         }
                         OutlinedButton(
                             onClick = { shuffleSeed = if (shuffleSeed == Int.MAX_VALUE) 1 else shuffleSeed + 1 },
                             enabled = canPlayerAct && state.playerRack.length > 1,
-                            modifier = Modifier.weight(1f).height(34.dp),
+                            modifier = Modifier.weight(1f).height(48.dp),
                             contentPadding = PaddingValues(horizontal = 3.dp),
                         ) {
-                            Icon(Icons.Rounded.Shuffle, null, Modifier.size(13.dp))
+                            Icon(Icons.Rounded.Shuffle, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(3.dp))
-                            Text(sh("KARIŞTIR", "SHUFFLE"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Text(sh("KARIŞTIR", "SHUFFLE"), fontSize = 12.sp, fontWeight = FontWeight.Black)
                         }
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        OutlinedButton(onClick = { showPass = true }, enabled = canPlayerAct, modifier = Modifier.weight(1f).height(if (compact) 40.dp else 43.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                        OutlinedButton(onClick = { showPass = true }, enabled = canPlayerAct, modifier = Modifier.weight(1f).height(48.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
                             Text(sh("PAS", "PASS"), fontSize = 14.sp, fontWeight = FontWeight.Black)
                         }
                         OutlinedButton(
                             onClick = { exchangeSelection = emptySet(); showExchange = true },
                             enabled = canPlayerAct && state.bag.isNotEmpty(),
-                            modifier = Modifier.weight(1.25f).height(if (compact) 40.dp else 43.dp),
+                            modifier = Modifier.weight(1.25f).height(48.dp),
                             border = BorderStroke(1.dp, SiegePurple),
                             contentPadding = PaddingValues(horizontal = 4.dp),
                         ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = 14.sp, fontWeight = FontWeight.Black) }
                         Button(
                             onClick = ::applyPlayerMove,
                             enabled = canPlayerAct && placements.isNotEmpty(),
-                            modifier = Modifier.weight(1.35f).height(if (compact) 40.dp else 43.dp),
+                            modifier = Modifier.weight(1.35f).height(48.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MainUi.Blue,
                                 contentColor = Color.White,
@@ -399,9 +399,9 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(if (won) sh("KUŞATMA SENİN!", "SIEGE WON!") else if (draw) sh("BERABERE", "DRAW") else sh("${botProfile.name.uppercase()} KAZANDI", "${botProfile.name.uppercase()} WON"), color = color, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                                Text(sh("Yeni alıştırma ile tekrar dene.", "Try another practice round."), color = MainUi.Muted, fontSize = 8.sp)
+                                Text(sh("Yeni alıştırma ile tekrar dene.", "Try another practice round."), color = MainUi.Muted, fontSize = 12.sp)
                             }
-                            TextButton(onClick = ::startAgain) { Text(sh("YENİ OYUN", "NEW GAME"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp) }
+                            TextButton(onClick = ::startAgain) { Text(sh("YENİ OYUN", "NEW GAME"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 12.sp) }
                         }
                     }
                 }
@@ -412,7 +412,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     Text(
                         sh("Son: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}", "Last: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}"),
                         color = MainUi.Muted,
-                        fontSize = 8.sp,
+                        fontSize = 12.sp,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth(),
                         maxLines = 1,
