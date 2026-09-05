@@ -26,7 +26,6 @@ jobs:
           from pathlib import Path
           import re
 
-          root = Path('.')
           workflows = [
               Path('.github/workflows/android.yml'),
               Path('.github/workflows/final-unified-validation.yml'),
@@ -54,13 +53,14 @@ jobs:
               'scripts/apply_ux_lock_v2.py',
           ]
           searchable_roots = [Path('.github'), Path('app'), Path('README.md'), Path('README_HOME_LOBBY.md')]
+          temp_workflow = '.github/workflows/cleanup-runtime-patches.yml'
           for candidate in candidates:
               name = Path(candidate).name
               refs = []
               for base in searchable_roots:
                   files = [base] if base.is_file() else list(base.rglob('*'))
                   for file in files:
-                      if not file.is_file() or file.as_posix() == candidate:
+                      if not file.is_file() or file.as_posix() in {candidate, temp_workflow}:
                           continue
                       try:
                           text = file.read_text(errors='ignore')
@@ -73,11 +73,11 @@ jobs:
               Path(candidate).unlink()
 
           Path('scripts/apply_word_siege_ui_fix_20260905.py').unlink()
-          Path('.github/workflows/cleanup-runtime-patches.yml').unlink()
+          Path(temp_workflow).unlink()
       - name: Verify cleanup invariants
         run: |
           set -euo pipefail
-          ! grep -R -n 'apply_word_siege_ui_fix_20260905.py' .github scripts app README.md README_HOME_LOBBY.md || false
+          ! grep -R -n 'apply_word_siege_ui_fix_20260905.py' .github scripts app README.md README_HOME_LOBBY.md
           test ! -f scripts/apply_word_siege_ui_fix_20260905.py
           test -f scripts/verify_frame_provenance.py
           grep -q 'modifier = modifier.height(if (compact) 70.dp else 78.dp)' app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt
