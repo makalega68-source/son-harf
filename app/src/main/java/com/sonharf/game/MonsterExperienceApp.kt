@@ -195,7 +195,7 @@ private fun MonsterHomeScreen(
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("SON HARF", color = MonsterUi.Text, fontSize = 28.sp, fontWeight = FontWeight.Black, letterSpacing = (-.6).sp)
+                    SonHarfBrandLogo(size = 54.dp)
                     Text(sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"), color = MonsterUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
                 MonsterIconButton(Icons.Rounded.Notifications, onTasks)
@@ -210,10 +210,7 @@ private fun MonsterHomeScreen(
         item {
             Text(sh("ARENANI SEÇ", "CHOOSE YOUR ARENA"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp)
             Spacer(Modifier.height(7.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MonsterQuickCard(sh("KLASİK", "CLASSIC"), sh("Kelime düellosu", "Word duel"), Icons.Rounded.SportsEsports, MonsterUi.Accent, Modifier.weight(1f), onPlay)
-                MonsterSiegeQuickCard(Modifier.weight(1f), onSiege)
-            }
+            MonsterSiegeQuickCard(Modifier.fillMaxWidth(), onSiege)
             Spacer(Modifier.height(8.dp))
             MonsterLeagueCard(stats.rating, onLeague)
         }
@@ -392,6 +389,10 @@ private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, 
                 Spacer(Modifier.weight(1f))
                 Text("1v1", color = MonsterUi.Text, fontWeight = FontWeight.Black)
             }
+            SonHarfBrandLogo(
+                modifier = Modifier.fillMaxWidth(),
+                size = 58.dp,
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 15.sp)
@@ -421,41 +422,28 @@ private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, 
 @Composable
 private fun MonsterSiegeQuickCard(modifier: Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = modifier.height(128.dp).clickable(onClick = onClick),
+        modifier = modifier.height(136.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         color = MonsterUi.SurfaceRaised,
         border = BorderStroke(1.dp, MonsterUi.Border),
     ) {
-        Column(
-            Modifier.fillMaxSize().padding(11.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween,
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             Image(
                 painter = painterResource(R.drawable.kelime_kusatma_logo),
                 contentDescription = sh("KELİME\nKUŞATMASI", "WORD\nSIEGE"),
-                modifier = Modifier.size(72.dp),
+                modifier = Modifier.size(106.dp),
                 contentScale = ContentScale.Fit,
             )
-            Text(
-                sh("Alanı ele geçir", "Capture territory"),
-                color = MonsterUi.Muted,
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Bold,
-            )
-        }
-    }
-}
-
-@Composable
-private fun MonsterQuickCard(title: String, subtitle: String, icon: ImageVector, accent: Color, modifier: Modifier, onClick: () -> Unit) {
-    Surface(modifier = modifier.height(128.dp).clickable(onClick = onClick), shape = RoundedCornerShape(18.dp), color = MonsterUi.SurfaceRaised, border = BorderStroke(1.dp, MonsterUi.Border)) {
-        Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(24.dp))
-            Column {
-                Text(title, color = MonsterUi.Text, fontSize = 14.sp, lineHeight = 15.sp, fontWeight = FontWeight.Black)
-                Text(subtitle, color = MonsterUi.Muted, fontSize = 12.sp)
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MonsterUi.Text, fontSize = 18.sp, lineHeight = 20.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(5.dp))
+                Text(sh("Alanı ele geçir", "Capture territory"), color = MonsterUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             }
+            Icon(Icons.Rounded.ChevronRight, null, tint = MonsterUi.Muted, modifier = Modifier.size(22.dp))
         }
     }
 }
