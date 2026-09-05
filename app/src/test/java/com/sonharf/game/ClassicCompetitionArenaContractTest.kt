@@ -25,6 +25,9 @@ class ClassicCompetitionArenaContractTest {
         assertTrue(text.contains("Icons.Rounded.Bolt"))
         assertTrue(text.contains("RÖVANŞ"))
         assertTrue(text.contains("BİR MAÇ DAHA"))
+        assertFalse(text.contains("✕ “\$required” İLE BAŞLAMALI"))
+        assertTrue(text.contains("scaleIn(initialScale = .72f"))
+        assertTrue(text.contains("slideInVertically"))
     }
 
     @Test fun urgencyRespectsUserSoundAndHapticPreferences() {
