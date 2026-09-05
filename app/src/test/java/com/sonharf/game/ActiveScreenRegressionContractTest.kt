@@ -32,7 +32,7 @@ class ActiveScreenRegressionContractTest {
     @Test fun practiceViewportContract() {
         val viewport = src("WordSiegeBoardViewport.kt")
         val board = src("WordSiegePracticeBoard.kt")
-        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.86f"))
+        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.80f"))
         assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_MIN_SCALE = 0.78f"))
         assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_MAX_SCALE = 1.24f"))
         assertTrue(board.contains("detectTransformGestures"))
@@ -71,15 +71,25 @@ class ActiveScreenRegressionContractTest {
         assertFalse(classic.contains("BasicTextField"))
     }
 
-    @Test fun typographyContractTargetsArePresent() {
+    @Test fun approvedCompactUiTargetsArePresent() {
         val classic = src("LightDuelUi.kt")
         val practice = src("WordSiegePracticeScreen.kt")
+        assertTrue(classic.contains("fontSize = 62.sp"))
+        assertTrue(classic.contains("fontSize = 17.sp"))
         assertTrue(classic.contains("fontSize = 15.sp"))
-        assertTrue(classic.contains("fontSize = 12.sp"))
-        assertTrue(classic.contains("fontSize = if (value.isBlank()) 16.sp else 20.sp"))
-        assertTrue(practice.contains("size = 50.dp"))
+        assertTrue(classic.contains("modifier = modifier.height(48.dp)"))
+        assertTrue(classic.contains("modifier = Modifier.size(30.dp)"))
+        assertTrue(classic.contains("Senkronize ediliyor…"))
+        assertTrue(classic.contains("CircularProgressIndicator("))
+        assertFalse(classic.contains("Kelimenizi yazın…"))
+        assertFalse(classic.contains("Type your word…"))
+        assertFalse(classic.contains("Text(\"➤\""))
+        assertTrue(practice.contains("ProfilePhotoAvatarRectWithGender("))
+        assertTrue(practice.contains("width = 42.dp"))
+        assertTrue(practice.contains("height = 56.dp"))
         assertTrue(practice.contains("fontSize = 30.sp"))
         assertTrue(practice.contains("fontSize = 15.sp"))
+        assertFalse(practice.contains("Ana sözlük hazır. Çevrimdışı alıştırmada da aynı sözlük kullanılacak."))
     }
 
     @Test fun scoringStillUsesTwoPointTransferWithoutWordRollback() {
