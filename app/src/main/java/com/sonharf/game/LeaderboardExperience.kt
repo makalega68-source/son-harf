@@ -90,8 +90,10 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
     ) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Surface(onClick = onBack, shape = RoundedCornerShape(12.dp), color = SonHarfSurface2, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .18f))) {
-                    Text("‹", Modifier.padding(horizontal = 13.dp, vertical = 5.dp), color = SonHarfText, fontSize = 28.sp, fontWeight = FontWeight.Bold)
+                Surface(onClick = onBack, modifier = Modifier.size(48.dp), shape = RoundedCornerShape(14.dp), color = SonHarfSurface2, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .18f))) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = SonHarfText)
+                    }
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
@@ -184,8 +186,8 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
 
         if (period != "season") item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                LeagueLanguagePill("🇹🇷 TR", language == "tr", Modifier.weight(1f)) { language = "tr" }
-                LeagueLanguagePill("🇬🇧 EN", language == "en", Modifier.weight(1f)) { language = "en" }
+                LeagueLanguagePill("TR • TÜRKÇE", language == "tr", Modifier.weight(1f)) { language = "tr" }
+                LeagueLanguagePill("EN • ENGLISH", language == "en", Modifier.weight(1f)) { language = "en" }
             }
         }
 
@@ -193,7 +195,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
 
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text(sh("OYUNCULAR", "PLAYERS"), color = SonHarfText, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Text(sh("OYUNCU", "PLAYER"), color = SonHarfText, fontSize = 13.sp, fontWeight = FontWeight.Black)
                 Text(sh("RATING", "RATING"), color = SonHarfMuted, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
         }
@@ -212,10 +214,12 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                         Icon(if (index < 3) Icons.Rounded.MilitaryTech else Icons.Rounded.Leaderboard, null, Modifier.padding(8.dp).size(20.dp), tint = accent)
                     }
                     Spacer(Modifier.width(9.dp))
-                    ProfilePhotoAvatar(
+                    ProfilePhotoAvatarRectWithGender(
                         avatarPath = profiles[row.userId]?.avatarPath,
+                        gender = profiles[row.userId]?.gender,
                         name = row.displayName,
-                        size = 38.dp,
+                        width = 40.dp,
+                        height = 48.dp,
                         visible = profiles[row.userId]?.avatarVisibility != "hidden",
                         accent = if (profiles[row.userId]?.isVip == true) SonHarfGold else SonHarfBlue,
                     )
@@ -231,7 +235,13 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                             }
                         }
                         val rate = if (row.winRate % 1.0 == 0.0) row.winRate.toInt().toString() else String.format("%.1f", row.winRate)
-                        Text("${row.leagueName}  •  ${row.wins}W ${row.losses}L  •  %$rate", color = SonHarfMuted, fontSize = 13.sp, maxLines = 1)
+                        Text(
+                            "${row.leagueName} • ${row.wins} ${sh("galibiyet", "wins")} • ${row.losses} ${sh("mağlubiyet", "losses")} • %$rate",
+                            color = SonHarfMuted,
+                            fontSize = 13.sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(row.rating.toString(), color = SonHarfText, fontSize = 15.sp, fontWeight = FontWeight.Black)
@@ -336,7 +346,7 @@ private fun LeaguePodium(rows: List<LeaderboardV2Row>, profiles: Map<String, Pro
 @Composable
 private fun LeagueLanguagePill(label: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = modifier.clickable(onClick = onClick),
+        modifier = modifier.heightIn(min = 48.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(11.dp),
         color = if (selected) SonHarfSurface2 else SonHarfSurface,
         border = BorderStroke(1.dp, if (selected) SonHarfBlue.copy(alpha = .40f) else SonHarfMuted.copy(alpha = .10f)),
