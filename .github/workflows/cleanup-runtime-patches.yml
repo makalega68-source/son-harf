@@ -1,0 +1,93 @@
+name: Cleanup runtime patches
+
+on:
+  push:
+    branches: [ cleanup-runtime-patches ]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cleanup-runtime-patches
+          fetch-depth: 0
+      - name: Apply current Word Siege patch permanently
+        run: |
+          set -euo pipefail
+          python scripts/apply_word_siege_ui_fix_20260905.py
+          git diff --check
+      - name: Remove runtime patch calls and proven-unused one-shot scripts
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          root = Path('.')
+          workflows = [
+              Path('.github/workflows/android.yml'),
+              Path('.github/workflows/final-unified-validation.yml'),
+              Path('.github/workflows/frame-provenance-gate.yml'),
+          ]
+          step = re.compile(
+              r"\n      - name: Apply Word Siege UI stabilization\n        run: \|\n          python scripts/apply_word_siege_ui_fix_20260905\.py\n          git diff --check(?:\n          git diff -- app/src/main/java/com/sonharf/game/WordSiegePracticeScreen\.kt app/src/main/java/com/sonharf/game/WordSiegePracticeBoard\.kt)?\n",
+              re.M,
+          )
+          for path in workflows:
+              text = path.read_text()
+              text2, count = step.subn('\n', text, count=1)
+              if count != 1:
+                  raise SystemExit(f'Expected runtime patch step not found exactly once in {path}')
+              path.write_text(text2)
+
+          candidates = [
+              'scripts/apply_action_ui_pack.py',
+              'scripts/apply_final_ui_bilbakalim_pack.py',
+              'scripts/apply_layout_bot_turkish_fixes.py',
+              'scripts/apply_premium_cyan_ui.py',
+              'scripts/apply_responsive_gameflow_fix.py',
+              'scripts/apply_responsive_home_user_fix.py',
+              'scripts/apply_user_requested_gameplay_ui_fixes.py',
+              'scripts/apply_ux_lock_v2.py',
+          ]
+          searchable_roots = [Path('.github'), Path('app'), Path('README.md'), Path('README_HOME_LOBBY.md')]
+          for candidate in candidates:
+              name = Path(candidate).name
+              refs = []
+              for base in searchable_roots:
+                  files = [base] if base.is_file() else list(base.rglob('*'))
+                  for file in files:
+                      if not file.is_file() or file.as_posix() == candidate:
+                          continue
+                      try:
+                          text = file.read_text(errors='ignore')
+                      except Exception:
+                          continue
+                      if name in text or candidate in text:
+                          refs.append(file.as_posix())
+              if refs:
+                  raise SystemExit(f'Refusing to delete referenced script {candidate}: {refs}')
+              Path(candidate).unlink()
+
+          Path('scripts/apply_word_siege_ui_fix_20260905.py').unlink()
+          Path('.github/workflows/cleanup-runtime-patches.yml').unlink()
+      - name: Verify cleanup invariants
+        run: |
+          set -euo pipefail
+          ! grep -R -n 'apply_word_siege_ui_fix_20260905.py' .github scripts app README.md README_HOME_LOBBY.md || false
+          test ! -f scripts/apply_word_siege_ui_fix_20260905.py
+          test -f scripts/verify_frame_provenance.py
+          grep -q 'modifier = modifier.height(if (compact) 70.dp else 78.dp)' app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt
+          grep -q 'var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }' app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt
+          git diff --check
+      - name: Commit cleanup
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'Remove obsolete runtime patch system and one-shot scripts'
+          git push origin HEAD:cleanup-runtime-patches
