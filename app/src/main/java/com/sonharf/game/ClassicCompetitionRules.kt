@@ -46,7 +46,7 @@ internal object ClassicCompetitionRules {
         abs(myScore - opponentScore) <= CRITICAL_SCORE_GAP || finalMovesRemaining in 1..4
 
     fun comboLabel(streak: Int, language: String): String? = when {
-        streak >= 5 -> if (language == "en") "$streak WORD STREAK" else "$streak KELİME SERİ"
+        streak >= 5 -> if (language == "en") "$streak WORD STREAK" else "$streak KELİME SERİSİ"
         streak >= 3 -> if (language == "en") "$streak WORD COMBO" else "$streak KELİME COMBO"
         else -> null
     }

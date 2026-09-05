@@ -42,7 +42,7 @@ class ClassicCompetitionRulesTest {
         assertTrue(ClassicCompetitionRules.isStrongScoreDelta(20))
         assertNull(ClassicCompetitionRules.comboLabel(2, "tr"))
         assertEquals("3 KELİME COMBO", ClassicCompetitionRules.comboLabel(3, "tr"))
-        assertEquals("5 KELİME SERİ", ClassicCompetitionRules.comboLabel(5, "tr"))
+        assertEquals("5 KELİME SERİSİ", ClassicCompetitionRules.comboLabel(5, "tr"))
     }
 
     @Test fun criticalModeUsesTenPointGapOrFinalMoves() {

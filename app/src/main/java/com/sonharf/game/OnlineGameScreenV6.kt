@@ -87,6 +87,14 @@ fun OnlineGameScreenV6() {
         notice = sh("Ses tanındı. Kelimeyi kontrol edip GÖNDER'e bas.", "Voice recognized. Check the word, then press SEND.")
     }
 
+    LaunchedEffect(feedbackWord, feedbackCorrect) {
+        if (feedbackWord != null && feedbackCorrect != null) {
+            delay(1500L)
+            feedbackWord = null
+            feedbackCorrect = null
+        }
+    }
+
     fun friendly(raw: String) = when {
         "player_already_in_game" in raw -> sh("Aktif maçına dönülüyor…", "Returning to your active match…")
         "not_your_turn" in raw -> sh("Sıra rakibinde.", "It is your opponent's turn.")
@@ -348,7 +356,6 @@ fun OnlineGameScreenV6() {
             feedbackCorrect = feedbackCorrect,
             wordInput = wordInput,
             onWordInput = { wordInput = it.take(40) },
-            notice = notice,
             busy = busy,
             triviaRound = triviaRound,
             triviaQuestion = triviaQuestion,
@@ -409,22 +416,6 @@ fun OnlineGameScreenV6() {
                     runCatching { backend.claimTurnTimeout(active.id) }
                         .onSuccess { acceptServerRoom(it) }
                         .onFailure { notice = friendly(it.message.orEmpty()) }
-                }
-            },
-            onBonus = {
-                if (!busy && active.status == "playing") scope.launch {
-                    busy = true
-                    runCatching { backend.triggerBilBakalimBonus(active.id) }
-                        .onSuccess { updated ->
-                            room = updated
-                            refreshQuiz(updated)
-                            if (updated.status == "quiz") {
-                                notice = sh("BİL BAKALIM başladı!", "GUESS IT started!")
-                                SonHarfSoundFx.softNotify()
-                            }
-                        }
-                        .onFailure { notice = friendly(it.message.orEmpty()) }
-                    busy = false
                 }
             },
             onVoice = {
