@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,6 +25,8 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 
+private enum class RetentionSection { MISSIONS, MASTERY, ACHIEVEMENTS, RECORDS }
+
 @Composable
 internal fun MainRetentionScreen(
     backend: OnlineGameBackend,
@@ -43,6 +46,7 @@ internal fun MainRetentionScreen(
     var loading by remember { mutableStateOf(true) }
     var busyKey by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var section by remember { mutableStateOf(RetentionSection.MISSIONS) }
 
     suspend fun reload() = coroutineScope {
         loading = true
@@ -108,7 +112,11 @@ internal fun MainRetentionScreen(
                             Text("${sh("SEVİYE", "LEVEL")} ${g?.level ?: 1}", color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
                             Text("${g?.xp ?: 0} XP • ${m?.selectedTitle ?: g?.nextTitle.orEmpty()}", color = MainUi.Muted, fontSize = 13.sp)
                         }
-                        Text("${m?.dailyPlayStreak ?: 0} 🔥", color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.LocalFireDepartment, null, tint = MainUi.Red)
+                            Spacer(Modifier.width(4.dp))
+                            Text("${m?.dailyPlayStreak ?: 0}", color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        }
                     }
                     LinearProgressIndicator(
                         progress = { xpProgress },
@@ -163,7 +171,9 @@ internal fun MainRetentionScreen(
                             colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold, contentColor = Color(0xFF3C2700)),
                             shape = RoundedCornerShape(14.dp),
                         ) {
-                            Text(if (g?.dailyClaimed == true) "✓ ${sh("ALINDI", "CLAIMED")}" else "🎁 +${g?.dailyReward ?: 40} SC", fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            Icon(if (g?.dailyClaimed == true) Icons.Rounded.CheckCircle else Icons.Rounded.CardGiftcard, null)
+                            Spacer(Modifier.width(5.dp))
+                            Text(if (g?.dailyClaimed == true) sh("ALINDI", "CLAIMED") else "+${g?.dailyReward ?: 40} SC", fontWeight = FontWeight.Black, fontSize = 13.sp)
                         }
                         OutlinedButton(
                             onClick = onDailyChallenge,
@@ -237,6 +247,9 @@ internal fun MainRetentionScreen(
             }
         }
 
+        item { RetentionSectionRail(section) { section = it } }
+
+        if (section == RetentionSection.MISSIONS) {
         item { MainSectionTitle(sh("GÖREV ROTASI", "MISSION ROUTE")) }
 
         if (missions.isEmpty() && goals.isEmpty() && !loading) {
@@ -251,7 +264,7 @@ internal fun MainRetentionScreen(
             }
         }
 
-        items(missions, key = { it.missionId }) { mission ->
+        items(missions.sortedByDescending { it.progress.toFloat() / it.target.coerceAtLeast(1) }, key = { it.missionId }) { mission ->
             MainUnifiedMissionCard(
                 mission = mission,
                 busy = busyKey == mission.missionId,
@@ -274,7 +287,7 @@ internal fun MainRetentionScreen(
         }
 
         if (missions.isEmpty()) {
-            items(goals, key = { it.id }) { goal ->
+            items(goals.sortedByDescending { it.progress.toFloat() / it.target.coerceAtLeast(1) }, key = { it.id }) { goal ->
                 MainLegacyGoalCard(
                     goal = goal,
                     busy = busyKey == goal.id,
@@ -293,7 +306,9 @@ internal fun MainRetentionScreen(
                 )
             }
         }
+        }
 
+        if (section == RetentionSection.MASTERY) {
         item { MainSectionTitle(sh("KELİME USTALIĞI", "WORD MASTERY")) }
 
         if (mastery.isEmpty() && !loading) {
@@ -342,7 +357,9 @@ internal fun MainRetentionScreen(
                 }
             }
         }
+        }
 
+        if (section == RetentionSection.ACHIEVEMENTS) {
         item {
             MainSectionTitle(sh("BAŞARIMLAR", "ACHIEVEMENTS"))
             Spacer(Modifier.height(8.dp))
@@ -359,7 +376,7 @@ internal fun MainRetentionScreen(
                     }
                     achievements.take(5).forEach { achievement ->
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(achievement.icon, fontSize = 18.sp)
+                            Icon(Icons.Rounded.EmojiEvents, null, tint = if (achievement.unlocked) MainUi.Gold else MainUi.Muted)
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 if (SonHarfUiState.isEnglish) achievement.titleEn else achievement.titleTr,
@@ -374,7 +391,9 @@ internal fun MainRetentionScreen(
                 }
             }
         }
+        }
 
+        if (section == RetentionSection.RECORDS) {
         records?.let { r ->
             item {
                 MainSectionTitle(sh("KİŞİSEL REKORLAR", "PERSONAL RECORDS"))
@@ -385,6 +404,10 @@ internal fun MainRetentionScreen(
                     MainMetricCard(r.realPvpMatches.toString(), sh("Gerçek PvP", "Real PvP"), Modifier.weight(1f))
                 }
             }
+        }
+        if (records == null && !loading) item {
+            Text(sh("Kişisel rekorlar ilk maçlarınla oluşur.", "Personal records appear after your first matches."), color = MainUi.Muted, fontSize = 13.sp)
+        }
         }
 
         notice?.let { message ->
@@ -408,6 +431,30 @@ internal fun MainRetentionScreen(
             }
         }
         item { Spacer(Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun RetentionSectionRail(selected: RetentionSection, onSelected: (RetentionSection) -> Unit) {
+    val tabs = listOf(
+        RetentionSection.MISSIONS to sh("GÖREVLER", "MISSIONS"),
+        RetentionSection.MASTERY to sh("USTALIK", "MASTERY"),
+        RetentionSection.ACHIEVEMENTS to sh("BAŞARIM", "ACHIEVEMENTS"),
+        RetentionSection.RECORDS to sh("REKOR", "RECORDS"),
+    )
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(15.dp)).background(MainUi.Surface).padding(4.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+        tabs.forEach { (key, label) ->
+            val active = selected == key
+            Surface(
+                modifier = Modifier.weight(1f).heightIn(min = 48.dp).clickable { onSelected(key) },
+                shape = RoundedCornerShape(11.dp),
+                color = if (active) MainUi.Blue else Color.Transparent,
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(label, color = if (active) Color.White else MainUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, maxLines = 2)
+                }
+            }
+        }
     }
 }
 
