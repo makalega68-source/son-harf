@@ -155,16 +155,16 @@ def patch_duel() -> None:
 def patch_style() -> None:
     text = STYLE.read_text(encoding="utf-8")
     replacements = {
-        'PurchasedFrameSpec(RED, "Kırmızı Hat", "Red Line", "LAYERLAB • kırmızı", "LAYERLAB • red", Color(0xFFFF566E), R.drawable.style_frame_red)':
-        'PurchasedFrameSpec(RED, "Royal Ruby", "Royal Ruby", "ROYAL • yakut", "ROYAL • ruby", Color(0xFFFF566E), R.drawable.style_frame_red)',
-        'PurchasedFrameSpec(GREEN, "Zümrüt Hat", "Emerald Line", "LAYERLAB • zümrüt", "LAYERLAB • emerald", Color(0xFF31D890), R.drawable.style_frame_green)':
-        'PurchasedFrameSpec(GREEN, "Royal Emerald", "Royal Emerald", "ROYAL • zümrüt", "ROYAL • emerald", Color(0xFF31D890), R.drawable.style_frame_green)',
-        'PurchasedFrameSpec(MINT, "Buz Mint", "Ice Mint", "LAYERLAB • mint", "LAYERLAB • mint", Color(0xFF53E0D2), R.drawable.style_frame_mint)':
-        'PurchasedFrameSpec(MINT, "Royal Ice", "Royal Ice", "ROYAL • buz", "ROYAL • ice", Color(0xFF53E0D2), R.drawable.style_frame_mint)',
-        'PurchasedFrameSpec(PURPLE, "Mor Spektrum", "Violet Spectrum", "LAYERLAB • mor", "LAYERLAB • violet", Color(0xFFA772FF), R.drawable.style_frame_purple)':
-        'PurchasedFrameSpec(PURPLE, "Royal Violet", "Royal Violet", "ROYAL • mor", "ROYAL • violet", Color(0xFFA772FF), R.drawable.style_frame_purple)',
-        'PurchasedFrameSpec(GOLD, "Altın Hat", "Gold Line", "LAYERLAB • premium altın", "LAYERLAB • premium gold", Color(0xFFFFC247), R.drawable.style_frame_gold)':
-        'PurchasedFrameSpec(GOLD, "Royal Gold", "Royal Gold", "ROYAL • premium altın", "ROYAL • premium gold", Color(0xFFFFC247), R.drawable.style_frame_gold)',
+        'PurchasedFrameSpec(PurchasedFrameCatalog.RED, "Kırmızı Hat", "Red Line", "Sade başlangıç ve günlük kullanım çerçevesi", "Clean starter and everyday frame", R.drawable.style_frame_red, Color(0xFFD84C4C), "SIRADAN", "STANDARD", R.drawable.style_icon_user)':
+        'PurchasedFrameSpec(PurchasedFrameCatalog.RED, "Royal Ruby", "Royal Ruby", "Yakut tonlu Royal Collection profil çerçevesi", "Ruby Royal Collection profile frame", R.drawable.style_frame_red, Color(0xFFD84C4C), "SIRADAN", "STANDARD", R.drawable.style_icon_user)',
+        'PurchasedFrameSpec(PurchasedFrameCatalog.GREEN, "Zümrüt Hat", "Emerald Line", "Dengeli zümrüt profil çerçevesi", "Balanced emerald profile frame", R.drawable.style_frame_green, Color(0xFF2FAE68), "MAĞAZA", "SHOP", R.drawable.style_icon_coin)':
+        'PurchasedFrameSpec(PurchasedFrameCatalog.GREEN, "Royal Emerald", "Royal Emerald", "Zümrüt tonlu Royal Collection profil çerçevesi", "Emerald Royal Collection profile frame", R.drawable.style_frame_green, Color(0xFF2FAE68), "MAĞAZA", "SHOP", R.drawable.style_icon_coin)',
+        'PurchasedFrameSpec(PurchasedFrameCatalog.MINT, "Buz Mint", "Ice Mint", "Temiz ve modern mint çerçeve", "Clean modern mint frame", R.drawable.style_frame_mint, Color(0xFF32BFB3), "MAĞAZA", "SHOP", R.drawable.style_icon_coin)':
+        'PurchasedFrameSpec(PurchasedFrameCatalog.MINT, "Royal Ice", "Royal Ice", "Buz tonlu Royal Collection profil çerçevesi", "Ice Royal Collection profile frame", R.drawable.style_frame_mint, Color(0xFF32BFB3), "MAĞAZA", "SHOP", R.drawable.style_icon_coin)',
+        'PurchasedFrameSpec(PurchasedFrameCatalog.PURPLE, "Mor Spektrum", "Violet Spectrum", "Premium mor profil vurgusu", "Premium violet profile accent", R.drawable.style_frame_purple, Color(0xFF7257D8), "MAĞAZA", "SHOP", R.drawable.style_icon_coin)':
+        'PurchasedFrameSpec(PurchasedFrameCatalog.PURPLE, "Royal Violet", "Royal Violet", "Mor tonlu Royal Collection profil çerçevesi", "Violet Royal Collection profile frame", R.drawable.style_frame_purple, Color(0xFF7257D8), "MAĞAZA", "SHOP", R.drawable.style_icon_coin)',
+        'PurchasedFrameSpec(PurchasedFrameCatalog.GOLD, "Altın Hat", "Gold Line", "VIP ve prestij koleksiyonuna uygun metalik çerçeve", "Metallic frame for VIP and prestige collection", R.drawable.style_frame_gold, Color(0xFFD7A72E), "VIP / PREMIUM", "VIP / PREMIUM", R.drawable.style_icon_trophy)':
+        'PurchasedFrameSpec(PurchasedFrameCatalog.GOLD, "Royal Gold", "Royal Gold", "Royal Collection premium altın profil çerçevesi", "Royal Collection premium gold profile frame", R.drawable.style_frame_gold, Color(0xFFD7A72E), "VIP / PREMIUM", "VIP / PREMIUM", R.drawable.style_icon_trophy)',
     }
     for old, new in replacements.items():
         text = replace_once(text, old, new, "Royal Collection catalog item")
