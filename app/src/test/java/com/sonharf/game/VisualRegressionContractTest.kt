@@ -38,6 +38,30 @@ class VisualRegressionContractTest {
         assertTrue(duel.contains("matchmakingState == MatchmakingUiState.Searching"))
     }
 
+    @Test
+    fun finalUiStagesRemainActiveAndAccessible() {
+        val auth = source("RequiredAuthGate.kt")
+        val profile = source("MainPlayerProfileScreen.kt")
+        val retention = source("MainRetentionScreen.kt")
+        val store = source("MonsterStyleStoreScreen.kt")
+        val settings = source("MainSettingsVipScreen.kt")
+        val cipher = source("DailyCipherScreen.kt")
+        val league = source("LeaderboardExperience.kt")
+
+        assertTrue(auth.contains("registerStep"))
+        assertTrue(auth.contains("DEVAM ET"))
+        assertTrue(profile.contains("ProfileDisclosureHeader"))
+        assertTrue(profile.contains("Modifier.width(124.dp).height(136.dp)"))
+        assertTrue(retention.contains("RetentionSectionRail"))
+        assertTrue(retention.contains("sortedByDescending"))
+        assertTrue(store.contains("selectedCategory"))
+        assertTrue(settings.contains("VipComparisonTable"))
+        assertFalse(settings.contains("8.5.sp"))
+        assertTrue(cipher.contains("CutCornerShape"))
+        assertFalse(cipher.contains("6.sp else 7.sp"))
+        assertTrue(league.contains("ProfilePhotoAvatarRectWithGender"))
+    }
+
     private fun source(name: String) = projectFile("app/src/main/java/com/sonharf/game/$name").readText()
     private fun projectFile(path: String): File {
         val file = listOf(File(path), File("../$path")).firstOrNull(File::exists)
