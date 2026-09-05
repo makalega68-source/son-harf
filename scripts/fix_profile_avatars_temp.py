@@ -140,3 +140,16 @@ replace_once(
                     )
                 }""",
 )
+
+# Regression guards must follow the new stronger contract: real photos remain mandatory,
+# and the live duel must also carry the equipped profile frame through lobby + arena.
+replace_once(
+    "app/src/test/java/com/sonharf/game/FinalRestorationRegressionTest.kt",
+    '        assertTrue(duel.contains("ProfilePhotoAvatarWithGender"))',
+    '        assertTrue(duel.contains("FramedProfilePhotoAvatar"))\n        assertTrue(duel.contains("playerFrameId"))',
+)
+replace_once(
+    "app/src/test/java/com/sonharf/game/ProfileImageCoverageRegressionTest.kt",
+    '        assertTrue(duel.contains("ProfilePhotoAvatarWithGender"))',
+    '        assertTrue(duel.contains("FramedProfilePhotoAvatar"))\n        assertTrue(duel.contains("playerFrameId"))\n        assertTrue(duel.contains("ProfilePhotoAvatarRectWithGender"))',
+)
