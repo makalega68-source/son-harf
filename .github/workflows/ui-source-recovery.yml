@@ -1,0 +1,108 @@
+name: UI Source Recovery
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - fix/installable-ui-source-20260905
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-source-recovery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      HAS_RELEASE_CONFIG: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 != '' && secrets.SON_HARF_RELEASE_STORE_PASSWORD != '' && secrets.SON_HARF_RELEASE_KEY_ALIAS != '' && secrets.SON_HARF_RELEASE_KEY_PASSWORD != '' && secrets.SON_HARF_ADMOB_APP_ID != '' && secrets.SON_HARF_ADMOB_REWARDED_ID != '' && secrets.SON_HARF_ADMOB_BANNER_ID != '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Verify committed source state
+        run: |
+          echo "SOURCE_SHA=$(git rev-parse HEAD)"
+          git diff --exit-code
+          test -z "$(git status --porcelain --untracked-files=no)"
+
+      - name: Apply approved active-screen UI source patch
+        run: |
+          python3 scripts/apply_active_screen_ui_20260905.py
+          git diff --check
+          git diff -- app/src/main/java/com/sonharf/game/LightDuelUi.kt app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt app/src/main/java/com/sonharf/game/WordSiegeBoardViewport.kt
+
+      - name: Build debug APK with regression tests
+        run: gradle clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Prepare and verify debug APK
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk SonHarf-UI-Source-Debug.apk
+          sha256sum SonHarf-UI-Source-Debug.apk | tee SonHarf-UI-Source-Debug.sha256
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose --print-certs SonHarf-UI-Source-Debug.apk
+
+      - name: Upload verified debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: son-harf-ui-source-debug
+          path: |
+            SonHarf-UI-Source-Debug.apk
+            SonHarf-UI-Source-Debug.sha256
+          if-no-files-found: error
+
+      - name: Build signed release APK
+        if: success() && env.HAS_RELEASE_CONFIG == 'true'
+        env:
+          RELEASE_KEYSTORE_B64: ${{ secrets.SON_HARF_RELEASE_KEYSTORE_B64 }}
+          SON_HARF_RELEASE_STORE_PASSWORD: ${{ secrets.SON_HARF_RELEASE_STORE_PASSWORD }}
+          SON_HARF_RELEASE_KEY_ALIAS: ${{ secrets.SON_HARF_RELEASE_KEY_ALIAS }}
+          SON_HARF_RELEASE_KEY_PASSWORD: ${{ secrets.SON_HARF_RELEASE_KEY_PASSWORD }}
+          SON_HARF_ADMOB_APP_ID: ${{ secrets.SON_HARF_ADMOB_APP_ID }}
+          SON_HARF_ADMOB_REWARDED_ID: ${{ secrets.SON_HARF_ADMOB_REWARDED_ID }}
+          SON_HARF_ADMOB_BANNER_ID: ${{ secrets.SON_HARF_ADMOB_BANNER_ID }}
+        run: |
+          printf '%s' "$RELEASE_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/son-harf-upload.jks"
+          gradle :app:assembleRelease --stacktrace --warning-mode all \
+            -PSON_HARF_RELEASE_STORE_FILE="$RUNNER_TEMP/son-harf-upload.jks" \
+            -PSON_HARF_RELEASE_STORE_PASSWORD="$SON_HARF_RELEASE_STORE_PASSWORD" \
+            -PSON_HARF_RELEASE_KEY_ALIAS="$SON_HARF_RELEASE_KEY_ALIAS" \
+            -PSON_HARF_RELEASE_KEY_PASSWORD="$SON_HARF_RELEASE_KEY_PASSWORD" \
+            -PSON_HARF_ADMOB_APP_ID="$SON_HARF_ADMOB_APP_ID" \
+            -PSON_HARF_ADMOB_REWARDED_ID="$SON_HARF_ADMOB_REWARDED_ID" \
+            -PSON_HARF_ADMOB_BANNER_ID="$SON_HARF_ADMOB_BANNER_ID"
+          cp app/build/outputs/apk/release/app-release.apk SonHarf-UI-Source-Release.apk
+          sha256sum SonHarf-UI-Source-Release.apk | tee SonHarf-UI-Source-Release.sha256
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose --print-certs SonHarf-UI-Source-Release.apk
+
+      - name: Upload verified signed release APK
+        if: success() && env.HAS_RELEASE_CONFIG == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: son-harf-ui-source-release
+          path: |
+            SonHarf-UI-Source-Release.apk
+            SonHarf-UI-Source-Release.sha256
+          if-no-files-found: error
+
+      - name: Report release signing availability
+        if: success() && env.HAS_RELEASE_CONFIG != 'true'
+        run: echo "::warning::Release signing secrets are not fully configured; verified debug APK was produced."
