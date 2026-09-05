@@ -144,7 +144,8 @@ private fun MonsterHomeScreen(
 
 @Composable
 private fun MonsterLiveMatchCard'''
-    text, count = pattern.subn(replacement, text, count=1)
+    # Use a function replacement so re.sub does not interpret Kotlin's \\n sequences.
+    text, count = pattern.subn(lambda _: replacement, text, count=1)
     if count != 1:
         raise SystemExit("Missing expected pattern: MonsterHomeScreen")
     return text
