@@ -62,6 +62,7 @@ internal fun MonsterStyleStoreScreen() {
     var busy by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(true) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var selectedCategory by remember { mutableStateOf("featured") }
 
     suspend fun reload() {
         loading = true
@@ -122,8 +123,12 @@ internal fun MonsterStyleStoreScreen() {
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item { StoreHeader(profile?.diamonds ?: 0) }
-            item { StoreCategoryRail() }
+            item { StoreCategoryRail(selectedCategory) { selectedCategory = it } }
             if (loading) item { StoreNotice(sh("Style yükleniyor…", "Loading Style…")) }
+            item { FairPlayStoreNotice() }
+            notice?.let { message -> item { StoreNotice(message) } }
+
+            if (selectedCategory == "featured") {
             item {
                 StoreSectionHeader(
                     sh("ÖNE ÇIKANLAR", "FEATURED"),
@@ -164,26 +169,37 @@ internal fun MonsterStyleStoreScreen() {
                     },
                 )
             }
-            notice?.let { message -> item { StoreNotice(message) } }
-            item { FairPlayStoreNotice() }
+            }
 
+            if (selectedCategory == "themes") {
             item { StoreSectionHeader(sh("TEMALAR", "THEMES"), sh("Uygulamanın tüm görsel sistemini değiştir", "Change the app-wide visual system")) }
             item { ThemeSlotRow(equipped) }
+            }
 
+            if (selectedCategory == "profile") {
             item { StoreSectionHeader(sh("PROFİL STYLE", "PROFILE STYLE"), sh("Çerçeve, plaka, arka plan ve rozet", "Frames, nameplates, backgrounds and badges")) }
             item { PurchasedProfileFramesStoreRow(backend = backend) }
+            }
 
+            if (selectedCategory == "match") {
             item { StoreSectionHeader(sh("MAÇ STYLE", "MATCH STYLE"), sh("Sadece görsel efektler; rekabet avantajı yok", "Visual effects only; no competitive advantage")) }
             item { PreviewRow(matchItems) }
+            }
 
+            if (selectedCategory == "prestige") {
             item { StoreSectionHeader(sh("PRESTİJ", "PRESTIGE"), sh("Ünvan, sezon rozeti ve koleksiyon etiketleri", "Titles, season badges and collectible labels")) }
             item { PreviewRow(prestigeItems) }
+            }
 
+            if (selectedCategory == "bundles") {
             item { StoreSectionHeader(sh("PAKETLER", "BUNDLES"), sh("Birbiriyle uyumlu Style setleri", "Matching Style collections")) }
             item { BundleRow() }
+            }
 
+            if (selectedCategory == "coin") {
             item { StoreSectionHeader("SON COIN", sh("Tek ve sade Style para birimi", "One simple Style currency")) }
             item { SonCoinReadyCard(profile?.diamonds ?: 0) }
+            }
         }
     }
 }
@@ -206,18 +222,25 @@ private fun StoreHeader(balance: Int) {
 }
 
 @Composable
-private fun StoreCategoryRail() {
+private fun StoreCategoryRail(selected: String, onSelected: (String) -> Unit) {
     val categories = listOf(
-        sh("Öne Çıkanlar", "Featured"), sh("Temalar", "Themes"), sh("Profil", "Profile"),
-        sh("Maç", "Match"), sh("Prestij", "Prestige"), sh("Paketler", "Bundles"), "Son Coin",
+        "featured" to sh("Öne Çıkanlar", "Featured"), "themes" to sh("Temalar", "Themes"), "profile" to sh("Profil", "Profile"),
+        "match" to sh("Maç", "Match"), "prestige" to sh("Prestij", "Prestige"), "bundles" to sh("Paketler", "Bundles"), "coin" to "Son Coin",
     )
     LazyRow(
         contentPadding = PaddingValues(horizontal = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        items(categories) { label ->
-            Surface(shape = RoundedCornerShape(99.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) {
-                Text(label, Modifier.padding(horizontal = 13.dp, vertical = 9.dp), color = StoreText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        items(categories, key = { it.first }) { (key, label) ->
+            val active = selected == key
+            Surface(
+                modifier = Modifier.heightIn(min = 48.dp),
+                onClick = { onSelected(key) },
+                shape = RoundedCornerShape(99.dp),
+                color = if (active) StoreBlue else StoreSurface,
+                border = BorderStroke(1.dp, if (active) StoreBlue else StoreBorder),
+            ) {
+                Text(label, Modifier.padding(horizontal = 13.dp, vertical = 12.dp), color = if (active) Color.White else StoreText, fontSize = 13.sp, fontWeight = FontWeight.Bold)
             }
         }
     }
