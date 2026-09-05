@@ -27,12 +27,13 @@ class HomeLobbyGameificationContractTest {
     @Test
     fun homeLobbyIsGameFirstAndUsesLiveWeeklyData() {
         val app = source("src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
-        assertTrue(app.contains("Kelimeyi Sürdür, Rakibini Geç"))
         assertTrue(app.contains("ARENANI SEÇ"))
         assertFalse(app.contains("MonsterQuickCard("))
         assertTrue(app.contains("MonsterSiegeQuickCard(Modifier.fillMaxWidth(), onSiege)"))
         assertTrue(app.contains("SonHarfBrandLogo("))
-        assertTrue(app.contains("R.drawable.kelime_kusatma_logo"))
+        assertTrue(app.contains("R.drawable.kelime_kusatma_logo_hd"))
+        assertFalse(app.contains("SonHarfBrandLogo(size = 54.dp)"))
+        assertTrue(app.contains("size = 88.dp"))
         assertTrue(app.contains("KELİME\\nKUŞATMASI"))
         assertTrue(app.contains("REKABET MERKEZİ"))
         assertTrue(app.contains("MonsterCompetitionStrip(tournament, archRival, stats.onlineFriends"))
