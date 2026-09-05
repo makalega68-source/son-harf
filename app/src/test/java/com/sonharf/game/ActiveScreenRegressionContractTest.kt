@@ -35,10 +35,12 @@ class ActiveScreenRegressionContractTest {
         assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.86f"))
         assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_MIN_SCALE = 0.78f"))
         assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_MAX_SCALE = 1.24f"))
+        assertTrue(board.contains("WordSiegeBoardViewportMode.FIT"))
         assertTrue(board.contains("detectTransformGestures"))
-        assertTrue(board.contains("closeScale = WORD_SIEGE_PRACTICE_CLOSE_SCALE"))
         assertTrue(board.contains("clampWordSiegeBoardPan"))
         assertTrue(board.contains("clipToBounds"))
+        assertFalse(board.contains("SmallFloatingActionButton("))
+        assertFalse(board.contains("CenterFocusStrong"))
     }
 
     @Test fun lastMoveHighlightIsOneShotAndDeduped() {
@@ -77,9 +79,11 @@ class ActiveScreenRegressionContractTest {
         assertTrue(classic.contains("fontSize = 15.sp"))
         assertTrue(classic.contains("fontSize = 12.sp"))
         assertTrue(classic.contains("fontSize = if (value.isBlank()) 16.sp else 20.sp"))
-        assertTrue(practice.contains("size = 50.dp"))
-        assertTrue(practice.contains("fontSize = 30.sp"))
-        assertTrue(practice.contains("fontSize = 15.sp"))
+        assertTrue(practice.contains("size = 46.dp"))
+        assertTrue(practice.contains("fontSize = 24.sp"))
+        assertTrue(practice.contains("fontSize = 14.sp"))
+        assertTrue(practice.contains("fontSize = 10.sp"))
+        assertTrue(practice.contains("height(if (compact) 70.dp else 78.dp)"))
     }
 
     @Test fun scoringStillUsesTwoPointTransferWithoutWordRollback() {
