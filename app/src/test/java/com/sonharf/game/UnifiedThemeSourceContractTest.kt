@@ -8,7 +8,7 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeShellUsesSingleLightThemeSource() {
+    fun activeShellUsesSingleEquippedThemeSource() {
         val theme = source("SonHarfTheme.kt")
         val shell = source("MonsterExperienceApp.kt")
         val aliases = source("MainExperienceApp.kt")
@@ -16,8 +16,9 @@ class UnifiedThemeSourceContractTest {
         listOf("Background", "Surface", "SurfaceSecondary", "PrimaryBlue", "PrimaryBlueSoft",
             "TextPrimary", "TextSecondary", "Border", "Success", "Error", "Warning",
             "DisabledBackground", "DisabledContent").forEach { assertTrue(theme.contains("val $it")) }
-        assertTrue(shell.contains("val Background = SonHarfTheme.Background"))
-        assertTrue(aliases.contains("val Background = SonHarfTheme.Background"))
+        assertTrue(theme.contains("SonHarfCosmetics.darkArenaTheme"))
+        assertTrue(shell.contains("val Background: Color get() = SonHarfTheme.Background"))
+        assertTrue(aliases.contains("val Background: Color get() = SonHarfTheme.Background"))
         assertFalse(shell.contains("Color(0xFF07111F)"))
         assertFalse(shell.contains("Color(0xFF111D2E)"))
     }
