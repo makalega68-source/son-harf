@@ -13,9 +13,12 @@ class MainExperienceContractTest {
     @Test
     fun authenticatedUsersEnterTheNewMonsterExperience() {
         val stable = projectFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
+        val runtime = projectFile("app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt").readText()
         val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
 
-        assertTrue(stable.contains("MonsterExperienceApp("))
+        assertTrue(stable.contains("LiveDuelRuntimeShell("))
+        assertTrue(runtime.contains("MonsterExperienceApp("))
+        assertTrue(runtime.contains("RefinedDuelOverlay()"))
         assertTrue(main.contains("OnlineGameScreenV6()"))
         assertTrue(main.contains("MonsterDestination.WORD_SIEGE"))
         assertTrue(main.contains("WordSiegeExperienceScreen"))
@@ -112,6 +115,7 @@ class MainExperienceContractTest {
         val online = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
         val arena = projectFile("app/src/main/java/com/sonharf/game/LightDuelUi.kt").readText()
         val keyboard = projectFile("app/src/main/java/com/sonharf/game/EmbeddedGameKeyboard.kt")
+        val refined = projectFile("app/src/main/java/com/sonharf/game/RefinedDuelOverlay.kt").readText()
 
         assertTrue(online.contains("var attempt = 0"))
         assertTrue(online.contains("else minOf(5000L, 1200L + attempt * 600L)"))
@@ -119,6 +123,8 @@ class MainExperienceContractTest {
         assertTrue(online.contains("SonHarfUiState.homeRequest += 1"))
         assertTrue(arena.contains("gameUppercase("))
         assertTrue(arena.contains("duelScoreFontSize(score).sp"))
+        assertTrue(refined.contains("AndroidTurkishKeyboard("))
+        assertTrue(refined.contains("RefinedDuelOverlay"))
         assertEquals(
             "Frozen keyboard changed",
             "f5143f6701c3bff95119aa6ce61d5f64acc15f8803fd2c6b48bcee4b5625d4a2",
