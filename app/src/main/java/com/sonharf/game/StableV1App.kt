@@ -81,7 +81,7 @@ fun StableV1App() {
             .fillMaxSize()
             .background(MainUi.Background),
     ) {
-        MonsterExperienceApp(onSignedOut = { authenticated = false })
+        LiveDuelRuntimeShell(onSignedOut = { authenticated = false })
     }
 }
 
