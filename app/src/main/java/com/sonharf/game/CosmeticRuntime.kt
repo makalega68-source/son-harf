@@ -39,6 +39,9 @@ object SonHarfCosmetics {
         get() = if (nameStyleId == "name_cyan") SonHarfCyan else SonHarfText
 
     val keyboardIsNeon: Boolean get() = keyboardThemeId == "keyboard_neon"
+    /** The only sellable match theme. It changes presentation only, never match rules. */
+    val darkArenaTheme: Boolean get() = gameThemeId == "theme_dark_arena"
+    // Kept for compatibility with an already-equipped legacy item. It is no longer sold.
     val monsterBlueTheme: Boolean get() = gameThemeId == "theme_monster_blue"
     // Retained only so older arena code compiles; Aurora is retired from sale.
     val auroraTheme: Boolean get() = gameThemeId == "theme_aurora"
