@@ -1,0 +1,55 @@
+name: Fix Word Siege Notice
+
+on:
+  push:
+    branches: [ fix/screenshot-regressions-20260906 ]
+    paths:
+      - '.github/workflows/fix-word-siege-notice.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/screenshot-regressions-20260906
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+      - name: Restore existing siege notice component
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt')
+          s = p.read_text(encoding='utf-8')
+          old = 'WordSiegePracticeNotice(message)'
+          new = 'WordSiegeNotice(message)'
+          count = s.count(old)
+          if count != 1:
+              raise SystemExit(f'expected exactly one obsolete notice call, found {count}')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+          git diff --check
+      - name: Run clean unit tests and debug build
+        run: gradle clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+      - name: Commit only verified source fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -rf app/build build
+          git rm .github/workflows/fix-word-siege-notice.yml
+          git add app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt
+          git diff --cached --check
+          git commit -m "Kelime Kuşatması bildirim bileşenini düzelt"
+          git push origin HEAD:fix/screenshot-regressions-20260906
