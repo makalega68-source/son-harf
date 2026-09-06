@@ -18,19 +18,19 @@ import androidx.compose.ui.unit.sp
 
 /** Shared compatibility aliases backed by the single shipped theme source. */
 internal object MainUi {
-    val Background = SonHarfTheme.Background
-    val Surface = SonHarfTheme.Surface
-    val SurfaceSoft = SonHarfTheme.SurfaceSecondary
-    val Text = SonHarfTheme.TextPrimary
-    val Muted = SonHarfTheme.TextSecondary
-    val Blue = SonHarfTheme.PrimaryBlue
-    val BlueDeep = Color(0xFF0A66D8)
-    val BlueSoft = SonHarfTheme.PrimaryBlueSoft
-    val Border = SonHarfTheme.Border
-    val Green = SonHarfTheme.Success
-    val Gold = SonHarfTheme.Warning
-    val Red = SonHarfTheme.Error
-    val Purple = SonHarfTheme.Purple
+    val Background: Color get() = SonHarfTheme.Background
+    val Surface: Color get() = SonHarfTheme.Surface
+    val SurfaceSoft: Color get() = SonHarfTheme.SurfaceSecondary
+    val Text: Color get() = SonHarfTheme.TextPrimary
+    val Muted: Color get() = SonHarfTheme.TextSecondary
+    val Blue: Color get() = SonHarfTheme.PrimaryBlue
+    val BlueDeep: Color get() = SonHarfTheme.PrimaryBlue
+    val BlueSoft: Color get() = SonHarfTheme.PrimaryBlueSoft
+    val Border: Color get() = SonHarfTheme.Border
+    val Green: Color get() = SonHarfTheme.Success
+    val Gold: Color get() = SonHarfTheme.Warning
+    val Red: Color get() = SonHarfTheme.Error
+    val Purple: Color get() = SonHarfTheme.Purple
 }
 
 @Composable
