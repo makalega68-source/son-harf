@@ -13,13 +13,17 @@ class ActiveScreenRegressionContractTest {
         val portal = src("GamePortalApp.kt")
         val stable = src("StableV1App.kt")
         val monster = src("MonsterExperienceApp.kt")
+        val runtime = src("LiveDuelRuntimeShell.kt")
         val online = src("OnlineGameScreenV6.kt")
         val siege = src("WordSiegePanMatch.kt")
         assertTrue(portal.contains("StableV1App"))
-        assertTrue(stable.contains("MonsterExperienceApp"))
+        assertTrue(stable.contains("LiveDuelRuntimeShell"))
+        assertTrue(runtime.contains("RefinedDuelOverlay()"))
+        assertTrue(runtime.contains("MonsterExperienceApp("))
         assertTrue(monster.contains("OnlineGameScreenV6"))
         assertTrue(online.contains("LightDuelArena("))
         assertTrue(siege.contains("WordSiegePracticeScreen("))
+        assertFalse(runtime.contains("TargetNeonGameScreen("))
         assertFalse(online.contains("TargetNeonGameScreen("))
     }
 
