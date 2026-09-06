@@ -63,7 +63,8 @@ class FinalRestorationRegressionTest {
         assertTrue(siegeRules.contains("CUBE_TRANSFER_POINTS: Int = 2"))
 
         // Style remains cosmetic-only while preserving the real theme purchase/equip backend.
-        assertTrue(style.contains("theme_monster_blue"))
+        assertTrue(style.contains("theme_dark_arena"))
+        assertFalse(style.contains("theme_monster_blue"))
         assertTrue(style.contains("purchaseShopItem"))
         assertTrue(style.contains("equipShopItem"))
         assertTrue(style.contains("PROFILE STYLE"))
