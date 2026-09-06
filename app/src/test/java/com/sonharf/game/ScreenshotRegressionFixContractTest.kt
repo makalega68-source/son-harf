@@ -5,6 +5,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ScreenshotRegressionFixContractTest {
+    // These contracts are intentionally source-level guards for the screenshot regressions fixed in this PR.
     private fun read(path: String): String {
         val direct = File(path.removePrefix("app/"))
         val root = File(path)
