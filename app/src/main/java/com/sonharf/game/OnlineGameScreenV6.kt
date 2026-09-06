@@ -36,6 +36,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.withTimeout
 
 private enum class MatchmakingUiState { Idle, Searching, Matched, Error, Cancelled }
 
@@ -180,7 +182,7 @@ fun OnlineGameScreenV6() {
                     val previousLastId = words.lastOrNull()?.id
                     words = it
                     val latest = it.lastOrNull()
-                    if (latest != null && latest.id != previousLastId) {
+                    if (latest != null && latest.id != previousLastId && latest.playerId == backend.currentUserId()) {
                         feedbackWord = gameUppercase(
                             latest.word.trim().ifBlank { latest.normalizedWord.trim() },
                             room?.language ?: language,
@@ -357,45 +359,69 @@ fun OnlineGameScreenV6() {
                 scope.launch {
                     val submitted = wordInput.trim()
                     if (submitted.isBlank()) return@launch
-                    val submitKey = "${active.id}|${active.roundNo}|${active.validWordCount}|${active.currentPlayerId}|${active.turnDeadline}|$submitted"
+                    val shownWord = gameUppercase(submitted, active.language)
+                    val alreadyUsed = words.any { played ->
+                        val existing = played.normalizedWord.trim().ifBlank { played.word.trim() }
+                        gameUppercase(existing, active.language) == shownWord
+                    }
+                    if (alreadyUsed) {
+                        feedbackWord = shownWord
+                        feedbackCorrect = false
+                        notice = eventMessage("word_already_used")
+                        SonHarfSoundFx.warning()
+                        return@launch
+                    }
+                    val submitKey = "${active.id}|${active.roundNo}|${active.validWordCount}|${active.currentPlayerId}|${active.turnDeadline}|$shownWord"
                     if (submitInFlightKey == submitKey || busy) return@launch
                     submitInFlightKey = submitKey
-                    val shownWord = gameUppercase(submitted, active.language)
                     val voiceToken = voiceRequestId
                     if (voiceToken == null) wordInput = ""
                     busy = true
                     SonHarfSoundFx.tap()
-                    runCatching {
-                        if (voiceToken != null) backend.submitVoiceWord(active.id, submitted, voiceToken)
-                        else backend.submitWord(active.id, submitted)
+                    try {
+                        runCatching {
+                            withTimeout(7_000L) {
+                                if (voiceToken != null) backend.submitVoiceWord(active.id, submitted, voiceToken)
+                                else backend.submitWord(active.id, submitted)
+                            }
+                        }
+                            .onSuccess { result ->
+                                acceptServerRoom(result)
+                                if (voiceToken != null) {
+                                    wordInput = ""
+                                    voiceRequestId = null
+                                    voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(voiceUses + 1)
+                                }
+                                if (failedEvent(result.lastEvent) && result.lastEventPlayerId == me) {
+                                    feedbackWord = shownWord
+                                    feedbackCorrect = false
+                                    notice = eventMessage(result.lastEvent)
+                                    SonHarfSoundFx.warning()
+                                } else {
+                                    feedbackWord = shownWord
+                                    feedbackCorrect = true
+                                    notice = sh("Kelime kabul edildi: $shownWord", "Word accepted: $shownWord")
+                                    SonHarfSoundFx.wordAccepted()
+                                }
+                            }
+                            .onFailure { error ->
+                                feedbackWord = shownWord
+                                if (error is TimeoutCancellationException) {
+                                    feedbackCorrect = null
+                                    notice = sh(
+                                        "Sunucu yanıtı gecikti. Oyun durumu eşitleniyor; tekrar göndermeden önce bekle.",
+                                        "Server response is delayed. Game state is syncing; wait before sending again.",
+                                    )
+                                } else {
+                                    feedbackCorrect = false
+                                    notice = friendly(error.message.orEmpty())
+                                    SonHarfSoundFx.warning()
+                                }
+                            }
+                    } finally {
+                        busy = false
+                        submitInFlightKey = null
                     }
-                        .onSuccess { result ->
-                            acceptServerRoom(result)
-                            if (voiceToken != null) {
-                                wordInput = ""
-                                voiceRequestId = null
-                                voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(voiceUses + 1)
-                            }
-                            if (failedEvent(result.lastEvent) && result.lastEventPlayerId == me) {
-                                feedbackWord = shownWord
-                                feedbackCorrect = false
-                                notice = eventMessage(result.lastEvent)
-                                SonHarfSoundFx.warning()
-                            } else {
-                                feedbackWord = shownWord
-                                feedbackCorrect = true
-                                notice = sh("Kelime kabul edildi: $shownWord", "Word accepted: $shownWord")
-                                SonHarfSoundFx.wordAccepted()
-                            }
-                        }
-                        .onFailure {
-                            feedbackWord = shownWord
-                            feedbackCorrect = false
-                            notice = friendly(it.message.orEmpty())
-                            SonHarfSoundFx.warning()
-                        }
-                    busy = false
-                    submitInFlightKey = null
                 }
             },
             onTimeout = {
