@@ -4,6 +4,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -35,8 +36,33 @@ private val DuelBlue = Color(0xFF238BFF)
 private val DuelGreen = Color(0xFF1C9B5F)
 private val DuelRed = Color(0xFFD53B45)
 private val DuelBorder = Color(0xFFD4DCE7)
+private val DuelVip = Color(0xFF8B63D9)
 
 private data class DuelFeedback(val correct: Boolean, val label: String)
+
+private fun remainingSeconds(deadline: String?, live: Boolean): Int {
+    if (!live || deadline.isNullOrBlank()) return 0
+    return runCatching {
+        val remainingMs = Instant.parse(deadline).toEpochMilli() - System.currentTimeMillis()
+        if (remainingMs <= 0L) 0 else ((remainingMs + 999L) / 1000L).toInt()
+    }.getOrDefault(0)
+}
+
+private fun deadlineExpired(deadline: String?): Boolean {
+    if (deadline.isNullOrBlank()) return false
+    return runCatching { Instant.parse(deadline).toEpochMilli() <= System.currentTimeMillis() }.getOrDefault(false)
+}
+
+private fun failedWordLabel(raw: String, shownWord: String): String = when {
+    "word_already_used" in raw -> sh("$shownWord ✕ • DAHA ÖNCE KULLANILDI", "$shownWord ✕ • ALREADY USED")
+    "wrong_start_letter" in raw -> sh("$shownWord ✕ • YANLIŞ HARF", "$shownWord ✕ • WRONG LETTER")
+    "not_in_dictionary" in raw -> sh("$shownWord ✕ • SÖZLÜKTE YOK", "$shownWord ✕ • NOT IN DICTIONARY")
+    "invalid_word" in raw -> sh("$shownWord ✕ • GEÇERSİZ", "$shownWord ✕ • INVALID")
+    "ends_with_soft_g" in raw -> sh("$shownWord ✕ • Ğ İLE BİTEMEZ", "$shownWord ✕ • CANNOT END WITH Ğ")
+    "voice_limit_reached" in raw -> sh("SESLİ GİRİŞ HAKKI DOLDU", "VOICE LIMIT REACHED")
+    "not_your_turn" in raw -> sh("SIRA RAKİPTE", "OPPONENT'S TURN")
+    else -> sh("$shownWord ✕ -5", "$shownWord ✕ -5")
+}
 
 @Composable
 internal fun RefinedDuelOverlay() {
@@ -56,6 +82,14 @@ internal fun RefinedDuelOverlay() {
     var chat by remember { mutableStateOf<List<ChatMessageDto>>(emptyList()) }
     var chatInput by remember { mutableStateOf("") }
     var timeoutClaimKey by remember { mutableStateOf<String?>(null) }
+    var voiceUses by remember { mutableIntStateOf(0) }
+    var voiceRequestId by remember { mutableStateOf<String?>(null) }
+
+    val voiceInput = rememberVoiceWordInput(room?.language ?: SonHarfUiState.language) { recognized, requestId ->
+        input = recognized.take(40)
+        voiceRequestId = requestId
+        feedback = null
+    }
 
     suspend fun loadProfiles(r: GameRoomDto) {
         val me = backend.currentUserId() ?: return
@@ -99,13 +133,13 @@ internal fun RefinedDuelOverlay() {
 
     LaunchedEffect(feedback) {
         if (feedback != null) {
-            delay(1300)
+            delay(1450)
             feedback = null
         }
     }
     LaunchedEffect(actionText) {
         if (actionText != null) {
-            delay(1700)
+            delay(1800)
             actionText = null
         }
     }
@@ -123,21 +157,24 @@ internal fun RefinedDuelOverlay() {
     val locale = if (active.language == "tr") Locale("tr", "TR") else Locale.ENGLISH
     val lastWord = words.lastOrNull()?.word?.uppercase(locale).orEmpty()
     val required = words.lastOrNull()?.normalizedWord?.lastOrNull()?.uppercaseChar()?.toString().orEmpty()
-    var seconds by remember(active.id) { mutableIntStateOf(0) }
+    var seconds by remember(active.id, active.turnDeadline, active.currentPlayerId, active.status) {
+        mutableIntStateOf(remainingSeconds(active.turnDeadline, liveWordPhase))
+    }
+
+    LaunchedEffect(active.id) {
+        voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(0)
+    }
 
     LaunchedEffect(active.turnDeadline, active.currentPlayerId, active.status) {
         while (true) {
-            seconds = if (active.turnDeadline == null || !liveWordPhase) 0 else runCatching {
-                val remainingMs = Instant.parse(active.turnDeadline).toEpochMilli() - System.currentTimeMillis()
-                if (remainingMs <= 0L) 0 else ((remainingMs + 999L) / 1000L).toInt()
-            }.getOrDefault(0)
+            seconds = remainingSeconds(active.turnDeadline, liveWordPhase)
             if (seconds <= 0) break
             delay(200)
         }
     }
 
     LaunchedEffect(active.id, active.turnDeadline, active.currentPlayerId, active.status, seconds) {
-        if (!liveWordPhase || active.turnDeadline == null || seconds > 0) return@LaunchedEffect
+        if (!liveWordPhase || active.turnDeadline == null || seconds > 0 || !deadlineExpired(active.turnDeadline)) return@LaunchedEffect
         val key = classicDeadlineEventKey(active)
         if (timeoutClaimKey == key) return@LaunchedEffect
         timeoutClaimKey = key
@@ -172,9 +209,15 @@ internal fun RefinedDuelOverlay() {
         }
     }
 
+    fun manualEdit(next: String) {
+        if (!myTurn || busy) return
+        input = next.take(40)
+        voiceRequestId = null
+    }
+
     fun appendKey(key: String) {
         if (!myTurn || busy || input.length >= 40) return
-        input += key
+        manualEdit(input + key)
     }
 
     fun submit() {
@@ -185,57 +228,65 @@ internal fun RefinedDuelOverlay() {
             val before = runCatching { backend.getRoom(active.id) }.getOrNull()
             if (before == null || before.currentPlayerId != me || before.status !in setOf("playing", "final", "sudden_death")) {
                 input = ""
+                voiceRequestId = null
                 feedback = DuelFeedback(false, sh("SIRA RAKİPTE", "OPPONENT'S TURN"))
                 busy = false
                 return@launch
             }
             val beforeMine = if (me == before.hostId) before.hostScore else before.guestScore
             val beforeOpp = if (me == before.hostId) before.guestScore else before.hostScore
-            runCatching { backend.submitWord(active.id, submitted) }
-                .onSuccess { updated ->
-                    room = updated
-                    words = runCatching { backend.getWords(active.id) }.getOrDefault(words)
-                    input = ""
-                    val afterMine = if (me == updated.hostId) updated.hostScore else updated.guestScore
-                    val accepted = updated.validWordCount > before.validWordCount ||
-                        (updated.status == "finished" && updated.lastEvent == "sudden_death_word")
-                    if (accepted) {
-                        val delta = afterMine - beforeMine
-                        feedback = DuelFeedback(true, sh("DOĞRU +${if (delta > 0) delta else 10}", "CORRECT +${if (delta > 0) delta else 10}"))
-                        val streak = if (me == updated.hostId) updated.hostStreak else updated.guestStreak
-                        val afterOpp = if (me == updated.hostId) updated.guestScore else updated.hostScore
-                        actionText = when {
-                            beforeMine <= beforeOpp && afterMine > afterOpp -> sh("👑 LİDERLİK SENDE", "👑 YOU TOOK THE LEAD")
-                            streak >= 5 -> sh("⚡ KELİME FIRTINASI x$streak", "⚡ WORD STORM x$streak")
-                            streak >= 3 -> sh("🔥 SERİ x$streak", "🔥 STREAK x$streak")
-                            submitted.length >= 9 -> sh("💥 UZUN KELİME", "💥 LONG WORD")
-                            else -> null
-                        }
-                    } else {
-                        val delta = afterMine - beforeMine
-                        feedback = DuelFeedback(false, sh("YANLIŞ ${if (delta < 0) delta else -5}", "WRONG ${if (delta < 0) delta else -5}"))
+            val shownWord = submitted.uppercase(locale)
+            val voiceToken = voiceRequestId
+            val result = runCatching {
+                if (voiceToken != null) backend.submitVoiceWord(active.id, submitted, voiceToken)
+                else backend.submitWord(active.id, submitted)
+            }
+            result.onSuccess { updated ->
+                room = updated
+                words = runCatching { backend.getWords(active.id) }.getOrDefault(words)
+                input = ""
+                voiceRequestId = null
+                if (voiceToken != null) voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(voiceUses + 1)
+                val afterMine = if (me == updated.hostId) updated.hostScore else updated.guestScore
+                val accepted = updated.validWordCount > before.validWordCount ||
+                    (updated.status == "finished" && updated.lastEvent == "sudden_death_word")
+                if (accepted) {
+                    val delta = afterMine - beforeMine
+                    feedback = DuelFeedback(true, "$shownWord ✓ +${if (delta > 0) delta else 10}")
+                    val streak = if (me == updated.hostId) updated.hostStreak else updated.guestStreak
+                    val afterOpp = if (me == updated.hostId) updated.guestScore else updated.hostScore
+                    actionText = when {
+                        beforeMine <= beforeOpp && afterMine > afterOpp -> sh("👑 LİDERLİK SENDE", "👑 YOU TOOK THE LEAD")
+                        streak >= 5 -> sh("⚡ KELİME FIRTINASI x$streak", "⚡ WORD STORM x$streak")
+                        streak >= 3 -> sh("🔥 SERİ x$streak", "🔥 STREAK x$streak")
+                        submitted.length >= 9 -> sh("💥 UZUN KELİME", "💥 LONG WORD")
+                        else -> null
                     }
+                } else {
+                    val delta = afterMine - beforeMine
+                    feedback = DuelFeedback(false, "$shownWord ✕ ${if (delta < 0) delta else -5}")
                 }
-                .onFailure {
-                    input = ""
-                    val reconciled = runCatching { backend.getRoom(active.id) }.getOrNull()
-                    val reconciledWords = runCatching { backend.getWords(active.id) }.getOrDefault(words)
-                    val acceptedOnServer = reconciledWords.any {
-                        it.playerId == me && (it.word.equals(submitted, true) || it.normalizedWord.equals(submitted, true))
-                    }
-                    if (reconciled != null) room = reconciled
-                    words = reconciledWords
-                    feedback = if (acceptedOnServer) DuelFeedback(true, sh("DOĞRU +10", "CORRECT +10"))
-                    else DuelFeedback(false, sh("YANLIŞ -5", "WRONG -5"))
+            }.onFailure { error ->
+                input = ""
+                voiceRequestId = null
+                val reconciled = runCatching { backend.getRoom(active.id) }.getOrNull()
+                val reconciledWords = runCatching { backend.getWords(active.id) }.getOrDefault(words)
+                val acceptedOnServer = reconciledWords.any {
+                    it.playerId == me && (it.word.equals(submitted, true) || it.normalizedWord.equals(submitted, true))
                 }
+                if (reconciled != null) room = reconciled
+                words = reconciledWords
+                feedback = if (acceptedOnServer) DuelFeedback(true, "$shownWord ✓ +10")
+                else DuelFeedback(false, failedWordLabel(error.message.orEmpty(), shownWord))
+            }
             busy = false
         }
     }
 
     Surface(Modifier.fillMaxSize(), color = DuelBg) {
         Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             DuelTopControls(onForfeit = { showForfeit = true }, onChat = {
                 if (myProfile?.isVip != true) actionText = sh("Sohbet VIP üyelerine özeldir", "Chat is for VIP members")
@@ -246,7 +297,7 @@ internal fun RefinedDuelOverlay() {
                 }
             })
 
-            Row(Modifier.fillMaxWidth().height(70.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth().height(64.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 CompactPlayerCard(
                     name = myProfile?.displayName ?: sh("SEN", "YOU"),
                     score = myScore,
@@ -254,7 +305,7 @@ internal fun RefinedDuelOverlay() {
                     active = myTurn,
                     modifier = Modifier.weight(1f),
                 )
-                DuelCountdown(active.status, seconds, Modifier.width(70.dp))
+                DuelCountdown(active.status, seconds, Modifier.width(68.dp))
                 CompactPlayerCard(
                     name = if (active.isBot) active.botName ?: "KelimeBot" else opponentProfile?.displayName ?: sh("RAKİP", "OPPONENT"),
                     score = opponentScore,
@@ -264,15 +315,30 @@ internal fun RefinedDuelOverlay() {
                 )
             }
 
-            Box(Modifier.fillMaxWidth().weight(1f).heightIn(min = 145.dp), contentAlignment = Alignment.Center) {
+            TurnStatusBar(status = active.status, myTurn = myTurn, opponentTurn = opponentTurn, isBot = active.isBot)
+
+            Box(Modifier.fillMaxWidth().weight(1f).heightIn(min = 155.dp, max = 285.dp), contentAlignment = Alignment.Center) {
                 CentralWordCard(lastWord, required, active.status, feedback, actionText)
             }
 
-            TypedWordField(input = input, enabled = myTurn && !busy, feedback = feedback)
+            PlayedWordsStrip(words = words, isVip = myProfile?.isVip == true, locale = locale)
+
+            TypedWordField(
+                input = input,
+                enabled = myTurn && !busy,
+                feedback = feedback,
+                voiceSupported = voiceInput.supported,
+                voiceUses = voiceUses,
+                onVoice = {
+                    if (!myTurn || busy) return@TypedWordField
+                    if (voiceUses >= 5) feedback = DuelFeedback(false, sh("SESLİ GİRİŞ HAKKI DOLDU", "VOICE LIMIT REACHED"))
+                    else voiceInput.launch()
+                },
+            )
             AndroidTurkishKeyboard(
                 enabled = myTurn && !busy,
                 onKey = ::appendKey,
-                onDelete = { if (input.isNotEmpty() && myTurn && !busy) input = input.dropLast(1) },
+                onDelete = { if (input.isNotEmpty() && myTurn && !busy) manualEdit(input.dropLast(1)) },
                 onSend = ::submit,
             )
         }
@@ -334,7 +400,7 @@ internal fun RefinedDuelOverlay() {
 
 @Composable
 private fun DuelTopControls(onForfeit: () -> Unit, onChat: () -> Unit) {
-    Row(Modifier.fillMaxWidth().height(28.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().height(26.dp), verticalAlignment = Alignment.CenterVertically) {
         TextButton(onClick = onForfeit, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp)) {
             Text(sh("Pes Et", "Forfeit"), color = DuelRed, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         }
@@ -349,17 +415,17 @@ private fun DuelTopControls(onForfeit: () -> Unit, onChat: () -> Unit) {
 private fun CompactPlayerCard(name: String, score: Int, streak: Int, active: Boolean, modifier: Modifier = Modifier) {
     val border = if (active) DuelBlue else DuelBorder
     val background = if (active) DuelBlue.copy(alpha = .09f) else DuelSurface
-    Surface(modifier = modifier.fillMaxHeight(), color = background, shape = RoundedCornerShape(16.dp), border = BorderStroke(if (active) 2.dp else 1.dp, border)) {
-        Row(Modifier.fillMaxSize().padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(36.dp).clip(CircleShape).background(if (active) DuelBlue else DuelSurface2), contentAlignment = Alignment.Center) {
-                Text(name.take(1).uppercase(), color = if (active) Color.White else DuelText, fontWeight = FontWeight.Black, fontSize = 17.sp)
+    Surface(modifier = modifier.fillMaxHeight(), color = background, shape = RoundedCornerShape(15.dp), border = BorderStroke(if (active) 2.dp else 1.dp, border)) {
+        Row(Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(34.dp).clip(CircleShape).background(if (active) DuelBlue else DuelSurface2), contentAlignment = Alignment.Center) {
+                Text(name.take(1).uppercase(), color = if (active) Color.White else DuelText, fontWeight = FontWeight.Black, fontSize = 16.sp)
             }
-            Spacer(Modifier.width(7.dp))
+            Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f)) {
                 Text(name, color = DuelText, fontWeight = FontWeight.Black, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text("$score", color = if (active) DuelBlue else DuelText, fontWeight = FontWeight.Black, fontSize = 18.sp)
+                Text("$score", color = if (active) DuelBlue else DuelText, fontWeight = FontWeight.Black, fontSize = 17.sp)
             }
-            if (streak >= 3) Text("🔥$streak", fontSize = 10.sp, fontWeight = FontWeight.Black)
+            if (streak >= 3) Text("🔥$streak", fontSize = 9.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -367,19 +433,50 @@ private fun CompactPlayerCard(name: String, score: Int, streak: Int, active: Boo
 @Composable
 private fun DuelCountdown(status: String, seconds: Int, modifier: Modifier = Modifier) {
     val urgent = seconds in 1..3
-    Surface(modifier = modifier.height(58.dp), color = if (urgent) DuelRed.copy(alpha = .1f) else DuelSurface, shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, if (urgent) DuelRed else DuelBorder)) {
+    Surface(modifier = modifier.height(56.dp), color = if (urgent) DuelRed.copy(alpha = .1f) else DuelSurface, shape = RoundedCornerShape(17.dp), border = BorderStroke(1.dp, if (urgent) DuelRed else DuelBorder)) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(
                 when (status) {
                     "quiz" -> "BİL"
                     "paused" -> "…"
+                    "finished" -> "✓"
                     else -> seconds.toString().padStart(2, '0')
                 },
                 color = if (urgent) DuelRed else DuelText,
                 fontWeight = FontWeight.Black,
                 fontSize = 20.sp,
             )
-            Text(if (status == "paused") sh("BAĞLANTI", "LINK") else sh("SN", "SEC"), color = DuelMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            Text(
+                when (status) {
+                    "paused" -> sh("BAĞLANTI", "LINK")
+                    "finished" -> sh("BİTTİ", "DONE")
+                    else -> sh("SN", "SEC")
+                },
+                color = DuelMuted,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
+private fun TurnStatusBar(status: String, myTurn: Boolean, opponentTurn: Boolean, isBot: Boolean) {
+    val (label, color) = when {
+        status == "paused" -> sh("BAĞLANTI BEKLENİYOR", "WAITING FOR CONNECTION") to DuelMuted
+        status == "quiz" -> sh("BİL BAKALIM", "TRIVIA") to DuelVip
+        status == "sudden_death" && myTurn -> sh("ALTIN HARF • SIRA SENDE", "SUDDEN DEATH • YOUR TURN") to DuelRed
+        status == "sudden_death" -> sh("ALTIN HARF • RAKİPTE", "SUDDEN DEATH • OPPONENT") to DuelRed
+        status == "final" && myTurn -> sh("FİNAL • SIRA SENDE", "FINAL • YOUR TURN") to DuelBlue
+        status == "final" -> sh("FİNAL • RAKİPTE", "FINAL • OPPONENT") to DuelBlue
+        status == "finished" -> sh("MAÇ TAMAMLANDI", "MATCH COMPLETE") to DuelGreen
+        myTurn -> sh("SIRA SENDE", "YOUR TURN") to DuelBlue
+        opponentTurn -> (if (isBot) sh("BOT DÜŞÜNÜYOR", "BOT IS THINKING") else sh("RAKİBİN SIRASI", "OPPONENT'S TURN")) to DuelMuted
+        else -> sh("HAZIR", "READY") to DuelMuted
+    }
+    Surface(Modifier.fillMaxWidth().height(28.dp), color = color.copy(alpha = .08f), shape = RoundedCornerShape(10.dp)) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(label, color = color, fontSize = 10.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -387,30 +484,40 @@ private fun DuelCountdown(status: String, seconds: Int, modifier: Modifier = Mod
 @Composable
 private fun CentralWordCard(lastWord: String, required: String, status: String, feedback: DuelFeedback?, actionText: String?) {
     val feedbackColor = if (feedback?.correct == true) DuelGreen else DuelRed
-    Surface(Modifier.fillMaxWidth().heightIn(min = 145.dp), color = DuelSurface, shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, DuelBorder)) {
-        Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+    Surface(Modifier.fillMaxWidth().fillMaxHeight(), color = DuelSurface, shape = RoundedCornerShape(22.dp), border = BorderStroke(1.dp, DuelBorder)) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(sh("SON KELİME", "LAST WORD"), color = DuelMuted, fontSize = 9.sp, fontWeight = FontWeight.Black)
-            Text(if (lastWord.isBlank()) sh("İLK KELİME", "FIRST WORD") else lastWord, color = DuelText, fontSize = if (lastWord.length > 15) 23.sp else 29.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Spacer(Modifier.height(3.dp))
+            Text(
+                if (lastWord.isBlank()) sh("İLK KELİME", "FIRST WORD") else lastWord,
+                color = DuelText,
+                fontSize = if (lastWord.length > 15) 22.sp else 28.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(2.dp))
             Text(
                 when {
                     status == "quiz" -> "?"
                     status == "paused" -> "…"
+                    status == "finished" -> "✓"
                     required.isBlank() -> "—"
                     else -> required
                 },
                 color = when {
                     feedback != null -> feedbackColor
+                    status == "finished" -> DuelGreen
                     else -> DuelBlue
                 },
-                fontSize = 72.sp,
-                lineHeight = 76.sp,
+                fontSize = 70.sp,
+                lineHeight = 72.sp,
                 fontWeight = FontWeight.Black,
             )
             Text(
                 when {
                     status == "quiz" -> sh("BİL BAKALIM", "TRIVIA")
                     status == "paused" -> sh("RAKİP BAĞLANTISI BEKLENİYOR", "WAITING FOR OPPONENT")
+                    status == "finished" -> sh("MAÇ TAMAMLANDI", "MATCH COMPLETE")
                     required.isBlank() -> sh("İLK HARF SERBEST", "FIRST LETTER FREE")
                     else -> sh("BU HARFLE BAŞLA", "START WITH THIS LETTER")
                 },
@@ -420,33 +527,98 @@ private fun CentralWordCard(lastWord: String, required: String, status: String, 
             )
             if (feedback != null) {
                 Spacer(Modifier.height(3.dp))
-                Text(feedback.label, color = feedbackColor, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                Text(feedback.label, color = feedbackColor, fontSize = 14.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
             } else if (actionText != null) {
                 Spacer(Modifier.height(3.dp))
-                Text(actionText, color = DuelBlue, fontSize = 13.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                Text(actionText, color = DuelBlue, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
             }
         }
     }
 }
 
 @Composable
-private fun TypedWordField(input: String, enabled: Boolean, feedback: DuelFeedback?) {
+private fun PlayedWordsStrip(words: List<GameWordDto>, isVip: Boolean, locale: Locale) {
+    val recent = words.takeLast(24)
+    Surface(
+        Modifier.fillMaxWidth().height(36.dp),
+        color = if (isVip) DuelVip.copy(alpha = .08f) else DuelSurface,
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, if (isVip) DuelVip.copy(alpha = .45f) else DuelBorder),
+    ) {
+        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                if (isVip) "VIP" else sh("KELİMELER", "WORDS"),
+                color = if (isVip) DuelVip else DuelMuted,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(start = 9.dp, end = 6.dp),
+            )
+            if (recent.isEmpty()) {
+                Text(sh("Henüz kelime yok", "No words yet"), color = DuelMuted, fontSize = 10.sp)
+            } else {
+                LazyRow(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    contentPadding = PaddingValues(end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    items(recent, key = { it.id }) { word ->
+                        Surface(color = DuelSurface2.copy(alpha = .72f), shape = RoundedCornerShape(8.dp)) {
+                            Text(
+                                word.word.trim().ifBlank { word.normalizedWord.trim() }.uppercase(locale),
+                                color = DuelText,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
+                                maxLines = 1,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TypedWordField(
+    input: String,
+    enabled: Boolean,
+    feedback: DuelFeedback?,
+    voiceSupported: Boolean,
+    voiceUses: Int,
+    onVoice: () -> Unit,
+) {
     val color = when {
         feedback?.correct == true -> DuelGreen
         feedback?.correct == false -> DuelRed
         enabled -> DuelBlue
         else -> DuelBorder
     }
-    Surface(Modifier.fillMaxWidth().height(54.dp), color = DuelSurface, shape = RoundedCornerShape(15.dp), border = BorderStroke(if (feedback != null) 2.dp else 1.dp, color)) {
-        Box(Modifier.fillMaxSize().padding(horizontal = 14.dp), contentAlignment = Alignment.CenterStart) {
+    Surface(Modifier.fillMaxWidth().height(52.dp), color = DuelSurface, shape = RoundedCornerShape(15.dp), border = BorderStroke(if (feedback != null) 2.dp else 1.dp, color)) {
+        Row(Modifier.fillMaxSize().padding(start = 14.dp, end = 5.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 if (input.isBlank()) sh("KELİMENİ YAZ", "TYPE YOUR WORD") else input,
                 color = if (input.isBlank()) DuelMuted.copy(alpha = .55f) else DuelText,
-                fontSize = 21.sp,
+                fontSize = 20.sp,
                 fontWeight = if (input.isBlank()) FontWeight.Bold else FontWeight.Black,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
+            if (voiceSupported) {
+                TextButton(
+                    onClick = onVoice,
+                    enabled = enabled,
+                    modifier = Modifier.width(54.dp).fillMaxHeight(),
+                    contentPadding = PaddingValues(0.dp),
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("🎙", fontSize = 18.sp)
+                        Text("${(5 - voiceUses).coerceAtLeast(0)}/5", color = DuelMuted, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
     }
 }
@@ -465,9 +637,7 @@ private fun AndroidTurkishKeyboard(enabled: Boolean, onKey: (String) -> Unit, on
                     if (index == 1) Spacer(Modifier.weight(.45f))
                     row.forEach { key -> DuelKeyButton(key, enabled, Modifier.weight(1f)) { onKey(key) } }
                     if (index == 1) Spacer(Modifier.weight(.45f))
-                    if (index == 2) {
-                        DuelKeyButton("⌫", enabled, Modifier.weight(1.25f), destructive = true, onClick = onDelete)
-                    }
+                    if (index == 2) DuelKeyButton("⌫", enabled, Modifier.weight(1.25f), destructive = true, onClick = onDelete)
                 }
             }
             Button(

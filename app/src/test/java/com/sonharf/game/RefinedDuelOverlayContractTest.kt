@@ -14,7 +14,9 @@ class RefinedDuelOverlayContractTest {
         assertTrue(source.contains("Sohbet"))
         assertTrue(source.contains("SON KELİME"))
         assertTrue(source.contains("BU HARFLE BAŞLA"))
-        assertTrue(source.contains("fontSize = 72.sp"))
+        assertTrue(source.contains("fontSize = 70.sp"))
+        assertTrue(source.contains("TurnStatusBar("))
+        assertTrue(source.contains("PlayedWordsStrip("))
         assertFalse(source.contains("BONUS"))
         assertFalse(source.contains("TEMİZLE"))
     }
@@ -32,9 +34,28 @@ class RefinedDuelOverlayContractTest {
         assertTrue(source.contains("shouldAcceptClassicSnapshot"))
         assertTrue(source.contains("classicDeadlineEventKey"))
         assertTrue(source.contains("backend.claimTurnTimeout"))
-        assertTrue(source.contains("DOĞRU +10"))
-        assertTrue(source.contains("YANLIŞ -5"))
+        assertTrue(source.contains("deadlineExpired(active.turnDeadline)"))
+        assertTrue(source.contains("backend.submitWord(active.id, submitted)"))
+        assertTrue(source.contains("backend.submitVoiceWord(active.id, submitted, voiceToken)"))
+        assertTrue(source.contains("✓ +"))
+        assertTrue(source.contains("✕ -5"))
         assertFalse(source.contains("SENKRONİZE EDİLİYOR"))
+    }
+
+    @Test fun playedWordHistoryDoesNotCreateVipGameplayAdvantage() {
+        assertTrue(source.contains("val recent = words.takeLast(24)"))
+        assertTrue(source.contains("PlayedWordsStrip(words = words, isVip = myProfile?.isVip == true"))
+        assertTrue(source.contains("if (isVip) \"VIP\" else sh(\"KELİMELER\", \"WORDS\")"))
+        assertFalse(source.contains("if (!isVip) return"))
+    }
+
+    @Test fun turnAndVoiceStatesRemainVisibleAndBounded() {
+        assertTrue(source.contains("SIRA SENDE"))
+        assertTrue(source.contains("RAKİBİN SIRASI"))
+        assertTrue(source.contains("BOT DÜŞÜNÜYOR"))
+        assertTrue(source.contains("voiceUses >= 5"))
+        assertTrue(source.contains("backend.getVoiceUses(active.id)"))
+        assertTrue(source.contains("(5 - voiceUses).coerceAtLeast(0)"))
     }
 
     @Test fun actionPackageIsVisualAndIntegrated() {
