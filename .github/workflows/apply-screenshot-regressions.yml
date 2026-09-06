@@ -29,6 +29,7 @@ jobs:
           gradle-version: '8.14.4'
       - name: Apply guarded source patches
         run: |
+          # v4: source fixes plus UX contract alignment
           python scripts/apply_screenshot_regressions_v2.py
           python scripts/fix_screenshot_scope_v3.py
           git diff --check
