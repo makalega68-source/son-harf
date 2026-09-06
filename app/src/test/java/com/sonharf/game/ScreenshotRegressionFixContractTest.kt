@@ -25,6 +25,6 @@ class ScreenshotRegressionFixContractTest {
     }
     @Test fun siegeStartsReadableAndUsesAccessibleNotice() {
         assertTrue(read("app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt").contains("mutableStateOf(WordSiegeBoardViewportMode.CLOSE)"))
-        assertTrue(read("app/src/main/java/com/sonharf/game/WordSiegePracticeNotice.kt").contains("SonHarfTheme.TextPrimary"))
+        assertTrue(read("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").contains("WordSiegeNotice(message)"))
     }
 }
