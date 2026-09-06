@@ -47,7 +47,7 @@ import java.time.Instant
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
-private val LBg = Color(0xFFF4F7FB)
+private val LBg: Color get() = if (SonHarfCosmetics.monsterBlueTheme) Color(0xFFC9E3FF) else Color(0xFFF4F7FB)
 private val LCard = Color.White
 private val LCard2 = Color(0xFFF0F4F8)
 private val LText = Color(0xFF182235)
@@ -863,7 +863,7 @@ private fun GameKeyboard(
     }
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = Color(0xFFF1F5F9),
+        color = if (SonHarfCosmetics.keyboardIsNeon) Color(0xFF102C3B) else Color(0xFFF1F5F9),
         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -902,13 +902,13 @@ private fun KeyButton(label: String, enabled: Boolean, modifier: Modifier, onCli
     Surface(
         modifier = modifier.height(40.dp).clickable(enabled = enabled, interactionSource = source, indication = null, onClick = onClick),
         shape = RoundedCornerShape(9.dp),
-        color = Color.White,
+        color = if (SonHarfCosmetics.keyboardIsNeon) Color(0xFF163F50) else Color.White,
         shadowElevation = 1.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 label,
-                color = if (enabled) LText else LMuted.copy(alpha = .4f),
+                color = if (!enabled) LMuted.copy(alpha = .4f) else if (SonHarfCosmetics.keyboardIsNeon) Color(0xFF62E4EF) else LText,
                 fontSize = if (label.length > 5) 14.sp else 14.sp,
                 fontWeight = FontWeight.Bold,
             )
