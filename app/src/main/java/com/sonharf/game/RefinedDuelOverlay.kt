@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -23,6 +24,10 @@ import com.sonharf.game.data.*
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import java.util.Locale
 
@@ -39,6 +44,11 @@ private val DuelBorder = Color(0xFFD4DCE7)
 private val DuelVip = Color(0xFF8B63D9)
 
 private data class DuelFeedback(val correct: Boolean, val label: String)
+private const val DuelSubmitTimeoutMs = 7_000L
+private val rejectedWordEvents = setOf(
+    "word_already_used", "wrong_start_letter", "not_in_dictionary", "invalid_word",
+    "ends_with_soft_g", "turn_expired", "not_your_turn",
+)
 
 private fun remainingSeconds(deadline: String?, live: Boolean): Int {
     if (!live || deadline.isNullOrBlank()) return 0
@@ -68,6 +78,7 @@ private fun failedWordLabel(raw: String, shownWord: String): String = when {
 internal fun RefinedDuelOverlay() {
     if (!SupabaseProvider.configured) return
     val backend = remember { OnlineGameBackend() }
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var room by remember { mutableStateOf<GameRoomDto?>(null) }
     var words by remember { mutableStateOf<List<GameWordDto>>(emptyList()) }
@@ -117,11 +128,15 @@ internal fun RefinedDuelOverlay() {
     LaunchedEffect(Unit) {
         // A running match can be restored before MonsterExperienceApp is composed.
         // Load equipped Style here as well so an owned/equipped arena is never lost.
-        runCatching { SonHarfCosmetics.apply(backend.getEquippedCosmetics()) }
+        withTimeoutOrNull(3_500L) {
+            runCatching { SonHarfCosmetics.applyAndPersist(context, backend.getEquippedCosmetics()) }
+        }
         while (true) {
             val current = room
-            val incoming = if (current == null) runCatching { discover() }.getOrNull()
-            else runCatching { backend.getRoom(current.id) }.getOrNull()
+            val incoming = withTimeoutOrNull(5_000L) {
+                if (current == null) runCatching { discover() }.getOrNull()
+                else runCatching { backend.getRoom(current.id) }.getOrNull()
+            }
             if (incoming != null) {
                 val accept = current == null || shouldAcceptClassicSnapshot(current, incoming)
                 if (accept) {
@@ -135,7 +150,9 @@ internal fun RefinedDuelOverlay() {
                 if (current == null || current.validWordCount != incoming.validWordCount) {
                     words = runCatching { backend.getWords(incoming.id) }.getOrDefault(words)
                 }
-                if (myProfile == null || (!incoming.isBot && opponentProfile == null)) loadProfiles(incoming)
+                if (myProfile == null || (!incoming.isBot && opponentProfile == null)) {
+                    withTimeoutOrNull(3_500L) { loadProfiles(incoming) }
+                }
                 if (showChat && !incoming.isBot) chat = runCatching { backend.getChat(incoming.id) }.getOrDefault(chat)
                 if (incoming.status == "quiz") {
                     val nextRound = runCatching { backend.getActiveTriviaRound(incoming.id) }.getOrNull()
@@ -186,7 +203,9 @@ internal fun RefinedDuelOverlay() {
     val opponentTurn = liveWordPhase && !myTurn
     val locale = if (active.language == "tr") Locale("tr", "TR") else Locale.ENGLISH
     val lastWord = words.lastOrNull()?.word?.uppercase(locale).orEmpty()
-    val required = words.lastOrNull()?.normalizedWord?.lastOrNull()?.uppercaseChar()?.toString().orEmpty()
+    val required = words.lastOrNull()?.normalizedWord?.takeLast(1)
+        ?.let { gameUppercase(it, active.language) }
+        .orEmpty()
     var seconds by remember(active.id, active.turnDeadline, active.currentPlayerId, active.status) {
         mutableIntStateOf(remainingSeconds(active.turnDeadline, liveWordPhase))
     }
@@ -271,58 +290,73 @@ internal fun RefinedDuelOverlay() {
         if (!myTurn || busy || submitted.isBlank()) return
         scope.launch {
             busy = true
-            // The server already verifies turn ownership. A separate pre-flight getRoom()
-            // added one full round trip before every answer and was the visible submit delay.
-            val before = active
-            val beforeMine = if (me == before.hostId) before.hostScore else before.guestScore
-            val beforeOpp = if (me == before.hostId) before.guestScore else before.hostScore
-            val shownWord = submitted.uppercase(locale)
-            val voiceToken = voiceRequestId
-            val result = runCatching {
-                if (voiceToken != null) backend.submitVoiceWord(active.id, submitted, voiceToken)
-                else backend.submitWord(active.id, submitted)
-            }
-            result.onSuccess { updated ->
-                room = updated
-                input = ""
-                voiceRequestId = null
-                if (voiceToken != null) voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(voiceUses + 1)
-                val afterMine = if (me == updated.hostId) updated.hostScore else updated.guestScore
-                val accepted = updated.validWordCount > before.validWordCount ||
-                    (updated.status == "finished" && updated.lastEvent == "sudden_death_word")
-                if (accepted) {
-                    val delta = afterMine - beforeMine
-                    feedback = DuelFeedback(true, "$shownWord ✓ +${if (delta > 0) delta else 10}")
-                    val streak = if (me == updated.hostId) updated.hostStreak else updated.guestStreak
-                    val afterOpp = if (me == updated.hostId) updated.guestScore else updated.hostScore
-                    actionText = when {
-                        beforeMine <= beforeOpp && afterMine > afterOpp -> sh("👑 LİDERLİK SENDE", "👑 YOU TOOK THE LEAD")
-                        streak >= 5 -> sh("⚡ KELİME FIRTINASI x$streak", "⚡ WORD STORM x$streak")
-                        streak >= 3 -> sh("🔥 SERİ x$streak", "🔥 STREAK x$streak")
-                        submitted.length >= 9 -> sh("💥 UZUN KELİME", "💥 LONG WORD")
-                        else -> null
+            try {
+                // The server already verifies turn ownership. A separate pre-flight getRoom()
+                // added one full round trip before every answer and was the visible submit delay.
+                val before = active
+                val beforeMine = if (me == before.hostId) before.hostScore else before.guestScore
+                val beforeOpp = if (me == before.hostId) before.guestScore else before.hostScore
+                val shownWord = gameUppercase(submitted, active.language)
+                val voiceToken = voiceRequestId
+                val result = runCatching {
+                    withTimeout(DuelSubmitTimeoutMs) {
+                        if (voiceToken != null) backend.submitVoiceWord(active.id, submitted, voiceToken)
+                        else backend.submitWord(active.id, submitted)
                     }
-                } else {
-                    // Preserve the server's rejection reason: a valid word such as KOALA
-                    // must not look like a dictionary failure when the required first letter
-                    // is different.
-                    feedback = DuelFeedback(false, failedWordLabel(updated.lastEvent.orEmpty(), shownWord))
                 }
-                words = runCatching { backend.getWords(active.id) }.getOrDefault(words)
-            }.onFailure { error ->
-                input = ""
-                voiceRequestId = null
-                val reconciled = runCatching { backend.getRoom(active.id) }.getOrNull()
-                val reconciledWords = runCatching { backend.getWords(active.id) }.getOrDefault(words)
-                val acceptedOnServer = reconciledWords.any {
-                    it.playerId == me && (it.word.equals(submitted, true) || it.normalizedWord.equals(submitted, true))
+                result.onSuccess { updated ->
+                    room = updated
+                    input = ""
+                    voiceRequestId = null
+                    if (voiceToken != null) {
+                        voiceUses = withTimeoutOrNull(2_500L) { backend.getVoiceUses(active.id) } ?: (voiceUses + 1)
+                    }
+                    val afterMine = if (me == updated.hostId) updated.hostScore else updated.guestScore
+                    val serverRejected = updated.lastEventPlayerId == me && updated.lastEvent in rejectedWordEvents
+                    val accepted = !serverRejected && (
+                        updated.validWordCount > before.validWordCount ||
+                            updated.lastEventPlayerId == me ||
+                            (updated.status == "finished" && updated.lastEvent == "sudden_death_word")
+                        )
+                    if (accepted) {
+                        val delta = afterMine - beforeMine
+                        feedback = DuelFeedback(true, "$shownWord ✓ +${if (delta > 0) delta else 3}")
+                        val streak = if (me == updated.hostId) updated.hostStreak else updated.guestStreak
+                        val afterOpp = if (me == updated.hostId) updated.guestScore else updated.hostScore
+                        actionText = when {
+                            beforeMine <= beforeOpp && afterMine > afterOpp -> sh("👑 LİDERLİK SENDE", "👑 YOU TOOK THE LEAD")
+                            streak >= 5 -> sh("⚡ KELİME FIRTINASI x$streak", "⚡ WORD STORM x$streak")
+                            streak >= 3 -> sh("🔥 SERİ x$streak", "🔥 STREAK x$streak")
+                            submitted.length >= 9 -> sh("💥 UZUN KELİME", "💥 LONG WORD")
+                            else -> null
+                        }
+                    } else {
+                        feedback = DuelFeedback(false, failedWordLabel(updated.lastEvent.orEmpty(), shownWord))
+                    }
+                    words = withTimeoutOrNull(2_500L) { backend.getWords(active.id) } ?: words
+                }.onFailure { error ->
+                    input = ""
+                    voiceRequestId = null
+                    val (reconciled, reconciledWords) = coroutineScope {
+                        val roomTask = async { withTimeoutOrNull(2_500L) { backend.getRoom(active.id) } }
+                        val wordsTask = async { withTimeoutOrNull(2_500L) { backend.getWords(active.id) } ?: words }
+                        roomTask.await() to wordsTask.await()
+                    }
+                    val normalizedSubmitted = submitted.lowercase(locale)
+                    val acceptedOnServer = reconciledWords.any {
+                        it.playerId == me && (
+                            it.word.lowercase(locale) == normalizedSubmitted ||
+                                it.normalizedWord.lowercase(locale) == normalizedSubmitted
+                            )
+                    }
+                    if (reconciled != null) room = reconciled
+                    words = reconciledWords
+                    feedback = if (acceptedOnServer) DuelFeedback(true, "$shownWord ✓")
+                    else DuelFeedback(false, if (error is kotlinx.coroutines.TimeoutCancellationException) sh("BAĞLANTI YAVAŞ • TEKRAR DENE", "SLOW CONNECTION • TRY AGAIN") else failedWordLabel(error.message.orEmpty(), shownWord))
                 }
-                if (reconciled != null) room = reconciled
-                words = reconciledWords
-                feedback = if (acceptedOnServer) DuelFeedback(true, "$shownWord ✓ +10")
-                else DuelFeedback(false, failedWordLabel(error.message.orEmpty(), shownWord))
+            } finally {
+                busy = false
             }
-            busy = false
         }
     }
 
