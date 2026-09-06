@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -27,20 +28,21 @@ import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
-private val StoreBg = SonHarfTheme.Background
-private val StoreSurface = SonHarfTheme.Surface
-private val StoreAlt = SonHarfTheme.SurfaceSecondary
-private val StoreBlue = SonHarfTheme.PrimaryBlue
-private val StoreText = SonHarfTheme.TextPrimary
-private val StoreMuted = SonHarfTheme.TextSecondary
-private val StoreBorder = SonHarfTheme.Border
-private val StoreGreen = SonHarfTheme.Success
-private val StoreGold = SonHarfTheme.Warning
+private val StoreBg: Color get() = SonHarfTheme.Background
+private val StoreSurface: Color get() = SonHarfTheme.Surface
+private val StoreAlt: Color get() = SonHarfTheme.SurfaceSecondary
+private val StoreBlue: Color get() = SonHarfTheme.PrimaryBlue
+private val StoreText: Color get() = SonHarfTheme.TextPrimary
+private val StoreMuted: Color get() = SonHarfTheme.TextSecondary
+private val StoreBorder: Color get() = SonHarfTheme.Border
+private val StoreGreen: Color get() = SonHarfTheme.Success
+private val StoreGold: Color get() = SonHarfTheme.Warning
 private const val StoreTimeout = 12_000L
 private data class StoreTab(val title: String, val kinds: Set<String>, val icon: androidx.compose.ui.graphics.vector.ImageVector)
 
 @Composable
 internal fun MonsterStyleStoreScreen() {
+    val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) runCatching { OnlineGameBackend() }.getOrNull() else null }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -67,7 +69,7 @@ internal fun MonsterStyleStoreScreen() {
                 catalog = nextCatalog
                 owned = nextOwned
                 equipped = nextEquipped
-                SonHarfCosmetics.apply(nextEquipped)
+                SonHarfCosmetics.applyAndPersist(context, nextEquipped)
             }
         }.onFailure { if (it is CancellationException && it !is TimeoutCancellationException) throw it; notice = sh("Mağaza verileri alınamadı. Lütfen tekrar dene.", "Store data could not be loaded. Please try again.") }
         loading = false
