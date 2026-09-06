@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,6 +27,20 @@ class BonusFlowReliabilityContractTest {
         assertTrue(arena.contains("triviaRound?.resultUntil"))
         assertTrue(arena.contains("triviaRound?.answerDeadline"))
         assertTrue(arena.contains("onTriviaTimeout()"))
+    }
+
+    @Test
+    fun quizOverlayHasSingleVisibleOwnerAndCannotBeCoveredByRefinedArena() {
+        val mount = projectFile("app/src/main/java/com/sonharf/game/SketchGameOverlayV9.kt").readText()
+        val shell = projectFile("app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt").readText()
+        val bonus = projectFile("app/src/main/java/com/sonharf/game/BilBakalimBonusOverlay.kt").readText()
+
+        assertTrue(mount.contains("setOf(\"playing\", \"final\", \"sudden_death\", \"paused\")"))
+        assertFalse(mount.contains("setOf(\"playing\", \"quiz\""))
+        assertTrue(shell.indexOf("SketchGameOverlayV9()") < shell.indexOf("BilBakalimBonusOverlay()"))
+        assertTrue(bonus.contains("it.status == \"quiz\""))
+        assertTrue(bonus.contains("backend.answerTrivia(activeRound.id"))
+        assertTrue(bonus.contains("finish_bilbakalim_result_v1"))
     }
 
     @Test
