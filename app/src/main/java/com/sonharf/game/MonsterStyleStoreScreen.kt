@@ -59,7 +59,7 @@ internal fun MonsterStyleStoreScreen() {
             withTimeout(StoreTimeout) {
                 val user = b.currentUserId() ?: error("unauthorized")
                 profile = b.getProfile(user)
-                catalog = b.getShopItems().filter { it.isRuntimeReadyStyle() }
+                catalog = b.getShopItems().filter { it.isRuntimeReadyStyle() } // theme_monster_blue is the active sale theme.
                 owned = b.getInventory()
                 equipped = b.getEquippedCosmetics().also { SonHarfCosmetics.apply(it) }
             }
@@ -73,7 +73,7 @@ internal fun MonsterStyleStoreScreen() {
             runCatching {
                 withTimeout(StoreTimeout) { if (item.id !in owned) b.purchaseShopItem(item.id); b.equipShopItem(item.id) }
             }.onSuccess {
-                notice = sh("\${item.nameTr} anında uygulandı.", "\${item.nameEn} was applied instantly."); reload()
+                notice = sh("${item.nameTr} anında uygulandı.", "${item.nameEn} was applied instantly."); reload()
             }.onFailure { error ->
                 notice = when {
                     "insufficient_diamonds" in error.message.orEmpty() -> sh("Yeterli Son Coin'in yok.", "You do not have enough Son Coin.")
@@ -104,12 +104,13 @@ internal fun MonsterStyleStoreScreen() {
             } else item { StoreSectionHeader(tabs[tab].title, sh("Kalıcı kozmetik koleksiyonu", "Permanent cosmetic collection")) }
             if (visible.isEmpty() && !loading) item { EmptyCatalogCard() }
             items(visible.filter { tab != 0 || it.id != "theme_monster_blue" }, key = { it.id }) { item -> ProductCard(item, item.id in owned, equipped.isEquipped(item), busy == item.id, ::buyAndEquip) }
+            item { PurchasedProfileFramesStoreRow(backend = backend) }
             item { FairPlayCard() }
         }
     }
 }
 private fun ShopItemDto.isRuntimeReadyStyle(): Boolean = when (kind) {
-    "game_theme" -> id in setOf("theme_monster_blue", "theme_aurora")
+    "game_theme" -> id == "theme_monster_blue"
     "profile_frame" -> id in PurchasedFrameCatalog.ids
     "name_style" -> id == "name_cyan"; "keyboard_theme" -> id == "keyboard_neon"
     "victory_effect" -> id == "victory_crown"; "emoji_pack" -> id == "emoji_vip"; else -> false
@@ -123,12 +124,12 @@ private fun EquippedCosmeticsDto?.isEquipped(item: ShopItemDto): Boolean = when 
     Card(colors = CardDefaults.cardColors(containerColor = StoreSurface), shape = RoundedCornerShape(24.dp), border = BorderStroke(1.dp, StoreBorder)) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = RoundedCornerShape(16.dp), color = StoreBlue.copy(.12f)) { Icon(Icons.Rounded.Storefront, null, Modifier.padding(11.dp).size(27.dp), tint = StoreBlue) }
-            Spacer(Modifier.width(11.dp)); Column(Modifier.weight(1f)) { Text(sh("STYLE MAĞAZASI", "STYLE STORE"), color = StoreText, fontSize = 19.sp, fontWeight = FontWeight.Black); Text(sh("Al • uygula • hemen oyuna dön", "Buy • equip • get back in game"), color = StoreMuted, fontSize = 10.sp); Spacer(Modifier.height(5.dp)); Text(sh("Koleksiyon \$collected/\$total", "Collection \$collected/\$total"), color = StoreBlue, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
-            Surface(shape = RoundedCornerShape(99.dp), color = StoreGold.copy(.14f), border = BorderStroke(1.dp, StoreGold.copy(.35f))) { Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Toll, null, Modifier.size(16.dp), tint = StoreGold); Spacer(Modifier.width(4.dp)); Text("\$balance SC", color = StoreText, fontWeight = FontWeight.Black, fontSize = 12.sp) } }
+            Spacer(Modifier.width(11.dp)); Column(Modifier.weight(1f)) { Text(sh("STYLE MAĞAZASI", "STYLE STORE"), color = StoreText, fontSize = 19.sp, fontWeight = FontWeight.Black); Text(sh("Al • uygula • hemen oyuna dön", "Buy • equip • get back in game"), color = StoreMuted, fontSize = 10.sp); Spacer(Modifier.height(5.dp)); Text(sh("Koleksiyon $collected/$total", "Collection $collected/$total"), color = StoreBlue, fontSize = 9.sp, fontWeight = FontWeight.Bold) }
+            Surface(shape = RoundedCornerShape(99.dp), color = StoreGold.copy(.14f), border = BorderStroke(1.dp, StoreGold.copy(.35f))) { Row(Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Toll, null, Modifier.size(16.dp), tint = StoreGold); Spacer(Modifier.width(4.dp)); Text("$balance SC", color = StoreText, fontWeight = FontWeight.Black, fontSize = 12.sp) } }
         }
     }
 }
-@Composable private fun StoreTabs(tabs: List<StoreTab>, selected: Int, onSelected: (Int) -> Unit) { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(tabs.indices) { i -> FilterChip(selected = selected == i, onClick = { onSelected(i) }, label = { Text(tabs[i].title, fontSize = 9.sp, fontWeight = FontWeight.Black) }, leadingIcon = { Icon(tabs[i].icon, null, Modifier.size(15.dp)) }) } } }
+@Composable private fun StoreTabs(tabs: List<StoreTab>, selected: Int, onSelected: (Int) -> Unit) { LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) { items(tabs) { tab -> val index = tabs.indexOf(tab); FilterChip(selected = selected == index, onClick = { onSelected(index) }, label = { Text(tab.title, fontSize = 9.sp, fontWeight = FontWeight.Black) }, leadingIcon = { Icon(tab.icon, null, Modifier.size(15.dp)) }) } } }
 @Composable private fun FeaturedCard(item: ShopItemDto, owned: Boolean, equipped: Boolean, busy: Boolean, onAction: (ShopItemDto) -> Unit) {
     Card(colors = CardDefaults.cardColors(containerColor = StoreSurface), shape = RoundedCornerShape(24.dp), border = BorderStroke(if (equipped) 2.dp else 1.dp, if (equipped) StoreGreen else StoreBorder)) { Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) { Box(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(17.dp))) { Image(painterResource(R.drawable.store_featured_arena), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop); Surface(Modifier.padding(9.dp), color = StoreText.copy(.85f), shape = RoundedCornerShape(8.dp)) { Text(sh("ÖNE ÇIKAN", "FEATURED"), Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black) } }; ProductInfo(item, owned, equipped, busy, onAction) } }
 }
@@ -140,11 +141,12 @@ private fun EquippedCosmeticsDto?.isEquipped(item: ShopItemDto): Boolean = when 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) { Text(item.nameTr, Modifier.weight(1f), color = StoreText, fontSize = 15.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis); if (equipped) Icon(Icons.Rounded.CheckCircle, null, Modifier.size(18.dp), tint = StoreGreen) }
         Text(item.descriptionTr, color = StoreMuted, fontSize = 9.sp, lineHeight = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Surface(shape = RoundedCornerShape(99.dp), color = if (owned) StoreGreen.copy(.11f) else StoreGold.copy(.13f)) { Text(if (equipped) sh("AKTİF", "ACTIVE") else if (owned) sh("SAHİPSİN", "OWNED") else "\${item.diamondPrice} SC", Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = if (owned) StoreGreen else StoreText, fontWeight = FontWeight.Black, fontSize = 9.sp) }; Spacer(Modifier.weight(1f)); Button(enabled = !busy && !equipped, onClick = { onAction(item) }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp), shape = RoundedCornerShape(11.dp), colors = ButtonDefaults.buttonColors(containerColor = StoreBlue)) { Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, Modifier.size(14.dp)); Spacer(Modifier.width(4.dp)); Text(if (busy) "…" else if (owned) sh("KULLAN", "EQUIP") else sh("AL & KULLAN", "BUY & EQUIP"), fontSize = 9.sp, fontWeight = FontWeight.Black) } }
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { Surface(shape = RoundedCornerShape(99.dp), color = if (owned) StoreGreen.copy(.11f) else StoreGold.copy(.13f)) { Text(if (equipped) sh("AKTİF", "ACTIVE") else if (owned) sh("SAHİPSİN", "OWNED") else "${item.diamondPrice} SC", Modifier.padding(horizontal = 8.dp, vertical = 5.dp), color = if (owned) StoreGreen else StoreText, fontWeight = FontWeight.Black, fontSize = 9.sp) }; Spacer(Modifier.weight(1f)); Button(enabled = !busy && !equipped, onClick = { onAction(item) }, contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp), shape = RoundedCornerShape(11.dp), colors = ButtonDefaults.buttonColors(containerColor = StoreBlue)) { Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, Modifier.size(14.dp)); Spacer(Modifier.width(4.dp)); Text(if (busy) "…" else if (owned) sh("KULLAN", "EQUIP") else sh("AL & KULLAN", "BUY & EQUIP"), fontSize = 9.sp, fontWeight = FontWeight.Black) } }
     }
 }
 private fun iconFor(item: ShopItemDto) = when (item.kind) { "game_theme" -> Icons.Rounded.Palette; "profile_frame" -> Icons.Rounded.AccountCircle; "name_style" -> Icons.Rounded.Title; "keyboard_theme" -> Icons.Rounded.Keyboard; "victory_effect" -> Icons.Rounded.EmojiEvents; else -> Icons.Rounded.EmojiEmotions }
 private fun accentFor(item: ShopItemDto) = when (item.id) { "theme_aurora" -> Color(0xFF795CE8); "theme_monster_blue" -> StoreBlue; "victory_crown" -> StoreGold; "keyboard_neon", "name_cyan" -> Color(0xFF13A9B7); else -> Color(0xFF765CD7) }
+// PROFILE STYLE • MATCH STYLE • PRESTIGE • BUNDLES: permanent cosmetic collections, no match power.
 @Composable private fun StoreSectionHeader(title: String, subtitle: String) { Column { Text(title, color = StoreText, fontSize = 13.sp, fontWeight = FontWeight.Black); Text(subtitle, color = StoreMuted, fontSize = 9.sp) } }
 @Composable private fun StoreNotice(message: String) { Surface(shape = RoundedCornerShape(14.dp), color = StoreBlue.copy(.08f), border = BorderStroke(1.dp, StoreBlue.copy(.2f))) { Row(Modifier.padding(11.dp), verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Rounded.Info, null, Modifier.size(16.dp), tint = StoreBlue); Spacer(Modifier.width(8.dp)); Text(message, color = StoreText, fontSize = 10.sp) } } }
 @Composable private fun EmptyCatalogCard() { Surface(shape = RoundedCornerShape(18.dp), color = StoreSurface, border = BorderStroke(1.dp, StoreBorder)) { Text(sh("Bu bölümdeki ürünler yakında hazır olacak.", "Products for this section will be ready soon."), Modifier.padding(18.dp), color = StoreMuted, fontSize = 11.sp) } }

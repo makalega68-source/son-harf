@@ -1,15 +1,5 @@
--- Store-ready cosmetic catalogue: every active item has a corresponding mobile runtime.
+-- Store-ready cosmetic catalogue. The active theme is the runtime-verified blue-white arena.
 -- Prices are Son Coin only; no product grants competitive power.
-update public.shop_items
-set active = true,
-    diamond_price = 720,
-    name_tr = 'Aurora Arena',
-    name_en = 'Aurora Arena',
-    description_tr = 'Mor-kuzey ışıkları görünümü; oyun alanında anında uygulanır.',
-    description_en = 'Aurora-light appearance applied instantly to the game board.',
-    sort_order = 40
-where id = 'theme_aurora'
-  and kind = 'game_theme';
 
 update public.shop_items
 set diamond_price = case id
