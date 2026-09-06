@@ -23,16 +23,16 @@ import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.auth.handleDeeplinks
 import kotlinx.coroutines.withTimeoutOrNull
 
-internal val SonHarfBg: Color get() = Color(0xFFF5F8FC)
-internal val SonHarfSurface: Color get() = Color.White
-internal val SonHarfSurface2: Color get() = Color(0xFFEEF5FF)
-internal val SonHarfPurple = Color(0xFF6B4FD3)
-internal val SonHarfCyan = Color(0xFF1687F8)
-internal val SonHarfBlue = Color(0xFF1677FF)
+internal val SonHarfBg: Color get() = SonHarfTheme.Background
+internal val SonHarfSurface: Color get() = SonHarfTheme.Surface
+internal val SonHarfSurface2: Color get() = SonHarfTheme.SurfaceSecondary
+internal val SonHarfPurple: Color get() = SonHarfTheme.Purple
+internal val SonHarfCyan: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFFFD36A) else Color(0xFF1687F8)
+internal val SonHarfBlue: Color get() = SonHarfTheme.PrimaryBlue
 internal val SonHarfGold = Color(0xFFF6C453)
 internal val SonHarfGreen = Color(0xFF35C878)
-internal val SonHarfText: Color get() = Color(0xFF142033)
-internal val SonHarfMuted: Color get() = Color(0xFF6F7C8D)
+internal val SonHarfText: Color get() = SonHarfTheme.TextPrimary
+internal val SonHarfMuted: Color get() = SonHarfTheme.TextSecondary
 internal val SonHarfPink = Color(0xFFFF5F57)
 
 private val SonHarfTypography = Typography(
@@ -91,6 +91,7 @@ class MainActivity : ComponentActivity() {
         SonHarfSoundFx.init(this)
         SonHarfPreferences.syncSound(this)
         SonHarfPreferences.syncUi(this)
+        SonHarfCosmetics.restore(this)
         WordMeaningRuntime.init(this)
         RemoteExperience.loadCached(this)
         AdPrivacyManager.requestConsent(this)
@@ -102,8 +103,24 @@ class MainActivity : ComponentActivity() {
             !authDeepLink
 
         setContent {
-            MaterialTheme(
-                colorScheme = lightColorScheme(
+            val appColors = if (SonHarfCosmetics.darkArenaTheme) {
+                darkColorScheme(
+                    primary = SonHarfBlue,
+                    secondary = SonHarfCyan,
+                    tertiary = SonHarfGreen,
+                    background = SonHarfBg,
+                    surface = SonHarfSurface,
+                    surfaceVariant = SonHarfSurface2,
+                    onPrimary = Color(0xFF201600),
+                    onSecondary = Color(0xFF201600),
+                    onTertiary = Color(0xFF07140D),
+                    onBackground = SonHarfText,
+                    onSurface = SonHarfText,
+                    onSurfaceVariant = SonHarfText,
+                    error = SonHarfPink,
+                )
+            } else {
+                lightColorScheme(
                     primary = SonHarfBlue,
                     secondary = SonHarfCyan,
                     tertiary = SonHarfGreen,
@@ -117,7 +134,10 @@ class MainActivity : ComponentActivity() {
                     onSurface = SonHarfText,
                     onSurfaceVariant = SonHarfText,
                     error = SonHarfPink,
-                ),
+                )
+            }
+            MaterialTheme(
+                colorScheme = appColors,
                 typography = SonHarfTypography,
             ) {
                 AppStartupGate(clearUnrememberedSession = clearUnrememberedSession)
