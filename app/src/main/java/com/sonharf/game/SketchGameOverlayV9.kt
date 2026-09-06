@@ -40,6 +40,7 @@ fun SketchGameOverlayV9() {
     if (active) {
         Box(Modifier.fillMaxSize()) {
             RefinedDuelOverlay()
+            BotTurnWatchdogOverlay()
         }
     }
 }
