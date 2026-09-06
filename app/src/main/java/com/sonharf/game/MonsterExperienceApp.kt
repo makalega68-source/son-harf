@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -32,20 +33,20 @@ import kotlinx.coroutines.delay
 
 // SON HARF ACTION UI ADAPTATION: original Compose implementation; no third-party binary assets bundled.
 internal object MonsterUi {
-    val Background = SonHarfTheme.Background
-    val Surface = SonHarfTheme.Surface
-    val SurfaceRaised = SonHarfTheme.Surface
-    val SurfaceSoft = SonHarfTheme.SurfaceSecondary
-    val Text = SonHarfTheme.TextPrimary
-    val Muted = SonHarfTheme.TextSecondary
-    val Border = SonHarfTheme.Border
+    val Background: Color get() = SonHarfTheme.Background
+    val Surface: Color get() = SonHarfTheme.Surface
+    val SurfaceRaised: Color get() = SonHarfTheme.Surface
+    val SurfaceSoft: Color get() = SonHarfTheme.SurfaceSecondary
+    val Text: Color get() = SonHarfTheme.TextPrimary
+    val Muted: Color get() = SonHarfTheme.TextSecondary
+    val Border: Color get() = SonHarfTheme.Border
     val Accent: Color get() = SonHarfTheme.PrimaryBlue
     val AccentText = Color.White
-    val Live = SonHarfTheme.Error
-    val Coral = SonHarfTheme.Error
-    val Orange = SonHarfTheme.Warning
-    val Green = SonHarfTheme.Success
-    val Gold = SonHarfTheme.Warning
+    val Live: Color get() = SonHarfTheme.Error
+    val Coral: Color get() = SonHarfTheme.Error
+    val Orange: Color get() = SonHarfTheme.Warning
+    val Green: Color get() = SonHarfTheme.Success
+    val Gold: Color get() = SonHarfTheme.Warning
 }
 
 private data class MonsterHomeStats(
@@ -60,13 +61,14 @@ private enum class MonsterDestination { HOME, GAME, WORD_SIEGE, LEAGUE, COMPETIT
 
 @Composable
 fun MonsterExperienceApp(onSignedOut: () -> Unit) {
+    val context = LocalContext.current
     val backend = remember { OnlineGameBackend() }
     var destination by remember { mutableStateOf(MonsterDestination.HOME) }
     var isPremium by remember { mutableStateOf(false) }
     val homeRequest = SonHarfUiState.homeRequest
 
     LaunchedEffect(Unit) {
-        runCatching { SonHarfCosmetics.apply(backend.getEquippedCosmetics()) }
+        runCatching { SonHarfCosmetics.applyAndPersist(context, backend.getEquippedCosmetics()) }
         val id = backend.currentUserId()
         if (id != null) isPremium = runCatching { backend.getProfile(id).isVip }.getOrDefault(false)
     }
@@ -250,7 +252,13 @@ private fun MonsterPlayerCommandCard(profile: ProfileDto?, stats: MonsterHomeSta
     ) {
         Column(
             Modifier.background(
-                Brush.linearGradient(listOf(Color(0xFF102B58), Color(0xFF165FC3), Color(0xFF1687F8)))
+                Brush.linearGradient(
+                    if (SonHarfCosmetics.darkArenaTheme) {
+                        listOf(Color(0xFF090C13), Color(0xFF171C27), Color(0xFF2C2417))
+                    } else {
+                        listOf(Color(0xFF102B58), Color(0xFF165FC3), Color(0xFF1687F8))
+                    }
+                )
             ).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
