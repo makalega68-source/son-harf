@@ -15,6 +15,18 @@ class ReleaseSecurityMatchmakingContractTest {
         assertTrue(sql.contains("grant execute on function public.claim_turn_timeout_v2(uuid,uuid,timestamptz) to authenticated,service_role;"))
     }
 
+    @Test fun privateRoomPauseAndResumeAreAuthenticatedOnly() {
+        val sql = hardeningMigration().readText()
+        assertTrue(sql.contains("create or replace function public.pause_private_room(p_room_id uuid)"))
+        assertTrue(sql.contains("create or replace function public.resume_private_room(p_room_id uuid)"))
+        assertTrue(sql.contains("revoke all on function public.pause_private_room(uuid) from public,anon;"))
+        assertTrue(sql.contains("revoke all on function public.resume_private_room(uuid) from public,anon;"))
+        assertTrue(sql.contains("grant execute on function public.pause_private_room(uuid) to authenticated,service_role;"))
+        assertTrue(sql.contains("grant execute on function public.resume_private_room(uuid) to authenticated,service_role;"))
+        assertTrue(sql.windowed(80, 1, partialWindows = true).any { it.contains("paused_by=v_uid") })
+        assertTrue(sql.windowed(100, 1, partialWindows = true).any { it.contains("last_event_player_id=v_uid") })
+    }
+
     @Test fun matchmakingWaitsFullFifteenSecondsAndProtectsSingleQueueResolution() {
         val sql = hardeningMigration().readText()
         assertTrue(sql.contains("q.queued_at<=now()-interval '15 seconds'"))
