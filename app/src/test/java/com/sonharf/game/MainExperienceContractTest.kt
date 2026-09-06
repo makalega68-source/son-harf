@@ -50,7 +50,7 @@ class MainExperienceContractTest {
     }
 
     @Test
-    fun activeShellUsesUnifiedBlueWhitePaletteAndStoreThemeRuntime() {
+    fun storeUsesDarkArenaThemeRuntime() {
         val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
         val store = projectFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
         val cosmetics = projectFile("app/src/main/java/com/sonharf/game/CosmeticRuntime.kt").readText()
@@ -60,11 +60,11 @@ class MainExperienceContractTest {
         assertTrue(main.contains("SonHarfTheme.PrimaryBlue"))
         assertFalse(main.contains("Color(0xFF07111F)"))
         assertFalse(main.contains("Color(0xFF111D2E)"))
-        assertTrue(store.contains("theme_monster_blue"))
-        assertTrue(store.contains("Mavi Beyaz Arena"))
+        assertTrue(store.contains("theme_dark_arena"))
+        assertTrue(store.contains("Gece Arenası"))
         assertTrue(store.contains("SATIN AL"))
-        assertTrue(cosmetics.contains("monsterBlueTheme"))
-        assertTrue(cosmetics.contains("gameThemeId == \"theme_monster_blue\""))
+        assertTrue(cosmetics.contains("darkArenaTheme"))
+        assertTrue(cosmetics.contains("gameThemeId == \"theme_dark_arena\""))
     }
 
     @Test
@@ -95,7 +95,8 @@ class MainExperienceContractTest {
         val offeredProducts = catalog.substringAfter("val oneTimeProducts = listOf(")
 
         assertTrue(main.contains("MonsterDestination.STYLE -> MonsterStyleStoreScreen()"))
-        assertTrue(store.contains("theme_monster_blue"))
+        assertTrue(store.contains("theme_dark_arena"))
+        assertFalse(store.contains("theme_monster_blue"))
         assertFalse(store.contains("theme_aurora"))
         assertFalse(store.contains("theme_midnight"))
         assertFalse(store.contains("theme_neon"))
