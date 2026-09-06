@@ -47,19 +47,24 @@ import java.time.Instant
 import kotlinx.coroutines.delay
 import kotlin.math.ceil
 
-private val LBg: Color get() = if (SonHarfCosmetics.monsterBlueTheme) Color(0xFFC9E3FF) else Color(0xFFF4F7FB)
-private val LCard = Color.White
-private val LCard2 = Color(0xFFF0F4F8)
-private val LText = Color(0xFF182235)
-private val LMuted = Color(0xFF718096)
-private val LBlue = Color(0xFF1769E0)
-private val LBlueSoft = Color(0xFFE8F2FF)
-private val LBorder = Color(0xFFDDE5EE)
-private val LRed = Color(0xFFE24D6B)
-private val LOrange = Color(0xFFF47B20)
-private val LGold = Color(0xFFF3A81A)
-private val LPurple = Color(0xFF7658D6)
-private val LGreen = Color(0xFF22A85A)
+private val LBg: Color get() = when {
+    SonHarfCosmetics.darkArenaTheme -> SonHarfTheme.Background
+    SonHarfCosmetics.monsterBlueTheme -> Color(0xFFC9E3FF)
+    else -> Color(0xFFF4F7FB)
+}
+private val LCard: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.Surface else Color.White
+private val LCard2: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.SurfaceSecondary else Color(0xFFF0F4F8)
+private val LText: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.TextPrimary else Color(0xFF182235)
+private val LMuted: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.TextSecondary else Color(0xFF718096)
+private val LBlue: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.PrimaryBlue else Color(0xFF1769E0)
+private val LBlueSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.PrimaryBlueSoft else Color(0xFFE8F2FF)
+private val LBorder: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.Border else Color(0xFFDDE5EE)
+private val LRed: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.Error else Color(0xFFE24D6B)
+private val LOrange: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.Warning else Color(0xFFF47B20)
+private val LGold: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.Warning else Color(0xFFF3A81A)
+private val LPurple: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.Purple else Color(0xFF7658D6)
+private val LGreen: Color get() = if (SonHarfCosmetics.darkArenaTheme) SonHarfTheme.Success else Color(0xFF22A85A)
+private val LOnPrimary: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF17120A) else Color.White
 
 @Composable
 internal fun LightDuelLobby(
@@ -86,7 +91,7 @@ internal fun LightDuelLobby(
     onInvite: (String) -> Unit,
     onInviteResponse: (String, Boolean) -> Unit,
 ) {
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, LBg))).statusBarsPadding()) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(LCard, LBg))).statusBarsPadding()) {
         LazyColumn(
             Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
@@ -152,8 +157,8 @@ internal fun LightDuelLobby(
                     onClick = if (matching) onCancel else onRandom,
                     modifier = Modifier.fillMaxWidth().height(60.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (matching) Color(0xFFFFEEF2) else LBlue,
-                        contentColor = if (matching) LRed else Color.White,
+                        containerColor = if (matching) LRed.copy(alpha = .12f) else LBlue,
+                        contentColor = if (matching) LRed else LOnPrimary,
                     ),
                     shape = RoundedCornerShape(20.dp),
                 ) {
@@ -171,7 +176,7 @@ internal fun LightDuelLobby(
             }
             item { NoticeCard(notice) }
             if (showPrivate) item {
-                Card(colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, LBorder)) {
+                Card(colors = CardDefaults.cardColors(containerColor = LCard), border = BorderStroke(1.dp, LBorder)) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(sh("ÖZEL ODA", "PRIVATE ROOM"), color = LText, fontWeight = FontWeight.Black)
                         Button(onClick = onCreate, modifier = Modifier.fillMaxWidth()) { Text(sh("VIP ODA OLUŞTUR", "CREATE VIP ROOM")) }
@@ -189,7 +194,7 @@ internal fun LightDuelLobby(
                 }
             }
             if (showFriends) item {
-                Card(colors = CardDefaults.cardColors(containerColor = Color.White), border = BorderStroke(1.dp, LBorder)) {
+                Card(colors = CardDefaults.cardColors(containerColor = LCard), border = BorderStroke(1.dp, LBorder)) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(sh("ARKADAŞLAR", "FRIENDS"), color = LText, fontWeight = FontWeight.Black)
                         invites.forEach { invite ->
@@ -448,7 +453,7 @@ internal fun LightDuelArena(
     val shownMyScore by animateIntAsState(myScore, tween(if (reducedMotion) 0 else 280), label = "server-my-score")
     val shownOppScore by animateIntAsState(oppScore, tween(if (reducedMotion) 0 else 280), label = "server-opp-score")
 
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, LBg))).statusBarsPadding()) {
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(LCard, LBg))).statusBarsPadding()) {
         Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Row(
                 Modifier.fillMaxWidth().height(110.dp).padding(horizontal = 10.dp, vertical = 7.dp),
@@ -548,7 +553,7 @@ internal fun LightDuelArena(
 
             Card(
                 modifier = Modifier.fillMaxWidth().weight(1f, fill = false).heightIn(max = 220.dp).padding(horizontal = 10.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = LCard),
                 shape = RoundedCornerShape(24.dp),
                 border = BorderStroke(1.dp, if (myTurn) LBlue.copy(alpha = .45f) else LBorder),
             ) {
@@ -690,12 +695,12 @@ private fun LightDuelReconnect(room: GameRoomDto, me: String?, onForfeit: () -> 
     }
 
     Box(
-        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.White, LBg))).statusBarsPadding(),
+        Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(LCard, LBg))).statusBarsPadding(),
         contentAlignment = Alignment.Center,
     ) {
         Card(
             modifier = Modifier.fillMaxWidth().padding(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = LCard),
             shape = RoundedCornerShape(26.dp),
             border = BorderStroke(1.dp, LGold.copy(alpha = .5f)),
         ) {
@@ -739,7 +744,7 @@ private fun CompetitivePlayerCard(
     val league = ratingLeagueProgress(rating).leagueName
     Card(
         modifier = modifier.height(96.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = LCard),
         shape = RoundedCornerShape(20.dp),
         border = BorderStroke(if (active) 3.dp else 1.dp, if (active) accent else LBorder),
     ) {
@@ -802,7 +807,7 @@ private fun CompetitiveInputBar(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        color = Color.White,
+        color = LCard,
         border = BorderStroke(2.dp, if (myTurn && !quiz) statusColor.copy(alpha = .65f) else LBorder),
     ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 6.dp)) {
@@ -951,7 +956,7 @@ private fun CompetitiveResult(
     Box(Modifier.fillMaxSize().background(LBg).statusBarsPadding().navigationBarsPadding(), contentAlignment = Alignment.Center) {
         Card(
             modifier = Modifier.fillMaxWidth(.9f),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
+            colors = CardDefaults.cardColors(containerColor = LCard),
             shape = RoundedCornerShape(28.dp),
             border = BorderStroke(1.dp, if (won) LBlue.copy(alpha = .4f) else if (draw) LGold.copy(alpha = .4f) else LRed.copy(alpha = .35f)),
         ) {
@@ -1039,7 +1044,7 @@ private fun BonusDialog(
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .42f)).padding(18.dp), contentAlignment = Alignment.Center) {
             var value by remember(round.id) { mutableStateOf("") }
             val parsed = value.toLongOrNull()
-            Card(colors = CardDefaults.cardColors(containerColor = Color.White), shape = RoundedCornerShape(20.dp)) {
+            Card(colors = CardDefaults.cardColors(containerColor = LCard), shape = RoundedCornerShape(20.dp)) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                     Text("★ BİL BAKALIM +${round.bonusPoints}", color = LGold, fontWeight = FontWeight.Black)
                     Text(question.question, color = LText, fontWeight = FontWeight.Bold)
@@ -1057,12 +1062,14 @@ private fun BonusDialog(
                     } else if (round.resolvedAt == null) {
                         Text(sh("Cevabın alındı.", "Answer received."), color = LBlue)
                     } else {
-                        Text(sh("ASIL CEVAP ${round.correctAnswer ?: "—"}", "ACTUAL ANSWER ${round.correctAnswer ?: "—"}"), color = LText, fontWeight = FontWeight.Black)
+                        Text(sh("DOĞRU CEVAP: ${round.correctAnswer ?: "—"}", "CORRECT ANSWER: ${round.correctAnswer ?: "—"}"), color = LText, fontWeight = FontWeight.Black)
                         Text(
-                            if (tied) sh("BERABERE", "TIE")
-                            else if (myWon) sh("DOĞRU • $myAnswer", "CORRECT • $myAnswer")
-                            else sh("RAKİP DAHA YAKIN • $opponentAnswer", "OPPONENT CLOSER • $opponentAnswer"),
-                            color = if (myWon) LGreen else LRed,
+                            when {
+                                tied -> sh("BERABERE • SEN ${myAnswer ?: "—"} • RAKİP ${opponentAnswer ?: "—"}", "TIE • YOU ${myAnswer ?: "—"} • OPPONENT ${opponentAnswer ?: "—"}")
+                                myWon -> sh("SEN DAHA YAKINSIN • $myAnswer • +${round.bonusPoints}", "YOU ARE CLOSER • $myAnswer • +${round.bonusPoints}")
+                                else -> sh("RAKİP DAHA YAKIN • $opponentAnswer • +${round.bonusPoints}", "OPPONENT CLOSER • $opponentAnswer • +${round.bonusPoints}")
+                            },
+                            color = when { tied -> LGold; myWon -> LGreen; else -> LRed },
                             fontWeight = FontWeight.Bold,
                         )
                     }
@@ -1105,7 +1112,7 @@ private fun LobbyPill(selected: Boolean, text: String, modifier: Modifier, onCli
     Surface(
         modifier.height(50.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(15.dp),
-        color = if (selected) LBlueSoft else Color.White,
+        color = if (selected) LBlueSoft else LCard,
         border = BorderStroke(1.dp, if (selected) LBlue.copy(alpha = .4f) else LBorder),
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -1118,7 +1125,7 @@ private fun LobbyPill(selected: Boolean, text: String, modifier: Modifier, onCli
 private fun LobbyAction(icon: String, title: String, modifier: Modifier, onClick: () -> Unit) {
     Card(
         modifier.height(88.dp).clickable(onClick = onClick),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = LCard),
         border = BorderStroke(1.dp, LBorder),
     ) {
         Column(Modifier.fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.Center) {
@@ -1130,7 +1137,7 @@ private fun LobbyAction(icon: String, title: String, modifier: Modifier, onClick
 
 @Composable
 private fun NoticeCard(notice: String) {
-    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), color = Color.White, border = BorderStroke(1.dp, LBorder)) {
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(13.dp), color = LCard, border = BorderStroke(1.dp, LBorder)) {
         Text(notice, Modifier.fillMaxWidth().padding(10.dp), color = LMuted, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 2)
     }
 }

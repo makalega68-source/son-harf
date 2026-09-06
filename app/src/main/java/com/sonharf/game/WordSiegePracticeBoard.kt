@@ -59,7 +59,7 @@ internal fun WordSiegePracticeBoard(
     var closePan by remember { mutableStateOf(Offset.Zero) }
     var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_CLOSE_SCALE) }
     var initialized by remember { mutableStateOf(false) }
-    var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
+    var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
     val transform by remember(mode, viewport, boardPx, closePan, closeScale) {
         derivedStateOf {
             wordSiegeBoardTransform(
@@ -298,7 +298,7 @@ internal fun WordSiegePracticeRackTile(
             Text(letter.toString(), color = if (used) MainUi.Muted.copy(alpha = .45f) else MainUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
             Text(
                 practiceLetterValue(letter.toString()),
-                color = MainUi.Muted,
+                color = if (used) MainUi.Muted.copy(alpha = .55f) else Color(0xFF5D4B20),
                 fontSize = WordSiegeBoardAccessibility.RackPoint,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),

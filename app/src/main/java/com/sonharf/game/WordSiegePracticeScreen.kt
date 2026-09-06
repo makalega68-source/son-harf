@@ -411,7 +411,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     contentAlignment = Alignment.Center,
                 ) {
                     notice?.let { message ->
-                        WordSiegeNotice(message)
+                        WordSiegePracticeNotice(message)
                     } ?: lastMove?.let { move ->
                         Text(
                             sh("Son: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}", "Last: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}"),
