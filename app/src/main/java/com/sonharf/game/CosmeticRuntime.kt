@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -7,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import com.sonharf.game.data.EquippedCosmeticsDto
 
 object SonHarfCosmetics {
+    private const val PREFS = "son_harf_equipped_style_cache"
     var profileFrameId by mutableStateOf<String?>(null)
     var nameStyleId by mutableStateOf<String?>(null)
     var gameThemeId by mutableStateOf<String?>(null)
@@ -21,6 +23,24 @@ object SonHarfCosmetics {
         keyboardThemeId = e?.keyboardThemeId
         victoryEffectId = e?.victoryEffectId
         emojiPackId = e?.emojiPackId
+    }
+
+    fun restore(context: Context) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        profileFrameId = prefs.getString("profile_frame_id", null)?.takeIf { it in PurchasedFrameCatalog.ids }
+        gameThemeId = prefs.getString("game_theme_id", null)?.takeIf { it == "theme_dark_arena" }
+        nameStyleId = prefs.getString("name_style_id", null)
+        keyboardThemeId = prefs.getString("keyboard_theme_id", null)
+    }
+
+    fun applyAndPersist(context: Context, e: EquippedCosmeticsDto?) {
+        apply(e)
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
+            .putString("profile_frame_id", profileFrameId)
+            .putString("game_theme_id", gameThemeId)
+            .putString("name_style_id", nameStyleId)
+            .putString("keyboard_theme_id", keyboardThemeId)
+            .apply()
     }
 
     val profileAccent: Color
