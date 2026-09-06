@@ -1036,15 +1036,16 @@ private fun AuroraArena(
         }
     }
 
-    val arenaBgTop = Color(0xFF050713)
-    val arenaBgBottom = Color(0xFF080B1A)
-    val arenaPanel = Color(0xFF0B1024)
-    val arenaPanel2 = Color(0xFF141C3A)
+    val darkArena = SonHarfCosmetics.darkArenaTheme
+    val arenaBgTop = if (darkArena) Color(0xFF020304) else Color(0xFF050713)
+    val arenaBgBottom = if (darkArena) Color(0xFF0C0A08) else Color(0xFF080B1A)
+    val arenaPanel = if (darkArena) Color(0xFF11100E) else Color(0xFF0B1024)
+    val arenaPanel2 = if (darkArena) Color(0xFF1D1913) else Color(0xFF141C3A)
     val arenaText = Color(0xFFF7F8FF)
     val arenaMuted = Color(0xFF9AA6C1)
-    val arenaBlue = Color(0xFF2188FF)
-    val arenaViolet = Color(0xFF8A5CFF)
-    val arenaMagenta = Color(0xFFE347FF)
+    val arenaBlue = if (darkArena) Color(0xFFD6A83A) else Color(0xFF2188FF)
+    val arenaViolet = if (darkArena) Color(0xFF805E2E) else Color(0xFF8A5CFF)
+    val arenaMagenta = if (darkArena) Color(0xFFDC7B3B) else Color(0xFFE347FF)
     val arenaGold = Color(0xFFFFB31A)
     val arenaCyan = Color(0xFF31D3FF)
     val arenaPink = Color(0xFFFF4F87)
@@ -1169,7 +1170,7 @@ private fun AuroraArena(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AuroraPlayerCard(playerName, playerAvatarPath, playerGender, playerRating, myScore, myRounds, myTurn, myAccent, Modifier.weight(1f))
+            AuroraPlayerCard(playerName, playerAvatarPath, playerGender, playerRating, myScore, myRounds, myTurn, myAccent, Modifier.weight(1f), frameId = SonHarfCosmetics.profileFrameId)
 
             Box(
                 modifier = Modifier
@@ -1546,6 +1547,7 @@ private fun AuroraPlayerCard(
     active: Boolean,
     accent: Color,
     modifier: Modifier,
+    frameId: String? = null,
 ) {
     Surface(
         modifier = modifier.height(86.dp),
@@ -1579,6 +1581,8 @@ private fun AuroraPlayerCard(
                 ) {
                     Text("🤖", fontSize = 25.sp)
                 }
+            } else if (!frameId.isNullOrBlank()) {
+                FramedProfilePhotoAvatar(avatarPath, gender, name, 44.dp, frameId, accent = accent, showGenderBadge = false)
             } else {
                 ProfilePhotoAvatarWithGender(
                     avatarPath = avatarPath,
