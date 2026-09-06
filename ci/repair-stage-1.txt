@@ -1,3 +1,0 @@
-stage=1
-restore=stable-duel
-reference=411f76689c1f26b9a72c9c44baf21d2347e095af
