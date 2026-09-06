@@ -26,13 +26,13 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.util.Locale
 
-private val DuelBg = Color(0xFFF4F7FB)
-private val DuelSurface = Color.White
-private val DuelSurface2 = Color(0xFFE4E8EE)
-private val DuelKey = Color(0xFFF9FAFC)
-private val DuelText = Color(0xFF172033)
-private val DuelMuted = Color(0xFF677386)
-private val DuelBlue = Color(0xFF238BFF)
+private val DuelBg get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF070A12) else Color(0xFFF4F7FB)
+private val DuelSurface get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF111722) else Color.White
+private val DuelSurface2 get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF202A38) else Color(0xFFE4E8EE)
+private val DuelKey get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFF182230) else Color(0xFFF9FAFC)
+private val DuelText get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFF5F7FC) else Color(0xFF172033)
+private val DuelMuted get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFAEB9C9) else Color(0xFF677386)
+private val DuelBlue get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFF0B84D) else Color(0xFF238BFF)
 private val DuelGreen = Color(0xFF1C9B5F)
 private val DuelRed = Color(0xFFD53B45)
 private val DuelBorder = Color(0xFFD4DCE7)
@@ -123,11 +123,15 @@ internal fun RefinedDuelOverlay() {
                         timeoutClaimKey = null
                     }
                 }
-                words = runCatching { backend.getWords(incoming.id) }.getOrDefault(words)
+                // Words change only when the authoritative count changes. Avoiding a second
+                // network request on every room tick keeps scrolling and typing smooth.
+                if (current == null || current.validWordCount != incoming.validWordCount) {
+                    words = runCatching { backend.getWords(incoming.id) }.getOrDefault(words)
+                }
                 if (myProfile == null || (!incoming.isBot && opponentProfile == null)) loadProfiles(incoming)
                 if (showChat && !incoming.isBot) chat = runCatching { backend.getChat(incoming.id) }.getOrDefault(chat)
             }
-            delay(450)
+            delay(900)
         }
     }
 
@@ -225,14 +229,9 @@ internal fun RefinedDuelOverlay() {
         if (!myTurn || busy || submitted.isBlank()) return
         scope.launch {
             busy = true
-            val before = runCatching { backend.getRoom(active.id) }.getOrNull()
-            if (before == null || before.currentPlayerId != me || before.status !in setOf("playing", "final", "sudden_death")) {
-                input = ""
-                voiceRequestId = null
-                feedback = DuelFeedback(false, sh("SIRA RAKİPTE", "OPPONENT'S TURN"))
-                busy = false
-                return@launch
-            }
+            // The server already verifies turn ownership. A separate pre-flight getRoom()
+            // added one full round trip before every answer and was the visible submit delay.
+            val before = active
             val beforeMine = if (me == before.hostId) before.hostScore else before.guestScore
             val beforeOpp = if (me == before.hostId) before.guestScore else before.hostScore
             val shownWord = submitted.uppercase(locale)
@@ -243,7 +242,6 @@ internal fun RefinedDuelOverlay() {
             }
             result.onSuccess { updated ->
                 room = updated
-                words = runCatching { backend.getWords(active.id) }.getOrDefault(words)
                 input = ""
                 voiceRequestId = null
                 if (voiceToken != null) voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(voiceUses + 1)
@@ -263,9 +261,12 @@ internal fun RefinedDuelOverlay() {
                         else -> null
                     }
                 } else {
-                    val delta = afterMine - beforeMine
-                    feedback = DuelFeedback(false, "$shownWord ✕ ${if (delta < 0) delta else -5}")
+                    // Preserve the server's rejection reason: a valid word such as KOALA
+                    // must not look like a dictionary failure when the required first letter
+                    // is different.
+                    feedback = DuelFeedback(false, failedWordLabel(updated.lastEvent.orEmpty(), shownWord))
                 }
+                words = runCatching { backend.getWords(active.id) }.getOrDefault(words)
             }.onFailure { error ->
                 input = ""
                 voiceRequestId = null
@@ -303,6 +304,9 @@ internal fun RefinedDuelOverlay() {
                     score = myScore,
                     streak = myStreak,
                     active = myTurn,
+                    avatarPath = myProfile?.avatarPath,
+                    gender = myProfile?.gender,
+                    frameId = SonHarfCosmetics.profileFrameId,
                     modifier = Modifier.weight(1f),
                 )
                 DuelCountdown(active.status, seconds, Modifier.width(68.dp))
@@ -311,6 +315,9 @@ internal fun RefinedDuelOverlay() {
                     score = opponentScore,
                     streak = opponentStreak,
                     active = opponentTurn,
+                    avatarPath = opponentProfile?.avatarPath,
+                    gender = opponentProfile?.gender,
+                    frameId = null,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -412,14 +419,29 @@ private fun DuelTopControls(onForfeit: () -> Unit, onChat: () -> Unit) {
 }
 
 @Composable
-private fun CompactPlayerCard(name: String, score: Int, streak: Int, active: Boolean, modifier: Modifier = Modifier) {
+private fun CompactPlayerCard(
+    name: String,
+    score: Int,
+    streak: Int,
+    active: Boolean,
+    avatarPath: String?,
+    gender: String?,
+    frameId: String?,
+    modifier: Modifier = Modifier,
+) {
     val border = if (active) DuelBlue else DuelBorder
     val background = if (active) DuelBlue.copy(alpha = .09f) else DuelSurface
     Surface(modifier = modifier.fillMaxHeight(), color = background, shape = RoundedCornerShape(15.dp), border = BorderStroke(if (active) 2.dp else 1.dp, border)) {
         Row(Modifier.fillMaxSize().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(34.dp).clip(CircleShape).background(if (active) DuelBlue else DuelSurface2), contentAlignment = Alignment.Center) {
-                Text(name.take(1).uppercase(), color = if (active) Color.White else DuelText, fontWeight = FontWeight.Black, fontSize = 16.sp)
-            }
+            FramedProfilePhotoAvatar(
+                avatarPath = avatarPath,
+                gender = gender,
+                name = name,
+                size = 34.dp,
+                frameId = frameId,
+                accent = if (active) DuelBlue else DuelSurface2,
+                showGenderBadge = false,
+            )
             Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f)) {
                 Text(name, color = DuelText, fontWeight = FontWeight.Black, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -525,12 +547,14 @@ private fun CentralWordCard(lastWord: String, required: String, status: String, 
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
             )
-            if (feedback != null) {
-                Spacer(Modifier.height(3.dp))
-                Text(feedback.label, color = feedbackColor, fontSize = 14.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-            } else if (actionText != null) {
-                Spacer(Modifier.height(3.dp))
-                Text(actionText, color = DuelBlue, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+            // Always reserve this line so correct/wrong feedback never shifts the card,
+            // keyboard, or surrounding screen vertically.
+            Spacer(Modifier.height(3.dp))
+            Box(Modifier.height(20.dp), contentAlignment = Alignment.Center) {
+                when {
+                    feedback != null -> Text(feedback.label, color = feedbackColor, fontSize = 14.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                    actionText != null -> Text(actionText, color = DuelBlue, fontSize = 12.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                }
             }
         }
     }
