@@ -11,9 +11,10 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 
 /**
- * Mount the mature V10 arena only while a match is actually active.
- * Finished games are intentionally left to ComboOverlayV9, which owns the single
- * persistent result/share/challenge summary and remembers dismissals across launches.
+ * Mount the refined duel arena only while a match is active.
+ * The previous V10 arena remains in the codebase as a rollback reference; finished
+ * games stay owned by ComboOverlayV9. The refined arena contains its action feedback
+ * inline so the match hierarchy remains uncluttered.
  */
 @Composable
 fun SketchGameOverlayV9() {
@@ -39,8 +40,7 @@ fun SketchGameOverlayV9() {
 
     if (active) {
         Box(Modifier.fillMaxSize()) {
-            SketchGameOverlayV10()
-            SonHarfExcitementOverlay()
+            RefinedDuelOverlay()
         }
     }
 }
