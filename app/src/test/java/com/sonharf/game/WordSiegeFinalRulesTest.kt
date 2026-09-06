@@ -123,12 +123,21 @@ class WordSiegeFinalRulesTest {
             primaryWord = "KALEM",
             opponentCaptured = 1,
         )
+        val iTakeItBack = WordSiegeMoveDto(
+            id = 4,
+            gameId = "game",
+            playerId = "me",
+            primaryWord = "KAT",
+            opponentCaptured = 1,
+        )
 
         assertEquals(6, WordSiegeFinalRules.earnedCubePoints(listOf(first), "me"))
         assertEquals(6, WordSiegeFinalRules.earnedCubePoints(listOf(first, rivalNeutral), "me"))
         assertEquals(4, WordSiegeFinalRules.earnedCubePoints(listOf(first, rivalNeutral, rivalTakesMine), "me"))
+        assertEquals(6, WordSiegeFinalRules.earnedCubePoints(listOf(first, rivalNeutral, rivalTakesMine, iTakeItBack), "me"))
         assertEquals(36, WordSiegeFinalRules.netScore(30, 6, 8))
         assertEquals(34, WordSiegeFinalRules.netScore(30, 4, 10))
+        assertEquals(36, WordSiegeFinalRules.netScore(30, 6, 12))
     }
 
     @Test fun orientationIsDetectedWithoutPlayerDirectionSelection() {
@@ -149,7 +158,8 @@ class WordSiegeFinalRulesTest {
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
-        val sql = projectFile("supabase/migrations/20260902090000_word_siege_final_transfer_v2.sql").readText()
+        val scoringV3 = projectFile("supabase/migrations/20260903161000_word_siege_current_territory_scoring_v3.sql").readText()
+        val boardV4 = projectFile("supabase/migrations/20260903230500_word_siege_15x15_v4.sql").readText()
 
         assertTrue(engine.contains("applyMove(state, 2, placements)"))
         assertTrue(engine.contains("SharedDictionaryService.isValidWordBlocking"))
@@ -159,8 +169,8 @@ class WordSiegeFinalRulesTest {
         assertTrue(sharedDictionary.contains("MIN_CANONICAL_LENGTH = 2"))
         assertTrue(!practice.contains("Yön otomatik algılanır"))
         assertTrue(!pan.contains("Yön otomatik algılanır"))
-        assertTrue(practice.contains("Torba ${'$'}{state.bag.length}"))
-        assertTrue(pan.contains("Torba ${'$'}{game.bag.length}"))
+        assertTrue(practice.contains("Torba ${state.bag.length}"))
+        assertTrue(pan.contains("Torba ${game.bag.length}"))
         assertTrue(experience.contains("WordSiegeFinalRules.detectOrientation"))
         assertTrue(pan.contains("0xFF35C878"))
         assertTrue(pan.contains("0xFFFF5F57"))
@@ -170,8 +180,13 @@ class WordSiegeFinalRulesTest {
         assertTrue(pan.contains("animateIntAsState"))
         assertFalse(practice.contains("delay(28)"))
         assertFalse(pan.contains("delay(28)"))
-        assertTrue(sql.contains("(neutral_count + opponent_count) * 2"))
-        assertTrue(sql.contains("r.player_one_word_score + r.player_one_area_score - r.player_two_area_score"))
+        assertTrue(scoringV3.contains("r.player_one_word_score + (r.player_one_area * 2)"))
+        assertTrue(scoringV3.contains("r.player_two_word_score + (r.player_two_area * 2)"))
+        assertFalse(scoringV3.contains("- r.player_two_area_score"))
+        assertFalse(scoringV3.contains("- r.player_one_area_score"))
+        assertTrue(boardV4.contains("generate_series(0, 224)"))
+        assertTrue(boardV4.contains("(neutral_count + opponent_count) * 2"))
+        assertTrue(boardV4.contains("Scoring semantics are unchanged: word points are permanent and each currently owned cube is worth 2."))
     }
 
     private fun state(board: List<WordSiegeCellDto>, rack: String) = WordSiegePracticeState(
