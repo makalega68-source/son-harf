@@ -13,9 +13,12 @@ class MainExperienceContractTest {
     @Test
     fun authenticatedUsersEnterTheNewMonsterExperience() {
         val stable = projectFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
+        val runtime = projectFile("app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt").readText()
         val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
 
-        assertTrue(stable.contains("MonsterExperienceApp("))
+        assertTrue(stable.contains("LiveDuelRuntimeShell("))
+        assertTrue(runtime.contains("MonsterExperienceApp("))
+        assertTrue(runtime.contains("RefinedDuelOverlay()"))
         assertTrue(main.contains("OnlineGameScreenV6()"))
         assertTrue(main.contains("MonsterDestination.WORD_SIEGE"))
         assertTrue(main.contains("WordSiegeExperienceScreen"))
@@ -33,7 +36,9 @@ class MainExperienceContractTest {
         val classic = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt")
 
         assertTrue(main.contains("MonsterLiveMatchCard("))
-        assertTrue(main.contains("KLASİK"))
+        assertFalse(main.contains("MonsterQuickCard("))
+        assertTrue(main.contains("MonsterSiegeQuickCard(Modifier.fillMaxWidth(), onSiege)"))
+        assertTrue(main.contains("SonHarfBrandLogo("))
         assertTrue(main.contains("KELİME\\nKUŞATMASI"))
         assertTrue(main.contains("LİG & RATING"))
         assertTrue(main.contains("HAFTANIN EN İYİLERİ"))
@@ -45,7 +50,7 @@ class MainExperienceContractTest {
     }
 
     @Test
-    fun activeShellUsesUnifiedPaletteAndDarkArenaStoreRuntime() {
+    fun activeShellUsesUnifiedBlueWhitePaletteAndStoreThemeRuntime() {
         val main = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
         val store = projectFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
         val cosmetics = projectFile("app/src/main/java/com/sonharf/game/CosmeticRuntime.kt").readText()
@@ -55,11 +60,11 @@ class MainExperienceContractTest {
         assertTrue(main.contains("SonHarfTheme.PrimaryBlue"))
         assertFalse(main.contains("Color(0xFF07111F)"))
         assertFalse(main.contains("Color(0xFF111D2E)"))
-        assertTrue(store.contains("theme_dark_arena"))
-        assertTrue(store.contains("Gece Arenası"))
+        assertTrue(store.contains("theme_monster_blue"))
+        assertTrue(store.contains("Mavi Beyaz Arena"))
         assertTrue(store.contains("SATIN AL"))
-        assertTrue(cosmetics.contains("darkArenaTheme"))
-        assertTrue(cosmetics.contains("gameThemeId == \"theme_dark_arena\""))
+        assertTrue(cosmetics.contains("monsterBlueTheme"))
+        assertTrue(cosmetics.contains("gameThemeId == \"theme_monster_blue\""))
     }
 
     @Test
@@ -90,7 +95,7 @@ class MainExperienceContractTest {
         val offeredProducts = catalog.substringAfter("val oneTimeProducts = listOf(")
 
         assertTrue(main.contains("MonsterDestination.STYLE -> MonsterStyleStoreScreen()"))
-        assertTrue(store.contains("theme_dark_arena"))
+        assertTrue(store.contains("theme_monster_blue"))
         assertFalse(store.contains("theme_aurora"))
         assertFalse(store.contains("theme_midnight"))
         assertFalse(store.contains("theme_neon"))
@@ -110,6 +115,7 @@ class MainExperienceContractTest {
         val online = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
         val arena = projectFile("app/src/main/java/com/sonharf/game/LightDuelUi.kt").readText()
         val keyboard = projectFile("app/src/main/java/com/sonharf/game/EmbeddedGameKeyboard.kt")
+        val refined = projectFile("app/src/main/java/com/sonharf/game/RefinedDuelOverlay.kt").readText()
 
         assertTrue(online.contains("var attempt = 0"))
         assertTrue(online.contains("else minOf(5000L, 1200L + attempt * 600L)"))
@@ -117,6 +123,8 @@ class MainExperienceContractTest {
         assertTrue(online.contains("SonHarfUiState.homeRequest += 1"))
         assertTrue(arena.contains("gameUppercase("))
         assertTrue(arena.contains("duelScoreFontSize(score).sp"))
+        assertTrue(refined.contains("AndroidTurkishKeyboard("))
+        assertTrue(refined.contains("RefinedDuelOverlay"))
         assertEquals(
             "Frozen keyboard changed",
             "f5143f6701c3bff95119aa6ce61d5f64acc15f8803fd2c6b48bcee4b5625d4a2",
