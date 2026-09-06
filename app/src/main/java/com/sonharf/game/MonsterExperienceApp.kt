@@ -269,7 +269,7 @@ private fun MonsterPlayerCommandCard(profile: ProfileDto?, stats: MonsterHomeSta
                 }
                 Spacer(Modifier.width(11.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp, maxLines = 1)
+                    Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = if (SonHarfCosmetics.nameStyleId == "name_cyan") Color(0xFF62E4EF) else Color.White, fontWeight = FontWeight.Black, fontSize = 17.sp, maxLines = 1)
                     Text(sh("${stats.leagueName} LİGİ", "${stats.leagueName} LEAGUE"), color = Color.White.copy(alpha = .78f), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 Surface(shape = RoundedCornerShape(99.dp), color = MonsterUi.Gold) {

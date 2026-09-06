@@ -68,8 +68,8 @@ class FinalRestorationRegressionTest {
         assertTrue(style.contains("equipShopItem"))
         assertTrue(style.contains("PROFILE STYLE"))
         assertTrue(style.contains("MATCH STYLE"))
-        assertTrue(style.contains("PRESTIGE"))
-        assertTrue(style.contains("BUNDLES"))
+        assertTrue(style.contains("isRuntimeReadyStyle"))
+        assertTrue(style.contains("FAIR PLAY PROMISE"))
 
         // Admin remains fail-closed, RPC-backed and on the unified light palette.
         assertTrue(admin.contains("backend.getAdminDashboard()"))

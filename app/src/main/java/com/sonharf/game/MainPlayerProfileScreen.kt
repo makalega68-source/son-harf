@@ -132,7 +132,7 @@ internal fun MainPlayerProfileScreen(
                     }
                     Text(
                         p?.displayName ?: sh("Oyuncu profili", "Player profile"),
-                        color = MainUi.Text,
+                        color = SonHarfCosmetics.playerNameColor,
                         fontSize = 25.sp,
                         fontWeight = FontWeight.Black,
                         maxLines = 1,
