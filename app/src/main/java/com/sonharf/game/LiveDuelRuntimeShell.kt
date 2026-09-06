@@ -51,7 +51,10 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
                         ?.id
                 }.getOrNull()
             }
-            delay(350L)
+            // The active overlay owns the live match refresh. Polling the whole room list
+            // several times per second here was competing with word submissions and made
+            // navigation feel unstable on slower phones.
+            delay(1_250L)
         }
     }
 
