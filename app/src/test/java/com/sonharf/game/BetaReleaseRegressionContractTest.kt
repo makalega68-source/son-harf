@@ -69,7 +69,7 @@ class BetaReleaseRegressionContractTest {
         assertTrue(vip.contains("BillingManager("))
         assertTrue(vip.contains("PlayPurchaseVerification.verify"))
         assertFalse(vip.contains("rememberInfiniteTransition"))
-        assertTrue(vip.lowercase().contains("no competitive power"))
+        assertTrue(vip.lowercase().contains("never grants time, score, moves, rating or live decision advantages"))
     }
 
     @Test
