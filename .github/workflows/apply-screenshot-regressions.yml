@@ -29,7 +29,6 @@ jobs:
           gradle-version: '8.14.4'
       - name: Apply guarded source patches
         run: |
-          # v4: source fixes plus UX contract alignment
           python scripts/apply_screenshot_regressions_v2.py
           python scripts/fix_screenshot_scope_v3.py
           git diff --check
@@ -39,8 +38,16 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -rf app/build build
           git rm .github/workflows/apply-screenshot-regressions.yml scripts/apply_screenshot_regressions.py scripts/apply_screenshot_regressions_v2.py scripts/fix_screenshot_scope_v3.py
-          git add -A
+          git add app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          git add app/src/main/java/com/sonharf/game/LightDuelUi.kt
+          git add app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt
+          git add app/src/main/java/com/sonharf/game/WordSiegeBoardAccessibility.kt
+          git add app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt
+          git add app/src/test/java/com/sonharf/game/ScreenshotRegressionFixContractTest.kt
+          git add app/src/test/java/com/sonharf/game/ActiveScreenRegressionContractTest.kt
+          git add app/src/test/java/com/sonharf/game/BonusFlowReliabilityContractTest.kt
           git diff --cached --check
           git commit -m "Ekran ve oyun akışı hatalarını düzelt"
           git push origin HEAD:fix/screenshot-regressions-20260906
