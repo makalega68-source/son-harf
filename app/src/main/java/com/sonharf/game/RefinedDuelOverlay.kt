@@ -84,6 +84,10 @@ internal fun RefinedDuelOverlay() {
     var timeoutClaimKey by remember { mutableStateOf<String?>(null) }
     var voiceUses by remember { mutableIntStateOf(0) }
     var voiceRequestId by remember { mutableStateOf<String?>(null) }
+    var triviaRound by remember { mutableStateOf<TriviaRoundDto?>(null) }
+    var triviaQuestion by remember { mutableStateOf<TriviaQuestionDto?>(null) }
+    var triviaSelection by remember { mutableStateOf<Long?>(null) }
+    var triviaTimeoutKey by remember { mutableStateOf<String?>(null) }
 
     val voiceInput = rememberVoiceWordInput(room?.language ?: SonHarfUiState.language) { recognized, requestId ->
         input = recognized.take(40)
@@ -111,6 +115,9 @@ internal fun RefinedDuelOverlay() {
     }
 
     LaunchedEffect(Unit) {
+        // A running match can be restored before MonsterExperienceApp is composed.
+        // Load equipped Style here as well so an owned/equipped arena is never lost.
+        runCatching { SonHarfCosmetics.apply(backend.getEquippedCosmetics()) }
         while (true) {
             val current = room
             val incoming = if (current == null) runCatching { discover() }.getOrNull()
@@ -130,6 +137,25 @@ internal fun RefinedDuelOverlay() {
                 }
                 if (myProfile == null || (!incoming.isBot && opponentProfile == null)) loadProfiles(incoming)
                 if (showChat && !incoming.isBot) chat = runCatching { backend.getChat(incoming.id) }.getOrDefault(chat)
+                if (incoming.status == "quiz") {
+                    val nextRound = runCatching { backend.getActiveTriviaRound(incoming.id) }.getOrNull()
+                    if (nextRound != null) {
+                        if (triviaRound?.id != nextRound.id || triviaQuestion?.id != nextRound.questionId) {
+                            triviaQuestion = runCatching { backend.getTriviaQuestion(nextRound.questionId) }.getOrNull()
+                            triviaSelection = null
+                            triviaTimeoutKey = null
+                        }
+                        triviaRound = nextRound
+                        if (triviaSelection == null) {
+                            triviaSelection = runCatching { backend.getMyTriviaAnswer(nextRound.id)?.answerIndex }.getOrNull()
+                        }
+                    }
+                } else {
+                    triviaRound = null
+                    triviaQuestion = null
+                    triviaSelection = null
+                    triviaTimeoutKey = null
+                }
             }
             delay(900)
         }
@@ -192,6 +218,22 @@ internal fun RefinedDuelOverlay() {
                 val reconciled = runCatching { backend.getRoom(active.id) }.getOrNull()
                 if (reconciled != null && shouldAcceptClassicSnapshot(active, reconciled)) room = reconciled
             }
+    }
+
+    LaunchedEffect(active.id, active.status, triviaRound?.id, triviaRound?.resolvedAt, triviaRound?.answerDeadline, triviaRound?.resultUntil) {
+        val round = triviaRound ?: return@LaunchedEffect
+        if (active.status != "quiz") return@LaunchedEffect
+        val deadline = if (round.resolvedAt == null) round.answerDeadline else round.resultUntil
+        if (deadline.isNullOrBlank()) return@LaunchedEffect
+        while (!deadlineExpired(deadline)) delay(200)
+        val key = "${round.id}:${round.resolvedAt ?: "answer"}"
+        if (triviaTimeoutKey == key) return@LaunchedEffect
+        triviaTimeoutKey = key
+        val updated = runCatching {
+            if (round.resolvedAt == null) backend.claimTriviaTimeout(round.id)
+            else backend.finishTriviaResult(round.id)
+        }.getOrNull()
+        if (updated != null && shouldAcceptClassicSnapshot(active, updated)) room = updated
     }
 
     LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount, active.roundNo) {
@@ -280,6 +322,22 @@ internal fun RefinedDuelOverlay() {
                 feedback = if (acceptedOnServer) DuelFeedback(true, "$shownWord ✓ +10")
                 else DuelFeedback(false, failedWordLabel(error.message.orEmpty(), shownWord))
             }
+            busy = false
+        }
+    }
+
+    fun submitTrivia(estimate: Int) {
+        val round = triviaRound ?: return
+        if (busy || active.status != "quiz" || round.resolvedAt != null || triviaSelection != null) return
+        scope.launch {
+            busy = true
+            runCatching { backend.answerTrivia(round.id, estimate) }
+                .onSuccess { updated ->
+                    room = updated
+                    triviaSelection = estimate.toLong()
+                    triviaRound = runCatching { backend.getActiveTriviaRound(active.id) }.getOrDefault(triviaRound)
+                }
+                .onFailure { actionText = sh("Cevap gönderilemedi, tekrar dene", "Answer could not be sent, try again") }
             busy = false
         }
     }
@@ -403,6 +461,71 @@ internal fun RefinedDuelOverlay() {
             dismissButton = { TextButton(onClick = { showChat = false }) { Text(sh("KAPAT", "CLOSE")) } },
         )
     }
+
+    if (active.status == "quiz") {
+        val round = triviaRound
+        val question = triviaQuestion
+        if (round != null && question != null) {
+            RefinedTriviaDialog(
+                round = round,
+                question = question,
+                myAnswer = triviaSelection,
+                me = me,
+                busy = busy,
+                onSubmit = ::submitTrivia,
+            )
+        }
+    }
+}
+
+@Composable
+private fun RefinedTriviaDialog(
+    round: TriviaRoundDto,
+    question: TriviaQuestionDto,
+    myAnswer: Long?,
+    me: String?,
+    busy: Boolean,
+    onSubmit: (Int) -> Unit,
+) {
+    var value by remember(round.id) { mutableStateOf("") }
+    val estimate = value.toIntOrNull()
+    AlertDialog(
+        onDismissRequest = {},
+        containerColor = DuelSurface,
+        title = { Text("★ ${sh("BİL BAKALIM", "TRIVIA")} +${round.bonusPoints}", color = DuelBlue, fontWeight = FontWeight.Black) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(question.question, color = DuelText, fontWeight = FontWeight.Bold)
+                when {
+                    round.resolvedAt != null -> {
+                        Text(sh("DOĞRU CEVAP: ${round.correctAnswer ?: "—"}", "CORRECT ANSWER: ${round.correctAnswer ?: "—"}"), color = DuelText, fontWeight = FontWeight.Black)
+                        Text(
+                            if (round.winnerId == null) sh("BERABERE", "TIE")
+                            else if (round.winnerId == me) sh("KAZANDIN", "YOU WON")
+                            else sh("RAKİP DAHA YAKIN", "OPPONENT WAS CLOSER"),
+                            color = if (round.winnerId == me) DuelGreen else DuelRed,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                    myAnswer != null -> Text(sh("Cevabın alındı: $myAnswer", "Answer received: $myAnswer"), color = DuelBlue, fontWeight = FontWeight.Bold)
+                    else -> OutlinedTextField(
+                        value = value,
+                        onValueChange = { value = it.filter(Char::isDigit).take(9) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        label = { Text(sh("Tahminin", "Your estimate")) },
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            if (round.resolvedAt == null && myAnswer == null) {
+                Button(onClick = { estimate?.let(onSubmit) }, enabled = estimate != null && !busy) {
+                    Text(sh("CEVABI GÖNDER", "SEND ANSWER"), fontWeight = FontWeight.Black)
+                }
+            }
+        },
+    )
 }
 
 @Composable
