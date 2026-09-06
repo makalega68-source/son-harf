@@ -11,10 +11,9 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 
 /**
- * Mount the refined duel arena only while a match is active.
- * The previous V10 arena remains in the codebase as a rollback reference; finished
- * games stay owned by ComboOverlayV9. The refined arena contains its action feedback
- * inline so the match hierarchy remains uncluttered.
+ * Mount the refined duel arena only while the word-duel surface owns the match.
+ * Quiz rounds are intentionally excluded: BilBakalimBonusOverlay is the single UI
+ * owner for the server-synchronised quiz flow and must remain unobstructed.
  */
 @Composable
 fun SketchGameOverlayV9() {
@@ -31,7 +30,7 @@ fun SketchGameOverlayV9() {
                     .decodeList<GameRoomDto>()
                     .any {
                         (it.hostId == me || it.guestId == me) &&
-                            it.status in setOf("playing", "quiz", "final", "sudden_death", "paused")
+                            it.status in setOf("playing", "final", "sudden_death", "paused")
                     }
             }.getOrDefault(false)
             delay(500)
