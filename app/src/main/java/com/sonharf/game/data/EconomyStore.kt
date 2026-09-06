@@ -18,6 +18,8 @@ private val supportedProfileFrameIds = setOf(
     "frame_asset_halloween",
 )
 
+private val supportedGameThemeIds = setOf("theme_dark_arena")
+
 @Serializable
 data class ShopItemDto(
     val id: String,
@@ -53,7 +55,11 @@ data class EquippedCosmeticsDto(
 suspend fun OnlineGameBackend.getShopItems(): List<ShopItemDto> =
     SupabaseProvider.client.from("shop_items").select().decodeList<ShopItemDto>()
         .filter { item ->
-            item.active && (item.kind != "profile_frame" || item.id in supportedProfileFrameIds)
+            item.active && when (item.kind) {
+                "profile_frame" -> item.id in supportedProfileFrameIds
+                "game_theme" -> item.id in supportedGameThemeIds
+                else -> true
+            }
         }
         .sortedBy { it.sortOrder }
 
