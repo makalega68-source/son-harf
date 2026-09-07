@@ -29,7 +29,7 @@ class WordSiegePracticeEngineTest {
     fun clearDictionaryFixture() = SharedDictionaryService.clearForTests()
 
     @Test
-    fun firstPracticeMoveCovers15x15CenterAndUsesBonus() {
+    fun firstPracticeMoveCovers15x15CenterUsesBonusAndClaimsZones() {
         val state = WordSiegePracticeEngine.newGame(random = Random(1)).copy(playerRack = "KALEMTR")
 
         val (next, move) = WordSiegePracticeEngine.applyMove(
@@ -40,10 +40,71 @@ class WordSiegePracticeEngineTest {
         )
 
         assertEquals("KALEM", move.primaryWord)
+        assertEquals(12, move.rawWordScore)
         assertEquals(12, move.wordScore)
-        assertEquals(5, next.playerArea)
+        assertEquals(setOf(11, 12, 13), move.flippedZoneIds)
+        assertEquals(3, next.playerArea)
+        assertEquals(8, next.playerAreaScore) // 2 + center fortress 4 + 2
+        assertEquals(20, WordSiegePracticeEngine.totalScore(next, 1))
+        assertEquals(1, next.playerConquestMeter)
         assertEquals(2, next.currentOwner)
         assertTrue(next.board[WordSiegeBoardSpec.CenterIndex].bonusUsed)
+    }
+
+    @Test
+    fun permanentWordScoreDoesNotDropWhenZoneOwnershipChanges() {
+        val base = WordSiegePracticeEngine.newGame(random = Random(1)).copy(
+            playerWordScore = 37,
+            botWordScore = 22,
+        )
+        val playerClaim = WordSiegeZoneRules.claimZones(base.board, base.board, 1, listOf(112))
+        val afterPlayer = base.copy(
+            board = playerClaim.board,
+            playerArea = WordSiegeZoneRules.ownedZoneCount(playerClaim.board, 1),
+            playerAreaScore = WordSiegeZoneRules.zoneScore(playerClaim.board, 1),
+        )
+        val botClaim = WordSiegeZoneRules.claimZones(afterPlayer.board, afterPlayer.board, 2, listOf(112))
+        val afterBot = afterPlayer.copy(
+            board = botClaim.board,
+            playerArea = WordSiegeZoneRules.ownedZoneCount(botClaim.board, 1),
+            botArea = WordSiegeZoneRules.ownedZoneCount(botClaim.board, 2),
+            playerAreaScore = WordSiegeZoneRules.zoneScore(botClaim.board, 1),
+            botAreaScore = WordSiegeZoneRules.zoneScore(botClaim.board, 2),
+        )
+
+        assertEquals(37, afterBot.playerWordScore)
+        assertEquals(0, afterBot.playerAreaScore)
+        assertEquals(WordSiegeZoneRules.FortressZonePoints, afterBot.botAreaScore)
+    }
+
+    @Test
+    fun conquestMeterArmsOnslaughtAndNextWordDoublesPermanentScore() {
+        val ready = WordSiegePracticeEngine.newGame(random = Random(1)).copy(
+            playerRack = "KALEMTR",
+            playerConquestMeter = 2,
+        )
+        val (armed, first) = WordSiegePracticeEngine.applyMove(
+            ready,
+            1,
+            linkedMapOf(110 to 0, 111 to 1, 112 to 2, 113 to 3, 114 to 4),
+        )
+
+        assertTrue(first.onslaughtTriggered)
+        assertTrue(armed.playerOnslaughtActive)
+        assertEquals(0, armed.playerConquestMeter)
+
+        val playerTurnAgain = armed.copy(
+            currentOwner = 1,
+            playerRack = "MASASİN",
+        )
+        val second = WordSiegePracticeEngine.applyMove(
+            playerTurnAgain,
+            1,
+            linkedMapOf(95 to 0, 96 to 1, 97 to 2, 98 to 3),
+        ).second
+
+        assertTrue(second.onslaughtConsumed)
+        assertEquals(second.rawWordScore * 2, second.wordScore)
     }
 
     @Test
@@ -61,7 +122,7 @@ class WordSiegePracticeEngineTest {
     }
 
     @Test
-    fun botCanFindMoveAndCaptureAnExistingTile() {
+    fun botCanFindMoveAndCaptureAZone() {
         val initial = WordSiegePracticeEngine.newGame(random = Random(1)).copy(
             playerRack = "KALEMTR",
             botRack = "MASASİN",
@@ -87,6 +148,12 @@ class WordSiegePracticeEngineTest {
         assertTrue(afterBot.botArea > 0)
         assertTrue(afterBot.board.any { it.owner == 2 })
         assertEquals(1, afterBot.currentOwner)
+    }
+
+    @Test
+    fun newPlayerBotHandicapIsFifteenPercent() {
+        assertEquals(0.85, WordSiegePracticeEngine.botHandicapFactor(1000, 0, 0), 0.0001)
+        assertTrue(WordSiegePracticeEngine.botHandicapFactor(1500, 20, 5) <= 1.0)
     }
 
     @Test
