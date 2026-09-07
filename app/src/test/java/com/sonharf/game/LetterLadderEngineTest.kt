@@ -1,10 +1,10 @@
 package com.sonharf.game
 
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertNotNull
-import kotlin.test.assertTrue
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 class LetterLadderEngineTest {
     private val chain = listOf("kalın", "yalın", "yalan", "yalak", "yamak", "yumak")
@@ -17,19 +17,19 @@ class LetterLadderEngineTest {
     private val dictionary = chain.toSet() + setOf("yalan", "yelin")
 
     @Test
-    fun `known five move chain changes every position exactly once`() {
+    fun knownFiveMoveChainChangesEveryPositionExactlyOnce() {
         val used = mutableSetOf<Int>()
         chain.zipWithNext().forEach { (from, to) ->
             val changed = LetterLadderEngine.changedIndex(from, to)
             assertNotNull(changed)
-            assertTrue(used.add(changed), "position $changed changed more than once")
+            assertTrue("position $changed changed more than once", used.add(changed!!))
         }
         assertEquals(setOf(0, 1, 2, 3, 4), used)
         assertEquals("yumak", chain.last())
     }
 
     @Test
-    fun `changing a locked position is rejected`() {
+    fun changingALockedPositionIsRejected() {
         val result = LetterLadderEngine.validateMove(
             puzzle = puzzle,
             current = "yalın",
@@ -42,7 +42,7 @@ class LetterLadderEngineTest {
     }
 
     @Test
-    fun `new position must immediately take its final target letter`() {
+    fun newPositionMustImmediatelyTakeItsFinalTargetLetter() {
         val result = LetterLadderEngine.validateMove(
             puzzle = puzzle,
             current = "kalın",
@@ -55,7 +55,7 @@ class LetterLadderEngineTest {
     }
 
     @Test
-    fun `valid sequence reaches target in exactly five moves`() {
+    fun validSequenceReachesTargetInExactlyFiveMoves() {
         var current = puzzle.start
         val used = mutableSetOf<Int>()
         chain.drop(1).forEach { next ->
@@ -66,8 +66,9 @@ class LetterLadderEngineTest {
                 usedPositions = used,
                 dictionary = dictionary,
             )
-            assertTrue(result.accepted, "$current -> $next must be accepted")
-            used += assertNotNull(result.changedIndex)
+            assertTrue("$current -> $next must be accepted", result.accepted)
+            assertNotNull(result.changedIndex)
+            used += result.changedIndex!!
             current = next
         }
         assertEquals(5, used.size)
@@ -75,7 +76,7 @@ class LetterLadderEngineTest {
     }
 
     @Test
-    fun `generator returns a legal five move puzzle from canonical candidates`() {
+    fun generatorReturnsALegalFiveMovePuzzleFromCanonicalCandidates() {
         val generated = LetterLadderEngine.generate(
             sourceWords = chain.toSet(),
             language = "tr",
@@ -83,6 +84,7 @@ class LetterLadderEngineTest {
             preferCurated = true,
         )
         assertNotNull(generated)
+        generated!!
         assertEquals(6, generated.solution.size)
         assertEquals(generated.start, generated.solution.first())
         assertEquals(generated.target, generated.solution.last())
