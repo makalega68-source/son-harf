@@ -11,18 +11,30 @@ class BotTurnWatchdogContractTest {
     private val mount by lazy { projectFile("app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt").readText() }
 
     @Test fun botTurnKeepsRecoveringUntilServerAdvances() {
+        assertTrue(watchdog.contains("internal fun BotTurnWatchdogOverlay(roomId: String)"))
+        assertTrue(watchdog.contains("LaunchedEffect(roomId)"))
         assertTrue(watchdog.contains("while (true)"))
-        assertTrue(watchdog.contains("eq(\"bot_turn\", true)"))
+        assertTrue(watchdog.contains("backend.getRoom(roomId)"))
+        assertTrue(watchdog.contains("it.botTurn"))
         assertTrue(watchdog.contains("backend.botTakeTurn(candidate.id)"))
         assertTrue(watchdog.contains("withTimeoutOrNull(4_000L)"))
         assertTrue(watchdog.contains("withTimeoutOrNull(6_000L)"))
-        assertTrue(watchdog.contains("delay(if (stillThinking) 900L else 300L)"))
+        assertTrue(watchdog.contains("delay(if (stillThinking) 1_200L else 700L)"))
     }
 
     @Test fun botThinkRecoveryIsMountedWithoutASecondVisibleOverlay() {
         assertFalse(watchdog.contains("\"BOT …\""))
-        assertTrue(mount.contains("BotTurnWatchdogOverlay()"))
-        assertTrue(mount.indexOf("BotTurnWatchdogOverlay()") > mount.indexOf("RefinedDuelOverlay()"))
+        assertTrue(mount.contains("BotTurnWatchdogOverlay(roomId = state.roomId)"))
+        assertTrue(
+            mount.indexOf("BotTurnWatchdogOverlay(roomId = state.roomId)") >
+                mount.indexOf("RefinedDuelOverlay()"),
+        )
+    }
+
+    @Test fun watchdogDoesNotScanTheWholeRoomTable() {
+        assertFalse(watchdog.contains("from(\"game_rooms\")"))
+        assertFalse(watchdog.contains("decodeList<GameRoomDto>()"))
+        assertTrue(watchdog.contains("backend.getRoom(roomId)"))
     }
 
     @Test fun quizOwnershipRemainsUntouched() {
