@@ -2,7 +2,7 @@
 
 Android için iki kişilik gerçek zamanlı Türkçe kelime düellosu.
 
-## Güncel sürüm: v0.8.0
+## Güncel sürüm: v0.9.4
 - Kotlin + Jetpack Compose
 - İki kişilik oda / davet kodu ve gerçek zamanlı maç
 - Son harfle kelime zinciri, normal ve uzman modlar

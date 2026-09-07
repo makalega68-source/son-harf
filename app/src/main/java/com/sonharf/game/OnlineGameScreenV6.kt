@@ -129,7 +129,7 @@ fun OnlineGameScreenV6() {
         return SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
             .filter {
                 (it.hostId == me || it.guestId == me) &&
-                    it.status in listOf("playing", "quiz", "final", "sudden_death", "paused") &&
+                    it.status in listOf("playing", "final", "sudden_death", "paused") &&
                     (it.isBot || it.guestId != null)
             }
             .maxByOrNull { runCatching { Instant.parse(it.createdAt) }.getOrDefault(Instant.EPOCH) }
@@ -365,6 +365,7 @@ fun OnlineGameScreenV6() {
                         gameUppercase(existing, active.language) == shownWord
                     }
                     if (alreadyUsed) {
+                        wordInput = ""
                         feedbackWord = shownWord
                         feedbackCorrect = false
                         notice = eventMessage("word_already_used")
@@ -375,7 +376,10 @@ fun OnlineGameScreenV6() {
                     if (submitInFlightKey == submitKey || busy) return@launch
                     submitInFlightKey = submitKey
                     val voiceToken = voiceRequestId
-                    if (voiceToken == null) wordInput = ""
+                    wordInput = ""
+                    feedbackWord = shownWord
+                    feedbackCorrect = null
+                    notice = sh("Kelime kontrol ediliyor…", "Checking word…")
                     busy = true
                     SonHarfSoundFx.tap()
                     try {
@@ -388,9 +392,11 @@ fun OnlineGameScreenV6() {
                             .onSuccess { result ->
                                 acceptServerRoom(result)
                                 if (voiceToken != null) {
-                                    wordInput = ""
                                     voiceRequestId = null
-                                    voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(voiceUses + 1)
+                                    voiceUses += 1
+                                    launch {
+                                        voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(voiceUses)
+                                    }
                                 }
                                 if (failedEvent(result.lastEvent) && result.lastEventPlayerId == me) {
                                     feedbackWord = shownWord
@@ -398,6 +404,7 @@ fun OnlineGameScreenV6() {
                                     notice = eventMessage(result.lastEvent)
                                     SonHarfSoundFx.warning()
                                 } else {
+                                    wordInput = ""
                                     feedbackWord = shownWord
                                     feedbackCorrect = true
                                     notice = sh("Kelime kabul edildi: $shownWord", "Word accepted: $shownWord")
@@ -405,12 +412,14 @@ fun OnlineGameScreenV6() {
                                 }
                             }
                             .onFailure { error ->
+                                if (error is TimeoutCancellationException) wordInput = submitted
+                                voiceRequestId = null
                                 feedbackWord = shownWord
                                 if (error is TimeoutCancellationException) {
                                     feedbackCorrect = null
                                     notice = sh(
-                                        "Sunucu yanıtı gecikti. Oyun durumu eşitleniyor; tekrar göndermeden önce bekle.",
-                                        "Server response is delayed. Game state is syncing; wait before sending again.",
+                                        "Sunucu yanıtı gecikti. Kelimen korundu; oyun durumu eşitleniyor.",
+                                        "Server response is delayed. Your word was preserved while the game syncs.",
                                     )
                                 } else {
                                     feedbackCorrect = false
@@ -433,22 +442,6 @@ fun OnlineGameScreenV6() {
                     runCatching { backend.claimTurnTimeout(active.id) }
                         .onSuccess { acceptServerRoom(it) }
                         .onFailure { notice = friendly(it.message.orEmpty()) }
-                }
-            },
-            onBonus = {
-                if (!busy && active.status == "playing") scope.launch {
-                    busy = true
-                    runCatching { backend.triggerBilBakalimBonus(active.id) }
-                        .onSuccess { updated ->
-                            room = updated
-                            refreshQuiz(updated)
-                            if (updated.status == "quiz") {
-                                notice = sh("BİL BAKALIM başladı!", "GUESS IT started!")
-                                SonHarfSoundFx.softNotify()
-                            }
-                        }
-                        .onFailure { notice = friendly(it.message.orEmpty()) }
-                    busy = false
                 }
             },
             onVoice = {

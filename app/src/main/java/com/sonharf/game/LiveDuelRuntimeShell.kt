@@ -31,8 +31,17 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
     LaunchedEffect(Unit) {
         while (true) {
             val me = backend.currentUserId()
+            val currentRoomId = activeRoomId
             activeRoomId = if (me == null || !SupabaseProvider.configured) {
                 null
+            } else if (currentRoomId != null) {
+                runCatching { backend.getRoom(currentRoomId) }
+                    .getOrNull()
+                    ?.takeIf {
+                        (it.hostId == me || it.guestId == me) &&
+                            it.status in setOf("playing", "final", "sudden_death", "paused")
+                    }
+                    ?.id
             } else {
                 runCatching {
                     SupabaseProvider.client
@@ -42,7 +51,7 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
                         .asSequence()
                         .filter {
                             (it.hostId == me || it.guestId == me) &&
-                                it.status in setOf("playing", "quiz", "final", "sudden_death", "paused") &&
+                                it.status in setOf("playing", "final", "sudden_death", "paused") &&
                                 (it.isBot || it.guestId != null)
                         }
                         .maxByOrNull {
@@ -54,7 +63,7 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
             // The active overlay owns the live match refresh. Polling the whole room list
             // several times per second here was competing with word submissions and made
             // navigation feel unstable on slower phones.
-            delay(1_250L)
+            delay(if (activeRoomId == null) 1_250L else 2_000L)
         }
     }
 
