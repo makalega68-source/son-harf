@@ -3,6 +3,7 @@ package com.sonharf.game
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -73,6 +74,42 @@ class LetterLadderEngineTest {
         }
         assertEquals(5, used.size)
         assertEquals(puzzle.target, current)
+    }
+
+    @Test
+    fun completionPathFindsAFullRouteForHints() {
+        val route = LetterLadderEngine.completionPath(
+            puzzle = puzzle,
+            current = puzzle.start,
+            usedPositions = emptySet(),
+            dictionary = dictionary,
+        )
+
+        assertNotNull(route)
+        assertEquals(chain, route)
+    }
+
+    @Test
+    fun locallyValidMoveCanBeRecognizedAsADeadEnd() {
+        val deadEndDictionary = chain.toSet() + setOf("kalık")
+        val localMove = LetterLadderEngine.validateMove(
+            puzzle = puzzle,
+            current = "kalın",
+            candidate = "kalık",
+            usedPositions = emptySet(),
+            dictionary = deadEndDictionary,
+        )
+
+        assertTrue(localMove.accepted)
+        assertEquals(4, localMove.changedIndex)
+        assertNull(
+            LetterLadderEngine.completionPath(
+                puzzle = puzzle,
+                current = "kalık",
+                usedPositions = setOf(4),
+                dictionary = deadEndDictionary,
+            ),
+        )
     }
 
     @Test
