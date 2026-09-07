@@ -31,7 +31,8 @@ class AdminWebConsoleContractTest {
         assertTrue(sql.contains("admin_match_replay_v1"))
         assertTrue(sql.contains("public.game_words"))
         assertTrue(sql.contains("public.word_siege_moves"))
-        assertTrue(sql.contains("auth.uid() is null or not public.is_admin(auth.uid())"))
+        assertTrue(sql.contains("v_uid uuid:=auth.uid()"))
+        assertTrue(sql.contains("v_uid is null or not public.is_admin(v_uid)"))
         assertTrue(sql.contains("revoke all on function public.admin_match_replay_v1(uuid) from public,anon"))
         assertTrue(sql.contains("grant execute on function public.admin_match_replay_v1(uuid) to authenticated,service_role"))
     }
