@@ -9,16 +9,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Check
@@ -132,18 +131,39 @@ internal object LetterLadderEngine {
         return LetterLadderMoveCheck(true, changedIndex = changed)
     }
 
-    fun hintPositions(
+    /**
+     * Finds a complete route from the current state to the target using only
+     * unused positions. This is deliberately tiny (maximum depth five), so it
+     * can be used for hints and dead-end prevention without a background job.
+     */
+    fun completionPath(
         puzzle: LetterLadderPuzzle,
         current: String,
         usedPositions: Set<Int>,
         dictionary: Set<String>,
-    ): List<Int> = (0 until WORD_LENGTH)
-        .filterNot { it in usedPositions }
-        .filter { index ->
+    ): List<String>? {
+        if (current.length != WORD_LENGTH || puzzle.target.length != WORD_LENGTH) return null
+        if (current == puzzle.target) return listOf(current)
+        if (usedPositions.size >= MOVE_COUNT) return null
+
+        val remaining = (0 until WORD_LENGTH).filterNot { it in usedPositions }
+        for (index in remaining) {
+            if (current[index] == puzzle.target[index]) continue
             val chars = current.toCharArray()
             chars[index] = puzzle.target[index]
-            String(chars) in dictionary
+            val next = String(chars)
+            if (next !in dictionary) continue
+
+            val tail = completionPath(
+                puzzle = puzzle,
+                current = next,
+                usedPositions = usedPositions + index,
+                dictionary = dictionary,
+            )
+            if (tail != null) return listOf(current) + tail
         }
+        return null
+    }
 
     fun generate(
         sourceWords: Set<String>,
@@ -313,31 +333,50 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
             dictionary = dictionary,
         )
         if (!check.accepted) {
-            SonHarfSoundFx.warning()
+            hintText = null
+            SonHarfSoundFx.puzzleError()
             message = when (check.reject) {
                 LetterLadderReject.LENGTH -> sh("Kelime tam 5 harf olmalı.", "The word must contain exactly 5 letters.")
                 LetterLadderReject.NOT_DICTIONARY -> sh("Bu kelime Son Harf sözlüğünde yok.", "This word is not in the Son Harf dictionary.")
                 LetterLadderReject.NOT_ONE_CHANGE -> sh("Yalnızca 1 harf değiştirebilirsin.", "You may change exactly one letter.")
                 LetterLadderReject.POSITION_ALREADY_USED -> sh("Bu kutuyu daha önce değiştirdin; tekrar değişemez.", "That position was already changed and is locked.")
-                LetterLadderReject.WRONG_TARGET_LETTER -> sh("Bu kutu bir daha değişmeyecek; hedefteki harfi bulmalısın.", "This position locks after the move; use its target letter.")
+                LetterLadderReject.WRONG_TARGET_LETTER -> sh("Değişen harf hedefteki harf olmalı.", "The changed letter must match the target letter.")
                 null -> sh("Geçersiz hamle.", "Invalid move.")
             }
             return
         }
 
         val changed = check.changedIndex ?: return
+        val nextUsed = usedPositions + changed
+        val canFinish = normalized == currentPuzzle.target || LetterLadderEngine.completionPath(
+            puzzle = currentPuzzle,
+            current = normalized,
+            usedPositions = nextUsed,
+            dictionary = dictionary,
+        ) != null
+        if (!canFinish) {
+            hintText = null
+            input = ""
+            SonHarfSoundFx.puzzleError()
+            message = sh(
+                "Bu hamle çıkmaza götürüyor. Başka bir harf değiştir.",
+                "That move leads to a dead end. Change a different letter.",
+            )
+            return
+        }
+
         path = path + normalized
-        usedPositions = usedPositions + changed
+        usedPositions = nextUsed
         input = ""
         hintText = null
         val solved = path.size == LetterLadderEngine.MOVE_COUNT + 1 && normalized == currentPuzzle.target
         if (solved) {
             completed = true
-            message = sh("Hedefe ulaştın! 5 farklı harfi birer kez değiştirdin.", "Target reached! You changed all five positions exactly once.")
+            message = sh("Hedefe ulaştın! Beş harfin tamamı kilitlendi.", "Target reached! All five positions are locked.")
             SonHarfSoundFx.victory()
         } else {
-            message = sh("Doğru hamle. ${usedPositions.size}/5 kutu kilitlendi.", "Valid move. ${usedPositions.size}/5 positions are locked.")
-            SonHarfSoundFx.wordAccepted()
+            message = sh("Doğru hamle. Devam et.", "Valid move. Keep going.")
+            SonHarfSoundFx.puzzleSuccess()
         }
     }
 
@@ -374,87 +413,136 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
         }
 
         val currentPuzzle = puzzle!!
-        val scroll = rememberScrollState()
         Column(
-            Modifier.weight(1f).verticalScroll(scroll).padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            Modifier.weight(1f).padding(horizontal = 12.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onExit) { Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MonsterUi.Text) }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = onExit, modifier = Modifier.size(40.dp)) {
+                    Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MonsterUi.Text)
+                }
+                Spacer(Modifier.width(2.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(sh("HARF YOLU", "LETTER PATH"), color = MonsterUi.Text, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                    Text(sh("5 hamle • Her kutu yalnızca 1 kez değişir", "5 moves • Each position changes only once"), color = MonsterUi.Muted, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(sh("HARF YOLU", "LETTER PATH"), color = MonsterUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        sh("5 hamle • Her kutu yalnızca 1 kez değişir", "5 moves • Each position changes only once"),
+                        color = MonsterUi.Muted,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                    )
                 }
                 Surface(shape = RoundedCornerShape(99.dp), color = MonsterUi.Gold.copy(alpha = .16f)) {
-                    Text("${usedPositions.size}/5", Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = MonsterUi.Gold, fontWeight = FontWeight.Black)
+                    Text(
+                        "${usedPositions.size}/5",
+                        Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        color = MonsterUi.Gold,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
+                    )
                 }
             }
 
             Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                shape = RoundedCornerShape(18.dp),
                 color = MonsterUi.SurfaceRaised,
                 border = BorderStroke(1.dp, MonsterUi.Border),
             ) {
-                Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(sh("BAŞLANGIÇ", "START"), color = MonsterUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.height(6.dp))
-                    LadderWordTiles(currentPuzzle.start.uppercase(locale), locked = emptySet(), accent = MonsterUi.Accent)
-                    Spacer(Modifier.height(10.dp))
+                Column(
+                    Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 7.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(sh("BAŞLANGIÇ", "START"), color = MonsterUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.height(3.dp))
+                    LadderWordTiles(
+                        word = currentPuzzle.start.uppercase(locale),
+                        locked = emptySet(),
+                        accent = MonsterUi.Accent,
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                    )
+                    Spacer(Modifier.height(3.dp))
 
                     for (move in 1..LetterLadderEngine.MOVE_COUNT) {
                         LadderMoveRow(
-                            number = move,
                             word = path.getOrNull(move)?.uppercase(locale),
                             isActive = !completed && move == path.size,
                             activeInput = input.uppercase(locale),
                             usedPositions = usedPositions,
+                            modifier = Modifier.fillMaxWidth().weight(1f),
                         )
-                        if (move < LetterLadderEngine.MOVE_COUNT) Spacer(Modifier.height(6.dp))
+                        if (move < LetterLadderEngine.MOVE_COUNT) Spacer(Modifier.height(3.dp))
                     }
 
-                    Spacer(Modifier.height(12.dp))
-                    Text(sh("HEDEF", "TARGET"), color = MonsterUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.height(6.dp))
-                    LadderWordTiles(currentPuzzle.target.uppercase(locale), locked = (0 until 5).toSet(), accent = MonsterUi.Green)
+                    Spacer(Modifier.height(3.dp))
+                    Text(sh("HEDEF", "TARGET"), color = MonsterUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.height(3.dp))
+                    LadderWordTiles(
+                        word = currentPuzzle.target.uppercase(locale),
+                        locked = (0 until 5).toSet(),
+                        accent = MonsterUi.Green,
+                        modifier = Modifier.fillMaxWidth().weight(1f),
+                    )
                 }
             }
 
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(17.dp),
-                color = if (completed) MonsterUi.Green.copy(alpha = .10f) else MonsterUi.Accent.copy(alpha = .07f),
-                border = BorderStroke(1.dp, (if (completed) MonsterUi.Green else MonsterUi.Accent).copy(alpha = .25f)),
+                shape = RoundedCornerShape(14.dp),
+                color = when {
+                    completed -> MonsterUi.Green.copy(alpha = .10f)
+                    hintText != null -> MonsterUi.Gold.copy(alpha = .10f)
+                    else -> MonsterUi.Accent.copy(alpha = .07f)
+                },
+                border = BorderStroke(
+                    1.dp,
+                    when {
+                        completed -> MonsterUi.Green.copy(alpha = .25f)
+                        hintText != null -> MonsterUi.Gold.copy(alpha = .30f)
+                        else -> MonsterUi.Accent.copy(alpha = .25f)
+                    },
+                ),
             ) {
-                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(message, color = MonsterUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(sh("Değişen kutular", "Changed positions"), color = MonsterUi.Muted, fontSize = 10.sp, modifier = Modifier.weight(1f))
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        hintText ?: message,
+                        color = MonsterUi.Text,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 2,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         repeat(5) { index ->
+                            val locked = index in usedPositions
                             Surface(
-                                modifier = Modifier.size(28.dp),
+                                modifier = Modifier.size(19.dp),
                                 shape = CircleShape,
-                                color = if (index in usedPositions) MonsterUi.Green else MonsterUi.SurfaceSoft,
-                                border = BorderStroke(1.dp, if (index in usedPositions) MonsterUi.Green else MonsterUi.Border),
+                                color = if (locked) MonsterUi.Green else MonsterUi.SurfaceSoft,
+                                border = BorderStroke(1.dp, if (locked) MonsterUi.Green else MonsterUi.Border),
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
-                                    if (index in usedPositions) Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(15.dp))
-                                    else Text("${index + 1}", color = MonsterUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                    if (locked) {
+                                        Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(11.dp))
+                                    } else {
+                                        Surface(
+                                            modifier = Modifier.size(4.dp),
+                                            shape = CircleShape,
+                                            color = MonsterUi.Muted.copy(alpha = .45f),
+                                        ) {}
+                                    }
                                 }
                             }
-                            if (index < 4) Spacer(Modifier.width(5.dp))
                         }
                     }
                 }
             }
 
-            hintText?.let { hint ->
-                Surface(shape = RoundedCornerShape(15.dp), color = MonsterUi.Gold.copy(alpha = .12f), border = BorderStroke(1.dp, MonsterUi.Gold.copy(alpha = .28f))) {
-                    Text(hint, Modifier.fillMaxWidth().padding(11.dp), color = MonsterUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-            }
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 OutlinedButton(
                     enabled = path.size > 1 && !completed,
                     onClick = {
@@ -467,48 +555,64 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                         input = ""
                         hintText = null
                         message = sh("Son hamle geri alındı.", "Last move undone.")
-                        SonHarfSoundFx.tap()
+                        SonHarfSoundFx.puzzleTap()
                     },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
-                ) { Text(sh("GERİ AL", "UNDO"), fontWeight = FontWeight.Black, fontSize = 11.sp) }
+                    modifier = Modifier.weight(1f).height(38.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Text(sh("GERİ AL", "UNDO"), fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
+                }
 
                 OutlinedButton(
                     enabled = !completed,
                     onClick = {
-                        val positions = LetterLadderEngine.hintPositions(currentPuzzle, path.last(), usedPositions, dictionary)
-                        hintText = if (positions.isEmpty()) {
-                            sh("Bu yolda devam edecek geçerli hamle kalmadı. Bir adım geri al.", "No valid continuation remains. Undo one move.")
+                        val current = path.last()
+                        val route = LetterLadderEngine.completionPath(currentPuzzle, current, usedPositions, dictionary)
+                        val next = route?.getOrNull(1)
+                        hintText = if (next == null) {
+                            sh("Son hamleyi geri al ve farklı bir yol dene.", "Undo the last move and try a different route.")
                         } else {
-                            val readable = positions.joinToString(" / ") { (it + 1).toString() }
-                            sh("İpucu: $readable. kutudaki harfi hedefe çevir.", "Hint: change position $readable to its target letter.")
+                            val changed = LetterLadderEngine.changedIndex(current, next)
+                            if (changed == null) {
+                                sh("Sonraki geçerli kelimeyi bul.", "Find the next valid word.")
+                            } else {
+                                val from = current[changed].uppercaseChar()
+                                val to = next[changed].uppercaseChar()
+                                sh(
+                                    "İpucu: $from → $to • ${next.uppercase(locale)}",
+                                    "Hint: $from → $to • ${next.uppercase(locale)}",
+                                )
+                            }
                         }
-                        SonHarfSoundFx.softNotify()
+                        SonHarfSoundFx.puzzleHint()
                     },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.weight(1f).height(38.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                    shape = RoundedCornerShape(12.dp),
                 ) {
-                    Icon(Icons.Rounded.Lightbulb, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(sh("İPUCU", "HINT"), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                    Icon(Icons.Rounded.Lightbulb, null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text(sh("İPUCU", "HINT"), fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
                 }
 
                 OutlinedButton(
-                    onClick = { resetCurrent(); SonHarfSoundFx.tap() },
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(14.dp),
+                    onClick = { resetCurrent(); SonHarfSoundFx.puzzleTap() },
+                    modifier = Modifier.weight(1f).height(38.dp),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp),
+                    shape = RoundedCornerShape(12.dp),
                 ) {
-                    Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text(sh("SIFIRLA", "RESET"), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                    Icon(Icons.Rounded.Refresh, null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text(sh("SIFIRLA", "RESET"), fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
                 }
             }
 
             if (completed) {
                 Button(
                     onClick = { puzzleNonce++ },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth().height(42.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MonsterUi.Green, contentColor = Color.White),
                 ) {
                     Text(sh("YENİ BULMACA", "NEW PUZZLE"), fontWeight = FontWeight.Black)
@@ -525,8 +629,14 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                 enabled = true,
                 submitEnabled = input.length == LetterLadderEngine.WORD_LENGTH,
                 maxLength = LetterLadderEngine.WORD_LENGTH,
-                onValueChange = { input = it },
+                onValueChange = {
+                    input = it
+                    hintText = null
+                },
                 onSubmit = { submit() },
+                compact = true,
+                keySound = { SonHarfSoundFx.puzzleKey() },
+                actionSound = { SonHarfSoundFx.puzzleTap() },
             )
         }
     }
@@ -534,31 +644,19 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
 
 @Composable
 private fun LadderMoveRow(
-    number: Int,
     word: String?,
     isActive: Boolean,
     activeInput: String,
     usedPositions: Set<Int>,
+    modifier: Modifier = Modifier,
 ) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Surface(
-            modifier = Modifier.size(30.dp),
-            shape = CircleShape,
-            color = if (word != null) MonsterUi.Green.copy(alpha = .16f) else if (isActive) MonsterUi.Accent.copy(alpha = .16f) else MonsterUi.SurfaceSoft,
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Text("$number", color = if (isActive) MonsterUi.Accent else MonsterUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Black)
-            }
-        }
-        Spacer(Modifier.width(8.dp))
-        val display = word ?: if (isActive) activeInput.padEnd(5, ' ') else "     "
-        LadderWordTiles(
-            word = display,
-            locked = usedPositions,
-            accent = if (word != null) MonsterUi.Green else MonsterUi.Accent,
-            modifier = Modifier.weight(1f),
-        )
-    }
+    val display = word ?: if (isActive) activeInput.padEnd(5, ' ') else "     "
+    LadderWordTiles(
+        word = display,
+        locked = usedPositions,
+        accent = if (word != null) MonsterUi.Green else MonsterUi.Accent,
+        modifier = modifier,
+    )
 }
 
 @Composable
@@ -572,21 +670,24 @@ private fun LadderWordTiles(
         repeat(5) { index ->
             val char = word.getOrNull(index)?.takeUnless { it == ' ' }?.toString().orEmpty()
             Surface(
-                modifier = Modifier.weight(1f).height(42.dp),
-                shape = RoundedCornerShape(10.dp),
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                shape = RoundedCornerShape(8.dp),
                 color = when {
                     index in locked -> MonsterUi.Green.copy(alpha = .13f)
                     char.isNotEmpty() -> accent.copy(alpha = .09f)
                     else -> MonsterUi.SurfaceSoft
                 },
-                border = BorderStroke(1.dp, when {
-                    index in locked -> MonsterUi.Green.copy(alpha = .55f)
-                    char.isNotEmpty() -> accent.copy(alpha = .40f)
-                    else -> MonsterUi.Border
-                }),
+                border = BorderStroke(
+                    1.dp,
+                    when {
+                        index in locked -> MonsterUi.Green.copy(alpha = .55f)
+                        char.isNotEmpty() -> accent.copy(alpha = .40f)
+                        else -> MonsterUi.Border
+                    },
+                ),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(char, color = MonsterUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                    Text(char, color = MonsterUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
