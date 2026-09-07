@@ -11,7 +11,8 @@ import androidx.compose.ui.unit.dp
 
 /**
  * Single source of truth for rendering a user profile photo with an equipped Style frame.
- * The avatar remains centered and visible even when no frame is equipped or artwork falls back.
+ * Profile photos intentionally use the rounded-rectangle renderer so purchased frame artwork and
+ * profile imagery share the same non-circular geometry across the app.
  */
 @Composable
 internal fun FramedProfilePhotoAvatar(
@@ -29,11 +30,12 @@ internal fun FramedProfilePhotoAvatar(
         modifier = Modifier.size(frameSize),
         contentAlignment = Alignment.Center,
     ) {
-        ProfilePhotoAvatarWithGender(
+        ProfilePhotoAvatarRectWithGender(
             avatarPath = avatarPath,
             gender = gender,
             name = name,
-            size = size,
+            width = size,
+            height = size,
             accent = accent,
             visible = visible,
             showGenderBadge = showGenderBadge,

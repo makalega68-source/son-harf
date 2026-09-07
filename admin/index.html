@@ -1,9 +1,43 @@
-<!doctype html><html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Son Harf • Operasyon</title><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><style>body{font-family:system-ui;background:#090d18;color:#eef2ff;margin:0}.wrap{max-width:980px;margin:auto;padding:24px}.card{background:#12192a;border:1px solid #27314a;border-radius:18px;padding:18px;margin:12px 0}input,button{padding:12px;border-radius:12px;border:1px solid #34405d;background:#0c1220;color:#fff}button{cursor:pointer;background:#635bff;font-weight:700}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.metric{background:#0c1220;padding:14px;border-radius:14px}.muted{color:#9aa6c1}pre{white-space:pre-wrap}</style></head><body><div class="wrap"><h1>Son Harf • Sistem Sağlığı</h1><p class="muted">Yalnız admin hesabı. Tüm onarım işlemleri audit log'a yazılır.</p><div id="login" class="card"><input id="email" type="email" placeholder="Admin e-posta"><input id="password" type="password" placeholder="Şifre"><button onclick="login()">Giriş</button><p id="msg"></p></div><div id="panel" hidden><div class="card"><button onclick="health()">Sağlığı Yenile</button> <button onclick="maintenance()">Bakım Çalıştır</button><div id="metrics" class="grid"></div></div><div class="card"><h3>Özellik Anahtarları</h3><button onclick="flag('matchmaking_enabled',true)">Eşleşme Aç</button> <button onclick="flag('matchmaking_enabled',false)">Eşleşme Kapat</button> <button onclick="flag('chat_enabled',true)">Chat Aç</button> <button onclick="flag('chat_enabled',false)">Chat Kapat</button> <button onclick="flag('trivia_enabled',true)">Quiz Aç</button> <button onclick="flag('trivia_enabled',false)">Quiz Kapat</button></div><div class="card"><h3>Maç Onarımı</h3><input id="room" placeholder="Room UUID"><button onclick="closeRoom()">Maçı Güvenle Kapat</button></div><div class="card"><pre id="log"></pre></div></div></div><script>
-const URL='https://bzdtftzdjtjoqhtcqtxb.supabase.co';const KEY='sb_publishable_e0SbZKPDCfEcRlxaJsXC7g_D9xkaDjf';const sb=supabase.createClient(URL,KEY);
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Son Harf • Operasyon</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{font-family:system-ui;background:#090d18;color:#eef2ff;margin:0}.wrap{max-width:1180px;margin:auto;padding:24px}.card{background:#12192a;border:1px solid #27314a;border-radius:18px;padding:18px;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.metric{background:#0c1220;padding:14px;border-radius:14px}input,select,button{padding:11px;border-radius:12px;border:1px solid #34405d;background:#0c1220;color:#fff;margin:3px}button{cursor:pointer;background:#635bff;font-weight:700}.danger{background:#8f2635}.muted{color:#9aa6c1}.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}pre{white-space:pre-wrap;max-height:420px;overflow:auto}.wide{width:min(420px,90%)}h3{margin-bottom:8px}
+</style>
+</head>
+<body><div class="wrap"><h1>Son Harf • Operasyon</h1><p class="muted">Yalnız admin hesabı. Değişiklikler server-authoritative RPC’lerle yürütülür; kritik bakım işlemleri audit log’a yazılır.</p>
+<div id="login" class="card"><input id="email" type="email" placeholder="Admin e-posta"><input id="password" type="password" placeholder="Şifre"><button onclick="login()">Giriş</button><p id="msg"></p></div>
+<div id="panel" hidden>
+<div class="card"><h3>Sistem Sağlığı</h3><div class="row"><button onclick="refreshAll()">Tümünü Yenile</button><button onclick="maintenance()">Bakım Çalıştır</button></div><div id="metrics" class="grid"></div></div>
+<div class="card"><h3>İşletme Özeti</h3><div id="dashboard" class="grid"></div><button onclick="sales()">Gelir / Mağaza Detayı</button></div>
+<div class="card"><h3>Feature Flags</h3><div class="row"><button onclick="flag('matchmaking_enabled',true)">Eşleşme Aç</button><button class="danger" onclick="flag('matchmaking_enabled',false)">Eşleşme Kapat</button><button onclick="flag('chat_enabled',true)">Chat Aç</button><button class="danger" onclick="flag('chat_enabled',false)">Chat Kapat</button><button onclick="flag('trivia_enabled',true)">Quiz Aç</button><button class="danger" onclick="flag('trivia_enabled',false)">Quiz Kapat</button></div><p class="muted">Bot fallback standardı: gerçek oyuncu bulunamazsa 15 saniye. Bu değer release güvenlik kuralıdır; panelden keyfi değiştirilmez.</p></div>
+<div class="card"><h3>Maç İnceleme / Replay / Onarım</h3><div class="row"><select id="matchMode"><option value="">Tüm modlar</option><option value="classic">Classic</option><option value="word_siege">Kuşatma</option><option value="arena">Arena</option></select><button onclick="matches()">Son Maç Analizleri</button></div><div class="row"><input id="room" class="wide" placeholder="Match / Room UUID"><button onclick="replay()">Replay Verisini Aç</button><button class="danger" onclick="closeRoom()">Maçı Güvenle Kapat</button></div><p class="muted">Replay Classic ve Kuşatma için server kaydındaki hamleleri zaman/sıra bilgisiyle döndürür; hiçbir oyun durumunu değiştirmez.</p></div>
+<div class="card"><h3>Turnuva / Sezon</h3><button onclick="competition()">Durumu Yenile</button><pre id="competition"></pre></div>
+<div class="card"><h3>Sözlük Release / Rollback</h3><div class="row"><select id="dictLang"><option value="tr">Türkçe</option><option value="en">English</option></select><input id="dictVersion" placeholder="örn. tr-2026.09.07-r1"><button onclick="publishDictionary()">Snapshot Yayınla</button><button class="danger" onclick="rollbackDictionary()">Önceki Sürüme Dön</button><button onclick="dictionaryState()">Durumu Gör</button></div><p class="muted">Yayınlanan snapshot deterministik SHA-256, kelime sayısı ve kaynak manifesti taşır. Rollback kelime tablosunu silmez; yalnız aktif release pointer’ını geri alır.</p><pre id="dictionary"></pre></div>
+<div class="card"><h3>Operasyon Günlüğü</h3><pre id="log"></pre></div>
+</div></div>
+<script>
+const URL='https://bzdtftzdjtjoqhtcqtxb.supabase.co';
+const KEY='sb_publishable_e0SbZKPDCfEcRlxaJsXC7g_D9xkaDjf';
+const sb=supabase.createClient(URL,KEY);
 const out=x=>document.getElementById('log').textContent=JSON.stringify(x,null,2);
-async function login(){let {error}=await sb.auth.signInWithPassword({email:email.value,password:password.value});if(error){msg.textContent=error.message;return}let {data}=await sb.rpc('is_admin');if(!data){await sb.auth.signOut();msg.textContent='Bu hesap admin değil.';return}login.hidden=true;panel.hidden=false;health()}
-async function health(){let {data,error}=await sb.rpc('admin_system_health');if(error)return out(error);metrics.innerHTML=Object.entries(data).map(([k,v])=>`<div class=metric><b>${k}</b><br>${v}</div>`).join('')}
-async function maintenance(){let {data,error}=await sb.rpc('admin_run_maintenance');out(error||data);health()}
-async function flag(k,v){let {error}=await sb.rpc('admin_set_config',{p_key:k,p_value:v});out(error||{ok:true,key:k,value:v})}
-async function closeRoom(){let {error}=await sb.rpc('admin_close_room',{p_room_id:room.value,p_reason:'admin_closed'});out(error||{ok:true})}
+const metric=(k,v)=>`<div class=metric><b>${k}</b><br>${v??'-'}</div>`;
+async function rpc(name,args){const {data,error}=await sb.rpc(name,args||{});if(error){out(error);throw error}return data}
+async function login(){let {error}=await sb.auth.signInWithPassword({email:email.value,password:password.value});if(error){msg.textContent=error.message;return}let {data}=await sb.rpc('is_admin');if(!data){await sb.auth.signOut();msg.textContent='Bu hesap admin değil.';return}login.hidden=true;panel.hidden=false;refreshAll()}
+async function refreshAll(){await Promise.allSettled([health(),dashboardLoad(),competition(),dictionaryState()])}
+async function health(){try{let data=await rpc('admin_system_health');metrics.innerHTML=Object.entries(data||{}).map(([k,v])=>metric(k,v)).join('')}catch{}}
+async function dashboardLoad(){try{let data=await rpc('admin_dashboard_v1');let d=Array.isArray(data)?data[0]:data;dashboard.innerHTML=Object.entries(d||{}).map(([k,v])=>metric(k,v)).join('')}catch{}}
+async function maintenance(){try{out(await rpc('admin_run_maintenance'));health()}catch{}}
+async function flag(k,v){try{await rpc('admin_set_config',{p_key:k,p_value:v});out({ok:true,key:k,value:v})}catch{}}
+async function closeRoom(){if(!room.value.trim())return out({error:'room_uuid_required'});try{await rpc('admin_close_room',{p_room_id:room.value.trim(),p_reason:'admin_closed'});out({ok:true,room:room.value.trim()})}catch{}}
+async function replay(){if(!room.value.trim())return out({error:'match_uuid_required'});try{out(await rpc('admin_match_replay_v1',{p_match_id:room.value.trim()}))}catch{}}
+async function matches(){try{out(await rpc('admin_recent_match_analysis_v1',{p_limit:30,p_mode:matchMode.value||null}))}catch{}}
+async function competition(){try{document.getElementById('competition').textContent=JSON.stringify(await rpc('admin_competition_overview_v1'),null,2)}catch{}}
+async function dictionaryState(){try{document.getElementById('dictionary').textContent=JSON.stringify(await rpc('admin_dictionary_release_state_v1'),null,2)}catch{}}
+async function publishDictionary(){let version=dictVersion.value.trim();if(!version)return out({error:'version_required'});try{out(await rpc('admin_publish_dictionary_release_v1',{p_language:dictLang.value,p_version:version}));dictionaryState()}catch{}}
+async function rollbackDictionary(){try{out(await rpc('admin_rollback_dictionary_release_v1',{p_language:dictLang.value,p_release_id:null}));dictionaryState()}catch{}}
+async function sales(){try{const [months,products,items]=await Promise.all([rpc('admin_monthly_revenue_v1'),rpc('admin_top_products_v1'),rpc('admin_top_store_items_v1')]);out({monthly_revenue:months,top_products:products,top_store_items:items})}catch{}}
 </script></body></html>
