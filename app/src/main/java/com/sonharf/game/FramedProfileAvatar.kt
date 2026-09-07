@@ -37,6 +37,7 @@ internal fun FramedProfilePhotoAvatar(
             width = size,
             height = size,
             accent = accent,
+            visible = visible,
             showGenderBadge = showGenderBadge,
         )
         PurchasedProfileFrameOverlay(
