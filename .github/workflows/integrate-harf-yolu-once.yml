@@ -1,0 +1,36 @@
+name: Integrate Harf Yolu Once
+
+on:
+  push:
+    branches: [ feat/third-game-harf-yolu-20260908 ]
+    paths:
+      - '.github/workflows/integrate-harf-yolu-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/third-game-harf-yolu-20260908
+          fetch-depth: 0
+      - name: Apply guarded navigation patch
+        run: python3 .github/scripts/integrate_harf_yolu.py
+      - name: Verify integration anchors
+        run: |
+          grep -q 'MonsterDestination.LETTER_LADDER' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'LetterLadderGameScreen' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'MonsterLetterLadderQuickCard(Modifier.fillMaxWidth(), onLetterLadder)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'MonsterSiegeQuickCard(Modifier.fillMaxWidth(), onSiege)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+      - name: Remove one-time patch machinery and commit
+        run: |
+          rm .github/scripts/integrate_harf_yolu.py
+          rm .github/workflows/integrate-harf-yolu-once.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt .github/scripts/integrate_harf_yolu.py .github/workflows/integrate-harf-yolu-once.yml
+          git commit -m 'Harf Yolu üçüncü oyun yönlendirmesini bağla'
+          git push origin HEAD:feat/third-game-harf-yolu-20260908
