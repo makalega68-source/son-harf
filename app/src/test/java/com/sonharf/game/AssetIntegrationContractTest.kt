@@ -81,7 +81,7 @@ class AssetIntegrationContractTest {
         assertFalse(practice.contains("PurchasedBoardActionVfx("))
     }
 
-    @Test fun sharedSiegeBoardKeepsReadableOwnershipAndFortressSeparation() {
+    @Test fun sharedSiegeBoardRestoresLegacyCalmCellColoring() {
         val online = read("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
@@ -89,10 +89,12 @@ class AssetIntegrationContractTest {
         assertTrue(practice.contains("PracticeSiegeMine = Color(0xFF35C878)"))
         assertTrue(practice.contains("PracticeSiegeRival = Color(0xFFFF5F57)"))
         assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFDDE6EB)"))
-        assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFF8FAF9)"))
         assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFFFF7E6)"))
-        assertTrue(practice.contains("fortress = WordSiegeZoneRules.isFortress(zoneId)"))
-        assertTrue(practice.contains("MainUi.Gold.copy(alpha = .78f)"))
+        assertTrue(practice.contains("letter != null -> territory"))
+        assertTrue(practice.contains("else -> PracticeSiegeEmpty"))
+        assertFalse(practice.contains("owner != 0 -> territory.copy"))
+        assertFalse(practice.contains("fortress = WordSiegeZoneRules.isFortress"))
+        assertFalse(practice.contains("\"♛\""))
         assertTrue(practice.contains(".padding(1.6.dp)"))
     }
 
