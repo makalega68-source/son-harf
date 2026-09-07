@@ -94,8 +94,8 @@ internal fun WordSiegePracticeBoard(
                 if (WordSiegeBoardSpec.isValidIndex(index)) {
                     add(
                         PurchasedBoardVfxEvent(
-                            id = "siege-placement:$index:$rackIndex",
-                            boardIndex = index,
+                            eventKey = "siege-placement:$index:$rackIndex",
+                            index = index,
                             kind = PurchasedBoardVfxKind.PLACEMENT,
                         ),
                     )
@@ -105,8 +105,8 @@ internal fun WordSiegePracticeBoard(
                 resolvedIndices.sorted().filter(WordSiegeBoardSpec::isValidIndex).forEach { index ->
                     add(
                         PurchasedBoardVfxEvent(
-                            id = "siege-resolved:$moveEventKey:$index",
-                            boardIndex = index,
+                            eventKey = "siege-resolved:$moveEventKey:$index",
+                            index = index,
                             kind = PurchasedBoardVfxKind.RESOLVED,
                         ),
                     )
