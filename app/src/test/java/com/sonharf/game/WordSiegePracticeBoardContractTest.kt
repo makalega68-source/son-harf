@@ -30,13 +30,15 @@ class WordSiegePracticeBoardContractTest {
         assertFalse(screen.contains("transfer\""))
     }
 
-    @Test fun `practice pending controls preserve rack indices`() {
+    @Test fun `practice pending controls preserve rack indices in compact action bar`() {
         val screen = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         assertTrue(screen.contains("wordSiegeShuffledRackIndices"))
         assertTrue(screen.contains("wordSiegeUndoPendingPlacement"))
-        assertTrue(screen.contains("GERİ AL"))
-        assertTrue(screen.contains("KARIŞTIR"))
+        assertTrue(screen.contains("sh(\"GERİ\", \"UNDO\")"))
+        assertTrue(screen.contains("Icons.Rounded.Shuffle"))
+        assertTrue(screen.contains("sh(\"Karıştır\", \"Shuffle\")"))
         assertTrue(screen.contains("wordSiegePracticeMoveNotice"))
+        assertTrue(screen.contains("height(44.dp)"))
     }
 
     @Test fun `new practice games deal from the canonical shuffled bag instead of fixed racks`() {
