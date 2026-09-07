@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import com.sonharf.game.data.SharedDictionaryService
+import com.sonharf.game.data.WordSiegeCellDto
 import kotlin.random.Random
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -44,7 +45,7 @@ class WordSiegePracticeEngineTest {
         assertEquals(12, move.wordScore)
         assertEquals(setOf(11, 12, 13), move.flippedZoneIds)
         assertEquals(3, next.playerArea)
-        assertEquals(8, next.playerAreaScore) // 2 + center fortress 4 + 2
+        assertEquals(8, next.playerAreaScore)
         assertEquals(20, WordSiegePracticeEngine.totalScore(next, 1))
         assertEquals(1, next.playerConquestMeter)
         assertEquals(2, next.currentOwner)
@@ -93,14 +94,22 @@ class WordSiegePracticeEngineTest {
         assertTrue(armed.playerOnslaughtActive)
         assertEquals(0, armed.playerConquestMeter)
 
+        val freshBoard = List(WordSiegeBoardSpec.CellCount) { index ->
+            WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index))
+        }
         val playerTurnAgain = armed.copy(
+            board = freshBoard,
             currentOwner = 1,
-            playerRack = "MASASİN",
+            playerRack = "KALEMTR",
+            playerArea = 0,
+            botArea = 0,
+            playerAreaScore = 0,
+            botAreaScore = 0,
         )
         val second = WordSiegePracticeEngine.applyMove(
             playerTurnAgain,
             1,
-            linkedMapOf(95 to 0, 96 to 1, 97 to 2, 98 to 3),
+            linkedMapOf(110 to 0, 111 to 1, 112 to 2, 113 to 3, 114 to 4),
         ).second
 
         assertTrue(second.onslaughtConsumed)
