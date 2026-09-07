@@ -7,35 +7,28 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WordSiegeContractTest {
-    @Test fun siegeReplacesConquestAndKeepsCoreVisuals() {
-        val siege = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGame.kt").readText()
+    @Test fun siegeNavigationUsesCanonical15x15ExperienceAndOldDamageModeIsGone() {
+        val entry = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGame.kt").readText()
+        val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
+        val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
+        val zoneRules = projectFile("app/src/main/java/com/sonharf/game/WordSiegeZoneRules.kt").readText()
         val home = projectFile("app/src/main/java/com/sonharf/game/LightWordThemeApp.kt").readText()
 
-        assertTrue(siege.contains("KELİME KUŞATMASI"))
-        assertTrue(siege.contains("Kelimeyi kur. Alanı ele geçir."))
-        assertTrue(siege.contains("initialSiegeTerritory"))
-        assertTrue(siege.contains("claimSiegeTerritory"))
-        assertTrue(siege.contains("40 to SiegeBonus.CASTLE"))
-        assertTrue(siege.contains("SiegeBonus.TREASURE"))
-        assertTrue(siege.contains("SiegeBonus.BRIDGE"))
-        assertTrue(siege.contains("SiegeBonus.FOG"))
-        assertTrue(siege.contains("SiegeBonus.DOUBLE"))
-        assertTrue(siege.contains("siege_treasure"))
-        assertTrue(siege.contains("siege_bridge"))
-        assertTrue(siege.contains("siege_fog"))
-        assertTrue(siege.contains("siege_castle_neutral"))
-        assertTrue(siege.contains("kare ele geçirildi"))
-        assertTrue(siege.contains("rememberInfiniteTransition"))
-        assertTrue(siege.contains("LaunchedEffect(gameId, turn)"))
-        assertTrue(siege.contains("castle_blue"))
-        assertTrue(siege.contains("castle_red"))
-        assertTrue(siege.contains("ProfilePhotoAvatar("))
-        assertTrue(siege.contains("KRİTİK!"))
-        assertTrue(siege.contains("KELİMEYİ GÖNDER"))
-        assertTrue(siege.contains("BOT"))
+        assertTrue(entry.contains("WordSiegeExperienceScreen(onExit = onExit)"))
+        assertTrue(experience.contains("WordSiegePanMatch("))
+        assertTrue(practice.contains("WordSiegePracticeBoard("))
+        assertTrue(zoneRules.contains("ZoneCount"))
+        assertTrue(zoneRules.contains("FortressZoneIds"))
+        assertTrue(zoneRules.contains("ConquestMeterMax"))
         assertTrue(home.contains("KELİME KUŞATMASI"))
         assertFalse(home.contains("KELİME FETHİ"))
-        assertFalse(projectFile("app/src/main/java/com/sonharf/game").resolve("WordConquestGame.kt").exists())
+
+        assertFalse(entry.contains("SiegeImpact"))
+        assertFalse(entry.contains("myHp"))
+        assertFalse(entry.contains("botHp"))
+        assertFalse(entry.contains("SiegeBonus.FOG"))
+        assertFalse(entry.contains("SiegeBonus.BRIDGE"))
+        assertFalse(entry.contains("claimSiegeTerritory"))
     }
 
     private fun projectFile(path: String): File {
