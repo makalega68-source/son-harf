@@ -31,6 +31,24 @@ class PlayPurchaseClawbackContractTest {
         assertFalse(sql.contains("greatest(0"))
     }
 
+    @Test
+    fun rtdnUsesVerifiedPushIdentityAndDoesNotAutoRevokePendingReview() {
+        val edge = projectFile("supabase/functions/google-play-rtdn/index.ts").readText()
+        val sql = projectFile("supabase/migrations/20260907090000_play_rtdn_event_dedupe.sql").readText()
+
+        assertTrue(edge.contains("verifyIdToken"))
+        assertTrue(edge.contains("GOOGLE_PLAY_RTDN_AUDIENCE"))
+        assertTrue(edge.contains("GOOGLE_PLAY_RTDN_PUSH_SERVICE_ACCOUNT"))
+        assertTrue(edge.contains("package_mismatch"))
+        assertTrue(edge.contains("claim_play_rtdn_event_v1"))
+        assertTrue(edge.contains("if (voided && purchaseToken)"))
+        assertTrue(edge.contains("reconcile_play_entitlement_v2"))
+        assertTrue(edge.contains("pendingRefund ? \"pending_refund_review\""))
+        assertFalse(edge.contains("if (pendingRefund && purchaseToken)"))
+        assertTrue(sql.contains("message_id text primary key"))
+        assertTrue(sql.contains("grant execute on function public.claim_play_rtdn_event_v1(text,text,text,text,timestamptz) to service_role"))
+    }
+
     private fun projectFile(path: String): File {
         val candidates = listOf(File(path), File("../$path"))
         val file = candidates.firstOrNull(File::exists)
