@@ -9,38 +9,50 @@ import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
+import java.time.Instant
 
 /**
- * Mount the refined duel arena only while the word-duel surface owns the match.
- * Quiz rounds are intentionally excluded: BilBakalimBonusOverlay is the single UI
- * owner for the server-synchronised quiz flow and must remain unobstructed.
+ * Legacy compatibility mount for the refined duel arena.
+ *
+ * The active V1 route is owned by LiveDuelRuntimeShell. This source remains buildable
+ * without restoring the old broad bot-watchdog scan: when it is ever composed, it
+ * resolves the concrete active room and passes that room id to the recovery watchdog.
  */
 @Composable
 fun SketchGameOverlayV9() {
     if (!SupabaseProvider.configured) return
     val backend = remember { OnlineGameBackend() }
-    var active by remember { mutableStateOf(false) }
+    var activeRoomId by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(Unit) {
         while (true) {
             val me = backend.currentUserId()
-            active = if (me == null) false else runCatching {
-                SupabaseProvider.client.from("game_rooms")
-                    .select()
-                    .decodeList<GameRoomDto>()
-                    .any {
-                        (it.hostId == me || it.guestId == me) &&
-                            it.status in setOf("playing", "final", "sudden_death", "paused")
-                    }
-            }.getOrDefault(false)
-            delay(500)
+            activeRoomId = if (me == null) {
+                null
+            } else {
+                runCatching {
+                    SupabaseProvider.client.from("game_rooms")
+                        .select()
+                        .decodeList<GameRoomDto>()
+                        .asSequence()
+                        .filter {
+                            (it.hostId == me || it.guestId == me) &&
+                                it.status in setOf("playing", "final", "sudden_death", "paused")
+                        }
+                        .maxByOrNull {
+                            runCatching { Instant.parse(it.createdAt) }.getOrDefault(Instant.EPOCH)
+                        }
+                        ?.id
+                }.getOrNull()
+            }
+            delay(if (activeRoomId == null) 2_500L else 1_500L)
         }
     }
 
-    if (active) {
+    activeRoomId?.let { roomId ->
         Box(Modifier.fillMaxSize()) {
             RefinedDuelOverlay()
-            BotTurnWatchdogOverlay()
+            BotTurnWatchdogOverlay(roomId = roomId)
         }
     }
 }
