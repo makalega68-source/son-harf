@@ -374,10 +374,23 @@ internal fun RefinedDuelOverlay() {
                 }
             })
 
-            Row(Modifier.fillMaxWidth().height(64.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                CompactPlayerCard(
+            DuelCompetitiveHeader(
+                myScore = myScore,
+                opponentScore = opponentScore,
+                myStreak = myStreak,
+                opponentStreak = opponentStreak,
+                status = active.status,
+                seconds = seconds,
+                language = active.language,
+            )
+
+            Row(
+                Modifier.fillMaxWidth().height(54.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                DuelIdentityCard(
                     name = myProfile?.displayName ?: sh("SEN", "YOU"),
-                    score = myScore,
                     streak = myStreak,
                     active = myTurn,
                     avatarPath = myProfile?.avatarPath,
@@ -385,10 +398,8 @@ internal fun RefinedDuelOverlay() {
                     frameId = SonHarfCosmetics.profileFrameId,
                     modifier = Modifier.weight(1f),
                 )
-                DuelCountdown(active.status, seconds, Modifier.width(68.dp))
-                CompactPlayerCard(
+                DuelIdentityCard(
                     name = if (active.isBot) active.botName ?: "KelimeBot" else opponentProfile?.displayName ?: sh("RAKİP", "OPPONENT"),
-                    score = opponentScore,
                     streak = opponentStreak,
                     active = opponentTurn,
                     avatarPath = opponentProfile?.avatarPath,
