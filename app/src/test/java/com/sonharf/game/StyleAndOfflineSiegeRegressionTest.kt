@@ -21,7 +21,8 @@ class StyleAndOfflineSiegeRegressionTest {
         assertFalse(dictionary.contains("offlinePracticeWords"))
         assertTrue(practice.contains("SharedDictionaryService.preloadCanonical"))
         assertTrue(practice.contains("dictionaryReady"))
-        assertTrue(practice.contains("ANA SÖZLÜK"))
+        assertTrue(practice.contains("Ana sözlük hazır."))
+        assertTrue(practice.contains("SÖZLÜK GEREKLİ"))
         assertTrue(practice.contains("showRestart"))
         assertTrue(practice.contains("Mevcut alıştırmadaki ilerleme sıfırlanacak"))
     }
