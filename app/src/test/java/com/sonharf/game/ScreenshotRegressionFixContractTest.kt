@@ -5,7 +5,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class ScreenshotRegressionFixContractTest {
-    // These contracts are intentionally source-level guards for the screenshot regressions fixed in this PR.
     private fun read(path: String): String {
         val direct = File(path.removePrefix("app/"))
         val root = File(path)
@@ -24,8 +23,12 @@ class ScreenshotRegressionFixContractTest {
         assertTrue(s.contains("BERABERE • SEN"))
         assertTrue(s.contains("RAKİP ${'$'}{opponentAnswer"))
     }
-    @Test fun siegeStartsReadableAndUsesAccessibleNotice() {
-        assertTrue(read("app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt").contains("mutableStateOf(WordSiegeBoardViewportMode.CLOSE)"))
-        assertTrue(read("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").contains("WordSiegeNotice(message)"))
+    @Test fun siegeStartsReadableAndUsesCompactAccessibleNotice() {
+        val board = read("app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
+        val screen = read("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt")
+        assertTrue(board.contains("mutableStateOf(WordSiegeBoardViewportMode.CLOSE)"))
+        assertTrue(screen.contains("Text(message, color = MainUi.Text"))
+        assertTrue(screen.contains("maxLines = 2"))
+        assertTrue(screen.contains("WordSiegeTempoBanner("))
     }
 }
