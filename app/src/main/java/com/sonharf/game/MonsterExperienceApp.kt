@@ -57,7 +57,7 @@ private data class MonsterHomeStats(
     val onlineFriends: Int = 0,
 )
 
-private enum class MonsterDestination { HOME, GAME, WORD_SIEGE, LEAGUE, COMPETITION, SOCIAL, STYLE, PROFILE, TASKS, VIP, SETTINGS, PROFILE_DETAILS, ACCOUNT, DAILY_CHALLENGE }
+private enum class MonsterDestination { HOME, GAME, WORD_SIEGE, LETTER_LADDER, LEAGUE, COMPETITION, SOCIAL, STYLE, PROFILE, TASKS, VIP, SETTINGS, PROFILE_DETAILS, ACCOUNT, DAILY_CHALLENGE }
 
 @Composable
 fun MonsterExperienceApp(onSignedOut: () -> Unit) {
@@ -88,7 +88,7 @@ fun MonsterExperienceApp(onSignedOut: () -> Unit) {
     }
 
     val topLevel = destination in setOf(MonsterDestination.HOME, MonsterDestination.LEAGUE, MonsterDestination.SOCIAL, MonsterDestination.STYLE, MonsterDestination.PROFILE)
-    val isGameplay = destination in setOf(MonsterDestination.GAME, MonsterDestination.WORD_SIEGE, MonsterDestination.DAILY_CHALLENGE)
+    val isGameplay = destination in setOf(MonsterDestination.GAME, MonsterDestination.WORD_SIEGE, MonsterDestination.LETTER_LADDER, MonsterDestination.DAILY_CHALLENGE)
     Scaffold(
         containerColor = SonHarfTheme.Background,
         topBar = { SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium) },
@@ -109,6 +109,7 @@ fun MonsterExperienceApp(onSignedOut: () -> Unit) {
                     backend,
                     { destination = MonsterDestination.GAME },
                     { destination = MonsterDestination.WORD_SIEGE },
+                    { destination = MonsterDestination.LETTER_LADDER },
                     { destination = MonsterDestination.LEAGUE },
                     { destination = MonsterDestination.COMPETITION },
                     { destination = MonsterDestination.SOCIAL },
@@ -120,6 +121,7 @@ fun MonsterExperienceApp(onSignedOut: () -> Unit) {
                 )
                 MonsterDestination.GAME -> OnlineGameScreenV6()
                 MonsterDestination.WORD_SIEGE -> WordSiegeExperienceScreen { destination = MonsterDestination.HOME }
+                MonsterDestination.LETTER_LADDER -> LetterLadderGameScreen { destination = MonsterDestination.HOME }
                 MonsterDestination.LEAGUE -> LeaderboardExperienceScreen { destination = MonsterDestination.HOME }
                 MonsterDestination.COMPETITION -> CompetitionHubScreen { destination = MonsterDestination.HOME }
                 MonsterDestination.SOCIAL -> MainSocialScreen(backend = backend, onPlay = { destination = MonsterDestination.GAME })
@@ -141,6 +143,7 @@ private fun MonsterHomeScreen(
     backend: OnlineGameBackend,
     onPlay: () -> Unit,
     onSiege: () -> Unit,
+    onLetterLadder: () -> Unit,
     onLeague: () -> Unit,
     onCompetition: () -> Unit,
     onSocial: () -> Unit,
@@ -206,9 +209,11 @@ private fun MonsterHomeScreen(
         }
         item { MonsterLiveMatchCard(profile, stats, onPlay) }
         item {
-            Text(sh("ARENANI SEÇ", "CHOOSE YOUR ARENA"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp)
+            Text(sh("OYUNUNU SEÇ", "CHOOSE YOUR GAME"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp)
             Spacer(Modifier.height(7.dp))
             MonsterSiegeQuickCard(Modifier.fillMaxWidth(), onSiege)
+            Spacer(Modifier.height(8.dp))
+            MonsterLetterLadderQuickCard(Modifier.fillMaxWidth(), onLetterLadder)
             Spacer(Modifier.height(8.dp))
             MonsterLeagueCard(stats.rating, onLeague)
         }
