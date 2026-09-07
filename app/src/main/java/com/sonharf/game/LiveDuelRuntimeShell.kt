@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -112,9 +113,18 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
             }
         }
 
-        RoomWatchState.Discovering,
-        RoomWatchState.Idle,
-        -> MonsterExperienceApp(onSignedOut = onSignedOut)
+        RoomWatchState.Discovering -> {
+            // Never construct the lobby/banner while we are still checking for a live match.
+            // This removes the short ad lifecycle window that previously existed on restore.
+            Box(
+                modifier = Modifier.fillMaxSize().background(MainUi.Background),
+                contentAlignment = Alignment.Center,
+            ) {
+                CircularProgressIndicator(color = MainUi.Blue)
+            }
+        }
+
+        RoomWatchState.Idle -> MonsterExperienceApp(onSignedOut = onSignedOut)
     }
 }
 
