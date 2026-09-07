@@ -196,15 +196,12 @@ internal fun WordSiegePracticeBoard(
                         repeat(WordSiegeBoardSpec.Size) { column ->
                             val index = WordSiegeBoardSpec.index(row, column)
                             val pendingRackIndex = placements[index]
-                            val zoneId = WordSiegeZoneRules.zoneIdForIndex(index)
                             WordSiegePracticeBoardCell(
                                 cell = board.getOrElse(index) { WordSiegeCellDto() },
                                 pendingLetter = pendingRackIndex?.let(rack::getOrNull),
                                 pending = pendingRackIndex != null,
                                 myOwner = myOwner,
                                 enabled = enabled,
-                                fortress = WordSiegeZoneRules.isFortress(zoneId),
-                                fortressCenter = row % WordSiegeZoneRules.ZoneSize == 1 && column % WordSiegeZoneRules.ZoneSize == 1,
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleMode,
@@ -231,8 +228,6 @@ private fun WordSiegePracticeBoardCell(
     pending: Boolean,
     myOwner: Int,
     enabled: Boolean,
-    fortress: Boolean,
-    fortressCenter: Boolean,
     lastMoveHighlight: Float,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
@@ -248,18 +243,7 @@ private fun WordSiegePracticeBoardCell(
     val cellColor = when {
         pending -> PracticeSiegeTile
         letter != null -> territory
-        owner != 0 -> territory.copy(alpha = .42f)
         else -> PracticeSiegeEmpty
-    }
-    val outlineWidth = when {
-        lastMoveHighlight > 0f -> 1.75.dp
-        fortress -> 1.15.dp
-        else -> 0.dp
-    }
-    val outlineColor = if (lastMoveHighlight > 0f) {
-        Color.White.copy(alpha = .25f + .65f * lastMoveHighlight)
-    } else {
-        MainUi.Gold.copy(alpha = .78f)
     }
 
     Box(
@@ -269,8 +253,8 @@ private fun WordSiegePracticeBoardCell(
             .clip(RoundedCornerShape(7.dp))
             .background(cellColor)
             .border(
-                width = outlineWidth,
-                color = outlineColor,
+                width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
+                color = Color.White.copy(alpha = .25f + .65f * lastMoveHighlight),
                 shape = RoundedCornerShape(7.dp),
             )
             .combinedClickable(
@@ -293,15 +277,8 @@ private fun WordSiegePracticeBoardCell(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(Color.White.copy(alpha = .06f * lastMoveHighlight)))
-        if (fortressCenter) {
-            Text(
-                "♛",
-                color = MainUi.Gold.copy(alpha = if (letter == null) .92f else .55f),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.align(Alignment.TopStart).padding(start = 3.dp, top = 1.dp),
-            )
+        if (lastMoveHighlight > 0f) {
+            Box(Modifier.matchParentSize().background(Color.White.copy(alpha = .06f * lastMoveHighlight)))
         }
         if (letter != null) {
             Text(letter, color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Black)
