@@ -4,10 +4,15 @@ internal fun wordSiegePracticeMoveNotice(
     move: WordSiegePracticeMove,
     turkish: Boolean,
 ): String {
-    val areaScore = move.capturedCells.coerceAtLeast(0) * WordSiegeFinalRules.CUBE_TRANSFER_POINTS
+    val zoneScore = move.flippedZoneIds.sumOf(WordSiegeZoneRules::zoneValue)
+    val fire = when {
+        move.onslaughtTriggered -> if (turkish) " • 🔥 YIKIM HAMLESİ HAZIR" else " • 🔥 ONSLAUGHT READY"
+        move.onslaughtConsumed -> if (turkish) " • 🔥 ×2" else " • 🔥 ×2"
+        else -> ""
+    }
     return if (turkish) {
-        "+${move.wordScore} kelime • Alan +$areaScore"
+        "+${move.wordScore} kelime • ${move.flippedZoneIds.size} bölge +$zoneScore$fire"
     } else {
-        "+${move.wordScore} word • Area +$areaScore"
+        "+${move.wordScore} word • ${move.flippedZoneIds.size} zones +$zoneScore$fire"
     }
 }
