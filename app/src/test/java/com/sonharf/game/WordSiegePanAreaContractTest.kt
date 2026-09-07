@@ -36,6 +36,20 @@ class WordSiegePanAreaContractTest {
         assertFalse(pan.contains("verticalScroll("))
     }
 
+    @Test fun serverBridgeLocksCanonical15x15GeometryBeforeZones() {
+        val bridge = v5BridgeMigrations()
+
+        assertTrue(bridge.contains("generate_series(0, 224)"))
+        assertTrue(bridge.contains("x not between 0 and 224"))
+        assertTrue(bridge.contains("x / 15 <> v_anchor / 15"))
+        assertTrue(bridge.contains("x % 15 <> v_anchor % 15"))
+        assertTrue(bridge.contains("case when p_horizontal then 1 else 15 end"))
+        assertTrue(bridge.contains("not (112 = any(v_indices))"))
+        assertTrue(bridge.contains("private.word_siege_word_allowed_v1"))
+        assertTrue(bridge.contains("private.word_siege_score_word_v1"))
+        assertTrue(bridge.indexOf("drop constraint") < bridge.indexOf("set board = ("))
+    }
+
     @Test fun zonesFortressesAndPermanentWordScoreReplaceCellLedger() {
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt").readText()
         val zoneRules = projectFile("app/src/main/java/com/sonharf/game/WordSiegeZoneRules.kt").readText()
@@ -80,6 +94,11 @@ class WordSiegePanAreaContractTest {
         assertFalse(zoneMigrations.contains("create or replace function private.word_siege_word_allowed_v1"))
         assertFalse(zoneMigrations.contains("create or replace function private.word_siege_score_word_v1"))
     }
+
+    private fun v5BridgeMigrations(): String = listOf(
+        "supabase/migrations/20260907232000_word_siege_15x15_bridge_geometry_v5.sql",
+        "supabase/migrations/20260907232100_word_siege_15x15_bridge_submit_v5.sql",
+    ).joinToString("\n") { projectFile(it).readText() }
 
     private fun v5ZoneMigrations(): String = listOf(
         "supabase/migrations/20260907233000_word_siege_zone_schema_v5.sql",
