@@ -9,54 +9,38 @@ import org.junit.Test
 class BonusFlowReliabilityContractTest {
 
     @Test
-    fun bonusSelectionResultAndResumeStayServerAuthoritative() {
+    fun bilBakalimIsRemovedFromTheActiveDuelPath() {
         val screen = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
         val arena = projectFile("app/src/main/java/com/sonharf/game/LightDuelUi.kt").readText()
-        val secureBackend = projectFile("app/src/main/java/com/sonharf/game/data/SecureMatchBackend.kt").readText()
+        val refined = projectFile("app/src/main/java/com/sonharf/game/RefinedDuelOverlay.kt").readText()
 
-        assertTrue(screen.contains("while (true)"))
-        assertTrue(screen.contains("backend.finishTriviaResult(q.id)"))
-        assertTrue(screen.contains("backend.claimTriviaTimeout(expectedRound)"))
-        assertTrue(screen.contains("backend.answerBilBakalimNumeric(q.id, estimate)"))
-        assertTrue(screen.contains("backend.triggerBilBakalimBonus(active.id)"))
-        assertTrue(secureBackend.contains("answer_bilbakalim_numeric_v4"))
-        assertTrue(secureBackend.contains("trigger_bilbakalim_bonus_v2"))
-        assertTrue(arena.contains("KeyboardType.Number"))
-        assertTrue(arena.contains("DOĞRU CEVAP"))
-        assertTrue(arena.contains("round.resolvedAt == null"))
-        assertTrue(arena.contains("triviaRound?.resultUntil"))
-        assertTrue(arena.contains("triviaRound?.answerDeadline"))
-        assertTrue(arena.contains("onTriviaTimeout()"))
+        assertFalse(screen.contains("backend.triggerBilBakalimBonus(active.id)"))
+        assertFalse(arena.contains("SmallAction(\"★ BONUS\""))
+        assertFalse(refined.contains("RefinedTriviaDialog("))
+        assertFalse(refined.contains("status in setOf(\"playing\", \"quiz\""))
     }
 
     @Test
-    fun quizOverlayHasSingleVisibleOwnerAndCannotBeCoveredByRefinedArena() {
+    fun legacyQuizOverlayCannotEnterTheActiveRuntime() {
         val mount = projectFile("app/src/main/java/com/sonharf/game/SketchGameOverlayV9.kt").readText()
-        val shell = projectFile("app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt").readText()
-        val bonus = projectFile("app/src/main/java/com/sonharf/game/BilBakalimBonusOverlay.kt").readText()
+        val shell = projectFile("app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt").readText()
 
         assertTrue(mount.contains("setOf(\"playing\", \"final\", \"sudden_death\", \"paused\")"))
-        assertFalse(mount.contains("setOf(\"playing\", \"quiz\""))
-        assertTrue(shell.indexOf("SketchGameOverlayV9()") < shell.indexOf("BilBakalimBonusOverlay()"))
-        assertTrue(bonus.contains("it.status == \"quiz\""))
-        assertTrue(bonus.contains("backend.answerTrivia(activeRound.id"))
-        assertTrue(bonus.contains("finish_bilbakalim_result_v1"))
+        assertFalse(shell.contains("\"quiz\""))
     }
 
     @Test
-    fun databaseUsesOneTenSecondClockAndLiveAdminControls() {
+    fun databaseDisablesTriviaAndReturnsBeforeBotThinking() {
         val migration = projectFile(
-            "supabase/migrations/20260831_bonus_flow_timer_admin_enforcement.sql"
+            "supabase/migrations/20260907103000_remove_bilbakalim_and_release_bot_submit.sql"
         ).readText()
 
-        assertTrue(migration.contains("clock_timestamp() + interval '10 seconds'"))
-        assertTrue(migration.contains("set is_correct=(answer_index=v_correct)"))
-        assertTrue(migration.contains("raise exception 'invalid_trivia_option'"))
-        assertTrue(migration.contains("'matchmaking_enabled'"))
-        assertTrue(migration.contains("'chat_enabled'"))
-        assertTrue(migration.contains("'trivia_enabled'"))
-        assertTrue(migration.contains("'maintenance_mode'"))
-        assertTrue(migration.contains("as restrictive"))
+        assertTrue(migration.contains("where key = 'trivia_enabled'"))
+        assertTrue(migration.contains("select public.submit_word_v3_core_v1(p_room_id, p_word)"))
+        assertFalse(migration.contains("r := public.bot_take_turn(r.id)"))
+        assertFalse(migration.contains("start_bilbakalim_round_v1(r.id"))
+        assertTrue(migration.contains("where status = 'quiz'"))
+        assertTrue(migration.contains("from public, anon"))
     }
 
     @Test
