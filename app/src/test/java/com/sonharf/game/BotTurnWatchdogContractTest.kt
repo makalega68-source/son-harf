@@ -8,18 +8,19 @@ import org.junit.Test
 
 class BotTurnWatchdogContractTest {
     private val watchdog by lazy { projectFile("app/src/main/java/com/sonharf/game/BotTurnWatchdogOverlay.kt").readText() }
-    private val mount by lazy { projectFile("app/src/main/java/com/sonharf/game/SketchGameOverlayV9.kt").readText() }
+    private val mount by lazy { projectFile("app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt").readText() }
 
     @Test fun botTurnKeepsRecoveringUntilServerAdvances() {
         assertTrue(watchdog.contains("while (true)"))
         assertTrue(watchdog.contains("eq(\"bot_turn\", true)"))
         assertTrue(watchdog.contains("backend.botTakeTurn(candidate.id)"))
-        assertTrue(watchdog.contains("moved.botTurn"))
-        assertTrue(watchdog.contains("delay(if (botThinking) 900L else 300L)"))
+        assertTrue(watchdog.contains("withTimeoutOrNull(4_000L)"))
+        assertTrue(watchdog.contains("withTimeoutOrNull(6_000L)"))
+        assertTrue(watchdog.contains("delay(if (stillThinking) 900L else 300L)"))
     }
 
-    @Test fun botThinkStateDoesNotLookLikeExpiredPlayerClock() {
-        assertTrue(watchdog.contains("\"BOT …\""))
+    @Test fun botThinkRecoveryIsMountedWithoutASecondVisibleOverlay() {
+        assertFalse(watchdog.contains("\"BOT …\""))
         assertTrue(mount.contains("BotTurnWatchdogOverlay()"))
         assertTrue(mount.indexOf("BotTurnWatchdogOverlay()") > mount.indexOf("RefinedDuelOverlay()"))
     }
