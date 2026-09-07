@@ -31,6 +31,7 @@ private val ACTIVE_STATUSES = setOf("playing", "final", "sudden_death", "paused"
 private const val MAX_CONSECUTIVE_FAILURES_BEFORE_SOFT_WARNING = 5
 private const val POLL_INTERVAL_ACTIVE_MS = 2_000L
 private const val POLL_INTERVAL_DISCOVER_MS = 1_250L
+private const val POLL_INTERVAL_IDLE_MS = 5_000L
 
 private sealed class RoomWatchState {
     data object Discovering : RoomWatchState()
@@ -43,6 +44,10 @@ private sealed class RoomWatchState {
  * transient room/network failures. Server state remains authoritative: an active
  * room is cleared only after a successful server snapshot positively shows that
  * the player is no longer participating or the room is no longer active.
+ *
+ * LaunchedEffect is composition-scoped, so this polling coroutine is cancelled as
+ * soon as the shell leaves composition. Idle discovery is intentionally slower to
+ * avoid unnecessary radio/CPU wakeups outside a live match.
  */
 @Composable
 internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
@@ -94,7 +99,8 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
             delay(
                 when (watchState) {
                     is RoomWatchState.Active -> POLL_INTERVAL_ACTIVE_MS
-                    else -> POLL_INTERVAL_DISCOVER_MS
+                    RoomWatchState.Discovering -> POLL_INTERVAL_DISCOVER_MS
+                    RoomWatchState.Idle -> POLL_INTERVAL_IDLE_MS
                 },
             )
         }
@@ -104,7 +110,7 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
         is RoomWatchState.Active -> {
             Box(modifier = Modifier.fillMaxSize()) {
                 RefinedDuelOverlay()
-                BotTurnWatchdogOverlay()
+                BotTurnWatchdogOverlay(roomId = state.roomId)
 
                 // Presentation-only warning. The match itself stays mounted and authoritative.
                 if (state.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES_BEFORE_SOFT_WARNING) {
