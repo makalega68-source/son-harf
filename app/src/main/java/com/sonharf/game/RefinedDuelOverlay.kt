@@ -298,6 +298,7 @@ internal fun RefinedDuelOverlay() {
                 val beforeOpp = if (me == before.hostId) before.guestScore else before.hostScore
                 val shownWord = gameUppercase(submitted, active.language)
                 val voiceToken = voiceRequestId
+                val knownWordIds = words.mapTo(hashSetOf()) { it.id }
                 val result = runCatching {
                     withTimeout(DuelSubmitTimeoutMs) {
                         if (voiceToken != null) backend.submitVoiceWord(active.id, submitted, voiceToken)
@@ -306,7 +307,6 @@ internal fun RefinedDuelOverlay() {
                 }
                 result.onSuccess { updated ->
                     room = updated
-                    input = ""
                     voiceRequestId = null
                     if (voiceToken != null) {
                         voiceUses = withTimeoutOrNull(2_500L) { backend.getVoiceUses(active.id) } ?: (voiceUses + 1)
@@ -317,8 +317,9 @@ internal fun RefinedDuelOverlay() {
                         updated.validWordCount > before.validWordCount ||
                             updated.lastEventPlayerId == me ||
                             (updated.status == "finished" && updated.lastEvent == "sudden_death_word")
-                        )
+                    )
                     if (accepted) {
+                        input = ""
                         val delta = afterMine - beforeMine
                         feedback = DuelFeedback(true, "$shownWord ✓ +${if (delta > 0) delta else 3}")
                         val streak = if (me == updated.hostId) updated.hostStreak else updated.guestStreak
@@ -331,11 +332,11 @@ internal fun RefinedDuelOverlay() {
                             else -> null
                         }
                     } else {
+                        input = submitted
                         feedback = DuelFeedback(false, failedWordLabel(updated.lastEvent.orEmpty(), shownWord))
                     }
                     words = withTimeoutOrNull(2_500L) { backend.getWords(active.id) } ?: words
                 }.onFailure { error ->
-                    input = ""
                     voiceRequestId = null
                     val (reconciled, reconciledWords) = coroutineScope {
                         val roomTask = async { withTimeoutOrNull(2_500L) { backend.getRoom(active.id) } }
@@ -344,15 +345,27 @@ internal fun RefinedDuelOverlay() {
                     }
                     val normalizedSubmitted = submitted.lowercase(locale)
                     val acceptedOnServer = reconciledWords.any {
-                        it.playerId == me && (
+                        it.id !in knownWordIds && it.playerId == me && (
                             it.word.lowercase(locale) == normalizedSubmitted ||
                                 it.normalizedWord.lowercase(locale) == normalizedSubmitted
                             )
                     }
                     if (reconciled != null) room = reconciled
                     words = reconciledWords
-                    feedback = if (acceptedOnServer) DuelFeedback(true, "$shownWord ✓")
-                    else DuelFeedback(false, if (error is kotlinx.coroutines.TimeoutCancellationException) sh("BAĞLANTI YAVAŞ • TEKRAR DENE", "SLOW CONNECTION • TRY AGAIN") else failedWordLabel(error.message.orEmpty(), shownWord))
+                    if (acceptedOnServer) {
+                        input = ""
+                        feedback = DuelFeedback(true, "$shownWord ✓")
+                    } else {
+                        input = submitted
+                        feedback = DuelFeedback(
+                            false,
+                            if (error is kotlinx.coroutines.TimeoutCancellationException) {
+                                sh("BAĞLANTI YAVAŞ • KELİME KORUNDU", "SLOW CONNECTION • WORD PRESERVED")
+                            } else {
+                                failedWordLabel(error.message.orEmpty(), shownWord)
+                            },
+                        )
+                    }
                 }
             } finally {
                 busy = false
