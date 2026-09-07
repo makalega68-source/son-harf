@@ -20,14 +20,16 @@ class CrossLayerReliabilityRegressionTest {
         assertTrue(activity.contains("auth.signOut() }.isSuccess"))
     }
 
-    @Test fun failedOrUncertainWordSubmissionPreservesPlayerInput() {
+    @Test fun rejectedWordsClearImmediatelyWhileOnlyTimeoutsRestoreInput() {
         val refined = source("app/src/main/java/com/sonharf/game/RefinedDuelOverlay.kt")
         val online = source("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt")
 
         assertTrue(refined.contains("val knownWordIds = words.mapTo(hashSetOf()) { it.id }"))
         assertTrue(refined.contains("it.id !in knownWordIds && it.playerId == me"))
-        assertTrue(refined.contains("input = submitted"))
-        assertTrue(online.contains("wordInput = submitted"))
+        assertTrue(refined.contains("input = \"\""))
+        assertTrue(refined.contains("TimeoutCancellationException) input = submitted"))
+        assertTrue(online.contains("wordInput = \"\""))
+        assertTrue(online.contains("TimeoutCancellationException) wordInput = submitted"))
         assertTrue(online.contains("Kelimen korundu; oyun durumu eşitleniyor."))
     }
 
