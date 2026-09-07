@@ -3,48 +3,41 @@ package com.sonharf.game
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
-import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
- * Safety net for bot turns.
+ * Recovery-only safety net for a bot turn.
  *
- * RefinedDuelOverlay starts the normal bot move. This watchdog continuously reconciles
- * a bot turn that survives because of a transient network/RPC failure. bot_take_turn is
- * server-authoritative and idempotent for an already-completed turn, so concurrent
- * recovery calls cannot award a second bot move.
- *
- * This composable is intentionally UI-less: RefinedDuelOverlay remains the single visual
- * owner of the duel screen while this loop only provides recovery semantics.
+ * RefinedDuelOverlay remains the normal bot-move owner. This watchdog only retries a
+ * bot turn that survives a transient RPC/network failure. It watches the one active
+ * room supplied by LiveDuelRuntimeShell instead of repeatedly scanning game_rooms.
+ * LaunchedEffect(roomId) is automatically cancelled when the match leaves composition
+ * or the active room changes.
  */
 @Composable
-internal fun BotTurnWatchdogOverlay() {
+internal fun BotTurnWatchdogOverlay(roomId: String) {
     if (!SupabaseProvider.configured) return
 
     val backend = remember { OnlineGameBackend() }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(roomId) {
         while (true) {
             val me = backend.currentUserId()
             val candidate = if (me == null) {
                 null
             } else {
                 withTimeoutOrNull(4_000L) {
-                    runCatching {
-                        SupabaseProvider.client.from("game_rooms").select {
-                            filter {
-                                eq("host_id", me)
-                                eq("is_bot", true)
-                                eq("bot_turn", true)
-                            }
-                        }.decodeList<GameRoomDto>()
-                            .filter { it.status in setOf("playing", "final", "sudden_death") }
-                            .maxWithOrNull(compareBy<GameRoomDto> { it.roundNo }.thenBy { it.validWordCount })
-                    }.getOrNull()
+                    runCatching { backend.getRoom(roomId) }
+                        .getOrNull()
+                        ?.takeIf {
+                            it.hostId == me &&
+                                it.isBot &&
+                                it.botTurn &&
+                                it.status in setOf("playing", "final", "sudden_death")
+                        }
                 }
             }
 
@@ -55,9 +48,10 @@ internal fun BotTurnWatchdogOverlay() {
                 val stillThinking = moved?.let {
                     it.botTurn && it.status in setOf("playing", "final", "sudden_death")
                 } ?: true
-                delay(if (stillThinking) 900L else 300L)
+                delay(if (stillThinking) 1_200L else 700L)
             } else {
-                delay(700L)
+                // RefinedDuelOverlay is already polling the room; this watchdog can stay quiet.
+                delay(1_500L)
             }
         }
     }
