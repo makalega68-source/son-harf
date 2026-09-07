@@ -37,8 +37,10 @@ class WordSiege15x15InteractionContractTest {
         assertTrue(source.contains("val index = WordSiegeBoardSpec.index(row, column)"))
         assertTrue(source.contains("onClick = { onCell(index) }"))
         assertTrue(source.contains("onDoubleClick = ::toggleMode"))
-        assertTrue(source.contains("WordSiegeZoneRules.zoneIdForIndex(index)"))
-        assertTrue(source.contains("fortress = WordSiegeZoneRules.isFortress(zoneId)"))
+        assertTrue(source.contains("letter != null -> territory"))
+        assertTrue(source.contains("else -> PracticeSiegeEmpty"))
+        assertFalse(source.contains("fortress = WordSiegeZoneRules.isFortress(zoneId)"))
+        assertFalse(source.contains("owner != 0 -> territory.copy"))
         assertFalse(source.contains("Çift dokun:"))
     }
 
