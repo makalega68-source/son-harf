@@ -406,6 +406,18 @@ private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, 
                 modifier = Modifier.fillMaxWidth(),
                 size = 88.dp,
             )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.mage_cat_preview_anthracite),
+                    contentDescription = sh("Mage Cat maskotu", "Mage Cat mascot"),
+                    modifier = Modifier.size(72.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 15.sp)
