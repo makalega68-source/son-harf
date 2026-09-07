@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import android.os.SystemClock
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -38,22 +39,41 @@ import java.time.Instant
 internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     var activeRoomId by remember { mutableStateOf<String?>(null) }
+    var finishedHoldStartedAt by remember { mutableStateOf<Long?>(null) }
 
     LaunchedEffect(Unit) {
         while (true) {
             val me = backend.currentUserId()
             val currentRoomId = activeRoomId
             activeRoomId = if (me == null || !SupabaseProvider.configured) {
+                finishedHoldStartedAt = null
                 null
             } else if (currentRoomId != null) {
-                runCatching { backend.getRoom(currentRoomId) }
-                    .getOrNull()
-                    ?.takeIf {
-                        (it.hostId == me || it.guestId == me) &&
-                            it.status in setOf("playing", "final", "sudden_death", "paused")
+                val snapshot = runCatching { backend.getRoom(currentRoomId) }.getOrNull()
+                when {
+                    snapshot == null || (snapshot.hostId != me && snapshot.guestId != me) -> {
+                        finishedHoldStartedAt = null
+                        null
                     }
-                    ?.id
+                    snapshot.status in setOf("playing", "final", "sudden_death", "paused") -> {
+                        finishedHoldStartedAt = null
+                        snapshot.id
+                    }
+                    snapshot.status == "finished" -> {
+                        val now = SystemClock.elapsedRealtime()
+                        val started = finishedHoldStartedAt ?: now.also { finishedHoldStartedAt = it }
+                        if (now - started < 3_600L) snapshot.id else {
+                            finishedHoldStartedAt = null
+                            null
+                        }
+                    }
+                    else -> {
+                        finishedHoldStartedAt = null
+                        null
+                    }
+                }
             } else {
+                finishedHoldStartedAt = null
                 runCatching {
                     SupabaseProvider.client
                         .from("game_rooms")
@@ -74,20 +94,15 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
             // The active overlay owns the live match refresh. Polling the whole room list
             // several times per second here was competing with word submissions and made
             // navigation feel unstable on slower phones.
-            delay(if (activeRoomId == null) 1_250L else 2_000L)
+            delay(if (activeRoomId == null) 1_250L else 700L)
         }
     }
 
-    if (activeRoomId != null) {
+    val roomId = activeRoomId
+    if (roomId != null) {
         Box {
             RefinedDuelOverlay()
-            MageCatMatchMascot(
-                cue = null,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(top = 118.dp, end = 14.dp)
-                    .size(MageCatMatchDefaultSize),
-            )
+            MageCatLiveDuelOverlay(roomId)
         }
         // Continuous recovery for transient bot RPC/network failures. The watchdog is
         // intentionally UI-less; RefinedDuelOverlay remains the only visible duel surface.
