@@ -402,22 +402,10 @@ private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, 
                 Spacer(Modifier.weight(1f))
                 Text("1v1", color = MonsterUi.Text, fontWeight = FontWeight.Black)
             }
-            Row(
+            SonHarfBrandLogo(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                SonHarfBrandLogo(
-                    modifier = Modifier.weight(1f),
-                    size = 88.dp,
-                )
-                Image(
-                    painter = painterResource(R.drawable.mage_cat_preview_anthracite),
-                    contentDescription = sh("Mage Cat maskotu", "Mage Cat mascot"),
-                    modifier = Modifier.size(80.dp),
-                    contentScale = ContentScale.Fit,
-                )
-            }
+                size = 88.dp,
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 15.sp)
