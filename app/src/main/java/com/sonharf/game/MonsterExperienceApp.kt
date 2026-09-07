@@ -88,7 +88,7 @@ fun MonsterExperienceApp(onSignedOut: () -> Unit) {
     }
 
     val topLevel = destination in setOf(MonsterDestination.HOME, MonsterDestination.LEAGUE, MonsterDestination.SOCIAL, MonsterDestination.STYLE, MonsterDestination.PROFILE)
-    val isGameplay = destination in setOf(MonsterDestination.GAME, MonsterDestination.WORD_SIEGE, MonsterDestination.LETTER_LADDER, MonsterDestination.DAILY_CHALLENGE)
+    val isGameplay = destination in setOf(MonsterDestination.GAME, MonsterDestination.WORD_SIEGE, MonsterDestination.DAILY_CHALLENGE, MonsterDestination.LETTER_LADDER)
     Scaffold(
         containerColor = SonHarfTheme.Background,
         topBar = { SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium) },
@@ -209,7 +209,7 @@ private fun MonsterHomeScreen(
         }
         item { MonsterLiveMatchCard(profile, stats, onPlay) }
         item {
-            Text(sh("OYUNUNU SEÇ", "CHOOSE YOUR GAME"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp)
+            Text(sh("ARENANI SEÇ", "CHOOSE YOUR ARENA"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp)
             Spacer(Modifier.height(7.dp))
             MonsterSiegeQuickCard(Modifier.fillMaxWidth(), onSiege)
             Spacer(Modifier.height(8.dp))
