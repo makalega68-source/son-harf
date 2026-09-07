@@ -16,12 +16,12 @@ class FinalRestorationRegressionTest {
         val siegePractice = source("WordSiegePracticeScreen.kt")
         val siegeExperience = source("WordSiegeExperience.kt")
         val siegeRules = source("WordSiegeFinalRules.kt")
+        val zoneRules = source("WordSiegeZoneRules.kt")
         val style = source("MonsterStyleStoreScreen.kt")
         val settings = source("MainSettingsVipScreen.kt")
         val admin = source("AdminConsoleScreen.kt")
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/OnlineGameBackend.kt").readText()
 
-        // First launch must render before network/auth cleanup and always have a fallback.
         assertFalse(activity.contains("runBlocking"))
         assertTrue(activity.contains("setContent"))
         assertTrue(activity.contains("AppStartupGate"))
@@ -29,14 +29,12 @@ class FinalRestorationRegressionTest {
         assertTrue(activity.contains("StartupError"))
         assertTrue(activity.contains("onRetry"))
 
-        // First-install language is mandatory before authentication and remains changeable later.
         assertTrue(shell.contains("FirstRunLanguagePreferences.isComplete"))
         assertTrue(shell.indexOf("FirstRunLanguageScreen") < shell.indexOf("hasVerifiedMembershipSession"))
         assertTrue(shell.contains("Dilini seç / Choose your language"))
         assertTrue(settings.contains("SonHarfPreferences.setLanguage(context, \"tr\")"))
         assertTrue(settings.contains("SonHarfPreferences.setLanguage(context, \"en\")"))
 
-        // Duel keeps separate player/rival photos and the approved light Son Harf palette.
         assertTrue(duel.contains("playerAvatarPath"))
         assertTrue(duel.contains("opponentAvatarPath"))
         assertTrue(duel.contains("FramedProfilePhotoAvatar"))
@@ -48,21 +46,24 @@ class FinalRestorationRegressionTest {
         assertFalse(duel.contains("Color(0xFFEAFB17)"))
         assertFalse(duel.contains("Color(0xFF0D0E11)"))
 
-        // Word Siege keeps actions/profiles while direction remains automatic without technical helper text.
         assertTrue(siege.contains("onPass"))
         assertTrue(siege.contains("onExchange"))
         assertTrue(siege.contains("ProfilePhotoAvatarWithGender"))
         assertFalse(siege.contains("Yön otomatik algılanır"))
         assertTrue(siege.contains("Torba ${'$'}{game.bag.length}"))
-        assertTrue(siege.contains("WordSiegeFinalRules.netScore"))
+        assertTrue(siege.contains("WordSiegeZoneRules.totalScore"))
+        assertTrue(siege.contains("WordSiegeLiveRivalryBar"))
+        assertTrue(siege.contains("WordSiegeTempoBanner"))
         assertTrue(siegePractice.contains("showPass"))
         assertTrue(siegePractice.contains("showExchange"))
         assertFalse(siegePractice.contains("Yön otomatik algılanır"))
         assertTrue(siegePractice.contains("Torba ${'$'}{state.bag.length}"))
         assertTrue(siegeExperience.contains("WordSiegeFinalRules.detectOrientation"))
         assertTrue(siegeRules.contains("CUBE_TRANSFER_POINTS: Int = 2"))
+        assertTrue(zoneRules.contains("NormalZonePoints = 2"))
+        assertTrue(zoneRules.contains("FortressZonePoints = 4"))
+        assertTrue(zoneRules.contains("ConquestMeterMax = 3"))
 
-        // Style remains cosmetic-only while preserving the real theme purchase/equip backend.
         assertTrue(style.contains("theme_dark_arena"))
         assertFalse(style.contains("theme_monster_blue"))
         assertTrue(style.contains("purchaseShopItem"))
@@ -72,7 +73,6 @@ class FinalRestorationRegressionTest {
         assertTrue(style.contains("isRuntimeReadyStyle"))
         assertTrue(style.contains("FAIR PLAY PROMISE"))
 
-        // Admin remains fail-closed, RPC-backed and on the unified light palette.
         assertTrue(admin.contains("backend.getAdminDashboard()"))
         assertTrue(admin.contains("dashboard = null"))
         assertTrue(admin.contains("Color(0xFFF5F8FC)"))
