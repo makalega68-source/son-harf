@@ -95,10 +95,6 @@ internal fun RefinedDuelOverlay() {
     var timeoutClaimKey by remember { mutableStateOf<String?>(null) }
     var voiceUses by remember { mutableIntStateOf(0) }
     var voiceRequestId by remember { mutableStateOf<String?>(null) }
-    var triviaRound by remember { mutableStateOf<TriviaRoundDto?>(null) }
-    var triviaQuestion by remember { mutableStateOf<TriviaQuestionDto?>(null) }
-    var triviaSelection by remember { mutableStateOf<Long?>(null) }
-    var triviaTimeoutKey by remember { mutableStateOf<String?>(null) }
 
     val voiceInput = rememberVoiceWordInput(room?.language ?: SonHarfUiState.language) { recognized, requestId ->
         input = recognized.take(40)
@@ -120,7 +116,7 @@ internal fun RefinedDuelOverlay() {
         return SupabaseProvider.client.from("game_rooms").select().decodeList<GameRoomDto>()
             .filter {
                 (it.hostId == me || it.guestId == me) &&
-                    it.status in setOf("playing", "quiz", "final", "sudden_death", "paused")
+                    it.status in setOf("playing", "final", "sudden_death", "paused")
             }
             .maxWithOrNull(compareBy<GameRoomDto> { it.roundNo }.thenBy { it.validWordCount })
     }
@@ -154,25 +150,6 @@ internal fun RefinedDuelOverlay() {
                     withTimeoutOrNull(3_500L) { loadProfiles(incoming) }
                 }
                 if (showChat && !incoming.isBot) chat = runCatching { backend.getChat(incoming.id) }.getOrDefault(chat)
-                if (incoming.status == "quiz") {
-                    val nextRound = runCatching { backend.getActiveTriviaRound(incoming.id) }.getOrNull()
-                    if (nextRound != null) {
-                        if (triviaRound?.id != nextRound.id || triviaQuestion?.id != nextRound.questionId) {
-                            triviaQuestion = runCatching { backend.getTriviaQuestion(nextRound.questionId) }.getOrNull()
-                            triviaSelection = null
-                            triviaTimeoutKey = null
-                        }
-                        triviaRound = nextRound
-                        if (triviaSelection == null) {
-                            triviaSelection = runCatching { backend.getMyTriviaAnswer(nextRound.id)?.answerIndex }.getOrNull()
-                        }
-                    }
-                } else {
-                    triviaRound = null
-                    triviaQuestion = null
-                    triviaSelection = null
-                    triviaTimeoutKey = null
-                }
             }
             delay(900)
         }
@@ -239,22 +216,6 @@ internal fun RefinedDuelOverlay() {
             }
     }
 
-    LaunchedEffect(active.id, active.status, triviaRound?.id, triviaRound?.resolvedAt, triviaRound?.answerDeadline, triviaRound?.resultUntil) {
-        val round = triviaRound ?: return@LaunchedEffect
-        if (active.status != "quiz") return@LaunchedEffect
-        val deadline = if (round.resolvedAt == null) round.answerDeadline else round.resultUntil
-        if (deadline.isNullOrBlank()) return@LaunchedEffect
-        while (!deadlineExpired(deadline)) delay(200)
-        val key = "${round.id}:${round.resolvedAt ?: "answer"}"
-        if (triviaTimeoutKey == key) return@LaunchedEffect
-        triviaTimeoutKey = key
-        val updated = runCatching {
-            if (round.resolvedAt == null) backend.claimTriviaTimeout(round.id)
-            else backend.finishTriviaResult(round.id)
-        }.getOrNull()
-        if (updated != null && shouldAcceptClassicSnapshot(active, updated)) room = updated
-    }
-
     LaunchedEffect(active.id, active.status, active.botTurn, active.validWordCount, active.roundNo) {
         if (!active.isBot || !active.botTurn || !liveWordPhase) return@LaunchedEffect
         delay(650)
@@ -299,6 +260,25 @@ internal fun RefinedDuelOverlay() {
                 val shownWord = gameUppercase(submitted, active.language)
                 val voiceToken = voiceRequestId
                 val knownWordIds = words.mapTo(hashSetOf()) { it.id }
+                val requiredLetter = words.lastOrNull()?.normalizedWord?.takeLast(1)
+                    ?.let { gameUppercase(it, active.language) }
+                    .orEmpty()
+                val immediateFailure = when {
+                    words.any {
+                        gameUppercase(it.normalizedWord.ifBlank { it.word }, active.language) == shownWord
+                    } -> "word_already_used"
+                    requiredLetter.isNotBlank() && !shownWord.startsWith(requiredLetter) -> "wrong_start_letter"
+                    active.language == "tr" && shownWord.endsWith("Ğ") -> "ends_with_soft_g"
+                    submitted.length !in 2..40 -> "invalid_word"
+                    else -> null
+                }
+                input = ""
+                if (immediateFailure != null) {
+                    feedback = DuelFeedback(false, failedWordLabel(immediateFailure, shownWord))
+                    SonHarfSoundFx.warning()
+                } else {
+                    actionText = sh("KONTROL EDİLİYOR…", "CHECKING…")
+                }
                 val result = runCatching {
                     withTimeout(DuelSubmitTimeoutMs) {
                         if (voiceToken != null) backend.submitVoiceWord(active.id, submitted, voiceToken)
@@ -307,9 +287,13 @@ internal fun RefinedDuelOverlay() {
                 }
                 result.onSuccess { updated ->
                     room = updated
+                    actionText = null
                     voiceRequestId = null
                     if (voiceToken != null) {
-                        voiceUses = withTimeoutOrNull(2_500L) { backend.getVoiceUses(active.id) } ?: (voiceUses + 1)
+                        voiceUses += 1
+                        scope.launch {
+                            voiceUses = withTimeoutOrNull(2_500L) { backend.getVoiceUses(active.id) } ?: voiceUses
+                        }
                     }
                     val afterMine = if (me == updated.hostId) updated.hostScore else updated.guestScore
                     val serverRejected = updated.lastEventPlayerId == me && updated.lastEvent in rejectedWordEvents
@@ -319,9 +303,9 @@ internal fun RefinedDuelOverlay() {
                             (updated.status == "finished" && updated.lastEvent == "sudden_death_word")
                     )
                     if (accepted) {
-                        input = ""
                         val delta = afterMine - beforeMine
                         feedback = DuelFeedback(true, "$shownWord ✓ +${if (delta > 0) delta else 3}")
+                        SonHarfSoundFx.wordAccepted()
                         val streak = if (me == updated.hostId) updated.hostStreak else updated.guestStreak
                         val afterOpp = if (me == updated.hostId) updated.guestScore else updated.hostScore
                         actionText = when {
@@ -332,11 +316,14 @@ internal fun RefinedDuelOverlay() {
                             else -> null
                         }
                     } else {
-                        input = submitted
                         feedback = DuelFeedback(false, failedWordLabel(updated.lastEvent.orEmpty(), shownWord))
+                        if (immediateFailure == null) SonHarfSoundFx.warning()
                     }
-                    words = withTimeoutOrNull(2_500L) { backend.getWords(active.id) } ?: words
+                    scope.launch {
+                        words = withTimeoutOrNull(2_500L) { backend.getWords(active.id) } ?: words
+                    }
                 }.onFailure { error ->
+                    actionText = null
                     voiceRequestId = null
                     val (reconciled, reconciledWords) = coroutineScope {
                         val roomTask = async { withTimeoutOrNull(2_500L) { backend.getRoom(active.id) } }
@@ -353,10 +340,10 @@ internal fun RefinedDuelOverlay() {
                     if (reconciled != null) room = reconciled
                     words = reconciledWords
                     if (acceptedOnServer) {
-                        input = ""
                         feedback = DuelFeedback(true, "$shownWord ✓")
+                        SonHarfSoundFx.wordAccepted()
                     } else {
-                        input = submitted
+                        if (error is kotlinx.coroutines.TimeoutCancellationException) input = submitted
                         feedback = DuelFeedback(
                             false,
                             if (error is kotlinx.coroutines.TimeoutCancellationException) {
@@ -370,22 +357,6 @@ internal fun RefinedDuelOverlay() {
             } finally {
                 busy = false
             }
-        }
-    }
-
-    fun submitTrivia(estimate: Int) {
-        val round = triviaRound ?: return
-        if (busy || active.status != "quiz" || round.resolvedAt != null || triviaSelection != null) return
-        scope.launch {
-            busy = true
-            runCatching { backend.answerTrivia(round.id, estimate) }
-                .onSuccess { updated ->
-                    room = updated
-                    triviaSelection = estimate.toLong()
-                    triviaRound = runCatching { backend.getActiveTriviaRound(active.id) }.getOrDefault(triviaRound)
-                }
-                .onFailure { actionText = sh("Cevap gönderilemedi, tekrar dene", "Answer could not be sent, try again") }
-            busy = false
         }
     }
 
@@ -509,70 +480,6 @@ internal fun RefinedDuelOverlay() {
         )
     }
 
-    if (active.status == "quiz") {
-        val round = triviaRound
-        val question = triviaQuestion
-        if (round != null && question != null) {
-            RefinedTriviaDialog(
-                round = round,
-                question = question,
-                myAnswer = triviaSelection,
-                me = me,
-                busy = busy,
-                onSubmit = ::submitTrivia,
-            )
-        }
-    }
-}
-
-@Composable
-private fun RefinedTriviaDialog(
-    round: TriviaRoundDto,
-    question: TriviaQuestionDto,
-    myAnswer: Long?,
-    me: String?,
-    busy: Boolean,
-    onSubmit: (Int) -> Unit,
-) {
-    var value by remember(round.id) { mutableStateOf("") }
-    val estimate = value.toIntOrNull()
-    AlertDialog(
-        onDismissRequest = {},
-        containerColor = DuelSurface,
-        title = { Text("★ ${sh("BİL BAKALIM", "TRIVIA")} +${round.bonusPoints}", color = DuelBlue, fontWeight = FontWeight.Black) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(question.question, color = DuelText, fontWeight = FontWeight.Bold)
-                when {
-                    round.resolvedAt != null -> {
-                        Text(sh("DOĞRU CEVAP: ${round.correctAnswer ?: "—"}", "CORRECT ANSWER: ${round.correctAnswer ?: "—"}"), color = DuelText, fontWeight = FontWeight.Black)
-                        Text(
-                            if (round.winnerId == null) sh("BERABERE", "TIE")
-                            else if (round.winnerId == me) sh("KAZANDIN", "YOU WON")
-                            else sh("RAKİP DAHA YAKIN", "OPPONENT WAS CLOSER"),
-                            color = if (round.winnerId == me) DuelGreen else DuelRed,
-                            fontWeight = FontWeight.Bold,
-                        )
-                    }
-                    myAnswer != null -> Text(sh("Cevabın alındı: $myAnswer", "Answer received: $myAnswer"), color = DuelBlue, fontWeight = FontWeight.Bold)
-                    else -> OutlinedTextField(
-                        value = value,
-                        onValueChange = { value = it.filter(Char::isDigit).take(9) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text(sh("Tahminin", "Your estimate")) },
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            if (round.resolvedAt == null && myAnswer == null) {
-                Button(onClick = { estimate?.let(onSubmit) }, enabled = estimate != null && !busy) {
-                    Text(sh("CEVABI GÖNDER", "SEND ANSWER"), fontWeight = FontWeight.Black)
-                }
-            }
-        },
-    )
 }
 
 @Composable
@@ -629,7 +536,6 @@ private fun DuelCountdown(status: String, seconds: Int, modifier: Modifier = Mod
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Text(
                 when (status) {
-                    "quiz" -> "BİL"
                     "paused" -> "…"
                     "finished" -> "✓"
                     else -> seconds.toString().padStart(2, '0')
@@ -656,7 +562,6 @@ private fun DuelCountdown(status: String, seconds: Int, modifier: Modifier = Mod
 private fun TurnStatusBar(status: String, myTurn: Boolean, opponentTurn: Boolean, isBot: Boolean) {
     val (label, color) = when {
         status == "paused" -> sh("BAĞLANTI BEKLENİYOR", "WAITING FOR CONNECTION") to DuelMuted
-        status == "quiz" -> sh("BİL BAKALIM", "TRIVIA") to DuelVip
         status == "sudden_death" && myTurn -> sh("ALTIN HARF • SIRA SENDE", "SUDDEN DEATH • YOUR TURN") to DuelRed
         status == "sudden_death" -> sh("ALTIN HARF • RAKİPTE", "SUDDEN DEATH • OPPONENT") to DuelRed
         status == "final" && myTurn -> sh("FİNAL • SIRA SENDE", "FINAL • YOUR TURN") to DuelBlue
@@ -690,7 +595,6 @@ private fun CentralWordCard(lastWord: String, required: String, status: String, 
             Spacer(Modifier.height(2.dp))
             Text(
                 when {
-                    status == "quiz" -> "?"
                     status == "paused" -> "…"
                     status == "finished" -> "✓"
                     required.isBlank() -> "—"
@@ -707,7 +611,6 @@ private fun CentralWordCard(lastWord: String, required: String, status: String, 
             )
             Text(
                 when {
-                    status == "quiz" -> sh("BİL BAKALIM", "TRIVIA")
                     status == "paused" -> sh("RAKİP BAĞLANTISI BEKLENİYOR", "WAITING FOR OPPONENT")
                     status == "finished" -> sh("MAÇ TAMAMLANDI", "MATCH COMPLETE")
                     required.isBlank() -> sh("İLK HARF SERBEST", "FIRST LETTER FREE")
