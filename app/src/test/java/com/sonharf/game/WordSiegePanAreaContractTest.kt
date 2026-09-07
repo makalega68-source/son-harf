@@ -39,7 +39,7 @@ class WordSiegePanAreaContractTest {
     @Test fun zonesFortressesAndPermanentWordScoreReplaceCellLedger() {
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt").readText()
         val zoneRules = projectFile("app/src/main/java/com/sonharf/game/WordSiegeZoneRules.kt").readText()
-        val migration = projectFile("supabase/migrations/20260907233000_word_siege_zone_conquest_v5.sql").readText()
+        val migrations = v5ZoneMigrations()
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
 
         assertTrue(backend.contains("player_one_conquest_meter"))
@@ -58,28 +58,37 @@ class WordSiegePanAreaContractTest {
         assertTrue(practice.contains("WordSiegeZoneRules.zoneScore"))
         assertFalse(practice.contains("WordSiegeFinalRules.cubeTransfer(move.capturedCells)"))
 
-        assertTrue(migration.contains("private.word_siege_claim_zones_v5"))
-        assertTrue(migration.contains("private.word_siege_zone_score_v5"))
-        assertTrue(migration.contains("v_final_score := v_raw_score * case when v_before_onslaught then 2 else 1 end"))
-        assertTrue(migration.contains("player_one_word_score = case"))
-        assertTrue(migration.contains("player_one_area_score = v_one_zone_score"))
-        assertTrue(migration.contains("player_two_area_score = v_two_zone_score"))
+        assertTrue(migrations.contains("private.word_siege_claim_zones_v5"))
+        assertTrue(migrations.contains("private.word_siege_zone_score_v5"))
+        assertTrue(migrations.contains("v_final_score := v_raw_score * case when v_before_onslaught then 2 else 1 end"))
+        assertTrue(migrations.contains("player_one_word_score = case"))
+        assertTrue(migrations.contains("player_one_area_score = v_one_zone_score"))
+        assertTrue(migrations.contains("player_two_area_score = v_two_zone_score"))
     }
 
     @Test fun duplicateProtectionAndCanonicalValidationPipelineStayIntact() {
         val legacyValidatedCore = projectFile("supabase/migrations/20260901060000_word_siege_area_score_v1.sql").readText()
-        val zoneMigration = projectFile("supabase/migrations/20260907233000_word_siege_zone_conquest_v5.sql").readText()
+        val zoneMigrations = v5ZoneMigrations()
 
         assertTrue(legacyValidatedCore.contains("word_siege_moves_game_move_number_uidx"))
         assertTrue(legacyValidatedCore.contains("request_fingerprint"))
         assertTrue(legacyValidatedCore.contains("private.word_siege_word_allowed_v1"))
         assertTrue(legacyValidatedCore.contains("private.word_siege_score_word_v1"))
 
-        assertTrue(zoneMigration.contains("rename to submit_word_siege_move_cell_core_v5"))
-        assertTrue(zoneMigration.contains("private.submit_word_siege_move_cell_core_v5(p_game_id, p_placements, p_horizontal)"))
-        assertFalse(zoneMigration.contains("create or replace function private.word_siege_word_allowed_v1"))
-        assertFalse(zoneMigration.contains("create or replace function private.word_siege_score_word_v1"))
+        assertTrue(zoneMigrations.contains("rename to submit_word_siege_move_cell_core_v5"))
+        assertTrue(zoneMigrations.contains("private.submit_word_siege_move_cell_core_v5(p_game_id, p_placements, p_horizontal)"))
+        assertFalse(zoneMigrations.contains("create or replace function private.word_siege_word_allowed_v1"))
+        assertFalse(zoneMigrations.contains("create or replace function private.word_siege_score_word_v1"))
     }
+
+    private fun v5ZoneMigrations(): String = listOf(
+        "supabase/migrations/20260907233000_word_siege_zone_schema_v5.sql",
+        "supabase/migrations/20260907233100_word_siege_zone_helpers_v5.sql",
+        "supabase/migrations/20260907233200_word_siege_zone_claim_v5.sql",
+        "supabase/migrations/20260907233300_word_siege_zone_normalize_v5.sql",
+        "supabase/migrations/20260907233400_word_siege_zone_submit_v5.sql",
+        "supabase/migrations/20260907233500_word_siege_zone_finish_timer_v5.sql",
+    ).joinToString("\n") { projectFile(it).readText() }
 
     private fun projectFile(path: String): File {
         val candidates = listOf(File(path), File("../$path"))
