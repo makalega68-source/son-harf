@@ -5,8 +5,8 @@ import kotlin.math.floor
 
 /**
  * Kuşatma board viewport policy.
- * Close mode keeps the readable 52dp cells and allows free 2D panning.
- * Fit mode scales the whole 15x15 board into the available viewport.
+ * Close mode keeps a Kelimelik-style mobile overview: more cells are visible at once while
+ * preserving readable letters and free 2D panning. Fit mode shows the complete 15x15 board.
  * Double-tap toggles between the two modes.
  */
 internal enum class WordSiegeBoardViewportMode { CLOSE, FIT }
@@ -15,8 +15,8 @@ internal enum class WordSiegeBoardTapAction { PLACE, TOGGLE_VIEWPORT }
 
 internal const val WORD_SIEGE_DESIRED_SCREEN_BORDER_DP = 1.3f
 internal const val WORD_SIEGE_MIN_SCREEN_BORDER_DP = 1f
-internal const val WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.86f
-internal const val WORD_SIEGE_PRACTICE_MIN_SCALE = 0.78f
+internal const val WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.68f
+internal const val WORD_SIEGE_PRACTICE_MIN_SCALE = 0.62f
 internal const val WORD_SIEGE_PRACTICE_MAX_SCALE = 1.24f
 internal const val WORD_SIEGE_LAST_MOVE_ENTER_MS = 180
 internal const val WORD_SIEGE_LAST_MOVE_HOLD_MS = 1_200
