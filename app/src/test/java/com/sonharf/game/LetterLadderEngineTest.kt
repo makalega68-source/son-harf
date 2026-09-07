@@ -14,7 +14,7 @@ class LetterLadderEngineTest {
         target = chain.last(),
         solution = chain,
     )
-    private val dictionary = chain.toSet() + setOf("yalan", "yelin")
+    private val dictionary = chain.toSet() + setOf("salın")
 
     @Test
     fun knownFiveMoveChainChangesEveryPositionExactlyOnce() {
@@ -46,7 +46,7 @@ class LetterLadderEngineTest {
         val result = LetterLadderEngine.validateMove(
             puzzle = puzzle,
             current = "kalın",
-            candidate = "yelin",
+            candidate = "salın",
             usedPositions = emptySet(),
             dictionary = dictionary,
         )
