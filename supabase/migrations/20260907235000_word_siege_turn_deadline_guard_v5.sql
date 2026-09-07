@@ -6,7 +6,7 @@
 create or replace function private.word_siege_turn_expired_v5(p_game_id uuid)
 returns boolean
 language sql
-stable
+volatile
 security definer
 set search_path = pg_catalog, public, private, pg_temp
 as $$
