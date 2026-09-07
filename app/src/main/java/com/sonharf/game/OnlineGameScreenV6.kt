@@ -375,7 +375,6 @@ fun OnlineGameScreenV6() {
                     if (submitInFlightKey == submitKey || busy) return@launch
                     submitInFlightKey = submitKey
                     val voiceToken = voiceRequestId
-                    if (voiceToken == null) wordInput = ""
                     busy = true
                     SonHarfSoundFx.tap()
                     try {
@@ -388,16 +387,17 @@ fun OnlineGameScreenV6() {
                             .onSuccess { result ->
                                 acceptServerRoom(result)
                                 if (voiceToken != null) {
-                                    wordInput = ""
                                     voiceRequestId = null
                                     voiceUses = runCatching { backend.getVoiceUses(active.id) }.getOrDefault(voiceUses + 1)
                                 }
                                 if (failedEvent(result.lastEvent) && result.lastEventPlayerId == me) {
+                                    wordInput = submitted
                                     feedbackWord = shownWord
                                     feedbackCorrect = false
                                     notice = eventMessage(result.lastEvent)
                                     SonHarfSoundFx.warning()
                                 } else {
+                                    wordInput = ""
                                     feedbackWord = shownWord
                                     feedbackCorrect = true
                                     notice = sh("Kelime kabul edildi: $shownWord", "Word accepted: $shownWord")
@@ -405,12 +405,14 @@ fun OnlineGameScreenV6() {
                                 }
                             }
                             .onFailure { error ->
+                                wordInput = submitted
+                                voiceRequestId = null
                                 feedbackWord = shownWord
                                 if (error is TimeoutCancellationException) {
                                     feedbackCorrect = null
                                     notice = sh(
-                                        "Sunucu yanıtı gecikti. Oyun durumu eşitleniyor; tekrar göndermeden önce bekle.",
-                                        "Server response is delayed. Game state is syncing; wait before sending again.",
+                                        "Sunucu yanıtı gecikti. Kelimen korundu; oyun durumu eşitleniyor.",
+                                        "Server response is delayed. Your word was preserved while the game syncs.",
                                     )
                                 } else {
                                     feedbackCorrect = false
