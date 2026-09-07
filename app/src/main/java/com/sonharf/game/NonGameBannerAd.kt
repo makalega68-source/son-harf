@@ -45,9 +45,8 @@ internal object SonHarfAdPolicy {
 
 /**
  * Anchored adaptive banner for non-game surfaces only.
- * The banner slot can exist before consent/ad availability, but the Google AdView itself
- * is not constructed until policy allows an ad request. This keeps authentication-to-home
- * navigation independent from the ads SDK lifecycle.
+ * Gameplay exits immediately before any Google AdView/context work is performed. This
+ * guarantees that a banner view cannot be created or retained by a match destination.
  */
 @Composable
 fun SonHarfTopAdBanner(
@@ -55,13 +54,16 @@ fun SonHarfTopAdBanner(
     isPremium: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    // Hard gameplay boundary: no slot, no AdView and no ad request while a game is active.
+    if (!visible) return
+
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
     SonHarfAdPolicy.isPremium = isPremium
 
     val adUnitId = BuildConfig.ADMOB_BANNER_AD_UNIT_ID
-    val slotVisible = SonHarfAdPolicy.canReserveBanner(isGameplay = !visible)
-    val policyAllows = SonHarfAdPolicy.canShowBanner(isGameplay = !visible)
+    val slotVisible = SonHarfAdPolicy.canReserveBanner(isGameplay = false)
+    val policyAllows = SonHarfAdPolicy.canShowBanner(isGameplay = false)
     val canLoadAd = policyAllows && adUnitId.isNotBlank()
 
     var loaded by remember(adUnitId) { mutableStateOf(false) }
