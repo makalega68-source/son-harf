@@ -66,6 +66,13 @@ object SonHarfSoundFx {
     fun explosion() { /* intentionally disabled */ }
     fun fireworks() = play(R.raw.sfx_victory, .28f)
 
+    /** Harf Yolu uses a deliberately quieter, softer micro-feedback palette. */
+    fun puzzleKey() = play(R.raw.sfx_ui_tap, .045f, 1.16f)
+    fun puzzleTap() = play(R.raw.sfx_ui_tap, .065f, 1.04f)
+    fun puzzleHint() = play(R.raw.sfx_soft_notify, .075f, 1.08f)
+    fun puzzleError() = play(R.raw.sfx_soft_notify, .070f, .88f)
+    fun puzzleSuccess() = play(R.raw.sfx_word_accepted, .14f, 1.04f)
+
     private fun play(resId: Int, volume: Float, rate: Float = 1f) {
         if (!enabled) return
         val soundPool = pool ?: return
