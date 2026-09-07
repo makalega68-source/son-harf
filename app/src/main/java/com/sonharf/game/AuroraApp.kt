@@ -120,6 +120,12 @@ private fun AuroraHome(onPlay: () -> Unit, onLeaderboard: () -> Unit, onShop: ()
                             Text(sh("DÜELLOYA GİR  ⚡", "ENTER DUEL  ⚡"), fontWeight = FontWeight.Black, fontSize = 18.sp)
                         }
                     }
+                    MageCatHomeMascot(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 8.dp, bottom = 6.dp)
+                            .size(MageCatHomeDefaultSize),
+                    )
                 }
             }
         }
