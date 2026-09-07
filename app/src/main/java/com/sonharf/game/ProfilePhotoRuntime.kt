@@ -259,11 +259,12 @@ internal fun ProfilePhotoAvatarRectWithGender(
     width: Dp,
     height: Dp,
     accent: Color = SonHarfCyan,
+    visible: Boolean = true,
     showGenderBadge: Boolean = true,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
-    LaunchedEffect(avatarPath) {
-        bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
+    LaunchedEffect(avatarPath, visible) {
+        bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
     val shape = RoundedCornerShape(14.dp)
