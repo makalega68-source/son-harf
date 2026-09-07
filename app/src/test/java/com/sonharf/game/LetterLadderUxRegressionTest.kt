@@ -21,12 +21,14 @@ class LetterLadderUxRegressionTest {
     }
 
     @Test
-    fun harfYoluUsesQuietDedicatedFeedbackWithoutChangingOtherKeyboardDefaults() {
-        val keyboard = projectFile("app/src/main/java/com/sonharf/game/EmbeddedGameKeyboard.kt").readText()
+    fun harfYoluUsesIsolatedCompactKeyboardAndQuietDedicatedFeedback() {
+        val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
         val sound = projectFile("app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt").readText()
 
-        assertTrue(keyboard.contains("keySound: () -> Unit = { SonHarfSoundFx.typingClick() }"))
-        assertTrue(keyboard.contains("actionSound: () -> Unit = { SonHarfSoundFx.tap() }"))
+        assertTrue(keyboard.contains("Harf Yolu'na özel kompakt klavye"))
+        assertTrue(keyboard.contains("keySound()"))
+        assertTrue(keyboard.contains("actionSound()"))
+        assertTrue(keyboard.contains("33.dp"))
         assertTrue(sound.contains("fun puzzleKey()"))
         assertTrue(sound.contains("fun puzzleError()"))
         assertTrue(sound.contains("fun puzzleHint()"))
