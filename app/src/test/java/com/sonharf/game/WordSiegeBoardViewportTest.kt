@@ -20,6 +20,16 @@ class WordSiegeBoardViewportTest {
     }
 
     @Test
+    fun `practice default shows a kelimelik style wider board window`() {
+        val phoneViewportWidth = 390f
+        val visibleColumns = phoneViewportWidth / (cellPx * WORD_SIEGE_PRACTICE_CLOSE_SCALE)
+
+        assertTrue("Default practice view should expose at least 10 board columns", visibleColumns >= 10f)
+        assertTrue(WORD_SIEGE_PRACTICE_MIN_SCALE <= WORD_SIEGE_PRACTICE_CLOSE_SCALE)
+        assertTrue(WORD_SIEGE_PRACTICE_CLOSE_SCALE < 0.75f)
+    }
+
+    @Test
     fun `fit scale uses exact minimum viewport ratio and centers the full board`() {
         val transform = wordSiegeBoardTransform(
             mode = WordSiegeBoardViewportMode.FIT,
