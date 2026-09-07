@@ -69,6 +69,9 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
 
     if (activeRoomId != null) {
         RefinedDuelOverlay()
+        // Continuous recovery for transient bot RPC/network failures. The watchdog is
+        // intentionally UI-less; RefinedDuelOverlay remains the only visible duel surface.
+        BotTurnWatchdogOverlay()
     } else {
         MonsterExperienceApp(onSignedOut = onSignedOut)
     }
