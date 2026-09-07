@@ -10,7 +10,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -89,7 +88,32 @@ internal fun WordSiegePracticeBoard(
         }
     }
 
-    val actionVfxEvents = emptyList<PurchasedBoardVfxEvent>()
+    val actionVfxEvents = remember(placements, moveEventKey, resolvedIndices) {
+        buildList {
+            placements.toSortedMap().forEach { (index, rackIndex) ->
+                if (WordSiegeBoardSpec.isValidIndex(index)) {
+                    add(
+                        PurchasedBoardVfxEvent(
+                            id = "siege-placement:$index:$rackIndex",
+                            boardIndex = index,
+                            kind = PurchasedBoardVfxKind.PLACEMENT,
+                        ),
+                    )
+                }
+            }
+            if (moveEventKey != null) {
+                resolvedIndices.sorted().filter(WordSiegeBoardSpec::isValidIndex).forEach { index ->
+                    add(
+                        PurchasedBoardVfxEvent(
+                            id = "siege-resolved:$moveEventKey:$index",
+                            boardIndex = index,
+                            kind = PurchasedBoardVfxKind.RESOLVED,
+                        ),
+                    )
+                }
+            }
+        }
+    }
 
     fun clampClosePan(candidate: Offset): Offset = clampWordSiegeBoardPan(
         candidate,
@@ -172,12 +196,15 @@ internal fun WordSiegePracticeBoard(
                         repeat(WordSiegeBoardSpec.Size) { column ->
                             val index = WordSiegeBoardSpec.index(row, column)
                             val pendingRackIndex = placements[index]
+                            val zoneId = WordSiegeZoneRules.zoneIdForIndex(index)
                             WordSiegePracticeBoardCell(
                                 cell = board.getOrElse(index) { WordSiegeCellDto() },
                                 pendingLetter = pendingRackIndex?.let(rack::getOrNull),
                                 pending = pendingRackIndex != null,
                                 myOwner = myOwner,
                                 enabled = enabled,
+                                fortress = WordSiegeZoneRules.isFortress(zoneId),
+                                fortressCenter = row % WordSiegeZoneRules.ZoneSize == 1 && column % WordSiegeZoneRules.ZoneSize == 1,
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleMode,
@@ -193,7 +220,6 @@ internal fun WordSiegePracticeBoard(
                 cellSizePx = tilePx,
                 modifier = Modifier.matchParentSize(),
             )
-
         }
     }
 }
@@ -205,6 +231,8 @@ private fun WordSiegePracticeBoardCell(
     pending: Boolean,
     myOwner: Int,
     enabled: Boolean,
+    fortress: Boolean,
+    fortressCenter: Boolean,
     lastMoveHighlight: Float,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
@@ -220,7 +248,18 @@ private fun WordSiegePracticeBoardCell(
     val cellColor = when {
         pending -> PracticeSiegeTile
         letter != null -> territory
+        owner != 0 -> territory.copy(alpha = .42f)
         else -> PracticeSiegeEmpty
+    }
+    val outlineWidth = when {
+        lastMoveHighlight > 0f -> 1.75.dp
+        fortress -> 1.15.dp
+        else -> 0.dp
+    }
+    val outlineColor = if (lastMoveHighlight > 0f) {
+        Color.White.copy(alpha = .25f + .65f * lastMoveHighlight)
+    } else {
+        MainUi.Gold.copy(alpha = .78f)
     }
 
     Box(
@@ -230,8 +269,8 @@ private fun WordSiegePracticeBoardCell(
             .clip(RoundedCornerShape(7.dp))
             .background(cellColor)
             .border(
-                width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
-                color = Color.White.copy(alpha = .25f + .65f * lastMoveHighlight),
+                width = outlineWidth,
+                color = outlineColor,
                 shape = RoundedCornerShape(7.dp),
             )
             .combinedClickable(
@@ -255,6 +294,15 @@ private fun WordSiegePracticeBoardCell(
         contentAlignment = Alignment.Center,
     ) {
         if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(Color.White.copy(alpha = .06f * lastMoveHighlight)))
+        if (fortressCenter) {
+            Text(
+                "♛",
+                color = MainUi.Gold.copy(alpha = if (letter == null) .92f else .55f),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.align(Alignment.TopStart).padding(start = 3.dp, top = 1.dp),
+            )
+        }
         if (letter != null) {
             Text(letter, color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Black)
             Text(
