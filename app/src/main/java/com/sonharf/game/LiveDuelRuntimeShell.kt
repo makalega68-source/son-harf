@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import android.os.SystemClock
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -100,7 +101,7 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
 
     val roomId = activeRoomId
     if (roomId != null) {
-        Box {
+        Box(Modifier.fillMaxSize()) {
             RefinedDuelOverlay()
             MageCatLiveDuelOverlay(roomId)
         }
@@ -108,7 +109,7 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
         // intentionally UI-less; RefinedDuelOverlay remains the only visible duel surface.
         BotTurnWatchdogOverlay()
     } else {
-        Box {
+        Box(Modifier.fillMaxSize()) {
             MonsterExperienceApp(onSignedOut = onSignedOut)
             MageCatHomeMascot(
                 modifier = Modifier
