@@ -45,6 +45,7 @@ class WordSiegePanAreaContractTest {
         assertTrue(bridge.contains("x % 15 <> v_anchor % 15"))
         assertTrue(bridge.contains("case when p_horizontal then 1 else 15 end"))
         assertTrue(bridge.contains("not (112 = any(v_indices))"))
+        assertTrue(bridge.contains("private.word_siege_prevalidate_move_v2"))
         assertTrue(bridge.contains("private.word_siege_word_allowed_v1"))
         assertTrue(bridge.contains("private.word_siege_score_word_v1"))
         assertTrue(bridge.indexOf("drop constraint") < bridge.indexOf("set board = ("))
@@ -74,6 +75,7 @@ class WordSiegePanAreaContractTest {
 
         assertTrue(migrations.contains("private.word_siege_claim_zones_v5"))
         assertTrue(migrations.contains("private.word_siege_zone_score_v5"))
+        assertTrue(migrations.contains("create or replace function private.word_siege_sync_area_scores_v1()"))
         assertTrue(migrations.contains("v_final_score := v_raw_score * case when v_before_onslaught then 2 else 1 end"))
         assertTrue(migrations.contains("player_one_word_score = case"))
         assertTrue(migrations.contains("player_one_area_score = v_one_zone_score"))
@@ -98,11 +100,13 @@ class WordSiegePanAreaContractTest {
     private fun v5BridgeMigrations(): String = listOf(
         "supabase/migrations/20260907232000_word_siege_15x15_bridge_geometry_v5.sql",
         "supabase/migrations/20260907232100_word_siege_15x15_bridge_submit_v5.sql",
+        "supabase/migrations/20260907232200_word_siege_15x15_bridge_prevalidate_v5.sql",
     ).joinToString("\n") { projectFile(it).readText() }
 
     private fun v5ZoneMigrations(): String = listOf(
         "supabase/migrations/20260907233000_word_siege_zone_schema_v5.sql",
         "supabase/migrations/20260907233100_word_siege_zone_helpers_v5.sql",
+        "supabase/migrations/20260907233150_word_siege_zone_score_trigger_v5.sql",
         "supabase/migrations/20260907233200_word_siege_zone_claim_v5.sql",
         "supabase/migrations/20260907233300_word_siege_zone_normalize_v5.sql",
         "supabase/migrations/20260907233400_word_siege_zone_submit_v5.sql",
