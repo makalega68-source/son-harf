@@ -32,15 +32,23 @@ data class WordSiegeGameDto(
     @SerialName("player_two_rack") val playerTwoRack: String? = null,
     @SerialName("player_one_word_score") val playerOneWordScore: Int = 0,
     @SerialName("player_two_word_score") val playerTwoWordScore: Int = 0,
+    /** Current zone score (normal zone 2, fortress zone 4). */
     @SerialName("player_one_area_score") val playerOneAreaScore: Int = 0,
     @SerialName("player_two_area_score") val playerTwoAreaScore: Int = 0,
+    /** Current owned-zone count. */
     @SerialName("player_one_area") val playerOneArea: Int = 0,
     @SerialName("player_two_area") val playerTwoArea: Int = 0,
+    @SerialName("player_one_conquest_meter") val playerOneConquestMeter: Int = 0,
+    @SerialName("player_two_conquest_meter") val playerTwoConquestMeter: Int = 0,
+    @SerialName("player_one_onslaught_active") val playerOneOnslaughtActive: Boolean = false,
+    @SerialName("player_two_onslaught_active") val playerTwoOnslaughtActive: Boolean = false,
     @SerialName("consecutive_passes") val consecutivePasses: Int = 0,
     @SerialName("move_count") val moveCount: Int = 0,
     @SerialName("last_action") val lastAction: String? = null,
     @SerialName("last_action_player_id") val lastActionPlayerId: String? = null,
     @SerialName("last_move_at") val lastMoveAt: String? = null,
+    @SerialName("turn_started_at") val turnStartedAt: String? = null,
+    @SerialName("turn_deadline") val turnDeadline: String? = null,
     @SerialName("finish_reason") val finishReason: String? = null,
     @SerialName("created_at") val createdAt: String = "",
     @SerialName("updated_at") val updatedAt: String = "",
@@ -56,11 +64,15 @@ data class WordSiegeMoveDto(
     @SerialName("formed_words") val formedWords: List<String> = emptyList(),
     @SerialName("placed_tiles") val placedTiles: List<WordSiegePlacedTileDto> = emptyList(),
     @SerialName("word_score") val wordScore: Int = 0,
+    @SerialName("raw_word_score") val rawWordScore: Int = wordScore,
     @SerialName("neutral_captured") val neutralCaptured: Int = 0,
     @SerialName("opponent_captured") val opponentCaptured: Int = 0,
     @SerialName("area_score") val areaScore: Int = 0,
     @SerialName("total_score") val totalScore: Int = wordScore + areaScore,
     @SerialName("captured_cells") val capturedCells: Int = 0,
+    @SerialName("zones_flipped") val zonesFlipped: List<Int> = emptyList(),
+    @SerialName("onslaught_triggered") val onslaughtTriggered: Boolean = false,
+    @SerialName("onslaught_consumed") val onslaughtConsumed: Boolean = false,
     @SerialName("created_at") val createdAt: String = "",
 )
 
@@ -144,6 +156,12 @@ suspend fun OnlineGameBackend.submitWordSiegeMove(
 suspend fun OnlineGameBackend.passWordSiegeTurn(gameId: String): WordSiegeGameDto =
     SupabaseProvider.client.postgrest.rpc(
         "pass_word_siege_turn_v1",
+        buildJsonObject { put("p_game_id", gameId) },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.expireWordSiegeTurn(gameId: String): WordSiegeGameDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "expire_word_siege_turn_v1",
         buildJsonObject { put("p_game_id", gameId) },
     ).decodeSingle()
 
