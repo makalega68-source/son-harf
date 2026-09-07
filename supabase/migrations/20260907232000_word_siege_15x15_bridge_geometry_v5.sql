@@ -24,6 +24,7 @@ as $$
   from generate_series(0, 224) i
 $$;
 
+-- Remap historical move coordinates while the associated game still identifies itself as 81-cell.
 update public.word_siege_moves m
 set placed_tiles = (
   select coalesce(jsonb_agg(
@@ -38,6 +39,24 @@ where exists (
   where g.id = m.game_id and jsonb_array_length(g.board) = 81
 );
 
+-- Drop legacy 81-cell checks BEFORE rewriting board rows. Production currently enforces these checks.
+do $$
+declare c record;
+begin
+  for c in
+    select conname, pg_get_constraintdef(oid) as definition
+    from pg_constraint
+    where conrelid = 'public.word_siege_games'::regclass and contype = 'c'
+  loop
+    if c.definition like '%player_one_area%81%'
+       or c.definition like '%player_two_area%81%'
+       or c.definition like '%jsonb_array_length(board)%81%' then
+      execute format('alter table public.word_siege_games drop constraint %I', c.conname);
+    end if;
+  end loop;
+end $$;
+
+-- Preserve existing letters/owners while centering legacy 9x9 games inside the new 15x15 board.
 update public.word_siege_games g
 set board = (
   with fresh as (select private.word_siege_new_board_v1() as board)
@@ -56,22 +75,6 @@ set board = (
   from fresh, generate_series(0, 224) i
 )
 where jsonb_typeof(g.board) = 'array' and jsonb_array_length(g.board) = 81;
-
-do $$
-declare c record;
-begin
-  for c in
-    select conname, pg_get_constraintdef(oid) as definition
-    from pg_constraint
-    where conrelid = 'public.word_siege_games'::regclass and contype = 'c'
-  loop
-    if c.definition like '%player_one_area%81%'
-       or c.definition like '%player_two_area%81%'
-       or c.definition like '%jsonb_array_length(board)%81%' then
-      execute format('alter table public.word_siege_games drop constraint %I', c.conname);
-    end if;
-  end loop;
-end $$;
 
 alter table public.word_siege_games drop constraint if exists word_siege_games_player_one_area_v4_check;
 alter table public.word_siege_games drop constraint if exists word_siege_games_player_two_area_v4_check;
