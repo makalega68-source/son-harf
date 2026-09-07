@@ -23,7 +23,7 @@ class WordSiegeFinalRulesTest {
 
     @After fun clearCanonicalDictionaryFixture() = SharedDictionaryService.clearForTests()
 
-    @Test fun araPlusKBecomesKaraAndIsAccepted() {
+    @Test fun araPlusKBecomesKaraAndClaimsTouchedZones() {
         val board = emptyBoard().toMutableList().apply {
             this[40] = WordSiegeCellDto(letter = "A", owner = 2)
             this[41] = WordSiegeCellDto(letter = "R", owner = 2)
@@ -35,7 +35,8 @@ class WordSiegeFinalRulesTest {
 
         assertEquals("KARA", move.primaryWord)
         assertEquals(listOf("KARA"), move.formedWords)
-        assertEquals(4, move.capturedCells)
+        assertEquals(3, move.capturedCells)
+        assertEquals(setOf(2, 3, 8), move.flippedZoneIds)
         assertEquals(8, next.playerAreaScore)
         assertEquals(1, next.board[39].owner)
         assertEquals(1, next.board[40].owner)
@@ -64,7 +65,6 @@ class WordSiegeFinalRulesTest {
             this[40] = WordSiegeCellDto(letter = "A", owner = 2)
             this[41] = WordSiegeCellDto(letter = "R", owner = 2)
             this[42] = WordSiegeCellDto(letter = "A", owner = 2)
-            // 39 is column 9 on a 15x15 board, so 24 is the directly adjacent cell above it.
             this[24] = WordSiegeCellDto(letter = "M", owner = 2)
         }
         val before = state(board, rack = "KXXXXXX")
@@ -96,7 +96,7 @@ class WordSiegeFinalRulesTest {
         assertEquals("KARA", connectedMove.primaryWord)
     }
 
-    @Test fun cubeTransferIsTwoPointsEachAndWordScoreNeverDropsForRivalNeutralCubes() {
+    @Test fun legacyTransferHelpersStillNeverRollbackPermanentWordScore() {
         assertEquals(2, WordSiegeFinalRules.cubeTransfer(1))
         assertEquals(8, WordSiegeFinalRules.cubeTransfer(4))
         assertEquals(42, WordSiegeFinalRules.netScore(wordScore = 34, earnedCubePoints = 8, opponentEarnedCubePoints = 0))
@@ -143,35 +143,39 @@ class WordSiegeFinalRulesTest {
         )
     }
 
-    @Test fun botAndHumanUseSameApplyMoveValidationAndUiLocksFinalOwnershipColors() {
+    @Test fun botAndHumanUseSameValidationAndSharedZoneBoard() {
         val engine = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
         val sharedDictionary = projectFile("app/src/main/java/com/sonharf/game/data/SharedDictionaryService.kt").readText()
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
+        val board = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt").readText()
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
-        val sql = projectFile("supabase/migrations/20260902090000_word_siege_final_transfer_v2.sql").readText()
+        val zoneRules = projectFile("app/src/main/java/com/sonharf/game/WordSiegeZoneRules.kt").readText()
+        val zoneSql = projectFile("supabase/migrations/20260907233400_word_siege_zone_submit_v5.sql").readText()
 
         assertTrue(engine.contains("applyMove(state, 2, placements)"))
         assertTrue(engine.contains("SharedDictionaryService.isValidWordBlocking"))
         assertTrue(engine.contains("SharedDictionaryService.practiceCandidates"))
-        assertTrue(!engine.contains("practiceDictionary"))
+        assertFalse(engine.contains("practiceDictionary"))
         assertTrue(sharedDictionary.contains("get_dictionary_snapshot_v3"))
         assertTrue(sharedDictionary.contains("MIN_CANONICAL_LENGTH = 2"))
-        assertTrue(!practice.contains("Yön otomatik algılanır"))
-        assertTrue(!pan.contains("Yön otomatik algılanır"))
+        assertFalse(practice.contains("Yön otomatik algılanır"))
+        assertFalse(pan.contains("Yön otomatik algılanır"))
         assertTrue(practice.contains("Torba ${'$'}{state.bag.length}"))
         assertTrue(pan.contains("Torba ${'$'}{game.bag.length}"))
         assertTrue(experience.contains("WordSiegeFinalRules.detectOrientation"))
-        assertTrue(pan.contains("0xFF35C878"))
-        assertTrue(pan.contains("0xFFFF5F57"))
-        assertTrue(experience.contains("0xFF35C878"))
-        assertTrue(experience.contains("0xFFFF5F57"))
+        assertTrue(pan.contains("WordSiegePracticeBoard("))
+        assertTrue(board.contains("PracticeSiegeMine = Color(0xFF35C878)"))
+        assertTrue(board.contains("PracticeSiegeRival = Color(0xFFFF5F57)"))
+        assertTrue(board.contains("fortress = WordSiegeZoneRules.isFortress(zoneId)"))
         assertTrue(practice.contains("animateIntAsState"))
         assertTrue(pan.contains("animateIntAsState"))
         assertFalse(practice.contains("delay(28)"))
         assertFalse(pan.contains("delay(28)"))
-        assertTrue(sql.contains("(neutral_count + opponent_count) * 2"))
-        assertTrue(sql.contains("r.player_one_word_score + r.player_one_area_score - r.player_two_area_score"))
+        assertTrue(zoneRules.contains("NormalZonePoints = 2"))
+        assertTrue(zoneRules.contains("FortressZonePoints = 4"))
+        assertTrue(zoneSql.contains("v_final_score := v_raw_score * case when v_before_onslaught then 2 else 1 end"))
+        assertTrue(zoneSql.contains("player_one_area_score = v_one_zone_score"))
     }
 
     private fun state(board: List<WordSiegeCellDto>, rack: String) = WordSiegePracticeState(
