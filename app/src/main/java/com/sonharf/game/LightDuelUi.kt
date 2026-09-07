@@ -251,7 +251,6 @@ internal fun LightDuelArena(
     voiceUses: Int,
     onSubmit: () -> Unit,
     onTimeout: () -> Unit,
-    onBonus: () -> Unit,
     onVoice: () -> Unit,
     onTrivia: (Long) -> Unit,
     onTriviaTimeout: () -> Unit,
@@ -614,7 +613,6 @@ internal fun LightDuelArena(
             Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 SmallAction(sh("⚑ PES ET", "⚑ FORFEIT"), LRed, Modifier.weight(1f), onForfeit)
                 SmallAction(sh("● SOHBET", "● CHAT"), LBlue, Modifier.weight(1f), onChat)
-                SmallAction("★ BONUS", LGold, Modifier.weight(1f), onBonus)
             }
 
             CompetitiveInputBar(
