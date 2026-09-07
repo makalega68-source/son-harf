@@ -1,6 +1,8 @@
 # Son Harf — Google Play Store Listing v1
 
 ## Konumlandırma
+**Slogan:** Kelimeyi Sürdür, Rakibini Geç
+
 **Ana vaat:** Canlı, hızlı ve rekabetçi kelime düellosu.
 
 **Başlık:** Son Harf: Kelime Düellosu
@@ -26,7 +28,7 @@
 - Turkuaz-mavi ana vurgu, kontrollü altın başarı vurgusu.
 - İki rakip oyuncu kartı + ortada kelime düellosu gerilimi.
 - Beyaz maskot görünür fakat ana oynanış mesajını kapatmaz.
-- Metin minimum: **KELİMELERİNLE MEYDAN OKU**
+- Ana metin: **KELİMEYİ SÜRDÜR, RAKİBİNİ GEÇ**
 
 ## Uygulama ikonu
 - Küçük boyutta okunur tek odak.
