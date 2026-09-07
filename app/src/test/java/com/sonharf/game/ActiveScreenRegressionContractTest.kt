@@ -71,7 +71,7 @@ class ActiveScreenRegressionContractTest {
         assertTrue(classic.contains("sh(\"TEMİZLE\", \"CLEAR\")"))
         assertTrue(classic.contains("sh(\"GÖNDER\", \"SEND\")"))
         assertTrue(classic.contains("● SOHBET"))
-        assertTrue(classic.contains("★ BONUS"))
+        assertFalse(classic.contains("★ BONUS"))
         assertTrue(classic.contains("Icons.Rounded.MoreVert"))
         assertTrue(classic.contains("DropdownMenu("))
         assertFalse(classic.contains("BasicTextField"))
