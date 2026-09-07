@@ -129,7 +129,7 @@ grant execute on function public.admin_rollback_dictionary_release_v1(text,uuid)
 create or replace function public.get_dictionary_snapshot_v4(p_language text default 'tr')
 returns jsonb
 language plpgsql
-security invoker
+security definer
 set search_path=''
 as $$
 declare v_language text:=case when lower(trim(coalesce(p_language,'tr')))='en' then 'en' else 'tr' end; v_release public.dictionary_release_snapshots%rowtype;
