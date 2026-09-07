@@ -1,10 +1,6 @@
 package com.sonharf.game
 
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.runtime.Composable
@@ -29,32 +25,9 @@ fun MageCatHomeMascot(
 ) {
     if (!enabled) return
 
-    val transition = rememberInfiniteTransition(label = "mageCatIdle")
-    val offsetY = transition.animateFloat(
-        initialValue = 0f,
-        targetValue = -5f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2200),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "mageCatIdleOffset",
-    )
-    val rotation = transition.animateFloat(
-        initialValue = -0.8f,
-        targetValue = 0.8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3000),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "mageCatIdleRotation",
-    )
-
-    MageCatImage(
-        modifier = modifier.graphicsLayer {
-            translationY = offsetY.value
-            rotationZ = rotation.value
-        },
-    )
+    // Ana giriş/lobi yolu en hassas uygulama yüzeyidir. Burada sonsuz animasyon yerine
+    // deterministik statik sunum kullanılır; maç içi olay tepkileri ayrı renderer'da kalır.
+    MageCatImage(modifier = modifier)
 }
 
 /** Maç ekranında küçük ve sakin; yalnızca director bir cue ürettiğinde kısa tepki verir. */
