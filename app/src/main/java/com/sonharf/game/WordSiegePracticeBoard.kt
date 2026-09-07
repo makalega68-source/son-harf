@@ -39,6 +39,7 @@ internal val PracticeSiegeNeutral = Color(0xFFF8FAF9)
 private val PracticeSiegeEmpty = Color(0xFFFFF7E6)
 private val PracticeSiegeMine = Color(0xFF35C878)
 private val PracticeSiegeRival = Color(0xFFFF5F57)
+private val PracticeSiegeLightTileText = Color(0xFF2F2A1F)
 
 @Composable
 internal fun WordSiegePracticeBoard(
@@ -295,7 +296,12 @@ internal fun WordSiegePracticeRackTile(
         shadowElevation = if (selected) 3.dp else 0.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(letter.toString(), color = if (used) MainUi.Muted.copy(alpha = .45f) else MainUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Text(
+                letter.toString(),
+                color = if (used) MainUi.Muted.copy(alpha = .45f) else PracticeSiegeLightTileText,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
+            )
             Text(
                 practiceLetterValue(letter.toString()),
                 color = if (used) MainUi.Muted.copy(alpha = .55f) else Color(0xFF5D4B20),
