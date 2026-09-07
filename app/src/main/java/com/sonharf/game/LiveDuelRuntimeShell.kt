@@ -1,33 +1,20 @@
 package com.sonharf.game
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -60,7 +47,6 @@ private sealed class RoomWatchState {
 internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     var watchState by remember { mutableStateOf<RoomWatchState>(RoomWatchState.Discovering) }
-    var hypeState by remember { mutableStateOf(HypeState()) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -83,12 +69,10 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
                                     RoomWatchState.Discovering
                                 }
 
-                                else -> {
-                                    hypeState = hypeState.updateFrom(serverRoom, me)
-                                    RoomWatchState.Active(serverRoom.id)
-                                }
+                                else -> RoomWatchState.Active(serverRoom.id)
                             }
                         } else {
+                            // Transient network/backend failure: preserve the active arena.
                             current.copy(consecutiveFailures = current.consecutiveFailures + 1)
                         }
                     }
@@ -98,7 +82,6 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
                     -> {
                         val discovered = discoverActiveRoom(backend, me)
                         watchState = if (discovered != null) {
-                            hypeState = HypeState().updateFrom(discovered, me)
                             RoomWatchState.Active(discovered.id)
                         } else {
                             RoomWatchState.Idle
@@ -122,11 +105,7 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
                 RefinedDuelOverlay()
                 BotTurnWatchdogOverlay()
 
-                CompetitiveHypeOverlay(
-                    hype = hypeState,
-                    modifier = Modifier.align(Alignment.TopCenter),
-                )
-
+                // Presentation-only warning. The match itself stays mounted and authoritative.
                 if (state.consecutiveFailures >= MAX_CONSECUTIVE_FAILURES_BEFORE_SOFT_WARNING) {
                     ReconnectingBanner(modifier = Modifier.align(Alignment.TopCenter))
                 }
@@ -161,115 +140,6 @@ private suspend fun discoverActiveRoom(
 private fun userIsParticipant(room: GameRoomDto, userId: String): Boolean =
     room.hostId == userId || room.guestId == userId
 
-private data class HypeState(
-    val myScore: Int = 0,
-    val opponentScore: Int = 0,
-    val myStreak: Int = 0,
-    val opponentStreak: Int = 0,
-    val roundNo: Int = 0,
-    val isSuddenDeath: Boolean = false,
-) {
-    fun updateFrom(room: GameRoomDto, userId: String): HypeState {
-        val amHost = room.hostId == userId
-        return HypeState(
-            myScore = if (amHost) room.hostScore else room.guestScore,
-            opponentScore = if (amHost) room.guestScore else room.hostScore,
-            myStreak = if (amHost) room.hostStreak else room.guestStreak,
-            opponentStreak = if (amHost) room.guestStreak else room.hostStreak,
-            roundNo = room.roundNo,
-            isSuddenDeath = room.status == "sudden_death",
-        )
-    }
-
-    val scoreDelta: Int get() = myScore - opponentScore
-    val isNeckAndNeck: Boolean get() = kotlin.math.abs(scoreDelta) <= 2
-    val leadingMultiplier: Int
-        get() = when {
-            myStreak >= 5 -> 3
-            myStreak >= 3 -> 2
-            else -> 1
-        }
-}
-
-@Composable
-private fun CompetitiveHypeOverlay(hype: HypeState, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .padding(top = 12.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.horizontalGradient(
-                    listOf(Color(0xFF1A0033), Color(0xFF3D0066), Color(0xFF1A0033)),
-                ),
-            )
-            .padding(horizontal = 20.dp, vertical = 10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            ScorePip(label = "SEN", value = hype.myScore, hot = hype.myStreak >= 3)
-            Spacer(Modifier.width(14.dp))
-            AnimatedVisibility(visible = hype.isNeckAndNeck) {
-                Text(
-                    "⚡ BAŞ BAŞA",
-                    color = Color(0xFFFFD700),
-                    fontWeight = FontWeight.Black,
-                    fontSize = 12.sp,
-                )
-            }
-            Spacer(Modifier.width(14.dp))
-            ScorePip(label = "RAKİP", value = hype.opponentScore, hot = hype.opponentStreak >= 3)
-        }
-
-        if (hype.leadingMultiplier > 1) {
-            Spacer(Modifier.height(4.dp))
-            Text(
-                "🔥 STREAK x${hype.leadingMultiplier}",
-                color = Color(0xFFFF6B00),
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-            )
-        }
-
-        if (hype.isSuddenDeath) {
-            Spacer(Modifier.height(4.dp))
-            PulsingText("⚔ ANİ ÖLÜM", Color(0xFFFF1744))
-        }
-    }
-}
-
-@Composable
-private fun ScorePip(label: String, value: Int, hot: Boolean) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = Color.White.copy(alpha = 0.7f), fontSize = 10.sp)
-        Text(
-            value.toString(),
-            color = if (hot) Color(0xFFFFD700) else Color.White,
-            fontWeight = FontWeight.Black,
-            fontSize = 20.sp,
-        )
-    }
-}
-
-@Composable
-private fun PulsingText(text: String, color: Color) {
-    val infinite = rememberInfiniteTransition(label = "pulse")
-    val alpha by infinite.animateFloat(
-        initialValue = 0.5f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(600, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "pulseAlpha",
-    )
-    Text(
-        text,
-        color = color.copy(alpha = alpha),
-        fontWeight = FontWeight.Black,
-        fontSize = 13.sp,
-    )
-}
-
 @Composable
 private fun ReconnectingBanner(modifier: Modifier = Modifier) {
     Box(
@@ -280,9 +150,10 @@ private fun ReconnectingBanner(modifier: Modifier = Modifier) {
             .padding(horizontal = 14.dp, vertical = 6.dp),
     ) {
         Text(
-            "Bağlantı zayıf — maçın korunuyor…",
+            sh("Bağlantı zayıf — maçın korunuyor…", "Weak connection — match preserved…"),
             color = Color.White,
             fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
         )
     }
 }
