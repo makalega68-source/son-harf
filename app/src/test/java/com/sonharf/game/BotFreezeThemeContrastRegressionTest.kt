@@ -14,11 +14,14 @@ class BotFreezeThemeContrastRegressionTest {
         val watchdog = source("BotTurnWatchdogOverlay.kt")
 
         assertTrue(runtime.contains("RefinedDuelOverlay()"))
-        assertTrue(runtime.contains("BotTurnWatchdogOverlay()"))
+        assertTrue(runtime.contains("BotTurnWatchdogOverlay(roomId = state.roomId)"))
+        assertTrue(watchdog.contains("internal fun BotTurnWatchdogOverlay(roomId: String)"))
+        assertTrue(watchdog.contains("backend.getRoom(roomId)"))
         assertTrue(watchdog.contains("withTimeoutOrNull(4_000L)"))
         assertTrue(watchdog.contains("withTimeoutOrNull(6_000L)"))
         assertTrue(watchdog.contains("while (true)"))
         assertFalse(watchdog.contains("BOT …"))
+        assertFalse(watchdog.contains("from(\"game_rooms\")"))
     }
 
     @Test fun wordSiegeLightSurfacesRemainReadableInDarkTheme() {
