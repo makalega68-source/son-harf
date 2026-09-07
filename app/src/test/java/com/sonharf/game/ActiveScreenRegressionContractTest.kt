@@ -36,8 +36,8 @@ class ActiveScreenRegressionContractTest {
     @Test fun practiceViewportContract() {
         val viewport = src("WordSiegeBoardViewport.kt")
         val board = src("WordSiegePracticeBoard.kt")
-        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.86f"))
-        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_MIN_SCALE = 0.78f"))
+        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.68f"))
+        assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_MIN_SCALE = 0.62f"))
         assertTrue(viewport.contains("WORD_SIEGE_PRACTICE_MAX_SCALE = 1.24f"))
         assertTrue(board.contains("WordSiegeBoardViewportMode.CLOSE"))
         assertTrue(board.contains("detectTransformGestures"))
