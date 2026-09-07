@@ -33,9 +33,6 @@ internal fun EmbeddedWordKeyboard(
     onValueChange: (String) -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
-    compact: Boolean = false,
-    keySound: () -> Unit = { SonHarfSoundFx.typingClick() },
-    actionSound: () -> Unit = { SonHarfSoundFx.tap() },
 ) {
     // Game-owned keyboard: the Android system IME never needs to open during a match.
     // Turkish layout mirrors the familiar Turkish-Q ordering and remains fixed on screen.
@@ -53,13 +50,6 @@ internal fun EmbeddedWordKeyboard(
         )
     }
 
-    val verticalPadding = if (compact) 4.dp else 6.dp
-    val rowGap = if (compact) 3.dp else 5.dp
-    val keyGap = if (compact) 2.dp else 3.dp
-    val actionGap = if (compact) 4.dp else 6.dp
-    val secondRowInset = if (compact) 5.dp else 7.dp
-    val thirdRowInset = if (compact) 13.dp else 17.dp
-
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = KeyboardBg,
@@ -67,28 +57,27 @@ internal fun EmbeddedWordKeyboard(
         border = BorderStroke(1.dp, KeyboardViolet.copy(alpha = .30f)),
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = verticalPadding),
-            verticalArrangement = Arrangement.spacedBy(rowGap),
+            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             rows.forEachIndexed { index, row ->
                 Row(
                     Modifier
                         .fillMaxWidth()
                         .padding(horizontal = when {
-                            index == 1 -> secondRowInset
-                            index == 2 -> thirdRowInset
+                            index == 1 -> 7.dp
+                            index == 2 -> 17.dp
                             else -> 0.dp
                         }),
-                    horizontalArrangement = Arrangement.spacedBy(keyGap),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
                 ) {
                     row.forEach { key ->
                         KeyboardKeyButton(
                             label = key,
                             enabled = enabled && value.length < maxLength,
                             modifier = Modifier.weight(1f),
-                            compact = compact,
                             onClick = {
-                                keySound()
+                                SonHarfSoundFx.typingClick()
                                 onValueChange((value + key).take(maxLength))
                             },
                         )
@@ -97,17 +86,16 @@ internal fun EmbeddedWordKeyboard(
             }
 
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = thirdRowInset),
-                horizontalArrangement = Arrangement.spacedBy(actionGap),
+                Modifier.fillMaxWidth().padding(horizontal = 17.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 KeyboardKeyButton(
                     label = "⌫",
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1f),
                     alt = true,
-                    compact = compact,
                     onClick = {
-                        actionSound()
+                        SonHarfSoundFx.tap()
                         onValueChange(value.dropLast(1))
                     },
                 )
@@ -116,9 +104,8 @@ internal fun EmbeddedWordKeyboard(
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1.35f),
                     alt = true,
-                    compact = compact,
                     onClick = {
-                        actionSound()
+                        SonHarfSoundFx.tap()
                         onValueChange("")
                     },
                 )
@@ -127,9 +114,8 @@ internal fun EmbeddedWordKeyboard(
                     enabled = submitEnabled && value.isNotBlank(),
                     modifier = Modifier.weight(2.15f),
                     action = true,
-                    compact = compact,
                     onClick = {
-                        actionSound()
+                        SonHarfSoundFx.tap()
                         onSubmit()
                     },
                 )
@@ -230,15 +216,14 @@ private fun KeyboardKeyButton(
     modifier: Modifier,
     alt: Boolean = false,
     action: Boolean = false,
-    compact: Boolean = false,
     onClick: () -> Unit,
 ) {
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(if (compact) 33.dp else 38.dp),
+        modifier = modifier.height(38.dp),
         contentPadding = PaddingValues(0.dp),
-        shape = RoundedCornerShape(if (compact) 9.dp else 11.dp),
+        shape = RoundedCornerShape(11.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = when {
                 action -> KeyboardAction
@@ -249,7 +234,7 @@ private fun KeyboardKeyButton(
             disabledContainerColor = if (alt) KeyboardKeyAlt.copy(alpha = .55f) else KeyboardKey.copy(alpha = .55f),
             disabledContentColor = KeyboardText.copy(alpha = .42f),
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = if (compact) 1.dp else 2.dp, pressedElevation = 0.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp),
         border = BorderStroke(
             1.dp,
             when {
@@ -261,12 +246,7 @@ private fun KeyboardKeyButton(
     ) {
         Text(
             label,
-            fontSize = when {
-                label.length > 4 && compact -> 9.sp
-                label.length > 4 -> 10.sp
-                compact -> 14.sp
-                else -> 15.sp
-            },
+            fontSize = if (label.length > 4) 10.sp else 15.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
         )
