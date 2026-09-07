@@ -71,14 +71,16 @@ language plpgsql
 set search_path = pg_catalog, public, private, pg_temp
 as $$
 begin
-  if new.status = 'playing' and new.current_player_id is not null and (
-      tg_op = 'INSERT'
-      or old.status is distinct from new.status
-      or old.current_player_id is distinct from new.current_player_id
-  ) then
-    new.turn_started_at := clock_timestamp();
-    new.turn_deadline := clock_timestamp() + interval '45 seconds';
-  elsif new.status <> 'playing' or new.current_player_id is null then
+  if new.status = 'playing' and new.current_player_id is not null then
+    if tg_op = 'INSERT' then
+      new.turn_started_at := clock_timestamp();
+      new.turn_deadline := clock_timestamp() + interval '45 seconds';
+    elsif old.status is distinct from new.status
+       or old.current_player_id is distinct from new.current_player_id then
+      new.turn_started_at := clock_timestamp();
+      new.turn_deadline := clock_timestamp() + interval '45 seconds';
+    end if;
+  else
     new.turn_started_at := null;
     new.turn_deadline := null;
   end if;
