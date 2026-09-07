@@ -1,0 +1,36 @@
+name: Preserve Harf Yolu Lobby Contract Once
+
+on:
+  push:
+    branches: [ feat/third-game-harf-yolu-20260908 ]
+    paths:
+      - '.github/workflows/preserve-harf-yolu-lobby-contract-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/third-game-harf-yolu-20260908
+          fetch-depth: 0
+      - name: Preserve established lobby contract while keeping game 3
+        run: python3 .github/scripts/preserve_harf_yolu_lobby_contract.py
+      - name: Verify preserved contract and Harf Yolu route
+        run: |
+          grep -q 'MonsterDestination.GAME, MonsterDestination.WORD_SIEGE, MonsterDestination.DAILY_CHALLENGE' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'ARENANI SEÇ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'MonsterDestination.LETTER_LADDER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          grep -q 'MonsterLetterLadderQuickCard(Modifier.fillMaxWidth(), onLetterLadder)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+      - name: Remove one-time patch files and commit
+        run: |
+          rm .github/scripts/preserve_harf_yolu_lobby_contract.py
+          rm .github/workflows/preserve-harf-yolu-lobby-contract-once.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt .github/scripts/preserve_harf_yolu_lobby_contract.py .github/workflows/preserve-harf-yolu-lobby-contract-once.yml
+          git commit -m 'Harf Yolu entegrasyonunda mevcut lobi sözleşmesini koru'
+          git push origin HEAD:feat/third-game-harf-yolu-20260908
