@@ -1,11 +1,17 @@
 package com.sonharf.game
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
@@ -22,6 +28,11 @@ import java.time.Instant
  * the authenticated player has a live room and switches the visible runtime
  * surface. Matchmaking, scoring and server authority remain in the existing
  * backend.
+ *
+ * Mage Cat is rendered here as a resilient active-shell layer so the purchased
+ * mascot cannot silently disappear when legacy home implementations are not on
+ * the shipped navigation path. The mascot is non-interactive and does not own
+ * gameplay state.
  */
 @Composable
 internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
@@ -68,11 +79,28 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
     }
 
     if (activeRoomId != null) {
-        RefinedDuelOverlay()
+        Box {
+            RefinedDuelOverlay()
+            MageCatMatchMascot(
+                cue = null,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 118.dp, end = 14.dp)
+                    .size(MageCatMatchDefaultSize),
+            )
+        }
         // Continuous recovery for transient bot RPC/network failures. The watchdog is
         // intentionally UI-less; RefinedDuelOverlay remains the only visible duel surface.
         BotTurnWatchdogOverlay()
     } else {
-        MonsterExperienceApp(onSignedOut = onSignedOut)
+        Box {
+            MonsterExperienceApp(onSignedOut = onSignedOut)
+            MageCatHomeMascot(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 14.dp, bottom = 74.dp)
+                    .size(MageCatHomeDefaultSize),
+            )
+        }
     }
 }
