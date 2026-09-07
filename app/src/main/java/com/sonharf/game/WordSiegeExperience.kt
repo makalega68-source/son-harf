@@ -35,10 +35,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 internal val SiegePurple = MainUi.Purple
-internal val SiegePurpleSoft = Color(0xFFF0ECFF)
+internal val SiegePurpleSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) MainUi.SurfaceSoft else Color(0xFFF0ECFF)
 internal val SiegeBlueSoft = MainUi.BlueSoft
 private val SiegeTile = Color(0xFFFFE3A5)
 private val SiegeTileBorder = Color(0xFFD99818)
+private val SiegeLightTileText = Color(0xFF2F2A1F)
+private val SiegeLightTileMuted = Color(0xFF5D4B20)
 
 private enum class SiegeListSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FINISHED }
 
@@ -430,15 +432,15 @@ private fun WordSiegeGamesList(
         }
 
         item {
-    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-        Image(
-            painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
-            contentDescription = sh("Kelime Kuşatması logosu", "Word Siege logo"),
-            modifier = Modifier.size(96.dp),
-            contentScale = ContentScale.Fit,
-        )
-    }
-}
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Image(
+                    painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
+                    contentDescription = sh("Kelime Kuşatması logosu", "Word Siege logo"),
+                    modifier = Modifier.size(96.dp),
+                    contentScale = ContentScale.Fit,
+                )
+            }
+        }
 
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -959,10 +961,12 @@ private fun WordSiegeBoardCell(
         ) {
             Box(contentAlignment = Alignment.Center) {
                 if (letter != null) {
-                    Text(letter, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    val contentColor = if (pending) SiegeLightTileText else MainUi.Text
+                    val pointColor = if (pending) SiegeLightTileMuted else MainUi.Muted
+                    Text(letter, color = contentColor, fontSize = 14.sp, fontWeight = FontWeight.Black)
                     Text(
                         wordSiegeLetterValue(letter),
-                        color = MainUi.Muted,
+                        color = pointColor,
                         fontSize = 5.sp,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(2.dp),
                     )
@@ -1003,10 +1007,15 @@ internal fun WordSiegeRackTile(
         shadowElevation = if (selected) 3.dp else 0.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(letter.toString(), color = if (used) MainUi.Muted.copy(alpha = .45f) else MainUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Text(
+                letter.toString(),
+                color = if (used) MainUi.Muted.copy(alpha = .45f) else SiegeLightTileText,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
+            )
             Text(
                 wordSiegeLetterValue(letter.toString()),
-                color = MainUi.Muted,
+                color = if (used) MainUi.Muted.copy(alpha = .55f) else SiegeLightTileMuted,
                 fontSize = 7.sp,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
             )
