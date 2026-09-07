@@ -51,7 +51,8 @@ enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
 
 class MainActivity : ComponentActivity() {
     private fun handleAuthDeepLink(intent: Intent) {
-        if (!SupabaseProvider.configured || intent.data?.scheme != "sonharf") return
+        val uri = intent.data
+        if (!SupabaseProvider.configured || uri?.scheme != "sonharf" || uri.host != "auth") return
         SupabaseProvider.client.handleDeeplinks(
             intent = intent,
             onSessionSuccess = { session ->
@@ -96,9 +97,8 @@ class MainActivity : ComponentActivity() {
         RemoteExperience.loadCached(this)
         AdPrivacyManager.requestConsent(this)
 
-        val authDeepLink = intent.data?.scheme == "sonharf"
-        val clearUnrememberedSession = !BuildConfig.DEBUG &&
-            SupabaseProvider.configured &&
+        val authDeepLink = intent.data?.let { it.scheme == "sonharf" && it.host == "auth" } == true
+        val clearUnrememberedSession = SupabaseProvider.configured &&
             !SonHarfPreferences.rememberLogin(this) &&
             !authDeepLink
 
@@ -157,9 +157,8 @@ private fun AppStartupGate(clearUnrememberedSession: Boolean) {
         state = StartupState.Loading
         val completed = withTimeoutOrNull(6_000) {
             if (clearUnrememberedSession) {
-                runCatching { SupabaseProvider.client.auth.signOut() }
-            }
-            true
+                runCatching { SupabaseProvider.client.auth.signOut() }.isSuccess
+            } else true
         } ?: false
         state = if (completed) StartupState.Ready else StartupState.Error
     }
