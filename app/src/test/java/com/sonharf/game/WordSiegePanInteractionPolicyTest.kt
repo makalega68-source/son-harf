@@ -13,7 +13,9 @@ class WordSiegePanInteractionPolicyTest {
         assertEquals(1200f / 468f, wordSiegeFitScale(1200f, 1200f, 468f), 0.001f)
     }
 
-    @Test fun `captured territory remains two points per cube`() {
-        assertEquals(6, WordSiegeFinalRules.cubeTransfer(3))
+    @Test fun `normal and fortress zones use the new conquest values`() {
+        assertEquals(2, WordSiegeZoneRules.NormalZonePoints)
+        assertEquals(4, WordSiegeZoneRules.FortressZonePoints)
+        assertEquals(4, WordSiegeZoneRules.zoneValue(WordSiegeZoneRules.zoneId(2, 2)))
     }
 }
