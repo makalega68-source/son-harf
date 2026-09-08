@@ -27,7 +27,7 @@ object MageCatDirector {
     var eyeColorVariant by mutableStateOf("blue")
         private set
 
-    fun setEyeColorVariant(variant: String) {
+    fun chooseEyeColorVariant(variant: String) {
         eyeColorVariant = when (variant.lowercase()) {
             "green", "orange" -> variant.lowercase()
             else -> "blue"
