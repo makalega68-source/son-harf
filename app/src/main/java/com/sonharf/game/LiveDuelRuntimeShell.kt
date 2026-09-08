@@ -13,6 +13,8 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 import java.time.Instant
 
+private val activeClassicDuelStatuses = setOf("playing", "final", "sudden_death", "paused")
+
 /**
  * Keeps the verified V1 shell/lobby intact, but guarantees that an active
  * classic duel is rendered by RefinedDuelOverlay rather than the legacy
@@ -32,33 +34,52 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
         while (true) {
             val me = backend.currentUserId()
             val currentRoomId = activeRoomId
-            activeRoomId = if (me == null || !SupabaseProvider.configured) {
-                null
-            } else if (currentRoomId != null) {
-                runCatching { backend.getRoom(currentRoomId) }
-                    .getOrNull()
-                    ?.takeIf {
-                        (it.hostId == me || it.guestId == me) &&
-                            it.status in setOf("playing", "final", "sudden_death", "paused")
+            activeRoomId = when {
+                !SupabaseProvider.configured -> null
+                currentRoomId != null -> {
+                    if (me == null) {
+                        // A transient auth/session refresh must not tear down a running duel.
+                        // Explicit sign-out disposes this shell through StableV1App.
+                        currentRoomId
+                    } else {
+                        val roomResult = runCatching { backend.getRoom(currentRoomId) }
+                        roomResult.fold(
+                            onSuccess = { currentRoom ->
+                                currentRoom
+                                    .takeIf {
+                                        (it.hostId == me || it.guestId == me) &&
+                                            it.status in activeClassicDuelStatuses
+                                    }
+                                    ?.id
+                            },
+                            onFailure = {
+                                // Network/RPC failures are not authoritative room state.
+                                // Keep the current duel mounted until a successful response
+                                // proves that the room is no longer active for this player.
+                                currentRoomId
+                            },
+                        )
                     }
-                    ?.id
-            } else {
-                runCatching {
-                    SupabaseProvider.client
-                        .from("game_rooms")
-                        .select()
-                        .decodeList<GameRoomDto>()
-                        .asSequence()
-                        .filter {
-                            (it.hostId == me || it.guestId == me) &&
-                                it.status in setOf("playing", "final", "sudden_death", "paused") &&
-                                (it.isBot || it.guestId != null)
-                        }
-                        .maxByOrNull {
-                            runCatching { Instant.parse(it.createdAt) }.getOrDefault(Instant.EPOCH)
-                        }
-                        ?.id
-                }.getOrNull()
+                }
+                me == null -> null
+                else -> {
+                    runCatching {
+                        SupabaseProvider.client
+                            .from("game_rooms")
+                            .select()
+                            .decodeList<GameRoomDto>()
+                            .asSequence()
+                            .filter {
+                                (it.hostId == me || it.guestId == me) &&
+                                    it.status in activeClassicDuelStatuses &&
+                                    (it.isBot || it.guestId != null)
+                            }
+                            .maxByOrNull {
+                                runCatching { Instant.parse(it.createdAt) }.getOrDefault(Instant.EPOCH)
+                            }
+                            ?.id
+                    }.getOrNull()
+                }
             }
             // The active overlay owns the live match refresh. Polling the whole room list
             // several times per second here was competing with word submissions and made
