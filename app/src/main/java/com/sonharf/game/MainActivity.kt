@@ -93,7 +93,6 @@ class MainActivity : ComponentActivity() {
         SonHarfPreferences.syncSound(this)
         SonHarfPreferences.syncUi(this)
         SonHarfCosmetics.restore(this)
-        WordMeaningRuntime.init(this)
         RemoteExperience.loadCached(this)
         AdPrivacyManager.requestConsent(this)
 
@@ -166,7 +165,7 @@ private fun AppStartupGate(clearUnrememberedSession: Boolean) {
     when (state) {
         StartupState.Loading -> StartupLoading()
         StartupState.Error -> StartupError(onRetry = { retryKey++ })
-        StartupState.Ready -> Box(Modifier.fillMaxSize()) { GamePortalApp() }
+        StartupState.Ready -> Box(Modifier.fillMaxSize()) { StableV1App() }
     }
 }
 
