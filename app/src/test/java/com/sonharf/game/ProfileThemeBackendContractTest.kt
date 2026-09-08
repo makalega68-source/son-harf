@@ -11,7 +11,7 @@ class ProfileThemeBackendContractTest {
         val profileThemes = File("src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt").readText()
 
         assertFalse(economy.contains("theme_main_blue_white"))
-        assertFalse(economy.contains("theme_monster_blue\")"))
+        assertFalse(economy.contains("theme_monster_blue"))
         assertTrue(profileThemes.contains("selectTheme(null)"))
         assertTrue(profileThemes.contains("Ana Mavi Beyaz"))
     }
