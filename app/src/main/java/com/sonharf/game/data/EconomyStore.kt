@@ -85,6 +85,11 @@ suspend fun OnlineGameBackend.equipShopItem(itemId: String) {
     SupabaseProvider.client.postgrest.rpc("equip_shop_item", buildJsonObject { put("p_item_id", itemId) })
 }
 
+/** Restores the built-in blue/white visual system without creating a fake purchasable item. */
+suspend fun OnlineGameBackend.equipDefaultGameTheme() {
+    SupabaseProvider.client.postgrest.rpc("equip_default_game_theme")
+}
+
 suspend fun OnlineGameBackend.claimVipMonthlyDiamonds() {
     SupabaseProvider.client.postgrest.rpc("claim_vip_monthly_diamonds")
 }
