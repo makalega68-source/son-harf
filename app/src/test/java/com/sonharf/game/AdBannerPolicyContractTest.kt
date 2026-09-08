@@ -38,9 +38,10 @@ class AdBannerPolicyContractTest {
 
     @Test
     fun gameplayRouteExplicitlyDisablesBanner() {
-        val app = source("src/main/java/com/sonharf/game/SonHarfIntegratedApp.kt")
-        assertTrue(app.contains("visible = screen != AppScreen.GAME"))
-        assertTrue(app.contains("AppScreen.GAME -> key(gameKey) { OnlineGameScreenV6() }"))
+        val app = source("src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
+        assertTrue(app.contains("val isGameplay = destination in setOf("))
+        assertTrue(app.contains("SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium)"))
+        assertTrue(app.contains("MonsterDestination.GAME -> OnlineGameScreenV6()"))
     }
 
     @Test
@@ -48,7 +49,7 @@ class AdBannerPolicyContractTest {
         val sourceRoot = projectFile("src/main/java/com/sonharf/game")
         val offenders = sourceRoot.walkTopDown()
             .filter { it.isFile && (it.name.contains("Game", ignoreCase = true) || it.name.contains("Arena", ignoreCase = true)) }
-            .filter { it.name != "SonHarfIntegratedApp.kt" && it.name != "NonGameBannerAd.kt" }
+            .filter { it.name != "NonGameBannerAd.kt" }
             .filter { it.readText().contains("SonHarfTopAdBanner(") }
             .toList()
         assertFalse("Gameplay files must never host banner ads: $offenders", offenders.isNotEmpty())
