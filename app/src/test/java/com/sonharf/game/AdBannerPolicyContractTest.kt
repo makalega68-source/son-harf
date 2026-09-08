@@ -37,11 +37,13 @@ class AdBannerPolicyContractTest {
     }
 
     @Test
-    fun gameplayRouteExplicitlyDisablesBanner() {
-        val app = source("src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
-        assertTrue(app.contains("val isGameplay = destination in setOf("))
-        assertTrue(app.contains("SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium)"))
-        assertTrue(app.contains("MonsterDestination.GAME -> OnlineGameScreenV6()"))
+    fun unifiedProGameplayRoutesExplicitlyDisableBanner() {
+        val app = source("src/main/java/com/sonharf/game/UnifiedProApp.kt")
+        assertTrue(app.contains("val gameplay = destination in setOf("))
+        assertTrue(app.contains("SonHarfTopAdBanner(visible = !gameplay, isPremium = isPro)"))
+        assertTrue(app.contains("UnifiedDestination.GAME -> OnlineGameScreenV6()"))
+        assertTrue(app.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
+        assertTrue(app.contains("UnifiedDestination.LETTER -> LetterLadderGameScreen"))
     }
 
     @Test
