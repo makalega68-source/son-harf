@@ -18,7 +18,10 @@ class VipDialogPolishContractTest {
         assertTrue(source.contains("ProductCatalog.VIP_YEARLY"))
         assertTrue(source.contains("ProductCatalog.VIP_MONTHLY"))
         assertFalse(source.contains("rememberInfiniteTransition"))
-        assertTrue(source.lowercase().contains("no competitive power"))
+        assertTrue(source.contains("2x SKOR"))
+        assertTrue(source.contains("2x SCORE"))
+        assertTrue(source.contains("server validated and consumed atomically"))
+        assertFalse(source.lowercase().contains("no competitive power"))
     }
 
     private fun projectFile(path: String): File {
