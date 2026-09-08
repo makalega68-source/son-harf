@@ -11,6 +11,7 @@ data class VipEntitlementsDto(
     @SerialName("freezer_count") val freezerCount: Int = 0,
     @SerialName("swap_count") val swapCount: Int = 0,
     @SerialName("hint_count") val hintCount: Int = 0,
+    @SerialName("multiplier_count") val multiplierCount: Int = 0,
     @SerialName("streak_shield_count") val streakShieldCount: Int = 0,
     @SerialName("xp_multiplier") val xpMultiplier: Int = 1,
     @SerialName("diamond_multiplier") val coinMultiplier: Int = 1,
@@ -30,6 +31,7 @@ data class VipDailyHelperClaimDto(
     @SerialName("freezer_count") val freezerCount: Int = 0,
     @SerialName("swap_count") val swapCount: Int = 0,
     @SerialName("hint_count") val hintCount: Int = 0,
+    @SerialName("multiplier_count") val multiplierCount: Int = 0,
     @SerialName("streak_shield_count") val streakShieldCount: Int = 0,
 )
 
