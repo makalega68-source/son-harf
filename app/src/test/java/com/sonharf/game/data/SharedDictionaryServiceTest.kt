@@ -24,9 +24,10 @@ class SharedDictionaryServiceTest {
         assertFalse(SharedDictionaryService.isValidCached("MAKALEB", "tr") == true)
 
         SharedDictionaryService.installSnapshotForTests("tr", listOf("ışık", "isim", "gül", "şişe", "ölçü", "çığ"))
-        listOf("IŞIK", "ışık", "İSİM", "isim", "GÜL", "ŞİŞE", "ÖLÇÜ", "ÇIĞ").forEach { word ->
+        listOf("IŞIK", "ışık", "İSİM", "isim", "GÜL", "ŞİŞE", "ÖLÇÜ").forEach { word ->
             assertTrue("Turkish locale normalization failed: $word", SharedDictionaryService.isValidCached(word, "tr") == true)
         }
+        assertFalse("Terminal soft-ğ must never enter the playable snapshot", SharedDictionaryService.isValidCached("ÇIĞ", "tr") == true)
     }
 
     @Test
@@ -40,7 +41,7 @@ class SharedDictionaryServiceTest {
     }
 
     @Test
-    fun noSnapshotNeverPretendsCanonicalWordIsInvalidFromSmallerList() {
+    fun noSnapshotNeverPretendsCanonicalWordIsValidFromSmallerList() {
         SharedDictionaryService.clearForTests()
         assertFalse(SharedDictionaryService.hasSnapshot("tr"))
         assertFalse(SharedDictionaryService.isValidWordBlocking("SEL", "tr"))
@@ -51,10 +52,10 @@ class SharedDictionaryServiceTest {
     fun englishUsesSameApiWithSeparateProductionDataset() {
         SharedDictionaryService.installSnapshotForTests(
             "en",
-            listOf("cat", "dog", "house", "game", "word", "play", "water", "light", "world", "friend"),
+            listOf("cat", "dog", "house", "game", "word", "play", "water", "light", "world", "friend", "apple"),
         )
 
-        listOf("CAT", "DOG", "HOUSE", "GAME", "WORD", "PLAY", "WATER", "LIGHT", "WORLD", "FRIEND").forEach { word ->
+        listOf("CAT", "DOG", "HOUSE", "GAME", "WORD", "PLAY", "WATER", "LIGHT", "WORLD", "FRIEND", "APPLE").forEach { word ->
             assertTrue("Expected valid: $word", SharedDictionaryService.isValidCached(word, "en") == true)
             assertTrue("Expected blocking canonical valid: $word", SharedDictionaryService.isValidWordBlocking(word, "en"))
         }
@@ -63,12 +64,23 @@ class SharedDictionaryServiceTest {
 
     @Test
     fun turkishAndEnglishSnapshotsNeverCrossFallback() {
-        SharedDictionaryService.installSnapshotForTests("tr", listOf("el", "sel", "ışık"))
-        SharedDictionaryService.installSnapshotForTests("en", listOf("cat", "word", "light"))
+        SharedDictionaryService.installSnapshotForTests("tr", listOf("el", "sel", "ışık", "kalem"))
+        SharedDictionaryService.installSnapshotForTests("en", listOf("cat", "word", "light", "apple"))
 
         assertTrue(SharedDictionaryService.isValidCached("EL", "tr") == true)
         assertFalse(SharedDictionaryService.isValidCached("EL", "en") == true)
         assertTrue(SharedDictionaryService.isValidCached("CAT", "en") == true)
         assertFalse(SharedDictionaryService.isValidCached("CAT", "tr") == true)
+        assertTrue(SharedDictionaryService.isValidCached("KALEM", "tr") == true)
+        assertFalse(SharedDictionaryService.isValidCached("KALEM", "en") == true)
+        assertTrue(SharedDictionaryService.isValidCached("APPLE", "en") == true)
+        assertFalse(SharedDictionaryService.isValidCached("APPLE", "tr") == true)
+    }
+
+    @Test
+    fun canonicalLanguageUsesOnlySupportedGameLanguages() {
+        assertEquals("tr", SharedDictionaryService.canonicalLanguage("tr"))
+        assertEquals("en", SharedDictionaryService.canonicalLanguage("EN"))
+        assertEquals("tr", SharedDictionaryService.canonicalLanguage("de"))
     }
 }
