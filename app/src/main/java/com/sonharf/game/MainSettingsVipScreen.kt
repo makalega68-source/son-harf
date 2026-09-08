@@ -23,6 +23,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
+import com.sonharf.game.data.VipEntitlementsDto
+import com.sonharf.game.data.getVipEntitlements
 import com.sonharf.game.data.setAvatarVisibility
 import io.github.jan.supabase.auth.auth
 import kotlinx.coroutines.launch
@@ -277,6 +279,7 @@ internal fun MainVipScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var vipEntitlements by remember { mutableStateOf<VipEntitlementsDto?>(null) }
     var loading by remember { mutableStateOf(true) }
     var showPurchase by remember { mutableStateOf(false) }
 
@@ -284,11 +287,13 @@ internal fun MainVipScreen(
         loading = true
         val id = backend.currentUserId()
         profile = id?.let { runCatching { backend.getProfile(it) }.getOrNull() }
+        vipEntitlements = if (profile?.isVip == true) runCatching { backend.getVipEntitlements() }.getOrNull() else null
         loading = false
     }
 
     LaunchedEffect(Unit) { reload() }
     val active = profile?.isVip == true
+    val vip = vipEntitlements
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -298,7 +303,7 @@ internal fun MainVipScreen(
         item {
             MainScreenHeader(
                 title = "Son Harf VIP",
-                subtitle = sh("Daha temiz, daha kişisel; rekabet daima adil", "Cleaner and more personal; competition stays fair"),
+                subtitle = sh("Reklamsız deneyim, PRO hakları ve kişiselleştirme", "Ad-free experience, PRO benefits and personalization"),
                 onBack = onBack,
             )
         }
@@ -321,7 +326,7 @@ internal fun MainVipScreen(
                     }
                     Text("VIP", color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.Black)
                     Text(
-                        if (active) sh("Üyeliğin aktif", "Your membership is active") else sh("Son Harf deneyimini kişiselleştir", "Personalize your Son Harf experience"),
+                        if (active) sh("Üyeliğin aktif", "Your membership is active") else sh("Son Harf deneyimini güçlendir", "Upgrade your Son Harf experience"),
                         color = Color.White,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
@@ -340,7 +345,9 @@ internal fun MainVipScreen(
         item {
             Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                    MainVipBenefit(Icons.Rounded.Block, sh("Reklamsız deneyim", "Ad-free experience"), sh("Maç dışında da sade ve kesintisiz", "Clean and uninterrupted outside matches"))
+                    MainVipBenefit(Icons.Rounded.Block, sh("Reklamsız deneyim", "Ad-free experience"), sh("Oyun dışı yüzeylerde reklamsız kullanım", "Ad-free use on non-gameplay surfaces"))
+                    MainVipBenefit(Icons.Rounded.Lightbulb, sh("Günlük İpucu", "Daily Hint"), sh("Desteklenen oyun modlarında günlük PRO hakkı", "Daily PRO resource in supported game modes"))
+                    MainVipBenefit(Icons.Rounded.SwapHoriz, sh("Harf Değiştirici", "Letter Swap"), sh("Desteklenen modlarda sunucu doğrulamalı", "Server validated in supported modes"))
                     MainVipBenefit(Icons.Rounded.Verified, sh("VIP profil rozeti", "VIP profile badge"), sh("Profil ve sosyal alanlarda görünür", "Visible on profile and social surfaces"))
                     MainVipBenefit(Icons.Rounded.Checkroom, sh("Özel Style içerikleri", "Exclusive Style content"), sh("Profil çerçevesi ve kişiselleştirme", "Profile frames and personalization"))
                     MainVipBenefit(Icons.Rounded.History, sh("Kelime geçmişi", "Word history"), sh("Düelloda son kelimeleri gör", "See recent words during a duel"))
@@ -351,18 +358,26 @@ internal fun MainVipScreen(
             }
         }
 
-        item {
+        if (active) item {
             Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Green.copy(alpha = .08f), border = BorderStroke(1.dp, MainUi.Green.copy(alpha = .30f))) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(sh("REKABET ADALETİ", "COMPETITIVE FAIRNESS"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(sh("PRO OYUN YARDIMLARI", "PRO GAME HELPERS"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh(
-                            "VIP; ekstra süre, ek puan, güçlü joker, rating koruması veya kazanma avantajı vermez.",
-                            "VIP never grants extra time, points, stronger jokers, rating protection or a winning advantage.",
+                            "Mevcut hakların: 💡 ${vip?.hintCount ?: 0} İpucu • 🔄 ${vip?.swapCount ?: 0} Harf Değiştirici. Günlük haklarını Ödüller merkezinden alabilirsin.",
+                            "Current resources: 💡 ${vip?.hintCount ?: 0} Hint • 🔄 ${vip?.swapCount ?: 0} Letter Swap. Claim your daily resources in Rewards.",
                         ),
                         color = MainUi.Text,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        sh(
+                            "Yardımlar yalnızca desteklenen modlarda sunucu doğrulamasıyla çalışır. Dereceli skor, süre ve rating etkileri bu sürümde etkin değildir.",
+                            "Helpers work only in supported modes with server validation. Ranked score, timer and rating effects are not enabled in this release.",
+                        ),
+                        color = MainUi.Muted,
+                        fontSize = 9.sp,
                     )
                 }
             }
