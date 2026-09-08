@@ -1,0 +1,70 @@
+name: Unified Pro Route Finalize
+
+on:
+  push:
+    branches: ["reset/son-harf-game-clean-slate"]
+    paths:
+      - "ci/unified-pro-route-finalize-trigger.txt"
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: reset/son-harf-game-clean-slate
+          fetch-depth: 0
+
+      - name: Finalize active routes and monetization copy
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          app = Path('app/src/main/java/com/sonharf/game/UnifiedProApp.kt')
+          s = app.read_text()
+          old = 'UnifiedDestination.VIP -> MainVipScreen(backend) { destination = UnifiedDestination.PROFILE }'
+          new = 'UnifiedDestination.VIP -> UnifiedProVipScreen(backend) { destination = UnifiedDestination.PROFILE }'
+          if old not in s:
+              raise SystemExit('Unified Pro VIP route hook not found')
+          app.write_text(s.replace(old, new, 1))
+
+          rewards = Path('app/src/main/java/com/sonharf/game/RewardCenterScreen.kt')
+          s = rewards.read_text()
+          replacements = {
+              'title = sh("SON COIN", "DIAMONDS")': 'title = sh("SON COIN", "SON COIN")',
+              'Opening a chest awards 15, 25, or 40 diamonds.': 'Opening a chest awards 15, 25, or 40 Son Coin.',
+              'Chest awarded ${reward?.diamondsAwarded ?: 0} diamonds!': 'Chest awarded ${reward?.diamondsAwarded ?: 0} Son Coin!',
+              've yalnızca güç vermeyen içeriklerde kullanılır.': 've mağazada ya da uygun içeriklerde kullanılır.',
+              'and is used only for non-power content.': 'and can be used in the Shop or eligible content.',
+          }
+          for old_text, new_text in replacements.items():
+              s = s.replace(old_text, new_text)
+          rewards.write_text(s)
+
+          vip = Path('app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt')
+          s = vip.read_text()
+          s = s.replace('Daha temiz, daha kişisel; rekabet daima adil', 'Reklamsız deneyim, PRO hakları ve kişiselleştirme')
+          s = s.replace('Cleaner and more personal; competition stays fair', 'Ad-free experience, PRO benefits and personalization')
+          s = s.replace('REKABET ADALETİ', 'PRO OYUN YARDIMLARI')
+          s = s.replace('COMPETITIVE FAIRNESS', 'PRO GAME HELPERS')
+          s = s.replace('VIP; ekstra süre, ek puan, güçlü joker, rating koruması veya kazanma avantajı vermez.', 'PRO; İpucu, Harf Değiştirici ve 2x Skor dahil sunucu doğrulamalı oyun yardımcıları sunar.')
+          s = s.replace('VIP never grants extra time, points, stronger jokers, rating protection or a winning advantage.', 'PRO includes server-validated gameplay helpers such as Hint, Letter Swap and 2x Score.')
+          vip.write_text(s)
+
+          # One-shot tooling must not remain in the product branch.
+          Path('.github/workflows/unified-pro-route-finalize.yml').unlink(missing_ok=True)
+          Path('ci/unified-pro-route-finalize-trigger.txt').unlink(missing_ok=True)
+          PY
+
+      - name: Commit route finalization
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "product: finalize Unified Pro active routes and monetization copy"
+          git push origin HEAD:reset/son-harf-game-clean-slate
