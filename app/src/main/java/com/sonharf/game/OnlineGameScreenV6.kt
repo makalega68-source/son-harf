@@ -1,9 +1,16 @@
 package com.sonharf.game
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import com.sonharf.game.mascot.ReactiveMageCatOverlay
 
-/** Stable integration point used by the app shell for the rebuilt Premier Son Harf duel. */
+/** Stable integration point for the rebuilt Unified Pro Premier duel. */
 @Composable
 fun OnlineGameScreenV6() {
-    PremierWordDuelScreen()
+    Box(Modifier.fillMaxSize()) {
+        PremierWordDuelScreen()
+        ReactiveMageCatOverlay()
+    }
 }
