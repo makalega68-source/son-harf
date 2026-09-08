@@ -33,17 +33,9 @@ internal enum class MageCatProminence {
     HERO,
 }
 
-/**
- * Oyun olaylarını maskot hareketlerine dönüştüren yerel yönetici.
- *
- * Temel hareket seçimini çevrimiçi yapay zekâya bırakmaz. Böylece davranışlar
- * düşük gecikmeli, test edilebilir ve çevrimdışı çalışır. Aynı olay için
- * [MageCatBehaviorSelector] çeşitlilik sağlar; bu sınıf ise zamanlama,
- * görünürlük ve öncelik kurallarını uygular.
- */
 internal class MageCatDirector(
     private val selector: MageCatBehaviorSelector = MageCatBehaviorSelector(),
-    private val reactionCooldownMs: Long = 2_800L,
+    private val reactionCooldownMs: Long = 1_800L,
     private val ambientCooldownMs: Long = 9_000L,
 ) {
     private var lastReactionAtMs: Long = Long.MIN_VALUE / 4
@@ -55,6 +47,8 @@ internal class MageCatDirector(
         return when (event) {
             MageCatEvent.IDLE -> ambientCue(context)
             MageCatEvent.CORRECT_WORD -> reactionCue(event, context, 1.6.seconds)
+            MageCatEvent.INVALID_WORD -> reactionCue(event, context, 1.45.seconds, allowDuringInput = true)
+            MageCatEvent.TIME_PRESSURE -> reactionCue(event, context, 1.1.seconds, allowDuringInput = true)
             MageCatEvent.WIN_STREAK -> reactionCue(event, context, 2.0.seconds)
             MageCatEvent.VICTORY -> heroCue(event, context, 2.8.seconds)
             MageCatEvent.DEFEAT -> heroCue(event, context, 2.4.seconds)
@@ -66,7 +60,6 @@ internal class MageCatDirector(
     private fun ambientCue(context: MageCatContext): MageCatCue? {
         if (context.playerInputActive || context.screen == MageCatScreen.RESULT) return null
         if (context.nowMs - lastAmbientAtMs < ambientCooldownMs) return null
-
         lastAmbientAtMs = context.nowMs
         return MageCatCue(
             motion = selector.choose(MageCatEvent.IDLE),
@@ -79,10 +72,10 @@ internal class MageCatDirector(
         event: MageCatEvent,
         context: MageCatContext,
         duration: Duration,
+        allowDuringInput: Boolean = false,
     ): MageCatCue? {
-        if (context.playerInputActive && context.screen == MageCatScreen.MATCH) return null
+        if (!allowDuringInput && context.playerInputActive && context.screen == MageCatScreen.MATCH) return null
         if (context.nowMs - lastReactionAtMs < reactionCooldownMs) return null
-
         lastReactionAtMs = context.nowMs
         return MageCatCue(
             motion = selector.choose(event),
@@ -96,7 +89,6 @@ internal class MageCatDirector(
         context: MageCatContext,
         duration: Duration,
     ): MageCatCue? {
-        // Sonuç/lig gibi yüksek değerli anlar cooldown'dan bağımsız oynayabilir.
         lastReactionAtMs = context.nowMs
         return MageCatCue(
             motion = selector.choose(event),
