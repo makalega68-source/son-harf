@@ -83,11 +83,11 @@ class ActiveScreenRegressionContractTest {
         assertTrue(classic.contains("fontSize = 15.sp"))
         assertTrue(classic.contains("fontSize = 9.sp"))
         assertTrue(classic.contains("fontSize = if (value.isBlank()) 16.sp else 20.sp"))
-        assertTrue(practice.contains("size = 46.dp"))
-        assertTrue(practice.contains("fontSize = 24.sp"))
-        assertTrue(practice.contains("fontSize = 14.sp"))
-        assertTrue(practice.contains("fontSize = 10.sp"))
-        assertTrue(practice.contains("height(if (compact) 70.dp else 78.dp)"))
+        assertTrue(practice.contains("size = if (compact) 38.dp else 46.dp"))
+        assertTrue(practice.contains("fontSize = if (compact) 20.sp else 24.sp"))
+        assertTrue(practice.contains("fontSize = if (compact) 12.sp else 14.sp"))
+        assertTrue(practice.contains("fontSize = if (compact) 9.sp else 10.sp"))
+        assertTrue(practice.contains("height(if (compact) 60.dp else 78.dp)"))
     }
 
     @Test fun scoringStillUsesTwoPointTransferWithoutWordRollback() {
