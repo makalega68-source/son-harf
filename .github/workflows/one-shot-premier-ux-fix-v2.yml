@@ -1,0 +1,291 @@
+name: One Shot Premier UX Fix V2
+
+on:
+  push:
+    branches:
+      - reset/son-harf-game-clean-slate
+
+permissions:
+  contents: write
+
+jobs:
+  patch-premier-v2:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: reset/son-harf-game-clean-slate
+          fetch-depth: 0
+
+      - name: Apply Premier freeze and UX fixes
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path('app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt')
+          source = path.read_text()
+
+          def require_replace(old, new, label, count=1):
+              global source
+              found = source.count(old)
+              if found != count:
+                  raise SystemExit(f'{label}: expected {count}, found {found}')
+              source = source.replace(old, new, count)
+
+          require_replace(
+              '    var timeoutClaimKey by remember { mutableStateOf<String?>(null) }\n',
+              '',
+              'timeout lock state',
+          )
+
+          timer_pattern = re.compile(
+              r'^    LaunchedEffect\(room\?\.turnDeadline, room\?\.currentPlayerId, room\?\.status\) \{.*?^    \}\n\n(?=    DisposableEffect)',
+              re.MULTILINE | re.DOTALL,
+          )
+          timer_matches = list(timer_pattern.finditer(source))
+          if len(timer_matches) != 1:
+              raise SystemExit(f'timer block: expected 1, found {len(timer_matches)}')
+          new_timer = '''    LaunchedEffect(room?.id, room?.botTurn, room?.status) {
+              val active = room ?: return@LaunchedEffect
+              val botPlayable = active.status in setOf("playing", "final", "sudden_death")
+              if (!active.isBot || !active.botTurn || !botPlayable) return@LaunchedEffect
+
+              // Normal bot play is server-authoritative. This is only a recovery path for an
+              // already-stuck/transient bot_turn row after a delayed room update.
+              delay(350)
+              for (attempt in 0 until 4) {
+                  val synced = runCatching { backend.getRoom(active.id) }.getOrNull()
+                  if (synced != null && (!synced.botTurn || synced.isPremierFinished() || synced.status !in setOf("playing", "final", "sudden_death"))) {
+                      room = synced
+                      notice = ""
+                      return@LaunchedEffect
+                  }
+                  val advanced = runCatching { backend.botTakeTurn(active.id) }.getOrNull()
+                  if (advanced != null) {
+                      room = advanced
+                      notice = ""
+                      return@LaunchedEffect
+                  }
+                  delay(700L + attempt * 250L)
+              }
+              notice = pt(language, "Rakip hamlesi yeniden eşitleniyor…", "Resyncing rival move…")
+          }
+
+          LaunchedEffect(room?.id, room?.turnDeadline, room?.currentPlayerId, room?.status, room?.botTurn) {
+              val active = room ?: return@LaunchedEffect
+              if (active.status !in setOf("playing", "final", "sudden_death") || active.botTurn) {
+                  turnSeconds = 45
+                  return@LaunchedEffect
+              }
+
+              val deadline = active.turnDeadline?.let { runCatching { Instant.parse(it) }.getOrNull() }
+              if (deadline == null) {
+                  turnSeconds = 45
+                  runCatching { backend.getRoom(active.id) }.getOrNull()?.let { synced ->
+                      if (synced != active) room = synced
+                  }
+                  return@LaunchedEffect
+              }
+
+              while (true) {
+                  val remaining = Duration.between(Instant.now(), deadline).seconds.coerceAtLeast(0).toInt()
+                  turnSeconds = remaining
+                  if (remaining > 0) {
+                      delay(250)
+                      continue
+                  }
+
+                  // Refresh before claiming. A delayed room update must never leave the arena at 00.
+                  val synced = runCatching { backend.getRoom(active.id) }.getOrNull()
+                  if (synced != null && (
+                          synced.turnDeadline != active.turnDeadline ||
+                              synced.currentPlayerId != active.currentPlayerId ||
+                              synced.status != active.status ||
+                              synced.botTurn != active.botTurn
+                      )
+                  ) {
+                      room = synced
+                      notice = ""
+                      return@LaunchedEffect
+                  }
+
+                  // The authoritative RPC allows either participant to advance an expired turn.
+                  val advanced = runCatching { backend.claimTurnTimeout(active.id) }.getOrNull()
+                  if (advanced != null) {
+                      room = advanced
+                      notice = pt(language, "Süre doldu. Sıra güncellendi.", "Time expired. Turn updated.")
+                      return@LaunchedEffect
+                  }
+
+                  notice = pt(language, "Maç yeniden eşitleniyor…", "Resyncing match…")
+                  delay(1000)
+              }
+          }
+
+          '''
+          source = timer_pattern.sub(new_timer, source, count=1)
+
+          require_replace(
+              '                        onQuickChat = { if (!active.isBot) showQuickChat = true },\n',
+              '                        onQuickChat = { showQuickChat = true },\n',
+              'quick chat action',
+          )
+          require_replace(
+              '                                            runCatching { backend.submitWord(active.id, candidate) }\n',
+              '                                            runCatching { backend.submitPremierWord(active.id, candidate) }\n',
+              'v4 premier submit',
+          )
+
+          chat_old = '''                scope.launch {
+                      runCatching { backend.sendChat(active.id, message) }
+                          .onFailure { notice = premierError(language, it.message.orEmpty()) }
+                  }
+          '''
+          chat_new = '''                scope.launch {
+                      if (active.isBot) {
+                          notice = pt(language, "Reaksiyon gönderildi: $message", "Reaction sent: $message")
+                          SonHarfSoundFx.softNotify()
+                      } else {
+                          runCatching { backend.sendChat(active.id, message) }
+                              .onFailure { notice = premierError(language, it.message.orEmpty()) }
+                      }
+                  }
+          '''
+          require_replace(chat_old, chat_new, 'bot quick reaction')
+
+          header_marker = 'private fun PremierArenaHeader('
+          header_pos = source.index(header_marker)
+          first_row = source.index('            Row(verticalAlignment = Alignment.CenterVertically) {', header_pos)
+          second_row = source.index('            Row(verticalAlignment = Alignment.CenterVertically) {', first_row + 1)
+          second_row_line_end = second_row + len('            Row(verticalAlignment = Alignment.CenterVertically) {')
+          symmetric_top = '''            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                  Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                      Surface(modifier = Modifier.clickable(onClick = onForfeit), shape = RoundedCornerShape(12.dp), color = PremierUi.RedSoft) {
+                          Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                              Icon(Icons.Rounded.Flag, null, tint = PremierUi.Red, modifier = Modifier.size(15.dp))
+                              Spacer(Modifier.width(4.dp))
+                              Text(pt(language, "PES ET", "SURRENDER"), color = PremierUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                          }
+                      }
+                  }
+                  Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                      Surface(shape = RoundedCornerShape(13.dp), color = PremierUi.Ice) {
+                          Text("$myScore  —  $rivalScore", Modifier.padding(horizontal = 13.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                      }
+                  }
+                  Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
+                      Surface(
+                          modifier = Modifier.clickable(onClick = onQuickChat),
+                          shape = RoundedCornerShape(12.dp),
+                          color = PremierUi.Ice,
+                          border = BorderStroke(1.dp, PremierUi.Border),
+                      ) {
+                          Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                              Icon(Icons.Rounded.ChatBubbleOutline, pt(language, "Sohbet", "Chat"), tint = PremierUi.Ocean, modifier = Modifier.size(15.dp))
+                              Spacer(Modifier.width(4.dp))
+                              Text(pt(language, "SOHBET", "CHAT"), color = PremierUi.OceanDeep, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                          }
+                      }
+                  }
+              }
+              Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {'''
+          source = source[:first_row] + symmetric_top + source[second_row_line_end:]
+
+          mini_pattern = re.compile(
+              r'@Composable\nprivate fun PremierMiniPlayer\(.*?\n\}\n\n(?=@Composable\nprivate fun PremierTurnBadge)',
+              re.DOTALL,
+          )
+          mini_matches = list(mini_pattern.finditer(source))
+          if len(mini_matches) != 1:
+              raise SystemExit(f'mini player: expected 1, found {len(mini_matches)}')
+          new_mini = '''@Composable
+          private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, visible: Boolean, rounds: Int, streak: Int, accent: Color, bot: Boolean, modifier: Modifier) {
+              val isLeft = accent == PremierUi.Ocean
+              Row(
+                  modifier = modifier,
+                  verticalAlignment = Alignment.CenterVertically,
+                  horizontalArrangement = if (isLeft) Arrangement.Start else Arrangement.End,
+              ) {
+                  if (isLeft) {
+                      ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp, accent, visible, false)
+                      Spacer(Modifier.width(8.dp))
+                  }
+                  Column(
+                      modifier = Modifier.widthIn(max = 68.dp),
+                      horizontalAlignment = if (isLeft) Alignment.Start else Alignment.End,
+                  ) {
+                      Text(name, color = PremierUi.Ink, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                      Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                          repeat(3) { i -> Box(Modifier.size(9.dp).clip(CircleShape).background(if (i < rounds) PremierUi.Gold else PremierUi.Border)) }
+                      }
+                      if (streak >= 2) Text("🔥 $streak", color = PremierUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                  }
+                  if (!isLeft) {
+                      Spacer(Modifier.width(8.dp))
+                      if (bot) SyntheticBotPortrait(name, width = 58.dp, height = 58.dp, accent = accent)
+                      else ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp, accent, visible, false)
+                  }
+              }
+          }
+
+          '''.replace('          ', '')
+          source = mini_pattern.sub(new_mini, source, count=1)
+
+          require_replace(
+              'Box(Modifier.size(52.dp).background(Brush.radialGradient(listOf(PremierUi.Sky, PremierUi.Ocean, PremierUi.OceanDeep)), CircleShape), contentAlignment = Alignment.Center)',
+              'Box(Modifier.size(60.dp).background(Brush.radialGradient(listOf(PremierUi.Sky, PremierUi.Ocean, PremierUi.OceanDeep)), CircleShape), contentAlignment = Alignment.Center)',
+              'timer size',
+          )
+          require_replace(
+              "Text(seconds.toString().padStart(2, '0'), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)",
+              "Text(seconds.toString().padStart(2, '0'), color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)",
+              'timer text',
+          )
+          require_replace(
+              'modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 104.dp, start = 22.dp, end = 22.dp)',
+              'modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 132.dp, start = 22.dp, end = 22.dp)',
+              'floating chat offset',
+          )
+
+          path.write_text(source)
+
+          test = Path('app/src/test/java/com/sonharf/game/PremierDuelUxRegressionTest.kt')
+          test.write_text('''package com.sonharf.game
+
+          import java.io.File
+          import org.junit.Assert.assertFalse
+          import org.junit.Assert.assertTrue
+          import org.junit.Test
+
+          class PremierDuelUxRegressionTest {
+              @Test fun premierArenaKeepsLargeProfilesVisibleChatSymmetryAndTimeoutRecovery() {
+                  val screen = File("src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
+                  val backend = File("src/main/java/com/sonharf/game/data/PremierDuelBackend.kt").readText()
+                  assertTrue(screen.contains("ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp"))
+                  assertTrue(screen.contains("SyntheticBotPortrait(name, width = 58.dp, height = 58.dp"))
+                  assertTrue(screen.contains("Text(pt(language, \\"SOHBET\\", \\"CHAT\\")"))
+                  assertFalse(screen.contains("enabled = !room.isBot"))
+                  assertTrue(screen.contains("Alignment.CenterStart"))
+                  assertTrue(screen.contains("Alignment.CenterEnd"))
+                  assertTrue(screen.contains("backend.claimTurnTimeout(active.id)"))
+                  assertTrue(screen.contains("backend.botTakeTurn(active.id)"))
+                  assertTrue(screen.contains("backend.submitPremierWord(active.id, candidate)"))
+                  assertFalse(screen.contains("timeoutClaimKey"))
+                  assertTrue(backend.contains("submit_word_v4"))
+              }
+          }
+          '''.replace('          ', ''))
+          PY
+
+      - name: Commit patched source and remove temporary workflows
+        shell: bash
+        run: |
+          rm -f .github/workflows/one-shot-premier-ux-fix.yml .github/workflows/one-shot-premier-ux-fix-v2.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Premier arena avatar, sohbet ve ilk hamle kilidini düzelt"
+          git push origin HEAD:reset/son-harf-game-clean-slate
