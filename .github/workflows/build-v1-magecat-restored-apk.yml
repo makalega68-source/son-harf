@@ -3,6 +3,8 @@ name: Build V1 MageCat 2D Mimics APK
 on:
   push:
     branches: [ apk-test-v1-magecat-mimics-20260909 ]
+    paths:
+      - '.github/workflows/build-v1-magecat-restored-apk.yml'
   workflow_dispatch:
 
 permissions:
