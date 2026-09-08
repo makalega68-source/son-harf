@@ -93,21 +93,25 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
 
     LaunchedEffect(state.language, dictionaryRetryKey) {
         dictionaryLoading = true
-        dictionaryReady = SharedDictionaryService.restorePersisted(context, state.language)
-        if (!dictionaryReady) {
-            runCatching { SharedDictionaryService.preloadCanonical(context, state.language) }
-                .onSuccess {
-                    dictionaryReady = true
+        val restored = SharedDictionaryService.restorePersisted(context, state.language)
+        dictionaryReady = restored
+        // A persisted snapshot is an offline continuity cache, not permanent authority. Always try
+        // to refresh it so newly added/corrected canonical words reach existing installations too.
+        runCatching { SharedDictionaryService.preloadCanonical(context, state.language) }
+            .onSuccess {
+                dictionaryReady = true
+                if (!restored) {
                     notice = sh("Ana sözlük hazır. Çevrimdışı alıştırmada da aynı sözlük kullanılacak.", "Main dictionary ready. The same dictionary will be used for offline practice.")
                 }
-                .onFailure {
-                    dictionaryReady = false
+            }
+            .onFailure {
+                dictionaryReady = restored
+                if (!restored) {
                     notice = sh("Ana sözlük yüklenemedi. Yenile düğmesine basıp tekrar dene.", "Main dictionary could not be loaded. Tap refresh to retry.")
                 }
-        }
+            }
         dictionaryLoading = false
     }
-
 
     fun clearSelection() {
         placements = emptyMap()
@@ -183,17 +187,19 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 4.dp),
         ) {
-            val compact = maxHeight < 700.dp
+            // On phones the 15x15 board is the primary interaction target. Compact the chrome even
+            // on tall phones; using height alone made modern 20:9 devices waste board space.
+            val compact = maxHeight < 700.dp || maxWidth < 600.dp
 
             Column(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 6.dp),
+                verticalArrangement = Arrangement.spacedBy(if (compact) 3.dp else 6.dp),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    modifier = Modifier.fillMaxWidth().height(if (compact) 42.dp else 48.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = onExit, modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = onExit, modifier = Modifier.size(if (compact) 42.dp else 48.dp)) {
                         Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                     }
                     Column(Modifier.weight(1f)) {
@@ -204,10 +210,10 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                                 dictionaryReady -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK", "BOT PRACTICE • MAIN DICTIONARY")
                                 else -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK GEREKLİ", "BOT PRACTICE • MAIN DICTIONARY REQUIRED")
                             },
-                            color = MainUi.Blue, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1,
+                            color = MainUi.Blue, fontSize = if (compact) 7.sp else 8.sp, fontWeight = FontWeight.Black, maxLines = 1,
                         )
                     }
-                    IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(48.dp)) {
+                    IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(if (compact) 42.dp else 48.dp)) {
                         Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = MainUi.Red)
                     }
                     IconButton(
@@ -215,7 +221,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                             if (!dictionaryReady) dictionaryRetryKey += 1
                             else if (state.moveCount > 0 || placements.isNotEmpty()) showRestart = true else startAgain()
                         },
-                        modifier = Modifier.size(48.dp),
+                        modifier = Modifier.size(if (compact) 42.dp else 48.dp),
                     ) {
                         Icon(Icons.Rounded.Refresh, sh("Yeni oyun", "New game"), tint = MainUi.Blue)
                     }
@@ -256,7 +262,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
                     border = BorderStroke(1.dp, if (displayedOwner == 1) MainUi.Green.copy(alpha = .25f) else MainUi.Red.copy(alpha = .25f)),
                 ) {
-                    Row(Modifier.padding(horizontal = 10.dp, vertical = if (compact) 5.dp else 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = if (compact) 4.dp else 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (botThinking) CircularProgressIndicator(Modifier.size(14.dp), color = SiegePurple, strokeWidth = 2.dp)
                         else Icon(if (displayedOwner == 1) Icons.Rounded.TouchApp else Icons.Rounded.SmartToy, null, tint = if (displayedOwner == 1) Color.White else MainUi.Red, modifier = Modifier.size(15.dp))
                         Spacer(Modifier.width(6.dp))
@@ -268,10 +274,11 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                                 else -> sh("${botProfile.name.uppercase()} OYNUYOR", "${botProfile.name.uppercase()} IS PLAYING")
                             },
                             color = if (displayedOwner == 1) Color.White else MainUi.Text,
-                            fontSize = 14.sp,
-                            lineHeight = 16.sp,
+                            fontSize = if (compact) 12.sp else 14.sp,
+                            lineHeight = if (compact) 13.sp else 16.sp,
                             fontWeight = FontWeight.Black,
-                            maxLines = 2,
+                            maxLines = if (compact) 1 else 2,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -368,20 +375,20 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        OutlinedButton(onClick = { showPass = true }, enabled = canPlayerAct, modifier = Modifier.weight(1f).height(if (compact) 40.dp else 43.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
-                            Text(sh("PAS", "PASS"), fontSize = 14.sp, fontWeight = FontWeight.Black)
+                        OutlinedButton(onClick = { showPass = true }, enabled = canPlayerAct, modifier = Modifier.weight(1f).height(if (compact) 38.dp else 43.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
+                            Text(sh("PAS", "PASS"), fontSize = if (compact) 13.sp else 14.sp, fontWeight = FontWeight.Black)
                         }
                         OutlinedButton(
                             onClick = { exchangeSelection = emptySet(); showExchange = true },
                             enabled = canPlayerAct && state.bag.isNotEmpty(),
-                            modifier = Modifier.weight(1.25f).height(if (compact) 40.dp else 43.dp),
+                            modifier = Modifier.weight(1.25f).height(if (compact) 38.dp else 43.dp),
                             border = BorderStroke(1.dp, SiegePurple),
                             contentPadding = PaddingValues(horizontal = 4.dp),
-                        ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = 14.sp, fontWeight = FontWeight.Black) }
+                        ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = if (compact) 13.sp else 14.sp, fontWeight = FontWeight.Black) }
                         Button(
                             onClick = ::applyPlayerMove,
                             enabled = canPlayerAct && placements.isNotEmpty(),
-                            modifier = Modifier.weight(1.35f).height(if (compact) 40.dp else 43.dp),
+                            modifier = Modifier.weight(1.35f).height(if (compact) 38.dp else 43.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = MainUi.Blue,
                                 contentColor = Color.White,
@@ -389,7 +396,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                                 disabledContentColor = SonHarfTheme.DisabledContent,
                             ),
                             contentPadding = PaddingValues(horizontal = 4.dp),
-                        ) { Text(sh("OYNA", "PLAY"), fontSize = 14.sp, fontWeight = FontWeight.Black) }
+                        ) { Text(sh("OYNA", "PLAY"), fontSize = if (compact) 13.sp else 14.sp, fontWeight = FontWeight.Black) }
                     }
                 } else {
                     val won = state.winnerOwner == 1
@@ -407,7 +414,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                 }
 
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(if (compact) 34.dp else 40.dp),
+                    modifier = Modifier.fillMaxWidth().height(if (compact) 26.dp else 40.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     notice?.let { message ->
@@ -518,35 +525,35 @@ private fun WordSiegePracticeScoreCard(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.height(if (compact) 70.dp else 78.dp),
+        modifier = modifier.height(if (compact) 60.dp else 78.dp),
         color = if (active) accent.copy(alpha = .09f) else MainUi.Surface,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
         border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) accent else MainUi.Border),
     ) {
-        Row(Modifier.padding(horizontal = 7.dp, vertical = if (compact) 5.dp else 7.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 7.dp, vertical = if (compact) 4.dp else 7.dp), verticalAlignment = Alignment.CenterVertically) {
             ProfilePhotoAvatarWithGender(
                 avatarPath = avatarPath,
                 gender = gender,
                 name = name,
-                size = 46.dp,
+                size = if (compact) 38.dp else 46.dp,
                 accent = accent,
                 visible = avatarVisible,
             )
-            Spacer(Modifier.width(6.dp))
+            Spacer(Modifier.width(if (compact) 5.dp else 6.dp))
             Column(Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp, lineHeight = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = if (compact) 12.sp else 14.sp, lineHeight = if (compact) 13.sp else 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (isBot) {
                         Spacer(Modifier.width(4.dp))
                         Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(99.dp), color = accent.copy(alpha = .12f)) {
-                            Text("BOT", Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = accent, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                            Text("BOT", Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = accent, fontSize = if (compact) 10.sp else 12.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
                 Row(verticalAlignment = Alignment.Bottom) {
-                    Text("$score", color = accent, fontWeight = FontWeight.Black, fontSize = 24.sp, lineHeight = 27.sp, maxLines = 1)
+                    Text("$score", color = accent, fontWeight = FontWeight.Black, fontSize = if (compact) 20.sp else 24.sp, lineHeight = if (compact) 22.sp else 27.sp, maxLines = 1)
                     Spacer(Modifier.width(5.dp))
-                    Text(sh("Alan $area", "Area $area"), color = MainUi.Muted, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(sh("Alan $area", "Area $area"), color = MainUi.Muted, fontSize = if (compact) 9.sp else 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }
