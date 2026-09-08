@@ -55,3 +55,5 @@ jobs:
           name: SonHarf-V1-MageCat-2D-Mimics-APK
           path: SonHarf-V1-MageCat-2D-Mimics.apk
           if-no-files-found: error
+
+# rebuild: verified complete 2D mimic sheet, legacy preview removed
