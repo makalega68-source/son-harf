@@ -161,6 +161,8 @@ internal fun MainPlayerProfileScreen(
             }
         }
 
+        item { ProfileOwnedThemesSection(backend) }
+
         item {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
