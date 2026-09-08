@@ -71,6 +71,8 @@ data class GameRoomDto(
     @SerialName("bot_turn") val botTurn: Boolean = false,
     @SerialName("disconnected_player_id") val disconnectedPlayerId: String? = null,
     @SerialName("reconnect_deadline") val reconnectDeadline: String? = null,
+    @SerialName("game_mode") val gameMode: String = "normal",
+    @SerialName("winner_is_bot") val winnerIsBot: Boolean = false,
 )
 
 @Serializable
@@ -118,26 +120,15 @@ data class TriviaRoundDto(
     @SerialName("guest_answer") val guestAnswer: Long? = null,
     @SerialName("bot_answer") val botAnswer: Long? = null,
     @SerialName("correct_answer") val correctAnswer: Long? = null,
-    @SerialName("winner_side") val winnerSide: String? = null,
-    @SerialName("winner_id") val winnerId: String? = null,
-    @SerialName("resolved_at") val resolvedAt: String? = null,
-    @SerialName("bot_attempted") val botAttempted: Boolean = false,
 )
 
 @Serializable
 data class TriviaAnswerDto(
+    val id: String,
     @SerialName("round_id") val roundId: String,
     @SerialName("player_id") val playerId: String,
     @SerialName("answer_index") val answerIndex: Long,
-    @SerialName("is_correct") val isCorrect: Boolean = false,
-)
-
-@Serializable
-data class MatchmakingQueueDto(
-    @SerialName("user_id") val userId: String,
-    val language: String,
-    val status: String,
-    @SerialName("room_id") val roomId: String? = null,
+    @SerialName("created_at") val createdAt: String,
 )
 
 @Serializable
@@ -146,6 +137,7 @@ data class FriendshipDto(
     @SerialName("friend_id") val friendId: String,
     val status: String,
     @SerialName("requested_by") val requestedBy: String,
+    @SerialName("created_at") val createdAt: String,
 )
 
 @Serializable
@@ -153,24 +145,37 @@ data class GameInviteDto(
     val id: String,
     @SerialName("sender_id") val senderId: String,
     @SerialName("receiver_id") val receiverId: String,
-    val language: String,
     val status: String,
     @SerialName("room_id") val roomId: String? = null,
-    @SerialName("expires_at") val expiresAt: String,
+    val language: String = "tr",
+    @SerialName("created_at") val createdAt: String,
 )
 
-@Serializable private data class ProfileWrite(val id: String, @SerialName("display_name") val displayName: String)
-@Serializable private data class ChatWrite(@SerialName("room_id") val roomId: String, @SerialName("sender_id") val senderId: String, val body: String)
+@Serializable
+private data class ProfileWrite(
+    val id: String,
+    @SerialName("display_name") val displayName: String,
+)
+
+@Serializable
+private data class ChatWrite(
+    @SerialName("room_id") val roomId: String,
+    @SerialName("sender_id") val senderId: String,
+    val body: String,
+)
+
+@Serializable
+private data class MatchmakingQueueDto(
+    @SerialName("user_id") val userId: String,
+    val status: String,
+    @SerialName("room_id") val roomId: String? = null,
+)
 
 object SupabaseProvider {
-    val configured: Boolean get() = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_KEY.isNotBlank()
+    val configured: Boolean = BuildConfig.SUPABASE_URL.isNotBlank() && BuildConfig.SUPABASE_KEY.isNotBlank()
     val client: SupabaseClient by lazy {
-        require(configured)
         createSupabaseClient(BuildConfig.SUPABASE_URL, BuildConfig.SUPABASE_KEY) {
-            install(Auth) {
-                scheme = "sonharf"
-                host = "auth"
-            }
+            install(Auth)
             install(Postgrest)
             install(Realtime)
         }
