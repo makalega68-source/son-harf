@@ -1,10 +1,9 @@
-name: Build V1 MageCat Restored APK
+name: Build V1 MageCat 2D APK
 
 on:
   push:
     branches: [ apk-test-v1-magecat-restored-20260908 ]
-    paths:
-      - '.github/workflows/build-v1-magecat-restored-apk.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -27,9 +26,9 @@ jobs:
       - name: Run regression tests and build APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
       - name: Stage APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-V1-MageCat-Restored.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-V1-MageCat-2D.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: SonHarf-V1-MageCat-Restored-APK
-          path: SonHarf-V1-MageCat-Restored.apk
+          name: SonHarf-V1-MageCat-2D-APK
+          path: SonHarf-V1-MageCat-2D.apk
           if-no-files-found: error
