@@ -5,12 +5,16 @@ on:
     branches: [ main ]
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   verify-frame-provenance:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -28,14 +32,21 @@ jobs:
         run: python -m pip install --disable-pip-version-check pillow==11.3.0
       - name: Verify repository drawables and exact catalog mapping
         run: python scripts/verify_frame_provenance.py
-      - name: Verify committed home lobby source
+      - name: Verify Unified Pro committed runtime
+        shell: bash
         run: |
-          grep -q 'SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          grep -q 'HAFTANIN EN İYİLERİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          ! grep -q 'MonsterQuickCard(' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          grep -q 'MonsterSiegeQuickCard(Modifier.fillMaxWidth(), onSiege)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          grep -q 'SonHarfBrandLogo(' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          ! grep -q 'OYUNCU MERKEZİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          set -euo pipefail
+          echo "SOURCE_SHA=$(git rev-parse HEAD)"
+          test ! -f app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          test ! -f app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt
+          grep -q 'UnifiedProApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
+          grep -q 'SonHarfTopAdBanner(visible = !gameplay, isPremium = isPro)' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'UnifiedDestination.GAME -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'UnifiedDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'UnifiedDestination.LETTER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          test -s app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
       - name: Test and build debug APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
       - name: Verify compiled APK pixels against immutable purchased-source manifest
