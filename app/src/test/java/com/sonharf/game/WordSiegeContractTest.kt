@@ -9,7 +9,7 @@ import org.junit.Test
 class WordSiegeContractTest {
     @Test fun siegeReplacesConquestAndKeepsCoreVisuals() {
         val siege = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGame.kt").readText()
-        val home = projectFile("app/src/main/java/com/sonharf/game/LightWordThemeApp.kt").readText()
+        val home = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
 
         assertTrue(siege.contains("KELİME KUŞATMASI"))
         assertTrue(siege.contains("Kelimeyi kur. Alanı ele geçir."))
