@@ -43,14 +43,24 @@ jobs:
           git diff --exit-code
           test -z "$(git status --porcelain --untracked-files=no)"
 
-      - name: Verify committed home lobby contract
+      - name: Verify Unified Pro source contract
+        shell: bash
         run: |
-          grep -q 'SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          grep -q 'HAFTANIN EN İYİLERİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          ! grep -q 'MonsterQuickCard(' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          grep -q 'MonsterSiegeQuickCard(Modifier.fillMaxWidth(), onSiege)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          grep -q 'SonHarfBrandLogo(' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          ! grep -q 'OYUNCU MERKEZİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          set -euo pipefail
+          test ! -f app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          test ! -f app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt
+          grep -q 'UnifiedProApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
+          grep -q 'SonHarfTopAdBanner(visible = !gameplay, isPremium = isPro)' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'UnifiedDestination.GAME -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'UnifiedDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'UnifiedDestination.LETTER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'UnifiedDestination.VIP -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          test -f app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
+          grep -q 'R.drawable.mage_cat_runtime' app/src/main/java/com/sonharf/game/mascot/MageCatCompanion.kt
+          test -f supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql
 
       - name: Build debug APK with tests
         run: gradle clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
