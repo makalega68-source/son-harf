@@ -9,11 +9,13 @@ import androidx.compose.ui.graphics.Color
 internal object SonHarfTheme {
     private val dark: Boolean get() = SonHarfCosmetics.darkArenaTheme
 
+    val IsDark: Boolean get() = dark
     val Background: Color get() = if (dark) Color(0xFF070A12) else Color(0xFFF5F8FC)
     val Surface: Color get() = if (dark) Color(0xFF111722) else Color(0xFFFFFFFF)
     val SurfaceSecondary: Color get() = if (dark) Color(0xFF1A2331) else Color(0xFFEEF5FF)
     val PrimaryBlue: Color get() = if (dark) Color(0xFFF0B84D) else Color(0xFF1769E0)
     val PrimaryBlueSoft: Color get() = if (dark) Color(0xFF2C2417) else Color(0xFFE8F1FF)
+    val SecondaryAccent: Color get() = if (dark) Color(0xFFD7A72E) else Color(0xFF139BB0)
     val TextPrimary: Color get() = if (dark) Color(0xFFF5F7FC) else Color(0xFF142033)
     val TextSecondary: Color get() = if (dark) Color(0xFFAEB9C9) else Color(0xFF66758A)
     val Border: Color get() = if (dark) Color(0xFF3A4658) else Color(0xFFD5E0EA)
