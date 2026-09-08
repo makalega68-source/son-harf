@@ -121,7 +121,10 @@ internal fun MonsterStyleStoreScreen() {
         }
     }
 }
-internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) {
+internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && isSupportedOwnedStyle()
+
+/** Retiring a product from sale does not remove the owner's ability to use supported artwork. */
+internal fun ShopItemDto.isSupportedOwnedStyle(): Boolean = when (kind) {
     "game_theme" -> id == "theme_dark_arena"
     "profile_frame" -> id in PurchasedFrameCatalog.ids
     "name_style" -> id == "name_cyan"; "keyboard_theme" -> id == "keyboard_neon"

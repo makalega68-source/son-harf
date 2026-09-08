@@ -31,4 +31,23 @@ class StoreCatalogPolicyTest {
         assertFalse(selected.isEquipped(item("frame_asset_green", "profile_frame")))
         assertFalse((null as EquippedCosmeticsDto?).isEquipped(item("theme_dark_arena", "game_theme")))
     }
+
+    @Test fun retiringSupportedItemsStopsSalesButPreservesCollectionUse() {
+        listOf(
+            item("frame_asset_red", "profile_frame"),
+            item("theme_dark_arena", "game_theme"),
+            item("name_cyan", "name_style"),
+            item("keyboard_neon", "keyboard_theme"),
+        ).forEach { product ->
+            val retired = product.copy(active = false)
+            assertFalse(retired.isRuntimeReadyStyle())
+            assertTrue(retired.isSupportedOwnedStyle())
+        }
+    }
+
+    @Test fun ownershipNeverEnablesUnsupportedOrMismatchedRuntimeAssets() {
+        assertFalse(item("unknown", "profile_frame").isSupportedOwnedStyle())
+        assertFalse(item("frame_asset_red", "game_theme").isSupportedOwnedStyle())
+        assertFalse(item("victory_crown", "victory_effect").isSupportedOwnedStyle())
+    }
 }

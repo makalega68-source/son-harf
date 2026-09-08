@@ -2,7 +2,7 @@
 
 ## Product decision
 
-Son Harf will use a **Premium = convenience + information advantage + capacity expansion** model. This is intentionally lighter than direct pay-to-win.
+Son Harf uses **Premium = ad-free experience + presentation + non-competitive convenience**. The product owner's 8 September 2026 instruction forbids pay-to-win, including paid real-time strategic information unavailable to free opponents. See `PREMIUM_PRODUCT_REVIEW_20260908.md` for the researched Kelimelik mapping.
 
 The free player must retain full access to the core competitive game. Payment may improve convenience, visibility, progression comfort and collection/status expression, but must not directly buy a match result.
 
@@ -17,7 +17,7 @@ Premium / PRO may include:
 - additional non-ranked daily challenge or task capacity,
 - faster access to non-competitive reward presentation/claim flows where this does not alter ranked match outcomes,
 - Premium-only Style items, profile frames, titles, badges and other status cosmetics,
-- enhanced word/letter information tools that support decision-making without injecting score, time or invalid-word forgiveness,
+- post-match word/letter analysis; any real-time score preview or remaining-letter information must be equally available to free and paid competitors,
 - Premium tournament or event access only when the event is separated from standard ranked fairness and its rewards do not create gameplay power,
 - expanded customization and convenience surfaces.
 
@@ -52,7 +52,7 @@ The following must not be sold for real money, Premium or Son Coin in ranked/sta
 
 ## Information-assist boundary
 
-Information advantage is permitted only when it remains an assistive layer rather than an automatic answer system.
+Paid information must not give a real-time competitive advantage. Historical analysis and non-competitive convenience are distinct from live help during a match.
 
 Permitted examples include:
 
@@ -60,9 +60,9 @@ Permitted examples include:
 - historical letter/word usage analysis,
 - post-match missed-opportunity analysis,
 - opponent tendency summaries based on already available historical data,
-- optional pre-match preparation information.
+- non-competitive personal practice analysis.
 
-Any real-time in-match helper that suggests exact playable words, reveals hidden answers, or materially solves the turn for the player requires separate product review before implementation.
+Do not sell live playable-word suggestions, hidden answers, exclusive remaining-letter counters, or other turn-solving assistance. Core friend invitations and rematches are free product goals; existing paid entitlements are not silently revoked by this policy update.
 
 ## Store design rule
 
