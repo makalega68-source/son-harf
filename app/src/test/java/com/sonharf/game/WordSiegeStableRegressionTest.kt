@@ -33,7 +33,7 @@ class WordSiegeStableRegressionTest {
         assertTrue(engine.contains("SharedDictionaryService.isValidWordBlocking"))
         assertTrue(engine.contains("SharedDictionaryService.practiceCandidates"))
         assertTrue(!engine.contains("practiceDictionary"))
-        assertTrue(sharedDictionary.contains("get_dictionary_snapshot_v3"))
+        assertTrue(sharedDictionary.contains("get_dictionary_snapshot_v4"))
         assertTrue(sharedDictionary.contains("MIN_CANONICAL_LENGTH = 2"))
         assertTrue(sharedDictionary.contains("ConcurrentHashMap"))
         assertTrue(rules.contains("CUBE_TRANSFER_POINTS: Int = 2"))
