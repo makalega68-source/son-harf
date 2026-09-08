@@ -64,7 +64,6 @@ class WordSiegeFinalRulesTest {
             this[40] = WordSiegeCellDto(letter = "A", owner = 2)
             this[41] = WordSiegeCellDto(letter = "R", owner = 2)
             this[42] = WordSiegeCellDto(letter = "A", owner = 2)
-            // 39 is column 9 on a 15x15 board, so 24 is the directly adjacent cell above it.
             this[24] = WordSiegeCellDto(letter = "M", owner = 2)
         }
         val before = state(board, rack = "KXXXXXX")
@@ -102,27 +101,9 @@ class WordSiegeFinalRulesTest {
         assertEquals(42, WordSiegeFinalRules.netScore(wordScore = 34, earnedCubePoints = 8, opponentEarnedCubePoints = 0))
         assertEquals(31, WordSiegeFinalRules.netScore(wordScore = 31, earnedCubePoints = 0, opponentEarnedCubePoints = 8))
 
-        val first = WordSiegeMoveDto(
-            id = 1,
-            gameId = "game",
-            playerId = "me",
-            primaryWord = "KARA",
-            neutralCaptured = 3,
-        )
-        val rivalNeutral = WordSiegeMoveDto(
-            id = 2,
-            gameId = "game",
-            playerId = "rival",
-            primaryWord = "MASA",
-            neutralCaptured = 4,
-        )
-        val rivalTakesMine = WordSiegeMoveDto(
-            id = 3,
-            gameId = "game",
-            playerId = "rival",
-            primaryWord = "KALEM",
-            opponentCaptured = 1,
-        )
+        val first = WordSiegeMoveDto(id = 1, gameId = "game", playerId = "me", primaryWord = "KARA", neutralCaptured = 3)
+        val rivalNeutral = WordSiegeMoveDto(id = 2, gameId = "game", playerId = "rival", primaryWord = "MASA", neutralCaptured = 4)
+        val rivalTakesMine = WordSiegeMoveDto(id = 3, gameId = "game", playerId = "rival", primaryWord = "KALEM", opponentCaptured = 1)
 
         assertEquals(6, WordSiegeFinalRules.earnedCubePoints(listOf(first), "me"))
         assertEquals(6, WordSiegeFinalRules.earnedCubePoints(listOf(first, rivalNeutral), "me"))
@@ -133,14 +114,8 @@ class WordSiegeFinalRulesTest {
 
     @Test fun orientationIsDetectedWithoutPlayerDirectionSelection() {
         val board = emptyBoard()
-        assertEquals(
-            WordSiegeOrientation.HORIZONTAL,
-            WordSiegeFinalRules.detectOrientation(board, listOf(111, 112, 113)),
-        )
-        assertEquals(
-            WordSiegeOrientation.VERTICAL,
-            WordSiegeFinalRules.detectOrientation(board, listOf(97, 112, 127)),
-        )
+        assertEquals(WordSiegeOrientation.HORIZONTAL, WordSiegeFinalRules.detectOrientation(board, listOf(111, 112, 113)))
+        assertEquals(WordSiegeOrientation.VERTICAL, WordSiegeFinalRules.detectOrientation(board, listOf(97, 112, 127)))
     }
 
     @Test fun botAndHumanUseSameApplyMoveValidationAndUiLocksFinalOwnershipColors() {
@@ -155,7 +130,7 @@ class WordSiegeFinalRulesTest {
         assertTrue(engine.contains("SharedDictionaryService.isValidWordBlocking"))
         assertTrue(engine.contains("SharedDictionaryService.practiceCandidates"))
         assertTrue(!engine.contains("practiceDictionary"))
-        assertTrue(sharedDictionary.contains("get_dictionary_snapshot_v3"))
+        assertTrue(sharedDictionary.contains("get_dictionary_snapshot_v4"))
         assertTrue(sharedDictionary.contains("MIN_CANONICAL_LENGTH = 2"))
         assertTrue(!practice.contains("Yön otomatik algılanır"))
         assertTrue(!pan.contains("Yön otomatik algılanır"))
@@ -182,8 +157,7 @@ class WordSiegeFinalRulesTest {
         currentOwner = 1,
     )
 
-    private fun emptyBoard(): List<WordSiegeCellDto> =
-        List(WordSiegeBoardSpec.CellCount) { WordSiegeCellDto() }
+    private fun emptyBoard(): List<WordSiegeCellDto> = List(WordSiegeBoardSpec.CellCount) { WordSiegeCellDto() }
 
     private fun expectPracticeError(block: () -> Unit): WordSiegePracticeError {
         try {
