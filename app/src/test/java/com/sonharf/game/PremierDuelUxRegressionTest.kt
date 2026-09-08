@@ -21,6 +21,9 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("backend.botTakeTurn(active.id)"))
         assertTrue(screen.contains("backend.submitPremierWord(active.id, candidate)"))
         assertFalse(screen.contains("timeoutClaimKey"))
-        assertTrue(backend.contains("submit_word_v4"))
+        assertTrue(backend.contains("submitWord(roomId, word)"))
+        assertTrue(backend.contains("getRoom(roomId)"))
+        assertTrue(backend.contains("botTakeTurn(roomId)"))
+        assertFalse(backend.contains("submit_word_v4"))
     }
 }
