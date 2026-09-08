@@ -9,7 +9,7 @@ import org.junit.Test
 class VipDialogPolishContractTest {
 
     @Test
-    fun vipDialogKeepsBillingFlowAndDropsHeavyPulseUi() {
+    fun vipDialogKeepsBillingFlowAndUsesServerValidatedHybridBenefits() {
         val source = projectFile("app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt").readText()
 
         assertTrue(source.contains("BillingManager("))
@@ -18,7 +18,10 @@ class VipDialogPolishContractTest {
         assertTrue(source.contains("ProductCatalog.VIP_YEARLY"))
         assertTrue(source.contains("ProductCatalog.VIP_MONTHLY"))
         assertFalse(source.contains("rememberInfiniteTransition"))
-        assertTrue(source.lowercase().contains("no competitive power"))
+        assertTrue(source.contains("GÜNLÜK İPUCU"))
+        assertTrue(source.contains("HARF DEĞİŞTİRİCİ"))
+        assertTrue(source.lowercase().contains("server-validated game helpers"))
+        assertFalse(source.lowercase().contains("no competitive power"))
     }
 
     private fun projectFile(path: String): File {
