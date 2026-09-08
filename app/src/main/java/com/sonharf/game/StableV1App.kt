@@ -36,27 +36,35 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
 
-/**
- * Stable product shell. First-install language selection is resolved before any
- * authentication lookup so a fresh install always has a deterministic route.
- */
+/** Unified Pro startup shell: language -> onboarding -> auth -> rebuilt product. */
 @Composable
 fun StableV1App() {
     val context = LocalContext.current
     var languageChosen by remember { mutableStateOf(FirstRunLanguagePreferences.isComplete(context)) }
+    var onboardingRequired by remember { mutableStateOf(FirstRunLanguagePreferences.needsOnboarding(context)) }
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
 
     if (!languageChosen) {
         FirstRunLanguageScreen { language ->
             FirstRunLanguagePreferences.complete(context, language)
+            SonHarfUiState.language = language
             languageChosen = true
+            onboardingRequired = true
         }
         return
     }
 
-    LaunchedEffect(languageChosen) {
-        if (!languageChosen) return@LaunchedEffect
+    if (onboardingRequired) {
+        FirstRunOnboarding {
+            FirstRunLanguagePreferences.completeOnboarding(context)
+            onboardingRequired = false
+        }
+        return
+    }
+
+    LaunchedEffect(languageChosen, onboardingRequired) {
+        if (!languageChosen || onboardingRequired) return@LaunchedEffect
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
         authChecked = true
     }
@@ -76,13 +84,7 @@ fun StableV1App() {
         return
     }
 
-    Box(
-        Modifier
-            .fillMaxSize()
-            .background(MainUi.Background),
-    ) {
-        LiveDuelRuntimeShell(onSignedOut = { authenticated = false })
-    }
+    UnifiedProApp(onSignedOut = { authenticated = false })
 }
 
 @Composable
@@ -115,7 +117,6 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                 textAlign = TextAlign.Center,
             )
             Spacer(Modifier.height(26.dp))
-
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -153,7 +154,6 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                     ),
                 )
             }
-
             Spacer(Modifier.height(22.dp))
             Button(
                 enabled = selected != null,
@@ -168,10 +168,7 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                     disabledContentColor = MainUi.Muted,
                 ),
             ) {
-                Text(
-                    if (selected == "en") "CONTINUE" else "DEVAM ET",
-                    fontWeight = FontWeight.Black,
-                )
+                Text(if (selected == "en") "CONTINUE" else "DEVAM ET", fontWeight = FontWeight.Black)
             }
         }
     }
