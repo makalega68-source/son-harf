@@ -1,8 +1,8 @@
-name: Build V1 MageCat 2D Animated APK
+name: Build V1 MageCat 2D Mimics APK
 
 on:
   push:
-    branches: [ apk-test-v1-magecat-restored-20260908 ]
+    branches: [ apk-test-v1-magecat-mimics-20260909 ]
   workflow_dispatch:
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.4'
-      - name: Apply test-only Mage Cat size and idle animation patch
+      - name: Route home card to native 2D Mage Cat mimic renderer
         shell: bash
         run: |
           python3 - <<'PY'
@@ -31,66 +31,25 @@ jobs:
 
           path = Path("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
           text = path.read_text(encoding="utf-8")
-
-          import_anchor = "import androidx.activity.compose.BackHandler\n"
-          animation_imports = """import androidx.compose.animation.core.RepeatMode
-          import androidx.compose.animation.core.animateFloat
-          import androidx.compose.animation.core.infiniteRepeatable
-          import androidx.compose.animation.core.rememberInfiniteTransition
-          import androidx.compose.animation.core.tween
-          """
-          if animation_imports not in text:
-              if import_anchor not in text:
-                  raise SystemExit("Mage Cat patch failed: import anchor not found")
-              text = text.replace(import_anchor, import_anchor + animation_imports, 1)
-
-          function_anchor = "private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, onPlay: () -> Unit) {\n"
-          if text.count(function_anchor) != 1:
-              raise SystemExit(f"Mage Cat patch failed: live card function count={text.count(function_anchor)}")
-
-          animation_block = '''    val mascotIdle = rememberInfiniteTransition(label = "mageCatHomeIdle")
-              val mascotBob by mascotIdle.animateFloat(
-                  initialValue = 0f,
-                  targetValue = -7f,
-                  animationSpec = infiniteRepeatable(
-                      animation = tween(durationMillis = 1450),
-                      repeatMode = RepeatMode.Reverse,
-                  ),
-                  label = "mageCatHomeBob",
-              )
-              val mascotSway by mascotIdle.animateFloat(
-                  initialValue = -2.5f,
-                  targetValue = 2.5f,
-                  animationSpec = infiniteRepeatable(
-                      animation = tween(durationMillis = 1800),
-                      repeatMode = RepeatMode.Reverse,
-                  ),
-                  label = "mageCatHomeSway",
-              )
-          '''
-          text = text.replace(function_anchor, function_anchor + animation_block, 1)
-
-          size_anchor = "modifier = Modifier.size(72.dp),"
-          if text.count(size_anchor) < 1:
-              raise SystemExit("Mage Cat patch failed: 72dp mascot anchor not found")
-          size_replacement = '''modifier = Modifier
-                              .offset(x = mascotSway.dp, y = mascotBob.dp)
-                              .size(118.dp),'''
-          before, marker, after = text.partition(function_anchor)
-          after_count = after.count(size_anchor)
-          if after_count < 1:
-              raise SystemExit("Mage Cat patch failed: mascot size anchor not found after live card function")
-          after = after.replace(size_anchor, size_replacement, 1)
-          text = before + marker + after
-
-          path.write_text(text, encoding="utf-8")
+          old = '''                Image(
+                              painter = painterResource(R.drawable.mage_cat_preview_anthracite),
+                              contentDescription = sh("Mage Cat maskotu", "Mage Cat mascot"),
+                              modifier = Modifier.size(72.dp),
+                              contentScale = ContentScale.Fit,
+                          )'''
+          if text.count(old) != 1:
+              raise SystemExit(f"Mage Cat home patch failed: expected one legacy image, found {text.count(old)}")
+          new = '''                MageCatHomeMascot(
+                              modifier = Modifier.size(MageCatHomeDefaultSize),
+                          )'''
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
           PY
       - name: Run regression tests and build APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
       - name: Stage APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-V1-MageCat-2D-Animated.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-V1-MageCat-2D-Mimics.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: SonHarf-V1-MageCat-2D-Animated-APK
-          path: SonHarf-V1-MageCat-2D-Animated.apk
+          name: SonHarf-V1-MageCat-2D-Mimics-APK
+          path: SonHarf-V1-MageCat-2D-Mimics.apk
           if-no-files-found: error
