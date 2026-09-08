@@ -5,6 +5,7 @@ import io.github.jan.supabase.postgrest.postgrest
 import java.text.Normalizer
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -15,19 +16,30 @@ private data class DictionarySnapshotDto(
     val words: List<String>,
 )
 
+@Serializable
+data class GameWordValidationDto(
+    val valid: Boolean,
+    val reason: String,
+    @SerialName("normalized_word") val normalizedWord: String,
+    @SerialName("first_letter") val firstLetter: String,
+    @SerialName("last_letter") val lastLetter: String,
+    @SerialName("char_length") val charLength: Int,
+)
+
 /**
- * Canonical dictionary gateway shared by every word-game mode.
+ * Canonical dictionary gateway shared by all Son Harf word modes.
  *
- * public.dictionary_words is authoritative via get_dictionary_snapshot_v3. The complete active,
- * game-allowed snapshot is cached independently per language. A persisted snapshot is restored first
- * for offline continuity, then a network refresh is attempted so a stale cache never becomes
- * permanently authoritative. There is no reduced practice-only fallback lexicon.
+ * public.dictionary_words is the single source of truth. V4 keeps Turkish and English isolated,
+ * language-normalized and game-filtered. The 2..15 snapshot is an offline continuity cache for board
+ * modes; online Premier duel validation is authoritative through validate_game_word_v2 and supports
+ * words up to 30 characters. No reduced or synthetic fallback lexicon is accepted.
  */
 object SharedDictionaryService {
-    private const val PREFS = "son_harf_dictionary_snapshot_v3"
+    private const val PREFS = "son_harf_dictionary_snapshot_v4"
     private const val WORDS_PREFIX = "words_"
-    private const val MIN_CANONICAL_LENGTH = 2
-    private const val MAX_CANONICAL_LENGTH = 32
+    private const val MIN_SNAPSHOT_LENGTH = 2
+    private const val MAX_SNAPSHOT_LENGTH = 15
+    private const val MAX_ONLINE_LENGTH = 30
     private val snapshots = ConcurrentHashMap<String, Set<String>>()
     private val turkishLocale = Locale.forLanguageTag("tr-TR")
     private val englishLocale = Locale.ENGLISH
@@ -36,19 +48,21 @@ object SharedDictionaryService {
 
     fun normalize(word: String, language: String): String {
         val lang = canonicalLanguage(language)
-        // Postgres normalize_game_word() canonicalizes to NFC before/after case folding. Doing the
-        // same here prevents visually identical composed/decomposed Unicode words from disagreeing
-        // between the offline snapshot and authoritative server validation.
         val nfc = Normalizer.normalize(word.trim(), Normalizer.Form.NFC)
         val lower = if (lang == "tr") nfc.lowercase(turkishLocale) else nfc.lowercase(englishLocale)
         return Normalizer.normalize(lower, Normalizer.Form.NFC)
     }
 
-    private fun inCanonicalLength(word: String): Boolean = word.length in MIN_CANONICAL_LENGTH..MAX_CANONICAL_LENGTH
+    private fun validCharacters(word: String, language: String): Boolean = when (canonicalLanguage(language)) {
+        "en" -> word.all { it in 'a'..'z' }
+        else -> word.all { it in "abcçdefgğhıijklmnoöprsştuüvyz" }
+    }
+
+    private fun inSnapshotLength(word: String): Boolean = word.length in MIN_SNAPSHOT_LENGTH..MAX_SNAPSHOT_LENGTH
 
     fun hasSnapshot(language: String): Boolean = snapshots.containsKey(canonicalLanguage(language))
 
-    /** Restore the last complete canonical snapshot without network access. */
+    /** Restore the last complete, previously verified canonical snapshot without network access. */
     fun restorePersisted(context: Context, language: String): Boolean {
         val lang = canonicalLanguage(language)
         if (snapshots.containsKey(lang)) return true
@@ -58,7 +72,9 @@ object SharedDictionaryService {
         if (raw.isBlank()) return false
         val indexed = raw.lineSequence()
             .map { normalize(it, lang) }
-            .filter(::inCanonicalLength)
+            .filter(::inSnapshotLength)
+            .filter { validCharacters(it, lang) }
+            .filterNot { lang == "tr" && it.endsWith('ğ') }
             .toHashSet()
         if (indexed.isEmpty()) return false
         snapshots[lang] = indexed
@@ -76,13 +92,15 @@ object SharedDictionaryService {
     private suspend fun fetchCanonical(language: String): Set<String> {
         val lang = canonicalLanguage(language)
         val payload = SupabaseProvider.client.postgrest.rpc(
-            "get_dictionary_snapshot_v3",
+            "get_dictionary_snapshot_v4",
             buildJsonObject { put("p_language", lang) },
         ).decodeSingle<DictionarySnapshotDto>()
         require(payload.language == lang) { "canonical_dictionary_language_mismatch" }
         val indexed = payload.words.asSequence()
             .map { normalize(it, lang) }
-            .filter(::inCanonicalLength)
+            .filter(::inSnapshotLength)
+            .filter { validCharacters(it, lang) }
+            .filterNot { lang == "tr" && it.endsWith('ğ') }
             .toHashSet()
         require(indexed.isNotEmpty()) { "canonical_dictionary_empty" }
         snapshots[lang] = indexed
@@ -110,26 +128,52 @@ object SharedDictionaryService {
         return snapshots[lang] ?: throw IllegalStateException("canonical_dictionary_unavailable")
     }
 
+    /** Authoritative online validation used by Premier duel and any server-backed word submission. */
+    suspend fun validateAuthoritative(word: String, language: String): GameWordValidationDto {
+        val lang = canonicalLanguage(language)
+        val normalized = normalize(word, lang)
+        if (normalized.length !in MIN_SNAPSHOT_LENGTH..MAX_ONLINE_LENGTH || !validCharacters(normalized, lang)) {
+            return GameWordValidationDto(
+                valid = false,
+                reason = if (normalized.length !in MIN_SNAPSHOT_LENGTH..MAX_ONLINE_LENGTH) "invalid_length" else "invalid_characters",
+                normalizedWord = normalized,
+                firstLetter = normalized.take(1),
+                lastLetter = normalized.takeLast(1),
+                charLength = normalized.length,
+            )
+        }
+        if (lang == "tr" && normalized.endsWith('ğ')) {
+            return GameWordValidationDto(false, "ends_with_soft_g", normalized, normalized.take(1), normalized.takeLast(1), normalized.length)
+        }
+        return SupabaseProvider.client.postgrest.rpc(
+            "validate_game_word_v2",
+            buildJsonObject {
+                put("p_word", word.trim())
+                put("p_language", lang)
+            },
+        ).decodeSingle()
+    }
+
+    /** Snapshot validation for offline/practice surfaces. Online duel must use validateAuthoritative. */
     suspend fun isValidWord(word: String, language: String): Boolean {
         val normalized = normalize(word, language)
-        if (!inCanonicalLength(normalized)) return false
+        if (!inSnapshotLength(normalized) || !validCharacters(normalized, language)) return false
+        if (canonicalLanguage(language) == "tr" && normalized.endsWith('ğ')) return false
         isValidCachedNormalized(normalized, language)?.let { return it }
         return normalized in preload(language)
     }
 
-    /**
-     * Synchronous bridge used by local practice after the screen has loaded/restored the canonical
-     * snapshot. With no snapshot we fail closed and let UI report dictionary-unavailable.
-     */
     fun isValidWordBlocking(word: String, language: String): Boolean {
         val normalized = normalize(word, language)
-        if (!inCanonicalLength(normalized)) return false
+        if (!inSnapshotLength(normalized) || !validCharacters(normalized, language)) return false
+        if (canonicalLanguage(language) == "tr" && normalized.endsWith('ğ')) return false
         return isValidCachedNormalized(normalized, language) ?: false
     }
 
     fun isValidCached(word: String, language: String): Boolean? {
         val normalized = normalize(word, language)
-        if (!inCanonicalLength(normalized)) return false
+        if (!inSnapshotLength(normalized) || !validCharacters(normalized, language)) return false
+        if (canonicalLanguage(language) == "tr" && normalized.endsWith('ğ')) return false
         return isValidCachedNormalized(normalized, language)
     }
 
@@ -138,7 +182,7 @@ object SharedDictionaryService {
         return snapshots[lang]?.contains(normalized)
     }
 
-    /** Bot candidates use exactly the same loaded canonical snapshot as human validation. */
+    /** Bot candidates use exactly the same loaded canonical snapshot as human practice validation. */
     fun practiceCandidates(language: String, rack: String, limit: Int = 420): List<String> {
         val lang = canonicalLanguage(language)
         val words = snapshots[lang] ?: return emptyList()
@@ -167,7 +211,9 @@ object SharedDictionaryService {
         val lang = canonicalLanguage(language)
         snapshots[lang] = words.asSequence()
             .map { normalize(it, lang) }
-            .filter(::inCanonicalLength)
+            .filter(::inSnapshotLength)
+            .filter { validCharacters(it, lang) }
+            .filterNot { lang == "tr" && it.endsWith('ğ') }
             .toHashSet()
     }
 
