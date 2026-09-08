@@ -56,6 +56,23 @@ import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+private object LetterLadderUi {
+    val Background: Color get() = SonHarfTheme.Background
+    val Surface: Color get() = SonHarfTheme.Surface
+    val SurfaceRaised: Color get() = SonHarfTheme.Surface
+    val SurfaceSoft: Color get() = SonHarfTheme.SurfaceSecondary
+    val Text: Color get() = SonHarfTheme.TextPrimary
+    val Muted: Color get() = SonHarfTheme.TextSecondary
+    val Border: Color get() = SonHarfTheme.Border
+    val Accent: Color get() = SonHarfTheme.PrimaryBlue
+    val AccentText: Color get() = Color.White
+    val Live: Color get() = SonHarfTheme.Error
+    val Coral: Color get() = SonHarfTheme.Error
+    val Orange: Color get() = SonHarfTheme.Warning
+    val Green: Color get() = SonHarfTheme.Success
+    val Gold: Color get() = SonHarfTheme.Warning
+}
+
 internal data class LetterLadderPuzzle(
     val id: String,
     val start: String,
@@ -381,14 +398,14 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
     }
 
     Column(
-        Modifier.fillMaxSize().background(MonsterUi.Background),
+        Modifier.fillMaxSize().background(LetterLadderUi.Background),
     ) {
         if (loading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = MonsterUi.Accent)
+                    CircularProgressIndicator(color = LetterLadderUi.Accent)
                     Spacer(Modifier.height(12.dp))
-                    Text(sh("Bulmaca hazırlanıyor…", "Preparing puzzle…"), color = MonsterUi.Muted, fontSize = 12.sp)
+                    Text(sh("Bulmaca hazırlanıyor…", "Preparing puzzle…"), color = LetterLadderUi.Muted, fontSize = 12.sp)
                 }
             }
             return@Column
@@ -400,11 +417,11 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Icon(Icons.Rounded.TrackChanges, null, tint = MonsterUi.Orange, modifier = Modifier.size(42.dp))
+                Icon(Icons.Rounded.TrackChanges, null, tint = LetterLadderUi.Orange, modifier = Modifier.size(42.dp))
                 Spacer(Modifier.height(12.dp))
-                Text(sh("Bulmaca açılamadı", "Puzzle unavailable"), color = MonsterUi.Text, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                Text(sh("Bulmaca açılamadı", "Puzzle unavailable"), color = LetterLadderUi.Text, fontWeight = FontWeight.Black, fontSize = 20.sp)
                 Spacer(Modifier.height(6.dp))
-                Text(message, color = MonsterUi.Muted, textAlign = TextAlign.Center, fontSize = 12.sp)
+                Text(message, color = LetterLadderUi.Muted, textAlign = TextAlign.Center, fontSize = 12.sp)
                 Spacer(Modifier.height(18.dp))
                 Button(onClick = { puzzleNonce++ }) { Text(sh("TEKRAR DENE", "TRY AGAIN"), fontWeight = FontWeight.Black) }
                 TextButton(onClick = onExit) { Text(sh("Geri dön", "Go back")) }
@@ -419,24 +436,24 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onExit, modifier = Modifier.size(40.dp)) {
-                    Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MonsterUi.Text)
+                    Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = LetterLadderUi.Text)
                 }
                 Spacer(Modifier.width(2.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(sh("HARF YOLU", "LETTER PATH"), color = MonsterUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                    Text(sh("HARF YOLU", "LETTER PATH"), color = LetterLadderUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh("5 hamle • Her kutu yalnızca 1 kez değişir", "5 moves • Each position changes only once"),
-                        color = MonsterUi.Muted,
+                        color = LetterLadderUi.Muted,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                     )
                 }
-                Surface(shape = RoundedCornerShape(99.dp), color = MonsterUi.Gold.copy(alpha = .16f)) {
+                Surface(shape = RoundedCornerShape(99.dp), color = LetterLadderUi.Gold.copy(alpha = .16f)) {
                     Text(
                         "${usedPositions.size}/5",
                         Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                        color = MonsterUi.Gold,
+                        color = LetterLadderUi.Gold,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                     )
@@ -446,19 +463,19 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
             Surface(
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 shape = RoundedCornerShape(18.dp),
-                color = MonsterUi.SurfaceRaised,
-                border = BorderStroke(1.dp, MonsterUi.Border),
+                color = LetterLadderUi.SurfaceRaised,
+                border = BorderStroke(1.dp, LetterLadderUi.Border),
             ) {
                 Column(
                     Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 7.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text(sh("BAŞLANGIÇ", "START"), color = MonsterUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Text(sh("BAŞLANGIÇ", "START"), color = LetterLadderUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(3.dp))
                     LadderWordTiles(
                         word = currentPuzzle.start.uppercase(locale),
                         locked = emptySet(),
-                        accent = MonsterUi.Accent,
+                        accent = LetterLadderUi.Accent,
                         modifier = Modifier.fillMaxWidth().weight(1f),
                     )
                     Spacer(Modifier.height(3.dp))
@@ -475,12 +492,12 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                     }
 
                     Spacer(Modifier.height(3.dp))
-                    Text(sh("HEDEF", "TARGET"), color = MonsterUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Text(sh("HEDEF", "TARGET"), color = LetterLadderUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(3.dp))
                     LadderWordTiles(
                         word = currentPuzzle.target.uppercase(locale),
                         locked = (0 until 5).toSet(),
-                        accent = MonsterUi.Green,
+                        accent = LetterLadderUi.Green,
                         modifier = Modifier.fillMaxWidth().weight(1f),
                     )
                 }
@@ -490,16 +507,16 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(14.dp),
                 color = when {
-                    completed -> MonsterUi.Green.copy(alpha = .10f)
-                    hintText != null -> MonsterUi.Gold.copy(alpha = .10f)
-                    else -> MonsterUi.Accent.copy(alpha = .07f)
+                    completed -> LetterLadderUi.Green.copy(alpha = .10f)
+                    hintText != null -> LetterLadderUi.Gold.copy(alpha = .10f)
+                    else -> LetterLadderUi.Accent.copy(alpha = .07f)
                 },
                 border = BorderStroke(
                     1.dp,
                     when {
-                        completed -> MonsterUi.Green.copy(alpha = .25f)
-                        hintText != null -> MonsterUi.Gold.copy(alpha = .30f)
-                        else -> MonsterUi.Accent.copy(alpha = .25f)
+                        completed -> LetterLadderUi.Green.copy(alpha = .25f)
+                        hintText != null -> LetterLadderUi.Gold.copy(alpha = .30f)
+                        else -> LetterLadderUi.Accent.copy(alpha = .25f)
                     },
                 ),
             ) {
@@ -509,7 +526,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                 ) {
                     Text(
                         hintText ?: message,
-                        color = MonsterUi.Text,
+                        color = LetterLadderUi.Text,
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 2,
@@ -522,8 +539,8 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                             Surface(
                                 modifier = Modifier.size(19.dp),
                                 shape = CircleShape,
-                                color = if (locked) MonsterUi.Green else MonsterUi.SurfaceSoft,
-                                border = BorderStroke(1.dp, if (locked) MonsterUi.Green else MonsterUi.Border),
+                                color = if (locked) LetterLadderUi.Green else LetterLadderUi.SurfaceSoft,
+                                border = BorderStroke(1.dp, if (locked) LetterLadderUi.Green else LetterLadderUi.Border),
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     if (locked) {
@@ -532,7 +549,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                                         Surface(
                                             modifier = Modifier.size(4.dp),
                                             shape = CircleShape,
-                                            color = MonsterUi.Muted.copy(alpha = .45f),
+                                            color = LetterLadderUi.Muted.copy(alpha = .45f),
                                         ) {}
                                     }
                                 }
@@ -613,7 +630,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                     onClick = { puzzleNonce++ },
                     modifier = Modifier.fillMaxWidth().height(42.dp),
                     shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MonsterUi.Green, contentColor = Color.White),
+                    colors = ButtonDefaults.buttonColors(containerColor = LetterLadderUi.Green, contentColor = Color.White),
                 ) {
                     Text(sh("YENİ BULMACA", "NEW PUZZLE"), fontWeight = FontWeight.Black)
                     Spacer(Modifier.width(6.dp))
@@ -654,7 +671,7 @@ private fun LadderMoveRow(
     LadderWordTiles(
         word = display,
         locked = usedPositions,
-        accent = if (word != null) MonsterUi.Green else MonsterUi.Accent,
+        accent = if (word != null) LetterLadderUi.Green else LetterLadderUi.Accent,
         modifier = modifier,
     )
 }
@@ -673,21 +690,21 @@ private fun LadderWordTiles(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 shape = RoundedCornerShape(8.dp),
                 color = when {
-                    index in locked -> MonsterUi.Green.copy(alpha = .13f)
+                    index in locked -> LetterLadderUi.Green.copy(alpha = .13f)
                     char.isNotEmpty() -> accent.copy(alpha = .09f)
-                    else -> MonsterUi.SurfaceSoft
+                    else -> LetterLadderUi.SurfaceSoft
                 },
                 border = BorderStroke(
                     1.dp,
                     when {
-                        index in locked -> MonsterUi.Green.copy(alpha = .55f)
+                        index in locked -> LetterLadderUi.Green.copy(alpha = .55f)
                         char.isNotEmpty() -> accent.copy(alpha = .40f)
-                        else -> MonsterUi.Border
+                        else -> LetterLadderUi.Border
                     },
                 ),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(char, color = MonsterUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                    Text(char, color = LetterLadderUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -699,8 +716,8 @@ internal fun MonsterLetterLadderQuickCard(modifier: Modifier, onClick: () -> Uni
     Surface(
         modifier = modifier.height(136.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
-        color = MonsterUi.SurfaceRaised,
-        border = BorderStroke(1.dp, MonsterUi.Accent.copy(alpha = .24f)),
+        color = LetterLadderUi.SurfaceRaised,
+        border = BorderStroke(1.dp, LetterLadderUi.Accent.copy(alpha = .24f)),
     ) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp),
@@ -714,13 +731,13 @@ internal fun MonsterLetterLadderQuickCard(modifier: Modifier, onClick: () -> Uni
             )
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh("3. OYUN", "GAME 3"), color = MonsterUi.Accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Text(sh("HARF YOLU", "LETTER PATH"), color = MonsterUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text(sh("3. OYUN", "GAME 3"), color = LetterLadderUi.Accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text(sh("HARF YOLU", "LETTER PATH"), color = LetterLadderUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(4.dp))
-                Text(sh("5 hamlede hedef kelimeye ulaş", "Reach the target in 5 moves"), color = MonsterUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                Text(sh("Değişen kutu kilitlenir", "Changed positions lock"), color = MonsterUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text(sh("5 hamlede hedef kelimeye ulaş", "Reach the target in 5 moves"), color = LetterLadderUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(sh("Değişen kutu kilitlenir", "Changed positions lock"), color = LetterLadderUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
-            Icon(Icons.Rounded.ChevronRight, null, tint = MonsterUi.Muted, modifier = Modifier.size(22.dp))
+            Icon(Icons.Rounded.ChevronRight, null, tint = LetterLadderUi.Muted, modifier = Modifier.size(22.dp))
         }
     }
 }
@@ -732,11 +749,11 @@ private fun MiniLadderWord(word: String, locked: Set<Int>) {
             Surface(
                 modifier = Modifier.size(12.dp),
                 shape = RoundedCornerShape(3.dp),
-                color = if (index in locked) MonsterUi.Green.copy(alpha = .20f) else MonsterUi.SurfaceRaised,
-                border = BorderStroke(0.5.dp, if (index in locked) MonsterUi.Green else MonsterUi.Border),
+                color = if (index in locked) LetterLadderUi.Green.copy(alpha = .20f) else LetterLadderUi.SurfaceRaised,
+                border = BorderStroke(0.5.dp, if (index in locked) LetterLadderUi.Green else LetterLadderUi.Border),
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                    Text(char.toString(), color = MonsterUi.Text, fontSize = 5.sp, fontWeight = FontWeight.Black)
+                    Text(char.toString(), color = LetterLadderUi.Text, fontSize = 5.sp, fontWeight = FontWeight.Black)
                 }
             }
         }

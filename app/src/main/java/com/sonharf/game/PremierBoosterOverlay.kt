@@ -100,7 +100,7 @@ internal fun PremierBoosterOverlay() {
         Modifier
             .fillMaxSize()
             .navigationBarsPadding()
-            .padding(horizontal = 14.dp, bottom = 214.dp),
+            .padding(start = 14.dp, end = 14.dp, bottom = 214.dp),
         contentAlignment = Alignment.BottomCenter,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
