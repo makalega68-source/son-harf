@@ -8,19 +8,17 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeShellUsesSingleEquippedThemeSource() {
-        val theme = source("SonHarfTheme.kt")
-        val shell = source("MonsterExperienceApp.kt")
-        val aliases = source("AppUiPrimitives.kt")
+    fun activeUnifiedShellUsesPremiumDarkPaletteAndNoLegacyMonsterTheme() {
+        val unified = source("UnifiedProApp.kt")
+        val premier = source("PremierWordDuelScreen.kt")
 
-        listOf("Background", "Surface", "SurfaceSecondary", "PrimaryBlue", "PrimaryBlueSoft",
-            "TextPrimary", "TextSecondary", "Border", "Success", "Error", "Warning",
-            "DisabledBackground", "DisabledContent").forEach { assertTrue(theme.contains("val $it")) }
-        assertTrue(theme.contains("SonHarfCosmetics.darkArenaTheme"))
-        assertTrue(shell.contains("val Background: Color get() = SonHarfTheme.Background"))
-        assertTrue(aliases.contains("val Background: Color get() = SonHarfTheme.Background"))
-        assertFalse(shell.contains("Color(0xFF07111F)"))
-        assertFalse(shell.contains("Color(0xFF111D2E)"))
+        assertTrue(unified.contains("val Background = Color(0xFF020617)"))
+        assertTrue(unified.contains("val Surface = Color(0xFF0F172A)"))
+        assertTrue(unified.contains("darkColorScheme("))
+        assertTrue(premier.contains("val Background = Color(0xFF020617)"))
+        assertTrue(premier.contains("val Surface = Color(0xFF0F172A)"))
+        assertFalse(unified.contains("MonsterUi"))
+        assertFalse(unified.contains("MonsterExperienceApp"))
     }
 
     @Test
