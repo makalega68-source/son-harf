@@ -39,14 +39,16 @@ class UnifiedProFoundationContractTest {
     }
 
     @Test
-    fun onboardingTeachesFairPlayWithoutCompetitivePaidPower() {
+    fun onboardingUsesModeScopedHelpersWithoutObsoleteAbsoluteBan() {
         val onboarding = source("src/main/java/com/sonharf/game/FirstRunOnboarding.kt")
-        assertTrue(onboarding.contains("payments never grant match power"))
-        assertTrue(onboarding.contains("hiçbir ödeme maç gücü vermez"))
-        assertTrue(onboarding.contains("non-competitive modes"))
-        assertTrue(onboarding.contains("rekabet dışı modlarda"))
-        assertFalse(onboarding.contains("2x"))
-        assertFalse(onboarding.contains("score multiplier", ignoreCase = true))
+        assertTrue(onboarding.contains("mod izin verdiğinde"))
+        assertTrue(onboarding.contains("when the mode allows it"))
+        assertTrue(onboarding.contains("İpucu"))
+        assertTrue(onboarding.contains("Harf Değiştirici"))
+        assertFalse(onboarding.contains("payments never grant match power"))
+        assertFalse(onboarding.contains("hiçbir ödeme maç gücü vermez"))
+        assertFalse(onboarding.contains("non-competitive modes"))
+        assertFalse(onboarding.contains("rekabet dışı modlarda"))
     }
 
     @Test
