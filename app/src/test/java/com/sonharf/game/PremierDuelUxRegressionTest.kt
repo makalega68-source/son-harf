@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+// Locks the real-device fixes requested for the rebuilt Premier 1v1 arena.
 class PremierDuelUxRegressionTest {
     @Test fun premierArenaKeepsLargeProfilesVisibleChatSymmetryAndTimeoutRecovery() {
         val screen = File("src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
