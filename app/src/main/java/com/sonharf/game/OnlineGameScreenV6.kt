@@ -12,5 +12,6 @@ fun OnlineGameScreenV6() {
     Box(Modifier.fillMaxSize()) {
         PremierWordDuelScreen()
         ReactiveMageCatOverlay()
+        PremierBoosterOverlay()
     }
 }
