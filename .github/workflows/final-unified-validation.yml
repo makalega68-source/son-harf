@@ -19,6 +19,9 @@ jobs:
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
 
       - uses: actions/setup-java@v5
         with:
@@ -34,42 +37,47 @@ jobs:
         with:
           gradle-version: '8.14.4'
 
-      - name: Source policy checks
+      - name: Unified Pro source policy checks
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          grep -q 'HAFTANIN EN İYİLERİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          ! grep -q 'MonsterQuickCard(' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          grep -q 'MonsterSiegeQuickCard(Modifier.fillMaxWidth(), onSiege)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          grep -q 'SonHarfBrandLogo(' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          ! grep -q 'OYUNCU MERKEZİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
-          test ! -f app/src/main/java/com/sonharf/game/MascotSystem.kt
-          test ! -f app/src/main/java/com/sonharf/game/MascotLive3DStage.kt
-          test ! -f app/src/main/java/com/sonharf/game/ChibiGameBehaviorDirector.kt
-          if grep -R -n -E 'Mascot(HomeCompanion|Live3DStage|Runtime|Catalog)|Chibi(GameBehaviorDirector)?' app/src/main/java/com/sonharf/game --include='*.kt'; then
-            echo "::error::Mascot runtime reference found in active app source"
-            exit 1
-          fi
+          echo "SOURCE_SHA=$(git rev-parse HEAD)"
+          test ! -f app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
+          test ! -f app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt
+          grep -q 'UnifiedProApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
+          grep -q 'val Background = Color(0xFF020617)' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'UnifiedDestination.VIP -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          grep -q 'mutableIntStateOf(20)' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          grep -q 'R.drawable.mage_cat_runtime' app/src/main/java/com/sonharf/game/mascot/MageCatCompanion.kt
+          test -s app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
+          test -s app/src/main/res/raw/warm_beginnings.mp3
+          grep -q 'multiplier_count' app/src/main/java/com/sonharf/game/data/VipEntitlements.kt
+          grep -q 'use_premier_multiplier_v1' app/src/main/java/com/sonharf/game/data/PremierBoosters.kt
+          grep -q "interval '20 seconds'" supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql
+          grep -q "interval '15 seconds'" supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql
+          grep -q 'add_points:=add_points\*2' supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql
+          grep -qi 'on delete restrict' supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql
 
       - name: Unit tests and debug APK
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
-      - name: APK policy checks
+      - name: APK integrity checks
         shell: bash
         run: |
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
-          test -f "$APK"
-          if unzip -l "$APK" | grep -Ei '(mascot|chibi)'; then
-            echo "::error::Mascot artifact leaked into active APK"
-            exit 1
-          fi
-          echo ">> [PASS] Mascot-free debug APK is built"
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose "$APK"
+          sha256sum "$APK"
+          echo ">> [PASS] Unified Pro debug APK built and verified"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: SonHarf-Final-Unified-PreRuntime-APK
+          name: SonHarf-Unified-Pro-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
