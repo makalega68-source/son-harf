@@ -16,12 +16,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.sonharf.game.data.OnlineGameBackend
 import kotlinx.coroutines.delay
+import java.time.Instant
 
-/**
- * Aktif V1 düello ekranına Mage Cat'i bağlayan düşük riskli overlay.
- * Oyun mutasyonu yapmaz; yalnızca server-authoritative oda snapshot'larını okuyup
- * doğru kelime, seri ve maç sonucu olaylarını maskot cue'larına dönüştürür.
- */
+private val mageCatRejectedEvents = setOf(
+    "word_already_used",
+    "wrong_start_letter",
+    "not_in_dictionary",
+    "invalid_word",
+    "ends_with_soft_g",
+    "turn_expired",
+)
+
 @Composable
 internal fun MageCatLiveDuelOverlay(roomId: String) {
     val backend = remember { OnlineGameBackend() }
@@ -31,6 +36,8 @@ internal fun MageCatLiveDuelOverlay(roomId: String) {
     var initialized by remember(roomId) { mutableStateOf(false) }
     var lastValidWordCount by remember(roomId) { mutableStateOf(0) }
     var lastStatus by remember(roomId) { mutableStateOf<String?>(null) }
+    var lastEventSignature by remember(roomId) { mutableStateOf<String?>(null) }
+    var warnedDeadline by remember(roomId) { mutableStateOf<String?>(null) }
 
     LaunchedEffect(roomId) {
         runtime.onScreenChanged(MageCatScreen.MATCH)
@@ -38,16 +45,26 @@ internal fun MageCatLiveDuelOverlay(roomId: String) {
             val snapshot = runCatching { backend.getRoom(roomId) }.getOrNull()
             if (snapshot != null) {
                 val me = backend.currentUserId()
+                val eventSignature = listOf(
+                    snapshot.lastEvent,
+                    snapshot.lastEventPlayerId,
+                    snapshot.validWordCount,
+                    snapshot.hostScore,
+                    snapshot.guestScore,
+                    snapshot.currentPlayerId,
+                    snapshot.turnDeadline,
+                ).joinToString("|")
+
                 if (!initialized) {
                     initialized = true
                     lastValidWordCount = snapshot.validWordCount
                     lastStatus = snapshot.status
+                    lastEventSignature = eventSignature
                 } else {
                     val newAcceptedWord = snapshot.validWordCount > lastValidWordCount && snapshot.lastEventPlayerId == me
                     if (newAcceptedWord) {
                         val streak = if (me == snapshot.hostId) snapshot.hostStreak else snapshot.guestStreak
-                        val event = MageCatGameEventMapper.acceptedWord(isMine = true, streak = streak)
-                        if (event != null) {
+                        MageCatGameEventMapper.acceptedWord(isMine = true, streak = streak)?.let { event ->
                             cue = runtime.onEvent(
                                 event = event,
                                 nowMs = SystemClock.elapsedRealtime(),
@@ -55,15 +72,50 @@ internal fun MageCatLiveDuelOverlay(roomId: String) {
                                 matchFinished = false,
                             ).cue
                         }
+                    } else if (
+                        eventSignature != lastEventSignature &&
+                        snapshot.lastEventPlayerId == me &&
+                        snapshot.lastEvent in mageCatRejectedEvents
+                    ) {
+                        MageCatGameEventMapper.rejectedWord(isMine = true)?.let { event ->
+                            cue = runtime.onEvent(
+                                event = event,
+                                nowMs = SystemClock.elapsedRealtime(),
+                                playerInputActive = true,
+                                matchFinished = false,
+                            ).cue
+                        }
+                    }
+
+                    val deadline = snapshot.turnDeadline
+                    if (
+                        snapshot.currentPlayerId == me &&
+                        snapshot.status in setOf("playing", "final", "sudden_death") &&
+                        !deadline.isNullOrBlank() &&
+                        warnedDeadline != deadline
+                    ) {
+                        val remainingSeconds = runCatching {
+                            ((Instant.parse(deadline).toEpochMilli() - System.currentTimeMillis()) / 1000L).toInt()
+                        }.getOrNull()
+                        if (remainingSeconds != null && remainingSeconds in 1..5) {
+                            warnedDeadline = deadline
+                            MageCatGameEventMapper.timePressure(isMine = true)?.let { event ->
+                                cue = runtime.onEvent(
+                                    event = event,
+                                    nowMs = SystemClock.elapsedRealtime(),
+                                    playerInputActive = true,
+                                    matchFinished = false,
+                                ).cue
+                            }
+                        }
                     }
 
                     if (snapshot.status == "finished" && lastStatus != "finished") {
                         resultMode = true
                         runtime.onScreenChanged(MageCatScreen.RESULT)
-                        val event = MageCatGameEventMapper.matchResult(snapshot.winnerId, me)
-                        cue = event?.let {
-                            runtime.onEvent(
-                                event = it,
+                        MageCatGameEventMapper.matchResult(snapshot.winnerId, me)?.let { event ->
+                            cue = runtime.onEvent(
+                                event = event,
                                 nowMs = SystemClock.elapsedRealtime(),
                                 matchFinished = true,
                             ).cue
@@ -72,9 +124,10 @@ internal fun MageCatLiveDuelOverlay(roomId: String) {
 
                     lastValidWordCount = snapshot.validWordCount
                     lastStatus = snapshot.status
+                    lastEventSignature = eventSignature
                 }
             }
-            delay(700L)
+            delay(650L)
         }
     }
 
@@ -90,15 +143,15 @@ internal fun MageCatLiveDuelOverlay(roomId: String) {
                 cue = cue,
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 10.dp)
-                    .size(124.dp),
+                    .padding(end = 8.dp)
+                    .size(MageCatResultDefaultSize),
             )
         } else {
             MageCatMatchMascot(
                 cue = cue,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(top = 112.dp, end = 10.dp)
+                    .padding(top = 106.dp, end = 8.dp)
                     .size(MageCatMatchDefaultSize),
             )
         }
