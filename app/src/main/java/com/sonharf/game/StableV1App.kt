@@ -40,6 +40,10 @@ import com.sonharf.game.data.SupabaseProvider
 @Composable
 fun StableV1App() {
     val context = LocalContext.current
+    remember(context) {
+        SonHarfCosmetics.restore(context)
+        true
+    }
     var languageChosen by remember { mutableStateOf(FirstRunLanguagePreferences.isComplete(context)) }
     var onboardingRequired by remember { mutableStateOf(FirstRunLanguagePreferences.needsOnboarding(context)) }
     var authChecked by remember { mutableStateOf(false) }
