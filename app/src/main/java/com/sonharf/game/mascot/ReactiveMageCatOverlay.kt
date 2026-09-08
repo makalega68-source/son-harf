@@ -18,7 +18,6 @@ import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.findPremierActiveRoom
-import com.sonharf.game.data.getRoom
 import com.sonharf.game.data.isPremierFinished
 import java.time.Duration
 import java.time.Instant
