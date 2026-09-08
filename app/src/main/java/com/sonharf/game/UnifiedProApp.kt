@@ -159,7 +159,7 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
                         { destination = UnifiedDestination.ACCOUNT },
                         onSignedOut,
                     )
-                    UnifiedDestination.VIP -> MainVipScreen(backend) { destination = UnifiedDestination.PROFILE }
+                    UnifiedDestination.VIP -> UnifiedProVipScreen(backend) { destination = UnifiedDestination.PROFILE }
                     UnifiedDestination.ACCOUNT -> CompleteProfileScreen(1) { destination = UnifiedDestination.SETTINGS }
                     UnifiedDestination.PROFILE_DETAILS -> CompleteProfileScreen(0) { destination = UnifiedDestination.PROFILE }
                     UnifiedDestination.TASKS -> MainRetentionScreen(

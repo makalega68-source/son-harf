@@ -298,7 +298,7 @@ internal fun MainVipScreen(
         item {
             MainScreenHeader(
                 title = "Son Harf VIP",
-                subtitle = sh("Daha temiz, daha kişisel; rekabet daima adil", "Cleaner and more personal; competition stays fair"),
+                subtitle = sh("Reklamsız deneyim, PRO hakları ve kişiselleştirme", "Ad-free experience, PRO benefits and personalization"),
                 onBack = onBack,
             )
         }
@@ -354,11 +354,11 @@ internal fun MainVipScreen(
         item {
             Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Green.copy(alpha = .08f), border = BorderStroke(1.dp, MainUi.Green.copy(alpha = .30f))) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(sh("REKABET ADALETİ", "COMPETITIVE FAIRNESS"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(sh("PRO OYUN YARDIMLARI", "PRO GAME HELPERS"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh(
-                            "VIP; ekstra süre, ek puan, güçlü joker, rating koruması veya kazanma avantajı vermez.",
-                            "VIP never grants extra time, points, stronger jokers, rating protection or a winning advantage.",
+                            "PRO; İpucu, Harf Değiştirici ve 2x Skor dahil sunucu doğrulamalı oyun yardımcıları sunar.",
+                            "PRO includes server-validated gameplay helpers such as Hint, Letter Swap and 2x Score.",
                         ),
                         color = MainUi.Text,
                         fontSize = 11.sp,

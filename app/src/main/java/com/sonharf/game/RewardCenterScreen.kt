@@ -139,7 +139,7 @@ fun RewardCenterScreen() {
 
         item {
             RewardAdCard(
-                icon = "◈", title = sh("SON COIN", "DIAMONDS"),
+                icon = "◈", title = sh("SON COIN", "SON COIN"),
                 description = sh("Her tamamlanan reklam +10 Son Coin verir. Son Coin'lerini mağazadaki Style ürünlerinde kullan.", "Each completed ad gives +10 Son Coin. Spend it on Style items in the Shop."),
                 progress = "${s?.diamondAdsUsed ?: 0}/${s?.diamondAdsLimit ?: 3}",
                 button = sh("REKLAM İZLE  +10", "WATCH AD  +10"),
@@ -151,7 +151,7 @@ fun RewardCenterScreen() {
         item {
             RewardAdCard(
                 icon = "🎁", title = sh("ÖDÜL SANDIĞI", "REWARD CHEST"),
-                description = sh("Reklam başına 1 sandık hakkı. Sandık açıldığında 15, 25 veya 40 Son Coin çıkar.", "Earn 1 chest per ad. Opening a chest awards 15, 25, or 40 diamonds."),
+                description = sh("Reklam başına 1 sandık hakkı. Sandık açıldığında 15, 25 veya 40 Son Coin çıkar.", "Earn 1 chest per ad. Opening a chest awards 15, 25, or 40 Son Coin."),
                 progress = "${s?.chestAdsUsed ?: 0}/${s?.chestAdsLimit ?: 2}",
                 button = sh("REKLAM İZLE  +1 SANDIK", "WATCH AD  +1 CHEST"),
                 enabled = adReady && (s?.chestAdsUsed ?: 0) < (s?.chestAdsLimit ?: 2) && busy == null,
@@ -166,7 +166,7 @@ fun RewardCenterScreen() {
                         Text(sh("ÖDÜL SANDIKLARIM", "MY REWARD CHESTS"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
                         Text("🎁 ${s?.chestKeys ?: 0}", fontWeight = FontWeight.Black)
                     }
-                    Text(sh("Topladığın ödül sandıklarını aç. Çıkan Son Coin doğrudan cüzdanına eklenir ve yalnızca güç vermeyen içeriklerde kullanılır.", "Open collected reward chests. Son Coin goes directly to your wallet and is used only for non-power content."), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(sh("Topladığın ödül sandıklarını aç. Çıkan Son Coin doğrudan cüzdanına eklenir ve mağazada ya da uygun içeriklerde kullanılır.", "Open collected reward chests. Son Coin goes directly to your wallet and can be used in the Shop or eligible content."), color = SonHarfMuted, fontSize = 9.sp)
                     Button(
                         onClick = {
                             val b = backend
@@ -177,7 +177,7 @@ fun RewardCenterScreen() {
                             scope.launch {
                                 busy = "open_chest"
                                 runCatching { b.openRewardChest() }
-                                    .onSuccess { reward -> notice = sh("Sandıktan ${reward?.diamondsAwarded ?: 0} Son Coin çıktı!", "Chest awarded ${reward?.diamondsAwarded ?: 0} diamonds!"); reload() }
+                                    .onSuccess { reward -> notice = sh("Sandıktan ${reward?.diamondsAwarded ?: 0} Son Coin çıktı!", "Chest awarded ${reward?.diamondsAwarded ?: 0} Son Coin!"); reload() }
                                     .onFailure { notice = sh("Açılacak sandığın yok.", "You do not have a chest to open.") }
                                 busy = null
                             }
