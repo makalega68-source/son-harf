@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.mascot.MageCatCompanion
+import com.sonharf.game.mascot.MageCatDirector
 import kotlinx.coroutines.delay
 
 private enum class UnifiedDestination {
@@ -32,19 +34,24 @@ private enum class UnifiedDestination {
     SETTINGS, VIP, ACCOUNT, PROFILE_DETAILS, TASKS, DAILY
 }
 
+/** Theme-aware shell palette. The equipped profile theme is the only visual source of truth. */
 private object UnifiedUi {
-    val Background = Color(0xFF020617)
-    val Surface = Color(0xFF0F172A)
-    val Surface2 = Color(0xFF111C31)
-    val Border = Color(0xFF24334D)
-    val Text = Color(0xFFF8FAFC)
-    val Muted = Color(0xFF94A3B8)
-    val Blue = Color(0xFF3B82F6)
-    val Cyan = Color(0xFF22D3EE)
-    val Gold = Color(0xFFF59E0B)
-    val Green = Color(0xFF10B981)
-    val Red = Color(0xFFEF4444)
-    val Purple = Color(0xFF8B5CF6)
+    val Background: Color get() = SonHarfTheme.Background
+    val Surface: Color get() = SonHarfTheme.Surface
+    val Surface2: Color get() = SonHarfTheme.SurfaceSecondary
+    val Border: Color get() = SonHarfTheme.Border
+    val Text: Color get() = SonHarfTheme.TextPrimary
+    val Muted: Color get() = SonHarfTheme.TextSecondary
+    val Blue: Color get() = SonHarfTheme.PrimaryBlue
+    val Cyan: Color get() = SonHarfTheme.SecondaryAccent
+    val Gold: Color get() = SonHarfTheme.Warning
+    val Green: Color get() = SonHarfTheme.Success
+    val Red: Color get() = SonHarfTheme.Error
+    val Purple: Color get() = SonHarfTheme.Purple
+
+    val HeroStart: Color get() = if (SonHarfTheme.IsDark) Color(0xFF111722) else Color(0xFF155FCC)
+    val HeroMiddle: Color get() = if (SonHarfTheme.IsDark) Color(0xFF2C2417) else Color(0xFF1769E0)
+    val HeroEnd: Color get() = if (SonHarfTheme.IsDark) Color(0xFF3A2A09) else Color(0xFF139BB0)
 }
 
 @Composable
@@ -56,7 +63,10 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
 
     LaunchedEffect(Unit) {
         val id = backend.currentUserId()
-        if (id != null) isPro = runCatching { backend.getProfile(id).isVip }.getOrDefault(false)
+        if (id != null) {
+            runCatching { backend.getEquippedCosmetics() }.getOrNull()?.let(SonHarfCosmetics::apply)
+            isPro = runCatching { backend.getProfile(id).isVip }.getOrDefault(false)
+        }
     }
     LaunchedEffect(homeRequest) {
         if (homeRequest > 0) destination = UnifiedDestination.HOME
@@ -87,9 +97,24 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
         UnifiedDestination.PROFILE,
     )
     val gameplay = destination in setOf(UnifiedDestination.GAME, UnifiedDestination.SIEGE, UnifiedDestination.LETTER, UnifiedDestination.DAILY)
-
-    MaterialTheme(
-        colorScheme = darkColorScheme(
+    val scheme = if (SonHarfTheme.IsDark) {
+        darkColorScheme(
+            primary = UnifiedUi.Blue,
+            secondary = UnifiedUi.Cyan,
+            tertiary = UnifiedUi.Green,
+            background = UnifiedUi.Background,
+            surface = UnifiedUi.Surface,
+            surfaceVariant = UnifiedUi.Surface2,
+            onPrimary = Color(0xFF211700),
+            onSecondary = Color(0xFF211700),
+            onTertiary = Color(0xFF05251B),
+            onBackground = UnifiedUi.Text,
+            onSurface = UnifiedUi.Text,
+            onSurfaceVariant = UnifiedUi.Text,
+            error = UnifiedUi.Red,
+        )
+    } else {
+        lightColorScheme(
             primary = UnifiedUi.Blue,
             secondary = UnifiedUi.Cyan,
             tertiary = UnifiedUi.Green,
@@ -97,14 +122,16 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
             surface = UnifiedUi.Surface,
             surfaceVariant = UnifiedUi.Surface2,
             onPrimary = Color.White,
-            onSecondary = Color(0xFF06262C),
-            onTertiary = Color(0xFF05251B),
+            onSecondary = Color.White,
+            onTertiary = Color.White,
             onBackground = UnifiedUi.Text,
             onSurface = UnifiedUi.Text,
             onSurfaceVariant = UnifiedUi.Text,
             error = UnifiedUi.Red,
         )
-    ) {
+    }
+
+    MaterialTheme(colorScheme = scheme) {
         Scaffold(
             containerColor = UnifiedUi.Background,
             topBar = { SonHarfTopAdBanner(visible = !gameplay, isPremium = isPro) },
@@ -192,6 +219,7 @@ private fun UnifiedHomeScreen(
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
 
     LaunchedEffect(Unit) {
+        MageCatDirector.onLobbyGreet()
         if (!SupabaseProvider.configured) return@LaunchedEffect
         val id = backend.currentUserId()
         profile = id?.let { runCatching { backend.getProfile(it) }.getOrNull() }
@@ -206,11 +234,40 @@ private fun UnifiedHomeScreen(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Text("SON HARF", color = UnifiedUi.Text, fontSize = 27.sp, fontWeight = FontWeight.Black)
-                    Text("Kelimeyi Sürdür, Rakibini Geç", color = UnifiedUi.Cyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text("Kelimeyi Sürdür, Rakibini Geç", color = UnifiedUi.Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
                 UnifiedRoundAction(Icons.Rounded.Notifications, onTasks)
                 Spacer(Modifier.width(8.dp))
                 UnifiedRoundAction(Icons.Rounded.WorkspacePremium, onVip)
+            }
+        }
+
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = UnifiedUi.Surface,
+                border = BorderStroke(1.dp, UnifiedUi.Border),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    MageCatCompanion(
+                        size = 72.dp,
+                        speechBubbleText = sh("Hazırsan başlayalım!", "Ready? Let's play!"),
+                        onClick = { MageCatDirector.onLobbyGreet() },
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text("MAGE CAT", color = UnifiedUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        Text(
+                            sh("Serine, süre baskısına ve maç sonucuna tepki veren yoldaşın.", "Your companion reacts to streaks, time pressure and match results."),
+                            color = UnifiedUi.Muted,
+                            fontSize = 9.sp,
+                        )
+                    }
+                }
             }
         }
 
@@ -223,11 +280,7 @@ private fun UnifiedHomeScreen(
             ) {
                 Column(
                     Modifier
-                        .background(
-                            Brush.linearGradient(
-                                listOf(Color(0xFF172554), Color(0xFF1D4ED8), Color(0xFF0891B2))
-                            )
-                        )
+                        .background(Brush.linearGradient(listOf(UnifiedUi.HeroStart, UnifiedUi.HeroMiddle, UnifiedUi.HeroEnd)))
                         .padding(18.dp),
                     verticalArrangement = Arrangement.spacedBy(15.dp),
                 ) {
@@ -244,7 +297,7 @@ private fun UnifiedHomeScreen(
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                            Text("🏆 ${profile?.rating ?: 1000} RP", color = Color.White.copy(alpha = .78f), fontWeight = FontWeight.Bold)
+                            Text("🏆 ${profile?.rating ?: 1000} RP", color = Color.White.copy(alpha = .82f), fontWeight = FontWeight.Bold)
                         }
                         Surface(shape = RoundedCornerShape(99.dp), color = UnifiedUi.Gold) {
                             Text("SC ${profile?.diamonds ?: 0}", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color(0xFF201600), fontWeight = FontWeight.Black)
@@ -271,7 +324,7 @@ private fun UnifiedHomeScreen(
                 Spacer(Modifier.width(10.dp))
                 Column(horizontalAlignment = Alignment.Start) {
                     Text(sh("OYNA", "PLAY"), fontSize = 23.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Premier 1v1 kelime düellosu", "Premier 1v1 word duel"), fontSize = 9.sp, color = Color.White.copy(alpha = .75f))
+                    Text(sh("Premier 1v1 kelime düellosu", "Premier 1v1 word duel"), fontSize = 9.sp, color = MaterialTheme.colorScheme.onPrimary.copy(alpha = .80f))
                 }
             }
         }
@@ -308,7 +361,7 @@ private fun UnifiedHomeScreen(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 UnifiedQuickTile(Icons.Rounded.EmojiEvents, sh("LİG", "LEAGUE"), UnifiedUi.Gold, Modifier.weight(1f), onLeague)
                 UnifiedQuickTile(Icons.Rounded.Groups, sh("SOSYAL", "SOCIAL"), UnifiedUi.Green, Modifier.weight(1f), onSocial)
-                UnifiedQuickTile(Icons.Rounded.Storefront, sh("MAĞAZA", "SHOP"), UnifiedUi.Purple, Modifier.weight(1f), onShop)
+                UnifiedQuickTile(Icons.Rounded.Storefront, sh("MAĞAZA", "SHOP"), UnifiedUi.Blue, Modifier.weight(1f), onShop)
             }
         }
 
@@ -341,7 +394,7 @@ private fun UnifiedHomeScreen(
 private fun UnifiedHeroMetric(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
-        Text(label, color = Color.White.copy(alpha = .68f), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = Color.White.copy(alpha = .72f), fontSize = 8.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -422,9 +475,9 @@ private fun UnifiedBottomBar(
                 icon = { Icon(item.second, null) },
                 label = { Text(item.third, fontSize = 8.sp) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = UnifiedUi.Cyan,
-                    selectedTextColor = UnifiedUi.Cyan,
-                    indicatorColor = UnifiedUi.Cyan.copy(alpha = .12f),
+                    selectedIconColor = UnifiedUi.Blue,
+                    selectedTextColor = UnifiedUi.Blue,
+                    indicatorColor = UnifiedUi.Blue.copy(alpha = .12f),
                     unselectedIconColor = UnifiedUi.Muted,
                     unselectedTextColor = UnifiedUi.Muted,
                 )
