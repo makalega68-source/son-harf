@@ -8,13 +8,24 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeUnifiedShellUsesPremiumDarkPaletteAndNoLegacyMonsterTheme() {
+    fun activeUnifiedShellFollowsEquippedThemeAndPremierKeepsFocusedArenaPalette() {
         val unified = source("UnifiedProApp.kt")
         val premier = source("PremierWordDuelScreen.kt")
+        val startup = source("StableV1App.kt")
+        val theme = source("SonHarfTheme.kt")
 
-        assertTrue(unified.contains("val Background = Color(0xFF020617)"))
-        assertTrue(unified.contains("val Surface = Color(0xFF0F172A)"))
+        assertTrue(unified.contains("val Background: Color get() = SonHarfTheme.Background"))
+        assertTrue(unified.contains("val Surface: Color get() = SonHarfTheme.Surface"))
+        assertTrue(unified.contains("lightColorScheme("))
         assertTrue(unified.contains("darkColorScheme("))
+        assertTrue(unified.contains("MageCatCompanion("))
+        assertTrue(unified.contains("MageCatDirector.onLobbyGreet()"))
+        assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = dark"))
+        assertTrue(theme.contains("val SecondaryAccent: Color get()"))
+
+        // Premier gameplay intentionally keeps its focused dark arena while the app shell
+        // follows the user's equipped Blue/White or Night Arena theme.
         assertTrue(premier.contains("val Background = Color(0xFF020617)"))
         assertTrue(premier.contains("val Surface = Color(0xFF0F172A)"))
         assertFalse(unified.contains("MonsterUi"))
