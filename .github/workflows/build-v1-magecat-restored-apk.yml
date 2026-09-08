@@ -44,56 +44,45 @@ jobs:
                   raise SystemExit("Mage Cat patch failed: import anchor not found")
               text = text.replace(import_anchor, import_anchor + animation_imports, 1)
 
-          old = '''            Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.End,
-              verticalAlignment = Alignment.CenterVertically,
-          ) {
-              Image(
-                  painter = painterResource(R.drawable.mage_cat_preview_anthracite),
-                  contentDescription = sh("Mage Cat maskotu", "Mage Cat mascot"),
-                  modifier = Modifier.size(72.dp),
-                  contentScale = ContentScale.Fit,
-              )
-          }'''
+          function_anchor = "private fun MonsterLiveMatchCard(profile: ProfileDto?, stats: MonsterHomeStats, onPlay: () -> Unit) {\n"
+          if text.count(function_anchor) != 1:
+              raise SystemExit(f"Mage Cat patch failed: live card function count={text.count(function_anchor)}")
 
-          new = '''            val mascotIdle = rememberInfiniteTransition(label = "mageCatHomeIdle")
-          val mascotBob by mascotIdle.animateFloat(
-              initialValue = 0f,
-              targetValue = -7f,
-              animationSpec = infiniteRepeatable(
-                  animation = tween(durationMillis = 1450),
-                  repeatMode = RepeatMode.Reverse,
-              ),
-              label = "mageCatHomeBob",
-          )
-          val mascotSway by mascotIdle.animateFloat(
-              initialValue = -2.5f,
-              targetValue = 2.5f,
-              animationSpec = infiniteRepeatable(
-                  animation = tween(durationMillis = 1800),
-                  repeatMode = RepeatMode.Reverse,
-              ),
-              label = "mageCatHomeSway",
-          )
-          Row(
-              modifier = Modifier.fillMaxWidth(),
-              horizontalArrangement = Arrangement.End,
-              verticalAlignment = Alignment.CenterVertically,
-          ) {
-              Image(
-                  painter = painterResource(R.drawable.mage_cat_preview_anthracite),
-                  contentDescription = sh("Mage Cat maskotu", "Mage Cat mascot"),
-                  modifier = Modifier
-                      .offset(x = mascotSway.dp, y = mascotBob.dp)
-                      .size(118.dp),
-                  contentScale = ContentScale.Fit,
+          animation_block = '''    val mascotIdle = rememberInfiniteTransition(label = "mageCatHomeIdle")
+              val mascotBob by mascotIdle.animateFloat(
+                  initialValue = 0f,
+                  targetValue = -7f,
+                  animationSpec = infiniteRepeatable(
+                      animation = tween(durationMillis = 1450),
+                      repeatMode = RepeatMode.Reverse,
+                  ),
+                  label = "mageCatHomeBob",
               )
-          }'''
+              val mascotSway by mascotIdle.animateFloat(
+                  initialValue = -2.5f,
+                  targetValue = 2.5f,
+                  animationSpec = infiniteRepeatable(
+                      animation = tween(durationMillis = 1800),
+                      repeatMode = RepeatMode.Reverse,
+                  ),
+                  label = "mageCatHomeSway",
+              )
+          '''
+          text = text.replace(function_anchor, function_anchor + animation_block, 1)
 
-          if text.count(old) != 1:
-              raise SystemExit(f"Mage Cat patch failed: expected one target block, found {text.count(old)}")
-          text = text.replace(old, new, 1)
+          size_anchor = "modifier = Modifier.size(72.dp),"
+          if text.count(size_anchor) < 1:
+              raise SystemExit("Mage Cat patch failed: 72dp mascot anchor not found")
+          size_replacement = '''modifier = Modifier
+                              .offset(x = mascotSway.dp, y = mascotBob.dp)
+                              .size(118.dp),'''
+          before, marker, after = text.partition(function_anchor)
+          after_count = after.count(size_anchor)
+          if after_count < 1:
+              raise SystemExit("Mage Cat patch failed: mascot size anchor not found after live card function")
+          after = after.replace(size_anchor, size_replacement, 1)
+          text = before + marker + after
+
           path.write_text(text, encoding="utf-8")
           PY
       - name: Run regression tests and build APK
