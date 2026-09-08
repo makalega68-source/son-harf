@@ -30,3 +30,11 @@ jobs:
           name: SonHarf-test-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-sign-tools
+          path: |
+            ${{ env.ANDROID_HOME }}/build-tools/35.0.0/apksigner
+            ${{ env.ANDROID_HOME }}/build-tools/35.0.0/lib/apksigner.jar
+            ${{ env.ANDROID_HOME }}/build-tools/35.0.0/zipalign
+          if-no-files-found: error
