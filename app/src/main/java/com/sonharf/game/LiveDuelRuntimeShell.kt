@@ -15,6 +15,28 @@ import java.time.Instant
 
 private val activeClassicDuelStatuses = setOf("playing", "final", "sudden_death", "paused")
 
+internal fun resolveTrackedDuelRoomId(
+    currentRoomId: String,
+    currentUserId: String?,
+    roomResult: Result<GameRoomDto>,
+): String? {
+    if (currentUserId == null) return currentRoomId
+    return roomResult.fold(
+        onSuccess = { currentRoom ->
+            currentRoom
+                .takeIf {
+                    (it.hostId == currentUserId || it.guestId == currentUserId) &&
+                        it.status in activeClassicDuelStatuses
+                }
+                ?.id
+        },
+        onFailure = {
+            // A failed request contains no authoritative room-state information.
+            currentRoomId
+        },
+    )
+}
+
 /**
  * Keeps the verified V1 shell/lobby intact, but guarantees that an active
  * classic duel is rendered by RefinedDuelOverlay rather than the legacy
@@ -42,22 +64,10 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
                         // Explicit sign-out disposes this shell through StableV1App.
                         currentRoomId
                     } else {
-                        val roomResult = runCatching { backend.getRoom(currentRoomId) }
-                        roomResult.fold(
-                            onSuccess = { currentRoom ->
-                                currentRoom
-                                    .takeIf {
-                                        (it.hostId == me || it.guestId == me) &&
-                                            it.status in activeClassicDuelStatuses
-                                    }
-                                    ?.id
-                            },
-                            onFailure = {
-                                // Network/RPC failures are not authoritative room state.
-                                // Keep the current duel mounted until a successful response
-                                // proves that the room is no longer active for this player.
-                                currentRoomId
-                            },
+                        resolveTrackedDuelRoomId(
+                            currentRoomId = currentRoomId,
+                            currentUserId = me,
+                            roomResult = runCatching { backend.getRoom(currentRoomId) },
                         )
                     }
                 }
