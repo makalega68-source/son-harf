@@ -1,9 +1,6 @@
 package com.sonharf.game.data
 
 import io.github.jan.supabase.postgrest.from
-import io.github.jan.supabase.postgrest.postgrest
-import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.put
 
 /** Small Premier-specific queries layered on the existing authoritative room APIs. */
 suspend fun OnlineGameBackend.findPremierActiveRoom(): GameRoomDto? {
@@ -28,18 +25,20 @@ suspend fun OnlineGameBackend.getPremierOpponent(room: GameRoomDto): ProfileDto?
 }
 
 /**
- * Premier submission uses the server's v4 wrapper so a bot response and the refreshed room state are
- * returned in the same authoritative call. This avoids exposing the transient bot_turn=true row to
- * the arena after the human opening move.
+ * Submit through the deployed v3 RPC, then collapse the transient bot_turn state before returning
+ * control to the arena. The database trigger usually advances the bot immediately; getRoom observes
+ * that authoritative result. botTakeTurn is only the recovery path when the transient row remains.
  */
-suspend fun OnlineGameBackend.submitPremierWord(roomId: String, word: String): GameRoomDto =
-    SupabaseProvider.client.postgrest.rpc(
-        "submit_word_v4",
-        buildJsonObject {
-            put("p_room_id", roomId)
-            put("p_word", word)
-        },
-    ).decodeSingle()
+suspend fun OnlineGameBackend.submitPremierWord(roomId: String, word: String): GameRoomDto {
+    val submitted = submitWord(roomId, word)
+    if (!submitted.isBot || !submitted.botTurn || submitted.isPremierFinished()) return submitted
+
+    val synced = runCatching { getRoom(roomId) }.getOrNull()
+    if (synced != null && (!synced.botTurn || synced.isPremierFinished())) return synced
+
+    return runCatching { botTakeTurn(roomId) }
+        .getOrElse { synced ?: submitted }
+}
 
 fun GameRoomDto.isPremierLive(): Boolean = status in setOf("playing", "quiz", "final", "sudden_death", "paused")
 
