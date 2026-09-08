@@ -7,9 +7,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WordSiegeContractTest {
-    @Test fun siegeReplacesConquestAndKeepsCoreVisuals() {
+    @Test fun siegeReplacesConquestAndRemainsReachableFromUnifiedPro() {
         val siege = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGame.kt").readText()
-        val home = projectFile("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt").readText()
+        val home = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
         assertTrue(siege.contains("KELİME KUŞATMASI"))
         assertTrue(siege.contains("Kelimeyi kur. Alanı ele geçir."))
@@ -34,6 +34,7 @@ class WordSiegeContractTest {
         assertTrue(siege.contains("KELİMEYİ GÖNDER"))
         assertTrue(siege.contains("BOT"))
         assertTrue(home.contains("KELİME KUŞATMASI"))
+        assertTrue(home.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
         assertFalse(home.contains("KELİME FETHİ"))
         assertFalse(projectFile("app/src/main/java/com/sonharf/game").resolve("WordConquestGame.kt").exists())
     }
