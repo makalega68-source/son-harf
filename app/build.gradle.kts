@@ -29,6 +29,13 @@ android {
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
     packaging { resources { excludes += "/META-INF/{AL2.0,LGPL2.1}" } }
+
+    sourceSets {
+        getByName("main") {
+            java.exclude("**/RiveMascotView.kt")
+            java.srcDir("src/compat/java")
+        }
+    }
 }
 
 dependencies {
