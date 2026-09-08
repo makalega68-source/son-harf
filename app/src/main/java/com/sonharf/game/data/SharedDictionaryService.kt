@@ -18,16 +18,16 @@ private data class DictionarySnapshotDto(
 /**
  * Canonical dictionary gateway shared by every word-game mode.
  *
- * public.dictionary_words is authoritative via get_dictionary_snapshot_v3. The complete active,
- * game-allowed snapshot is cached independently per language. A persisted snapshot is restored first
- * for offline continuity, then a network refresh is attempted so a stale cache never becomes
- * permanently authoritative. There is no reduced practice-only fallback lexicon.
+ * public.dictionary_words is authoritative via get_dictionary_snapshot_v4. The complete active,
+ * game-allowed 2..15 character snapshot is cached independently per language. A persisted v4
+ * snapshot is restored first for offline continuity, then a network refresh is attempted so stale
+ * data never becomes permanently authoritative. There is no reduced practice-only fallback lexicon.
  */
 object SharedDictionaryService {
-    private const val PREFS = "son_harf_dictionary_snapshot_v3"
+    private const val PREFS = "son_harf_dictionary_snapshot_v4"
     private const val WORDS_PREFIX = "words_"
     private const val MIN_CANONICAL_LENGTH = 2
-    private const val MAX_CANONICAL_LENGTH = 32
+    private const val MAX_CANONICAL_LENGTH = 15
     private val snapshots = ConcurrentHashMap<String, Set<String>>()
     private val turkishLocale = Locale.forLanguageTag("tr-TR")
     private val englishLocale = Locale.ENGLISH
@@ -48,7 +48,7 @@ object SharedDictionaryService {
 
     fun hasSnapshot(language: String): Boolean = snapshots.containsKey(canonicalLanguage(language))
 
-    /** Restore the last complete canonical snapshot without network access. */
+    /** Restore the last complete v4 snapshot without network access. */
     fun restorePersisted(context: Context, language: String): Boolean {
         val lang = canonicalLanguage(language)
         if (snapshots.containsKey(lang)) return true
@@ -76,7 +76,7 @@ object SharedDictionaryService {
     private suspend fun fetchCanonical(language: String): Set<String> {
         val lang = canonicalLanguage(language)
         val payload = SupabaseProvider.client.postgrest.rpc(
-            "get_dictionary_snapshot_v3",
+            "get_dictionary_snapshot_v4",
             buildJsonObject { put("p_language", lang) },
         ).decodeSingle<DictionarySnapshotDto>()
         require(payload.language == lang) { "canonical_dictionary_language_mismatch" }
@@ -97,7 +97,7 @@ object SharedDictionaryService {
 
     /**
      * Restore locally first for instant/offline availability, then refresh from the authoritative
-     * backend. If refresh fails, the previously verified local snapshot remains usable.
+     * backend. If refresh fails, the previously verified local v4 snapshot remains usable.
      */
     suspend fun preloadCanonical(context: Context, language: String): Set<String> {
         val lang = canonicalLanguage(language)
