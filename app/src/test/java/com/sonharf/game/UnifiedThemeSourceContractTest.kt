@@ -11,7 +11,7 @@ class UnifiedThemeSourceContractTest {
     fun activeShellUsesSingleEquippedThemeSource() {
         val theme = source("SonHarfTheme.kt")
         val shell = source("MonsterExperienceApp.kt")
-        val aliases = source("MainExperienceApp.kt")
+        val aliases = source("AppUiPrimitives.kt")
 
         listOf("Background", "Surface", "SurfaceSecondary", "PrimaryBlue", "PrimaryBlueSoft",
             "TextPrimary", "TextSecondary", "Border", "Success", "Error", "Warning",
