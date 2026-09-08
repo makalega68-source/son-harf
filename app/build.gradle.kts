@@ -32,7 +32,6 @@ android {
 
     sourceSets {
         getByName("main") {
-            java.exclude("**/RiveMascotView.kt")
             java.srcDir("src/compat/java")
         }
     }
