@@ -13,8 +13,8 @@ class StyleAndOfflineSiegeRegressionTest {
         val dictionary = read("src/main/java/com/sonharf/game/data/SharedDictionaryService.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt")
 
-        assertTrue(dictionary.contains("get_dictionary_snapshot_v3"))
-        assertTrue(dictionary.contains("MIN_CANONICAL_LENGTH = 2"))
+        assertTrue(dictionary.contains("get_dictionary_snapshot_v4"))
+        assertTrue(dictionary.contains("MIN_SNAPSHOT_LENGTH = 2"))
         assertTrue(dictionary.contains("preloadCanonical"))
         assertTrue(dictionary.contains("restorePersisted"))
         assertFalse(dictionary.contains("offlinePracticeTurkish"))
