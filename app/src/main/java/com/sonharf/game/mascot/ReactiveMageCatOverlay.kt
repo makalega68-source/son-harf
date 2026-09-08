@@ -45,7 +45,6 @@ private fun secondsUntil(deadline: String?): Int {
 fun ReactiveMageCatOverlay(roomId: String) {
     val backend = remember { OnlineGameBackend() }
     var snapshot by remember(roomId) { mutableStateOf<GameRoomDto?>(null) }
-    var previous by remember(roomId) { mutableStateOf<GameRoomDto?>(null) }
     var seconds by remember(roomId) { mutableIntStateOf(0) }
 
     DisposableEffect(roomId) {
@@ -59,8 +58,16 @@ fun ReactiveMageCatOverlay(roomId: String) {
             if (incoming != null) {
                 val me = backend.currentUserId()
                 val old = snapshot
-                previous = old
                 snapshot = incoming
+
+                if (old != null && (
+                        old.currentPlayerId != incoming.currentPlayerId ||
+                            old.turnDeadline != incoming.turnDeadline
+                    )
+                ) {
+                    // Never carry a previous turn's urgency or failure emotion into a new turn.
+                    MageCatDirector.resetToIdle()
+                }
 
                 val myScore = if (me == incoming.hostId) incoming.hostScore else incoming.guestScore
                 val oldScore = old?.let { if (me == it.hostId) it.hostScore else it.guestScore } ?: myScore
