@@ -1,11 +1,14 @@
 package com.sonharf.game
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
@@ -13,16 +16,6 @@ import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 import java.time.Instant
 
-/**
- * Keeps the verified V1 shell/lobby intact, but guarantees that an active
- * classic duel is rendered by RefinedDuelOverlay rather than the legacy
- * LightDuelArena surface.
- *
- * This wrapper intentionally owns no game mutations. It only detects whether
- * the authenticated player has a live room and switches the visible runtime
- * surface. Matchmaking, scoring and server authority remain in the existing
- * backend.
- */
 @Composable
 internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
@@ -60,18 +53,17 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
                         ?.id
                 }.getOrNull()
             }
-            // The active overlay owns the live match refresh. Polling the whole room list
-            // several times per second here was competing with word submissions and made
-            // navigation feel unstable on slower phones.
             delay(if (activeRoomId == null) 1_250L else 2_000L)
         }
     }
 
-    if (activeRoomId != null) {
-        RefinedDuelOverlay()
-        // Continuous recovery for transient bot RPC/network failures. The watchdog is
-        // intentionally UI-less; RefinedDuelOverlay remains the only visible duel surface.
-        BotTurnWatchdogOverlay()
+    val roomId = activeRoomId
+    if (roomId != null) {
+        Box(Modifier.fillMaxSize()) {
+            RefinedDuelOverlay()
+            MageCatLiveDuelOverlay(roomId)
+            BotTurnWatchdogOverlay()
+        }
     } else {
         MonsterExperienceApp(onSignedOut = onSignedOut)
     }
