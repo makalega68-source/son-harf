@@ -121,7 +121,7 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                         Spacer(Modifier.width(11.dp))
                         Column(Modifier.weight(1f)) {
                             Text("SON HARF VIP", color = VipBlue, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                            Text(sh("Daha temiz. Daha kişisel.", "Cleaner. More personal."), color = VipMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(sh("Daha temiz. Daha kişisel. Daha avantajlı.", "Cleaner. More personal. More rewarding."), color = VipMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                         TextButton(onClick = onDismiss, enabled = !busy) {
                             Text("✕", color = VipText, fontSize = 18.sp, fontWeight = FontWeight.Black)
@@ -141,6 +141,8 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                     )
 
                     VipModernBenefit("◆", "400 SON COIN", sh("Her ay hesabına", "Added every month"))
+                    VipModernBenefit("💡", sh("GÜNLÜK İPUCU", "DAILY HINT"), sh("Desteklenen oyun modlarında", "In supported game modes"))
+                    VipModernBenefit("↻", sh("HARF DEĞİŞTİRİCİ", "LETTER SWAP"), sh("Günlük PRO oyun yardımı", "Daily PRO game help"))
                     VipModernBenefit("♛", sh("ÖZEL ODA", "PRIVATE ROOM"), sh("Arkadaşlarınla özel eşleşme", "Private matches with friends"))
                     VipModernBenefit("✦", "STYLE", sh("VIP profil ve görünüm seçenekleri", "VIP profile and appearance options"))
                     VipModernBenefit("↗", sh("GELİŞMİŞ İSTATİSTİK", "ADVANCED STATS"), sh("Daha ayrıntılı performans görünümü", "More detailed performance view"))
@@ -150,7 +152,7 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                         color = VipGreen.copy(alpha = .10f),
                     ) {
                         Text(
-                            sh("✓ Reklamsız deneyim   •   ✓ Rekabet gücü vermez", "✓ Ad-free   •   ✓ No competitive power"),
+                            sh("✓ Reklamsız deneyim   •   ✓ Oyun yardımları sunucu doğrulamalı", "✓ Ad-free   •   ✓ Server-validated game helpers"),
                             Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
                             color = VipGreen,
                             fontSize = 9.sp,
