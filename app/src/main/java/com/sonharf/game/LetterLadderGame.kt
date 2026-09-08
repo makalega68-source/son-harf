@@ -697,32 +697,22 @@ private fun LadderWordTiles(
 @Composable
 internal fun MonsterLetterLadderQuickCard(modifier: Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = modifier.height(126.dp).clickable(onClick = onClick),
+        modifier = modifier.height(136.dp).clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         color = MonsterUi.SurfaceRaised,
         border = BorderStroke(1.dp, MonsterUi.Accent.copy(alpha = .24f)),
     ) {
         Row(
-            Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
+            Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
-                modifier = Modifier.size(86.dp),
-                shape = RoundedCornerShape(18.dp),
-                color = MonsterUi.Accent.copy(alpha = .09f),
-                border = BorderStroke(1.dp, MonsterUi.Accent.copy(alpha = .20f)),
-            ) {
-                Column(
-                    Modifier.padding(8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                ) {
-                    MiniLadderWord("KALIN", setOf())
-                    Text("↓", color = MonsterUi.Accent, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    MiniLadderWord("YUMAK", (0 until 5).toSet())
-                }
-            }
-            Spacer(Modifier.width(14.dp))
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.harf_yolu_logo),
+                contentDescription = sh("Harf Yolu logosu", "Letter Path logo"),
+                modifier = Modifier.size(106.dp),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            )
+            Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(sh("3. OYUN", "GAME 3"), color = MonsterUi.Accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
                 Text(sh("HARF YOLU", "LETTER PATH"), color = MonsterUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black)
