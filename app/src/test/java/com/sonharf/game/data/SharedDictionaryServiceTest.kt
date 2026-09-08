@@ -1,6 +1,7 @@
 package com.sonharf.game.data
 
 import org.junit.After
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -26,6 +27,16 @@ class SharedDictionaryServiceTest {
         listOf("IŞIK", "ışık", "İSİM", "isim", "GÜL", "ŞİŞE", "ÖLÇÜ", "ÇIĞ").forEach { word ->
             assertTrue("Turkish locale normalization failed: $word", SharedDictionaryService.isValidCached(word, "tr") == true)
         }
+    }
+
+    @Test
+    fun unicodeEquivalentSpellingsUseSameCanonicalKeyAsServer() {
+        val decomposed = "c\u0327ilek"
+        assertEquals("çilek", SharedDictionaryService.normalize(decomposed, "tr"))
+
+        SharedDictionaryService.installSnapshotForTests("tr", listOf("çilek"))
+        assertTrue(SharedDictionaryService.isValidCached(decomposed, "tr") == true)
+        assertTrue(SharedDictionaryService.isValidWordBlocking(decomposed, "tr"))
     }
 
     @Test
