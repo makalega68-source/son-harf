@@ -1,15 +1,9 @@
 package com.sonharf.game
 
-import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 
-/**
- * Clean-slate integration point for the next Son Harf game implementation.
- *
- * The previous classic Son Harf game foundation and UI were deliberately removed.
- * The new game code supplied by the product owner will replace this empty slot.
- */
+/** Stable integration point used by the app shell for the rebuilt Premier Son Harf duel. */
 @Composable
 fun OnlineGameScreenV6() {
-    BackHandler { SonHarfUiState.homeRequest += 1 }
+    PremierWordDuelScreen()
 }
