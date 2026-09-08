@@ -79,7 +79,7 @@ Sözlük genişletmesi bu pakette yapılmadı; mevcut çalışan sözlük ve aç
 
 | Sıra | Paket | Tamamlanma ölçütü | Bu çalışma |
 |---|---|---|---|
-| 1 | Kalıcı Style koleksiyonu / ağ hatası / okunabilirlik | Eski ürün sahibince okunur/kullanılır, başkası kullanamaz; offline tema korunur; Android test/derleme | Uygulama ve veritabanı doğrulaması hazırlanıyor; sonuç ayrı doğrulama kaydında |
+| 1 | Kalıcı Style koleksiyonu / ağ hatası / okunabilirlik | Eski ürün sahibince okunur/kullanılır, başkası kullanamaz; offline tema korunur; Android test/derleme | PR #283; sahiplik migration'ı canlıda uygulandı ve tekrar test edildi; Android sonuçları PR'da izlenir |
 | 2 | Bütün modlarda TR/EN ve sözlük | Dil × mod × bot × online/offline kabul matrisi; eksik çeviri yok; kaynak kayıtları tam | Açık; V4 PR ile birlikte değerlendirilecek |
 | 3 | Ana sayfa / onboarding / maç sonu | İlk maç başlama ve öğretim tamamlama ölçümü; tüm eski akışlar erişilebilir | Açık |
 | 4 | Lig/rating/seri/rövanş/rakip/turnuva | Sunucu tek ödül/tek sonuç garantisi; dil/mod rating ayrımı; tekrar davet yarış testi | Açık |
@@ -94,3 +94,13 @@ Sözlük genişletmesi bu pakette yapılmadı; mevcut çalışan sözlük ve aç
 D1/D7/D30 geri dönüş; ilk maç başlama; maç tamamlama; rövanş dönüşümü; gerçek rakip bekleme p50/p95; dil/mod başına sözlük ret oranı; satın alma restore başarı oranı; çökmesiz oturum ve gecikme ölçülür. Başlangıç verisi olmadan artış yüzdesi vaat edilmez. Kullanıcı kimlikleri takma kimlikli; sohbet metni, token ve ödeme ayrıntısı analytics'e yazılmaz.
 
 Güvenlik: sunucu süre/skor/sıra/sonuç otoritesi; idempotent hamle/ödül/satın alma; reconnect snapshot+sequence; RLS sahiplik kontrolleri; hatada tekrar gönderim çift ödül doğurmaz. Şema ile depo arasında fark bulunduğundan körlemesine db push yapılmaz. Eski APK ve dal temizliği ancak aktif dağıtım/geri dönüş bağlantıları ve saklama ihtiyacı doğrulandıktan sonra yapılır.
+
+## İlk paketin veritabanı doğrulaması
+
+Canlı migration kimliği `20260908120313_permanent_style_ownership` ile depo dosyası eşleştirildi. İşlem yalnızca katalog okuma politikası ve sahip olunan ürünün kullanım koşulunu değiştirir; satın alma, bakiye ve envanter satırlarını değiştirmez. Mevcut canlı kullanım fonksiyonunun yeni alanları korunur. Tanım değişmişse migration sessizce ezmek yerine hata verir.
+
+`supabase/tests/permanent_style_ownership.sql` hem uygulama öncesi geri alınan işlemde hem uygulama sonrası çalıştırıldı: arşivlenmiş ürünü sahibi okur/kullanır; sahip olmayan okuyamaz/kullanamaz ve diğer kişinin envanterini göremez. Anon rolü kullanım RPC'sini çağıramaz. Test çerçevesi ve seçim değişiklikleri ROLLBACK ile geri alındı.
+
+Güvenlik danışmanı uyarı sayıları öncesi/sonrası değişmedi. Bu, tüm sistemin güvenli olduğu iddiası değildir. Önceden mevcut iki [anon SECURITY DEFINER uyarısı](https://supabase.com/docs/guides/database/database-linter?lint=0028_anon_security_definer_function_executable) `equip_default_game_theme` ve `get_dictionary_snapshot_v3` içindir; ilki auth.uid() kontrolü içerir. Tüm RPC çağrı grafiği incelenmeden izinler topluca değiştirilmedi. Kaynak atfı belirsiz sözlük kayıtları ve [sızdırılmış parola koruması uyarısı](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection) yayın öncesi açık işlerdir.
+
+Android/Compose cihaz üzerinde görsel kontrol, büyük yazı ölçeği ve iki cihaz multiplayer testi yapılmadı. PR derlemesinin başarılı olması bunların yerine geçmez. Ana dal ve mevcut APK bu paketle değiştirilmedi.
