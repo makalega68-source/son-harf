@@ -2,6 +2,7 @@ package com.sonharf.game.data
 
 import android.content.Context
 import io.github.jan.supabase.postgrest.postgrest
+import java.text.Normalizer
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlinx.serialization.Serializable
@@ -35,8 +36,12 @@ object SharedDictionaryService {
 
     fun normalize(word: String, language: String): String {
         val lang = canonicalLanguage(language)
-        val trimmed = word.trim()
-        return if (lang == "tr") trimmed.lowercase(turkishLocale) else trimmed.lowercase(englishLocale)
+        // Postgres normalize_game_word() canonicalizes to NFC before/after case folding. Doing the
+        // same here prevents visually identical composed/decomposed Unicode words from disagreeing
+        // between the offline snapshot and authoritative server validation.
+        val nfc = Normalizer.normalize(word.trim(), Normalizer.Form.NFC)
+        val lower = if (lang == "tr") nfc.lowercase(turkishLocale) else nfc.lowercase(englishLocale)
+        return Normalizer.normalize(lower, Normalizer.Form.NFC)
     }
 
     private fun inCanonicalLength(word: String): Boolean = word.length in MIN_CANONICAL_LENGTH..MAX_CANONICAL_LENGTH

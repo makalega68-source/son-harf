@@ -2,7 +2,9 @@
 
 ## Canonical dictionaries
 
-Son Harf uses `public.dictionary_words` as the authoritative word corpus. Mobile clients fetch a language-specific, game-allowed snapshot through `get_dictionary_snapshot_v3`. The game snapshot currently accepts words between 2 and 12 characters; the database may retain longer source entries for future game modes.
+Son Harf uses `public.dictionary_words` as the authoritative word corpus. Mobile clients fetch a language-specific, game-allowed snapshot through `get_dictionary_snapshot_v3`. The game snapshot accepts words between 2 and 15 characters so the local canonical cache covers the full 15×15 Word Siege board; longer source entries remain in the database for server-side modes and future game surfaces.
+
+Client and server normalization both use Unicode NFC canonicalization plus language-aware case folding. A persisted mobile snapshot is an offline continuity cache only: when network access is available the app refreshes it from the authoritative backend so existing installations receive dictionary corrections and expansions.
 
 ### Turkish (`tr`)
 
