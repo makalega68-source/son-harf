@@ -50,6 +50,7 @@ fun RewardCenterScreen() {
     var status by remember { mutableStateOf<RewardCenterStatusDto?>(null) }
     var items by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var vipEntitlements by remember { mutableStateOf<VipEntitlementsDto?>(null) }
     var adReady by remember { mutableStateOf(false) }
     val adsAllowed = AdPrivacyManager.adsAllowed
     var busy by remember { mutableStateOf<String?>(null) }
@@ -72,6 +73,7 @@ fun RewardCenterScreen() {
             status = b.getRewardCenterStatus()
             items = b.getShopItems()
             profile = b.currentUserId()?.let { b.getProfile(it) }
+            vipEntitlements = runCatching { b.getVipEntitlements() }.getOrNull()
         }.onFailure {
             notice = sh("Ödül verileri yüklenemedi.", "Reward data could not be loaded.")
         }
@@ -130,6 +132,7 @@ fun RewardCenterScreen() {
 
     val s = status
     val trialItem = items.firstOrNull { it.id == s?.trialItemId }
+    val vip = vipEntitlements
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
@@ -137,10 +140,83 @@ fun RewardCenterScreen() {
             Text(sh("Ödüllü reklamlar isteğe bağlıdır. İnce banner yalnızca oyun dışı menülerde gösterilir; maçlarda ve oyun alanlarında reklam yoktur.", "Rewarded ads are optional. A thin banner appears only on non-game menus; matches and gameplay areas remain ad-free."), color = SonHarfMuted, fontSize = 10.sp)
         }
 
+        if (profile?.isVip == true) item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = SonHarfPurple.copy(alpha = .12f)),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .40f)),
+            ) {
+                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Column {
+                            Text(sh("PRO GÜNLÜK OYUN YARDIMI", "PRO DAILY GAME HELP"), color = SonHarfPurple, fontWeight = FontWeight.Black)
+                            Text(sh("Sunucu tarafından verilen günlük haklar", "Daily server-issued resources"), color = SonHarfMuted, fontSize = 9.sp)
+                        }
+                        Text("PRO", color = SonHarfPurple, fontWeight = FontWeight.Black)
+                    }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Surface(Modifier.weight(1f), shape = RoundedCornerShape(13.dp), color = SonHarfSurface2) {
+                            Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("💡 ${vip?.hintCount ?: 0}", fontWeight = FontWeight.Black)
+                                Text(sh("İpucu", "Hint"), color = SonHarfMuted, fontSize = 8.sp)
+                            }
+                        }
+                        Surface(Modifier.weight(1f), shape = RoundedCornerShape(13.dp), color = SonHarfSurface2) {
+                            Column(Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("🔄 ${vip?.swapCount ?: 0}", fontWeight = FontWeight.Black)
+                                Text(sh("Harf Değiştirici", "Letter Swap"), color = SonHarfMuted, fontSize = 8.sp)
+                            }
+                        }
+                    }
+                    Text(
+                        sh("Bu yardımcılar yalnızca desteklenen oyun modlarında kullanılabilir; hak ve tüketim sunucu tarafından doğrulanır.", "These helpers can be used only in supported game modes; eligibility and consumption are server validated."),
+                        color = SonHarfMuted,
+                        fontSize = 9.sp,
+                    )
+                    Button(
+                        onClick = {
+                            val b = backend ?: return@Button
+                            scope.launch {
+                                busy = "vip_daily"
+                                runCatching { b.claimVipDailyHelpers() }
+                                    .onSuccess { claim ->
+                                        notice = if (claim.alreadyClaimed) {
+                                            sh("Bugünkü PRO oyun yardımını zaten aldın.", "You already claimed today's PRO game help.")
+                                        } else {
+                                            sh("+1 İpucu ve +1 Harf Değiştirici hesabına eklendi.", "+1 Hint and +1 Letter Swap added to your account.")
+                                        }
+                                        reload()
+                                    }
+                                    .onFailure { e ->
+                                        notice = when {
+                                            "not_vip" in e.message.orEmpty() -> sh("Aktif PRO üyeliği gerekli.", "An active PRO membership is required.")
+                                            else -> sh("PRO günlük hakkı alınamadı.", "PRO daily help could not be claimed.")
+                                        }
+                                    }
+                                busy = null
+                            }
+                        },
+                        enabled = vip?.isVip == true && vip.dailyJokersClaimed.not() && busy == null,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
+                    ) {
+                        Text(
+                            when {
+                                busy == "vip_daily" -> "…"
+                                vip?.dailyJokersClaimed == true -> sh("BUGÜN ALINDI", "CLAIMED TODAY")
+                                else -> sh("GÜNLÜK HAKKI AL", "CLAIM DAILY HELP")
+                            },
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
+                }
+            }
+        }
+
         item {
             RewardAdCard(
-                icon = "◈", title = sh("SON COIN", "DIAMONDS"),
-                description = sh("Her tamamlanan reklam +10 Son Coin verir. Son Coin'lerini mağazadaki Style ürünlerinde kullan.", "Each completed ad gives +10 Son Coin. Spend it on Style items in the Shop."),
+                icon = "◈", title = sh("SON COIN", "SON COIN"),
+                description = sh("Her tamamlanan reklam +10 Son Coin verir. Son Coin'lerini mağazadaki Style ve uygun içeriklerde kullan.", "Each completed ad gives +10 Son Coin. Spend it on Style and eligible Shop content."),
                 progress = "${s?.diamondAdsUsed ?: 0}/${s?.diamondAdsLimit ?: 3}",
                 button = sh("REKLAM İZLE  +10", "WATCH AD  +10"),
                 enabled = adReady && (s?.diamondAdsUsed ?: 0) < (s?.diamondAdsLimit ?: 3) && busy == null,
@@ -151,7 +227,7 @@ fun RewardCenterScreen() {
         item {
             RewardAdCard(
                 icon = "🎁", title = sh("ÖDÜL SANDIĞI", "REWARD CHEST"),
-                description = sh("Reklam başına 1 sandık hakkı. Sandık açıldığında 15, 25 veya 40 Son Coin çıkar.", "Earn 1 chest per ad. Opening a chest awards 15, 25, or 40 diamonds."),
+                description = sh("Reklam başına 1 sandık hakkı. Sandık açıldığında 15, 25 veya 40 Son Coin çıkar.", "Earn 1 chest per ad. Opening a chest awards 15, 25, or 40 Son Coin."),
                 progress = "${s?.chestAdsUsed ?: 0}/${s?.chestAdsLimit ?: 2}",
                 button = sh("REKLAM İZLE  +1 SANDIK", "WATCH AD  +1 CHEST"),
                 enabled = adReady && (s?.chestAdsUsed ?: 0) < (s?.chestAdsLimit ?: 2) && busy == null,
@@ -166,7 +242,7 @@ fun RewardCenterScreen() {
                         Text(sh("ÖDÜL SANDIKLARIM", "MY REWARD CHESTS"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
                         Text("🎁 ${s?.chestKeys ?: 0}", fontWeight = FontWeight.Black)
                     }
-                    Text(sh("Topladığın ödül sandıklarını aç. Çıkan Son Coin doğrudan cüzdanına eklenir ve yalnızca güç vermeyen içeriklerde kullanılır.", "Open collected reward chests. Son Coin goes directly to your wallet and is used only for non-power content."), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(sh("Topladığın ödül sandıklarını aç. Çıkan Son Coin doğrudan cüzdanına eklenir ve mağaza envanterinde kullanılabilir.", "Open collected reward chests. Son Coin goes directly to your wallet and can be used in the Shop inventory."), color = SonHarfMuted, fontSize = 9.sp)
                     Button(
                         onClick = {
                             val b = backend
@@ -177,7 +253,7 @@ fun RewardCenterScreen() {
                             scope.launch {
                                 busy = "open_chest"
                                 runCatching { b.openRewardChest() }
-                                    .onSuccess { reward -> notice = sh("Sandıktan ${reward?.diamondsAwarded ?: 0} Son Coin çıktı!", "Chest awarded ${reward?.diamondsAwarded ?: 0} diamonds!"); reload() }
+                                    .onSuccess { reward -> notice = sh("Sandıktan ${reward?.diamondsAwarded ?: 0} Son Coin çıktı!", "Chest awarded ${reward?.diamondsAwarded ?: 0} Son Coin!"); reload() }
                                     .onFailure { notice = sh("Açılacak sandığın yok.", "You do not have a chest to open.") }
                                 busy = null
                             }
@@ -235,7 +311,7 @@ fun RewardCenterScreen() {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface2), shape = RoundedCornerShape(16.dp)) {
                 Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(sh("GÜNLÜK YENİLENME", "DAILY RESET"), fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                    Text(sh("Kotalar her gün UTC gün değişiminde sunucuda yenilenir. Cihaz saatini değiştirmek veya uygulamayı silmek kotayı sıfırlamaz.", "Quotas reset on the server each UTC day. Changing device time or reinstalling the app does not reset them."), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(sh("Kotalar ve günlük PRO hakları her gün UTC gün değişiminde sunucuda yenilenir. Cihaz saatini değiştirmek veya uygulamayı silmek kotayı sıfırlamaz.", "Quotas and daily PRO resources reset on the server each UTC day. Changing device time or reinstalling the app does not reset them."), color = SonHarfMuted, fontSize = 9.sp)
                     Text("◈ ${profile?.diamonds ?: 0}", color = SonHarfCyan, fontWeight = FontWeight.Black)
                 }
             }
