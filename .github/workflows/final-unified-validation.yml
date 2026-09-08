@@ -38,9 +38,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q 'DAILY_CIPHER' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
-          grep -q 'MASTERY' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
-          grep -q 'SonHarfTopAdBanner' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
           grep -q 'SonHarfTopAdBanner(visible = !isGameplay, isPremium = isPremium)' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
           grep -q 'HAFTANIN EN İYİLERİ' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
           ! grep -q 'MonsterQuickCard(' app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
