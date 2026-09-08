@@ -45,7 +45,13 @@ jobs:
           test ! -f app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
           test ! -f app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt
           grep -q 'UnifiedProApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
-          grep -q 'val Background = Color(0xFF020617)' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'SonHarfCosmetics.restore(context)' app/src/main/java/com/sonharf/game/StableV1App.kt
+          grep -q 'val Background: Color get() = SonHarfTheme.Background' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'val Surface: Color get() = SonHarfTheme.Surface' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'lightColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'darkColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'MageCatCompanion(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'MageCatDirector.onLobbyGreet()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.VIP -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
