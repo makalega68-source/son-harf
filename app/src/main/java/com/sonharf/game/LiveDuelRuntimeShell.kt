@@ -1,14 +1,18 @@
 package com.sonharf.game
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.mascot.ReactiveMageCatOverlay
 import io.github.jan.supabase.postgrest.from
 import kotlinx.coroutines.delay
 import java.time.Instant
@@ -45,7 +49,7 @@ internal fun resolveTrackedDuelRoomId(
  * This wrapper intentionally owns no game mutations. It only detects whether
  * the authenticated player has a live room and switches the visible runtime
  * surface. Matchmaking, scoring and server authority remain in the existing
- * backend.
+ * backend. The Mage Cat layer is also read-only and cannot mutate gameplay.
  */
 @Composable
 internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
@@ -98,11 +102,16 @@ internal fun LiveDuelRuntimeShell(onSignedOut: () -> Unit) {
         }
     }
 
-    if (activeRoomId != null) {
-        RefinedDuelOverlay()
-        // Continuous recovery for transient bot RPC/network failures. The watchdog is
-        // intentionally UI-less; RefinedDuelOverlay remains the only visible duel surface.
-        BotTurnWatchdogOverlay()
+    val roomId = activeRoomId
+    if (roomId != null) {
+        Box(Modifier.fillMaxSize()) {
+            RefinedDuelOverlay()
+            // Continuous recovery for transient bot RPC/network failures. The watchdog is
+            // intentionally UI-less; RefinedDuelOverlay remains the only gameplay surface.
+            BotTurnWatchdogOverlay()
+            // Presentation-only companion: no score, timer or match mutations.
+            ReactiveMageCatOverlay(roomId)
+        }
     } else {
         MonsterExperienceApp(onSignedOut = onSignedOut)
     }
