@@ -1,0 +1,153 @@
+name: Unified Pro Finalize
+
+on:
+  push:
+    branches: ["reset/son-harf-game-clean-slate"]
+    paths:
+      - "ci/unified-pro-finalize-trigger.txt"
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: reset/son-harf-game-clean-slate
+          fetch-depth: 0
+
+      - name: Finalize Premier runtime
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt')
+          s = p.read_text()
+
+          old_theme = '''private object PremierUi {
+              val Background = Color(0xFFF3F7FB)
+              val Surface = Color.White
+              val Ink = Color(0xFF0B1F3A)
+              val Muted = Color(0xFF6B7C93)
+              val Ocean = Color(0xFF0284C7)
+              val OceanDeep = Color(0xFF0A3A82)
+              val Sky = Color(0xFF38BDF8)
+              val Ice = Color(0xFFE8F6FF)
+              val Border = Color(0xFFD7E7F3)
+              val Green = Color(0xFF059669)
+              val GreenSoft = Color(0xFFE8FAF2)
+              val Red = Color(0xFFDC3D4D)
+              val RedSoft = Color(0xFFFFECEF)
+              val Gold = Color(0xFFF5B82E)
+              val GoldSoft = Color(0xFFFFF7DD)
+          }'''
+          new_theme = '''private object PremierUi {
+              val Background = Color(0xFF020617)
+              val Surface = Color(0xFF0F172A)
+              val Ink = Color(0xFFF8FAFC)
+              val Muted = Color(0xFF94A3B8)
+              val Ocean = Color(0xFF3B82F6)
+              val OceanDeep = Color(0xFF60A5FA)
+              val Sky = Color(0xFF38BDF8)
+              val Ice = Color(0xFF1E293B)
+              val Border = Color(0xFF334155)
+              val Green = Color(0xFF10B981)
+              val GreenSoft = Color(0xFF052E2B)
+              val Red = Color(0xFFEF4444)
+              val RedSoft = Color(0xFF3F151C)
+              val Gold = Color(0xFFF59E0B)
+              val GoldSoft = Color(0xFF3A2A09)
+          }'''
+          if old_theme not in s:
+              raise SystemExit('old PremierUi block not found')
+          s = s.replace(old_theme, new_theme, 1)
+
+          s = s.replace('mutableIntStateOf(45)', 'mutableIntStateOf(20)')
+          s = s.replace('turnSeconds = 45', 'turnSeconds = 20')
+          s = s.replace('"45 sn tur", "45 sec turn"', '"20 sn tur", "20 sec turn"')
+
+          old_bot1 = 'if (bot) SyntheticBotPortrait(name, width = 70.dp, height = 70.dp, accent = accent)'
+          new_bot1 = 'if (bot) com.sonharf.game.mascot.MageCatCompanion(size = 70.dp)'
+          old_bot2 = 'if (bot) SyntheticBotPortrait(name, width = 58.dp, height = 58.dp, accent = accent)'
+          new_bot2 = 'if (bot) com.sonharf.game.mascot.MageCatCompanion(size = 58.dp)'
+          if old_bot1 not in s or old_bot2 not in s:
+              raise SystemExit('bot placeholder hooks not found')
+          s = s.replace(old_bot1, new_bot1, 1).replace(old_bot2, new_bot2, 1)
+
+          old_required = '''private fun premierRequiredToken(room: GameRoomDto, words: List<GameWordDto>): String {
+              val last = words.lastOrNull()?.normalizedWord?.trim().orEmpty()
+              if (last.isBlank()) return "★"
+              val count = if (room.gameMode == "expert") room.roundNo.coerceIn(1, 3) else 1
+              return premierUpper(last.takeLast(count), room.language)
+          }'''
+          new_required = '''private fun premierRequiredToken(room: GameRoomDto, words: List<GameWordDto>): String {
+              PremierBoosterUiState.requiredOverride
+                  ?.takeIf { PremierBoosterUiState.roomId == room.id && it.isNotBlank() }
+                  ?.let { return premierUpper(it, room.language) }
+              val last = words.lastOrNull()?.normalizedWord?.trim().orEmpty()
+              if (last.isBlank()) return "★"
+              val count = if (room.gameMode == "expert") room.roundNo.coerceIn(1, 3) else 1
+              return premierUpper(last.takeLast(count), room.language)
+          }'''
+          if old_required not in s:
+              raise SystemExit('required token helper not found')
+          s = s.replace(old_required, new_required, 1)
+
+          old_target = '''private fun PremierTargetCard(language: String, required: String, gameMode: String, round: Int) {
+              val transition = rememberInfiniteTransition(label = "letter")
+              val glow by transition.animateFloat(.25f, .55f, infiniteRepeatable(tween(1050), RepeatMode.Reverse), label = "glow")'''
+          new_target = '''private fun PremierTargetCard(language: String, required: String, gameMode: String, round: Int) {
+              val transition = rememberInfiniteTransition(label = "letter")
+              val glow by transition.animateFloat(.25f, .55f, infiniteRepeatable(tween(1050), RepeatMode.Reverse), label = "glow")
+              val targetBadge = when {
+                  required == "★" -> "—"
+                  gameMode == "expert" -> "x${round.coerceIn(1, 3)}"
+                  required.length == 1 -> "${com.sonharf.game.data.DictionaryEngine.getLetterPoint(required.first(), language)}P"
+                  else -> "x${round.coerceIn(1, 3)}"
+              }'''
+          if old_target not in s:
+              raise SystemExit('target card hook not found')
+          s = s.replace(old_target, new_target, 1)
+          s = s.replace('Text(if (gameMode == "expert") "x${round.coerceIn(1, 3)}" else "3P", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)',
+                        'Text(targetBadge, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)', 1)
+
+          if 'SyntheticBotPortrait(name, width = 70.dp' in s or 'SyntheticBotPortrait(name, width = 58.dp' in s:
+              raise SystemExit('Premier bot placeholders remain')
+          if '45 sec turn' in s or '45 sn tur' in s or 'mutableIntStateOf(45)' in s:
+              raise SystemExit('45-second Premier UI remains')
+          p.write_text(s)
+          PY
+
+          # Remove old classic runtime files only when no other source/test references them.
+          for spec in \
+            "MonsterExperienceApp:app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt" \
+            "LiveDuelRuntimeShell:app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt"; do
+            symbol="${spec%%:*}"
+            file="${spec#*:}"
+            refs=$(git grep -l "$symbol" -- app/src/main app/src/test 2>/dev/null | grep -v "^${file}$" || true)
+            if [ -z "$refs" ]; then
+              rm -f "$file"
+              echo "Removed unused classic runtime: $file"
+            else
+              echo "Kept $file; still referenced by:"
+              echo "$refs"
+            fi
+          done
+
+          # Obsolete committed APKs are not source of truth; final APK comes from CI artifact.
+          rm -f dist/*.apk
+
+      - name: Commit finalizer changes
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "No finalizer changes"
+            exit 0
+          fi
+          git commit -m "ui: finalize dark Unified Pro Premier runtime"
+          git push origin HEAD:reset/son-harf-game-clean-slate
