@@ -45,21 +45,21 @@ import kotlinx.coroutines.launch
 private enum class PremierStage { Loading, Lobby, Searching, Vs, Playing, Finished }
 
 private object PremierUi {
-    val Background = Color(0xFFF3F7FB)
-    val Surface = Color.White
-    val Ink = Color(0xFF0B1F3A)
-    val Muted = Color(0xFF6B7C93)
-    val Ocean = Color(0xFF0284C7)
-    val OceanDeep = Color(0xFF0A3A82)
+    val Background = Color(0xFF020617)
+    val Surface = Color(0xFF0F172A)
+    val Ink = Color(0xFFF8FAFC)
+    val Muted = Color(0xFF94A3B8)
+    val Ocean = Color(0xFF3B82F6)
+    val OceanDeep = Color(0xFF60A5FA)
     val Sky = Color(0xFF38BDF8)
-    val Ice = Color(0xFFE8F6FF)
-    val Border = Color(0xFFD7E7F3)
-    val Green = Color(0xFF059669)
-    val GreenSoft = Color(0xFFE8FAF2)
-    val Red = Color(0xFFDC3D4D)
-    val RedSoft = Color(0xFFFFECEF)
-    val Gold = Color(0xFFF5B82E)
-    val GoldSoft = Color(0xFFFFF7DD)
+    val Ice = Color(0xFF1E293B)
+    val Border = Color(0xFF334155)
+    val Green = Color(0xFF10B981)
+    val GreenSoft = Color(0xFF052E2B)
+    val Red = Color(0xFFEF4444)
+    val RedSoft = Color(0xFF3F151C)
+    val Gold = Color(0xFFF59E0B)
+    val GoldSoft = Color(0xFF3A2A09)
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr
@@ -94,7 +94,7 @@ fun PremierWordDuelScreen() {
     var showForfeit by remember { mutableStateOf(false) }
     var showQuickChat by remember { mutableStateOf(false) }
     var floatingMessage by remember { mutableStateOf<ChatMessageDto?>(null) }
-    var turnSeconds by remember { mutableIntStateOf(45) }
+    var turnSeconds by remember { mutableIntStateOf(20) }
 
     suspend fun ensureMe(): ProfileDto {
         if (backend.currentUserId() == null) backend.ensurePlayer(pt(language, "Oyuncu", "Player"))
@@ -211,13 +211,13 @@ fun PremierWordDuelScreen() {
 LaunchedEffect(room?.id, room?.turnDeadline, room?.currentPlayerId, room?.status, room?.botTurn) {
     val active = room ?: return@LaunchedEffect
     if (active.status !in setOf("playing", "final", "sudden_death") || active.botTurn) {
-        turnSeconds = 45
+        turnSeconds = 20
         return@LaunchedEffect
     }
 
     val deadline = active.turnDeadline?.let { runCatching { Instant.parse(it) }.getOrNull() }
     if (deadline == null) {
-        turnSeconds = 45
+        turnSeconds = 20
         runCatching { backend.getRoom(active.id) }.getOrNull()?.let { synced ->
             if (synced != active) room = synced
         }
@@ -540,7 +540,7 @@ private fun PremierLobby(
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PremierFeatureTile(Icons.Rounded.Verified, pt(language, "ANA SÖZLÜK", "MASTER DICTIONARY"), pt(language, "TR + EN", "TR + EN"), Modifier.weight(1f))
-            PremierFeatureTile(Icons.Rounded.Bolt, pt(language, "HIZLI", "FAST"), pt(language, "45 sn tur", "45 sec turn"), Modifier.weight(1f))
+            PremierFeatureTile(Icons.Rounded.Bolt, pt(language, "HIZLI", "FAST"), pt(language, "20 sn tur", "20 sec turn"), Modifier.weight(1f))
             PremierFeatureTile(Icons.Rounded.Groups, pt(language, "CANLI", "LIVE"), "1v1", Modifier.weight(1f))
         }
 
@@ -664,7 +664,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
 private fun PremierVsPlayerCard(language: String, name: String, avatar: String?, gender: String?, visible: Boolean, rating: Int, winRate: Int, accent: Color, bot: Boolean = false) {
     Surface(modifier = Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(23.dp)), shape = RoundedCornerShape(23.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, accent.copy(alpha = .22f))) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (bot) SyntheticBotPortrait(name, width = 70.dp, height = 70.dp, accent = accent)
+            if (bot) com.sonharf.game.mascot.MageCatCompanion(size = 70.dp)
             else ProfilePhotoAvatarWithGender(avatar, gender, name, 66.dp, accent, visible, false)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -842,7 +842,7 @@ private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, vi
         }
         if (!isLeft) {
   Spacer(Modifier.width(8.dp))
-  if (bot) SyntheticBotPortrait(name, width = 58.dp, height = 58.dp, accent = accent)
+  if (bot) com.sonharf.game.mascot.MageCatCompanion(size = 58.dp)
   else ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp, accent, visible, false)
         }
     }
@@ -872,6 +872,12 @@ private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String) 
 private fun PremierTargetCard(language: String, required: String, gameMode: String, round: Int) {
     val transition = rememberInfiniteTransition(label = "letter")
     val glow by transition.animateFloat(.25f, .55f, infiniteRepeatable(tween(1050), RepeatMode.Reverse), label = "glow")
+    val targetBadge = when {
+        required == "★" -> "—"
+        gameMode == "expert" -> "x${round.coerceIn(1, 3)}"
+        required.length == 1 -> "${com.sonharf.game.data.DictionaryEngine.getLetterPoint(required.first(), language)}P"
+        else -> "x${round.coerceIn(1, 3)}"
+    }
     Box(
         Modifier.size(154.dp).shadow(25.dp, RoundedCornerShape(34.dp)).clip(RoundedCornerShape(34.dp))
             .background(Brush.radialGradient(listOf(PremierUi.Sky, PremierUi.Ocean, PremierUi.OceanDeep))),
@@ -879,7 +885,7 @@ private fun PremierTargetCard(language: String, required: String, gameMode: Stri
     ) {
         Box(Modifier.matchParentSize().background(Color.White.copy(alpha = glow * .13f)))
         Surface(modifier = Modifier.align(Alignment.TopEnd).padding(10.dp), shape = RoundedCornerShape(99.dp), color = Color.White.copy(alpha = .20f)) {
-            Text(if (gameMode == "expert") "x${round.coerceIn(1, 3)}" else "3P", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Text(targetBadge, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(required, color = Color.White, fontSize = if (required.length > 1) 58.sp else 76.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
@@ -1083,6 +1089,9 @@ private fun profileWinRate(profile: ProfileDto?): Int {
 }
 
 private fun premierRequiredToken(room: GameRoomDto, words: List<GameWordDto>): String {
+    PremierBoosterUiState.requiredOverride
+        ?.takeIf { PremierBoosterUiState.roomId == room.id && it.isNotBlank() }
+        ?.let { return premierUpper(it, room.language) }
     val last = words.lastOrNull()?.normalizedWord?.trim().orEmpty()
     if (last.isBlank()) return "★"
     val count = if (room.gameMode == "expert") room.roundNo.coerceIn(1, 3) else 1
