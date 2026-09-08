@@ -37,26 +37,37 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
 
 /**
- * Stable product shell. First-install language selection is resolved before any
- * authentication lookup so a fresh install always has a deterministic route.
+ * Stable product shell. First-install language selection and the short gameplay
+ * onboarding are resolved before authentication lookup so a fresh install has
+ * a deterministic route. Existing installs are not forced through onboarding.
  */
 @Composable
 fun StableV1App() {
     val context = LocalContext.current
     var languageChosen by remember { mutableStateOf(FirstRunLanguagePreferences.isComplete(context)) }
+    var onboardingRequired by remember { mutableStateOf(FirstRunLanguagePreferences.needsOnboarding(context)) }
     var authChecked by remember { mutableStateOf(false) }
     var authenticated by remember { mutableStateOf(false) }
 
     if (!languageChosen) {
         FirstRunLanguageScreen { language ->
             FirstRunLanguagePreferences.complete(context, language)
+            onboardingRequired = true
             languageChosen = true
         }
         return
     }
 
-    LaunchedEffect(languageChosen) {
-        if (!languageChosen) return@LaunchedEffect
+    if (onboardingRequired) {
+        FirstRunOnboarding {
+            FirstRunLanguagePreferences.completeOnboarding(context)
+            onboardingRequired = false
+        }
+        return
+    }
+
+    LaunchedEffect(languageChosen, onboardingRequired) {
+        if (!languageChosen || onboardingRequired) return@LaunchedEffect
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
         authChecked = true
     }
