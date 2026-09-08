@@ -1,4 +1,4 @@
-name: Build V1 MageCat 2D APK
+name: Build V1 MageCat 2D Animated APK
 
 on:
   push:
@@ -23,12 +23,85 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.14.4'
+      - name: Apply test-only Mage Cat size and idle animation patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt")
+          text = path.read_text(encoding="utf-8")
+
+          import_anchor = "import androidx.activity.compose.BackHandler\n"
+          animation_imports = """import androidx.compose.animation.core.RepeatMode
+          import androidx.compose.animation.core.animateFloat
+          import androidx.compose.animation.core.infiniteRepeatable
+          import androidx.compose.animation.core.rememberInfiniteTransition
+          import androidx.compose.animation.core.tween
+          """
+          if animation_imports not in text:
+              if import_anchor not in text:
+                  raise SystemExit("Mage Cat patch failed: import anchor not found")
+              text = text.replace(import_anchor, import_anchor + animation_imports, 1)
+
+          old = '''            Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.End,
+              verticalAlignment = Alignment.CenterVertically,
+          ) {
+              Image(
+                  painter = painterResource(R.drawable.mage_cat_preview_anthracite),
+                  contentDescription = sh("Mage Cat maskotu", "Mage Cat mascot"),
+                  modifier = Modifier.size(72.dp),
+                  contentScale = ContentScale.Fit,
+              )
+          }'''
+
+          new = '''            val mascotIdle = rememberInfiniteTransition(label = "mageCatHomeIdle")
+          val mascotBob by mascotIdle.animateFloat(
+              initialValue = 0f,
+              targetValue = -7f,
+              animationSpec = infiniteRepeatable(
+                  animation = tween(durationMillis = 1450),
+                  repeatMode = RepeatMode.Reverse,
+              ),
+              label = "mageCatHomeBob",
+          )
+          val mascotSway by mascotIdle.animateFloat(
+              initialValue = -2.5f,
+              targetValue = 2.5f,
+              animationSpec = infiniteRepeatable(
+                  animation = tween(durationMillis = 1800),
+                  repeatMode = RepeatMode.Reverse,
+              ),
+              label = "mageCatHomeSway",
+          )
+          Row(
+              modifier = Modifier.fillMaxWidth(),
+              horizontalArrangement = Arrangement.End,
+              verticalAlignment = Alignment.CenterVertically,
+          ) {
+              Image(
+                  painter = painterResource(R.drawable.mage_cat_preview_anthracite),
+                  contentDescription = sh("Mage Cat maskotu", "Mage Cat mascot"),
+                  modifier = Modifier
+                      .offset(x = mascotSway.dp, y = mascotBob.dp)
+                      .size(118.dp),
+                  contentScale = ContentScale.Fit,
+              )
+          }'''
+
+          if text.count(old) != 1:
+              raise SystemExit(f"Mage Cat patch failed: expected one target block, found {text.count(old)}")
+          text = text.replace(old, new, 1)
+          path.write_text(text, encoding="utf-8")
+          PY
       - name: Run regression tests and build APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace
       - name: Stage APK
-        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-V1-MageCat-2D.apk
+        run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-V1-MageCat-2D-Animated.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: SonHarf-V1-MageCat-2D-APK
-          path: SonHarf-V1-MageCat-2D.apk
+          name: SonHarf-V1-MageCat-2D-Animated-APK
+          path: SonHarf-V1-MageCat-2D-Animated.apk
           if-no-files-found: error
