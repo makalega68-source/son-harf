@@ -12,9 +12,12 @@ data class CoreWordCandidateDto(
     @SerialName("normalized_word") val normalizedWord: String,
 )
 
-/** Client-side word validation for Son Harf uses the same canonical snapshot as Word Siege. */
+/** Online/core validation uses the authoritative V4 server validator. */
 suspend fun OnlineGameBackend.validateCoreWord(word: String, language: String): Boolean =
-    SharedDictionaryService.isValidWord(word, language)
+    SharedDictionaryService.validateAuthoritative(word, language).valid
+
+suspend fun OnlineGameBackend.validateCoreWordDetailed(word: String, language: String): GameWordValidationDto =
+    SharedDictionaryService.validateAuthoritative(word, language)
 
 suspend fun OnlineGameBackend.getCoreWordCandidates(
     letters: String,
