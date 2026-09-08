@@ -49,18 +49,18 @@ private val onboardingSteps = listOf(
     OnboardingStep(
         titleTr = "2 • PUAN VE SERİ",
         titleEn = "2 • SCORE AND STREAK",
-        bodyTr = "Zor harfler daha değerlidir. Arka arkaya doğru kelimeler seri oluşturur; hiçbir ödeme maç gücü vermez.",
-        bodyEn = "Hard letters are worth more. Consecutive valid words build a streak; payments never grant match power.",
+        bodyTr = "Zor harfler daha değerlidir. Arka arkaya doğru kelimeler seri oluşturur ve daha güçlü bir tempo yakalamanı sağlar.",
+        bodyEn = "Hard letters are worth more. Consecutive valid words build a streak and help you maintain momentum.",
         exampleTr = "J • Ğ • Z = yüksek değer",
         exampleEn = "Q • X • Z = high value",
     ),
     OnboardingStep(
         titleTr = "3 • 20 SANİYE BASKISI",
         titleEn = "3 • 20 SECOND PRESSURE",
-        bodyTr = "Her hamlede hızlı karar ver. Süre dolarsa sıra rakibe geçer. İpucu ve harf değişimi yalnızca rekabet dışı modlarda kullanılabilir.",
-        bodyEn = "Decide quickly each turn. When time expires, play passes on. Hints and swaps are limited to non-competitive modes.",
-        exampleTr = "Odaklan • Yaz • Gönder",
-        exampleEn = "Focus • Type • Send",
+        bodyTr = "Her hamlede hızlı karar ver. Süre dolarsa sıra rakibe geçer. Takılırsan, oynadığın mod izin verdiğinde İpucu veya Harf Değiştirici kullanabilirsin.",
+        bodyEn = "Decide quickly each turn. When time expires, play passes on. If you get stuck, you can use a Hint or Letter Swap when the mode allows it.",
+        exampleTr = "Odaklan • Yardımını seç • Gönder",
+        exampleEn = "Focus • Choose help • Send",
     ),
 )
 
