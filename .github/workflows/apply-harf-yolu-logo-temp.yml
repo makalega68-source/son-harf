@@ -1,0 +1,81 @@
+name: Temp Apply Harf Yolu Logo
+
+on:
+  push:
+    branches: [ feat/harf-yolu-logo-20260908 ]
+    paths:
+      - '.github/workflows/apply-harf-yolu-logo-temp.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.event.head_commit.message == 'Add temporary Harf Yolu logo applicator'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/harf-yolu-logo-20260908
+          fetch-depth: 0
+
+      - name: Apply isolated Harf Yolu card change
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/sonharf/game/LetterLadderGame.kt')
+          source = path.read_text(encoding='utf-8')
+          start_marker = '@Composable\ninternal fun MonsterLetterLadderQuickCard'
+          end_marker = '\n@Composable\nprivate fun MiniLadderWord'
+          start = source.index(start_marker)
+          end = source.index(end_marker, start)
+          replacement = '''@Composable
+          internal fun MonsterLetterLadderQuickCard(modifier: Modifier, onClick: () -> Unit) {
+              Surface(
+                  modifier = modifier.height(136.dp).clickable(onClick = onClick),
+                  shape = RoundedCornerShape(18.dp),
+                  color = MonsterUi.SurfaceRaised,
+                  border = BorderStroke(1.dp, MonsterUi.Accent.copy(alpha = .24f)),
+              ) {
+                  Row(
+                      Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp),
+                      verticalAlignment = Alignment.CenterVertically,
+                  ) {
+                      androidx.compose.foundation.Image(
+                          painter = androidx.compose.ui.res.painterResource(R.drawable.harf_yolu_logo),
+                          contentDescription = sh("Harf Yolu logosu", "Letter Path logo"),
+                          modifier = Modifier.size(106.dp),
+                          contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                      )
+                      Spacer(Modifier.width(16.dp))
+                      Column(Modifier.weight(1f)) {
+                          Text(sh("3. OYUN", "GAME 3"), color = MonsterUi.Accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                          Text(sh("HARF YOLU", "LETTER PATH"), color = MonsterUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                          Spacer(Modifier.height(4.dp))
+                          Text(sh("5 hamlede hedef kelimeye ulaş", "Reach the target in 5 moves"), color = MonsterUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                          Text(sh("Değişen kutu kilitlenir", "Changed positions lock"), color = MonsterUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                      }
+                      Icon(Icons.Rounded.ChevronRight, null, tint = MonsterUi.Muted, modifier = Modifier.size(22.dp))
+                  }
+              }
+          }
+          '''
+          path.write_text(source[:start] + replacement + source[end:], encoding='utf-8')
+          PY
+
+          grep -q 'R.drawable.harf_yolu_logo' app/src/main/java/com/sonharf/game/LetterLadderGame.kt
+          grep -q 'modifier = modifier.height(136.dp)' app/src/main/java/com/sonharf/game/LetterLadderGame.kt
+          grep -q 'modifier = Modifier.size(106.dp)' app/src/main/java/com/sonharf/game/LetterLadderGame.kt
+          test -s app/src/main/res/drawable-nodpi/harf_yolu_logo.webp
+          git diff --check
+
+      - name: Commit isolated card integration
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/sonharf/game/LetterLadderGame.kt
+          git commit -m 'Harf Yolu logosunu ana oyun kartına bağla'
+          git push origin HEAD:feat/harf-yolu-logo-20260908
