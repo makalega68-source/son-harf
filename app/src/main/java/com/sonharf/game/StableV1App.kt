@@ -34,7 +34,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.syncPreferredLanguage
 
 /**
  * Stable product shell. First-install language selection and the short gameplay
@@ -85,6 +87,15 @@ fun StableV1App() {
     if (!authenticated) {
         RequiredAuthGate { authenticated = true }
         return
+    }
+
+    LaunchedEffect(authenticated, SonHarfUiState.language) {
+        if (authenticated && SupabaseProvider.configured) {
+            // Preference sync must never block entry to the game shell.
+            runCatching {
+                OnlineGameBackend().syncPreferredLanguage(SonHarfUiState.language)
+            }
+        }
     }
 
     Box(
