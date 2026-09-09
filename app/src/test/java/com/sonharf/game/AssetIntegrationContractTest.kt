@@ -87,19 +87,20 @@ class AssetIntegrationContractTest {
         assertFalse(practice.contains("wordSiegeBoardBorderWidthDp(transform.scale)"))
     }
 
-    @Test fun onlineSiegeKeepsBorderPaletteWhilePracticeUsesCalmBorderlessSeparation() {
+    @Test fun onlineSiegeKeepsCalmOwnershipAndBonusPaletteWhilePracticeUsesCompactSeparation() {
         val online = read("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
-        listOf("0xFF7890A8", "0xFF5279A6", "0xFF147A48", "0xFFB72E35", "0xFFD99818").forEach {
-            assertTrue(online.contains(it))
-        }
-        assertTrue(online.contains("border.copy(alpha = .96f)"))
+        listOf(
+            "0xFF8DA19A", "0xFF7E8E91", "0xFF3A7B58", "0xFFA84F59", "0xFFD99818",
+            "0xFFDCEFF8", "0xFFDCEEDC", "0xFFE9E0F2", "0xFFDECBE9", "0xFFF0C75A", "0xFFF6B94A",
+        ).forEach { assertTrue(online.contains(it)) }
+        assertTrue(online.contains("border.copy(alpha = .92f)"))
 
-        assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFDDE6EB)"))
+        assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFD9E4E7)"))
         assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFF8FAF9)"))
-        assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFFFF7E6)"))
-        assertTrue(practice.contains(".padding(1.6.dp)"))
+        assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFFFF8EA)"))
+        assertTrue(practice.contains(".padding(1.25.dp)"))
         val cellStart = practice.indexOf("private fun WordSiegePracticeBoardCell")
         val rackStart = practice.indexOf("internal fun WordSiegePracticeRackTile")
         assertTrue(cellStart >= 0 && rackStart > cellStart)
