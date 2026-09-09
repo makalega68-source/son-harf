@@ -204,6 +204,7 @@ fun ProfHammyCompanion(
     speaking: Boolean = false,
 ) {
     val transition = rememberInfiniteTransition(label = "ProfHammyLayeredRig")
+    val accentColor = MaterialTheme.colorScheme.primary
 
     val bodyBob by transition.animateFloat(
         initialValue = -0.7f,
@@ -336,6 +337,7 @@ fun ProfHammyCompanion(
                 speaking = speaking,
                 headTilt = headTilt,
                 breathing = breathing,
+                accentColor = accentColor,
             )
         }
     }
@@ -352,6 +354,7 @@ private fun DrawScope.drawProfHammyRig(
     speaking: Boolean,
     headTilt: Float,
     breathing: Float,
+    accentColor: Color,
 ) {
     val w = size.width
     val h = size.height
@@ -370,7 +373,6 @@ private fun DrawScope.drawProfHammyRig(
     val bowDark = Color(0xFF446247)
     val pencil = Color(0xFFE7B34F)
 
-    // Ground shadow — reacts subtly to breathing so the body feels planted.
     val shadowScale = 1f - breathing * 0.04f
     drawOval(
         color = Color.Black.copy(alpha = 0.10f),
@@ -378,7 +380,6 @@ private fun DrawScope.drawProfHammyRig(
         size = Size(w * 0.38f * shadowScale, h * 0.055f),
     )
 
-    // BODY LAYER
     val bodyTop = h * 0.55f
     val bodyHeight = h * (0.34f + breathing * 0.012f)
     drawOval(
@@ -402,7 +403,6 @@ private fun DrawScope.drawProfHammyRig(
         size = Size(w * 0.18f, h * 0.08f),
     )
 
-    // FEET LAYER
     val footLift = if (mood == ProfHammyMood.EXCITED) h * 0.008f * gesture else 0f
     drawOval(
         color = furDark,
@@ -425,7 +425,6 @@ private fun DrawScope.drawProfHammyRig(
         size = Size(w * 0.11f, h * 0.05f),
     )
 
-    // ARM / PAW LAYERS — each has an independent pivot.
     val leftShoulder = Offset(w * 0.31f, h * 0.64f)
     val rightShoulder = Offset(w * 0.69f, h * 0.64f)
     val leftAngle = when (mood) {
@@ -482,7 +481,6 @@ private fun DrawScope.drawProfHammyRig(
         }
     }
 
-    // Bow tie belongs to the body, not the head.
     drawOval(
         color = bow,
         topLeft = Offset(w * 0.37f, h * 0.595f),
@@ -495,7 +493,6 @@ private fun DrawScope.drawProfHammyRig(
     )
     drawCircle(color = bowDark, radius = w * 0.035f, center = Offset(cx, h * 0.638f))
 
-    // HEAD RIG — everything inside rotates around the neck independently of the body.
     val headPivot = Offset(cx, h * 0.49f)
     val moodTiltMultiplier = when (mood) {
         ProfHammyMood.EXCITED -> 1.7f
@@ -534,7 +531,6 @@ private fun DrawScope.drawProfHammyRig(
             size = Size(w * 0.25f, h * 0.11f),
         )
 
-        // Muzzle / cheeks.
         drawOval(
             color = cream,
             topLeft = Offset(w * 0.315f, h * 0.425f),
@@ -572,7 +568,6 @@ private fun DrawScope.drawProfHammyRig(
             drawRigEye(rightEye, eyeRadius * scale, eye, mood, gx, gy, effectiveEyeOpen)
         }
 
-        // Eyebrows create clearer expression separation.
         when (mood) {
             ProfHammyMood.FOCUSED -> {
                 drawLine(
@@ -625,7 +620,6 @@ private fun DrawScope.drawProfHammyRig(
             else -> Unit
         }
 
-        // Glasses are a stable identity layer above animated eyes.
         drawCircle(color = glasses, radius = lensRadius, center = leftEye, style = Stroke(width = w * 0.021f))
         drawCircle(color = glasses, radius = lensRadius, center = rightEye, style = Stroke(width = w * 0.021f))
         drawLine(
@@ -652,12 +646,10 @@ private fun DrawScope.drawProfHammyRig(
         )
     }
 
-    // Tiny excitement accents live outside the head pivot so they feel like scene particles.
     if (mood == ProfHammyMood.EXCITED) {
-        val accent = MaterialTheme.colorScheme.primary
-        drawCircle(color = accent.copy(alpha = 0.34f), radius = w * 0.018f, center = Offset(w * 0.15f, h * 0.31f))
-        drawCircle(color = accent.copy(alpha = 0.30f), radius = w * 0.014f, center = Offset(w * 0.85f, h * 0.26f))
-        drawCircle(color = accent.copy(alpha = 0.24f), radius = w * 0.010f, center = Offset(w * 0.81f, h * 0.43f))
+        drawCircle(color = accentColor.copy(alpha = 0.34f), radius = w * 0.018f, center = Offset(w * 0.15f, h * 0.31f))
+        drawCircle(color = accentColor.copy(alpha = 0.30f), radius = w * 0.014f, center = Offset(w * 0.85f, h * 0.26f))
+        drawCircle(color = accentColor.copy(alpha = 0.24f), radius = w * 0.010f, center = Offset(w * 0.81f, h * 0.43f))
     }
 }
 
