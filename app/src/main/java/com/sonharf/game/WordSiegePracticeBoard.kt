@@ -10,7 +10,6 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -34,12 +33,19 @@ import com.sonharf.game.data.WordSiegeCellDto
 private val PracticeSiegeCellSize = 52.dp
 private val PracticeSiegeTile = Color(0xFFFFE3A5)
 private val PracticeSiegeTileBorder = Color(0xFFD99818)
-internal val PracticeSiegeBoardSurface = Color(0xFFDDE6EB)
+internal val PracticeSiegeBoardSurface = Color(0xFFD9E4E7)
 internal val PracticeSiegeNeutral = Color(0xFFF8FAF9)
-private val PracticeSiegeEmpty = Color(0xFFFFF7E6)
-private val PracticeSiegeMine = Color(0xFF35C878)
-private val PracticeSiegeRival = Color(0xFFFF5F57)
+private val PracticeSiegeEmpty = Color(0xFFFFF8EA)
+private val PracticeSiegeMine = Color(0xFF65B58A)
+private val PracticeSiegeRival = Color(0xFFD98286)
 private val PracticeSiegeLightTileText = Color(0xFF2F2A1F)
+private val PracticeBonus2H = Color(0xFFDCEFF8)
+private val PracticeBonus3H = Color(0xFFDCEEDC)
+private val PracticeBonus2K = Color(0xFFE9E0F2)
+private val PracticeBonus3K = Color(0xFFDECBE9)
+private val PracticeBonus4K = Color(0xFFF0C75A)
+private val PracticeBonusStar = Color(0xFFF6B94A)
+private val PracticeLastMove = Color(0xFFF1C75B)
 
 @Composable
 internal fun WordSiegePracticeBoard(
@@ -84,8 +90,8 @@ internal fun WordSiegePracticeBoard(
             highlightAlpha.snapTo(0f)
             highlightAlpha.animateTo(1f, tween(WORD_SIEGE_LAST_MOVE_ENTER_MS))
             delay(WORD_SIEGE_LAST_MOVE_HOLD_MS.toLong())
-            highlightAlpha.animateTo(0f, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
-            highlightedIndices = emptySet()
+            // Keep the most recently placed word subtly visible until the next move.
+            highlightAlpha.animateTo(0.42f, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
         }
     }
 
@@ -127,13 +133,14 @@ internal fun WordSiegePracticeBoard(
     Surface(
         modifier = modifier,
         color = PracticeSiegeBoardSurface,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, MainUi.Border.copy(alpha = .55f)),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MainUi.Border.copy(alpha = .70f)),
+        shadowElevation = 1.dp,
     ) {
         Box(
             Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .clipToBounds()
                 .onGloballyPositioned { viewport = it.size }
                 .pointerInput(mode, viewport, boardPx, closeScale) {
@@ -193,7 +200,6 @@ internal fun WordSiegePracticeBoard(
                 cellSizePx = tilePx,
                 modifier = Modifier.matchParentSize(),
             )
-
         }
     }
 }
@@ -217,22 +223,33 @@ private fun WordSiegePracticeBoardCell(
     }
     val letter = pendingLetter?.toString() ?: cell.letter
     val canPlace = enabled && (cell.letter == null || pending)
+    val activeBonus = if (letter == null && !cell.bonusUsed) cell.bonus else null
     val cellColor = when {
         pending -> PracticeSiegeTile
         letter != null -> territory
+        activeBonus == "2H" -> PracticeBonus2H
+        activeBonus == "3H" -> PracticeBonus3H
+        activeBonus == "2K" -> PracticeBonus2K
+        activeBonus == "3K" -> PracticeBonus3K
+        activeBonus == WordSiegeBoardSpec.CenterBonus -> PracticeBonus4K
+        activeBonus == WordSiegeBoardSpec.StarBonus -> PracticeBonusStar
         else -> PracticeSiegeEmpty
     }
 
     Box(
         Modifier
             .size(PracticeSiegeCellSize)
-            .padding(1.6.dp)
-            .clip(RoundedCornerShape(7.dp))
+            .padding(1.25.dp)
+            .clip(RoundedCornerShape(6.dp))
             .background(cellColor)
             .border(
-                width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
-                color = Color.White.copy(alpha = .25f + .65f * lastMoveHighlight),
-                shape = RoundedCornerShape(7.dp),
+                width = if (lastMoveHighlight > 0f) 1.65.dp else 0.45.dp,
+                color = if (lastMoveHighlight > 0f) {
+                    PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
+                } else {
+                    MainUi.Border.copy(alpha = .45f)
+                },
+                shape = RoundedCornerShape(6.dp),
             )
             .combinedClickable(
                 onClick = {
@@ -254,7 +271,9 @@ private fun WordSiegePracticeBoardCell(
             ),
         contentAlignment = Alignment.Center,
     ) {
-        if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(Color.White.copy(alpha = .06f * lastMoveHighlight)))
+        if (lastMoveHighlight > 0f) {
+            Box(Modifier.matchParentSize().background(PracticeLastMove.copy(alpha = .045f * lastMoveHighlight)))
+        }
         if (letter != null) {
             Text(letter, color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Black)
             Text(
@@ -264,11 +283,19 @@ private fun WordSiegePracticeBoardCell(
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
             )
-        } else if (!cell.bonusUsed && cell.bonus != null) {
+        } else if (activeBonus != null) {
             Text(
-                cell.bonus,
-                color = if (cell.bonus == "2H" || cell.bonus == "3H") MainUi.Blue else SiegePurple,
-                fontSize = WordSiegeBoardAccessibility.BoardBonus,
+                WordSiegeBoardSpec.displayBonusLabel(activeBonus),
+                color = when (activeBonus) {
+                    "2H" -> Color(0xFF316B86)
+                    "3H" -> Color(0xFF3E6B4C)
+                    "2K", "3K" -> Color(0xFF6D5585)
+                    WordSiegeBoardSpec.CenterBonus -> Color(0xFF6A4B12)
+                    WordSiegeBoardSpec.StarBonus -> Color(0xFF744500)
+                    else -> MainUi.Text
+                },
+                fontSize = if (activeBonus == WordSiegeBoardSpec.StarBonus) 8.sp else WordSiegeBoardAccessibility.BoardBonus,
+                letterSpacing = if (activeBonus == WordSiegeBoardSpec.StarBonus) (-.4).sp else 0.sp,
                 fontWeight = FontWeight.Black,
             )
         }

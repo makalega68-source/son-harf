@@ -44,9 +44,10 @@ internal object WordSiegePracticeEngine {
     fun newGame(language: String = "tr", random: Random = Random.Default): WordSiegePracticeState {
         val lang = SharedDictionaryService.canonicalLanguage(language)
         val shuffled = WordSiegeBoardSpec.shuffledBag(lang, random)
+        val bonuses = WordSiegeBoardSpec.newGameBonuses(random)
         return WordSiegePracticeState(
             board = List(WordSiegeBoardSpec.CellCount) { index ->
-                WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index))
+                WordSiegeCellDto(bonus = bonuses[index])
             },
             playerRack = shuffled.take(7),
             botRack = shuffled.drop(7).take(7),
@@ -135,6 +136,14 @@ internal object WordSiegePracticeEngine {
         }
         if (words.isEmpty()) fail("word_siege_word_required")
         if (hasBoardLetter && !connected) fail("word_siege_move_must_connect")
+
+        // The Kelimelik-style three-star reward is a move bonus, not a word multiplier.
+        // Count it once even when the placed tile also creates cross words.
+        val starBonus = placements.keys.count { index ->
+            val cell = state.board[index]
+            cell.letter == null && !cell.bonusUsed && cell.bonus == WordSiegeBoardSpec.StarBonus
+        } * WordSiegeBoardSpec.StarBonusPoints
+        score += starBonus
 
         placements.forEach { (index, rackIndex) ->
             board[index] = board[index].copy(
@@ -325,6 +334,7 @@ internal object WordSiegePracticeEngine {
             if (bonus == "3H") value *= 3
             if (bonus == "2K") multiplier *= 2
             if (bonus == "3K") multiplier *= 3
+            if (bonus == WordSiegeBoardSpec.CenterBonus) multiplier *= 4
             total += value
         }
         return total * multiplier

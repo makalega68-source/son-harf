@@ -17,8 +17,8 @@ class SiegeDictionaryThemeRegressionTest {
 
         assertTrue(board.contains("const val Size = 15"))
         assertTrue(screen.contains("maxHeight < 700.dp || maxWidth < 600.dp"))
-        assertTrue(screen.contains("modifier = modifier.height(if (compact) 60.dp else 78.dp)"))
-        assertTrue(screen.contains("height(if (compact) 26.dp else 40.dp)"))
+        assertTrue(screen.contains("modifier = modifier.height(if (compact) 56.dp else 72.dp)"))
+        assertTrue(screen.contains("height(if (compact) 22.dp else 32.dp)"))
     }
 
     @Test fun persistedDictionaryIsRefreshedAndUnicodeNormalizationMatchesServer() {

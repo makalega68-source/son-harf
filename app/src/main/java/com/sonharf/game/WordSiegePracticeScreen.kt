@@ -115,18 +115,18 @@ internal fun WordSiegePracticeScreen(
                 if (!restored) {
                     notice = if (matchmakingFallback) {
                         sh(
-                            "Ana sözlük hazır. Geçici bot maçı sürerken gerçek rakip araması devam ediyor.",
-                            "Main dictionary ready. Real matchmaking continues during the temporary bot match.",
+                            "Sözlük hazır. Geçici bot maçı sürerken gerçek rakip araması devam ediyor.",
+                            "Dictionary ready. Real matchmaking continues during the temporary bot match.",
                         )
                     } else {
-                        sh("Ana sözlük hazır. Çevrimdışı alıştırmada da aynı sözlük kullanılacak.", "Main dictionary ready. The same dictionary will be used for offline practice.")
+                        sh("Sözlük hazır. Çevrimdışı alıştırmada da aynı sözlük kullanılacak.", "Dictionary ready. The same dictionary will be used for offline practice.")
                     }
                 }
             }
             .onFailure {
                 dictionaryReady = restored
                 if (!restored) {
-                    notice = sh("Ana sözlük yüklenemedi. Yenile düğmesine basıp tekrar dene.", "Main dictionary could not be loaded. Tap refresh to retry.")
+                    notice = sh("Sözlük yüklenemedi. Yenile düğmesine basıp tekrar dene.", "Dictionary could not be loaded. Tap refresh to retry.")
                 }
             }
         dictionaryLoading = false
@@ -150,14 +150,14 @@ internal fun WordSiegePracticeScreen(
                 "New temporary bot match started. Real matchmaking is still running.",
             )
         } else {
-            sh("İlk hamle sende. Ortadaki 2K karesinden geç.", "Your first move must cover the center 2W cell.")
+            sh("İlk hamle sende. Ortadaki altın 4K karesinden geç.", "Your first move must cover the gold center 4W cell.")
         }
         clearSelection()
     }
 
     fun applyPlayerMove() {
         if (!dictionaryReady) {
-            notice = sh("Ana sözlük henüz hazır değil. Yenile düğmesine basıp tekrar dene.", "Main dictionary is not ready yet. Tap refresh and try again.")
+            notice = sh("Sözlük henüz hazır değil. Yenile düğmesine basıp tekrar dene.", "Dictionary is not ready yet. Tap refresh and try again.")
             return
         }
         runCatching { WordSiegePracticeEngine.applyMove(state, 1, placements) }
@@ -211,38 +211,37 @@ internal fun WordSiegePracticeScreen(
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
         BoxWithConstraints(
-            modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 4.dp),
+            modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 4.dp, vertical = 2.dp),
         ) {
-            // On phones the 15x15 board is the primary interaction target. Compact the chrome even
-            // on tall phones; using height alone made modern 20:9 devices waste board space.
+            // The 15x15 board is the primary interaction target. Keep chrome compact so the board
+            // occupies as much of the phone screen as possible without sacrificing safe insets.
             val compact = maxHeight < 700.dp || maxWidth < 600.dp
 
             Column(
                 modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(if (compact) 3.dp else 6.dp),
+                verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(if (compact) 42.dp else 48.dp),
+                    modifier = Modifier.fillMaxWidth().height(if (compact) 40.dp else 46.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(onClick = onExit, modifier = Modifier.size(if (compact) 42.dp else 48.dp)) {
+                    IconButton(onClick = onExit, modifier = Modifier.size(if (compact) 40.dp else 46.dp)) {
                         Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                     }
                     Column(Modifier.weight(1f)) {
                         Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = if (compact) 16.sp else 18.sp, fontWeight = FontWeight.Black, maxLines = 1)
                         Text(
                             when {
-                                matchmakingFallback && dictionaryLoading -> sh("BOT MAÇI • RAKİP ARANIYOR • SÖZLÜK HAZIRLANIYOR", "BOT MATCH • FINDING RIVAL • LOADING DICTIONARY")
+                                matchmakingFallback && dictionaryLoading -> sh("BOT MAÇI • RAKİP ARANIYOR", "BOT MATCH • FINDING RIVAL")
                                 matchmakingFallback && dictionaryReady -> sh("BOT MAÇI • GERÇEK RAKİP ARANIYOR", "BOT MATCH • FINDING REAL RIVAL")
-                                matchmakingFallback -> sh("BOT MAÇI • ANA SÖZLÜK GEREKLİ", "BOT MATCH • MAIN DICTIONARY REQUIRED")
-                                dictionaryLoading -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK HAZIRLANIYOR", "BOT PRACTICE • LOADING MAIN DICTIONARY")
-                                dictionaryReady -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK", "BOT PRACTICE • MAIN DICTIONARY")
-                                else -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK GEREKLİ", "BOT PRACTICE • MAIN DICTIONARY REQUIRED")
+                                matchmakingFallback -> sh("BOT MAÇI", "BOT MATCH")
+                                dictionaryLoading -> sh("BOT İLE ALIŞTIRMA • HAZIRLANIYOR", "BOT PRACTICE • PREPARING")
+                                else -> sh("BOT İLE ALIŞTIRMA", "BOT PRACTICE")
                             },
                             color = MainUi.Blue, fontSize = if (compact) 7.sp else 8.sp, fontWeight = FontWeight.Black, maxLines = 1,
                         )
                     }
-                    IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(if (compact) 42.dp else 48.dp)) {
+                    IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(if (compact) 40.dp else 46.dp)) {
                         Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = MainUi.Red)
                     }
                     IconButton(
@@ -250,13 +249,13 @@ internal fun WordSiegePracticeScreen(
                             if (!dictionaryReady) dictionaryRetryKey += 1
                             else if (state.moveCount > 0 || placements.isNotEmpty()) showRestart = true else startAgain()
                         },
-                        modifier = Modifier.size(if (compact) 42.dp else 48.dp),
+                        modifier = Modifier.size(if (compact) 40.dp else 46.dp),
                     ) {
                         Icon(Icons.Rounded.Refresh, sh("Yeni oyun", "New game"), tint = MainUi.Blue)
                     }
                 }
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     WordSiegePracticeScoreCard(
                         name = playerProfile?.displayName ?: sh("SEN", "YOU"),
                         score = displayedPlayerScore,
@@ -288,10 +287,10 @@ internal fun WordSiegePracticeScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = if (displayedOwner == 1) MainUi.Blue else SiegePurpleSoft,
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(11.dp),
                     border = BorderStroke(1.dp, if (displayedOwner == 1) MainUi.Green.copy(alpha = .25f) else MainUi.Red.copy(alpha = .25f)),
                 ) {
-                    Row(Modifier.padding(horizontal = 10.dp, vertical = if (compact) 4.dp else 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(horizontal = 9.dp, vertical = if (compact) 3.dp else 5.dp), verticalAlignment = Alignment.CenterVertically) {
                         if (botThinking) CircularProgressIndicator(Modifier.size(14.dp), color = SiegePurple, strokeWidth = 2.dp)
                         else Icon(if (displayedOwner == 1) Icons.Rounded.TouchApp else Icons.Rounded.SmartToy, null, tint = if (displayedOwner == 1) Color.White else MainUi.Red, modifier = Modifier.size(15.dp))
                         Spacer(Modifier.width(6.dp))
@@ -452,7 +451,7 @@ internal fun WordSiegePracticeScreen(
                 }
 
                 Box(
-                    modifier = Modifier.fillMaxWidth().height(if (compact) 26.dp else 40.dp),
+                    modifier = Modifier.fillMaxWidth().height(if (compact) 22.dp else 32.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     notice?.let { message ->
@@ -590,17 +589,17 @@ private fun WordSiegePracticeScoreCard(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.height(if (compact) 60.dp else 78.dp),
+        modifier = modifier.height(if (compact) 56.dp else 72.dp),
         color = if (active) accent.copy(alpha = .09f) else MainUi.Surface,
         shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp),
         border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) accent else MainUi.Border),
     ) {
-        Row(Modifier.padding(horizontal = 7.dp, vertical = if (compact) 4.dp else 7.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(horizontal = 7.dp, vertical = if (compact) 3.dp else 6.dp), verticalAlignment = Alignment.CenterVertically) {
             ProfilePhotoAvatarWithGender(
                 avatarPath = avatarPath,
                 gender = gender,
                 name = name,
-                size = if (compact) 38.dp else 46.dp,
+                size = if (compact) 36.dp else 44.dp,
                 accent = accent,
                 visible = avatarVisible,
             )

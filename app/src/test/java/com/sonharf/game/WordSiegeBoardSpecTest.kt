@@ -1,22 +1,24 @@
 package com.sonharf.game
 
+import kotlin.random.Random
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WordSiegeBoardSpecTest {
     @Test
-    fun `board has 225 cells and center is index 112`() {
+    fun `board has 225 cells and center is gold 4K`() {
         assertEquals(15, WordSiegeBoardSpec.Size)
         assertEquals(225, WordSiegeBoardSpec.CellCount)
         assertEquals(112, WordSiegeBoardSpec.CenterIndex)
         assertEquals(7, WordSiegeBoardSpec.row(112))
         assertEquals(7, WordSiegeBoardSpec.column(112))
-        assertEquals("2K", WordSiegeBoardSpec.bonusAt(112))
+        assertEquals("4K", WordSiegeBoardSpec.bonusAt(112))
     }
 
     @Test
-    fun `bonus layout is symmetric on both axes`() {
+    fun `static bonus layout is symmetric on both axes`() {
         repeat(WordSiegeBoardSpec.CellCount) { index ->
             val row = WordSiegeBoardSpec.row(index)
             val column = WordSiegeBoardSpec.column(index)
@@ -26,5 +28,21 @@ class WordSiegeBoardSpecTest {
             assertEquals(WordSiegeBoardSpec.bonusAt(index), WordSiegeBoardSpec.bonusAt(verticalMirror))
         }
         assertTrue((0 until WordSiegeBoardSpec.CellCount).count { WordSiegeBoardSpec.bonusAt(it) != null } >= 50)
+    }
+
+    @Test
+    fun `every new game gets exactly one random three star bonus on a neutral cell`() {
+        val starIndices = (1..24).map { seed ->
+            val bonuses = WordSiegeBoardSpec.newGameBonuses(Random(seed))
+            assertEquals(WordSiegeBoardSpec.CellCount, bonuses.size)
+            assertEquals("4K", bonuses[WordSiegeBoardSpec.CenterIndex])
+            assertEquals(1, bonuses.count { it == WordSiegeBoardSpec.StarBonus })
+            val star = bonuses.indexOf(WordSiegeBoardSpec.StarBonus)
+            assertTrue(star >= 0)
+            assertNotEquals(WordSiegeBoardSpec.CenterIndex, star)
+            assertEquals(null, WordSiegeBoardSpec.bonusAt(star))
+            star
+        }
+        assertTrue("Star placement must vary between games", starIndices.distinct().size > 1)
     }
 }

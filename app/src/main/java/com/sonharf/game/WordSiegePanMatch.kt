@@ -42,14 +42,21 @@ import kotlinx.coroutines.launch
 
 private val PanSiegeTile = Color(0xFFFFE3A5)
 private val PanSiegeTileBorder = Color(0xFFD99818)
-private val PanSiegeBoardSurface = Color(0xFFE7EDF5)
-private val PanSiegeNeutral = Color(0xFFF7F8FA)
-private val PanSiegeMine = Color(0xFF35C878)
-private val PanSiegeRival = Color(0xFFFF5F57)
-private val PanSiegeNeutralBorder = Color(0xFF7890A8)
-private val PanSiegeBonusBorder = Color(0xFF5279A6)
-private val PanSiegeMineBorder = Color(0xFF147A48)
-private val PanSiegeRivalBorder = Color(0xFFB72E35)
+private val PanSiegeBoardSurface = Color(0xFFD9E4E7)
+private val PanSiegeNeutral = Color(0xFFF8FAF9)
+private val PanSiegeMine = Color(0xFF65B58A)
+private val PanSiegeRival = Color(0xFFD98286)
+private val PanSiegeNeutralBorder = Color(0xFF8DA19A)
+private val PanSiegeBonusBorder = Color(0xFF7E8E91)
+private val PanSiegeMineBorder = Color(0xFF3A7B58)
+private val PanSiegeRivalBorder = Color(0xFFA84F59)
+private val PanSiegeBonus2H = Color(0xFFDCEFF8)
+private val PanSiegeBonus3H = Color(0xFFDCEEDC)
+private val PanSiegeBonus2K = Color(0xFFE9E0F2)
+private val PanSiegeBonus3K = Color(0xFFDECBE9)
+private val PanSiegeBonus4K = Color(0xFFF0C75A)
+private val PanSiegeBonusStar = Color(0xFFF6B94A)
+private val PanSiegeLastMove = Color(0xFFF1C75B)
 private val PanSiegeCellSize = 52.dp
 internal const val WORD_SIEGE_BOT_FALLBACK_DELAY_MS = 15_000L
 
@@ -125,8 +132,8 @@ internal fun WordSiegePanMatch(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding()
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(5.dp),
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
@@ -431,8 +438,8 @@ private fun PanSiegeBoard(
             launch {
                 highlightAlpha.animateTo(1f, tween(WORD_SIEGE_LAST_MOVE_ENTER_MS))
                 delay(WORD_SIEGE_LAST_MOVE_HOLD_MS.toLong())
-                highlightAlpha.animateTo(0f, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
-                highlightedIndices = emptySet()
+                // Keep the newest word minimally visible until another move arrives.
+                highlightAlpha.animateTo(0.42f, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
             }
             if (!dragging && viewportMode == WordSiegeBoardViewportMode.CLOSE) {
                 val indices = lastMove.placedTiles.map { it.index }.filter(WordSiegeBoardSpec::isValidIndex)
@@ -473,13 +480,13 @@ private fun PanSiegeBoard(
     Surface(
         modifier = modifier,
         color = PanSiegeBoardSurface,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, MainUi.Border),
+        shape = RoundedCornerShape(12.dp),
+        border = BorderStroke(1.dp, MainUi.Border.copy(alpha = .75f)),
     ) {
         Box(
             Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .clipToBounds()
                 .onGloballyPositioned { viewport = it.size }
                 .pointerInput(gameId, viewportMode, viewport, boardPx, closeScale) {
@@ -591,31 +598,48 @@ private fun PanSiegeBoardCell(
     onDoubleClick: () -> Unit,
 ) {
     val owner = if (pending) myOwner else cell.owner
-    val baseColor = when {
+    val territoryColor = when {
         owner == 0 -> PanSiegeNeutral
         owner == myOwner -> PanSiegeMine
         else -> PanSiegeRival
     }
-    val border = when {
-        pending -> PanSiegeTileBorder
-        owner == myOwner -> PanSiegeMineBorder
-        owner != 0 -> PanSiegeRivalBorder
-        !cell.bonusUsed && cell.bonus != null -> PanSiegeBonusBorder
-        else -> PanSiegeNeutralBorder
-    }
     val letter = pendingLetter?.toString() ?: cell.letter
     val canPlace = enabled && (cell.letter == null || pending)
+    val activeBonus = if (letter == null && !cell.bonusUsed) cell.bonus else null
+    val bonusSurface = when (activeBonus) {
+        "2H" -> PanSiegeBonus2H
+        "3H" -> PanSiegeBonus3H
+        "2K" -> PanSiegeBonus2K
+        "3K" -> PanSiegeBonus3K
+        WordSiegeBoardSpec.CenterBonus -> PanSiegeBonus4K
+        WordSiegeBoardSpec.StarBonus -> PanSiegeBonusStar
+        else -> null
+    }
+    val baseColor = when {
+        pending -> PanSiegeTile
+        letter != null -> territoryColor
+        bonusSurface != null -> bonusSurface
+        else -> PanSiegeNeutral
+    }
+    val border = when {
+        pending -> PanSiegeTileBorder
+        letter != null && owner == myOwner -> PanSiegeMineBorder
+        letter != null && owner != 0 -> PanSiegeRivalBorder
+        activeBonus == WordSiegeBoardSpec.CenterBonus || activeBonus == WordSiegeBoardSpec.StarBonus -> Color(0xFFB58222)
+        activeBonus != null -> PanSiegeBonusBorder
+        else -> PanSiegeNeutralBorder
+    }
 
     Box(
         Modifier
             .size(size)
-            .padding(1.5.dp)
-            .clip(RoundedCornerShape(7.dp))
+            .padding(1.25.dp)
+            .clip(RoundedCornerShape(6.dp))
             .background(baseColor)
             .border(
                 width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
-                color = Color.White.copy(alpha = .25f + .65f * lastMoveHighlight),
-                shape = RoundedCornerShape(7.dp),
+                color = PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),
+                shape = RoundedCornerShape(6.dp),
             )
             .combinedClickable(
                 onClick = {
@@ -639,12 +663,12 @@ private fun PanSiegeBoardCell(
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = if (pending) PanSiegeTile.copy(alpha = .76f) else Color.Transparent,
-            shape = RoundedCornerShape(7.dp),
-            border = BorderStroke(if (pending) maxOf(2.dp, borderWidth) else borderWidth, border.copy(alpha = .96f)),
+            color = Color.Transparent,
+            shape = RoundedCornerShape(6.dp),
+            border = BorderStroke(if (pending) maxOf(2.dp, borderWidth) else borderWidth, border.copy(alpha = .92f)),
         ) {
             Box(contentAlignment = Alignment.Center) {
-                if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(Color.White.copy(alpha = .06f * lastMoveHighlight)))
+                if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(PanSiegeLastMove.copy(alpha = .045f * lastMoveHighlight)))
                 if (letter != null) {
                     Text(letter, color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Black)
                     Text(
@@ -654,11 +678,19 @@ private fun PanSiegeBoardCell(
                         fontWeight = FontWeight.Black,
                         modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
                     )
-                } else if (!cell.bonusUsed && cell.bonus != null) {
+                } else if (activeBonus != null) {
                     Text(
-                        cell.bonus,
-                        color = when (cell.bonus) { "2H", "3H" -> MainUi.Blue else -> SiegePurple },
-                        fontSize = WordSiegeBoardAccessibility.BoardBonus,
+                        WordSiegeBoardSpec.displayBonusLabel(activeBonus),
+                        color = when (activeBonus) {
+                            "2H" -> Color(0xFF316B86)
+                            "3H" -> Color(0xFF3E6B4C)
+                            "2K", "3K" -> Color(0xFF6D5585)
+                            WordSiegeBoardSpec.CenterBonus -> Color(0xFF6A4B12)
+                            WordSiegeBoardSpec.StarBonus -> Color(0xFF744500)
+                            else -> MainUi.Text
+                        },
+                        fontSize = if (activeBonus == WordSiegeBoardSpec.StarBonus) 8.sp else WordSiegeBoardAccessibility.BoardBonus,
+                        letterSpacing = if (activeBonus == WordSiegeBoardSpec.StarBonus) (-.4).sp else 0.sp,
                         fontWeight = FontWeight.Black,
                     )
                 }
