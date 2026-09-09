@@ -12,6 +12,6 @@ fun OnlineGameScreenV6() {
     Box(Modifier.fillMaxSize()) {
         PremierWordDuelScreen()
         ReactiveMageCatOverlay()
-        PremierBoosterOverlay()
+        // Ranked Premier is skill-only. Purchasable gameplay boosters must never alter a live duel.
     }
 }
