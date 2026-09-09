@@ -12,6 +12,7 @@ class UnifiedProBoosterContractTest {
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/PremierBoosters.kt").readText()
         val overlay = projectFile("app/src/main/java/com/sonharf/game/PremierBoosterOverlay.kt").readText()
         val integration = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
+        val premier = projectFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
         val vip = projectFile("app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt").readText()
         val shop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
         val entitlements = projectFile("app/src/main/java/com/sonharf/game/data/VipEntitlements.kt").readText()
@@ -25,10 +26,12 @@ class UnifiedProBoosterContractTest {
         assertTrue(overlay.contains("usePremierSwap"))
         assertTrue(overlay.contains("usePremierMultiplier"))
 
-        // Ranked runtime must not mount the purchasable gameplay-power surface.
+        // Ranked runtime must mount neither paid gameplay power nor mascot overlays.
         assertTrue(integration.contains("PremierWordDuelScreen()"))
-        assertTrue(integration.contains("ReactiveMageCatOverlay()"))
+        assertFalse(integration.contains("ReactiveMageCatOverlay()"))
         assertFalse(integration.contains("PremierBoosterOverlay()"))
+        assertFalse(premier.contains("PremierBoosterUiState.requiredOverride"))
+        assertFalse(premier.contains("com.sonharf.game.mascot"))
 
         assertFalse(vip.contains("2x Skor"))
         assertFalse(vip.contains("claimVipDailyHelpers"))
