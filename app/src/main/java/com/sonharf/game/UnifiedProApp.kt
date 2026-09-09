@@ -285,7 +285,10 @@ private fun UnifiedHomeScreen(
         }
 
         item {
-            ProfHammyHomeCard()
+            ProfHammyHomeCard(
+                wins = profile?.wins ?: 0,
+                losses = profile?.losses ?: 0,
+            )
         }
 
         item {
