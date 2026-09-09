@@ -35,6 +35,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -81,43 +82,75 @@ private val profHammyHomeReactions = listOf(
     ),
 )
 
-private const val PROF_HAMMY_DEFAULT_TR = "Hazırsan başlayalım. Bugün güzel bir kelime bul!"
-private const val PROF_HAMMY_DEFAULT_EN = "Ready? Let’s find a great word today!"
+private const val PROF_HAMMY_COACH_LEAD_THRESHOLD = 3
+
+private fun profHammyCoachMessage(wins: Int, losses: Int): ProfHammyHomeReaction {
+    val safeWins = wins.coerceAtLeast(0)
+    val safeLosses = losses.coerceAtLeast(0)
+    val totalMatches = safeWins + safeLosses
+
+    return when {
+        totalMatches <= 3 -> ProfHammyHomeReaction(
+            mood = ProfHammyMood.FOCUSED,
+            textTr = "İlk maçlarda hızdan önce doğru kelime. Sakin başla!",
+            textEn = "In your first matches, accuracy comes before speed. Start calm!",
+        )
+        safeWins >= safeLosses + PROF_HAMMY_COACH_LEAD_THRESHOLD -> ProfHammyHomeReaction(
+            mood = ProfHammyMood.HAPPY,
+            textTr = "Güzel bir ritim yakaladın. Aynı sakinlikle devam et! 🌟",
+            textEn = "You’ve found a good rhythm. Keep that same calm focus! 🌟",
+        )
+        safeLosses >= safeWins + PROF_HAMMY_COACH_LEAD_THRESHOLD -> ProfHammyHomeReaction(
+            mood = ProfHammyMood.FOCUSED,
+            textTr = "Bugün yeni bir sayfa. Sakin başla, ritmini kur.",
+            textEn = "Today is a fresh start. Begin calm and find your rhythm.",
+        )
+        else -> ProfHammyHomeReaction(
+            mood = ProfHammyMood.WINK,
+            textTr = "Hazırsan başlayalım. Bugün güzel bir kelime bul!",
+            textEn = "Ready? Let’s find a great word today!",
+        )
+    }
+}
 
 /**
  * Lobby-safe Prof. Hammy presentation.
  *
- * Reactions are local UI state only. This component has no access to Premier match state,
- * score, rating, target letters, word suggestions, inventory or economy state.
+ * Coaching uses only aggregate lobby statistics supplied by the caller. Reactions are local UI
+ * state only. This component has no access to Premier match state, score, rating, target letters,
+ * word suggestions, inventory or economy state.
  */
 @Composable
 fun ProfHammyHomeCard(
+    wins: Int = 0,
+    losses: Int = 0,
     modifier: Modifier = Modifier,
 ) {
+    val coachMessage = remember(wins, losses) { profHammyCoachMessage(wins, losses) }
     var reactionId by remember { mutableIntStateOf(0) }
-    var mood by remember { mutableStateOf(ProfHammyMood.HAPPY) }
-    var speechTr by remember { mutableStateOf(PROF_HAMMY_DEFAULT_TR) }
-    var speechEn by remember { mutableStateOf(PROF_HAMMY_DEFAULT_EN) }
+    var mood by remember { mutableStateOf(coachMessage.mood) }
+    var activeReaction by remember { mutableStateOf<ProfHammyHomeReaction?>(null) }
 
     LaunchedEffect(reactionId) {
         delay(if (reactionId == 0) 2200L else 1800L)
         mood = ProfHammyMood.IDLE
-        if (reactionId > 0) {
-            speechTr = PROF_HAMMY_DEFAULT_TR
-            speechEn = PROF_HAMMY_DEFAULT_EN
-        }
+        activeReaction = null
     }
+
+    val visibleMessage = activeReaction ?: coachMessage
 
     Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clickable {
+            .clickable(
+                role = Role.Button,
+                onClickLabel = sh("Prof. Hammy ile etkileş", "Interact with Prof. Hammy"),
+            ) {
                 val nextId = reactionId + 1
                 val reaction = profHammyHomeReactions[(nextId - 1) % profHammyHomeReactions.size]
                 reactionId = nextId
                 mood = reaction.mood
-                speechTr = reaction.textTr
-                speechEn = reaction.textEn
+                activeReaction = reaction
             },
         shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surface,
@@ -150,7 +183,7 @@ fun ProfHammyHomeCard(
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = sh(speechTr, speechEn),
+                    text = sh(visibleMessage.textTr, visibleMessage.textEn),
                     color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
