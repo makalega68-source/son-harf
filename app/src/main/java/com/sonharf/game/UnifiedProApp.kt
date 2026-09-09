@@ -25,8 +25,6 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
-import com.sonharf.game.mascot.MageCatCompanion
-import com.sonharf.game.mascot.MageCatDirector
 import kotlinx.coroutines.delay
 
 private enum class UnifiedDestination {
@@ -219,7 +217,6 @@ private fun UnifiedHomeScreen(
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
 
     LaunchedEffect(Unit) {
-        MageCatDirector.onLobbyGreet()
         if (!SupabaseProvider.configured) return@LaunchedEffect
         val id = backend.currentUserId()
         profile = id?.let { runCatching { backend.getProfile(it) }.getOrNull() }
@@ -239,35 +236,6 @@ private fun UnifiedHomeScreen(
                 UnifiedRoundAction(Icons.Rounded.Notifications, onTasks)
                 Spacer(Modifier.width(8.dp))
                 UnifiedRoundAction(Icons.Rounded.WorkspacePremium, onVip)
-            }
-        }
-
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = UnifiedUi.Surface,
-                border = BorderStroke(1.dp, UnifiedUi.Border),
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    MageCatCompanion(
-                        size = 72.dp,
-                        speechBubbleText = sh("Hazırsan başlayalım!", "Ready? Let's play!"),
-                        onClick = { MageCatDirector.onLobbyGreet() },
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("MAGE CAT", color = UnifiedUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
-                        Text(
-                            sh("Serine, süre baskısına ve maç sonucuna tepki veren yoldaşın.", "Your companion reacts to streaks, time pressure and match results."),
-                            color = UnifiedUi.Muted,
-                            fontSize = 9.sp,
-                        )
-                    }
-                }
             }
         }
 
