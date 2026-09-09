@@ -285,6 +285,10 @@ private fun UnifiedHomeScreen(
         }
 
         item {
+            ProfHammyHomeCard()
+        }
+
+        item {
             Button(
                 onClick = onPlay,
                 modifier = Modifier.fillMaxWidth().height(70.dp),
