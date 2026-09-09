@@ -1,11 +1,5 @@
 package com.sonharf.game
 
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -28,7 +22,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
@@ -86,9 +79,11 @@ private fun premiumHammyCoachLine(wins: Int, losses: Int): PremiumHammyCoachLine
 /**
  * Premium lobby presentation for Prof. Hammy.
  *
- * This overload is intentionally limited to the two aggregate lobby statistics used by the
- * home screen. It does not receive Premier match state, score, rating, target letters, inventory,
- * economy state or word suggestions. The premium artwork is bundled locally in the APK.
+ * Hotfix note: the artwork is intentionally static here. The previous continuous graphics-layer
+ * animation was the only new runtime work introduced exactly when the authenticated home screen
+ * began closing on a real device. Keeping the same local artwork without a perpetual animation
+ * isolates that regression while preserving the premium mascot visual. Gameplay and fair-play
+ * state are not read or modified here.
  */
 @Composable
 fun ProfHammyHomeCard(
@@ -97,27 +92,11 @@ fun ProfHammyHomeCard(
 ) {
     val coachLine = remember(wins, losses) { premiumHammyCoachLine(wins, losses) }
     var tapIndex by remember { mutableIntStateOf(-1) }
-    val visibleLine = if (tapIndex < 0) coachLine else premiumHammyTapLines[tapIndex % premiumHammyTapLines.size]
-
-    val transition = rememberInfiniteTransition(label = "PremiumHammyLobby")
-    val floatY by transition.animateFloat(
-        initialValue = -2.0f,
-        targetValue = 2.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "PremiumHammyFloat",
-    )
-    val breathe by transition.animateFloat(
-        initialValue = 0.992f,
-        targetValue = 1.012f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2600, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "PremiumHammyBreathe",
-    )
+    val visibleLine = if (tapIndex < 0) {
+        coachLine
+    } else {
+        premiumHammyTapLines[tapIndex % premiumHammyTapLines.size]
+    }
 
     Surface(
         modifier = Modifier
@@ -145,12 +124,7 @@ fun ProfHammyHomeCard(
                 contentDescription = sh("Prof. Hammy", "Prof. Hammy"),
                 modifier = Modifier
                     .width(138.dp)
-                    .height(160.dp)
-                    .graphicsLayer {
-                        translationY = floatY
-                        scaleX = breathe
-                        scaleY = breathe
-                    },
+                    .height(160.dp),
                 contentScale = ContentScale.Fit,
             )
 
