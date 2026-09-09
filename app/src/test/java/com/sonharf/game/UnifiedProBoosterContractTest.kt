@@ -13,6 +13,7 @@ class UnifiedProBoosterContractTest {
         val overlay = projectFile("app/src/main/java/com/sonharf/game/PremierBoosterOverlay.kt").readText()
         val integration = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
         val vip = projectFile("app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt").readText()
+        val shop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
         val entitlements = projectFile("app/src/main/java/com/sonharf/game/data/VipEntitlements.kt").readText()
 
         // Compatibility API remains available in source for old clients/non-ranked future reuse.
@@ -33,6 +34,13 @@ class UnifiedProBoosterContractTest {
         assertFalse(vip.contains("claimVipDailyHelpers"))
         assertTrue(vip.contains("ADİL REKABET"))
         assertTrue(entitlements.contains("rankedLiveAssist: Boolean = false"))
+
+        // Store messaging must describe only fair PRO value, never a paid ranked advantage.
+        assertTrue(shop.contains("Dereceli Premier maçlarında satın alınabilir oyun gücü yoktur"))
+        assertTrue(shop.contains("Adil rekabet: PRO"))
+        assertFalse(shop.contains("günlük İpucu, Harf Değiştirici ve 2x Skor"))
+        assertFalse(shop.contains("daily Hint, Letter Swap and 2x Score"))
+        assertFalse(shop.contains("helper boosters with PRO"))
     }
 
     @Test
