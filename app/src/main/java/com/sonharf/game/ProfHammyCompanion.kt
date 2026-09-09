@@ -82,6 +82,8 @@ private val profHammyHomeReactions = listOf(
     ),
 )
 
+private const val PROF_HAMMY_COACH_LEAD_THRESHOLD = 3
+
 private fun profHammyCoachMessage(wins: Int, losses: Int): ProfHammyHomeReaction {
     val safeWins = wins.coerceAtLeast(0)
     val safeLosses = losses.coerceAtLeast(0)
@@ -93,12 +95,12 @@ private fun profHammyCoachMessage(wins: Int, losses: Int): ProfHammyHomeReaction
             textTr = "İlk maçlarda hızdan önce doğru kelime. Sakin başla!",
             textEn = "In your first matches, accuracy comes before speed. Start calm!",
         )
-        safeWins >= safeLosses + 3 -> ProfHammyHomeReaction(
+        safeWins >= safeLosses + PROF_HAMMY_COACH_LEAD_THRESHOLD -> ProfHammyHomeReaction(
             mood = ProfHammyMood.HAPPY,
             textTr = "Güzel bir ritim yakaladın. Aynı sakinlikle devam et! 🌟",
             textEn = "You’ve found a good rhythm. Keep that same calm focus! 🌟",
         )
-        safeLosses >= safeWins + 3 -> ProfHammyHomeReaction(
+        safeLosses >= safeWins + PROF_HAMMY_COACH_LEAD_THRESHOLD -> ProfHammyHomeReaction(
             mood = ProfHammyMood.FOCUSED,
             textTr = "Bugün yeni bir sayfa. Sakin başla, ritmini kur.",
             textEn = "Today is a fresh start. Begin calm and find your rhythm.",
