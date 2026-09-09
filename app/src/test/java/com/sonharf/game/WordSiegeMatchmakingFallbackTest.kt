@@ -11,11 +11,26 @@ class WordSiegeMatchmakingFallbackTest {
         assertEquals(15_000L, WORD_SIEGE_BOT_FALLBACK_DELAY_MS)
 
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
+        val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
+        val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
+
         assertTrue(pan.contains("delay(WORD_SIEGE_BOT_FALLBACK_DELAY_MS)"))
         assertTrue(pan.contains("fallbackPracticeActive"))
         assertTrue(pan.contains("game.status == \"waiting\""))
-        assertTrue(pan.contains("WordSiegePracticeScreen"))
+        assertTrue(pan.contains("matchmakingFallback = true"))
+        assertTrue(pan.contains("temporary bot match starts immediately"))
         assertTrue(!pan.contains("cancelWordSiegeWaiting"))
+
+        assertTrue(practice.contains("matchmakingFallback: Boolean = false"))
+        assertTrue(practice.contains("BOT MAÇI • GERÇEK RAKİP ARANIYOR"))
+        assertTrue(practice.contains("BOT MATCH • FINDING REAL RIVAL"))
+        assertTrue(practice.contains("Gerçek rakip bulununca otomatik geçilecek"))
+        assertTrue(practice.contains("switch automatically when a real rival is found"))
+        assertTrue(practice.contains("BOT İLE ALIŞTIRMA • ANA SÖZLÜK"))
+        assertTrue(practice.contains("BOT PRACTICE • MAIN DICTIONARY"))
+
+        // Manual practice stays explicitly practice-mode by relying on the default false parameter.
+        assertTrue(experience.contains("WordSiegePracticeScreen(onExit = { practiceActive = false })"))
     }
 
     private fun projectFile(path: String): File {
