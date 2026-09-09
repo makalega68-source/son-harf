@@ -1,0 +1,57 @@
+name: Mage Cat Android Rendering
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/magecat-rendering.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  mascot-rendering:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+      - name: Prepare SDK and tests
+        run: |
+          sdkmanager "platforms;android-36" "build-tools;36.0.0"
+          gradle :app:assembleDebug :app:assembleDebugAndroidTest --max-workers=2 --stacktrace
+      - name: Enable KVM for the hosted runner
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Render expressions and dock on Android
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_5
+          disable-animations: false
+          script: |
+            gradle :app:connectedDebugAndroidTest --max-workers=2 --stacktrace
+            mkdir -p mascot-rendering
+            adb pull /sdcard/Android/data/com.sonharf.game/files/mascot-verification mascot-rendering/
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: magecat-android-rendering
+          path: |
+            mascot-rendering/
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
+          if-no-files-found: warn
+
