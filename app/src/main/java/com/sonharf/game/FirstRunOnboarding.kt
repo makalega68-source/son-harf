@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -35,6 +36,9 @@ private data class OnboardingStep(
     val bodyEn: String,
     val exampleTr: String,
     val exampleEn: String,
+    val coachTr: String,
+    val coachEn: String,
+    val coachMood: ProfHammyMood,
 )
 
 private val onboardingSteps = listOf(
@@ -45,6 +49,9 @@ private val onboardingSteps = listOf(
         bodyEn = "Start your word with the final letter of your opponent's word.",
         exampleTr = "KİTAP → PAMUK → KALEM",
         exampleEn = "TABLE → EAGLE → EARTH",
+        coachTr = "Son harfi yakala; yeni kelimen oradan başlar.",
+        coachEn = "Catch the last letter; your next word starts there.",
+        coachMood = ProfHammyMood.WINK,
     ),
     OnboardingStep(
         titleTr = "2 • TAŞ PUANLARI VE COMBO",
@@ -53,14 +60,20 @@ private val onboardingSteps = listOf(
         bodyEn = "Hard letters are worth more. Fast consecutive valid words build a streak.",
         exampleTr = "J • Ğ • Z = yüksek değer",
         exampleEn = "Q • X • Z = high value",
+        coachTr = "Zor harfler puan kazandırır; seri ise ritmini gösterir.",
+        coachEn = "Hard letters score more; streaks show your rhythm.",
+        coachMood = ProfHammyMood.EXCITED,
     ),
     OnboardingStep(
         titleTr = "3 • 20 SANİYE BASKISI",
         titleEn = "3 • 20 SECOND PRESSURE",
-        bodyTr = "Her hamle için 20 saniyen var. Süre biterse sıra rakibe geçer. Takılırsan İpucu veya Harf Değiştirici kullanabilirsin.",
-        bodyEn = "You have 20 seconds per turn. When time expires, play passes on. Use a Hint or Letter Swap if you get stuck.",
-        exampleTr = "Odaklan • Yardımını seç • Gönder",
-        exampleEn = "Focus • Choose help • Send",
+        bodyTr = "Her hamle için 20 saniyen var. Süre biterse sıra rakibe geçer. Önce doğru kelimeyi bul, sonra hızlan.",
+        bodyEn = "You have 20 seconds per turn. When time expires, play passes on. Find the right word first, then build speed.",
+        exampleTr = "Odaklan • Kelimeyi bul • Gönder",
+        exampleEn = "Focus • Find the word • Send",
+        coachTr = "20 saniyeyi sakin kullan. Hız kadar doğruluk da önemli.",
+        coachEn = "Use your 20 seconds calmly. Accuracy matters as much as speed.",
+        coachMood = ProfHammyMood.FOCUSED,
     ),
 )
 
@@ -80,7 +93,7 @@ internal fun FirstRunOnboarding(onComplete: () -> Unit) {
             verticalArrangement = Arrangement.Center,
         ) {
             SonHarfBrandLogo(size = 72.dp)
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(18.dp))
             Text(
                 text = if (english) "LEARN IN 30 SECONDS" else "30 SANİYEDE ÖĞREN",
                 color = MainUi.Text,
@@ -88,13 +101,49 @@ internal fun FirstRunOnboarding(onComplete: () -> Unit) {
                 fontWeight = FontWeight.Black,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
             LinearProgressIndicator(
                 progress = { (step + 1) / onboardingSteps.size.toFloat() },
                 modifier = Modifier.fillMaxWidth().height(7.dp),
                 color = MainUi.Blue,
             )
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(16.dp))
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = MainUi.Surface,
+                border = BorderStroke(1.dp, MainUi.Border),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ProfHammyCompanion(
+                        mood = current.coachMood,
+                        size = 68.dp,
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = "PROF. HAMMY",
+                            color = MainUi.Blue,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Text(
+                            text = if (english) current.coachEn else current.coachTr,
+                            color = MainUi.Text,
+                            fontSize = 13.sp,
+                            lineHeight = 18.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(14.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(22.dp),
@@ -131,7 +180,7 @@ internal fun FirstRunOnboarding(onComplete: () -> Unit) {
                     }
                 }
             }
-            Spacer(Modifier.height(22.dp))
+            Spacer(Modifier.height(18.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (step > 0) {
                     Button(
