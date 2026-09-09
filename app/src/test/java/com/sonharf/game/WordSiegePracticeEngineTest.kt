@@ -29,8 +29,12 @@ class WordSiegePracticeEngineTest {
     fun clearDictionaryFixture() = SharedDictionaryService.clearForTests()
 
     @Test
-    fun firstPracticeMoveCovers15x15CenterAndUsesBonus() {
-        val state = WordSiegePracticeEngine.newGame(random = Random(1)).copy(playerRack = "KALEMTR")
+    fun firstPracticeMoveCovers15x15CenterAndUses4KBonus() {
+        val initial = WordSiegePracticeEngine.newGame(random = Random(1))
+        val state = initial.copy(
+            board = initial.board.map { cell -> if (cell.bonus == WordSiegeBoardSpec.StarBonus) cell.copy(bonus = null) else cell },
+            playerRack = "KALEMTR",
+        )
 
         val (next, move) = WordSiegePracticeEngine.applyMove(
             state = state,
@@ -40,20 +44,44 @@ class WordSiegePracticeEngineTest {
         )
 
         assertEquals("KALEM", move.primaryWord)
-        assertEquals(12, move.wordScore)
+        assertEquals(24, move.wordScore)
         assertEquals(5, next.playerArea)
         assertEquals(2, next.currentOwner)
         assertTrue(next.board[WordSiegeBoardSpec.CenterIndex].bonusUsed)
     }
 
     @Test
-    fun newGameHas225CellsAndFreshRackComesFromCanonicalBag() {
+    fun threeStarBonusAdds25PointsExactlyOnceToTheMove() {
+        val initial = WordSiegePracticeEngine.newGame(random = Random(4))
+        val board = initial.board.mapIndexed { index, cell ->
+            when {
+                index == 110 -> cell.copy(bonus = WordSiegeBoardSpec.StarBonus, bonusUsed = false)
+                cell.bonus == WordSiegeBoardSpec.StarBonus -> cell.copy(bonus = null)
+                else -> cell
+            }
+        }
+        val state = initial.copy(board = board, playerRack = "KALEMTR")
+
+        val (_, move) = WordSiegePracticeEngine.applyMove(
+            state,
+            1,
+            linkedMapOf(110 to 0, 111 to 1, 112 to 2, 113 to 3, 114 to 4),
+            true,
+        )
+
+        assertEquals(49, move.wordScore) // KALEM on 4K = 24, plus one three-star reward = 25.
+    }
+
+    @Test
+    fun newGameHas225CellsFreshRackAndExactlyOneStarBonus() {
         val first = WordSiegePracticeEngine.newGame(random = Random(11))
         val second = WordSiegePracticeEngine.newGame(random = Random(29))
 
         assertEquals(225, first.board.size)
         assertEquals(7, first.playerRack.length)
         assertNotEquals(first.playerRack, second.playerRack)
+        assertEquals(1, first.board.count { it.bonus == WordSiegeBoardSpec.StarBonus })
+        assertEquals("4K", first.board[WordSiegeBoardSpec.CenterIndex].bonus)
         assertEquals(
             WordSiegeBoardSpec.canonicalBag("tr").toList().sorted(),
             (first.playerRack + first.botRack + first.bag).toList().sorted(),
