@@ -37,19 +37,23 @@ private object UnifiedUi {
     val Background: Color get() = SonHarfTheme.Background
     val Surface: Color get() = SonHarfTheme.Surface
     val Surface2: Color get() = SonHarfTheme.SurfaceSecondary
+    val Navigation: Color get() = SonHarfTheme.NavigationSurface
     val Border: Color get() = SonHarfTheme.Border
     val Text: Color get() = SonHarfTheme.TextPrimary
     val Muted: Color get() = SonHarfTheme.TextSecondary
-    val Blue: Color get() = SonHarfTheme.PrimaryBlue
-    val Cyan: Color get() = SonHarfTheme.SecondaryAccent
+    val Blue: Color get() = SonHarfTheme.Primary
+    val Cyan: Color get() = SonHarfTheme.Turquoise
     val Gold: Color get() = SonHarfTheme.Warning
     val Green: Color get() = SonHarfTheme.Success
     val Red: Color get() = SonHarfTheme.Error
-    val Purple: Color get() = SonHarfTheme.Purple
+    val Purple: Color get() = SonHarfTheme.Lavender
+    val OnPrimary: Color get() = SonHarfTheme.OnPrimary
+    val OnSecondary: Color get() = SonHarfTheme.OnSecondary
+    val OnTertiary: Color get() = SonHarfTheme.OnTertiary
 
-    val HeroStart: Color get() = if (SonHarfTheme.IsDark) Color(0xFF111722) else Color(0xFF155FCC)
-    val HeroMiddle: Color get() = if (SonHarfTheme.IsDark) Color(0xFF2C2417) else Color(0xFF1769E0)
-    val HeroEnd: Color get() = if (SonHarfTheme.IsDark) Color(0xFF3A2A09) else Color(0xFF139BB0)
+    val HeroStart: Color get() = SonHarfTheme.HeroStart
+    val HeroMiddle: Color get() = SonHarfTheme.HeroMiddle
+    val HeroEnd: Color get() = SonHarfTheme.HeroEnd
 }
 
 @Composable
@@ -103,9 +107,9 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
             background = UnifiedUi.Background,
             surface = UnifiedUi.Surface,
             surfaceVariant = UnifiedUi.Surface2,
-            onPrimary = Color(0xFF211700),
-            onSecondary = Color(0xFF211700),
-            onTertiary = Color(0xFF05251B),
+            onPrimary = UnifiedUi.OnPrimary,
+            onSecondary = UnifiedUi.OnSecondary,
+            onTertiary = UnifiedUi.OnTertiary,
             onBackground = UnifiedUi.Text,
             onSurface = UnifiedUi.Text,
             onSurfaceVariant = UnifiedUi.Text,
@@ -119,9 +123,9 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
             background = UnifiedUi.Background,
             surface = UnifiedUi.Surface,
             surfaceVariant = UnifiedUi.Surface2,
-            onPrimary = Color.White,
-            onSecondary = Color.White,
-            onTertiary = Color.White,
+            onPrimary = UnifiedUi.OnPrimary,
+            onSecondary = UnifiedUi.OnSecondary,
+            onTertiary = UnifiedUi.OnTertiary,
             onBackground = UnifiedUi.Text,
             onSurface = UnifiedUi.Text,
             onSurfaceVariant = UnifiedUi.Text,
@@ -267,8 +271,8 @@ private fun UnifiedHomeScreen(
                             Text(profile?.displayName ?: sh("OYUNCU", "PLAYER"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
                             Text("🏆 ${profile?.rating ?: 1000} RP", color = Color.White.copy(alpha = .82f), fontWeight = FontWeight.Bold)
                         }
-                        Surface(shape = RoundedCornerShape(99.dp), color = UnifiedUi.Gold) {
-                            Text("SC ${profile?.diamonds ?: 0}", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = Color(0xFF201600), fontWeight = FontWeight.Black)
+                        Surface(shape = RoundedCornerShape(99.dp), color = UnifiedUi.Surface) {
+                            Text("SC ${profile?.diamonds ?: 0}", Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = UnifiedUi.Gold, fontWeight = FontWeight.Black)
                         }
                     }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -427,7 +431,7 @@ private fun UnifiedBottomBar(
     onShop: () -> Unit,
     onProfile: () -> Unit,
 ) {
-    NavigationBar(containerColor = UnifiedUi.Surface, tonalElevation = 0.dp) {
+    NavigationBar(containerColor = UnifiedUi.Navigation, tonalElevation = 0.dp) {
         listOf(
             Triple(UnifiedDestination.HOME, Icons.Rounded.Home, sh("ANA", "HOME")) to onHome,
             Triple(UnifiedDestination.LEAGUE, Icons.Rounded.EmojiEvents, sh("LİG", "LEAGUE")) to onLeague,
