@@ -7,7 +7,7 @@ import org.junit.Test
 
 class UnifiedProRuntimeContractTest {
     @Test
-    fun startupRoutesOnlyToUnifiedProAndPremierDuel() {
+    fun startupRoutesOnlyToUnifiedProAndSkillOnlyPremierDuel() {
         val startup = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
         val unified = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
         val integration = File("src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
@@ -17,7 +17,8 @@ class UnifiedProRuntimeContractTest {
         assertTrue(unified.contains("Premier 1v1"))
         assertTrue(integration.contains("PremierWordDuelScreen()"))
         assertTrue(integration.contains("ReactiveMageCatOverlay()"))
-        assertTrue(integration.contains("PremierBoosterOverlay()"))
+        assertFalse(integration.contains("PremierBoosterOverlay()"))
+        assertTrue(integration.contains("Ranked Premier is skill-only"))
         assertFalse(File("src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt").exists())
         assertFalse(File("src/main/java/com/sonharf/game/MonsterExperienceApp.kt").exists())
     }
