@@ -432,20 +432,43 @@ internal fun WordSiegePracticeScreen(
                     val draw = state.winnerOwner == null
                     val color = when { won -> MainUi.Green; draw -> MainUi.Gold; else -> MainUi.Red }
                     Surface(Modifier.fillMaxWidth(), color = color.copy(alpha = .08f), shape = androidx.compose.foundation.shape.RoundedCornerShape(14.dp), border = BorderStroke(1.dp, color.copy(alpha = .35f))) {
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Column(Modifier.weight(1f)) {
-                                Text(if (won) sh("KUŞATMA SENİN!", "SIEGE WON!") else if (draw) sh("BERABERE", "DRAW") else sh("${botProfile.name.uppercase()} KAZANDI", "${botProfile.name.uppercase()} WON"), color = color, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                                Text(
-                                    if (matchmakingFallback) {
-                                        sh("Gerçek rakip araması sürüyor. İstersen bot maçını yeniden başlat.", "Real matchmaking is still running. You can restart the bot match.")
-                                    } else {
-                                        sh("Yeni alıştırma ile tekrar dene.", "Try another practice round.")
-                                    },
-                                    color = MainUi.Muted,
-                                    fontSize = 8.sp,
-                                )
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(if (won) sh("KUŞATMA SENİN!", "SIEGE WON!") else if (draw) sh("BERABERE", "DRAW") else sh("${botProfile.name.uppercase()} KAZANDI", "${botProfile.name.uppercase()} WON"), color = color, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                                    Text(
+                                        if (matchmakingFallback) {
+                                            sh("Gerçek rakip araması sürüyor. İstersen bot maçını yeniden başlat.", "Real matchmaking is still running. You can restart the bot match.")
+                                        } else {
+                                            sh("Yeni alıştırma ile tekrar dene.", "Try another practice round.")
+                                        },
+                                        color = MainUi.Muted,
+                                        fontSize = 8.sp,
+                                    )
+                                }
+                                TextButton(onClick = ::startAgain) { Text(sh("YENİ OYUN", "NEW GAME"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp) }
                             }
-                            TextButton(onClick = ::startAgain) { Text(sh("YENİ OYUN", "NEW GAME"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp) }
+                            if (!matchmakingFallback) {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    ProfHammyCompanion(
+                                        mood = when { won -> ProfHammyMood.EXCITED; draw -> ProfHammyMood.WINK; else -> ProfHammyMood.FOCUSED },
+                                        size = if (compact) 42.dp else 50.dp,
+                                    )
+                                    Spacer(Modifier.width(7.dp))
+                                    Text(
+                                        text = when {
+                                            won -> sh("Alanı iyi yönettin. Yeni alıştırmada daha uzun bir zincir dene.", "You controlled the board well. Try a longer chain in the next practice round.")
+                                            draw -> sh("Dengeyi korudun. Yeni turda merkez alanını erken sahiplen.", "You held the balance. Claim the center earlier in the next round.")
+                                            else -> sh("Tahtayı oku, bağlantını koru. Yeni alıştırmada sakin başla.", "Read the board and protect your connection. Start the next practice round calmly.")
+                                        },
+                                        color = MainUi.Text,
+                                        fontSize = if (compact) 8.sp else 9.sp,
+                                        lineHeight = if (compact) 10.sp else 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        modifier = Modifier.weight(1f),
+                                    )
+                                }
+                            }
                         }
                     }
                 }
