@@ -16,7 +16,7 @@ object DictionaryEngine {
     fun normalize(word: String, language: String): String {
         val canonical = SharedDictionaryService.canonicalLanguage(language)
         val locale = if (canonical == "tr") Locale.forLanguageTag("tr-TR") else Locale.ROOT
-        var cleaned = word.trim().uppercase(locale)
+        var cleaned = SharedDictionaryService.normalize(word, canonical).uppercase(locale)
         if (canonical == "tr") {
             cleaned = cleaned.replace("Â", "A").replace("Î", "I").replace("Û", "U")
         }
