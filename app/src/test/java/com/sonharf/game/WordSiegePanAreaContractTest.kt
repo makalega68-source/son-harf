@@ -17,9 +17,12 @@ class WordSiegePanAreaContractTest {
         assertTrue(pan.contains("WordSiegeBoardSpec.Size"))
         assertTrue(pan.contains("detectDragGestures"))
         assertTrue(pan.contains("combinedClickable"))
-        assertTrue(pan.contains("onDoubleClick = ::toggleViewport"))
+        assertTrue(pan.contains("onDoubleClick = { toggleViewport(index) }"))
+        assertTrue(pan.contains("wordSiegeOnlineCloseScale"))
+        assertTrue(pan.contains("closeScale = closeScale"))
         assertTrue(pan.contains("WordSiegeBoardViewportMode.CLOSE"))
         assertTrue(viewport.contains("WordSiegeBoardViewportMode.FIT"))
+        assertTrue(viewport.contains("WORD_SIEGE_ONLINE_ZOOM_FACTOR = 1.85f"))
         assertTrue(viewport.contains("wordSiegeFitScale"))
         assertTrue(pan.contains("translationX = transform.pan.x"))
         assertTrue(pan.contains("translationY = transform.pan.y"))
@@ -41,12 +44,15 @@ class WordSiegePanAreaContractTest {
     @Test fun boardKeepsReadableOwnershipAndTapPlacementContract() {
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
+        val accessibility = projectFile("app/src/main/java/com/sonharf/game/WordSiegeBoardAccessibility.kt").readText()
 
         assertTrue(pan.contains("PanSiegeMine = Color(0xFF35C878)"))
         assertTrue(pan.contains("PanSiegeRival = Color(0xFFFF5F57)"))
         assertTrue(pan.contains("fontSize = 21.sp"))
         assertTrue(pan.contains("WordSiegeBoardAccessibility.BoardLetterPoint"))
         assertTrue(pan.contains("WordSiegeBoardAccessibility.BoardBonus"))
+        assertTrue(accessibility.contains("BoardLetterPoint: TextUnit = 13.sp"))
+        assertTrue(accessibility.contains("BoardBonus: TextUnit = 17.sp"))
         assertTrue(pan.contains("color = Color.Black"))
         assertTrue(pan.contains("val canPlace = enabled && (cell.letter == null || pending)"))
         assertTrue(pan.contains("WordSiegeBoardTapAction.PLACE"))
@@ -57,16 +63,20 @@ class WordSiegePanAreaContractTest {
         assertTrue(experience.contains("0xFFFF5F57"))
     }
 
-    @Test fun areaPointsAreServerCalculatedAsTwoPointsPerGainedCubeAndTransferredInNetScore() {
+    @Test fun areaPointsAreServerCalculatedAsTwoPointsPerGainedCubeAndCurrentTerritoryDrivesVisibleScore() {
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt").readText()
+        val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val baseMigration = projectFile("supabase/migrations/20260901060000_word_siege_area_score_v1.sql").readText()
         val finalMigration = projectFile("supabase/migrations/20260902090000_word_siege_final_transfer_v2.sql").readText()
+        val currentTerritoryMigration = projectFile("supabase/migrations/20260909090000_word_siege_current_territory_score_v5.sql").readText()
 
         assertTrue(backend.contains("player_one_area_score"))
         assertTrue(backend.contains("neutral_captured"))
         assertTrue(backend.contains("opponent_captured"))
         assertTrue(backend.contains("area_score"))
         assertTrue(backend.contains("total_score"))
+        assertTrue(pan.contains("WordSiegeFinalRules.currentTerritoryScore"))
+        assertTrue(pan.contains("val myAreaCount = panSiegeAreaCount(game, myOwner)"))
 
         // Preserve the original transactional/ownership pipeline.
         assertTrue(baseMigration.contains("before_owner = 0 and after_owner = p_owner"))
@@ -76,9 +86,13 @@ class WordSiegePanAreaContractTest {
         assertTrue(baseMigration.contains("player_one_area = v_one_area"))
         assertTrue(baseMigration.contains("player_two_area = v_two_area"))
 
-        // Historical migrations remain available for provenance; current-territory scoring is
-        // asserted by dedicated WordSiegeFinalRules/current-territory tests.
+        // Historical migrations remain immutable for provenance. v5 overrides final winner scoring
+        // with permanent word points + cubes currently owned * 2.
         assertTrue(finalMigration.contains("(neutral_count + opponent_count) * 2"))
+        assertTrue(currentTerritoryMigration.contains("r.player_one_word_score + (r.player_one_area * 2)"))
+        assertTrue(currentTerritoryMigration.contains("r.player_two_word_score + (r.player_two_area * 2)"))
+        assertFalse(currentTerritoryMigration.contains("player_one_area_score -"))
+        assertFalse(currentTerritoryMigration.contains("player_two_area_score -"))
     }
 
     @Test fun duplicateProtectionAndExistingValidationPipelineStayIntact() {
