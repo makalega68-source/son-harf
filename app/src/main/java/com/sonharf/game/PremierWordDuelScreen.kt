@@ -45,22 +45,23 @@ import kotlinx.coroutines.launch
 
 private enum class PremierStage { Loading, Lobby, Searching, Vs, Playing, Finished }
 
+/** Fixed high-legibility gameplay palette from the same calm Son Harf color family. */
 private object PremierUi {
-    val Background = Color(0xFFE9F1FF)
-    val Surface = Color(0xFFFFFFFF)
-    val Ink = Color(0xFF0B1B3A)
-    val Muted = Color(0xFF5A6C8C)
-    val Ocean = Color(0xFF2563EB)
-    val OceanDeep = Color(0xFF1D4ED8)
-    val Sky = Color(0xFF38BDF8)
-    val Ice = Color(0xFFF4F7FE)
-    val Border = Color(0xFFDCE5F5)
-    val Green = Color(0xFF16A34A)
-    val GreenSoft = Color(0xFFDCFCE7)
-    val Red = Color(0xFFE11D48)
-    val RedSoft = Color(0xFFFFE4E9)
-    val Gold = Color(0xFFF59E0B)
-    val GoldSoft = Color(0xFFFFF4D6)
+    val Background = Color(0xFFF1F5F2)
+    val Surface = Color(0xFFFFFDF7)
+    val Ink = Color(0xFF26382F)
+    val Muted = Color(0xFF65766D)
+    val Ocean = Color(0xFF4F725E)
+    val OceanDeep = Color(0xFF3F614E)
+    val Sky = Color(0xFF4A6E83)
+    val Ice = Color(0xFFEAF2EE)
+    val Border = Color(0xFFCCD8D1)
+    val Green = Color(0xFF4B765D)
+    val GreenSoft = Color(0xFFDDE9E1)
+    val Red = Color(0xFFA84F59)
+    val RedSoft = Color(0xFFF4E4E5)
+    val Gold = Color(0xFF8A6538)
+    val GoldSoft = Color(0xFFF1E7D3)
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr
@@ -291,7 +292,7 @@ fun PremierWordDuelScreen() {
     Box(
         Modifier
             .fillMaxSize()
-            .background(Brush.verticalGradient(listOf(Color.White, PremierUi.Background)))
+            .background(Brush.verticalGradient(listOf(PremierUi.Surface, PremierUi.Background)))
     ) {
         when (stage) {
             PremierStage.Loading -> PremierLoading(language)
@@ -798,7 +799,7 @@ private fun PremierArenaHeader(
     val totalScore = myScore + rivalScore
     val myFraction = if (totalScore <= 0) 0.5f else myScore.toFloat() / totalScore.toFloat()
     val danger = seconds in 1..5
-    val timerStart = if (danger) Color(0xFFFFB4C0) else PremierUi.Sky
+    val timerStart = if (danger) PremierUi.RedSoft else PremierUi.Sky
     val timerEnd = if (danger) PremierUi.Red else PremierUi.OceanDeep
 
     Surface(shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp), color = PremierUi.Surface, shadowElevation = 8.dp, border = BorderStroke(1.dp, PremierUi.Border)) {
@@ -1007,7 +1008,7 @@ private fun PremierKeyboard(language: String, value: String, enabled: Boolean, k
         listOf("A","S","D","F","G","H","J","K","L","Ş","İ"),
         listOf("Z","X","C","V","B","N","M","Ö","Ç"),
     )
-    Surface(color = Color(0xFFE6ECF7), shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp), shadowElevation = 10.dp) {
+    Surface(color = PremierUi.Ice, shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp), shadowElevation = 10.dp) {
         Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 6.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             rows.forEachIndexed { index, row ->
                 Row(Modifier.fillMaxWidth().padding(horizontal = if (index == 1) 7.dp else if (index == 2) 16.dp else 0.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -1037,9 +1038,9 @@ private fun PremierKey(label: String, enabled: Boolean, modifier: Modifier, keyH
         contentPadding = PaddingValues(0.dp),
         shape = RoundedCornerShape(9.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = when { action -> PremierUi.Ocean; alt -> Color(0xFFCBD5E9); else -> Color.White },
+            containerColor = when { action -> PremierUi.Ocean; alt -> PremierUi.Border; else -> PremierUi.Surface },
             contentColor = when { action -> Color.White; alt -> PremierUi.Ink; else -> PremierUi.Ink },
-            disabledContainerColor = Color(0xFFEDF1F8),
+            disabledContainerColor = PremierUi.Background,
             disabledContentColor = PremierUi.Muted.copy(alpha = .50f),
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = if (action) 4.dp else 1.dp),
