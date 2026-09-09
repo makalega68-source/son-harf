@@ -8,39 +8,62 @@ import org.junit.Test
 
 class UnifiedProBoosterContractTest {
     @Test
-    fun premierBoostersAreServerAuthoritativeAndVisibleInUnifiedPro() {
+    fun rankedPremierKeepsCompatibilityApisButDoesNotExposePurchasableMatchPower() {
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/PremierBoosters.kt").readText()
         val overlay = projectFile("app/src/main/java/com/sonharf/game/PremierBoosterOverlay.kt").readText()
         val integration = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
+        val premier = projectFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
         val vip = projectFile("app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt").readText()
+        val shop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
         val entitlements = projectFile("app/src/main/java/com/sonharf/game/data/VipEntitlements.kt").readText()
 
+        // Compatibility API remains available in source for old clients/non-ranked future reuse.
         assertTrue(backend.contains("get_premier_booster_status_v1"))
         assertTrue(backend.contains("use_premier_hint_v1"))
         assertTrue(backend.contains("use_premier_swap_v1"))
         assertTrue(backend.contains("use_premier_multiplier_v1"))
-        assertTrue(backend.contains("multiplier_armed"))
         assertTrue(overlay.contains("usePremierHint"))
         assertTrue(overlay.contains("usePremierSwap"))
         assertTrue(overlay.contains("usePremierMultiplier"))
-        assertTrue(integration.contains("PremierBoosterOverlay()"))
-        assertTrue(vip.contains("2x Skor"))
-        assertTrue(vip.contains("claimVipDailyHelpers"))
-        assertTrue(entitlements.contains("\"multiplier_count\""))
+
+        // Ranked runtime must mount neither paid gameplay power nor mascot overlays.
+        assertTrue(integration.contains("PremierWordDuelScreen()"))
+        assertFalse(integration.contains("ReactiveMageCatOverlay()"))
+        assertFalse(integration.contains("PremierBoosterOverlay()"))
+        assertFalse(premier.contains("PremierBoosterUiState.requiredOverride"))
+        assertFalse(premier.contains("com.sonharf.game.mascot"))
+
+        assertFalse(vip.contains("2x Skor"))
+        assertFalse(vip.contains("claimVipDailyHelpers"))
+        assertTrue(vip.contains("ADİL REKABET"))
+        assertTrue(entitlements.contains("rankedLiveAssist: Boolean = false"))
+
+        // Store messaging must describe only fair PRO value, never a paid ranked advantage.
+        assertTrue(shop.contains("Dereceli Premier maçlarında satın alınabilir oyun gücü yoktur"))
+        assertTrue(shop.contains("Adil rekabet: PRO"))
+        assertFalse(shop.contains("günlük İpucu, Harf Değiştirici ve 2x Skor"))
+        assertFalse(shop.contains("daily Hint, Letter Swap and 2x Score"))
+        assertFalse(shop.contains("helper boosters with PRO"))
     }
 
     @Test
-    fun authoritativeMigrationLocksTimingInventoryAndScoreMultiplier() {
-        val migration = projectFile("supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql").readText()
+    fun laterFairPlayMigrationNeutralizesTheLegacyBoosterRegressionServerSide() {
+        val legacy = projectFile("supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql").readText()
+        val fairPlay = projectFile("supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql").readText()
 
-        assertTrue(migration.contains("interval '20 seconds'"))
-        assertTrue(migration.contains("interval '15 seconds'"))
-        assertTrue(migration.contains("add_points:=add_points*2"))
-        assertTrue(migration.contains("on delete restrict", ignoreCase = true))
-        assertTrue(migration.contains("use_premier_hint_v1"))
-        assertTrue(migration.contains("use_premier_swap_v1"))
-        assertTrue(migration.contains("use_premier_multiplier_v1"))
-        assertTrue(migration.contains("revoke all on function public.use_premier_multiplier_v1(uuid) from public,anon"))
+        // Preserve the independent 20-second server turn work from the legacy migration.
+        assertTrue(legacy.contains("interval '20 seconds'"))
+        assertTrue(legacy.contains("on delete restrict", ignoreCase = true))
+
+        // But competitive power is explicitly inert in the later authoritative migration.
+        assertTrue(fairPlay.contains("select p_default"))
+        assertTrue(fairPlay.contains("select false"))
+        assertTrue(fairPlay.contains("competitive_booster_disabled"))
+        assertTrue(fairPlay.contains("alter column hint_count set default 0"))
+        assertTrue(fairPlay.contains("alter column swap_count set default 0"))
+        assertTrue(fairPlay.contains("alter column multiplier_count set default 0"))
+        assertTrue(fairPlay.contains("'ranked_live_assist', false"))
+        assertTrue(fairPlay.contains("'rewarded_ad_bypass', coalesce(v_vip, false)"))
     }
 
     @Test

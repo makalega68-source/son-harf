@@ -65,7 +65,6 @@ fun EconomyShopScreen(
 
 @Composable
 private fun EconomyCatalogScreen() {
-    val context = LocalContext.current
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -129,7 +128,7 @@ private fun EconomyCatalogScreen() {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
                     Text("STYLE", color = SonHarfBlue, fontSize = 30.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Profilini kişiselleştir • yardımcı takviyeler PRO'da", "Personalize your profile • helper boosters with PRO"), color = SonHarfMuted, fontSize = 10.sp)
+                    Text(sh("Profilini kişiselleştir • PRO'da kozmetik ve sosyal ayrıcalıklar", "Personalize your profile • cosmetic and social benefits with PRO"), color = SonHarfMuted, fontSize = 10.sp)
                 }
                 Surface(shape = RoundedCornerShape(99.dp), color = SonHarfCyan.copy(alpha = .13f), border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .35f))) {
                     Text("◈ ${profile?.diamonds ?: 0} SC", Modifier.padding(horizontal = 13.dp, vertical = 8.dp), color = SonHarfCyan, fontWeight = FontWeight.Black)
@@ -147,7 +146,7 @@ private fun EconomyCatalogScreen() {
 
         item {
             Text(sh("SON COIN İLE STYLE", "STYLE WITH SON COIN"), color = SonHarfCyan, fontWeight = FontWeight.Black, fontSize = 13.sp)
-            Text(sh("Son Coin; Style ve seçili mağaza ürünlerinde kullanılır. Oyun takviyeleri sunucuda doğrulanır.", "Son Coin is used for Style and selected shop items. Gameplay boosters are server validated."), color = SonHarfMuted, fontSize = 9.sp)
+            Text(sh("Son Coin; Style ve seçili mağaza ürünlerinde kullanılır. Dereceli Premier maçlarında satın alınabilir oyun gücü yoktur.", "Son Coin is used for Style and selected shop items. Ranked Premier has no purchasable gameplay power."), color = SonHarfMuted, fontSize = 9.sp)
         }
 
         if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfCyan) }
@@ -242,12 +241,12 @@ private fun AnimatedVipShopCard(active: Boolean, onClick: () -> Unit) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     Box(Modifier.size(48.dp).background(Color.White, CircleShape), contentAlignment = Alignment.Center) { Text("♛", color = SonHarfGold, fontSize = 28.sp, fontWeight = FontWeight.Black) }
-                    Column { Text("VIP", color = MainUi.Blue, fontSize = 24.sp, fontWeight = FontWeight.Black); Text(sh("Reklamsız + Style + günlük takviyeler", "Ad-free + Style + daily boosters"), color = SonHarfMuted, fontSize = 9.sp) }
+                    Column { Text("VIP", color = MainUi.Blue, fontSize = 24.sp, fontWeight = FontWeight.Black); Text(sh("Reklamsız + Style + analiz", "Ad-free + Style + analysis"), color = SonHarfMuted, fontSize = 9.sp) }
                 }
                 Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) SonHarfGreen else MainUi.Blue, fontWeight = FontWeight.Black)
             }
-            Text(sh("Özel oda • özel Style • gelişmiş istatistik • reklamsız deneyim • günlük İpucu, Harf Değiştirici ve 2x Skor", "Private rooms • exclusive Style • advanced stats • no ads • daily Hint, Letter Swap and 2x Score"), color = SonHarfText, fontSize = 10.sp)
-            Text(sh("İpucu, Harf Değiştirici ve 2x Skor hakları sunucuda doğrulanır ve kullanımda atomik olarak tüketilir.", "Hint, Letter Swap and 2x Score are server validated and consumed atomically on use."), color = SonHarfGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text(sh("Özel oda • özel Style • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar", "Private rooms • exclusive Style • advanced stats • ad-free experience • social benefits"), color = SonHarfText, fontSize = 10.sp)
+            Text(sh("Adil rekabet: PRO, dereceli Premier maçlarında skor, hedef harf, kelime ipucu veya rating avantajı vermez.", "Fair play: PRO gives no score, target-letter, word-hint, or rating advantage in ranked Premier matches."), color = SonHarfGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

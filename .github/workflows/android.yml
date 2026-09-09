@@ -55,18 +55,21 @@ jobs:
           grep -q 'val Background: Color get() = SonHarfTheme.Background' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'lightColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'darkColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'MageCatCompanion(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'MageCatDirector.onLobbyGreet()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          ! grep -q 'MageCat' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.GAME -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.LETTER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.VIP -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          test -f app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
-          grep -q 'R.drawable.mage_cat_runtime' app/src/main/java/com/sonharf/game/mascot/MageCatCompanion.kt
+          ! grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          ! grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          ! grep -q 'com.sonharf.game.mascot' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          grep -q 'premierRemainingTurnSeconds' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          test ! -d app/src/main/java/com/sonharf/game/mascot
+          test ! -f app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
           test -f supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql
+          test -f supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
+          grep -q 'competitive_booster_disabled' supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
 
       - name: Build debug APK with tests
         run: gradle clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all

@@ -23,7 +23,6 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.VipEntitlementsDto
-import com.sonharf.game.data.claimVipDailyHelpers
 import com.sonharf.game.data.getVipEntitlements
 import kotlinx.coroutines.launch
 
@@ -43,7 +42,6 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var entitlements by remember { mutableStateOf<VipEntitlementsDto?>(null) }
     var loading by remember { mutableStateOf(true) }
-    var claiming by remember { mutableStateOf(false) }
     var showPurchase by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
 
@@ -69,7 +67,7 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, null, tint = UProText) }
                 Column(Modifier.weight(1f)) {
                     Text("SON HARF PRO", color = UProText, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Premier üyelik ve oyun yardımcıları", "Premier membership and game helpers"), color = UProBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(sh("Premier üyelik ve fair-play ayrıcalıkları", "Premier membership and fair-play benefits"), color = UProBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
                 Icon(Icons.Rounded.WorkspacePremium, null, tint = UProGold, modifier = Modifier.size(30.dp))
             }
@@ -88,8 +86,8 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                     Text(if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("FREE PLAN", "FREE PLAN"), color = if (active) UProGold else UProMuted, fontWeight = FontWeight.Black)
                     Text(profile?.displayName ?: sh("Oyuncu", "Player"), color = UProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
-                        if (active) sh("Reklamsız deneyim + sunucu doğrulamalı oyun yardımcıları", "Ad-free experience + server-validated game helpers")
-                        else sh("PRO ile günlük takviyeleri ve premium özellikleri aç.", "Unlock daily boosters and premium features with PRO."),
+                        if (active) sh("Reklamsız deneyim + Style + özel oda + gelişmiş analiz", "Ad-free experience + Style + private rooms + advanced analysis")
+                        else sh("PRO ile kozmetik, sosyal ve analiz özelliklerini aç.", "Unlock cosmetic, social, and analysis features with PRO."),
                         color = UProMuted,
                         fontSize = 10.sp,
                     )
@@ -99,43 +97,9 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
 
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ProResourceCard("💡", sh("İPUCU", "HINT"), e?.hintCount ?: 0, UProBlue, Modifier.weight(1f))
-                ProResourceCard("🔄", sh("DEĞİŞTİR", "SWAP"), e?.swapCount ?: 0, UProGreen, Modifier.weight(1f))
-                ProResourceCard("×2", sh("SKOR", "SCORE"), e?.multiplierCount ?: 0, UProGold, Modifier.weight(1f))
-            }
-        }
-
-        if (active) item {
-            Button(
-                onClick = {
-                    scope.launch {
-                        claiming = true
-                        runCatching { backend.claimVipDailyHelpers() }
-                            .onSuccess { result ->
-                                notice = if (result.alreadyClaimed) {
-                                    sh("Bugünkü PRO takviye paketini zaten aldın.", "You already claimed today's PRO booster pack.")
-                                } else {
-                                    sh("+1 İpucu, +1 Harf Değiştirici ve +1 2x Skor eklendi.", "+1 Hint, +1 Letter Swap and +1 2x Score added.")
-                                }
-                                reload()
-                            }
-                            .onFailure { notice = sh("Günlük PRO paketi alınamadı.", "Daily PRO pack could not be claimed.") }
-                        claiming = false
-                    }
-                },
-                enabled = !claiming && e?.dailyJokersClaimed != true,
-                modifier = Modifier.fillMaxWidth().height(54.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = UProGold, contentColor = Color(0xFF211600)),
-            ) {
-                Text(
-                    when {
-                        claiming -> "…"
-                        e?.dailyJokersClaimed == true -> sh("BUGÜN ALINDI", "CLAIMED TODAY")
-                        else -> sh("GÜNLÜK PRO TAKVİYELERİNİ AL", "CLAIM DAILY PRO BOOSTERS")
-                    },
-                    fontWeight = FontWeight.Black,
-                )
+                ProAccessCard("🚫", sh("REKLAMSIZ", "AD-FREE"), active && e?.rewardedAdBypass == true, UProBlue, Modifier.weight(1f))
+                ProAccessCard("📊", sh("ANALİZ", "ANALYSIS"), active && e?.postMatchAnalysis == true, UProGreen, Modifier.weight(1f))
+                ProAccessCard("♛", sh("ÖZEL ODA", "PRIVATE ROOM"), active && e?.privateRooms == true, UProGold, Modifier.weight(1f))
             }
         }
 
@@ -143,12 +107,19 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
             Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
                 Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ProLine("🚫", sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
-                    ProLine("💡", sh("İpucu fısıltısı", "Hint whisper"))
-                    ProLine("🔄", sh("Harf Değiştirici", "Letter Swap"))
-                    ProLine("×2", sh("2x Skor Çarpanı", "2x Score Multiplier"))
+                    ProLine("🎨", sh("PRO Style ve profil ayrıcalıkları", "PRO Style and profile benefits"))
                     ProLine("📊", sh("Gelişmiş istatistik ve maç analizi", "Advanced stats and match analysis"))
-                    ProLine("♛", sh("Özel oda ve PRO Style ayrıcalıkları", "Private rooms and PRO Style benefits"))
-                    Text(sh("Oyun etkileri istemciden değil, sunucu tarafından doğrulanır ve tüketilir.", "Gameplay effects are validated and consumed by the server, not the client."), color = UProMuted, fontSize = 9.sp)
+                    ProLine("♛", sh("Özel oda ayrıcalıkları", "Private room benefits"))
+                    ProLine("👥", sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))
+                    Surface(shape = RoundedCornerShape(12.dp), color = UProGreen.copy(alpha = .10f), border = BorderStroke(1.dp, UProGreen.copy(alpha = .35f))) {
+                        Text(
+                            sh(
+                                "ADİL REKABET: PRO, dereceli Premier maçlarda skor, hedef harf, kelime ipucu veya rating avantajı vermez.",
+                                "FAIR PLAY: PRO gives no score, target-letter, word-hint, or rating advantage in ranked Premier matches.",
+                            ),
+                            Modifier.fillMaxWidth().padding(10.dp), color = UProGreen, fontSize = 9.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
         }
@@ -188,16 +159,22 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
     }
 
     if (showPurchase) {
-        VipPurchaseDialog(onVerified = { scope.launch { reload() } }, onDismiss = { showPurchase = false })
+        VipPurchaseDialog(
+            onVerified = {
+                notice = sh("PRO üyeliğin doğrulandı.", "Your PRO membership was verified.")
+                scope.launch { reload() }
+            },
+            onDismiss = { showPurchase = false },
+        )
     }
 }
 
 @Composable
-private fun ProResourceCard(icon: String, label: String, count: Int, accent: Color, modifier: Modifier) {
+private fun ProAccessCard(icon: String, label: String, enabled: Boolean, accent: Color, modifier: Modifier) {
     Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = UProSurface, border = BorderStroke(1.dp, accent.copy(alpha = .45f))) {
         Column(Modifier.padding(11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(icon, color = accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
-            Text("$count", color = UProText, fontSize = 18.sp, fontWeight = FontWeight.Black)
+            Text(if (enabled) "✓" else "—", color = if (enabled) UProGreen else UProMuted, fontSize = 18.sp, fontWeight = FontWeight.Black)
             Text(label, color = UProMuted, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
