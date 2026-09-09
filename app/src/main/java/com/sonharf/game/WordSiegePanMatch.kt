@@ -117,7 +117,6 @@ internal fun WordSiegePanMatch(
         return
     }
 
-
     Column(
         Modifier
             .fillMaxSize()
@@ -549,7 +548,6 @@ private fun PanSiegeBoard(
             ) {
                 Icon(Icons.Rounded.CenterFocusStrong, sh("Merkeze dön", "Center board"), Modifier.size(19.dp))
             }
-
         }
     }
 }
@@ -742,7 +740,7 @@ private fun PanSiegePlayerCard(
                 Text(profile?.displayName ?: fallbackName, color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text("$score", color = accent, fontSize = 18.sp, fontWeight = FontWeight.Black)
                 Text(
-                    sh("Küp $territoryPoints • Alan $areaCount • 2/küp", "Cubes $territoryPoints • Area $areaCount • 2/cube"),
+                    sh("Küp $areaCount • Alan $territoryPoints • 2/küp", "Cubes $areaCount • Area $territoryPoints • 2/cube"),
                     color = MainUi.Muted,
                     fontSize = 7.sp,
                     maxLines = 1,
