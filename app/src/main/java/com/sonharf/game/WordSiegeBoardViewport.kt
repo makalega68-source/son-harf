@@ -15,6 +15,8 @@ internal enum class WordSiegeBoardTapAction { PLACE, TOGGLE_VIEWPORT }
 
 internal const val WORD_SIEGE_DESIRED_SCREEN_BORDER_DP = 1.3f
 internal const val WORD_SIEGE_MIN_SCREEN_BORDER_DP = 1f
+internal const val WORD_SIEGE_ONLINE_ZOOM_FACTOR = 1.85f
+internal const val WORD_SIEGE_ONLINE_MAX_CLOSE_SCALE = 1f
 internal const val WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.68f
 internal const val WORD_SIEGE_PRACTICE_MIN_SCALE = 0.62f
 internal const val WORD_SIEGE_PRACTICE_MAX_SCALE = 1.24f
@@ -46,6 +48,26 @@ internal fun wordSiegeFitScale(
 ): Float {
     if (viewportWidthPx <= 0f || viewportHeightPx <= 0f || boardWidthPx <= 0f || boardHeightPx <= 0f) return 1f
     return minOf(viewportWidthPx / boardWidthPx, viewportHeightPx / boardHeightPx)
+}
+
+/**
+ * Online CLOSE scale is derived from the current FIT scale rather than being hard-coded to 1x.
+ * The board therefore grows by the requested two-step factor on every device while never
+ * exceeding the authored 52dp cell size. This keeps the current stable viewport architecture,
+ * but makes the double-tap enlargement consistent on narrow and tall screens.
+ */
+internal fun wordSiegeOnlineCloseScale(
+    viewportWidthPx: Float,
+    viewportHeightPx: Float,
+    boardWidthPx: Float,
+    boardHeightPx: Float = boardWidthPx,
+    zoomFactor: Float = WORD_SIEGE_ONLINE_ZOOM_FACTOR,
+    maxScale: Float = WORD_SIEGE_ONLINE_MAX_CLOSE_SCALE,
+): Float {
+    val fit = wordSiegeFitScale(viewportWidthPx, viewportHeightPx, boardWidthPx, boardHeightPx)
+    if (fit <= 0f || !fit.isFinite()) return maxScale.coerceAtLeast(0.01f)
+    val safeMax = maxScale.coerceAtLeast(fit)
+    return (fit * zoomFactor.coerceAtLeast(1f)).coerceIn(fit, safeMax)
 }
 
 internal fun wordSiegeFitPan(
