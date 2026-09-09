@@ -46,8 +46,11 @@ private val WordSiegePracticeBots = listOf(
 )
 
 @Composable
-internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
-    // Profile enrichment is optional. Core practice actions never require backend/network availability.
+internal fun WordSiegePracticeScreen(
+    onExit: () -> Unit,
+    matchmakingFallback: Boolean = false,
+) {
+    // Profile enrichment is optional. Core practice/fallback actions never require backend availability.
     val backend = remember { runCatching { OnlineGameBackend() }.getOrNull() }
     val me = remember(backend) { backend?.currentUserId() }
     var playerProfile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -59,7 +62,16 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
     var dictionaryRetryKey by remember { mutableIntStateOf(0) }
     var placements by remember { mutableStateOf<Map<Int, Int>>(emptyMap()) }
     var selectedRackIndex by remember { mutableStateOf<Int?>(null) }
-    var notice by remember { mutableStateOf<String?>(null) }
+    var notice by remember(matchmakingFallback) {
+        mutableStateOf(
+            if (matchmakingFallback) {
+                sh(
+                    "Geçici bot maçı başladı. Gerçek rakip bulununca otomatik geçilecek.",
+                    "Temporary bot match started. You'll switch automatically when a real rival is found.",
+                )
+            } else null,
+        )
+    }
     var lastMove by remember { mutableStateOf<WordSiegePracticeMove?>(null) }
     var botThinking by remember { mutableStateOf(false) }
     var showPass by remember { mutableStateOf(false) }
@@ -101,7 +113,14 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
             .onSuccess {
                 dictionaryReady = true
                 if (!restored) {
-                    notice = sh("Ana sözlük hazır. Çevrimdışı alıştırmada da aynı sözlük kullanılacak.", "Main dictionary ready. The same dictionary will be used for offline practice.")
+                    notice = if (matchmakingFallback) {
+                        sh(
+                            "Ana sözlük hazır. Geçici bot maçı sürerken gerçek rakip araması devam ediyor.",
+                            "Main dictionary ready. Real matchmaking continues during the temporary bot match.",
+                        )
+                    } else {
+                        sh("Ana sözlük hazır. Çevrimdışı alıştırmada da aynı sözlük kullanılacak.", "Main dictionary ready. The same dictionary will be used for offline practice.")
+                    }
                 }
             }
             .onFailure {
@@ -125,7 +144,14 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
         lastMove = null
         shuffleSeed = 0
         actionVfxEvent = 0
-        notice = sh("İlk hamle sende. Ortadaki 2K karesinden geç.", "Your first move must cover the center 2W cell.")
+        notice = if (matchmakingFallback) {
+            sh(
+                "Yeni geçici bot maçı başladı. Gerçek rakip araması sürüyor.",
+                "New temporary bot match started. Real matchmaking is still running.",
+            )
+        } else {
+            sh("İlk hamle sende. Ortadaki 2K karesinden geç.", "Your first move must cover the center 2W cell.")
+        }
         clearSelection()
     }
 
@@ -206,6 +232,9 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                         Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = if (compact) 16.sp else 18.sp, fontWeight = FontWeight.Black, maxLines = 1)
                         Text(
                             when {
+                                matchmakingFallback && dictionaryLoading -> sh("BOT MAÇI • RAKİP ARANIYOR • SÖZLÜK HAZIRLANIYOR", "BOT MATCH • FINDING RIVAL • LOADING DICTIONARY")
+                                matchmakingFallback && dictionaryReady -> sh("BOT MAÇI • GERÇEK RAKİP ARANIYOR", "BOT MATCH • FINDING REAL RIVAL")
+                                matchmakingFallback -> sh("BOT MAÇI • ANA SÖZLÜK GEREKLİ", "BOT MATCH • MAIN DICTIONARY REQUIRED")
                                 dictionaryLoading -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK HAZIRLANIYOR", "BOT PRACTICE • LOADING MAIN DICTIONARY")
                                 dictionaryReady -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK", "BOT PRACTICE • MAIN DICTIONARY")
                                 else -> sh("BOT İLE ALIŞTIRMA • ANA SÖZLÜK GEREKLİ", "BOT PRACTICE • MAIN DICTIONARY REQUIRED")
@@ -268,6 +297,7 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                         Spacer(Modifier.width(6.dp))
                         Text(
                             when {
+                                state.status == "finished" && matchmakingFallback -> sh("BOT MAÇI BİTTİ • RAKİP ARAMASI SÜRÜYOR", "BOT MATCH FINISHED • MATCHMAKING CONTINUES")
                                 state.status == "finished" -> sh("ALIŞTIRMA BİTTİ", "PRACTICE FINISHED")
                                 botThinking -> sh("${botProfile.name.uppercase()} HAMLESİNİ HAZIRLIYOR", "${botProfile.name.uppercase()} IS PREPARING A MOVE")
                                 displayedOwner == 1 -> sh("SIRA SENDE • Harf seç, tahtaya bırak, OYNA", "YOUR TURN • Select tile, place it, PLAY")
@@ -406,7 +436,15 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) {
                                 Text(if (won) sh("KUŞATMA SENİN!", "SIEGE WON!") else if (draw) sh("BERABERE", "DRAW") else sh("${botProfile.name.uppercase()} KAZANDI", "${botProfile.name.uppercase()} WON"), color = color, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                                Text(sh("Yeni alıştırma ile tekrar dene.", "Try another practice round."), color = MainUi.Muted, fontSize = 8.sp)
+                                Text(
+                                    if (matchmakingFallback) {
+                                        sh("Gerçek rakip araması sürüyor. İstersen bot maçını yeniden başlat.", "Real matchmaking is still running. You can restart the bot match.")
+                                    } else {
+                                        sh("Yeni alıştırma ile tekrar dene.", "Try another practice round.")
+                                    },
+                                    color = MainUi.Muted,
+                                    fontSize = 8.sp,
+                                )
                             }
                             TextButton(onClick = ::startAgain) { Text(sh("YENİ OYUN", "NEW GAME"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp) }
                         }
@@ -438,7 +476,16 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showRestart = false },
             title = { Text(sh("Yeni oyun başlat?", "Start a new game?"), fontWeight = FontWeight.Black) },
-            text = { Text(sh("Mevcut alıştırmadaki ilerleme sıfırlanacak.", "Current practice progress will be reset."), color = MainUi.Muted) },
+            text = {
+                Text(
+                    if (matchmakingFallback) {
+                        sh("Geçici bot maçı sıfırlanacak. Gerçek rakip araması devam edecek.", "The temporary bot match will reset. Real matchmaking will continue.")
+                    } else {
+                        sh("Mevcut alıştırmadaki ilerleme sıfırlanacak.", "Current practice progress will be reset.")
+                    },
+                    color = MainUi.Muted,
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     showRestart = false
@@ -453,7 +500,16 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showPass = false },
             title = { Text(sh("Turu geç?", "Pass this turn?"), fontWeight = FontWeight.Black) },
-            text = { Text(sh("İki oyuncu art arda pas verirse alıştırma biter.", "Two consecutive passes end practice."), color = MainUi.Muted) },
+            text = {
+                Text(
+                    if (matchmakingFallback) {
+                        sh("İki oyuncu art arda pas verirse bot maçı biter; gerçek rakip araması sürer.", "Two consecutive passes end the bot match; real matchmaking continues.")
+                    } else {
+                        sh("İki oyuncu art arda pas verirse alıştırma biter.", "Two consecutive passes end practice.")
+                    },
+                    color = MainUi.Muted,
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     showPass = false
@@ -469,7 +525,16 @@ internal fun WordSiegePracticeScreen(onExit: () -> Unit) {
         AlertDialog(
             onDismissRequest = { showForfeit = false },
             title = { Text(sh("Pes etmek istiyor musun?", "Do you want to forfeit?"), fontWeight = FontWeight.Black) },
-            text = { Text(sh("${botProfile.name} bu alıştırmayı kazanır.", "${botProfile.name} wins this practice round."), color = MainUi.Muted) },
+            text = {
+                Text(
+                    if (matchmakingFallback) {
+                        sh("${botProfile.name} bu bot maçını kazanır. Gerçek rakip araması devam eder.", "${botProfile.name} wins this bot match. Real matchmaking continues.")
+                    } else {
+                        sh("${botProfile.name} bu alıştırmayı kazanır.", "${botProfile.name} wins this practice round.")
+                    },
+                    color = MainUi.Muted,
+                )
+            },
             confirmButton = {
                 TextButton(onClick = { showForfeit = false; state = WordSiegePracticeEngine.forfeit(state, 1); clearSelection() }) {
                     Text(sh("PES ET", "FORFEIT"), color = MainUi.Red, fontWeight = FontWeight.Black)
