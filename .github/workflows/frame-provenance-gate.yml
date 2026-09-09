@@ -50,8 +50,8 @@ jobs:
           grep -q 'UnifiedDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.LETTER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          test -s app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
+          grep -q 'ReactiveMageCatOverlay(' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          test -s app/src/main/res/drawable-nodpi/mage_cat_expressions.png
       - name: Test and build debug APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
       - name: Verify compiled APK pixels against immutable purchased-source manifest

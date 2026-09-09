@@ -12,8 +12,8 @@ class PremierDuelUxRegressionTest {
         val backend = File("src/main/java/com/sonharf/game/data/PremierDuelBackend.kt").readText()
 
         assertTrue(screen.contains("ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp"))
-        assertTrue(screen.contains("MageCatCompanion(size = 58.dp)"))
-        assertTrue(screen.contains("MageCatCompanion(size = 70.dp)"))
+        assertTrue(screen.contains("MageCatCompanion(size = 58.dp, moodOverride = MageCatMood.IDLE, animateIdle = false)"))
+        assertTrue(screen.contains("MageCatCompanion(size = 70.dp, moodOverride = MageCatMood.IDLE, animateIdle = false)"))
         assertFalse(screen.contains("SyntheticBotPortrait("))
         assertTrue(screen.contains("Text(pt(language, \"SOHBET\", \"CHAT\")"))
         assertFalse(screen.contains("enabled = !room.isBot"))

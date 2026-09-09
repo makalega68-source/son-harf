@@ -254,17 +254,16 @@ private fun UnifiedHomeScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     MageCatCompanion(
-                        size = 72.dp,
-                        speechBubbleText = sh("Hazırsan başlayalım!", "Ready? Let's play!"),
+                        size = 88.dp,
                         onClick = { MageCatDirector.onLobbyGreet() },
                     )
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("MAGE CAT", color = UnifiedUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        Text(sh("Kelime yoldaşın", "Your word companion"), color = UnifiedUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
                         Text(
-                            sh("Serine, süre baskısına ve maç sonucuna tepki veren yoldaşın.", "Your companion reacts to streaks, time pressure and match results."),
+                            sh("Hazırsan başlayalım. Birlikte yeni bir seri yakalayalım!", "Ready? Let’s build a new streak together!"),
                             color = UnifiedUi.Muted,
-                            fontSize = 9.sp,
+                            fontSize = 13.sp,
                         )
                     }
                 }

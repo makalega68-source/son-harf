@@ -54,11 +54,11 @@ jobs:
           grep -q 'MageCatDirector.onLobbyGreet()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.VIP -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          grep -q 'ReactiveMageCatOverlay(' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
           grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           grep -q 'mutableIntStateOf(20)' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
-          grep -q 'R.drawable.mage_cat_runtime' app/src/main/java/com/sonharf/game/mascot/MageCatCompanion.kt
-          test -s app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
+          grep -q 'R.drawable.mage_cat_expressions' app/src/main/java/com/sonharf/game/mascot/MageCatCompanion.kt
+          test -s app/src/main/res/drawable-nodpi/mage_cat_expressions.png
           test -s app/src/main/res/raw/warm_beginnings.mp3
           grep -q 'multiplier_count' app/src/main/java/com/sonharf/game/data/VipEntitlements.kt
           grep -q 'use_premier_multiplier_v1' app/src/main/java/com/sonharf/game/data/PremierBoosters.kt

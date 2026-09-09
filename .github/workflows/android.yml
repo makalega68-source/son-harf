@@ -62,10 +62,10 @@ jobs:
           grep -q 'UnifiedDestination.LETTER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.VIP -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          grep -q 'ReactiveMageCatOverlay(' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
           grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          test -f app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
-          grep -q 'R.drawable.mage_cat_runtime' app/src/main/java/com/sonharf/game/mascot/MageCatCompanion.kt
+          test -f app/src/main/res/drawable-nodpi/mage_cat_expressions.png
+          grep -q 'R.drawable.mage_cat_expressions' app/src/main/java/com/sonharf/game/mascot/MageCatCompanion.kt
           test -f supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql
 
       - name: Build debug APK with tests

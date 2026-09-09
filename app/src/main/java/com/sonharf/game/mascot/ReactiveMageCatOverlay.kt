@@ -1,98 +1,42 @@
 package com.sonharf.game.mascot
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.layout.padding
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import android.os.SystemClock
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.sonharf.game.SonHarfUiState
-import com.sonharf.game.data.GameRoomDto
-import com.sonharf.game.data.OnlineGameBackend
-import com.sonharf.game.data.SupabaseProvider
-import com.sonharf.game.data.findPremierActiveRoom
-import com.sonharf.game.data.isPremierFinished
-import java.time.Duration
-import java.time.Instant
+import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-/**
- * Read-only mascot layer. It observes authoritative room snapshots only and never
- * submits words, mutates score/rating, claims timeout or advances the bot.
- */
+/** A reserved inline companion dock. Consumes the screen's existing snapshot; never polls. */
 @Composable
-fun ReactiveMageCatOverlay() {
-    if (!SupabaseProvider.configured || !SonHarfUiState.inMatch) return
-    val backend = remember { OnlineGameBackend() }
-    var room by remember { mutableStateOf<GameRoomDto?>(null) }
-    var phrase by remember { mutableStateOf<String?>(null) }
-    var lastEvent by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(SonHarfUiState.inMatch) {
-        if (!SonHarfUiState.inMatch) return@LaunchedEffect
-        MageCatDirector.onMatchStart()
-        var activeId: String? = null
-        while (SonHarfUiState.inMatch) {
-            val next = runCatching {
-                if (activeId == null) backend.findPremierActiveRoom()
-                else backend.getRoom(requireNotNull(activeId))
-            }.getOrNull()
-            if (next != null) {
-                activeId = next.id
-                val previous = room
-                room = next
-                val myId = backend.currentUserId()
-                val amHost = myId == next.hostId
-                val myScore = if (amHost) next.hostScore else next.guestScore
-                val previousScore = previous?.let { if (amHost) it.hostScore else it.guestScore } ?: myScore
-                val streak = if (amHost) next.hostStreak else next.guestStreak
-                val deadline = next.turnDeadline?.let { runCatching { Instant.parse(it) }.getOrNull() }
-                val seconds = deadline?.let { Duration.between(Instant.now(), it).seconds.toInt().coerceAtLeast(0) }
-                if (seconds != null) MageCatDirector.onTimeUrgent(seconds)
-
-                if (next.lastEvent != lastEvent) {
-                    lastEvent = next.lastEvent
-                    when {
-                        next.isPremierFinished() && next.winnerId == myId -> {
-                            MageCatDirector.onMatchVictory()
-                            phrase = if (SonHarfUiState.isEnglish) "Victory! ✨" else "Zafer! ✨"
-                        }
-                        next.isPremierFinished() -> {
-                            MageCatDirector.onMatchDefeat()
-                            phrase = if (SonHarfUiState.isEnglish) "Rematch?" else "Rövanş?"
-                        }
-                        myScore > previousScore -> {
-                            MageCatDirector.onCorrectWord(5, streak)
-                            phrase = if (streak >= 3) {
-                                if (SonHarfUiState.isEnglish) "Great streak! 🔥" else "Harika seri! 🔥"
-                            } else null
-                        }
-                        next.lastEvent in setOf("invalid_word", "not_in_dictionary", "wrong_start_letter", "turn_expired") -> {
-                            MageCatDirector.onWrongWordOrTimeout()
-                            phrase = if (SonHarfUiState.isEnglish) "Try again!" else "Tekrar dene!"
-                        }
-                    }
-                }
-            }
-            delay(650)
-        }
+fun ReactiveMageCatOverlay(snapshot: CompanionSnapshot, english: Boolean = false, modifier: Modifier = Modifier) {
+    val brain = remember(snapshot.matchId) { MageCatBrain() }
+    var reaction by remember(snapshot.matchId) { mutableStateOf(CompanionReaction(MageCatMood.IDLE, "Yanındayım.", "I'm with you.")) }
+    LaunchedEffect(snapshot) {
+        reaction = brain.observe(snapshot, SystemClock.elapsedRealtime())
+        delay(2800)
+        reaction = brain.observe(snapshot, SystemClock.elapsedRealtime())
     }
-
-    Box(
-        Modifier.fillMaxSize().navigationBarsPadding().padding(horizontal = 8.dp, vertical = 150.dp),
-        contentAlignment = Alignment.BottomStart,
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .55f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
-        MageCatCompanion(
-            size = 72.dp,
-            speechBubbleText = phrase,
-            onClick = { MageCatDirector.onLobbyGreet() },
-        )
+        Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            MageCatCompanion(size = 52.dp, moodOverride = reaction.mood, eventKey = reaction.sequence, animateIdle = false)
+            Spacer(Modifier.width(8.dp))
+            Text(if (english) reaction.en else reaction.tr, modifier = Modifier.weight(1f),
+                color = MaterialTheme.colorScheme.onSurface, fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold, maxLines = 2)
+        }
     }
 }

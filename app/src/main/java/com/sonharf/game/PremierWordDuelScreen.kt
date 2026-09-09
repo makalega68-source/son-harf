@@ -1,5 +1,7 @@
 package com.sonharf.game
 
+import com.sonharf.game.mascot.*
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.RepeatMode
@@ -95,6 +97,7 @@ fun PremierWordDuelScreen() {
     var showQuickChat by remember { mutableStateOf(false) }
     var floatingMessage by remember { mutableStateOf<ChatMessageDto?>(null) }
     var turnSeconds by remember { mutableIntStateOf(20) }
+    var mascotRejectedWords by remember { mutableIntStateOf(0) }
 
     suspend fun ensureMe(): ProfileDto {
         if (backend.currentUserId() == null) backend.ensurePlayer(pt(language, "Oyuncu", "Player"))
@@ -341,6 +344,7 @@ LaunchedEffect(room?.id, room?.turnDeadline, room?.currentPlayerId, room?.status
                         notice = notice,
                         busy = busy,
                         turnSeconds = turnSeconds,
+                        mascotRejectedWords = mascotRejectedWords,
                         floatingMessage = floatingMessage,
                         onInput = { input = it },
                         onForfeit = { showForfeit = true },
@@ -353,6 +357,7 @@ LaunchedEffect(room?.id, room?.turnDeadline, room?.currentPlayerId, room?.status
                                 runCatching { backend.validateCoreWordDetailed(candidate, active.language) }
                                     .onSuccess { check ->
                                         if (!check.valid) {
+                                            mascotRejectedWords += 1
                                             notice = validationMessage(language, check.reason)
                                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                         } else {
@@ -365,6 +370,7 @@ LaunchedEffect(room?.id, room?.turnDeadline, room?.currentPlayerId, room?.status
                                                         "proper_noun_not_allowed", "not_game_allowed", "turn_expired"
                                                     )
                                                     if (failed) {
+                                                        mascotRejectedWords += 1
                                                         notice = validationMessage(language, next.lastEvent.orEmpty())
                                                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                                     } else {
@@ -598,6 +604,7 @@ private fun PremierLanguageSwitch(language: String, onLanguage: (String) -> Unit
 @Composable
 private fun PremierLoading(language: String) {
     Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        MageCatCompanion(size = 100.dp, moodOverride = MageCatMood.ANGRY)
         CircularProgressIndicator(color = PremierUi.Ocean)
         Spacer(Modifier.height(14.dp))
         Text(pt(language, "Premier arena hazırlanıyor…", "Preparing Premier arena…"), color = PremierUi.Ink, fontWeight = FontWeight.Black)
@@ -618,7 +625,7 @@ private fun PremierSearching(language: String, onCancel: () -> Unit) {
             contentAlignment = Alignment.Center,
         ) {
             Surface(shape = CircleShape, color = PremierUi.Surface, border = BorderStroke(2.dp, PremierUi.Ocean)) {
-                Icon(Icons.Rounded.Groups, null, tint = PremierUi.Ocean, modifier = Modifier.padding(27.dp).size(42.dp))
+                MageCatCompanion(size = 96.dp, moodOverride = MageCatMood.ANGRY)
             }
         }
         Spacer(Modifier.height(24.dp))
@@ -664,7 +671,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
 private fun PremierVsPlayerCard(language: String, name: String, avatar: String?, gender: String?, visible: Boolean, rating: Int, winRate: Int, accent: Color, bot: Boolean = false) {
     Surface(modifier = Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(23.dp)), shape = RoundedCornerShape(23.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, accent.copy(alpha = .22f))) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (bot) com.sonharf.game.mascot.MageCatCompanion(size = 70.dp)
+            if (bot) com.sonharf.game.mascot.MageCatCompanion(size = 70.dp, moodOverride = MageCatMood.IDLE, animateIdle = false)
             else ProfilePhotoAvatarWithGender(avatar, gender, name, 66.dp, accent, visible, false)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -699,6 +706,7 @@ private fun PremierArena(
     notice: String,
     busy: Boolean,
     turnSeconds: Int,
+    mascotRejectedWords: Int,
     floatingMessage: ChatMessageDto?,
     onInput: (String) -> Unit,
     onForfeit: () -> Unit,
@@ -721,7 +729,14 @@ private fun PremierArena(
             PremierArenaHeader(language, room, me, opponent, rivalName, myScore, rivalScore, myRounds, rivalRounds, myStreak, rivalStreak, turnSeconds, onForfeit, onQuickChat)
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(12.dp))
-                PremierTurnBadge(language, myTurn, room.status)
+                ReactiveMageCatOverlay(
+                    CompanionSnapshot(room.id, myScore, rivalScore, myTurn, turnSeconds, myStreak,
+                        rejectedWords = mascotRejectedWords,
+                        ownFailureKey = if (meId != null && room.lastEventPlayerId == meId && room.lastEvent == "turn_expired")
+                            "${room.lastEvent}:${room.turnDeadline}:${room.roundNo}:${room.validWordCount}" else null,
+                    ),
+                    english = language == "en",
+                )
                 Spacer(Modifier.height(12.dp))
                 PremierTargetCard(language, required, room.gameMode, room.roundNo)
                 Spacer(Modifier.height(10.dp))
@@ -842,7 +857,7 @@ private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, vi
         }
         if (!isLeft) {
   Spacer(Modifier.width(8.dp))
-  if (bot) com.sonharf.game.mascot.MageCatCompanion(size = 58.dp)
+  if (bot) com.sonharf.game.mascot.MageCatCompanion(size = 58.dp, moodOverride = MageCatMood.IDLE, animateIdle = false)
   else ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp, accent, visible, false)
         }
     }
@@ -1028,9 +1043,7 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Surface(shape = CircleShape, color = if (won) PremierUi.GreenSoft else PremierUi.RedSoft) {
-            Icon(if (won) Icons.Rounded.EmojiEvents else Icons.Rounded.SportsEsports, null, tint = if (won) PremierUi.Green else PremierUi.Red, modifier = Modifier.padding(22.dp).size(48.dp))
-        }
+        MageCatCompanion(size = 110.dp, moodOverride = if (won) MageCatMood.EXCITED else MageCatMood.CRYING, animateIdle = false)
         Spacer(Modifier.height(18.dp))
         Text(if (won) pt(language, "ZAFER", "VICTORY") else pt(language, "MAÇ BİTTİ", "MATCH OVER"), color = if (won) PremierUi.Ocean else PremierUi.Red, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
         Text(if (won) pt(language, "Rakibini geride bıraktın.", "You outplayed your rival.") else pt(language, "Yeni maçta geri dön.", "Come back stronger next match."), color = PremierUi.Muted, fontSize = 12.sp)

@@ -1,5 +1,7 @@
 package com.sonharf.game
 
+import com.sonharf.game.mascot.*
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -690,6 +692,17 @@ private fun WordSiegeMatch(
                     modifier = Modifier.weight(1f),
                 )
             }
+        }
+
+        item {
+            ReactiveMageCatOverlay(
+                CompanionSnapshot(
+                    matchId = game.id, myScore = game.scoreFor(myOwner) + game.areaFor(myOwner) * 2,
+                    rivalScore = game.scoreFor(if (myOwner == 1) 2 else 1) + game.areaFor(if (myOwner == 1) 2 else 1) * 2, myTurn = myTurn,
+                    territory = game.areaFor(myOwner), finished = game.status == "finished",
+                    won = me != null && game.winnerId == me, draw = game.status == "finished" && game.winnerId == null,
+                ), english = SonHarfUiState.isEnglish,
+            )
         }
 
         if (game.status == "waiting") {
