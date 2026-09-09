@@ -65,7 +65,7 @@ fun OnlineGameScreenV6() {
     }
 
     Box(Modifier.fillMaxSize()) {
-        // Ranked Premier stays skill-only while the match is live.
+        // Ranked Premier is skill-only while the match is live.
         PremierWordDuelScreen()
 
         val finished = postMatchRoom
