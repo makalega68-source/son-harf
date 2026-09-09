@@ -31,6 +31,20 @@ class SharedDictionaryServiceTest {
     }
 
     @Test
+    fun invisibleDictionaryArtifactsAreRemovedBeforeCanonicalLookup() {
+        assertEquals("istanbul", SharedDictionaryService.normalize("\uFEFFİSTANBUL\r\n", "tr"))
+        assertEquals("kalem", SharedDictionaryService.normalize("KA\u200BLEM", "tr"))
+        assertEquals("masa", SharedDictionaryService.normalize("\u00A0MASA\u00A0", "tr"))
+        assertEquals("isim", SharedDictionaryService.normalize("\tİSİM\t", "tr"))
+
+        SharedDictionaryService.installSnapshotForTests("tr", listOf("istanbul", "kalem", "masa", "isim"))
+        listOf("\uFEFFİSTANBUL\r", "KA\u200BLEM", "\u00A0MASA\u00A0", "\tİSİM\n").forEach { word ->
+            assertTrue("Dirty UTF-8 artifact should not break lookup: $word", SharedDictionaryService.isValidCached(word, "tr") == true)
+            assertTrue("Blocking lookup must use the same cleanup: $word", SharedDictionaryService.isValidWordBlocking(word, "tr"))
+        }
+    }
+
+    @Test
     fun unicodeEquivalentSpellingsUseSameCanonicalKeyAsServer() {
         val decomposed = "c\u0327ilek"
         assertEquals("çilek", SharedDictionaryService.normalize(decomposed, "tr"))
