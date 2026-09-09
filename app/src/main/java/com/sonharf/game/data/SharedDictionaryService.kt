@@ -48,8 +48,18 @@ object SharedDictionaryService {
 
     fun normalize(word: String, language: String): String {
         val lang = canonicalLanguage(language)
-        val nfc = Normalizer.normalize(word.trim(), Normalizer.Form.NFC)
-        val lower = if (lang == "tr") nfc.lowercase(turkishLocale) else nfc.lowercase(englishLocale)
+        val nfc = Normalizer.normalize(word, Normalizer.Form.NFC)
+        val cleaned = nfc
+            .replace("\uFEFF", "")
+            .replace("\u200B", "")
+            .replace("\u200C", "")
+            .replace("\u200D", "")
+            .replace('\u00A0', ' ')
+            .replace('\r', ' ')
+            .replace('\n', ' ')
+            .replace('\t', ' ')
+            .trim()
+        val lower = if (lang == "tr") cleaned.lowercase(turkishLocale) else cleaned.lowercase(englishLocale)
         return Normalizer.normalize(lower, Normalizer.Form.NFC)
     }
 
