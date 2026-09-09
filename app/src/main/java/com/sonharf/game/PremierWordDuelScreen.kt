@@ -67,6 +67,12 @@ private fun pt(language: String, tr: String, en: String): String = if (language 
 private fun premierLocale(language: String): Locale = if (language == "en") Locale.ENGLISH else Locale.forLanguageTag("tr-TR")
 private fun premierUpper(value: String, language: String): String = value.uppercase(premierLocale(language))
 
+internal fun premierRemainingTurnSeconds(deadline: Instant, now: Instant = Instant.now()): Int {
+    val remainingMillis = Duration.between(now, deadline).toMillis()
+    if (remainingMillis <= 0L) return 0
+    return ((remainingMillis + 999L) / 1000L).coerceIn(1L, 20L).toInt()
+}
+
 @Composable
 fun PremierWordDuelScreen() {
     if (!SupabaseProvider.configured) {
@@ -232,14 +238,17 @@ fun PremierWordDuelScreen() {
         }
 
         while (true) {
-            val remaining = Duration.between(Instant.now(), deadline).seconds.coerceAtLeast(0).toInt()
-            turnSeconds = remaining
+            val remaining = premierRemainingTurnSeconds(deadline)
             if (remaining > 0) {
+                turnSeconds = remaining
                 delay(250)
                 continue
             }
 
-            // Refresh first. A delayed room update must never leave the arena permanently at 00.
+            // Never present 00 as an actionable live turn. Keep the final visible tick while
+            // the server confirms expiry or sends the next authoritative room state.
+            turnSeconds = 1
+
             val synced = runCatching { backend.getRoom(active.id) }.getOrNull()
             if (synced != null && (
                     synced.turnDeadline != active.turnDeadline ||
@@ -253,7 +262,6 @@ fun PremierWordDuelScreen() {
                 return@LaunchedEffect
             }
 
-            // The authoritative timeout RPC accepts either room participant after expiry.
             val advanced = runCatching { backend.claimTurnTimeout(active.id) }.getOrNull()
             if (advanced != null) {
                 room = advanced
@@ -675,7 +683,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
 private fun PremierVsPlayerCard(language: String, name: String, avatar: String?, gender: String?, visible: Boolean, rating: Int, winRate: Int, accent: Color, bot: Boolean = false) {
     Surface(modifier = Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(23.dp)), shape = RoundedCornerShape(23.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, accent.copy(alpha = .22f))) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (bot) com.sonharf.game.mascot.MageCatCompanion(size = 70.dp)
+            if (bot) PremierBotAvatar(size = 70.dp, accent = accent)
             else ProfilePhotoAvatarWithGender(avatar, gender, name, 66.dp, accent, visible, false)
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -879,8 +887,25 @@ private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, vi
         }
         if (!isLeft) {
             Spacer(Modifier.width(8.dp))
-            if (bot) com.sonharf.game.mascot.MageCatCompanion(size = 58.dp)
+            if (bot) PremierBotAvatar(size = 58.dp, accent = accent)
             else ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp, accent, visible, false)
+        }
+    }
+}
+
+@Composable
+private fun PremierBotAvatar(size: Dp, accent: Color) {
+    Surface(
+        modifier = Modifier.size(size),
+        shape = CircleShape,
+        color = PremierUi.Ice,
+        border = BorderStroke(3.dp, accent),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(Icons.Rounded.SmartToy, null, tint = accent, modifier = Modifier.size(size * .42f))
+                Text("BOT", color = accent, fontSize = (size.value * .12f).sp, fontWeight = FontWeight.Black)
+            }
         }
     }
 }
@@ -1126,9 +1151,6 @@ private fun profileWinRate(profile: ProfileDto?): Int {
 }
 
 private fun premierRequiredToken(room: GameRoomDto, words: List<GameWordDto>): String {
-    PremierBoosterUiState.requiredOverride
-        ?.takeIf { PremierBoosterUiState.roomId == room.id && it.isNotBlank() }
-        ?.let { return premierUpper(it, room.language) }
     val last = words.lastOrNull()?.normalizedWord?.trim().orEmpty()
     if (last.isBlank()) return "★"
     val count = if (room.gameMode == "expert") room.roundNo.coerceIn(1, 3) else 1
