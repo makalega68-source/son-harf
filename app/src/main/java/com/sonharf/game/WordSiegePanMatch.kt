@@ -82,10 +82,12 @@ internal fun WordSiegePanMatch(
     val rack = if (me == game.playerOneId) game.playerOneRack else game.playerTwoRack.orEmpty()
     val canAct = myTurn && !busy
     val lastMove = moves.lastOrNull()
-    val myEarnedCubePoints = WordSiegeFinalRules.earnedCubePoints(moves, me)
-    val rivalEarnedCubePoints = WordSiegeFinalRules.earnedCubePoints(moves, opponentId)
-    val myTargetScore = WordSiegeFinalRules.netScore(panSiegeWordScore(game, myOwner), myEarnedCubePoints, rivalEarnedCubePoints)
-    val rivalTargetScore = WordSiegeFinalRules.netScore(panSiegeWordScore(game, rivalOwner), rivalEarnedCubePoints, myEarnedCubePoints)
+    val myAreaCount = panSiegeAreaCount(game, myOwner)
+    val rivalAreaCount = panSiegeAreaCount(game, rivalOwner)
+    val myTerritoryPoints = WordSiegeFinalRules.cubeTransfer(myAreaCount)
+    val rivalTerritoryPoints = WordSiegeFinalRules.cubeTransfer(rivalAreaCount)
+    val myTargetScore = WordSiegeFinalRules.currentTerritoryScore(panSiegeWordScore(game, myOwner), myAreaCount)
+    val rivalTargetScore = WordSiegeFinalRules.currentTerritoryScore(panSiegeWordScore(game, rivalOwner), rivalAreaCount)
     val displayedMyScore by animateIntAsState(myTargetScore, tween(260), label = "siege-my-score")
     val displayedRivalScore by animateIntAsState(rivalTargetScore, tween(260), label = "siege-rival-score")
     val displayedCurrentPlayerId = game.currentPlayerId
@@ -149,8 +151,8 @@ internal fun WordSiegePanMatch(
                 profile = mine,
                 fallbackName = sh("Sen", "You"),
                 score = displayedMyScore,
-                earnedCubePoints = myEarnedCubePoints,
-                areaCount = panSiegeAreaCount(game, myOwner),
+                territoryPoints = myTerritoryPoints,
+                areaCount = myAreaCount,
                 accent = MainUi.Green,
                 active = displayedCurrentPlayerId == me,
                 modifier = Modifier.weight(1f),
@@ -159,8 +161,8 @@ internal fun WordSiegePanMatch(
                 profile = opponent,
                 fallbackName = if (game.status == "waiting") sh("Rakip aranıyor", "Finding rival") else sh("Rakip", "Rival"),
                 score = displayedRivalScore,
-                earnedCubePoints = rivalEarnedCubePoints,
-                areaCount = panSiegeAreaCount(game, rivalOwner),
+                territoryPoints = rivalTerritoryPoints,
+                areaCount = rivalAreaCount,
                 accent = MainUi.Red,
                 active = displayedCurrentPlayerId == opponentId,
                 modifier = Modifier.weight(1f),
@@ -359,14 +361,22 @@ private fun PanSiegeBoard(
     var highlightedIndices by remember(gameId) { mutableStateOf<Set<Int>>(emptySet()) }
     val highlightAlpha = remember(gameId) { Animatable(0f) }
     var viewportMode by remember(gameId) { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
+    val closeScale = remember(viewport, boardPx) {
+        wordSiegeOnlineCloseScale(
+            viewportWidthPx = viewport.width.toFloat(),
+            viewportHeightPx = viewport.height.toFloat(),
+            boardWidthPx = boardPx,
+        )
+    }
 
-    val transform by remember(viewportMode, viewport, boardPx, closePan) {
+    val transform by remember(viewportMode, viewport, boardPx, closePan, closeScale) {
         derivedStateOf {
             wordSiegeBoardTransform(
                 mode = viewportMode,
                 viewportWidthPx = viewport.width.toFloat(),
                 viewportHeightPx = viewport.height.toFloat(),
                 boardWidthPx = boardPx,
+                closeScale = closeScale,
                 closePan = closePan,
             )
         }
@@ -378,7 +388,7 @@ private fun PanSiegeBoard(
         viewport.width.toFloat(),
         viewport.height.toFloat(),
         boardPx,
-        1f,
+        closeScale,
     )
 
     fun centerCloseOn(index: Int): Offset =
@@ -388,17 +398,18 @@ private fun PanSiegeBoard(
             viewportHeightPx = viewport.height.toFloat(),
             boardWidthPx = boardPx,
             cellSizePx = tilePx,
+            scale = closeScale,
         )
 
-    fun toggleViewport() {
+    fun toggleViewport(focusIndex: Int) {
         val nextMode = viewportMode.toggle()
         if (nextMode == WordSiegeBoardViewportMode.CLOSE) {
-            closePan = centerCloseOn(WordSiegeBoardSpec.CenterIndex)
+            closePan = centerCloseOn(focusIndex)
         }
         viewportMode = nextMode
     }
 
-    LaunchedEffect(viewport, gameId, boardPx) {
+    LaunchedEffect(viewport, gameId, boardPx, closeScale) {
         if (!initialized && viewport.width > 0 && viewport.height > 0) {
             closePan = centerCloseOn(WordSiegeBoardSpec.CenterIndex)
             initialized = true
@@ -469,7 +480,7 @@ private fun PanSiegeBoard(
                 .clip(RoundedCornerShape(14.dp))
                 .clipToBounds()
                 .onGloballyPositioned { viewport = it.size }
-                .pointerInput(gameId, viewportMode, viewport, boardPx) {
+                .pointerInput(gameId, viewportMode, viewport, boardPx, closeScale) {
                     if (viewportMode == WordSiegeBoardViewportMode.CLOSE) {
                         detectDragGestures(
                             onDragStart = { dragging = true },
@@ -512,7 +523,7 @@ private fun PanSiegeBoard(
                                 borderWidth = boardBorderWidth,
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
                                 onClick = { onCell(index) },
-                                onDoubleClick = ::toggleViewport,
+                                onDoubleClick = { toggleViewport(index) },
                             )
                         }
                     }
@@ -705,7 +716,7 @@ private fun PanSiegePlayerCard(
     profile: ProfileDto?,
     fallbackName: String,
     score: Int,
-    earnedCubePoints: Int,
+    territoryPoints: Int,
     areaCount: Int,
     accent: Color,
     active: Boolean,
@@ -731,7 +742,7 @@ private fun PanSiegePlayerCard(
                 Text(profile?.displayName ?: fallbackName, color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text("$score", color = accent, fontSize = 18.sp, fontWeight = FontWeight.Black)
                 Text(
-                    sh("Küp +$earnedCubePoints • Alan $areaCount • küp başına ±2", "Cubes +$earnedCubePoints • Area $areaCount • ±2 per cube"),
+                    sh("Küp $territoryPoints • Alan $areaCount • 2/küp", "Cubes $territoryPoints • Area $areaCount • 2/cube"),
                     color = MainUi.Muted,
                     fontSize = 7.sp,
                     maxLines = 1,
