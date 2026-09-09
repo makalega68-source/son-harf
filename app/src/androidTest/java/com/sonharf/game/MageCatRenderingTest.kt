@@ -63,6 +63,7 @@ class MageCatRenderingTest {
             compose.onAllNodesWithContentDescription("Mage Cat").fetchSemanticsNodes().size == 1
         }
         compose.onNodeWithContentDescription("Mage Cat").assertIsDisplayed()
+        compose.onNodeWithText("MAÇ TAMAMLANDI").assertIsDisplayed()
         compose.onNodeWithText("Zafer senin! Harika oynadın.").assertIsDisplayed()
         saveScreenshot("narrow-dock-large-text.png")
     }

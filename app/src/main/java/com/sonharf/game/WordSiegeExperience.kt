@@ -702,6 +702,7 @@ private fun WordSiegeMatch(
                     territory = game.areaFor(myOwner), finished = game.status == "finished",
                     won = me != null && game.winnerId == me, draw = game.status == "finished" && game.winnerId == null,
                 ), english = SonHarfUiState.isEnglish,
+                statusText = if (game.status == "waiting") sh("RAKİP ARANIYOR", "FINDING A RIVAL") else null,
             )
         }
 

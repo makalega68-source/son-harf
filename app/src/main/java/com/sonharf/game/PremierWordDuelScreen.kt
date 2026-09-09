@@ -736,6 +736,8 @@ private fun PremierArena(
                             "${room.lastEvent}:${room.turnDeadline}:${room.roundNo}:${room.validWordCount}" else null,
                     ),
                     english = language == "en",
+                    statusText = if (room.status !in setOf("playing", "final", "sudden_death"))
+                        pt(language, "MAÇ SENKRONİZE EDİLİYOR", "SYNCING MATCH") else null,
                 )
                 Spacer(Modifier.height(12.dp))
                 PremierTargetCard(language, required, room.gameMode, room.roundNo)
