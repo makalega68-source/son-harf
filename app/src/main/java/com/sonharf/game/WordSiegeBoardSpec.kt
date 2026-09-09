@@ -12,6 +12,10 @@ internal object WordSiegeBoardSpec {
     const val HorizontalDelta = 1
     const val VerticalDelta = Size
 
+    const val CenterBonus = "4K"
+    const val StarBonus = "3Y"
+    const val StarBonusPoints = 25
+
     fun isValidIndex(index: Int): Boolean = index in 0 until CellCount
     fun row(index: Int): Int = index / Size
     fun column(index: Int): Int = index % Size
@@ -19,6 +23,7 @@ internal object WordSiegeBoardSpec {
 
     fun bonusAt(index: Int): String? {
         if (!isValidIndex(index)) return null
+        if (index == CenterIndex) return CenterBonus
         val row = row(index)
         val column = column(index)
         return when {
@@ -28,6 +33,27 @@ internal object WordSiegeBoardSpec {
             row to column in DoubleLetter -> "2H"
             else -> null
         }
+    }
+
+    /**
+     * Returns the bonus layout for a newly-created match.
+     * Static premium cells remain deterministic while exactly one three-star reward cell
+     * is selected from a neutral cell for every new game. The center 4K cell is never replaced.
+     */
+    fun newGameBonuses(random: Random = Random.Default): List<String?> {
+        val bonuses = MutableList<String?>(CellCount) { index -> bonusAt(index) }
+        val candidates = (0 until CellCount).filter { index ->
+            index != CenterIndex && bonuses[index] == null
+        }
+        if (candidates.isNotEmpty()) {
+            bonuses[candidates[random.nextInt(candidates.size)]] = StarBonus
+        }
+        return bonuses
+    }
+
+    fun displayBonusLabel(bonus: String?): String = when (bonus) {
+        StarBonus -> "★★★"
+        else -> bonus.orEmpty()
     }
 
     fun canonicalBag(language: String): String = if (language.lowercase() == "en") {
@@ -66,7 +92,6 @@ internal object WordSiegeBoardSpec {
 
     private val DoubleWord = setOf(
         1 to 1, 1 to 13, 2 to 2, 2 to 12, 3 to 3, 3 to 11, 4 to 4, 4 to 10,
-        7 to 7,
         10 to 4, 10 to 10, 11 to 3, 11 to 11, 12 to 2, 12 to 12, 13 to 1, 13 to 13,
     )
 
