@@ -9,7 +9,7 @@ import org.junit.Test
 class VipDialogPolishContractTest {
 
     @Test
-    fun vipDialogKeepsBillingFlowAndDropsHeavyPulseUi() {
+    fun vipDialogKeepsBillingFlowAndExplicitlyPromisesFairPlay() {
         val source = projectFile("app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt").readText()
 
         assertTrue(source.contains("BillingManager("))
@@ -18,10 +18,13 @@ class VipDialogPolishContractTest {
         assertTrue(source.contains("ProductCatalog.VIP_YEARLY"))
         assertTrue(source.contains("ProductCatalog.VIP_MONTHLY"))
         assertFalse(source.contains("rememberInfiniteTransition"))
-        assertTrue(source.contains("2x SKOR"))
-        assertTrue(source.contains("2x SCORE"))
-        assertTrue(source.contains("server validated and consumed atomically"))
-        assertFalse(source.lowercase().contains("no competitive power"))
+
+        assertTrue(source.contains("ADİL REKABET"))
+        assertTrue(source.contains("FAIR PLAY"))
+        assertTrue(source.contains("gives no score, target-letter, or word advantage"))
+        assertFalse(source.contains("2x SKOR"))
+        assertFalse(source.contains("2x SCORE"))
+        assertFalse(source.contains("server validated and consumed atomically"))
     }
 
     private fun projectFile(path: String): File {
