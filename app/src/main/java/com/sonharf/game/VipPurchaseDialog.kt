@@ -102,21 +102,23 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
                         Text("SON HARF PRO", color = ProText, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Premier avantaj paketi", "Premier advantage pack"), color = ProBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(sh("Adil premium üyelik", "Fair-play premium membership"), color = ProBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                     TextButton(onClick = onDismiss, enabled = !busy) { Text("✕", color = ProText, fontSize = 18.sp) }
                 }
 
                 ProBenefit("🚫", sh("REKLAMSIZ", "AD-FREE"), sh("Menü ve mağazada reklamsız deneyim", "Ad-free menus and shop"))
-                ProBenefit("💡", sh("GÜNLÜK İPUCU", "DAILY HINT"), sh("Sunucu doğrulamalı kelime fısıltısı", "Server-validated word whisper"))
-                ProBenefit("🔄", sh("HARF DEĞİŞTİRİCİ", "LETTER SWAP"), sh("Aktif hedef harfi değiştir", "Change the active required letter"))
-                ProBenefit("×2", sh("2x SKOR", "2x SCORE"), sh("Bir sonraki geçerli hamlenin puanını ikiye katla", "Double the next valid move score"))
-                ProBenefit("↗", sh("GELİŞMİŞ İSTATİSTİK", "ADVANCED STATS"), sh("Detaylı maç analizi ve performans", "Detailed match analysis and performance"))
-                ProBenefit("♛", sh("ÖZEL ODA & STYLE", "PRIVATE ROOMS & STYLE"), sh("Sosyal ve görsel PRO ayrıcalıkları", "Social and visual PRO benefits"))
+                ProBenefit("🎨", sh("PRO STYLE", "PRO STYLE"), sh("Özel görünüm ve profil ayrıcalıkları", "Exclusive appearance and profile benefits"))
+                ProBenefit("♛", sh("ÖZEL ODALAR", "PRIVATE ROOMS"), sh("Arkadaşlarınla özel oyun alanları", "Private play spaces with friends"))
+                ProBenefit("📊", sh("GELİŞMİŞ İSTATİSTİK", "ADVANCED STATS"), sh("Detaylı maç analizi ve performans", "Detailed match analysis and performance"))
+                ProBenefit("👥", sh("SOSYAL AYRICALIKLAR", "SOCIAL BENEFITS"), sh("Kaydedilmiş arkadaş listesi ve PRO profil değeri", "Saved friend list and PRO profile value"))
 
                 Surface(shape = RoundedCornerShape(14.dp), color = ProGreen.copy(alpha = .10f), border = BorderStroke(1.dp, ProGreen.copy(alpha = .35f))) {
                     Text(
-                        sh("Tüm oyun yardımcıları sunucuda doğrulanır ve hak kullanıldığında atomik olarak tüketilir.", "All gameplay helpers are server validated and consumed atomically."),
+                        sh(
+                            "ADİL REKABET: PRO, dereceli Premier maçlarda skor, hedef harf veya kelime avantajı vermez.",
+                            "FAIR PLAY: PRO gives no score, target-letter, or word advantage in ranked Premier matches.",
+                        ),
                         Modifier.fillMaxWidth().padding(11.dp), color = ProGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
                     )
                 }
