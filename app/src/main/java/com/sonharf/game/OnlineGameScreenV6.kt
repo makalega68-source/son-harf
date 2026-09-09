@@ -35,12 +35,18 @@ import kotlinx.coroutines.delay
 fun OnlineGameScreenV6() {
     val backend = remember { OnlineGameBackend() }
     var hasEnteredLiveMatch by remember { mutableStateOf(false) }
+    var finishedBeforeLiveId by remember { mutableStateOf<String?>(null) }
     var postMatchRoom by remember { mutableStateOf<GameRoomDto?>(null) }
     var showHammyResult by remember { mutableStateOf(false) }
     val inMatch = SonHarfUiState.inMatch
 
     LaunchedEffect(inMatch) {
         if (inMatch) {
+            if (!hasEnteredLiveMatch) {
+                finishedBeforeLiveId = runCatching {
+                    backend.findPremierLatestFinishedRoom()?.id
+                }.getOrNull()
+            }
             hasEnteredLiveMatch = true
             postMatchRoom = null
             showHammyResult = false
@@ -56,7 +62,10 @@ fun OnlineGameScreenV6() {
 
         hasEnteredLiveMatch = false
         val finished = runCatching { backend.findPremierLatestFinishedRoom() }.getOrNull()
-        if (finished != null && finished.isPremierFinished()) {
+        val isNewFinishedRoom = finished != null && finished.id != finishedBeforeLiveId
+        finishedBeforeLiveId = null
+
+        if (isNewFinishedRoom && finished != null && finished.isPremierFinished()) {
             postMatchRoom = finished
             showHammyResult = true
             delay(6000)
