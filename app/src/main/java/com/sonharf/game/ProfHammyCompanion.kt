@@ -392,6 +392,40 @@ private fun ProfHammyCanvas(
                 )
             }
 
+            ProfHammyMood.FOCUSED -> {
+                drawLine(
+                    color = eye,
+                    start = Offset(w * 0.45f, h * 0.69f),
+                    end = Offset(w * 0.55f, h * 0.69f),
+                    strokeWidth = w * 0.018f,
+                )
+            }
+
+            ProfHammyMood.EXCITED -> {
+                drawOval(
+                    color = eye,
+                    topLeft = Offset(w * 0.42f, h * 0.635f),
+                    size = androidx.compose.ui.geometry.Size(w * 0.16f, h * 0.14f),
+                )
+                drawRect(
+                    color = Color.White,
+                    topLeft = Offset(w * 0.47f, h * 0.645f),
+                    size = androidx.compose.ui.geometry.Size(w * 0.06f, h * 0.045f),
+                )
+            }
+
+            ProfHammyMood.IDLE -> {
+                drawArc(
+                    color = eye,
+                    startAngle = 22f,
+                    sweepAngle = 136f,
+                    useCenter = false,
+                    topLeft = Offset(w * 0.435f, h * 0.63f),
+                    size = androidx.compose.ui.geometry.Size(w * 0.13f, h * 0.11f),
+                    style = Stroke(width = w * 0.019f),
+                )
+            }
+
             else -> {
                 drawArc(
                     color = eye,
@@ -437,6 +471,19 @@ private fun ProfHammyCanvas(
                 color = primary.copy(alpha = 0.35f),
                 radius = w * 0.016f,
                 center = Offset(w * 0.90f, h * 0.36f),
+            )
+        }
+
+        if (mood == ProfHammyMood.EXCITED) {
+            drawCircle(
+                color = primary.copy(alpha = 0.28f),
+                radius = w * 0.018f,
+                center = Offset(w * 0.18f, h * 0.18f),
+            )
+            drawCircle(
+                color = primary.copy(alpha = 0.28f),
+                radius = w * 0.014f,
+                center = Offset(w * 0.82f, h * 0.20f),
             )
         }
 
