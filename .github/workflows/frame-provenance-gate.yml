@@ -45,13 +45,18 @@ jobs:
           grep -q 'val Background: Color get() = SonHarfTheme.Background' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'lightColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'darkColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'MageCatCompanion(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          ! grep -q 'MageCat' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.GAME -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'UnifiedDestination.LETTER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          test -s app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
+          grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          ! grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          ! grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
+          ! grep -q 'com.sonharf.game.mascot' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          grep -q 'premierRemainingTurnSeconds' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          test ! -d app/src/main/java/com/sonharf/game/mascot
+          test ! -f app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
+          test -f supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
       - name: Test and build debug APK
         run: gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
       - name: Verify compiled APK pixels against immutable purchased-source manifest
