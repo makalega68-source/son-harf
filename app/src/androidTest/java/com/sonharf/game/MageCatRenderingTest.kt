@@ -13,6 +13,8 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.sonharf.game.mascot.*
+import com.sonharf.game.data.GameRoomDto
+import org.junit.Assert.assertTrue
 import java.io.File
 import org.junit.Rule
 import org.junit.Test
@@ -66,6 +68,38 @@ class MageCatRenderingTest {
         compose.onNodeWithText("MAÇ TAMAMLANDI").assertIsDisplayed()
         compose.onNodeWithText("Zafer senin! Harika oynadın.").assertIsDisplayed()
         saveScreenshot("narrow-dock-large-text.png")
+    }
+
+    @Test fun compactArenaKeepsMascotInputAndKeyboardSeparate() {
+        compose.setContent {
+            MaterialTheme {
+                Surface(Modifier.width(360.dp).height(640.dp)) {
+                    PremierArena(
+                        language = "tr",
+                        room = GameRoomDto(id = "fixture", code = "TEST", hostId = "host", guestId = "guest",
+                            status = "playing", currentPlayerId = "host", hostScore = 12, guestScore = 9),
+                        me = null, opponent = null, meId = "host", words = emptyList(),
+                        input = "KALEM", notice = "", busy = false, turnSeconds = 14,
+                        mascotRejectedWords = 0, floatingMessage = null,
+                        onInput = {}, onForfeit = {}, onQuickChat = {}, onSubmit = {},
+                    )
+                }
+            }
+        }
+        compose.waitUntil(15_000) {
+            compose.onAllNodesWithContentDescription("Mage Cat").fetchSemanticsNodes().size == 1
+        }
+        compose.onNodeWithContentDescription("Mage Cat").assertIsDisplayed()
+        compose.onNodeWithText("SIRA SENDE").assertIsDisplayed()
+        compose.onNodeWithText("KALEM").assertIsDisplayed()
+        compose.onNodeWithText("Ğ").assertIsDisplayed()
+        compose.onNodeWithText("GÖNDER  ➤").assertIsDisplayed()
+        val mascot = compose.onNodeWithContentDescription("Mage Cat").fetchSemanticsNode().boundsInRoot
+        val input = compose.onNodeWithText("KALEM").fetchSemanticsNode().boundsInRoot
+        val keyboard = compose.onNodeWithText("Ğ").fetchSemanticsNode().boundsInRoot
+        assertTrue("Mascot overlaps word input", mascot.bottom < input.top)
+        assertTrue("Word input overlaps keyboard", input.bottom < keyboard.top)
+        saveScreenshot("compact-arena.png")
     }
 
     private fun saveScreenshot(name: String) {

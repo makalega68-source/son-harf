@@ -47,10 +47,11 @@ jobs:
             adb install -r app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
             adb shell am instrument -w -r -e class com.sonharf.game.MageCatRenderingTest com.sonharf.game.test/androidx.test.runner.AndroidJUnitRunner > mascot-rendering/instrumentation.txt
             cat mascot-rendering/instrumentation.txt
-            grep -Fq 'OK (2 tests)' mascot-rendering/instrumentation.txt
+            grep -Fq 'OK (3 tests)' mascot-rendering/instrumentation.txt
             adb pull /sdcard/Android/data/com.sonharf.game/files/mascot-verification mascot-rendering/
             test -s mascot-rendering/mascot-verification/nine-expressions.png
             test -s mascot-rendering/mascot-verification/narrow-dock-large-text.png
+            test -s mascot-rendering/mascot-verification/compact-arena.png
       - uses: actions/upload-artifact@v4
         if: always()
         with:

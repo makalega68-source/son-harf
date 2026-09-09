@@ -37,7 +37,7 @@ fun ReactiveMageCatOverlay(
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
     ) {
         Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
-            MageCatCompanion(size = 52.dp, moodOverride = reaction.mood, eventKey = reaction.sequence, animateIdle = false)
+            MageCatCompanion(size = 44.dp, moodOverride = reaction.mood, eventKey = reaction.sequence, animateIdle = false)
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 // Turn ownership stays visible even while a celebration/comfort reaction plays.

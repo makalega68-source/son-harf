@@ -13,6 +13,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -695,7 +697,7 @@ private fun PremierStatPill(text: String, accent: Color) {
 }
 
 @Composable
-private fun PremierArena(
+internal fun PremierArena(
     language: String,
     room: GameRoomDto,
     me: ProfileDto?,
@@ -727,8 +729,13 @@ private fun PremierArena(
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             PremierArenaHeader(language, room, me, opponent, rivalName, myScore, rivalScore, myRounds, rivalRounds, myStreak, rivalStreak, turnSeconds, onForfeit, onQuickChat)
-            Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(Modifier.height(12.dp))
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp)) {
+                val targetSize = if (maxHeight < 350.dp) 104.dp else 154.dp
+                Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    // Keep input and keyboard anchored; only the information area can scroll.
+                    Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                        horizontalAlignment = Alignment.CenterHorizontally) {
+                Spacer(Modifier.height(2.dp))
                 ReactiveMageCatOverlay(
                     CompanionSnapshot(room.id, myScore, rivalScore, myTurn, turnSeconds, myStreak,
                         rejectedWords = mascotRejectedWords,
@@ -739,8 +746,8 @@ private fun PremierArena(
                     statusText = if (room.status !in setOf("playing", "final", "sudden_death"))
                         pt(language, "MAÇ SENKRONİZE EDİLİYOR", "SYNCING MATCH") else null,
                 )
-                Spacer(Modifier.height(12.dp))
-                PremierTargetCard(language, required, room.gameMode, room.roundNo)
+                Spacer(Modifier.height(2.dp))
+                PremierTargetCard(language, required, room.gameMode, room.roundNo, targetSize)
                 Spacer(Modifier.height(10.dp))
                 Text(
                     if (required == "★") pt(language, "İlk kelime serbest", "Free opening word")
@@ -752,12 +759,13 @@ private fun PremierArena(
                 )
                 Spacer(Modifier.height(10.dp))
                 PremierWordTrail(words, language)
-                Spacer(Modifier.weight(1f))
+                    }
                 if (notice.isNotBlank()) {
                     Text(notice, color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 6.dp))
                 }
                 PremierInputBar(language, input, required, myTurn, busy)
                 Spacer(Modifier.height(7.dp))
+                }
             }
             PremierKeyboard(language, input, enabled = myTurn && !busy, onInput = onInput, onSubmit = onSubmit)
         }
@@ -886,7 +894,7 @@ private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String) 
 }
 
 @Composable
-private fun PremierTargetCard(language: String, required: String, gameMode: String, round: Int) {
+private fun PremierTargetCard(language: String, required: String, gameMode: String, round: Int, size: androidx.compose.ui.unit.Dp = 154.dp) {
     val transition = rememberInfiniteTransition(label = "letter")
     val glow by transition.animateFloat(.25f, .55f, infiniteRepeatable(tween(1050), RepeatMode.Reverse), label = "glow")
     val targetBadge = when {
@@ -896,7 +904,7 @@ private fun PremierTargetCard(language: String, required: String, gameMode: Stri
         else -> "x${round.coerceIn(1, 3)}"
     }
     Box(
-        Modifier.size(154.dp).shadow(25.dp, RoundedCornerShape(34.dp)).clip(RoundedCornerShape(34.dp))
+        Modifier.size(size).shadow(25.dp, RoundedCornerShape(34.dp)).clip(RoundedCornerShape(34.dp))
             .background(Brush.radialGradient(listOf(PremierUi.Sky, PremierUi.Ocean, PremierUi.OceanDeep))),
         contentAlignment = Alignment.Center,
     ) {
@@ -905,7 +913,7 @@ private fun PremierTargetCard(language: String, required: String, gameMode: Stri
             Text(targetBadge, Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(required, color = Color.White, fontSize = if (required.length > 1) 58.sp else 76.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+            Text(required, color = Color.White, fontSize = if (size < 154.dp) { if (required.length > 1) 40.sp else 54.sp } else { if (required.length > 1) 58.sp else 76.sp }, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
             Text(if (required == "★") pt(language, "SERBEST", "FREE") else pt(language, "HEDEF", "TARGET"), color = Color.White.copy(alpha = .78f), fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
         }
     }
