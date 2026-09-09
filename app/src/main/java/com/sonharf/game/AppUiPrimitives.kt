@@ -21,27 +21,36 @@ internal object MainUi {
     val Background: Color get() = SonHarfTheme.Background
     val Surface: Color get() = SonHarfTheme.Surface
     val SurfaceSoft: Color get() = SonHarfTheme.SurfaceSecondary
+    val SurfaceRaised: Color get() = SonHarfTheme.SurfaceElevated
+    val Navigation: Color get() = SonHarfTheme.NavigationSurface
+    val Modal: Color get() = SonHarfTheme.ModalSurface
+    val GameSurface: Color get() = SonHarfTheme.GameSurface
+    val Tile: Color get() = SonHarfTheme.GameTile
+    val TileBorder: Color get() = SonHarfTheme.GameTileBorder
     val Text: Color get() = SonHarfTheme.TextPrimary
     val Muted: Color get() = SonHarfTheme.TextSecondary
-    val Blue: Color get() = SonHarfTheme.PrimaryBlue
-    val BlueDeep: Color get() = SonHarfTheme.PrimaryBlue
-    val BlueSoft: Color get() = SonHarfTheme.PrimaryBlueSoft
+    val Blue: Color get() = SonHarfTheme.Primary
+    val BlueDeep: Color get() = SonHarfTheme.Primary
+    val BlueSoft: Color get() = SonHarfTheme.PrimarySoft
+    val GrayBlue: Color get() = SonHarfTheme.SoftBlue
+    val Cyan: Color get() = SonHarfTheme.Turquoise
     val Border: Color get() = SonHarfTheme.Border
     val Green: Color get() = SonHarfTheme.Success
     val Gold: Color get() = SonHarfTheme.Warning
     val Red: Color get() = SonHarfTheme.Error
-    val Purple: Color get() = SonHarfTheme.Purple
+    val Purple: Color get() = SonHarfTheme.Lavender
 }
 
-// Shared palette still used by independent modes such as Harf Yolu / competition screens.
-internal val PortalBg = Color(0xFFF7F9FC)
-internal val PortalCard = Color.White
-internal val PortalText = Color(0xFF182235)
-internal val PortalMuted = Color(0xFF718096)
-internal val PortalBlue = Color(0xFF1769E0)
-internal val PortalGold = Color(0xFFF3A81A)
-internal val PortalGreen = Color(0xFF22B95F)
-internal val PortalRed = Color(0xFFE64B55)
+// Independent/legacy mode tokens now resolve to the same application-wide palette.
+// Keeping these aliases avoids risky broad rewrites while eliminating the old bright portal theme.
+internal val PortalBg: Color get() = SonHarfTheme.Background
+internal val PortalCard: Color get() = SonHarfTheme.Surface
+internal val PortalText: Color get() = SonHarfTheme.TextPrimary
+internal val PortalMuted: Color get() = SonHarfTheme.TextSecondary
+internal val PortalBlue: Color get() = SonHarfTheme.SoftBlue
+internal val PortalGold: Color get() = SonHarfTheme.Warning
+internal val PortalGreen: Color get() = SonHarfTheme.Success
+internal val PortalRed: Color get() = SonHarfTheme.Error
 
 @Composable
 internal fun MainSectionTitle(title: String) {

@@ -8,7 +8,7 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeUnifiedShellFollowsEquippedThemeAndPremierKeepsPremiumBlueWhiteArenaPalette() {
+    fun activeUnifiedShellFollowsEquippedThemeAndPremierKeepsCalmHighLegibilityArenaPalette() {
         val unified = source("UnifiedProApp.kt")
         val premier = source("PremierWordDuelScreen.kt")
         val startup = source("StableV1App.kt")
@@ -16,6 +16,7 @@ class UnifiedThemeSourceContractTest {
 
         assertTrue(unified.contains("val Background: Color get() = SonHarfTheme.Background"))
         assertTrue(unified.contains("val Surface: Color get() = SonHarfTheme.Surface"))
+        assertTrue(unified.contains("val Navigation: Color get() = SonHarfTheme.NavigationSurface"))
         assertTrue(unified.contains("lightColorScheme("))
         assertTrue(unified.contains("darkColorScheme("))
         assertFalse(unified.contains("MageCatCompanion("))
@@ -24,13 +25,19 @@ class UnifiedThemeSourceContractTest {
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
         assertTrue(theme.contains("val IsDark: Boolean get() = dark"))
         assertTrue(theme.contains("val SecondaryAccent: Color get()"))
+        assertTrue(theme.contains("val NavigationSurface: Color get()"))
+        assertTrue(theme.contains("val GameSurface: Color get()"))
+        assertTrue(theme.contains("val GameTile: Color get()"))
+        assertTrue(theme.contains("val HeroStart: Color get()"))
 
-        // Premier gameplay has an explicit premium White/Blue arena contract while the app shell
-        // continues to follow the user's equipped global theme outside the active duel surface.
-        assertTrue(premier.contains("val Background = Color(0xFFE9F1FF)"))
-        assertTrue(premier.contains("val Surface = Color(0xFFFFFFFF)"))
-        assertTrue(premier.contains("val Ocean = Color(0xFF2563EB)"))
-        assertTrue(premier.contains("Brush.verticalGradient(listOf(Color.White, PremierUi.Background))"))
+        // Premier remains a fixed high-legibility competitive surface, but now belongs to the
+        // same calm sage / cream / gray-blue visual family as the application shell.
+        assertTrue(premier.contains("val Background = Color(0xFFF1F5F2)"))
+        assertTrue(premier.contains("val Surface = Color(0xFFFFFDF7)"))
+        assertTrue(premier.contains("val Ocean = Color(0xFF4F725E)"))
+        assertTrue(premier.contains("val Sky = Color(0xFF4A6E83)"))
+        assertTrue(premier.contains("Brush.verticalGradient(listOf(PremierUi.Surface, PremierUi.Background))"))
+        assertFalse(premier.contains("val Ocean = Color(0xFF2563EB)"))
         assertFalse(premier.contains("val Background = Color(0xFF020617)"))
         assertFalse(premier.contains("val Surface = Color(0xFF0F172A)"))
         assertFalse(premier.contains("MageCatCompanion("))
