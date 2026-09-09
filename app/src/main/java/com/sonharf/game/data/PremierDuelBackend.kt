@@ -17,6 +17,24 @@ suspend fun OnlineGameBackend.findPremierActiveRoom(): GameRoomDto? {
         .maxByOrNull { it.createdAt }
 }
 
+/**
+ * Read-only post-match lookup used by presentation surfaces after Premier has already left live play.
+ * It never mutates match state and deliberately filters to rooms whose authoritative result is final.
+ */
+suspend fun OnlineGameBackend.findPremierLatestFinishedRoom(): GameRoomDto? {
+    val me = currentUserId() ?: return null
+    return SupabaseProvider.client.from("game_rooms")
+        .select()
+        .decodeList<GameRoomDto>()
+        .asSequence()
+        .filter { room ->
+            (room.hostId == me || room.guestId == me) &&
+                room.isPremierFinished() &&
+                (room.isBot || room.guestId != null)
+        }
+        .maxByOrNull { it.createdAt }
+}
+
 suspend fun OnlineGameBackend.getPremierOpponent(room: GameRoomDto): ProfileDto? {
     if (room.isBot) return null
     val me = currentUserId() ?: return null
