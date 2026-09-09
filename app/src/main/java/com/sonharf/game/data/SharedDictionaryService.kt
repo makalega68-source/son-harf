@@ -158,7 +158,7 @@ object SharedDictionaryService {
         return SupabaseProvider.client.postgrest.rpc(
             "validate_game_word_v2",
             buildJsonObject {
-                put("p_word", word.trim())
+                put("p_word", normalized)
                 put("p_language", lang)
             },
         ).decodeSingle()
