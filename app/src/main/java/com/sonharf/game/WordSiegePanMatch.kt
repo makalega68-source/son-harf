@@ -113,7 +113,10 @@ internal fun WordSiegePanMatch(
     }
 
     if (fallbackPracticeActive && game.status == "waiting") {
-        WordSiegePracticeScreen(onExit = { fallbackPracticeActive = false })
+        WordSiegePracticeScreen(
+            onExit = { fallbackPracticeActive = false },
+            matchmakingFallback = true,
+        )
         return
     }
 
@@ -186,8 +189,8 @@ internal fun WordSiegePanMatch(
                     Spacer(Modifier.height(8.dp))
                     Text(
                         sh(
-                            "15 saniye içinde rakip bulunmazsa botla hemen başlayacaksın. Gerçek rakip araması arka planda sürecek.",
-                            "If no rival is found within 15 seconds, practice starts immediately with a bot while real matchmaking continues in the background.",
+                            "15 saniye içinde rakip bulunmazsa geçici bot maçı hemen başlayacak. Gerçek rakip araması arka planda sürecek.",
+                            "If no rival is found within 15 seconds, a temporary bot match starts immediately while real matchmaking continues in the background.",
                         ),
                         color = MainUi.Muted,
                         fontSize = 12.sp,
