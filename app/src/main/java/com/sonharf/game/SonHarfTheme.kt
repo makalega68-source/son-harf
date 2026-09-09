@@ -28,12 +28,13 @@ internal object SonHarfTheme {
     val GameTile: Color get() = if (dark) Color(0xFF4B4437) else Color(0xFFF1E7D3)
     val GameTileBorder: Color get() = if (dark) Color(0xFF7C6E50) else Color(0xFFC6AD7D)
 
-    // Calm accent family.
-    val Primary: Color get() = if (dark) Color(0xFFA9C7B4) else Color(0xFF4F725E) // sage
+    // Calm accent family. Dark mode deliberately keeps filled accents dark
+    // enough for legacy white control labels to remain readable.
+    val Primary: Color get() = if (dark) Color(0xFF527763) else Color(0xFF4F725E) // sage
     val PrimarySoft: Color get() = if (dark) Color(0xFF273B30) else Color(0xFFDDE9E1)
-    val SoftBlue: Color get() = if (dark) Color(0xFFA4BFCE) else Color(0xFF4A6E83)
-    val Turquoise: Color get() = if (dark) Color(0xFF8EBBB4) else Color(0xFF477B78)
-    val Lavender: Color get() = if (dark) Color(0xFFB9ABD6) else Color(0xFF7B6B95)
+    val SoftBlue: Color get() = if (dark) Color(0xFF4A6E83) else Color(0xFF4A6E83)
+    val Turquoise: Color get() = if (dark) Color(0xFF477B78) else Color(0xFF477B78)
+    val Lavender: Color get() = if (dark) Color(0xFF7B6B95) else Color(0xFF7B6B95)
     val Sand: Color get() = if (dark) Color(0xFFD1BC91) else Color(0xFFD7C49F)
 
     // Text and dividers.
@@ -42,16 +43,17 @@ internal object SonHarfTheme {
     val Border: Color get() = if (dark) Color(0xFF3D5147) else Color(0xFFCCD8D1)
 
     // Semantic states stay recognizable but use desaturated, calmer tones.
-    val Success: Color get() = if (dark) Color(0xFF91C8A4) else Color(0xFF4B765D)
-    val Error: Color get() = if (dark) Color(0xFFD99CA2) else Color(0xFFA84F59)
-    val Warning: Color get() = if (dark) Color(0xFFD3B57C) else Color(0xFF8A6538)
+    val Success: Color get() = if (dark) Color(0xFF4B765D) else Color(0xFF4B765D)
+    val Error: Color get() = if (dark) Color(0xFFA84F59) else Color(0xFFA84F59)
+    val Warning: Color get() = if (dark) Color(0xFF8A6538) else Color(0xFF8A6538)
     val DisabledBackground: Color get() = if (dark) Color(0xFF29372F) else Color(0xFFE2E8E3)
     val DisabledContent: Color get() = if (dark) Color(0xFF7F9187) else Color(0xFF809087)
 
-    // Content colors for filled controls.
-    val OnPrimary: Color get() = if (dark) Color(0xFF18261F) else Color.White
-    val OnSecondary: Color get() = if (dark) Color(0xFF15222A) else Color.White
-    val OnTertiary: Color get() = if (dark) Color(0xFF17231E) else Color.White
+    // Filled controls use one high-contrast content color across both themes.
+    // This also protects legacy composables that still assume white labels.
+    val OnPrimary: Color get() = Color.White
+    val OnSecondary: Color get() = Color.White
+    val OnTertiary: Color get() = Color.White
 
     // Soft hero gradient used by the home/profile summary layer.
     val HeroStart: Color get() = if (dark) Color(0xFF20332A) else Color(0xFF607E6B)
