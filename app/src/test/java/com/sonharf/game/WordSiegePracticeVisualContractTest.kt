@@ -15,18 +15,19 @@ class WordSiegePracticeVisualContractTest {
         }
     }
 
-    @Test fun practiceBoardUsesCalmBackgroundAndBorderlessCellSeparation() {
+    @Test fun practiceBoardUsesLivelyCalmBonusSurfacesAndSubtleLatestMoveHighlight() {
         val text = source()
-        assertTrue(text.contains("PracticeSiegeBoardSurface = Color(0xFFDDE6EB)"))
+        assertTrue(text.contains("PracticeSiegeBoardSurface = Color(0xFFD9E4E7)"))
         assertTrue(text.contains("PracticeSiegeNeutral = Color(0xFFF8FAF9)"))
-        assertTrue(text.contains(".padding(1.6.dp)"))
-
-        val cellStart = text.indexOf("private fun WordSiegePracticeBoardCell")
-        val rackStart = text.indexOf("internal fun WordSiegePracticeRackTile")
-        assertTrue(cellStart >= 0 && rackStart > cellStart)
-        val cellSection = text.substring(cellStart, rackStart)
-        assertFalse(cellSection.contains("BorderStroke("))
-        assertFalse(cellSection.contains("wordSiegeBoardBorderWidthDp"))
+        assertTrue(text.contains("PracticeBonus2H"))
+        assertTrue(text.contains("PracticeBonus3H"))
+        assertTrue(text.contains("PracticeBonus2K"))
+        assertTrue(text.contains("PracticeBonus3K"))
+        assertTrue(text.contains("PracticeBonus4K"))
+        assertTrue(text.contains("PracticeBonusStar"))
+        assertTrue(text.contains("WordSiegeBoardSpec.displayBonusLabel(activeBonus)"))
+        assertTrue(text.contains("highlightAlpha.animateTo(0.42f"))
+        assertTrue(text.contains(".padding(1.25.dp)"))
     }
 
     @Test fun visualChangePreservesViewportVfxAndInteractionContracts() {
