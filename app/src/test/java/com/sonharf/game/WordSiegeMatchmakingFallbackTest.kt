@@ -26,8 +26,10 @@ class WordSiegeMatchmakingFallbackTest {
         assertTrue(practice.contains("BOT MATCH • FINDING REAL RIVAL"))
         assertTrue(practice.contains("Gerçek rakip bulununca otomatik geçilecek"))
         assertTrue(practice.contains("switch automatically when a real rival is found"))
-        assertTrue(practice.contains("BOT İLE ALIŞTIRMA • ANA SÖZLÜK"))
-        assertTrue(practice.contains("BOT PRACTICE • MAIN DICTIONARY"))
+        assertTrue(practice.contains("BOT İLE ALIŞTIRMA"))
+        assertTrue(practice.contains("BOT PRACTICE"))
+        assertTrue(!practice.contains("ANA SÖZLÜK"))
+        assertTrue(!practice.contains("MAIN DICTIONARY"))
 
         // Manual practice stays explicitly practice-mode by relying on the default false parameter.
         assertTrue(experience.contains("WordSiegePracticeScreen(onExit = { practiceActive = false })"))
