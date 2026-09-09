@@ -8,6 +8,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,11 +23,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -35,6 +40,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 enum class ProfHammyMood {
     IDLE,
@@ -46,18 +52,73 @@ enum class ProfHammyMood {
     WINK,
 }
 
+private data class ProfHammyHomeReaction(
+    val mood: ProfHammyMood,
+    val textTr: String,
+    val textEn: String,
+)
+
+private val profHammyHomeReactions = listOf(
+    ProfHammyHomeReaction(
+        mood = ProfHammyMood.WINK,
+        textTr = "Bugün kelimeler senden yana! 😉",
+        textEn = "Words are on your side today! 😉",
+    ),
+    ProfHammyHomeReaction(
+        mood = ProfHammyMood.EXCITED,
+        textTr = "Bir seri yakalamaya ne dersin? 🔥",
+        textEn = "How about starting a streak? 🔥",
+    ),
+    ProfHammyHomeReaction(
+        mood = ProfHammyMood.FOCUSED,
+        textTr = "İlk harfi gör, kelimeyi zihninde tamamla.",
+        textEn = "See the first letter and finish the word in your mind.",
+    ),
+    ProfHammyHomeReaction(
+        mood = ProfHammyMood.HAPPY,
+        textTr = "Hazırsan arenada görüşürüz! 🌟",
+        textEn = "Ready? I’ll see you in the arena! 🌟",
+    ),
+)
+
+private const val PROF_HAMMY_DEFAULT_TR = "Hazırsan başlayalım. Bugün güzel bir kelime bul!"
+private const val PROF_HAMMY_DEFAULT_EN = "Ready? Let’s find a great word today!"
+
 /**
  * Lobby-safe Prof. Hammy presentation.
  *
- * This component is deliberately stateless and has no access to Premier match state,
+ * Reactions are local UI state only. This component has no access to Premier match state,
  * score, rating, target letters, word suggestions, inventory or economy state.
  */
 @Composable
 fun ProfHammyHomeCard(
     modifier: Modifier = Modifier,
 ) {
+    var reactionId by remember { mutableIntStateOf(0) }
+    var mood by remember { mutableStateOf(ProfHammyMood.HAPPY) }
+    var speechTr by remember { mutableStateOf(PROF_HAMMY_DEFAULT_TR) }
+    var speechEn by remember { mutableStateOf(PROF_HAMMY_DEFAULT_EN) }
+
+    LaunchedEffect(reactionId) {
+        delay(if (reactionId == 0) 2200L else 1800L)
+        mood = ProfHammyMood.IDLE
+        if (reactionId > 0) {
+            speechTr = PROF_HAMMY_DEFAULT_TR
+            speechEn = PROF_HAMMY_DEFAULT_EN
+        }
+    }
+
     Surface(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable {
+                val nextId = reactionId + 1
+                val reaction = profHammyHomeReactions[(nextId - 1) % profHammyHomeReactions.size]
+                reactionId = nextId
+                mood = reaction.mood
+                speechTr = reaction.textTr
+                speechEn = reaction.textEn
+            },
         shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.20f)),
@@ -68,7 +129,7 @@ fun ProfHammyHomeCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ProfHammyCompanion(
-                mood = ProfHammyMood.HAPPY,
+                mood = mood,
                 size = 92.dp,
             )
             Spacer(Modifier.width(13.dp))
@@ -83,16 +144,13 @@ fun ProfHammyHomeCard(
                     fontWeight = FontWeight.Black,
                 )
                 Text(
-                    text = sh("Kelime öğretmenin", "Your word coach"),
+                    text = sh("Kelime öğretmenin • Dokun ve selamlaş", "Your word coach • Tap to say hi"),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = sh(
-                        "Hazırsan başlayalım. Bugün güzel bir kelime bul!",
-                        "Ready? Let’s find a great word today!",
-                    ),
+                    text = sh(speechTr, speechEn),
                     color = MaterialTheme.colorScheme.onSurface,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -104,6 +162,7 @@ fun ProfHammyHomeCard(
     }
 }
 
+/** Stateless render-only mascot surface. */
 @Composable
 fun ProfHammyCompanion(
     modifier: Modifier = Modifier,
@@ -115,7 +174,10 @@ fun ProfHammyCompanion(
         initialValue = -1.2f,
         targetValue = 1.2f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1800, easing = FastOutSlowInEasing),
+            animation = tween(
+                durationMillis = if (mood == ProfHammyMood.EXCITED) 1200 else 1800,
+                easing = FastOutSlowInEasing,
+            ),
             repeatMode = RepeatMode.Reverse,
         ),
         label = "ProfHammyFloat",
@@ -127,18 +189,21 @@ fun ProfHammyCompanion(
             .graphicsLayer { translationY = floatY },
         contentAlignment = Alignment.Center,
     ) {
-        ProfHammyCanvas(mood = mood)
+        ProfHammyCanvas(mood = mood, size = size)
     }
 }
 
 @Composable
-private fun ProfHammyCanvas(mood: ProfHammyMood) {
+private fun ProfHammyCanvas(
+    mood: ProfHammyMood,
+    size: Dp,
+) {
     val primary = MaterialTheme.colorScheme.primary
     val surface = MaterialTheme.colorScheme.surface
 
-    Canvas(modifier = Modifier.size(92.dp)) {
-        val w = size.width
-        val h = size.height
+    Canvas(modifier = Modifier.size(size)) {
+        val w = this.size.width
+        val h = this.size.height
         val cx = w * 0.50f
 
         val fur = Color(0xFFE59A3A)
