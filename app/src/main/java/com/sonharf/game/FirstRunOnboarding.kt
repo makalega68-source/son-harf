@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -25,8 +23,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -39,9 +35,6 @@ private data class OnboardingStep(
     val bodyEn: String,
     val exampleTr: String,
     val exampleEn: String,
-    val coachTr: String,
-    val coachEn: String,
-    val coachMood: ProfHammyMood,
 )
 
 private val onboardingSteps = listOf(
@@ -52,9 +45,6 @@ private val onboardingSteps = listOf(
         bodyEn = "Start your word with the final letter of your opponent's word.",
         exampleTr = "KİTAP → PAMUK → KALEM",
         exampleEn = "TABLE → EAGLE → EARTH",
-        coachTr = "Son harfi yakala; yeni kelimen oradan başlar.",
-        coachEn = "Catch the last letter; your next word starts there.",
-        coachMood = ProfHammyMood.WINK,
     ),
     OnboardingStep(
         titleTr = "2 • TAŞ PUANLARI VE COMBO",
@@ -63,9 +53,6 @@ private val onboardingSteps = listOf(
         bodyEn = "Hard letters are worth more. Fast consecutive valid words build a streak.",
         exampleTr = "J • Ğ • Z = yüksek değer",
         exampleEn = "Q • X • Z = high value",
-        coachTr = "Zor harfler puan kazandırır; seri ise ritmini gösterir.",
-        coachEn = "Hard letters score more; streaks show your rhythm.",
-        coachMood = ProfHammyMood.EXCITED,
     ),
     OnboardingStep(
         titleTr = "3 • 20 SANİYE BASKISI",
@@ -74,9 +61,6 @@ private val onboardingSteps = listOf(
         bodyEn = "You have 20 seconds per turn. When time expires, play passes on. Find the right word first, then build speed.",
         exampleTr = "Odaklan • Kelimeyi bul • Gönder",
         exampleEn = "Focus • Find the word • Send",
-        coachTr = "20 saniyeyi sakin kullan. Hız kadar doğruluk da önemli.",
-        coachEn = "Use your 20 seconds calmly. Accuracy matters as much as speed.",
-        coachMood = ProfHammyMood.FOCUSED,
     ),
 )
 
@@ -111,46 +95,6 @@ internal fun FirstRunOnboarding(onComplete: () -> Unit) {
                 color = MainUi.Blue,
             )
             Spacer(Modifier.height(16.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(18.dp),
-                color = MainUi.Surface,
-                border = BorderStroke(1.dp, MainUi.Border),
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Image(
-                        painter = painterResource(R.drawable.prof_hammy_hero),
-                        contentDescription = "Prof. Hammy",
-                        modifier = Modifier
-                            .width(92.dp)
-                            .height(112.dp),
-                        contentScale = ContentScale.Fit,
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(2.dp),
-                    ) {
-                        Text(
-                            text = "PROF. HAMMY",
-                            color = MainUi.Blue,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Black,
-                        )
-                        Text(
-                            text = if (english) current.coachEn else current.coachTr,
-                            color = MainUi.Text,
-                            fontSize = 13.sp,
-                            lineHeight = 18.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(14.dp))
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(22.dp),

@@ -448,27 +448,6 @@ internal fun WordSiegePracticeScreen(
                                 }
                                 TextButton(onClick = ::startAgain) { Text(sh("YENİ OYUN", "NEW GAME"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp) }
                             }
-                            if (!matchmakingFallback) {
-                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                    ProfHammyCompanion(
-                                        mood = when { won -> ProfHammyMood.EXCITED; draw -> ProfHammyMood.WINK; else -> ProfHammyMood.FOCUSED },
-                                        size = if (compact) 42.dp else 50.dp,
-                                    )
-                                    Spacer(Modifier.width(7.dp))
-                                    Text(
-                                        text = when {
-                                            won -> sh("Alanı iyi yönettin. Yeni alıştırmada daha uzun bir zincir dene.", "You controlled the board well. Try a longer chain in the next practice round.")
-                                            draw -> sh("Dengeyi korudun. Yeni turda merkez alanını erken sahiplen.", "You held the balance. Claim the center earlier in the next round.")
-                                            else -> sh("Tahtayı oku, bağlantını koru. Yeni alıştırmada sakin başla.", "Read the board and protect your connection. Start the next practice round calmly.")
-                                        },
-                                        color = MainUi.Text,
-                                        fontSize = if (compact) 8.sp else 9.sp,
-                                        lineHeight = if (compact) 10.sp else 12.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        modifier = Modifier.weight(1f),
-                                    )
-                                }
-                            }
                         }
                     }
                 }

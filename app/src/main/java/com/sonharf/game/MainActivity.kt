@@ -5,9 +5,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -150,21 +147,19 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun AppStartupGate(clearUnrememberedSession: Boolean) {
     var state by remember { mutableStateOf<StartupState>(StartupState.Loading) }
-    var retryKey by remember { mutableIntStateOf(0) }
-
-    LaunchedEffect(clearUnrememberedSession, retryKey) {
+    LaunchedEffect(clearUnrememberedSession) {
         state = StartupState.Loading
-        val completed = withTimeoutOrNull(6_000) {
+        withTimeoutOrNull(1_500) {
             if (clearUnrememberedSession) {
-                runCatching { SupabaseProvider.client.auth.signOut() }.isSuccess
-            } else true
-        } ?: false
-        state = if (completed) StartupState.Ready else StartupState.Error
+                runCatching { SupabaseProvider.client.auth.signOut() }
+            }
+        }
+        // Session cleanup is best-effort: a slow/offline backend must never block app launch.
+        state = StartupState.Ready
     }
 
     when (state) {
         StartupState.Loading -> StartupLoading()
-        StartupState.Error -> StartupError(onRetry = { retryKey++ })
         StartupState.Ready -> Box(Modifier.fillMaxSize()) { StableV1App() }
     }
 }
@@ -172,7 +167,6 @@ private fun AppStartupGate(clearUnrememberedSession: Boolean) {
 private sealed interface StartupState {
     data object Loading : StartupState
     data object Ready : StartupState
-    data object Error : StartupState
 }
 
 @Composable
@@ -189,27 +183,6 @@ private fun StartupLoading() {
             Spacer(Modifier.height(14.dp))
             Text(sh("SON HARF hazırlanıyor…", "Preparing SON HARF…"), color = SonHarfText, fontWeight = FontWeight.Bold)
             Text(sh("Oturum ve ayarlar güvenli biçimde yükleniyor.", "Loading session and settings safely."), color = SonHarfMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
-        }
-    }
-}
-
-@Composable
-private fun StartupError(onRetry: () -> Unit) {
-    Surface(Modifier.fillMaxSize(), color = SonHarfBg) {
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Icon(Icons.Rounded.Refresh, null, Modifier.size(46.dp), tint = SonHarfBlue)
-            Spacer(Modifier.height(14.dp))
-            Text(sh("Başlatma tamamlanamadı", "Startup could not complete"), color = SonHarfText, fontSize = 20.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(6.dp))
-            Text(sh("Bağlantını kontrol edip tekrar deneyebilirsin.", "Check your connection and try again."), color = SonHarfMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
-            Spacer(Modifier.height(18.dp))
-            Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = SonHarfBlue), shape = RoundedCornerShape(14.dp)) {
-                Text(sh("TEKRAR DENE", "TRY AGAIN"), fontWeight = FontWeight.Black)
-            }
         }
     }
 }

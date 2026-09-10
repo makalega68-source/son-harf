@@ -98,7 +98,6 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
         UnifiedDestination.SHOP,
         UnifiedDestination.PROFILE,
     )
-    val gameplay = destination in setOf(UnifiedDestination.GAME, UnifiedDestination.SIEGE, UnifiedDestination.LETTER, UnifiedDestination.DAILY)
     val scheme = if (SonHarfTheme.IsDark) {
         darkColorScheme(
             primary = UnifiedUi.Blue,
@@ -136,7 +135,7 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
     MaterialTheme(colorScheme = scheme) {
         Scaffold(
             containerColor = UnifiedUi.Background,
-            topBar = { SonHarfTopAdBanner(visible = !gameplay, isPremium = isPro) },
+            topBar = { SonHarfTopAdBanner(isPremium = isPro) },
             bottomBar = {
                 if (topLevel) UnifiedBottomBar(
                     destination = destination,
@@ -282,13 +281,6 @@ private fun UnifiedHomeScreen(
                     }
                 }
             }
-        }
-
-        item {
-            ProfHammyHomeCard(
-                wins = profile?.wins ?: 0,
-                losses = profile?.losses ?: 0,
-            )
         }
 
         item {
