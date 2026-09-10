@@ -44,6 +44,36 @@ object SharedDictionaryService {
     private val turkishLocale = Locale.forLanguageTag("tr-TR")
     private val englishLocale = Locale.ENGLISH
 
+    // Entries confirmed as dictionary-source leakage must never be accepted, even from a persisted
+    // snapshot produced before the backend correction reached the device.
+    private val turkishKnownInvalidWords = setOf(
+        "amlat",
+    )
+
+    // Bot-only presentation policy. These can remain valid human-play words; practice/AI opponents
+    // simply do not choose them. Keeping this separate from dictionary validity preserves player choice.
+    private val turkishBotExcludedWords = setOf(
+        "am",
+        "penis",
+        "sik",
+        "sikmek",
+        "sikiş",
+        "sikişmek",
+        "yarak",
+        "yarrak",
+        "göt",
+        "taşak",
+        "taşşak",
+        "vajina",
+        "vulva",
+        "klitoris",
+        "dildo",
+        "porno",
+        "pornografi",
+        "orospu",
+        "pezevenk",
+    )
+
     fun canonicalLanguage(language: String): String = if (language.lowercase(Locale.ROOT) == "en") "en" else "tr"
 
     fun normalize(word: String, language: String): String {
@@ -70,6 +100,17 @@ object SharedDictionaryService {
 
     private fun inSnapshotLength(word: String): Boolean = word.length in MIN_SNAPSHOT_LENGTH..MAX_SNAPSHOT_LENGTH
 
+    private fun isKnownInvalidNormalized(word: String, language: String): Boolean =
+        canonicalLanguage(language) == "tr" && word in turkishKnownInvalidWords
+
+    /** True for words an automated opponent may visibly play. Human dictionary validity is separate. */
+    fun isBotAllowedWord(word: String, language: String): Boolean {
+        val lang = canonicalLanguage(language)
+        val normalized = normalize(word, lang)
+        if (isKnownInvalidNormalized(normalized, lang)) return false
+        return lang != "tr" || normalized !in turkishBotExcludedWords
+    }
+
     fun hasSnapshot(language: String): Boolean = snapshots.containsKey(canonicalLanguage(language))
 
     /** Restore the last complete, previously verified canonical snapshot without network access. */
@@ -85,6 +126,7 @@ object SharedDictionaryService {
             .filter(::inSnapshotLength)
             .filter { validCharacters(it, lang) }
             .filterNot { lang == "tr" && it.endsWith('ğ') }
+            .filterNot { isKnownInvalidNormalized(it, lang) }
             .toHashSet()
         if (indexed.isEmpty()) return false
         snapshots[lang] = indexed
@@ -111,6 +153,7 @@ object SharedDictionaryService {
             .filter(::inSnapshotLength)
             .filter { validCharacters(it, lang) }
             .filterNot { lang == "tr" && it.endsWith('ğ') }
+            .filterNot { isKnownInvalidNormalized(it, lang) }
             .toHashSet()
         require(indexed.isNotEmpty()) { "canonical_dictionary_empty" }
         snapshots[lang] = indexed
@@ -152,6 +195,9 @@ object SharedDictionaryService {
                 charLength = normalized.length,
             )
         }
+        if (isKnownInvalidNormalized(normalized, lang)) {
+            return GameWordValidationDto(false, "known_invalid_entry", normalized, normalized.take(1), normalized.takeLast(1), normalized.length)
+        }
         if (lang == "tr" && normalized.endsWith('ğ')) {
             return GameWordValidationDto(false, "ends_with_soft_g", normalized, normalized.take(1), normalized.takeLast(1), normalized.length)
         }
@@ -168,6 +214,7 @@ object SharedDictionaryService {
     suspend fun isValidWord(word: String, language: String): Boolean {
         val normalized = normalize(word, language)
         if (!inSnapshotLength(normalized) || !validCharacters(normalized, language)) return false
+        if (isKnownInvalidNormalized(normalized, language)) return false
         if (canonicalLanguage(language) == "tr" && normalized.endsWith('ğ')) return false
         isValidCachedNormalized(normalized, language)?.let { return it }
         return normalized in preload(language)
@@ -176,6 +223,7 @@ object SharedDictionaryService {
     fun isValidWordBlocking(word: String, language: String): Boolean {
         val normalized = normalize(word, language)
         if (!inSnapshotLength(normalized) || !validCharacters(normalized, language)) return false
+        if (isKnownInvalidNormalized(normalized, language)) return false
         if (canonicalLanguage(language) == "tr" && normalized.endsWith('ğ')) return false
         return isValidCachedNormalized(normalized, language) ?: false
     }
@@ -183,6 +231,7 @@ object SharedDictionaryService {
     fun isValidCached(word: String, language: String): Boolean? {
         val normalized = normalize(word, language)
         if (!inSnapshotLength(normalized) || !validCharacters(normalized, language)) return false
+        if (isKnownInvalidNormalized(normalized, language)) return false
         if (canonicalLanguage(language) == "tr" && normalized.endsWith('ğ')) return false
         return isValidCachedNormalized(normalized, language)
     }
@@ -192,7 +241,7 @@ object SharedDictionaryService {
         return snapshots[lang]?.contains(normalized)
     }
 
-    /** Bot candidates use exactly the same loaded canonical snapshot as human practice validation. */
+    /** Bot candidates use the same canonical snapshot as humans plus a bot-only presentation filter. */
     fun practiceCandidates(language: String, rack: String, limit: Int = 420): List<String> {
         val lang = canonicalLanguage(language)
         val words = snapshots[lang] ?: return emptyList()
@@ -200,6 +249,7 @@ object SharedDictionaryService {
         val rackUpper = rack.uppercase(locale)
         return words.asSequence()
             .filter { it.length in 2..7 }
+            .filter { isBotAllowedWord(it, lang) }
             .map { it.uppercase(locale) }
             .filter { candidate -> missingLetters(candidate, rackUpper) <= 1 }
             .sortedWith(compareByDescending<String> { it.length }.thenBy { it })
@@ -224,6 +274,7 @@ object SharedDictionaryService {
             .filter(::inSnapshotLength)
             .filter { validCharacters(it, lang) }
             .filterNot { lang == "tr" && it.endsWith('ğ') }
+            .filterNot { isKnownInvalidNormalized(it, lang) }
             .toHashSet()
     }
 
