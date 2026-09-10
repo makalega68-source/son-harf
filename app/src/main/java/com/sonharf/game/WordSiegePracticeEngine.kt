@@ -115,6 +115,9 @@ internal object WordSiegePracticeEngine {
             if (cells.size < 2) return
             val word = cells.joinToString("") { letterAt(it)?.toString().orEmpty() }
             if (!SharedDictionaryService.isValidWordBlocking(word, state.language)) fail("word_siege_invalid_word:$word")
+            if (owner == 2 && !SharedDictionaryService.isBotAllowedWord(word, state.language)) {
+                fail("word_siege_bot_filtered_word:$word")
+            }
             words += word
             if (primary == null) primary = word
             score += scoreWord(state.board, placements, rack, cells)
