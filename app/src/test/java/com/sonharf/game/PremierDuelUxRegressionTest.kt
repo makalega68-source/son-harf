@@ -44,7 +44,7 @@ class PremierDuelUxRegressionTest {
         // Small-screen gameplay must keep the target instruction visible above the keyboard.
         assertTrue(screen.contains("val veryCompact = maxHeight < 610.dp"))
         assertTrue(screen.contains("if (!veryCompact)"))
-        assertTrue(screen.contains("“$required” ile başlayan bir kelime yaz"))
+        assertTrue(screen.contains("“\$required” ile başlayan bir kelime yaz"))
 
         // A completed authoritative submit clears the attempt and gives explicit correct/wrong feedback.
         assertTrue(screen.contains("input = \"\""))
