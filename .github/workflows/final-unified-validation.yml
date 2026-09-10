@@ -55,7 +55,7 @@ jobs:
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
-          grep -q 'mutableIntStateOf(20)' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          grep -q 'private const val PREMIER_TURN_SECONDS = 15' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
           grep -q 'premierRemainingTurnSeconds' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
           ! grep -q 'com.sonharf.game.mascot' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
           test ! -d app/src/main/java/com/sonharf/game/mascot
@@ -64,6 +64,8 @@ jobs:
           grep -q 'multiplier_count' app/src/main/java/com/sonharf/game/data/VipEntitlements.kt
           grep -q 'use_premier_multiplier_v1' app/src/main/java/com/sonharf/game/data/PremierBoosters.kt
           grep -q "interval '20 seconds'" supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql
+          test -f supabase/migrations/20260910142500_premier_turn_15_seconds.sql
+          grep -q "interval '15 seconds'" supabase/migrations/20260910142500_premier_turn_15_seconds.sql
           grep -qi 'on delete restrict' supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql
           grep -q 'competitive_booster_disabled' supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
           grep -q "'ranked_live_assist', false" supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
