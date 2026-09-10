@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,13 +10,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MarkEmailUnread
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -222,6 +226,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 .navigationBarsPadding()
                 .imePadding(),
         ) {
+            SonHarfLeafBackdrop(Modifier.matchParentSize())
             // Generated directly in Compose so no stale bitmap can survive an app update.
             Box(
                 Modifier.matchParentSize().background(
@@ -285,35 +290,51 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     Modifier.fillMaxSize().padding(horizontal = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Spacer(Modifier.height(34.dp))
-                    SonHarfOfficialLogo(
-                        modifier = Modifier.fillMaxWidth(.78f).height(174.dp),
+                    Spacer(Modifier.weight(.42f))
+                    Image(
+                        painter = painterResource(R.drawable.son_harf_gold_teal_logo),
+                        contentDescription = "Son Harf",
+                        modifier = Modifier.fillMaxWidth(.94f).heightIn(max = 255.dp),
+                        contentScale = ContentScale.Fit,
                     )
-                    Spacer(Modifier.height(56.dp))
+                    Text(
+                        sh("Kelimeyi Sürdür, Rakibini Geç", "Continue the Word, Beat Your Rival"),
+                        color = AuthUi.Primary,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(58.dp))
                     Button(
                         onClick = { register = false; notice = ""; showForm = true },
-                        modifier = Modifier.fillMaxWidth(.90f).height(58.dp),
-                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth(.90f).height(70.dp),
+                        shape = RoundedCornerShape(24.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = AuthUi.Primary,
                             contentColor = Color.White,
                         ),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
                     ) {
-                        Text(sh("Giriş Yap", "Sign In"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Text(sh("Giriş Yap", "Sign In"), fontWeight = FontWeight.Bold, fontSize = 23.sp)
+                            Icon(Icons.Rounded.ChevronRight, null, Modifier.align(Alignment.CenterEnd).size(32.dp))
+                        }
                     }
                     Spacer(Modifier.height(12.dp))
                     OutlinedButton(
                         onClick = { register = true; notice = ""; showForm = true },
-                        modifier = Modifier.fillMaxWidth(.90f).height(56.dp),
-                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth(.90f).height(68.dp),
+                        shape = RoundedCornerShape(24.dp),
                         border = BorderStroke(1.dp, AuthUi.Border),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = AuthUi.Surface.copy(alpha = .94f),
                             contentColor = AuthUi.SoftBlue,
                         ),
                     ) {
-                        Text(sh("Kayıt Ol", "Register"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Text(sh("Kayıt Ol", "Register"), fontWeight = FontWeight.Bold, fontSize = 23.sp)
+                            Icon(Icons.Rounded.ChevronRight, null, Modifier.align(Alignment.CenterEnd).size(32.dp))
+                        }
                     }
                     Spacer(Modifier.weight(1f))
                     Spacer(Modifier.height(28.dp))
