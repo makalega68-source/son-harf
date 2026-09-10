@@ -6,6 +6,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
@@ -46,6 +47,12 @@ private val PracticeBonus3K = Color(0xFFDECBE9)
 private val PracticeBonus4K = Color(0xFFF0C75A)
 private val PracticeBonusStar = Color(0xFFF6B94A)
 private val PracticeLastMove = Color(0xFFF1C75B)
+private val PracticeDefinitionBadge = Color(0xFF25AFCF)
+
+internal data class PracticeResolvedWord(
+    val word: String,
+    val badgeIndex: Int,
+)
 
 @Composable
 internal fun WordSiegePracticeBoard(
@@ -56,6 +63,7 @@ internal fun WordSiegePracticeBoard(
     enabled: Boolean,
     moveEventKey: Int? = null,
     resolvedIndices: Set<Int> = emptySet(),
+    language: String = SonHarfUiState.language,
     modifier: Modifier = Modifier,
     onCell: (Int) -> Unit,
 ) {
@@ -93,6 +101,12 @@ internal fun WordSiegePracticeBoard(
             // Keep the most recently placed word subtly visible until the next move.
             highlightAlpha.animateTo(0.42f, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
         }
+    }
+
+    val resolvedWord = remember(board, resolvedIndices) { resolvePracticeLastWord(board, resolvedIndices) }
+    var definitionWord by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(resolvedWord?.word) {
+        if (definitionWord != null && definitionWord != resolvedWord?.word) definitionWord = null
     }
 
     val actionVfxEvents = emptyList<PurchasedBoardVfxEvent>()
@@ -186,6 +200,10 @@ internal fun WordSiegePracticeBoard(
                                 myOwner = myOwner,
                                 enabled = enabled,
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
+                                showDefinitionBadge = resolvedWord?.badgeIndex == index,
+                                onDefinitionClick = {
+                                    resolvedWord?.word?.let { definitionWord = it }
+                                },
                                 onClick = { onCell(index) },
                                 onDoubleClick = ::toggleMode,
                             )
@@ -202,6 +220,14 @@ internal fun WordSiegePracticeBoard(
             )
         }
     }
+
+    definitionWord?.let { word ->
+        WordDefinitionDialog(
+            word = word,
+            language = language,
+            onDismiss = { definitionWord = null },
+        )
+    }
 }
 
 @Composable
@@ -212,6 +238,8 @@ private fun WordSiegePracticeBoardCell(
     myOwner: Int,
     enabled: Boolean,
     lastMoveHighlight: Float,
+    showDefinitionBadge: Boolean,
+    onDefinitionClick: () -> Unit,
     onClick: () -> Unit,
     onDoubleClick: () -> Unit,
 ) {
@@ -283,6 +311,26 @@ private fun WordSiegePracticeBoardCell(
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
             )
+            if (showDefinitionBadge && !pending) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .size(20.dp)
+                        .clip(
+                            RoundedCornerShape(
+                                topStart = 10.dp,
+                                topEnd = 0.dp,
+                                bottomEnd = 5.dp,
+                                bottomStart = 0.dp,
+                            ),
+                        )
+                        .background(PracticeDefinitionBadge)
+                        .clickable(onClick = onDefinitionClick),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text("?", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                }
+            }
         } else if (activeBonus != null) {
             Text(
                 WordSiegeBoardSpec.displayBonusLabel(activeBonus),
@@ -338,6 +386,59 @@ internal fun WordSiegePracticeRackTile(
             )
         }
     }
+}
+
+internal fun resolvePracticeLastWord(
+    board: List<WordSiegeCellDto>,
+    resolvedIndices: Set<Int>,
+): PracticeResolvedWord? {
+    val placed = resolvedIndices
+        .filter(WordSiegeBoardSpec::isValidIndex)
+        .filter { board.getOrNull(it)?.letter?.isNotBlank() == true }
+        .sorted()
+    if (placed.isEmpty()) return null
+
+    val anchor = placed.first()
+    val allSameRow = placed.all { WordSiegeBoardSpec.row(it) == WordSiegeBoardSpec.row(anchor) }
+    val allSameColumn = placed.all { WordSiegeBoardSpec.column(it) == WordSiegeBoardSpec.column(anchor) }
+
+    fun contiguousCells(startIndex: Int, delta: Int): List<Int> {
+        var start = startIndex
+        while (true) {
+            val previous = start - delta
+            val crossedRow = delta == WordSiegeBoardSpec.HorizontalDelta &&
+                WordSiegeBoardSpec.isValidIndex(previous) &&
+                WordSiegeBoardSpec.row(previous) != WordSiegeBoardSpec.row(start)
+            if (!WordSiegeBoardSpec.isValidIndex(previous) || crossedRow || board.getOrNull(previous)?.letter.isNullOrBlank()) break
+            start = previous
+        }
+
+        val result = mutableListOf<Int>()
+        var current = start
+        while (WordSiegeBoardSpec.isValidIndex(current) && board.getOrNull(current)?.letter?.isNotBlank() == true) {
+            result += current
+            val next = current + delta
+            if (!WordSiegeBoardSpec.isValidIndex(next)) break
+            if (delta == WordSiegeBoardSpec.HorizontalDelta && WordSiegeBoardSpec.row(next) != WordSiegeBoardSpec.row(current)) break
+            current = next
+        }
+        return result
+    }
+
+    val horizontalCells = contiguousCells(anchor, WordSiegeBoardSpec.HorizontalDelta)
+    val verticalCells = contiguousCells(anchor, WordSiegeBoardSpec.VerticalDelta)
+    val wordCells = when {
+        placed.size > 1 && allSameRow -> horizontalCells
+        placed.size > 1 && allSameColumn -> verticalCells
+        horizontalCells.size >= 2 -> horizontalCells
+        verticalCells.size >= 2 -> verticalCells
+        else -> return null
+    }
+    if (wordCells.size < 2) return null
+
+    val word = wordCells.joinToString("") { board.getOrNull(it)?.letter.orEmpty() }
+    if (word.length < 2) return null
+    return PracticeResolvedWord(word = word, badgeIndex = placed.maxOrNull() ?: anchor)
 }
 
 private fun practiceLetterValue(letter: String): String = when (letter) {

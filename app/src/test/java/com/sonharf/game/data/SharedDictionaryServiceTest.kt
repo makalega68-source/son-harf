@@ -31,6 +31,26 @@ class SharedDictionaryServiceTest {
     }
 
     @Test
+    fun invalidSourceLeakIsRemovedFromAllLocalValidationPaths() {
+        SharedDictionaryService.installSnapshotForTests("tr", listOf("amlat", "kalem", "masa"))
+
+        assertFalse("AMLAT must never survive a stale or test snapshot", SharedDictionaryService.isValidCached("AMLAT", "tr") == true)
+        assertFalse("AMLAT must never be accepted by blocking practice validation", SharedDictionaryService.isValidWordBlocking("AMLAT", "tr"))
+        assertTrue(SharedDictionaryService.isValidWordBlocking("KALEM", "tr"))
+    }
+
+    @Test
+    fun sensitiveWordsStayHumanValidButAreNeverBotCandidates() {
+        SharedDictionaryService.installSnapshotForTests("tr", listOf("am", "penis", "sik", "kalem", "masa"))
+
+        listOf("AM", "PENİS", "SİK").forEach { word ->
+            assertTrue("Human player should retain canonical dictionary access: $word", SharedDictionaryService.isValidWordBlocking(word, "tr"))
+            assertFalse("Bot must not choose sensitive word: $word", SharedDictionaryService.isBotAllowedWord(word, "tr"))
+        }
+        assertTrue(SharedDictionaryService.isBotAllowedWord("KALEM", "tr"))
+    }
+
+    @Test
     fun invisibleDictionaryArtifactsAreRemovedBeforeCanonicalLookup() {
         assertEquals("istanbul", SharedDictionaryService.normalize("\uFEFFİSTANBUL\r\n", "tr"))
         assertEquals("kalem", SharedDictionaryService.normalize("KA\u200BLEM", "tr"))
