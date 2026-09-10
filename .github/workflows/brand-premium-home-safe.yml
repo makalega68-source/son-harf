@@ -142,8 +142,8 @@ jobs:
           grep -q 'SonHarfOfficialLogo' app/src/main/java/com/sonharf/game/RequiredAuthGate.kt
           grep -q 'SonHarfOfficialLogo' app/src/main/java/com/sonharf/game/StableV1App.kt
           grep -q 'SonHarfOfficialLogo' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'text = "S"' app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt
-          grep -q 'text = "H"' app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt
+          grep -q 'letter = "S"' app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt
+          grep -q 'letter = "H"' app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt
           ! grep -q 'painterResource' app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt
           grep -q 'HAFTA ŞAMPİYONU' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'private fun WeeklyChampionHero' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
