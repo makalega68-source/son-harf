@@ -244,6 +244,12 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     suspend fun botTakeTurn(roomId: String): GameRoomDto =
         supabase.postgrest.rpc("bot_take_turn", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()
 
+    suspend fun resumePremierBotMatch(roomId: String): GameRoomDto =
+        supabase.postgrest.rpc(
+            "resume_premier_bot_match_v1",
+            buildJsonObject { put("p_room_id", roomId) },
+        ).decodeSingle()
+
     suspend fun botAnswerTrivia(roomId: String): GameRoomDto =
         supabase.postgrest.rpc("bot_answer_trivia", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()
 
