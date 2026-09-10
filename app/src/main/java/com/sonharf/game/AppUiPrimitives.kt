@@ -34,13 +34,13 @@ internal object MainUi {
 }
 
 // Shared palette still used by independent modes such as Harf Yolu / competition screens.
-internal val PortalBg = Color(0xFFF7F9FC)
-internal val PortalCard = Color.White
-internal val PortalText = Color(0xFF182235)
-internal val PortalMuted = Color(0xFF718096)
-internal val PortalBlue = Color(0xFF1769E0)
-internal val PortalGold = Color(0xFFF3A81A)
-internal val PortalGreen = Color(0xFF22B95F)
+internal val PortalBg = Color(0xFFF7FAF3)
+internal val PortalCard = Color(0xFFFFFCF4)
+internal val PortalText = Color(0xFF173F37)
+internal val PortalMuted = Color(0xFF687F77)
+internal val PortalBlue = Color(0xFF286A59)
+internal val PortalGold = Color(0xFFD5A93F)
+internal val PortalGreen = Color(0xFF3A8C68)
 internal val PortalRed = Color(0xFFE64B55)
 
 @Composable

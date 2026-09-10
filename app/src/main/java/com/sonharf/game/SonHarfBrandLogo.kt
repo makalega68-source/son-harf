@@ -15,7 +15,7 @@ fun SonHarfBrandLogo(
     size: Dp? = 52.dp,
 ) {
     Image(
-        painter = painterResource(R.drawable.son_harf_splash_logo),
+        painter = painterResource(R.drawable.son_harf_gold_teal_logo),
         contentDescription = "Son Harf",
         modifier = if (size == null) modifier else modifier.height(size),
         contentScale = ContentScale.Fit,

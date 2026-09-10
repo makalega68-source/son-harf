@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,13 +19,17 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.LeaderboardV2Row
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.getLeaderboardV2
 import com.sonharf.game.mascot.MageCatCompanion
 import com.sonharf.game.mascot.MageCatDirector
 import kotlinx.coroutines.delay
@@ -49,9 +54,9 @@ private object UnifiedUi {
     val Red: Color get() = SonHarfTheme.Error
     val Purple: Color get() = SonHarfTheme.Purple
 
-    val HeroStart: Color get() = if (SonHarfTheme.IsDark) Color(0xFF111722) else Color(0xFF155FCC)
-    val HeroMiddle: Color get() = if (SonHarfTheme.IsDark) Color(0xFF2C2417) else Color(0xFF1769E0)
-    val HeroEnd: Color get() = if (SonHarfTheme.IsDark) Color(0xFF3A2A09) else Color(0xFF139BB0)
+    val HeroStart: Color get() = if (SonHarfTheme.IsDark) Color(0xFF173E35) else Color(0xFF347B68)
+    val HeroMiddle: Color get() = if (SonHarfTheme.IsDark) Color(0xFF25483F) else Color(0xFF28705F)
+    val HeroEnd: Color get() = if (SonHarfTheme.IsDark) Color(0xFF3A3320) else Color(0xFF465C7A)
 }
 
 @Composable
@@ -150,8 +155,8 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .background(UnifiedUi.Background)
             ) {
+                if (!SonHarfTheme.IsDark) SonHarfLeafBackdrop(Modifier.matchParentSize())
                 when (destination) {
                     UnifiedDestination.HOME -> UnifiedHomeScreen(
                         backend = backend,
@@ -217,12 +222,16 @@ private fun UnifiedHomeScreen(
     onVip: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var weeklyLeaders by remember { mutableStateOf<List<LeaderboardV2Row>>(emptyList()) }
 
     LaunchedEffect(Unit) {
         MageCatDirector.onLobbyGreet()
         if (!SupabaseProvider.configured) return@LaunchedEffect
         val id = backend.currentUserId()
         profile = id?.let { runCatching { backend.getProfile(it) }.getOrNull() }
+        weeklyLeaders = runCatching {
+            backend.getLeaderboardV2(if (SonHarfUiState.isEnglish) "en" else "tr", "week", 3)
+        }.getOrDefault(emptyList())
     }
 
     LazyColumn(
@@ -232,41 +241,10 @@ private fun UnifiedHomeScreen(
     ) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text("SON HARF", color = UnifiedUi.Text, fontSize = 27.sp, fontWeight = FontWeight.Black)
-                    Text("Kelimeyi Sürdür, Rakibini Geç", color = UnifiedUi.Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
+                SonHarfBrandLogo(modifier = Modifier.weight(1f).height(102.dp), size = null)
                 UnifiedRoundAction(Icons.Rounded.Notifications, onTasks)
                 Spacer(Modifier.width(8.dp))
                 UnifiedRoundAction(Icons.Rounded.WorkspacePremium, onVip)
-            }
-        }
-
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = UnifiedUi.Surface,
-                border = BorderStroke(1.dp, UnifiedUi.Border),
-            ) {
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    MageCatCompanion(
-                        size = 88.dp,
-                        onClick = { MageCatDirector.onLobbyGreet() },
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(sh("Kelime yoldaşın", "Your word companion"), color = UnifiedUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
-                        Text(
-                            sh("Hazırsan başlayalım. Birlikte yeni bir seri yakalayalım!", "Ready? Let’s build a new streak together!"),
-                            color = UnifiedUi.Muted,
-                            fontSize = 13.sp,
-                        )
-                    }
-                }
             }
         }
 
@@ -329,31 +307,31 @@ private fun UnifiedHomeScreen(
         }
 
         item {
-            Text(sh("ARENANI SEÇ", "CHOOSE YOUR ARENA"), color = UnifiedUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp)
+            UnifiedWeeklyPodium(weeklyLeaders, onLeague)
+        }
+
+        item {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
+                Text(sh("DİĞER OYUNLAR", "MORE GAMES"), color = UnifiedUi.Text, fontWeight = FontWeight.Black, fontSize = 18.sp, modifier = Modifier.weight(1f))
+                Text(sh("Daha fazla kelime, daha fazla eğlence!", "More words, more fun!"), color = UnifiedUi.Muted, fontSize = 8.sp)
+            }
             Spacer(Modifier.height(8.dp))
-            UnifiedModeCard(
-                icon = Icons.Rounded.AutoAwesome,
-                title = sh("PREMIER 1v1", "PREMIER 1v1"),
-                subtitle = sh("20 saniyelik baskı • canlı skor • rövanş", "20-second pressure • live score • rematch"),
-                accent = UnifiedUi.Blue,
-                onClick = onPlay,
-            )
-            Spacer(Modifier.height(9.dp))
-            UnifiedModeCard(
-                icon = Icons.Rounded.GridView,
-                title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
-                subtitle = sh("Alanı ele geçir, küpleri koru", "Capture territory and protect cubes"),
-                accent = UnifiedUi.Gold,
-                onClick = onSiege,
-            )
-            Spacer(Modifier.height(9.dp))
-            UnifiedModeCard(
-                icon = Icons.Rounded.Route,
-                title = sh("HARF YOLU", "LETTER PATH"),
-                subtitle = sh("Hedef kelimeye ulaş", "Reach the target word"),
-                accent = UnifiedUi.Green,
-                onClick = onLetter,
-            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                UnifiedBrandModeCard(
+                    image = R.drawable.kelime_kusatmasi_brand,
+                    title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                    subtitle = sh("Alanı ele geçir, küpleri koru", "Capture territory and protect cubes"),
+                    modifier = Modifier.weight(1f),
+                    onClick = onSiege,
+                )
+                UnifiedBrandModeCard(
+                    image = R.drawable.kelime_yolu_brand,
+                    title = sh("KELİME YOLU", "WORD ROAD"),
+                    subtitle = sh("Her kelime seni hedefe yaklaştırır", "Every word moves you closer"),
+                    modifier = Modifier.weight(1f),
+                    onClick = onLetter,
+                )
+            }
         }
 
         item {
@@ -385,6 +363,24 @@ private fun UnifiedHomeScreen(
             }
         }
 
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = UnifiedUi.Surface,
+                border = BorderStroke(1.dp, UnifiedUi.Border),
+            ) {
+                Row(Modifier.padding(horizontal = 14.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                    MageCatCompanion(size = 58.dp, onClick = { MageCatDirector.onLobbyGreet() })
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(sh("Kelime yoldaşın hazır", "Your word companion is ready"), color = UnifiedUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        Text(sh("Her kelime yeni bir meydan okuma!", "Every word is a new challenge!"), color = UnifiedUi.Muted, fontSize = 9.sp)
+                    }
+                }
+            }
+        }
+
         item { Spacer(Modifier.height(8.dp)) }
     }
 }
@@ -394,6 +390,106 @@ private fun UnifiedHeroMetric(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(value, color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
         Text(label, color = Color.White.copy(alpha = .72f), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun UnifiedWeeklyPodium(leaders: List<LeaderboardV2Row>, onAll: () -> Unit) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = Color(0xFF123E35),
+        border = BorderStroke(1.dp, UnifiedUi.Gold.copy(alpha = .38f)),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = UnifiedUi.Gold.copy(alpha = .15f)) {
+                    Icon(Icons.Rounded.EmojiEvents, null, tint = UnifiedUi.Gold, modifier = Modifier.padding(9.dp).size(23.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(sh("HAFTANIN ZİRVESİ", "WEEKLY LEADERS"), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Bu haftanın en güçlü oyuncuları", "This week's strongest players"), color = Color(0xFFBDD4CB), fontSize = 10.sp)
+                }
+                TextButton(onClick = onAll) { Text(sh("TÜMÜ  ›", "ALL  ›"), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black) }
+            }
+            Spacer(Modifier.height(15.dp))
+            val order = listOf(1, 0, 2)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Bottom) {
+                order.forEach { index ->
+                    val row = leaders.getOrNull(index)
+                    UnifiedPodiumPlayer(
+                        place = index + 1,
+                        name = row?.displayName ?: "—",
+                        rating = row?.rating,
+                        modifier = Modifier.weight(if (index == 0) 1.15f else 1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun UnifiedPodiumPlayer(place: Int, name: String, rating: Int?, modifier: Modifier = Modifier) {
+    val accent = when (place) {
+        1 -> Color(0xFFF2C44F)
+        2 -> Color(0xFFB9CAD6)
+        else -> Color(0xFFD08B60)
+    }
+    val avatarSize = if (place == 1) 62.dp else 50.dp
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(if (place == 1) "♛" else "◆", color = accent, fontSize = if (place == 1) 27.sp else 17.sp)
+        Surface(shape = CircleShape, color = accent.copy(alpha = .18f), border = BorderStroke(3.dp, accent), modifier = Modifier.size(avatarSize)) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(name.take(1).uppercase().ifBlank { place.toString() }, color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        Spacer(Modifier.height(5.dp))
+        Text(name, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black, maxLines = 1)
+        Text(rating?.let { "$it RP" } ?: "— RP", color = accent, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(if (place == 1) 12.dp else 7.dp))
+        Box(
+            Modifier
+                .width(if (place == 1) 82.dp else 68.dp)
+                .height(if (place == 1) 25.dp else 18.dp)
+                .background(accent.copy(alpha = .28f), RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(place.toString(), color = accent, fontSize = 10.sp, fontWeight = FontWeight.Black)
+        }
+    }
+}
+
+@Composable
+private fun UnifiedBrandModeCard(
+    image: Int,
+    title: String,
+    subtitle: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier.height(164.dp).clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        color = UnifiedUi.Surface,
+        border = BorderStroke(1.dp, UnifiedUi.Border),
+    ) {
+        Column {
+            Image(
+                painter = painterResource(image),
+                contentDescription = title,
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                contentScale = ContentScale.Crop,
+            )
+            Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(title, color = UnifiedUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                    Text(subtitle, color = UnifiedUi.Muted, fontSize = 7.sp, maxLines = 2)
+                }
+                Icon(Icons.Rounded.ChevronRight, null, tint = UnifiedUi.Blue, modifier = Modifier.size(18.dp))
+            }
+        }
     }
 }
 

@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -9,13 +10,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MarkEmailUnread
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -162,16 +166,16 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     }
 
     val authColors = lightColorScheme(
-        primary = Color(0xFF1769E0),
-        secondary = Color(0xFF6A4FD8),
-        background = Color(0xFFF4FAFF),
+        primary = Color(0xFF286A59),
+        secondary = Color(0xFFD5A93F),
+        background = Color(0xFFF7FAF3),
         surface = Color.White,
-        surfaceVariant = Color(0xFFEAF3FF),
+        surfaceVariant = Color(0xFFE8F2EA),
         onPrimary = Color.White,
         onSecondary = Color.White,
-        onBackground = Color(0xFF142B4F),
-        onSurface = Color(0xFF142B4F),
-        onSurfaceVariant = Color(0xFF607596),
+        onBackground = Color(0xFF173F37),
+        onSurface = Color(0xFF173F37),
+        onSurfaceVariant = Color(0xFF687F77),
     )
 
     MaterialTheme(colorScheme = authColors) {
@@ -183,15 +187,16 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 .navigationBarsPadding()
                 .imePadding(),
         ) {
+            SonHarfLeafBackdrop(Modifier.matchParentSize())
             // Generated directly in Compose so no stale bitmap can survive an app update.
             Box(
                 Modifier.matchParentSize().background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFFFCFDFF),
-                            Color(0xFFF3F7FF),
-                            Color(0xFFF8F5FF),
-                            Color(0xFFEEF5FF),
+                            Color.White.copy(alpha = .20f),
+                            Color.Transparent,
+                            Color(0xFFF7FAF3).copy(alpha = .10f),
+                            Color.Transparent,
                         )
                     )
                 )
@@ -203,7 +208,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     .background(
                         Brush.radialGradient(
                             listOf(
-                                Color(0xFF1769E0).copy(alpha = .17f),
+                                Color(0xFF76AD91).copy(alpha = .10f),
                                 Color.Transparent,
                             )
                         ),
@@ -217,7 +222,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     .background(
                         Brush.radialGradient(
                             listOf(
-                                Color(0xFF6A4FD8).copy(alpha = .13f),
+                                Color(0xFFD5A93F).copy(alpha = .07f),
                                 Color.Transparent,
                             )
                         ),
@@ -233,8 +238,8 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     .background(
                         Brush.horizontalGradient(
                             listOf(
-                                Color(0xFF1769E0).copy(alpha = .06f),
-                                Color(0xFF6A4FD8).copy(alpha = .05f),
+                                Color(0xFF286A59).copy(alpha = .05f),
+                                Color(0xFFD5A93F).copy(alpha = .04f),
                                 Color.Transparent,
                             )
                         ),
@@ -246,39 +251,53 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     Modifier.fillMaxSize().padding(horizontal = 24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Spacer(Modifier.height(34.dp))
-                    SonHarfBrandLogo(
-                        modifier = Modifier.fillMaxWidth(.84f).height(190.dp),
-                        size = null,
+                    Spacer(Modifier.weight(.42f))
+                    Image(
+                        painter = painterResource(R.drawable.son_harf_gold_teal_logo),
+                        contentDescription = "Son Harf",
+                        modifier = Modifier.fillMaxWidth(.94f).heightIn(max = 255.dp),
+                        contentScale = ContentScale.Fit,
                     )
-                    Spacer(Modifier.height(56.dp))
+                    Text(
+                        sh("Kelimeyi Sürdür, Rakibini Geç", "Continue the Word, Beat Your Rival"),
+                        color = Color(0xFF286A59),
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(58.dp))
                     Button(
                         onClick = { register = false; notice = ""; showForm = true },
-                        modifier = Modifier.fillMaxWidth(.90f).height(58.dp),
-                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier.fillMaxWidth(.90f).height(70.dp),
+                        shape = RoundedCornerShape(24.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = Color(0xFF1769E0),
+                            containerColor = Color(0xFF286A59),
                             contentColor = Color.White,
                         ),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
                     ) {
-                        Text(sh("Giriş Yap", "Sign In"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Text(sh("Giriş Yap", "Sign In"), fontWeight = FontWeight.Bold, fontSize = 23.sp)
+                            Icon(Icons.Rounded.ChevronRight, null, Modifier.align(Alignment.CenterEnd).size(32.dp))
+                        }
                     }
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(14.dp))
                     OutlinedButton(
                         onClick = { register = true; notice = ""; showForm = true },
-                        modifier = Modifier.fillMaxWidth(.90f).height(56.dp),
-                        shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, Color(0xFF8CB8F3)),
+                        modifier = Modifier.fillMaxWidth(.90f).height(68.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        border = BorderStroke(1.dp, Color(0xFFBCD2C6)),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = Color.White.copy(alpha = .92f),
-                            contentColor = Color(0xFF173B77),
+                            contentColor = Color(0xFF486D82),
                         ),
                     ) {
-                        Text(sh("Kayıt Ol", "Register"), fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                            Text(sh("Kayıt Ol", "Register"), fontWeight = FontWeight.Bold, fontSize = 23.sp)
+                            Icon(Icons.Rounded.ChevronRight, null, Modifier.align(Alignment.CenterEnd).size(32.dp))
+                        }
                     }
                     Spacer(Modifier.weight(1f))
-                    Spacer(Modifier.height(28.dp))
                 }
             } else {
             Column(
@@ -291,7 +310,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     onClick = { showForm = false; notice = ""; success = false },
                     modifier = Modifier.align(Alignment.Start),
                 ) {
-                    Text("‹ " + sh("Giriş ekranına dön", "Back to login"), color = Color(0xFF1769E0), fontWeight = FontWeight.Bold)
+                    Text("‹ " + sh("Giriş ekranına dön", "Back to login"), color = Color(0xFF286A59), fontWeight = FontWeight.Bold)
                 }
                 if (pendingVerificationEmail != null) {
                     EmailVerificationCard(
@@ -315,7 +334,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .94f)),
                     shape = RoundedCornerShape(24.dp),
-                    border = BorderStroke(1.dp, Color(0xFFB8D4F7)),
+                    border = BorderStroke(1.dp, Color(0xFFBCD2C6)),
                     elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
                 ) {
                     Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -406,7 +425,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 enabled = !busy,
                                 modifier = Modifier.align(Alignment.End),
                             ) {
-                                Text(sh("Şifremi unuttum", "Forgot password"), color = Color(0xFF1769E0), fontWeight = FontWeight.Bold)
+                                Text(sh("Şifremi unuttum", "Forgot password"), color = Color(0xFF286A59), fontWeight = FontWeight.Bold)
                             }
                         }
                         Button(
@@ -520,7 +539,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                             enabled = !busy,
                             modifier = Modifier.fillMaxWidth().height(58.dp),
                             shape = RoundedCornerShape(18.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = if (register) Color(0xFF6A4FD8) else Color(0xFF1769E0), contentColor = Color.White),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (register) Color(0xFFD5A93F) else Color(0xFF286A59), contentColor = Color.White),
                         ) {
                             Text(
                                 if (busy) "…" else if (register) sh("KAYIT OL", "REGISTER") else sh("GİRİŞ YAP", "SIGN IN"),
@@ -559,7 +578,7 @@ private fun EmailVerificationCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = .96f)),
         shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.dp, Color(0xFFB8D4F7)),
+        border = BorderStroke(1.dp, Color(0xFFBCD2C6)),
         elevation = CardDefaults.cardElevation(defaultElevation = 5.dp),
     ) {
         Column(
@@ -569,34 +588,34 @@ private fun EmailVerificationCard(
         ) {
             Surface(
                 modifier = Modifier.size(72.dp),
-                color = Color(0xFFEAF3FF),
+                color = Color(0xFFE8F2EA),
                 shape = CircleShape,
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Rounded.MarkEmailUnread,
                         contentDescription = null,
-                        tint = Color(0xFF1769E0),
+                        tint = Color(0xFF286A59),
                         modifier = Modifier.size(34.dp),
                     )
                 }
             }
             Text(
                 "E-postanı doğrula",
-                color = Color(0xFF142B4F),
+                color = Color(0xFF173F37),
                 fontWeight = FontWeight.Black,
                 fontSize = 22.sp,
             )
             Text(
                 email,
-                color = Color(0xFF1769E0),
+                color = Color(0xFF286A59),
                 fontWeight = FontWeight.Bold,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
             )
             Text(
                 "Maildeki doğrulama bağlantısına dokunduğunda Son Harf otomatik açılır. Bağlantı çalışmazsa e-postadaki 6 haneli kodu gir.",
-                color = Color(0xFF607596),
+                color = Color(0xFF687F77),
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
             )
@@ -640,7 +659,7 @@ private fun EmailVerificationCard(
                     Text(
                         notice,
                         Modifier.fillMaxWidth().padding(12.dp),
-                        color = Color(0xFF142B4F),
+                        color = Color(0xFF173F37),
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
                     )
