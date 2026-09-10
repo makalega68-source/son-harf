@@ -126,7 +126,7 @@ internal fun WordSiegePracticeScreen(
             .onFailure {
                 dictionaryReady = restored
                 if (!restored) {
-                    notice = sh("Sözlük yüklenemedi. Yenile düğmesine basıp tekrar dene.", "Dictionary could not be loaded. Tap refresh to retry.")
+                    notice = sh("Sözlük yüklenemedi. Yenile düğmesine basıp tekrar dene.", "Dictionary could not be loaded. Tap refresh and try again.")
                 }
             }
         dictionaryLoading = false
@@ -211,7 +211,9 @@ internal fun WordSiegePracticeScreen(
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
         BoxWithConstraints(
-            modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 4.dp, vertical = 2.dp),
+            // UnifiedProApp's Scaffold already reserves the top ad banner and system-bar insets.
+            // Re-applying them here wastes vertical room and creates a false blank footer.
+            modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 2.dp),
         ) {
             // The 15x15 board is the primary interaction target. Keep chrome compact so the board
             // occupies as much of the phone screen as possible without sacrificing safe insets.
@@ -222,14 +224,25 @@ internal fun WordSiegePracticeScreen(
                 verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp),
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth().height(if (compact) 40.dp else 46.dp),
+                    modifier = Modifier.fillMaxWidth().height(if (compact) 46.dp else 52.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onExit, modifier = Modifier.size(if (compact) 40.dp else 46.dp)) {
                         Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                     }
-                    Column(Modifier.weight(1f)) {
-                        Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = if (compact) 16.sp else 18.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                    Column(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        Text(
+                            sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                            color = MainUi.Text,
+                            fontSize = if (compact) 16.sp else 18.sp,
+                            lineHeight = if (compact) 18.sp else 21.sp,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                        )
+                        Spacer(Modifier.height(if (compact) 1.dp else 2.dp))
                         Text(
                             when {
                                 matchmakingFallback && dictionaryLoading -> sh("BOT MAÇI • RAKİP ARANIYOR", "BOT MATCH • FINDING RIVAL")
@@ -238,7 +251,12 @@ internal fun WordSiegePracticeScreen(
                                 dictionaryLoading -> sh("BOT İLE ALIŞTIRMA • HAZIRLANIYOR", "BOT PRACTICE • PREPARING")
                                 else -> sh("BOT İLE ALIŞTIRMA", "BOT PRACTICE")
                             },
-                            color = MainUi.Blue, fontSize = if (compact) 7.sp else 8.sp, fontWeight = FontWeight.Black, maxLines = 1,
+                            color = MainUi.Blue,
+                            fontSize = if (compact) 8.sp else 9.sp,
+                            lineHeight = if (compact) 10.sp else 11.sp,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                     IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(if (compact) 40.dp else 46.dp)) {
@@ -452,21 +470,23 @@ internal fun WordSiegePracticeScreen(
                     }
                 }
 
-                Box(
-                    modifier = Modifier.fillMaxWidth().height(if (compact) 22.dp else 32.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    notice?.let { message ->
-                        WordSiegeNotice(message)
-                    } ?: lastMove?.let { move ->
-                        Text(
-                            sh("Son: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}", "Last: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}"),
-                            color = MainUi.Muted,
-                            fontSize = 8.sp,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth(),
-                            maxLines = 1,
-                        )
+                if (notice != null || lastMove != null) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().height(if (compact) 22.dp else 32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        notice?.let { message ->
+                            WordSiegeNotice(message)
+                        } ?: lastMove?.let { move ->
+                            Text(
+                                sh("Son: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}", "Last: ${move.formedWords.joinToString(" + ")} • +${move.wordScore}"),
+                                color = MainUi.Muted,
+                                fontSize = 8.sp,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
+                                maxLines = 1,
+                            )
+                        }
                     }
                 }
             }
@@ -606,20 +626,29 @@ private fun WordSiegePracticeScoreCard(
                 visible = avatarVisible,
             )
             Spacer(Modifier.width(if (compact) 5.dp else 6.dp))
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(
+                modifier = Modifier.weight(1f).fillMaxHeight(),
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Row(
+                    modifier = Modifier.height(if (compact) 18.dp else 22.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(name, color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = if (compact) 12.sp else 14.sp, lineHeight = if (compact) 13.sp else 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
                     if (isBot) {
                         Spacer(Modifier.width(4.dp))
                         Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(99.dp), color = accent.copy(alpha = .12f)) {
-                            Text("BOT", Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = accent, fontSize = if (compact) 10.sp else 12.sp, fontWeight = FontWeight.Black)
+                            Text("BOT", Modifier.padding(horizontal = 5.dp, vertical = 1.dp), color = accent, fontSize = if (compact) 9.sp else 10.sp, lineHeight = if (compact) 11.sp else 12.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
-                Row(verticalAlignment = Alignment.Bottom) {
+                Row(
+                    modifier = Modifier.height(if (compact) 24.dp else 30.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text("$score", color = accent, fontWeight = FontWeight.Black, fontSize = if (compact) 20.sp else 24.sp, lineHeight = if (compact) 22.sp else 27.sp, maxLines = 1)
                     Spacer(Modifier.width(5.dp))
-                    Text(sh("Alan $area", "Area $area"), color = MainUi.Muted, fontSize = if (compact) 9.sp else 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(sh("Alan $area", "Area $area"), color = MainUi.Muted, fontSize = if (compact) 9.sp else 10.sp, lineHeight = if (compact) 11.sp else 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

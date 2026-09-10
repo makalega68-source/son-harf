@@ -13,7 +13,7 @@ class WordSiegeResponsiveLayoutTest {
 
         assertTrue(source.contains("BoxWithConstraints"))
         assertTrue(source.contains("val compact = maxHeight < 700.dp"))
-        assertTrue(source.contains("Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()"))
+        assertTrue(source.contains("modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 2.dp)"))
         assertTrue(source.contains("Box(Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(source.contains("WordSiegePracticeBoard("))
         assertTrue(source.contains("showPass = true"))
@@ -23,13 +23,22 @@ class WordSiegeResponsiveLayoutTest {
     }
 
     @Test
-    fun bottomInfoPanelStaysInsideNavigationBarSafeLayoutBudget() {
+    fun practiceChromeUsesShellInsetsAndKeepsHeaderProfileAndFooterAligned() {
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         val online = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
+        val shell = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
-        assertTrue(practice.contains(".statusBarsPadding().navigationBarsPadding()"))
+        assertFalse(practice.contains(".statusBarsPadding().navigationBarsPadding()"))
+        assertTrue(shell.contains("topBar = { SonHarfTopAdBanner(isPremium = isPro) }"))
+        assertTrue(practice.contains("modifier = Modifier.fillMaxWidth().height(if (compact) 46.dp else 52.dp)"))
+        assertTrue(practice.contains("lineHeight = if (compact) 10.sp else 11.sp"))
+        assertTrue(practice.contains("modifier = Modifier.weight(1f).fillMaxHeight()"))
+        assertTrue(practice.contains("modifier = Modifier.height(if (compact) 24.dp else 30.dp)"))
+        assertTrue(practice.contains("if (notice != null || lastMove != null)"))
         assertTrue(practice.indexOf("Box(Modifier.fillMaxWidth().weight(1f)") < practice.indexOf("notice?.let { message ->"))
         assertTrue(practice.indexOf("onClick = ::applyPlayerMove") < practice.indexOf("notice?.let { message ->"))
+
+        // Online siege keeps its existing safe-inset contract; this fix is intentionally scoped to practice.
         assertTrue(online.contains(".statusBarsPadding()\n            .navigationBarsPadding()"))
         assertTrue(online.contains("modifier = Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(online.indexOf("lastMove?.let { PanSiegeLastMoveInfo(it) }") > online.indexOf("onClick = onSubmit"))
