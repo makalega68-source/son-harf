@@ -1,0 +1,106 @@
+       border = BorderStroke(1.dp, Color.White.copy(alpha = .45f)),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("#$place", color = accentDeep, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            Spacer(Modifier.width(10.dp))
+            ProfilePhotoAvatarWithGender(
+                avatarPath = avatarPath,
+                gender = profile?.gender,
+                name = name,
+                size = if (champion) 50.dp else 44.dp,
+                accent = accent,
+                visible = profile?.avatarVisibility != "hidden",
+                showGenderBadge = false,
+            )
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        name,
+                        color = Color(0xFFFFFBF2),
+                        fontSize = if (champion) 13.sp else 12.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    if (profile?.isVip == true) {
+                        Spacer(Modifier.width(6.dp))
+                        Surface(shape = RoundedCornerShape(99.dp), color = accent.copy(alpha = .15f)) {
+                            Text("PRO", Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = accent, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    "${player.row.rating} RP",
+                    color = accent,
+                    fontSize = if (champion) 11.sp else 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+            if (champion) {
+                Icon(Icons.Rounded.EmojiEvents, null, tint = accent, modifier = Modifier.size(23.dp))
+            }
+        }
+    }
+}
+
+'''
+source = unified.read_text(encoding='utf-8')
+start = source.find(start_marker)
+end = source.find(end_marker, start)
+unified.write_text(source[:start] + weekly_block + source[end:], encoding='utf-8')
+
+brand_test = ROOT / 'app/src/test/java/com/sonharf/game/BrandStartupRegressionTest.kt'
+brand_test.write_text('''package com.sonharf.game
+
+import java.io.File
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class BrandStartupRegressionTest {
+    @Test
+    fun approvedRasterBrandKeepsExplicitStartupSafeFallback() {
+        val logo = File("src/main/java/com/sonharf/game/SonHarfBrandLogo.kt").readText()
+        val main = File("src/main/java/com/sonharf/game/MainActivity.kt").readText()
+        val manifest = File("src/main/AndroidManifest.xml").readText()
+        val brandAsset = File("src/main/res/drawable-nodpi/son_harf_brand_logo.webp")
+        val iconAsset = File("src/main/res/drawable-nodpi/son_harf_app_icon.webp")
+
+        assertTrue(logo.contains("startupSafe"))
+        assertTrue(logo.contains("painterResource(R.drawable.son_harf_brand_logo)"))
+        assertTrue(main.contains("startupSafe = true"))
+        assertTrue(manifest.contains("@drawable/son_harf_app_icon"))
+        assertTrue(brandAsset.isFile && brandAsset.length() > 1_000)
+        assertTrue(iconAsset.isFile && iconAsset.length() > 1_000)
+        assertTrue(isWebP(brandAsset))
+        assertTrue(isWebP(iconAsset))
+        assertTrue(File("src/main/res/drawable/son_harf_app_icon_safe.xml").isFile)
+        assertFalse(File("src/main/res/drawable/son_harf_splash_logo.webp").exists())
+    }
+
+    private fun isWebP(file: File): Boolean {
+        val bytes = file.readBytes()
+        return bytes.size > 12 &&
+            bytes.copyOfRange(0, 4).contentEquals("RIFF".toByteArray()) &&
+            bytes.copyOfRange(8, 12).contentEquals("WEBP".toByteArray())
+    }
+}
+''', encoding='utf-8')
+
+podium_test = ROOT / 'app/src/test/java/com/sonharf/game/UnifiedHomeWeeklyPodiumContractTest.kt'
+podium_test.write_text('''package com.sonharf.game
+
+import java.io.File
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class UnifiedHomeWeeklyPodiumContractTest {
+    @Test
+    fun homeUsesSinglePremierEntryAndShowsPremiumWeeklyTopThree() {
+        val source = File("src/main/java/com/
