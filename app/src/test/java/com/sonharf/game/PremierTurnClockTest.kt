@@ -9,8 +9,11 @@ class PremierTurnClockTest {
 
     @Test
     fun countdownUsesCeilingSoLiveTurnNeverShowsZeroEarly() {
-        assertEquals(20, premierRemainingTurnSeconds(now.plusMillis(20_000), now))
-        assertEquals(20, premierRemainingTurnSeconds(now.plusMillis(19_001), now))
+        assertEquals(15, premierRemainingTurnSeconds(now.plusMillis(20_000), now))
+        assertEquals(15, premierRemainingTurnSeconds(now.plusMillis(15_000), now))
+        assertEquals(15, premierRemainingTurnSeconds(now.plusMillis(14_999), now))
+        assertEquals(11, premierRemainingTurnSeconds(now.plusMillis(10_001), now))
+        assertEquals(10, premierRemainingTurnSeconds(now.plusMillis(10_000), now))
         assertEquals(2, premierRemainingTurnSeconds(now.plusMillis(1_001), now))
         assertEquals(1, premierRemainingTurnSeconds(now.plusMillis(999), now))
         assertEquals(1, premierRemainingTurnSeconds(now.plusMillis(1), now))
