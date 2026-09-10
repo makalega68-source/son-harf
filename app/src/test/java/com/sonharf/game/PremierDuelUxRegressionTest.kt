@@ -10,6 +10,7 @@ class PremierDuelUxRegressionTest {
     @Test fun premierArenaKeepsLargeProfilesVisibleChatSymmetryAndTimeoutRecovery() {
         val screen = File("src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
         val backend = File("src/main/java/com/sonharf/game/data/PremierDuelBackend.kt").readText()
+        val onlineBackend = File("src/main/java/com/sonharf/game/data/OnlineGameBackend.kt").readText()
 
         assertTrue(screen.contains("ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp"))
         assertTrue(screen.contains("PremierBotAvatar(size = 58.dp"))
@@ -32,5 +33,12 @@ class PremierDuelUxRegressionTest {
         assertTrue(backend.contains("getRoom(roomId)"))
         assertTrue(backend.contains("botTakeTurn(roomId)"))
         assertFalse(backend.contains("submit_word_v4"))
+
+        // Returning to a live bot room must refresh the server deadline instead of charging offline time.
+        assertTrue(screen.contains("found?.isBot == true && found.isPremierLive()"))
+        assertTrue(screen.contains("backend.resumePremierBotMatch(found.id)"))
+        assertTrue(onlineBackend.contains("suspend fun resumePremierBotMatch(roomId: String): GameRoomDto"))
+        assertTrue(onlineBackend.contains("\"resume_premier_bot_match_v1\""))
+        assertTrue(onlineBackend.contains("put(\"p_room_id\", roomId)"))
     }
 }
