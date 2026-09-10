@@ -255,9 +255,8 @@ private fun UnifiedHomeScreen(
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    SonHarfBrandLogo(
-                        modifier = Modifier.width(172.dp).height(72.dp),
-                        size = null,
+                    SonHarfOfficialLogo(
+                        modifier = Modifier.width(158.dp).height(44.dp),
                     )
                     Text(
                         sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"),
@@ -346,7 +345,7 @@ private fun UnifiedHomeScreen(
             Spacer(Modifier.height(8.dp))
             UnifiedModeCard(
                 icon = Icons.Rounded.GridView,
-                logoRes = R.drawable.kelime_kusatmasi_brand,
+                logoRes = R.drawable.kelime_kusatma_logo_hd,
                 title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
                 subtitle = sh("Alanı ele geçir, küpleri koru", "Capture territory and protect cubes"),
                 accent = UnifiedUi.Gold,
@@ -355,9 +354,9 @@ private fun UnifiedHomeScreen(
             Spacer(Modifier.height(9.dp))
             UnifiedModeCard(
                 icon = Icons.Rounded.Route,
-                logoRes = R.drawable.kelime_yolu_brand,
-                title = sh("KELİME YOLU", "WORD ROAD"),
-                subtitle = sh("Her kelime seni hedefe yaklaştırır", "Every word moves you closer"),
+                logoRes = R.drawable.harf_yolu_logo,
+                title = sh("HARF YOLU", "LETTER PATH"),
+                subtitle = sh("Hedef kelimeye ulaş", "Reach the target word"),
                 accent = UnifiedUi.Green,
                 onClick = onLetter,
             )
