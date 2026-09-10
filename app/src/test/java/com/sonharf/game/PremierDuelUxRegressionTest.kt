@@ -1,16 +1,18 @@
 package com.sonharf.game
 
 import java.io.File
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 // Locks the real-device fixes requested for the rebuilt Premier 1v1 arena.
 class PremierDuelUxRegressionTest {
-    @Test fun premierArenaKeepsLargeProfilesVisibleChatSymmetryAndTimeoutRecovery() {
+    @Test fun premierArenaKeepsProfilesVisibleAndServerAuthoritativeRecovery() {
         val screen = File("src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
         val backend = File("src/main/java/com/sonharf/game/data/PremierDuelBackend.kt").readText()
         val onlineBackend = File("src/main/java/com/sonharf/game/data/OnlineGameBackend.kt").readText()
+        val turnClock = File("src/main/java/com/sonharf/game/data/PremierTurnClock.kt").readText()
 
         assertTrue(screen.contains("ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp"))
         assertTrue(screen.contains("PremierBotAvatar(size = 58.dp"))
@@ -21,7 +23,6 @@ class PremierDuelUxRegressionTest {
         assertFalse(screen.contains("enabled = !room.isBot"))
         assertTrue(screen.contains("Alignment.CenterStart"))
         assertTrue(screen.contains("Alignment.CenterEnd"))
-        assertTrue(screen.contains("premierRemainingTurnSeconds(deadline)"))
         assertTrue(screen.contains("turnSeconds = 1"))
         assertTrue(screen.contains("backend.claimTurnTimeout(active.id)"))
         assertTrue(screen.contains("backend.botTakeTurn(active.id)"))
@@ -41,13 +42,34 @@ class PremierDuelUxRegressionTest {
         assertTrue(onlineBackend.contains("\"resume_premier_bot_match_v1\""))
         assertTrue(onlineBackend.contains("put(\"p_room_id\", roomId)"))
 
+        // The 20-second visible timer is anchored to server time and a monotonic phone clock.
+        assertTrue(screen.contains("fetchPremierTurnClock(active.id)"))
+        assertTrue(screen.contains("SystemClock.elapsedRealtime()"))
+        assertTrue(screen.contains("premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs)"))
+        assertTrue(turnClock.contains("data class PremierTurnClockDto"))
+        assertTrue(turnClock.contains("\"get_premier_turn_clock_v1\""))
+        assertTrue(turnClock.contains("put(\"p_room_id\", roomId)"))
+
         // Small-screen gameplay must keep the target instruction visible above the keyboard.
         assertTrue(screen.contains("val veryCompact = maxHeight < 610.dp"))
         assertTrue(screen.contains("if (!veryCompact)"))
         assertTrue(screen.contains("“\$required” ile başlayan bir kelime yaz"))
 
-        // A completed authoritative submit clears the attempt and gives explicit correct/wrong feedback.
-        assertTrue(screen.contains("input = \"\""))
+        // Target card and central letter are intentionally more compact on real devices.
+        assertTrue(screen.contains("if (veryCompact) 78.dp"))
+        assertTrue(screen.contains("if (compact) 88.dp"))
+        assertTrue(screen.contains("if (tall) 118.dp"))
+        assertTrue(screen.contains("else 104.dp"))
+        assertTrue(screen.contains("if (required.length > 1) .32f else .42f"))
+        assertFalse(screen.contains("if (tall) 164.dp"))
+
+        // Send consumes the visible attempt immediately, then the authoritative server result arrives.
+        val candidateIndex = screen.indexOf("val candidate = input")
+        val clearIndex = screen.indexOf("input = \"\"", candidateIndex)
+        val submitIndex = screen.indexOf("backend.submitPremierWord(active.id, candidate)", candidateIndex)
+        assertTrue(candidateIndex >= 0)
+        assertTrue(clearIndex > candidateIndex)
+        assertTrue(submitIndex > clearIndex)
         assertTrue(screen.contains("val accepted = next.validWordCount > active.validWordCount"))
         assertTrue(screen.contains("pt(language, \"DOĞRU\", \"CORRECT\")"))
         assertTrue(screen.contains("pt(language, \"YANLIŞ\", \"WRONG\")"))
@@ -56,14 +78,27 @@ class PremierDuelUxRegressionTest {
         // The input bar no longer carries the redundant server badge.
         assertFalse(screen.contains("PremierStatPill(pt(language, \"SUNUCU\", \"SERVER\")"))
 
-        // Chat keeps quick reactions but human matches also expose a real typed message field/history.
+        // Chat is a typed transcript for human and bot matches; canned quick-message UI is gone.
         assertTrue(screen.contains("private fun PremierChatSheet("))
-        assertTrue(screen.contains("messages = chat"))
+        assertTrue(screen.contains("messages = if (room?.isBot == true) botChat else chat"))
         assertTrue(screen.contains("OutlinedTextField("))
         assertTrue(screen.contains("\"Mesaj yaz…\""))
         assertTrue(screen.contains("backend.sendChat(active.id, message)"))
         assertTrue(screen.contains("backend.getChat(active.id)"))
-        assertTrue(screen.contains("quickMessages.forEach"))
-        assertTrue(screen.contains("Bot maçında gerçek mesajlaşma kapalıdır."))
+        assertTrue(screen.contains("premierBotChatReply(language, message)"))
+        assertTrue(screen.contains("Bot ile serbestçe yazış."))
+        assertFalse(screen.contains("quickMessages"))
+        assertFalse(screen.contains("Hızlı reaksiyonlar"))
+        assertFalse(screen.contains("Bot maçında gerçek mesajlaşma kapalıdır."))
+    }
+
+    @Test fun serverAnchoredCountdownRoundsUpWithoutSkippingSeconds() {
+        assertEquals(20, premierRemainingTurnSecondsFromMillis(20_000))
+        assertEquals(20, premierRemainingTurnSecondsFromMillis(19_999))
+        assertEquals(11, premierRemainingTurnSecondsFromMillis(10_001))
+        assertEquals(10, premierRemainingTurnSecondsFromMillis(10_000))
+        assertEquals(1, premierRemainingTurnSecondsFromMillis(1))
+        assertEquals(0, premierRemainingTurnSecondsFromMillis(0))
+        assertEquals(0, premierRemainingTurnSecondsFromMillis(-1))
     }
 }
