@@ -5,8 +5,8 @@
     <application
         android:theme="@style/Theme.SonHarf"
         android:label="Son Harf"
-        android:icon="@drawable/son_harf_app_icon_safe"
-        android:roundIcon="@drawable/son_harf_app_icon_safe"
+        android:icon="@drawable/son_harf_launcher_icon"
+        android:roundIcon="@drawable/son_harf_launcher_icon"
         android:allowBackup="false"
         android:supportsRtl="true">
         <meta-data
