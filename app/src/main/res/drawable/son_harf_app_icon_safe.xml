@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <!--
-      Vector-only launcher path: no bitmap decode is allowed during startup.
-      This prevents a malformed raster asset from crashing launch or authentication.
-    -->
-    <item android:drawable="@drawable/son_harf_gold_teal_logo" />
-</layer-list>
