@@ -20,17 +20,25 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.LeaderboardV2Row
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.getLeaderboardV2
 import kotlinx.coroutines.delay
 
 private enum class UnifiedDestination {
     HOME, GAME, SIEGE, LETTER, LEAGUE, COMPETITION, SOCIAL, SHOP, PROFILE,
     SETTINGS, VIP, ACCOUNT, PROFILE_DETAILS, TASKS, DAILY
 }
+
+private data class WeeklyPodiumPlayer(
+    val row: LeaderboardV2Row,
+    val profile: ProfileDto?,
+)
 
 /** Theme-aware shell palette. The equipped profile theme is the only visual source of truth. */
 private object UnifiedUi {
@@ -218,11 +226,25 @@ private fun UnifiedHomeScreen(
     onVip: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var weeklyTop by remember { mutableStateOf<List<WeeklyPodiumPlayer>>(emptyList()) }
+    var weeklyTopLoading by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
         val id = backend.currentUserId()
         profile = id?.let { runCatching { backend.getProfile(it) }.getOrNull() }
+
+        weeklyTopLoading = true
+        val language = if (SonHarfUiState.language == "en") "en" else "tr"
+        weeklyTop = runCatching {
+            backend.getLeaderboardV2(language, "week", 3).map { row ->
+                WeeklyPodiumPlayer(
+                    row = row,
+                    profile = runCatching { backend.getProfile(row.userId) }.getOrNull(),
+                )
+            }
+        }.getOrDefault(emptyList())
+        weeklyTopLoading = false
     }
 
     LazyColumn(
@@ -301,16 +323,16 @@ private fun UnifiedHomeScreen(
         }
 
         item {
-            Text(sh("ARENANI SEÇ", "CHOOSE YOUR ARENA"), color = UnifiedUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp)
-            Spacer(Modifier.height(8.dp))
-            UnifiedModeCard(
-                icon = Icons.Rounded.AutoAwesome,
-                title = sh("PREMIER 1v1", "PREMIER 1v1"),
-                subtitle = sh("20 saniyelik baskı • canlı skor • rövanş", "20-second pressure • live score • rematch"),
-                accent = UnifiedUi.Blue,
-                onClick = onPlay,
+            WeeklyChampionPodium(
+                players = weeklyTop,
+                loading = weeklyTopLoading,
+                onOpenLeague = onLeague,
             )
-            Spacer(Modifier.height(9.dp))
+        }
+
+        item {
+            Text(sh("DİĞER OYUNLAR", "OTHER GAMES"), color = UnifiedUi.Text, fontWeight = FontWeight.Black, fontSize = 14.sp)
+            Spacer(Modifier.height(8.dp))
             UnifiedModeCard(
                 icon = Icons.Rounded.GridView,
                 title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
@@ -358,6 +380,199 @@ private fun UnifiedHomeScreen(
         }
 
         item { Spacer(Modifier.height(8.dp)) }
+    }
+}
+
+@Composable
+private fun WeeklyChampionPodium(
+    players: List<WeeklyPodiumPlayer>,
+    loading: Boolean,
+    onOpenLeague: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(16.dp, RoundedCornerShape(26.dp))
+            .clickable(onClick = onOpenLeague),
+        shape = RoundedCornerShape(26.dp),
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, Color.White.copy(alpha = .20f)),
+    ) {
+        Column(
+            Modifier
+                .background(
+                    Brush.linearGradient(
+                        listOf(UnifiedUi.HeroStart, UnifiedUi.HeroMiddle, UnifiedUi.HeroEnd)
+                    )
+                )
+                .padding(horizontal = 12.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = Color.White.copy(alpha = .14f)) {
+                    Icon(
+                        Icons.Rounded.WorkspacePremium,
+                        null,
+                        tint = Color(0xFFFFD76A),
+                        modifier = Modifier.padding(9.dp).size(20.dp),
+                    )
+                }
+                Spacer(Modifier.width(9.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        sh("HAFTANIN ZİRVESİ", "WEEKLY PODIUM"),
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = .5.sp,
+                    )
+                    Text(
+                        sh("Haftanın en iyi 3 oyuncusu", "Top 3 players of the week"),
+                        color = Color.White.copy(alpha = .72f),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Surface(shape = RoundedCornerShape(99.dp), color = Color.White.copy(alpha = .12f)) {
+                    Row(Modifier.padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(sh("TÜMÜ", "ALL"), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        Spacer(Modifier.width(3.dp))
+                        Icon(Icons.Rounded.ChevronRight, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+
+            if (loading) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().height(3.dp),
+                    color = Color(0xFFFFD76A),
+                    trackColor = Color.White.copy(alpha = .16f),
+                )
+            }
+
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.Bottom,
+            ) {
+                WeeklyChampionCard(
+                    place = 2,
+                    player = players.getOrNull(1),
+                    modifier = Modifier.weight(1f),
+                )
+                WeeklyChampionCard(
+                    place = 1,
+                    player = players.getOrNull(0),
+                    modifier = Modifier.weight(1f),
+                )
+                WeeklyChampionCard(
+                    place = 3,
+                    player = players.getOrNull(2),
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeeklyChampionCard(
+    place: Int,
+    player: WeeklyPodiumPlayer?,
+    modifier: Modifier,
+) {
+    val accent = when (place) {
+        1 -> Color(0xFFFFD25A)
+        2 -> Color(0xFFC7CED8)
+        else -> Color(0xFFC88758)
+    }
+    val accentDeep = when (place) {
+        1 -> Color(0xFF9A6B00)
+        2 -> Color(0xFF697586)
+        else -> Color(0xFF7C4728)
+    }
+    val cardHeight = if (place == 1) 178.dp else 160.dp
+    val avatarWidth = if (place == 1) 76.dp else 68.dp
+    val avatarHeight = if (place == 1) 58.dp else 52.dp
+    val name = player?.row?.displayName ?: "—"
+    val profile = player?.profile
+    val avatarPath = if (profile?.avatarVisibility == "hidden") null else profile?.avatarPath
+
+    Surface(
+        modifier = modifier.height(cardHeight),
+        shape = RoundedCornerShape(19.dp),
+        color = Color.White.copy(alpha = if (place == 1) .18f else .11f),
+        border = BorderStroke(if (place == 1) 2.dp else 1.dp, accent.copy(alpha = .88f)),
+        shadowElevation = if (place == 1) 8.dp else 3.dp,
+    ) {
+        Column(
+            Modifier.fillMaxSize().padding(horizontal = 5.dp, vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Surface(
+                shape = RoundedCornerShape(99.dp),
+                color = accent,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = .55f)),
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        if (place == 1) Icons.Rounded.EmojiEvents else Icons.Rounded.MilitaryTech,
+                        null,
+                        tint = accentDeep,
+                        modifier = Modifier.size(12.dp),
+                    )
+                    Spacer(Modifier.width(3.dp))
+                    Text("#$place", color = accentDeep, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = accent.copy(alpha = .18f),
+                border = BorderStroke(if (place == 1) 3.dp else 2.dp, accent),
+                shadowElevation = if (place == 1) 8.dp else 4.dp,
+            ) {
+                Box(Modifier.padding(3.dp), contentAlignment = Alignment.Center) {
+                    ProfilePhotoAvatarRectWithGender(
+                        avatarPath = avatarPath,
+                        gender = profile?.gender,
+                        name = name,
+                        width = avatarWidth,
+                        height = avatarHeight,
+                        accent = accent,
+                        showGenderBadge = false,
+                    )
+                }
+            }
+            Spacer(Modifier.height(6.dp))
+            Text(
+                name,
+                color = Color.White,
+                fontSize = if (place == 1) 11.sp else 10.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                player?.row?.let { "${it.rating} RP" } ?: "— RP",
+                color = accent,
+                fontSize = if (place == 1) 10.sp else 9.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+            )
+            if (profile?.isVip == true) {
+                Spacer(Modifier.height(3.dp))
+                Surface(shape = RoundedCornerShape(99.dp), color = accent.copy(alpha = .20f)) {
+                    Text("PRO", Modifier.padding(horizontal = 6.dp, vertical = 2.dp), color = accent, fontSize = 6.sp, fontWeight = FontWeight.Black)
+                }
+            }
+        }
     }
 }
 
