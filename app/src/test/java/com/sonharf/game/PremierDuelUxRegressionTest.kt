@@ -14,13 +14,27 @@ class PremierDuelUxRegressionTest {
         val onlineBackend = File("src/main/java/com/sonharf/game/data/OnlineGameBackend.kt").readText()
         val turnClock = File("src/main/java/com/sonharf/game/data/PremierTurnClock.kt").readText()
 
-        assertTrue(screen.contains("ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp"))
+        // Human profile photos use the rectangular runtime so purchased rectangular frames align.
+        assertTrue(screen.contains("ProfilePhotoAvatarRectWithGender("))
+        assertTrue(screen.contains("width = 70.dp"))
+        assertTrue(screen.contains("height = 54.dp"))
+        assertTrue(screen.contains("width = 84.dp"))
+        assertTrue(screen.contains("height = 64.dp"))
         assertTrue(screen.contains("PremierBotAvatar(size = 58.dp"))
         assertTrue(screen.contains("PremierBotAvatar(size = 70.dp"))
         assertFalse(screen.contains("MageCatCompanion("))
         assertFalse(screen.contains("SyntheticBotPortrait("))
+
+        // Chat remains typed/realtime and now has an unread red indicator.
         assertTrue(screen.contains("Text(pt(language, \"SOHBET\", \"CHAT\")"))
         assertFalse(screen.contains("enabled = !room.isBot"))
+        assertTrue(screen.contains("var hasUnreadChat by remember { mutableStateOf(false) }"))
+        assertTrue(screen.contains("if (latest != null && latest.id != previousId && latest.senderId != backend.currentUserId())"))
+        assertTrue(screen.contains("hasUnreadChat = !showQuickChat"))
+        assertTrue(screen.contains("unreadChat = hasUnreadChat"))
+        assertTrue(screen.contains("Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-3).dp).size(10.dp).clip(CircleShape).background(PremierUi.Red)"))
+        assertTrue(screen.contains("hasUnreadChat = false"))
+
         assertTrue(screen.contains("Alignment.CenterStart"))
         assertTrue(screen.contains("Alignment.CenterEnd"))
         assertTrue(screen.contains("turnSeconds = 1"))
@@ -42,20 +56,32 @@ class PremierDuelUxRegressionTest {
         assertTrue(onlineBackend.contains("\"resume_premier_bot_match_v1\""))
         assertTrue(onlineBackend.contains("put(\"p_room_id\", roomId)"))
 
-        // The 20-second visible timer is anchored to server time and a monotonic phone clock.
+        // The 15-second visible timer stays server-clock anchored and monotonic on-device.
+        assertTrue(screen.contains("private const val PREMIER_TURN_SECONDS = 15"))
         assertTrue(screen.contains("fetchPremierTurnClock(active.id)"))
         assertTrue(screen.contains("SystemClock.elapsedRealtime()"))
         assertTrue(screen.contains("premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs)"))
+        assertTrue(screen.contains("\"15 sn tur\""))
         assertTrue(turnClock.contains("data class PremierTurnClockDto"))
         assertTrue(turnClock.contains("\"get_premier_turn_clock_v1\""))
         assertTrue(turnClock.contains("put(\"p_room_id\", roomId)"))
 
-        // Small-screen gameplay must keep the target instruction visible above the keyboard.
-        assertTrue(screen.contains("val veryCompact = maxHeight < 610.dp"))
-        assertTrue(screen.contains("if (!veryCompact)"))
-        assertTrue(screen.contains("“\$required” ile başlayan bir kelime yaz"))
+        // The old instruction is removed; the latest played word is the central context line.
+        assertTrue(screen.contains("val latestPlayedWord"))
+        assertTrue(screen.contains("latestPlayedWord.ifBlank"))
+        assertFalse(screen.contains("“\$required” ile başlayan bir kelime yaz"))
+        assertFalse(screen.contains("Enter a word starting with “\$required”"))
+        assertTrue(screen.contains("fontSize = if (veryCompact) 14.sp else 16.sp"))
 
-        // Target card and central letter are intentionally more compact on real devices.
+        // History chips center as a group instead of hugging the left edge.
+        assertTrue(screen.contains("Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally)"))
+
+        // Purchased action VFX is used cosmetically on turn arrival and accepted moves.
+        assertTrue(screen.contains("PurchasedVictoryVfx("))
+        assertTrue(screen.contains("eventKey = \"turn:"))
+        assertTrue(screen.contains("eventKey = \"accepted:"))
+
+        // Target card and central letter remain compact on real devices.
         assertTrue(screen.contains("if (veryCompact) 78.dp"))
         assertTrue(screen.contains("if (compact) 88.dp"))
         assertTrue(screen.contains("if (tall) 118.dp"))
@@ -93,8 +119,9 @@ class PremierDuelUxRegressionTest {
     }
 
     @Test fun serverAnchoredCountdownRoundsUpWithoutSkippingSeconds() {
-        assertEquals(20, premierRemainingTurnSecondsFromMillis(20_000))
-        assertEquals(20, premierRemainingTurnSecondsFromMillis(19_999))
+        assertEquals(15, premierRemainingTurnSecondsFromMillis(20_000))
+        assertEquals(15, premierRemainingTurnSecondsFromMillis(15_000))
+        assertEquals(15, premierRemainingTurnSecondsFromMillis(14_999))
         assertEquals(11, premierRemainingTurnSecondsFromMillis(10_001))
         assertEquals(10, premierRemainingTurnSecondsFromMillis(10_000))
         assertEquals(1, premierRemainingTurnSecondsFromMillis(1))
