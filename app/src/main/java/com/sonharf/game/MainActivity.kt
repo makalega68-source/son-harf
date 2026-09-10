@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -47,19 +48,27 @@ private val SonHarfTypography = Typography(
 enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
 
 class MainActivity : ComponentActivity() {
+    private fun bestEffortStartup(name: String, block: () -> Unit) {
+        runCatching(block).onFailure { Log.e("SonHarfStartup", "$name failed; continuing launch", it) }
+    }
+
     private fun handleAuthDeepLink(intent: Intent) {
         val uri = intent.data
         if (!SupabaseProvider.configured || uri?.scheme != "sonharf" || uri.host != "auth") return
-        SupabaseProvider.client.handleDeeplinks(
-            intent = intent,
-            onSessionSuccess = { session ->
-                val verifiedEmail = session.user?.email.orEmpty()
-                if (verifiedEmail.isNotBlank()) {
-                    SonHarfPreferences.setRememberLogin(this, true, verifiedEmail)
-                }
-                runOnUiThread { recreate() }
-            },
-        )
+        bestEffortStartup("auth deeplink") {
+            SupabaseProvider.client.handleDeeplinks(
+                intent = intent,
+                onSessionSuccess = { session ->
+                    val verifiedEmail = session.user?.email.orEmpty()
+                    if (verifiedEmail.isNotBlank()) {
+                        bestEffortStartup("remember login") {
+                            SonHarfPreferences.setRememberLogin(this, true, verifiedEmail)
+                        }
+                    }
+                    runOnUiThread { recreate() }
+                },
+            )
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -70,33 +79,36 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
-        SonHarfBackgroundMusic.start(this)
+        bestEffortStartup("background music") { SonHarfBackgroundMusic.start(this) }
     }
 
     override fun onStop() {
-        SonHarfBackgroundMusic.pause()
+        runCatching { SonHarfBackgroundMusic.pause() }
         super.onStop()
     }
 
     override fun onDestroy() {
-        SonHarfBackgroundMusic.release()
-        SonHarfSoundFx.release()
+        runCatching { SonHarfBackgroundMusic.release() }
+        runCatching { SonHarfSoundFx.release() }
         super.onDestroy()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        SonHarfSoundFx.init(this)
-        SonHarfPreferences.syncSound(this)
-        SonHarfPreferences.syncUi(this)
-        SonHarfCosmetics.restore(this)
-        RemoteExperience.loadCached(this)
-        AdPrivacyManager.requestConsent(this)
+
+        // Nothing optional is allowed to prevent the first frame from being rendered. Audio,
+        // cached cosmetics/experience data and privacy SDKs are useful, but a device-specific
+        // initialization failure must degrade that feature instead of crashing the whole app.
+        bestEffortStartup("sound effects") { SonHarfSoundFx.init(this) }
+        bestEffortStartup("sound preferences") { SonHarfPreferences.syncSound(this) }
+        bestEffortStartup("ui preferences") { SonHarfPreferences.syncUi(this) }
+        bestEffortStartup("cosmetics") { SonHarfCosmetics.restore(this) }
+        bestEffortStartup("remote experience cache") { RemoteExperience.loadCached(this) }
+        bestEffortStartup("ad privacy") { AdPrivacyManager.requestConsent(this) }
 
         val authDeepLink = intent.data?.let { it.scheme == "sonharf" && it.host == "auth" } == true
-        val clearUnrememberedSession = SupabaseProvider.configured &&
-            !SonHarfPreferences.rememberLogin(this) &&
-            !authDeepLink
+        val rememberLogin = runCatching { SonHarfPreferences.rememberLogin(this) }.getOrDefault(false)
+        val clearUnrememberedSession = SupabaseProvider.configured && !rememberLogin && !authDeepLink
 
         setContent {
             val appColors = if (SonHarfCosmetics.darkArenaTheme) {
