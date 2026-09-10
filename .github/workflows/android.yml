@@ -51,7 +51,8 @@ jobs:
           test ! -f app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt
           grep -q 'UnifiedProApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
           grep -q 'SonHarfCosmetics.restore(context)' app/src/main/java/com/sonharf/game/StableV1App.kt
-          grep -q 'SonHarfTopAdBanner(visible = !gameplay, isPremium = isPro)' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          ! grep -RqiE 'ProfHammy|Prof\. Hammy|prof_hammy' app/src/main/java app/src/main/res
           grep -q 'val Background: Color get() = SonHarfTheme.Background' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'lightColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
           grep -q 'darkColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
