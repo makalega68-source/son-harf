@@ -16,20 +16,27 @@ class UnifiedHomeWeeklyPodiumContractTest {
         assertFalse(source.contains("ARENANI SEÇ"))
         assertFalse(source.contains("20 saniyelik baskı"))
 
-        // Home podium is populated from the existing authoritative weekly leaderboard RPC.
+        // Home podium still uses the authoritative weekly top-three source.
         assertTrue(source.contains("backend.getLeaderboardV2(language, \"week\", 3)"))
         assertTrue(source.contains("WeeklyChampionPodium("))
         assertTrue(source.contains("HAFTANIN ZİRVESİ"))
-        assertTrue(source.contains("players.getOrNull(0)"))
+        assertTrue(source.contains("WeeklyChampionHero(player = players.first()"))
         assertTrue(source.contains("players.getOrNull(1)"))
         assertTrue(source.contains("players.getOrNull(2)"))
 
-        // Premium podium presentation uses rectangular photos and explicit gold/silver/bronze rank frames.
-        assertTrue(source.contains("ProfilePhotoAvatarRectWithGender("))
-        assertTrue(source.contains("1 -> Color(0xFFFFD25A)"))
-        assertTrue(source.contains("2 -> Color(0xFFC7CED8)"))
-        assertTrue(source.contains("else -> Color(0xFFC88758)"))
+        // Premium hierarchy: one champion hero, compact runners, and privacy-safe avatars.
+        assertTrue(source.contains("private fun WeeklyChampionHero"))
+        assertTrue(source.contains("private fun WeeklyRunnerCard"))
+        assertTrue(source.contains("ProfilePhotoAvatarWithGender("))
+        assertTrue(source.contains("HAFTA ŞAMPİYONU"))
+        assertTrue(source.contains("Text(\"#1\""))
+        assertTrue(source.contains("place = 2"))
+        assertTrue(source.contains("place = 3"))
         assertTrue(source.contains("avatarVisibility == \"hidden\""))
+
+        // Real empty/loading state replaces fabricated placeholder podium entries.
+        assertTrue(source.contains("WeeklyPodiumEmptyState("))
+        assertTrue(source.contains("players.isEmpty()"))
 
         // Other game modes remain reachable instead of being removed with the duplicate Premier card.
         assertTrue(source.contains("DİĞER OYUNLAR"))
