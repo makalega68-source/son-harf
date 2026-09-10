@@ -40,5 +40,30 @@ class PremierDuelUxRegressionTest {
         assertTrue(onlineBackend.contains("suspend fun resumePremierBotMatch(roomId: String): GameRoomDto"))
         assertTrue(onlineBackend.contains("\"resume_premier_bot_match_v1\""))
         assertTrue(onlineBackend.contains("put(\"p_room_id\", roomId)"))
+
+        // Small-screen gameplay must keep the target instruction visible above the keyboard.
+        assertTrue(screen.contains("val veryCompact = maxHeight < 610.dp"))
+        assertTrue(screen.contains("if (!veryCompact)"))
+        assertTrue(screen.contains("“$required” ile başlayan bir kelime yaz"))
+
+        // A completed authoritative submit clears the attempt and gives explicit correct/wrong feedback.
+        assertTrue(screen.contains("input = \"\""))
+        assertTrue(screen.contains("val accepted = next.validWordCount > active.validWordCount"))
+        assertTrue(screen.contains("pt(language, \"DOĞRU\", \"CORRECT\")"))
+        assertTrue(screen.contains("pt(language, \"YANLIŞ\", \"WRONG\")"))
+        assertTrue(screen.contains("PremierMoveFeedback("))
+
+        // The input bar no longer carries the redundant server badge.
+        assertFalse(screen.contains("PremierStatPill(pt(language, \"SUNUCU\", \"SERVER\")"))
+
+        // Chat keeps quick reactions but human matches also expose a real typed message field/history.
+        assertTrue(screen.contains("private fun PremierChatSheet("))
+        assertTrue(screen.contains("messages = chat"))
+        assertTrue(screen.contains("OutlinedTextField("))
+        assertTrue(screen.contains("\"Mesaj yaz…\""))
+        assertTrue(screen.contains("backend.sendChat(active.id, message)"))
+        assertTrue(screen.contains("backend.getChat(active.id)"))
+        assertTrue(screen.contains("quickMessages.forEach"))
+        assertTrue(screen.contains("Bot maçında gerçek mesajlaşma kapalıdır."))
     }
 }
