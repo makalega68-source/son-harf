@@ -1,13 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
     <!--
-      Keep the manifest pointed at a stable XML drawable so the launcher never depends on a
-      directly-declared raster resource. The visible artwork is the user's supplied SH icon,
-      re-encoded as a validated PNG in drawable-nodpi.
+      Vector-only launcher path: no bitmap decode is allowed during startup.
+      This prevents a malformed raster asset from crashing launch or authentication.
     -->
-    <item>
-        <bitmap
-            android:src="@drawable/son_harf_gold_teal_logo"
-            android:gravity="fill" />
-    </item>
+    <item android:drawable="@drawable/son_harf_gold_teal_logo" />
 </layer-list>
