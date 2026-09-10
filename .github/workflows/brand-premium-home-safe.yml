@@ -1,0 +1,103 @@
+name: Safe Brand + Premium Home Integration
+
+on:
+  push:
+    branches: [ feat/brand-premium-home-safe-20260910 ]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: brand-premium-home-safe
+  cancel-in-progress: true
+
+jobs:
+  patch-build-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: feat/brand-premium-home-safe-20260910
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Apply guarded UI patch
+        run: python3 .github/scripts/apply_brand_premium_home.py
+
+      - name: Verify targeted source contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          grep -q '@drawable/son_harf_app_icon_safe' app/src/main/AndroidManifest.xml
+          grep -q 'SonHarfOfficialLogo' app/src/main/java/com/sonharf/game/RequiredAuthGate.kt
+          grep -q 'SonHarfOfficialLogo' app/src/main/java/com/sonharf/game/StableV1App.kt
+          grep -q 'SonHarfOfficialLogo' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'HAFTA ŞAMPİYONU' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'private fun WeeklyChampionHero' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'private fun WeeklyRunnerCard' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          ! grep -q 'private fun WeeklyChampionCard' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'UnifiedDestination.GAME -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'val Background: Color get() = SonHarfTheme.Background' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          test -f app/src/main/res/drawable/son_harf_app_icon_safe.xml
+          test ! -f app/src/main/res/drawable/son_harf_app_icon.webp
+          test -f app/src/main/res/drawable-nodpi/son_harf_brand_logo.webp
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/res/drawable-nodpi/son_harf_brand_logo.webp')
+          data = p.read_bytes()
+          assert len(data) > 1000
+          assert data[:4] == b'RIFF' and data[8:12] == b'WEBP'
+          print('WEBP header and size verified:', len(data))
+          PY
+          if command -v identify >/dev/null 2>&1; then
+            identify app/src/main/res/drawable-nodpi/son_harf_brand_logo.webp
+          fi
+
+      - name: Build debug APK with unit tests
+        run: gradle clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Brand-Premium-Test.apk
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose --print-certs SonHarf-Brand-Premium-Test.apk
+          sha256sum SonHarf-Brand-Premium-Test.apk | tee SonHarf-Brand-Premium-Test.sha256
+
+      - name: Upload verified APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: son-harf-brand-premium-apk
+          path: |
+            SonHarf-Brand-Premium-Test.apk
+            SonHarf-Brand-Premium-Test.sha256
+          if-no-files-found: error
+
+      - name: Commit only after green build
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f .github/scripts/apply_brand_premium_home.py
+          rm -f .github/workflows/brand-premium-home-safe.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Markayı güvenli entegre et ve haftanın zirvesini premiumlaştır"
+          git push origin HEAD:feat/brand-premium-home-safe-20260910
