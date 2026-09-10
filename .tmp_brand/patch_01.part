@@ -1,0 +1,112 @@
+            size = null,
+                startupSafe = true,
+            )''',
+)
+
+stable = ROOT / 'app/src/main/java/com/sonharf/game/StableV1App.kt'
+replace_once(
+    stable,
+    '''            SonHarfBrandLogo(size = 82.dp)
+            Spacer(Modifier.height(24.dp))
+            Text(
+                text = "SON HARF",
+                color = MainUi.Text,
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Black,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Dilini seç / Choose your language",''',
+    '''            SonHarfBrandLogo(size = 132.dp)
+            Spacer(Modifier.height(18.dp))
+            Text(
+                text = "Dilini seç / Choose your language",''',
+)
+
+manifest = ROOT / 'app/src/main/AndroidManifest.xml'
+replace_once(manifest, 'android:icon="@drawable/son_harf_app_icon_safe"', 'android:icon="@drawable/son_harf_app_icon"')
+replace_once(manifest, 'android:roundIcon="@drawable/son_harf_app_icon_safe"', 'android:roundIcon="@drawable/son_harf_app_icon"')
+
+unified = ROOT / 'app/src/main/java/com/sonharf/game/UnifiedProApp.kt'
+replace_once(
+    unified,
+    '''                Column(Modifier.weight(1f)) {
+                    Text("SON HARF", color = UnifiedUi.Text, fontSize = 27.sp, fontWeight = FontWeight.Black)
+                    Text("Kelimeyi Sürdür, Rakibini Geç", color = UnifiedUi.Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }''',
+    '''                Column(Modifier.weight(1f)) {
+                    SonHarfBrandLogo(size = 60.dp)
+                    Spacer(Modifier.height(2.dp))
+                    Text("Kelimeyi Sürdür, Rakibini Geç", color = UnifiedUi.Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }''',
+)
+
+source = unified.read_text(encoding='utf-8')
+start_marker = '@Composable\nprivate fun WeeklyChampionPodium('
+end_marker = '@Composable\nprivate fun UnifiedHeroMetric'
+start = source.find(start_marker)
+end = source.find(end_marker, start)
+if start < 0 or end < 0:
+    raise SystemExit('Weekly podium markers not found; refusing unsafe patch')
+
+weekly_block = '''@Composable
+private fun WeeklyChampionPodium(
+    players: List<WeeklyPodiumPlayer>,
+    loading: Boolean,
+    onOpenLeague: () -> Unit,
+) {
+    val champagne = Color(0xFFE7C66A)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(12.dp, RoundedCornerShape(24.dp))
+            .sonHarfPressScale(pressedScale = 0.99f)
+            .clickable(onClick = onOpenLeague),
+        shape = RoundedCornerShape(24.dp),
+        color = Color.Transparent,
+        border = BorderStroke(1.dp, champagne.copy(alpha = .42f)),
+    ) {
+        Column(
+            Modifier
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            Color(0xFF19372F),
+                            Color(0xFF294A40),
+                            Color(0xFF263E49),
+                        )
+                    )
+                )
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = CircleShape,
+                    color = champagne.copy(alpha = .16f),
+                    border = BorderStroke(1.dp, champagne.copy(alpha = .35f)),
+                ) {
+                    Icon(
+                        Icons.Rounded.WorkspacePremium,
+                        contentDescription = null,
+                        tint = champagne,
+                        modifier = Modifier.padding(10.dp).size(21.dp),
+                    )
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        sh("HAFTANIN ZİRVESİ", "WEEKLY PODIUM"),
+                        color = Color(0xFFFFFBF2),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = .35.sp,
+                    )
+                    Text(
+                        sh("Haftanın en iyi 3 oyuncusu", "Top 3 players of the week"),
+                        color = Color.White.copy(alpha = .68f),
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+                Surface(
