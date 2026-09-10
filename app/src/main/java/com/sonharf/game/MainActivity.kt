@@ -128,7 +128,7 @@ class MainActivity : ComponentActivity() {
                     onTertiary = Color.White,
                     onBackground = SonHarfText,
                     onSurface = SonHarfText,
-                    onSurfaceVariant = SonHarfText,
+                    onSurfaceVariant = SonHarfSurface2,
                     error = SonHarfPink,
                 )
             }
@@ -177,7 +177,11 @@ private fun StartupLoading() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            SonHarfBrandLogo(modifier = Modifier.fillMaxWidth(.58f), size = null)
+            SonHarfBrandLogo(
+                modifier = Modifier.fillMaxWidth(.58f),
+                size = null,
+                startupSafe = true,
+            )
             Spacer(Modifier.height(24.dp))
             CircularProgressIndicator(color = SonHarfBlue, strokeWidth = 3.dp)
             Spacer(Modifier.height(14.dp))
