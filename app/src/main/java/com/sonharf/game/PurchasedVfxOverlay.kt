@@ -27,10 +27,15 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
+internal const val PURCHASED_DUEL_WORD_VFX_MS = 720
+internal const val PURCHASED_DUEL_WORD_MAX_ALPHA = .76f
+internal const val PURCHASED_DUEL_WORD_STAR_COUNT = 4
+internal const val PURCHASED_DUEL_WORD_CENTER_STAR_DP = 28f
+
 internal const val PURCHASED_BOARD_PLACE_VFX_MS = 650
 internal const val PURCHASED_BOARD_RESOLVE_VFX_MS = 800
-internal const val PURCHASED_BOARD_PLACE_MAX_ALPHA = .86f
-internal const val PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .88f
+internal const val PURCHASED_BOARD_PLACE_MAX_ALPHA = .82f
+internal const val PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .85f
 internal const val PURCHASED_BOARD_PLACE_STAR_COUNT = 4
 internal const val PURCHASED_BOARD_RESOLVE_STAR_COUNT = 5
 internal const val PURCHASED_BOARD_PLACE_MIN_STAR_DP = 12f
@@ -44,6 +49,13 @@ internal data class PurchasedBoardVfxEvent(
     val kind: PurchasedBoardVfxKind,
 )
 
+private val PurchasedDuelWordVfxDirections = listOf(
+    -0.86f to -0.38f,
+    0.86f to -0.44f,
+    -0.68f to 0.62f,
+    0.68f to 0.66f,
+)
+
 private val PurchasedBoardVfxDirections = listOf(
     -0.90f to -0.62f,
     0.90f to -0.52f,
@@ -54,27 +66,45 @@ private val PurchasedBoardVfxDirections = listOf(
 )
 private val PurchasedPlacementCyan = Color(0xFF35D6FF)
 
-/** Cosmetic-only, bounded Compose adaptation of a purchased Eric Wang VFX texture. */
+/**
+ * Cosmetic-only, bounded Compose adaptation of a purchased Eric Wang VFX texture.
+ * This is intentionally a micro word-success burst, not a full-screen celebration.
+ */
 @Composable
 internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier) {
     val progress = remember(eventKey) { Animatable(0f) }
     LaunchedEffect(eventKey) {
         progress.snapTo(0f)
-        progress.animateTo(1f, tween(1050))
+        progress.animateTo(1f, tween(PURCHASED_DUEL_WORD_VFX_MS))
     }
     val p = progress.value
-    val alpha = if (p < .18f) p / .18f else (1f - p).coerceIn(0f, 1f)
+    val envelope = if (p < .16f) p / .16f else ((1f - p) / .84f).coerceIn(0f, 1f)
+    val alpha = envelope * PURCHASED_DUEL_WORD_MAX_ALPHA
+
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        repeat(8) { i ->
-            val dx = ((i % 4) - 1.5f) * (34f + 54f * p)
-            val dy = ((i / 4) * 2 - 1) * (30f + 54f * p)
+        repeat(PURCHASED_DUEL_WORD_STAR_COUNT) { index ->
+            val (xDirection, yDirection) = PurchasedDuelWordVfxDirections[index]
+            val distance = 24f + 34f * p
+            val starSize = 12f + (index % 2) * 2f
             Image(
-                painterResource(R.drawable.vfx_twinkle),
-                null,
-                Modifier.offset(dx.dp, dy.dp).size((15f + (i % 3) * 3f).dp).rotate(i * 31f + p * 100f).alpha(alpha),
+                painter = painterResource(R.drawable.vfx_twinkle),
+                contentDescription = null,
+                modifier = Modifier
+                    .offset((xDirection * distance).dp, (yDirection * distance).dp)
+                    .size(starSize.dp)
+                    .rotate(index * 43f + p * 70f)
+                    .alpha(alpha),
             )
         }
-        Image(painterResource(R.drawable.vfx_twinkle), null, Modifier.offset(y = (-54).dp).size(42.dp).rotate(p * 90f).alpha(alpha))
+        Image(
+            painter = painterResource(R.drawable.vfx_twinkle),
+            contentDescription = null,
+            modifier = Modifier
+                .offset(y = (-36).dp)
+                .size(PURCHASED_DUEL_WORD_CENTER_STAR_DP.dp)
+                .rotate(p * 70f)
+                .alpha(alpha),
+        )
     }
 }
 
@@ -136,10 +166,14 @@ private fun PurchasedBoardActionVfx(
     Box(modifier.fillMaxSize()) {
         Canvas(Modifier.matchParentSize()) {
             val ringRadiusPx = with(density) { (ringStartDp + ringTravelDp * p).dp.toPx() }
-            val ringStrokePx = with(density) { 3.2.dp.toPx() }
-            val glowStrokePx = with(density) { 7.dp.toPx() }
+            val ringStrokePx = with(density) {
+                (if (kind == PurchasedBoardVfxKind.PLACEMENT) 2.6f else 2.9f).dp.toPx()
+            }
+            val glowStrokePx = with(density) {
+                (if (kind == PurchasedBoardVfxKind.PLACEMENT) 5.2f else 5.8f).dp.toPx()
+            }
             drawCircle(
-                color = tint.copy(alpha = envelope * maxAlpha * .22f),
+                color = tint.copy(alpha = envelope * maxAlpha * .20f),
                 radius = ringRadiusPx,
                 center = centerPx,
                 style = Stroke(width = glowStrokePx),
