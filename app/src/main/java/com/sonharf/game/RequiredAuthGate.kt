@@ -286,9 +286,8 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Spacer(Modifier.height(34.dp))
-                    SonHarfBrandLogo(
-                        modifier = Modifier.fillMaxWidth(.84f).height(190.dp),
-                        size = null,
+                    SonHarfOfficialLogo(
+                        modifier = Modifier.fillMaxWidth(.78f).height(174.dp),
                     )
                     Spacer(Modifier.height(56.dp))
                     Button(

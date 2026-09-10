@@ -104,15 +104,10 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            SonHarfBrandLogo(size = 82.dp)
-            Spacer(Modifier.height(24.dp))
-            Text(
-                text = "SON HARF",
-                color = MainUi.Text,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Black,
+            SonHarfOfficialLogo(
+                modifier = Modifier.fillMaxWidth(.66f).height(104.dp),
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(18.dp))
             Text(
                 text = "Dilini seç / Choose your language",
                 color = MainUi.Muted,
