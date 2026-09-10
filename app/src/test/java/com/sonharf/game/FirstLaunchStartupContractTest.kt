@@ -7,12 +7,13 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class FirstLaunchStartupContractTest {
-    @Test fun mainActivityNeverBlocksBeforeComposeAndHasTimeoutFallback() {
+    @Test fun mainActivityNeverBlocksBeforeComposeAndAlwaysContinuesAfterTimeout() {
         val main = projectFile("app/src/main/java/com/sonharf/game/MainActivity.kt").readText()
         assertFalse(main.contains("runBlocking"))
         assertTrue(main.contains("AppStartupGate"))
         assertTrue(main.contains("withTimeoutOrNull"))
-        assertTrue(main.contains("StartupError"))
+        assertFalse(main.contains("StartupError"))
+        assertTrue(main.contains("state = StartupState.Ready"))
         assertTrue(main.contains("setContent"))
     }
 

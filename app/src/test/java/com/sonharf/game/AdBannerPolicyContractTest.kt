@@ -37,17 +37,17 @@ class AdBannerPolicyContractTest {
     }
 
     @Test
-    fun unifiedProGameplayRoutesExplicitlyDisableBanner() {
+    fun unifiedProUsesOneBannerAcrossAllRoutesIncludingGameplay() {
         val app = source("src/main/java/com/sonharf/game/UnifiedProApp.kt")
-        assertTrue(app.contains("val gameplay = destination in setOf("))
-        assertTrue(app.contains("SonHarfTopAdBanner(visible = !gameplay, isPremium = isPro)"))
+        assertTrue(app.contains("SonHarfTopAdBanner(isPremium = isPro)"))
+        assertFalse(app.contains("visible = !gameplay"))
         assertTrue(app.contains("UnifiedDestination.GAME -> OnlineGameScreenV6()"))
         assertTrue(app.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
         assertTrue(app.contains("UnifiedDestination.LETTER -> LetterLadderGameScreen"))
     }
 
     @Test
-    fun gameplayImplementationsDoNotInstantiateBannerDirectly() {
+    fun gameplayImplementationsUseOnlyTheSharedShellBanner() {
         val sourceRoot = projectFile("src/main/java/com/sonharf/game")
         val offenders = sourceRoot.walkTopDown()
             .filter { it.isFile && (it.name.contains("Game", ignoreCase = true) || it.name.contains("Arena", ignoreCase = true)) }

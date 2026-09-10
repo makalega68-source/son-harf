@@ -24,5 +24,8 @@ class UnifiedProRuntimeContractTest {
         assertFalse(File("src/main/res/drawable-nodpi/mage_cat_runtime.webp").exists())
         assertFalse(File("src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt").exists())
         assertFalse(File("src/main/java/com/sonharf/game/MonsterExperienceApp.kt").exists())
+        assertFalse(File("src/main/java/com/sonharf/game/ProfHammyCompanion.kt").exists())
+        assertFalse(File("src/main/java/com/sonharf/game/ProfHammyPremiumHomeCard.kt").exists())
+        assertFalse(File("src/main/res/drawable-nodpi/prof_hammy_hero.webp").exists())
     }
 }
