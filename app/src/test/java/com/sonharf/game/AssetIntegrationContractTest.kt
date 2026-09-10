@@ -48,12 +48,14 @@ class AssetIntegrationContractTest {
 
     @Test fun purchasedVfxIsVisibleOneShotAndInputTransparent() {
         val src = read("src/main/java/com/sonharf/game/PurchasedVfxOverlay.kt")
-        assertTrue(src.contains("1050"))
+        assertTrue(src.contains("PURCHASED_DUEL_WORD_VFX_MS = 720"))
+        assertTrue(src.contains("PURCHASED_DUEL_WORD_MAX_ALPHA = .76f"))
+        assertTrue(src.contains("PURCHASED_DUEL_WORD_STAR_COUNT = 4"))
         assertTrue(src.contains("Cosmetic-only"))
         assertTrue(src.contains("PURCHASED_BOARD_PLACE_VFX_MS = 650"))
         assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_VFX_MS = 800"))
-        assertTrue(src.contains("PURCHASED_BOARD_PLACE_MAX_ALPHA = .86f"))
-        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .88f"))
+        assertTrue(src.contains("PURCHASED_BOARD_PLACE_MAX_ALPHA = .82f"))
+        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .85f"))
         assertTrue(src.contains("PURCHASED_BOARD_PLACE_STAR_COUNT = 4"))
         assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_STAR_COUNT = 5"))
         assertTrue(src.contains("PURCHASED_BOARD_PLACE_MIN_STAR_DP = 12f"))
