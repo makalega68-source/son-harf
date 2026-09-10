@@ -47,6 +47,7 @@ import kotlinx.coroutines.launch
 
 private enum class PremierStage { Loading, Lobby, Searching, Vs, Playing, Finished }
 private data class PremierMoveFeedback(val accepted: Boolean, val message: String)
+private const val PREMIER_TURN_SECONDS = 15
 
 /** Fixed high-legibility gameplay palette from the same calm Son Harf color family. */
 private object PremierUi {
@@ -73,7 +74,7 @@ private fun premierUpper(value: String, language: String): String = value.upperc
 
 internal fun premierRemainingTurnSecondsFromMillis(remainingMillis: Long): Int {
     if (remainingMillis <= 0L) return 0
-    return ((remainingMillis + 999L) / 1000L).coerceIn(1L, 20L).toInt()
+    return ((remainingMillis + 999L) / 1000L).coerceIn(1L, PREMIER_TURN_SECONDS.toLong()).toInt()
 }
 
 internal fun premierRemainingTurnSeconds(deadline: Instant, now: Instant = Instant.now()): Int =
@@ -108,9 +109,10 @@ fun PremierWordDuelScreen() {
     var busy by remember { mutableStateOf(false) }
     var showForfeit by remember { mutableStateOf(false) }
     var showQuickChat by remember { mutableStateOf(false) }
+    var hasUnreadChat by remember { mutableStateOf(false) }
     var floatingMessage by remember { mutableStateOf<ChatMessageDto?>(null) }
     var moveFeedback by remember { mutableStateOf<PremierMoveFeedback?>(null) }
-    var turnSeconds by remember { mutableIntStateOf(20) }
+    var turnSeconds by remember { mutableIntStateOf(PREMIER_TURN_SECONDS) }
 
     suspend fun ensureMe(): ProfileDto {
         if (backend.currentUserId() == null) backend.ensurePlayer(pt(language, "Oyuncu", "Player"))
@@ -123,7 +125,10 @@ fun PremierWordDuelScreen() {
     suspend fun adoptRoom(next: GameRoomDto, cinematic: Boolean) {
         val previousRoomId = room?.id
         room = next
-        if (previousRoomId != next.id) botChat = emptyList()
+        if (previousRoomId != next.id) {
+            botChat = emptyList()
+            hasUnreadChat = false
+        }
         language = SharedDictionaryService.canonicalLanguage(next.language)
         SonHarfUiState.language = language
         opponent = backend.getPremierOpponent(next)
@@ -181,6 +186,7 @@ fun PremierWordDuelScreen() {
                     val latest = next.lastOrNull()
                     if (latest != null && latest.id != previousId && latest.senderId != backend.currentUserId()) {
                         floatingMessage = latest
+                        hasUnreadChat = !showQuickChat
                     }
                 }
         }
@@ -247,22 +253,22 @@ fun PremierWordDuelScreen() {
     LaunchedEffect(room?.id, room?.turnDeadline, room?.currentPlayerId, room?.status, room?.botTurn) {
         val active = room ?: return@LaunchedEffect
         if (active.status !in setOf("playing", "final", "sudden_death") || active.botTurn) {
-            turnSeconds = 20
+            turnSeconds = PREMIER_TURN_SECONDS
             return@LaunchedEffect
         }
 
         val deadline = active.turnDeadline?.let { runCatching { Instant.parse(it) }.getOrNull() }
         if (deadline == null) {
-            turnSeconds = 20
+            turnSeconds = PREMIER_TURN_SECONDS
             runCatching { backend.getRoom(active.id) }.getOrNull()?.let { synced ->
                 if (synced != active) room = synced
             }
             return@LaunchedEffect
         }
 
-        // Anchor the visible countdown to the database clock rather than the phone's wall
-        // clock. A phone that is several seconds fast must still receive a full 20-second turn.
-        turnSeconds = 20
+        // Anchor the visible countdown to the database clock rather than the phone wall clock.
+        // Phone clock drift must not shorten the authoritative 15-second turn.
+        turnSeconds = PREMIER_TURN_SECONDS
         val requestStartedAt = SystemClock.elapsedRealtime()
         val serverClock = runCatching { fetchPremierTurnClock(active.id) }.getOrNull()
         val requestFinishedAt = SystemClock.elapsedRealtime()
@@ -399,11 +405,15 @@ fun PremierWordDuelScreen() {
                         notice = notice,
                         busy = busy,
                         turnSeconds = turnSeconds,
+                        unreadChat = hasUnreadChat,
                         floatingMessage = floatingMessage,
                         moveFeedback = moveFeedback,
                         onInput = { input = it },
                         onForfeit = { showForfeit = true },
-                        onQuickChat = { showQuickChat = true },
+                        onQuickChat = {
+                            hasUnreadChat = false
+                            showQuickChat = true
+                        },
                         onSubmit = {
                             if (busy || input.isBlank()) return@PremierArena
                             scope.launch {
@@ -538,6 +548,7 @@ fun PremierWordDuelScreen() {
                             body = premierBotChatReply(language, message),
                             createdAt = Instant.now().toString(),
                         )
+                        if (!showQuickChat) hasUnreadChat = true
                     } else {
                         runCatching {
                             backend.sendChat(active.id, message)
@@ -588,13 +599,13 @@ private fun PremierLobby(
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    ProfilePhotoAvatarWithGender(
-                        avatarPath = profile?.avatarPath,
+                    ProfilePhotoAvatarRectWithGender(
+                        avatarPath = if (profile?.avatarVisibility == "hidden") null else profile?.avatarPath,
                         gender = profile?.gender,
                         name = profile?.displayName ?: pt(language, "Oyuncu", "Player"),
-                        size = 58.dp,
+                        width = 76.dp,
+                        height = 58.dp,
                         accent = Color.White,
-                        visible = profile?.avatarVisibility != "hidden",
                         showGenderBadge = false,
                     )
                     Spacer(Modifier.width(12.dp))
@@ -623,7 +634,7 @@ private fun PremierLobby(
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PremierFeatureTile(Icons.Rounded.Verified, pt(language, "ANA SÖZLÜK", "MASTER DICTIONARY"), pt(language, "TR + EN", "TR + EN"), Modifier.weight(1f))
-            PremierFeatureTile(Icons.Rounded.Bolt, pt(language, "HIZLI", "FAST"), pt(language, "20 sn tur", "20 sec turn"), Modifier.weight(1f))
+            PremierFeatureTile(Icons.Rounded.Bolt, pt(language, "HIZLI", "FAST"), pt(language, "15 sn tur", "15 sec turn"), Modifier.weight(1f))
             PremierFeatureTile(Icons.Rounded.Groups, pt(language, "CANLI", "LIVE"), "1v1", Modifier.weight(1f))
         }
 
@@ -748,7 +759,15 @@ private fun PremierVsPlayerCard(language: String, name: String, avatar: String?,
     Surface(modifier = Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(23.dp)), shape = RoundedCornerShape(23.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, accent.copy(alpha = .22f))) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (bot) PremierBotAvatar(size = 70.dp, accent = accent)
-            else ProfilePhotoAvatarWithGender(avatar, gender, name, 66.dp, accent, visible, false)
+            else ProfilePhotoAvatarRectWithGender(
+                avatarPath = if (visible) avatar else null,
+                gender = gender,
+                name = name,
+                width = 84.dp,
+                height = 64.dp,
+                accent = accent,
+                showGenderBadge = false,
+            )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
                 Text(name, color = PremierUi.Ink, fontSize = 18.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -782,6 +801,7 @@ private fun PremierArena(
     notice: String,
     busy: Boolean,
     turnSeconds: Int,
+    unreadChat: Boolean,
     floatingMessage: ChatMessageDto?,
     moveFeedback: PremierMoveFeedback?,
     onInput: (String) -> Unit,
@@ -799,6 +819,7 @@ private fun PremierArena(
     val myTurn = room.currentPlayerId == meId && !room.botTurn && room.status in setOf("playing", "final", "sudden_death")
     val rivalName = if (room.isBot) room.botName ?: pt(language, "KelimeBot", "WordBot") else opponent?.displayName ?: pt(language, "Rakip", "Rival")
     val required = premierRequiredToken(room, words)
+    val latestPlayedWord = words.lastOrNull()?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val veryCompact = maxHeight < 610.dp
@@ -809,7 +830,7 @@ private fun PremierArena(
         val primaryGap = if (veryCompact) 3.dp else if (compact) 5.dp else 9.dp
 
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
-            PremierArenaHeader(language, room, me, opponent, rivalName, myScore, rivalScore, myRounds, rivalRounds, myStreak, rivalStreak, turnSeconds, onForfeit, onQuickChat)
+            PremierArenaHeader(language, room, me, opponent, rivalName, myScore, rivalScore, myRounds, rivalRounds, myStreak, rivalStreak, turnSeconds, unreadChat, onForfeit, onQuickChat)
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(primaryGap))
                 PremierTurnBadge(language, myTurn, room.status)
@@ -817,14 +838,14 @@ private fun PremierArena(
                 PremierTargetCard(language, required, room.gameMode, room.roundNo, targetSize)
                 Spacer(Modifier.height(primaryGap))
                 Text(
-                    if (required == "★") pt(language, "İlk kelime serbest", "Free opening word")
-                    else pt(language, "“$required” ile başlayan bir kelime yaz", "Enter a word starting with “$required”"),
+                    latestPlayedWord.ifBlank { pt(language, "İLK KELİME SERBEST", "FREE OPENING WORD") },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
                     color = PremierUi.OceanDeep,
-                    fontSize = if (veryCompact) 10.sp else 11.sp,
+                    fontSize = if (veryCompact) 14.sp else 16.sp,
                     fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (!veryCompact) {
                     Spacer(Modifier.height(primaryGap))
@@ -846,6 +867,19 @@ private fun PremierArena(
                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
             )
             PremierKeyboard(language, input, enabled = myTurn && !busy, keyHeight = keyHeight, onInput = onInput, onSubmit = onSubmit)
+        }
+
+        if (myTurn && room.validWordCount > 0) {
+            PurchasedVictoryVfx(
+                eventKey = "turn:${room.id}:${room.validWordCount}",
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        if (moveFeedback?.accepted == true) {
+            PurchasedVictoryVfx(
+                eventKey = "accepted:${room.id}:${room.validWordCount}:${moveFeedback.message}",
+                modifier = Modifier.fillMaxSize(),
+            )
         }
 
         AnimatedVisibility(visible = floatingMessage != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 132.dp, start = 22.dp, end = 22.dp)) {
@@ -894,6 +928,7 @@ private fun PremierArenaHeader(
     myStreak: Int,
     rivalStreak: Int,
     seconds: Int,
+    unreadChat: Boolean,
     onForfeit: () -> Unit,
     onQuickChat: () -> Unit,
 ) {
@@ -921,16 +956,21 @@ private fun PremierArenaHeader(
                     }
                 }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                    Surface(
-                        modifier = Modifier.clickable(onClick = onQuickChat),
-                        shape = RoundedCornerShape(12.dp),
-                        color = PremierUi.Ice,
-                        border = BorderStroke(1.dp, PremierUi.Border),
-                    ) {
-                        Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.ChatBubbleOutline, pt(language, "Sohbet", "Chat"), tint = PremierUi.Ocean, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(pt(language, "SOHBET", "CHAT"), color = PremierUi.OceanDeep, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Box {
+                        Surface(
+                            modifier = Modifier.clickable(onClick = onQuickChat),
+                            shape = RoundedCornerShape(12.dp),
+                            color = PremierUi.Ice,
+                            border = BorderStroke(1.dp, PremierUi.Border),
+                        ) {
+                            Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.ChatBubbleOutline, pt(language, "Sohbet", "Chat"), tint = PremierUi.Ocean, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text(pt(language, "SOHBET", "CHAT"), color = PremierUi.OceanDeep, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                        if (unreadChat) {
+                            Box(Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-3).dp).size(10.dp).clip(CircleShape).background(PremierUi.Red))
                         }
                     }
                 }
@@ -974,7 +1014,15 @@ private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, vi
         horizontalArrangement = if (isLeft) Arrangement.Start else Arrangement.End,
     ) {
         if (isLeft) {
-            ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp, accent, visible, false)
+            ProfilePhotoAvatarRectWithGender(
+                avatarPath = if (visible) avatar else null,
+                gender = gender,
+                name = name,
+                width = 70.dp,
+                height = 54.dp,
+                accent = accent,
+                showGenderBadge = false,
+            )
             Spacer(Modifier.width(8.dp))
         }
         Column(
@@ -990,7 +1038,15 @@ private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, vi
         if (!isLeft) {
             Spacer(Modifier.width(8.dp))
             if (bot) PremierBotAvatar(size = 58.dp, accent = accent)
-            else ProfilePhotoAvatarWithGender(avatar, gender, name, 58.dp, accent, visible, false)
+            else ProfilePhotoAvatarRectWithGender(
+                avatarPath = if (visible) avatar else null,
+                gender = gender,
+                name = name,
+                width = 70.dp,
+                height = 54.dp,
+                accent = accent,
+                showGenderBadge = false,
+            )
         }
     }
 }
@@ -1064,7 +1120,11 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String) {
         Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierUi.Muted, fontSize = 10.sp)
         return
     }
-    LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp), contentPadding = PaddingValues(horizontal = 2.dp)) {
+    LazyRow(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
+        contentPadding = PaddingValues(horizontal = 8.dp),
+    ) {
         items(words.takeLast(12).reversed(), key = { it.id }) { entry ->
             Surface(shape = RoundedCornerShape(11.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Border)) {
                 Text(premierUpper(entry.normalizedWord.ifBlank { entry.word }, language), Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Black)
