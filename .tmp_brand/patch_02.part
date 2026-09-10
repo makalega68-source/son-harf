@@ -1,0 +1,111 @@
+                  shape = RoundedCornerShape(99.dp),
+                    color = Color.White.copy(alpha = .07f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = .12f)),
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(sh("TÜMÜ", "ALL"), color = Color(0xFFFFFBF2), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        Spacer(Modifier.width(3.dp))
+                        Icon(Icons.Rounded.ChevronRight, null, tint = champagne, modifier = Modifier.size(14.dp))
+                    }
+                }
+            }
+
+            if (loading) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth().height(3.dp),
+                    color = champagne,
+                    trackColor = Color.White.copy(alpha = .10f),
+                )
+            }
+
+            val podium = listOf(
+                1 to players.getOrNull(0),
+                2 to players.getOrNull(1),
+                3 to players.getOrNull(2),
+            )
+            if (!loading && podium.all { it.second == null }) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color.White.copy(alpha = .06f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = .09f)),
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 14.dp, vertical = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Rounded.EmojiEvents, null, tint = champagne, modifier = Modifier.size(25.dp))
+                        Spacer(Modifier.width(11.dp))
+                        Column {
+                            Text(
+                                sh("Haftalık sıralama hazırlanıyor", "Weekly ranking is getting ready"),
+                                color = Color(0xFFFFFBF2),
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                            )
+                            Text(
+                                sh("İlk sonuçlar geldikçe burada görünecek.", "Top players will appear here as results arrive."),
+                                color = Color.White.copy(alpha = .58f),
+                                fontSize = 9.sp,
+                            )
+                        }
+                    }
+                }
+            } else {
+                podium.forEach { (place, player) ->
+                    if (player != null) {
+                        WeeklyChampionCard(
+                            place = place,
+                            player = player,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WeeklyChampionCard(
+    place: Int,
+    player: WeeklyPodiumPlayer,
+    modifier: Modifier,
+) {
+    val accent = when (place) {
+        1 -> Color(0xFFFFD25A)
+        2 -> Color(0xFFC7CED8)
+        else -> Color(0xFFC88758)
+    }
+    val accentDeep = when (place) {
+        1 -> Color(0xFF7E5700)
+        2 -> Color(0xFF566170)
+        else -> Color(0xFF6F3E24)
+    }
+    val profile = player.profile
+    val avatarPath = if (profile?.avatarVisibility == "hidden") null else profile?.avatarPath
+    val name = player.row.displayName.ifBlank { sh("Oyuncu", "Player") }
+    val champion = place == 1
+
+    Surface(
+        modifier = modifier.height(if (champion) 78.dp else 68.dp),
+        shape = RoundedCornerShape(18.dp),
+        color = if (champion) Color.White.copy(alpha = .12f) else Color.White.copy(alpha = .055f),
+        border = BorderStroke(
+            if (champion) 1.5.dp else 1.dp,
+            accent.copy(alpha = if (champion) .72f else .34f),
+        ),
+        shadowElevation = if (champion) 4.dp else 0.dp,
+    ) {
+        Row(
+            Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Surface(
+                modifier = Modifier.size(if (champion) 34.dp else 30.dp),
+                shape = CircleShape,
+                color = accent,
+          
