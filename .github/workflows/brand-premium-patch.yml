@@ -1,0 +1,68 @@
+name: Brand Premium Patch
+
+on:
+  push:
+    branches: [ brand/new-icon-logo-20260910 ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: brand-premium-patch
+  cancel-in-progress: true
+
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: brand/new-icon-logo-20260910
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+
+      - name: Reassemble guarded patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .tmp_brand/patch_00.part .tmp_brand/patch_01.part .tmp_brand/patch_02.part .tmp_brand/patch_03.part .tmp_brand/patch_04.part > "$RUNNER_TEMP/apply-brand-premium-patch.py"
+          python -m py_compile "$RUNNER_TEMP/apply-brand-premium-patch.py"
+
+      - name: Apply approved branding and premium podium
+        shell: bash
+        run: |
+          set -euo pipefail
+          python "$RUNNER_TEMP/apply-brand-premium-patch.py"
+          test -f app/src/main/res/drawable-nodpi/son_harf_app_icon.webp
+          test -f app/src/main/res/drawable-nodpi/son_harf_brand_logo.webp
+          test ! -f Son_Harf_Ikon.webp
+          test ! -d .tmp_brand
+
+      - name: Build and run regression tests
+        run: gradle clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Commit only after green build
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Son Harf CI"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git status --short
+          git commit -m "Apply new Son Harf brand and premium weekly podium"
+          git push origin HEAD:brand/new-icon-logo-20260910
