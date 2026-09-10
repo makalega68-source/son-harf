@@ -128,7 +128,7 @@ class MainActivity : ComponentActivity() {
                     onTertiary = Color.White,
                     onBackground = SonHarfText,
                     onSurface = SonHarfText,
-                    onSurfaceVariant = SonHarfSurface2,
+                    onSurfaceVariant = SonHarfText,
                     error = SonHarfPink,
                 )
             }
