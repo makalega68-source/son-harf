@@ -19,16 +19,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Startup-safe Son Harf wordmark.
+ * Son Harf brand mark.
  *
- * Keep this logo independent from raster decoding so a damaged drawable can never block app launch.
- * The launcher icon has the same palette in a vector drawable.
+ * User-facing screens use the approved WebP logo. The very first loading frame can opt into
+ * a Compose-only fallback so app launch never depends on raster decoding.
  */
 @Composable
 fun SonHarfBrandLogo(
     modifier: Modifier = Modifier,
     size: Dp? = 52.dp,
+    startupSafe: Boolean = false,
 ) {
+    if (!startupSafe) {
+        val officialModifier = if (size == null) modifier else modifier.height(size)
+        SonHarfOfficialLogo(modifier = officialModifier)
+        return
+    }
+
     val logoModifier = if (size == null) {
         modifier.aspectRatio(2.15f)
     } else {
