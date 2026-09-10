@@ -177,15 +177,41 @@ jobs:
             SonHarf-Brand-Premium-Test.sha256
           if-no-files-found: error
 
-      - name: Commit only after green build
+      - name: Commit only approved source files after green build
         shell: bash
         run: |
           set -euo pipefail
-          rm -f .github/scripts/apply_brand_premium_home.py
-          rm -f .github/workflows/brand-premium-home-safe.yml
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -A
+
+          # Remove the temporary integration machinery from the final branch state.
+          git rm -f .github/scripts/apply_brand_premium_home.py
+          git rm -f .github/workflows/brand-premium-home-safe.yml
+
+          # Explicit allowlist: never stage app/build, APK artifacts, caches, or unrelated files.
+          git add \
+            app/src/main/java/com/sonharf/game/RequiredAuthGate.kt \
+            app/src/main/java/com/sonharf/game/StableV1App.kt \
+            app/src/main/java/com/sonharf/game/UnifiedProApp.kt \
+            app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt \
+            app/src/main/res/drawable/son_harf_app_icon_safe.xml
+
           git diff --cached --check
+          while IFS= read -r path; do
+            case "$path" in
+              .github/scripts/apply_brand_premium_home.py|\
+              .github/workflows/brand-premium-home-safe.yml|\
+              app/src/main/java/com/sonharf/game/RequiredAuthGate.kt|\
+              app/src/main/java/com/sonharf/game/StableV1App.kt|\
+              app/src/main/java/com/sonharf/game/UnifiedProApp.kt|\
+              app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt|\
+              app/src/main/res/drawable/son_harf_app_icon_safe.xml) ;;
+              *) echo "Unexpected staged path: $path"; exit 1 ;;
+            esac
+          done < <(git diff --cached --name-only)
+
+          test -z "$(git diff --cached --name-only | grep '^app/build/' || true)"
+          test -z "$(git diff --cached --name-only | grep '^SonHarf-Brand-Premium-Test' || true)"
+          git status --short
           git commit -m "Markayı güvenli entegre et ve haftanın zirvesini premiumlaştır"
           git push origin HEAD:feat/brand-premium-home-safe-20260910
