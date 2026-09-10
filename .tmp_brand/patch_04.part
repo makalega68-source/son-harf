@@ -1,0 +1,45 @@
+sonharf/game/UnifiedProApp.kt").readText()
+
+        assertTrue(source.contains("Premier 1v1 kelime düellosu"))
+        assertFalse(source.contains("title = sh(\\\"PREMIER 1v1\\\", \\\"PREMIER 1v1\\\")"))
+        assertFalse(source.contains("ARENANI SEÇ"))
+        assertFalse(source.contains("20 saniyelik baskı"))
+
+        assertTrue(source.contains("backend.getLeaderboardV2(language, \\\"week\\\", 3)"))
+        assertTrue(source.contains("WeeklyChampionPodium("))
+        assertTrue(source.contains("HAFTANIN ZİRVESİ"))
+        assertTrue(source.contains("players.getOrNull(0)"))
+        assertTrue(source.contains("players.getOrNull(1)"))
+        assertTrue(source.contains("players.getOrNull(2)"))
+
+        assertTrue(source.contains("ProfilePhotoAvatarWithGender("))
+        assertTrue(source.contains("1 -> Color(0xFFFFD25A)"))
+        assertTrue(source.contains("2 -> Color(0xFFC7CED8)"))
+        assertTrue(source.contains("else -> Color(0xFFC88758)"))
+        assertTrue(source.contains("avatarVisibility == \\\"hidden\\\""))
+        assertTrue(source.contains("Color(0xFF19372F)"))
+        assertTrue(source.contains("Color(0xFFE7C66A)"))
+        assertTrue(source.contains("Haftalık sıralama hazırlanıyor"))
+        assertTrue(source.contains("Weekly ranking is getting ready"))
+
+        assertTrue(source.contains("SonHarfBrandLogo(size = 60.dp)"))
+        assertTrue(source.contains("DİĞER OYUNLAR"))
+        assertTrue(source.contains("KELİME KUŞATMASI"))
+        assertTrue(source.contains("HARF YOLU"))
+    }
+}
+''', encoding='utf-8')
+
+# Clean all staging machinery so the successful commit contains only production changes.
+for temp in [
+    ROOT / '.tmp_brand/icon.b64',
+    *(ROOT / f'.tmp_brand/logo_{i:02}.b64' for i in range(5)),
+    *(ROOT / f'.tmp_brand/patch_{i:02}.part' for i in range(5)),
+    ROOT / '.github/workflows/brand-premium-patch.yml',
+]:
+    if temp.exists():
+        temp.unlink()
+try:
+    (ROOT / '.tmp_brand').rmdir()
+except OSError:
+    pass
