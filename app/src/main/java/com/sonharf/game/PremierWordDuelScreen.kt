@@ -129,7 +129,12 @@ fun PremierWordDuelScreen() {
     LaunchedEffect(Unit) {
         runCatching {
             val player = ensureMe()
-            val active = backend.findPremierActiveRoom()
+            val found = backend.findPremierActiveRoom()
+            val active = if (found?.isBot == true && found.isPremierLive()) {
+                runCatching { backend.resumePremierBotMatch(found.id) }.getOrDefault(found)
+            } else {
+                found
+            }
             if (active != null) {
                 adoptRoom(active, cinematic = false)
                 notice = pt(language, "${player.displayName}, aktif maçına dönüldü.", "${player.displayName}, your active match was restored.")
