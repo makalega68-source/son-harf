@@ -159,8 +159,8 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
                 Modifier
                     .fillMaxSize()
                     .padding(padding)
-                    .background(UnifiedUi.Background)
             ) {
+                if (!SonHarfTheme.IsDark) SonHarfLeafBackdrop(Modifier.matchParentSize())
                 when (destination) {
                     UnifiedDestination.HOME -> UnifiedHomeScreen(
                         backend = backend,
