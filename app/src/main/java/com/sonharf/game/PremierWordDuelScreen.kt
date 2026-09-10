@@ -13,6 +13,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -44,6 +45,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.launch
 
 private enum class PremierStage { Loading, Lobby, Searching, Vs, Playing, Finished }
+private data class PremierMoveFeedback(val accepted: Boolean, val message: String)
 
 /** Fixed high-legibility gameplay palette from the same calm Son Harf color family. */
 private object PremierUi {
@@ -102,6 +104,7 @@ fun PremierWordDuelScreen() {
     var showForfeit by remember { mutableStateOf(false) }
     var showQuickChat by remember { mutableStateOf(false) }
     var floatingMessage by remember { mutableStateOf<ChatMessageDto?>(null) }
+    var moveFeedback by remember { mutableStateOf<PremierMoveFeedback?>(null) }
     var turnSeconds by remember { mutableIntStateOf(20) }
 
     suspend fun ensureMe(): ProfileDto {
@@ -180,6 +183,13 @@ fun PremierWordDuelScreen() {
         if (floatingMessage != null) {
             delay(2600)
             floatingMessage = null
+        }
+    }
+
+    LaunchedEffect(moveFeedback) {
+        if (moveFeedback != null) {
+            delay(2200)
+            moveFeedback = null
         }
     }
 
@@ -367,6 +377,7 @@ fun PremierWordDuelScreen() {
                         busy = busy,
                         turnSeconds = turnSeconds,
                         floatingMessage = floatingMessage,
+                        moveFeedback = moveFeedback,
                         onInput = { input = it },
                         onForfeit = { showForfeit = true },
                         onQuickChat = { showQuickChat = true },
@@ -380,18 +391,25 @@ fun PremierWordDuelScreen() {
                                 runCatching { backend.submitPremierWord(active.id, candidate) }
                                     .onSuccess { next ->
                                         room = next
-                                        val failed = next.lastEvent in setOf(
-                                            "word_already_used", "wrong_start_letter", "not_in_dictionary",
-                                            "invalid_word", "ends_with_soft_g", "abbreviation_not_allowed",
-                                            "proper_noun_not_allowed", "not_game_allowed", "turn_expired"
-                                        )
-                                        if (failed) {
-                                            notice = validationMessage(language, next.lastEvent.orEmpty())
-                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                        } else {
-                                            input = ""
-                                            notice = pt(language, "Hamle kilitlendi.", "Move locked in.")
+                                        // An authoritative server response consumes the attempt, so the
+                                        // field must be ready for the next turn even when the word is rejected.
+                                        input = ""
+                                        val accepted = next.validWordCount > active.validWordCount
+                                        if (accepted) {
+                                            notice = ""
+                                            moveFeedback = PremierMoveFeedback(
+                                                accepted = true,
+                                                message = "${pt(language, "DOĞRU", "CORRECT")} • ${premierUpper(candidate, language)}",
+                                            )
                                             SonHarfSoundFx.scoreTick()
+                                        } else {
+                                            val reason = next.lastEvent.orEmpty()
+                                            notice = ""
+                                            moveFeedback = PremierMoveFeedback(
+                                                accepted = false,
+                                                message = "${pt(language, "YANLIŞ", "WRONG")} • ${validationMessage(language, reason)}",
+                                            )
+                                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                         }
                                     }
                                     .onFailure { notice = premierError(language, it.message.orEmpty()) }
@@ -468,21 +486,28 @@ fun PremierWordDuelScreen() {
     }
 
     if (showQuickChat && room != null) {
-        PremierQuickChatSheet(
+        PremierChatSheet(
             language = language,
+            messages = chat,
+            meId = backend.currentUserId(),
+            isBot = room?.isBot == true,
             onDismiss = { showQuickChat = false },
             onSend = { message ->
-                val active = room ?: return@PremierQuickChatSheet
+                val active = room ?: return@PremierChatSheet
                 scope.launch {
                     if (active.isBot) {
-                        notice = pt(language, "Reaksiyon gönderildi: $message", "Reaction sent: $message")
+                        notice = pt(language, "Bot maçında mesaj gönderimi yok; hızlı tepki gösterildi.", "Messages are not sent in bot matches; quick reaction shown.")
                         SonHarfSoundFx.softNotify()
                     } else {
-                        runCatching { backend.sendChat(active.id, message) }
-                            .onFailure { notice = premierError(language, it.message.orEmpty()) }
+                        runCatching {
+                            backend.sendChat(active.id, message)
+                            backend.getChat(active.id)
+                        }.onSuccess { refreshed ->
+                            chat = refreshed
+                            notice = ""
+                        }.onFailure { notice = premierError(language, it.message.orEmpty()) }
                     }
                 }
-                showQuickChat = false
             },
         )
     }
@@ -718,6 +743,7 @@ private fun PremierArena(
     busy: Boolean,
     turnSeconds: Int,
     floatingMessage: ChatMessageDto?,
+    moveFeedback: PremierMoveFeedback?,
     onInput: (String) -> Unit,
     onForfeit: () -> Unit,
     onQuickChat: () -> Unit,
@@ -735,11 +761,12 @@ private fun PremierArena(
     val required = premierRequiredToken(room, words)
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val compact = maxHeight < 660.dp
+        val veryCompact = maxHeight < 610.dp
+        val compact = maxHeight < 700.dp
         val tall = maxHeight > 820.dp
-        val targetSize = if (compact) 116.dp else if (tall) 164.dp else 146.dp
-        val keyHeight = if (compact) 42.dp else if (tall) 50.dp else 46.dp
-        val primaryGap = if (compact) 6.dp else 10.dp
+        val targetSize = if (veryCompact) 96.dp else if (compact) 112.dp else if (tall) 164.dp else 140.dp
+        val keyHeight = if (veryCompact) 38.dp else if (compact) 41.dp else if (tall) 50.dp else 46.dp
+        val primaryGap = if (veryCompact) 3.dp else if (compact) 5.dp else 9.dp
 
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             PremierArenaHeader(language, room, me, opponent, rivalName, myScore, rivalScore, myRounds, rivalRounds, myStreak, rivalStreak, turnSeconds, onForfeit, onQuickChat)
@@ -752,16 +779,20 @@ private fun PremierArena(
                 Text(
                     if (required == "★") pt(language, "İlk kelime serbest", "Free opening word")
                     else pt(language, "“$required” ile başlayan bir kelime yaz", "Enter a word starting with “$required”"),
-                    color = PremierUi.Muted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    color = PremierUi.OceanDeep,
+                    fontSize = if (veryCompact) 10.sp else 11.sp,
+                    fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center,
+                    maxLines = 1,
                 )
-                Spacer(Modifier.height(primaryGap))
-                PremierWordTrail(words, language)
-                Spacer(Modifier.weight(1f).heightIn(min = 4.dp))
+                if (!veryCompact) {
+                    Spacer(Modifier.height(primaryGap))
+                    PremierWordTrail(words, language)
+                }
+                Spacer(Modifier.weight(1f).heightIn(min = 2.dp))
                 if (notice.isNotBlank()) {
-                    Text(notice, color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 6.dp))
+                    Text(notice, color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 4.dp))
                 }
             }
             // Keep the live input outside the flexible arena body. This guarantees visibility on
@@ -780,6 +811,30 @@ private fun PremierArena(
         AnimatedVisibility(visible = floatingMessage != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 132.dp, start = 22.dp, end = 22.dp)) {
             Surface(shape = RoundedCornerShape(16.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Sky.copy(alpha = .45f)), shadowElevation = 9.dp) {
                 Text(floatingMessage?.body.orEmpty(), Modifier.padding(horizontal = 16.dp, vertical = 10.dp), color = PremierUi.OceanDeep, fontWeight = FontWeight.Black, fontSize = 13.sp)
+            }
+        }
+
+        AnimatedVisibility(
+            visible = moveFeedback != null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.Center).padding(horizontal = 26.dp),
+        ) {
+            val feedback = moveFeedback
+            if (feedback != null) {
+                val accent = if (feedback.accepted) PremierUi.Green else PremierUi.Red
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = if (feedback.accepted) PremierUi.GreenSoft else PremierUi.RedSoft,
+                    border = BorderStroke(2.dp, accent),
+                    shadowElevation = 12.dp,
+                ) {
+                    Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(if (feedback.accepted) Icons.Rounded.CheckCircle else Icons.Rounded.Close, null, tint = accent, modifier = Modifier.size(24.dp))
+                        Spacer(Modifier.width(9.dp))
+                        Text(feedback.message, color = accent, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    }
+                }
             }
         }
     }
@@ -998,7 +1053,6 @@ private fun PremierInputBar(language: String, input: String, required: String, m
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (myTurn && !busy) PremierStatPill(pt(language, "SUNUCU", "SERVER"), PremierUi.Green)
         }
     }
 }
@@ -1057,13 +1111,108 @@ private fun PremierKey(label: String, enabled: Boolean, modifier: Modifier, keyH
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PremierQuickChatSheet(language: String, onDismiss: () -> Unit, onSend: (String) -> Unit) {
-    val messages = if (language == "en") listOf("Fast!", "Great move!", "Nice word!", "Think carefully…", "Get ready for a rematch!")
+private fun PremierChatSheet(
+    language: String,
+    messages: List<ChatMessageDto>,
+    meId: String?,
+    isBot: Boolean,
+    onDismiss: () -> Unit,
+    onSend: (String) -> Unit,
+) {
+    var draft by remember { mutableStateOf("") }
+    val quickMessages = if (language == "en") listOf("Fast!", "Great move!", "Nice word!", "Think carefully…", "Get ready for a rematch!")
     else listOf("Hızlısın!", "İyi hamleydi!", "Çok iyi kelime!", "Düşün bakalım…", "Rövanşa hazırlan!")
     val emojis = listOf("🔥", "😎", "👏", "⚡", "🤯", "🏆")
+
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = PremierUi.Surface) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-            Text(pt(language, "Hızlı Reaksiyon", "Quick Reactions"), color = PremierUi.Ink, fontSize = 18.sp, fontWeight = FontWeight.Black)
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.ChatBubbleOutline, null, tint = PremierUi.Ocean, modifier = Modifier.size(22.dp))
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(pt(language, "Maç Sohbeti", "Match Chat"), color = PremierUi.Ink, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        if (isBot) pt(language, "Bot maçında gerçek mesajlaşma kapalıdır.", "Real messaging is unavailable in bot matches.")
+                        else pt(language, "Rakibinle gerçek zamanlı mesajlaş.", "Message your rival in real time."),
+                        color = PremierUi.Muted,
+                        fontSize = 10.sp,
+                    )
+                }
+            }
+
+            if (!isBot) {
+                if (messages.isEmpty()) {
+                    Surface(shape = RoundedCornerShape(14.dp), color = PremierUi.Background) {
+                        Text(
+                            pt(language, "Henüz mesaj yok. İlk mesajı sen gönder.", "No messages yet. Send the first one."),
+                            Modifier.fillMaxWidth().padding(14.dp),
+                            color = PremierUi.Muted,
+                            fontSize = 11.sp,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 80.dp, max = 220.dp),
+                        verticalArrangement = Arrangement.spacedBy(7.dp),
+                    ) {
+                        items(messages.takeLast(50), key = { it.id }) { message ->
+                            val mine = message.senderId == meId
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start,
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = if (mine) PremierUi.GreenSoft else PremierUi.Ice,
+                                    border = BorderStroke(1.dp, if (mine) PremierUi.Green.copy(alpha = .22f) else PremierUi.Border),
+                                ) {
+                                    Text(
+                                        message.body,
+                                        Modifier.widthIn(max = 260.dp).padding(horizontal = 12.dp, vertical = 9.dp),
+                                        color = PremierUi.Ink,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Medium,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    OutlinedTextField(
+                        value = draft,
+                        onValueChange = { draft = it.take(300) },
+                        modifier = Modifier.weight(1f),
+                        placeholder = { Text(pt(language, "Mesaj yaz…", "Type a message…")) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = PremierUi.Ocean,
+                            unfocusedBorderColor = PremierUi.Border,
+                            focusedContainerColor = PremierUi.Surface,
+                            unfocusedContainerColor = PremierUi.Surface,
+                        ),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    FilledIconButton(
+                        onClick = {
+                            val text = draft.trim()
+                            if (text.isNotEmpty()) {
+                                onSend(text)
+                                draft = ""
+                            }
+                        },
+                        enabled = draft.isNotBlank(),
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = PremierUi.Ocean),
+                    ) {
+                        Icon(Icons.Rounded.Send, pt(language, "Gönder", "Send"))
+                    }
+                }
+            }
+
+            Text(pt(language, "Hızlı reaksiyonlar", "Quick reactions"), color = PremierUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 emojis.forEach { emoji ->
                     Surface(modifier = Modifier.clickable { onSend(emoji) }, shape = RoundedCornerShape(13.dp), color = PremierUi.Background) {
@@ -1072,7 +1221,7 @@ private fun PremierQuickChatSheet(language: String, onDismiss: () -> Unit, onSen
                 }
             }
             FlowRow(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                messages.forEach { message ->
+                quickMessages.forEach { message ->
                     Surface(modifier = Modifier.clickable { onSend(message) }, shape = RoundedCornerShape(99.dp), color = PremierUi.Ice, border = BorderStroke(1.dp, PremierUi.Border)) {
                         Text(message, Modifier.padding(horizontal = 12.dp, vertical = 8.dp), color = PremierUi.OceanDeep, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
