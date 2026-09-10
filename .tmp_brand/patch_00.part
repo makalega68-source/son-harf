@@ -1,0 +1,129 @@
+from pathlib import Path
+import base64
+
+ROOT = Path('.')
+
+
+def replace_once(path: Path, old: str, new: str) -> None:
+    text = path.read_text(encoding='utf-8')
+    if old not in text:
+        raise SystemExit(f'Expected block not found in {path}; refusing unsafe patch')
+    path.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+
+def is_webp(data: bytes) -> bool:
+    return len(data) > 12 and data[:4] == b'RIFF' and data[8:12] == b'WEBP'
+
+
+# Decode the approved transparent WEBP assets staged as text so the GitHub connector
+# never has to reinterpret binary data.
+icon_b64 = (ROOT / '.tmp_brand/icon.b64').read_text(encoding='utf-8').strip()
+logo_b64 = ''.join(
+    (ROOT / f'.tmp_brand/logo_{i:02}.b64').read_text(encoding='utf-8').strip()
+    for i in range(5)
+)
+icon = base64.b64decode(icon_b64, validate=True)
+logo = base64.b64decode(logo_b64, validate=True)
+if not is_webp(icon) or not is_webp(logo):
+    raise SystemExit('Approved brand asset decoding did not produce valid WEBP files')
+
+res_dir = ROOT / 'app/src/main/res/drawable-nodpi'
+res_dir.mkdir(parents=True, exist_ok=True)
+(res_dir / 'son_harf_app_icon.webp').write_bytes(icon)
+(res_dir / 'son_harf_brand_logo.webp').write_bytes(logo)
+(ROOT / 'son-harf-icon.webp').write_bytes(icon)
+(ROOT / 'son-harf-logo.webp').write_bytes(logo)
+obsolete = ROOT / 'Son_Harf_Ikon.webp'
+if obsolete.exists():
+    obsolete.unlink()
+
+# Approved logo in normal UI, but retain an explicit vector/text-only startup-safe path.
+brand_logo = ROOT / 'app/src/main/java/com/sonharf/game/SonHarfBrandLogo.kt'
+brand_logo.write_text('''package com.sonharf.game
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+/**
+ * Son Harf brand mark.
+ *
+ * Normal product UI uses the approved transparent WEBP. The very early startup state
+ * deliberately opts into [startupSafe] so a raster decode can never block app launch.
+ */
+@Composable
+fun SonHarfBrandLogo(
+    modifier: Modifier = Modifier,
+    size: Dp? = 52.dp,
+    startupSafe: Boolean = false,
+) {
+    if (!startupSafe) {
+        Image(
+            painter = painterResource(R.drawable.son_harf_brand_logo),
+            contentDescription = "Son Harf",
+            modifier = if (size == null) modifier else modifier.height(size),
+            contentScale = ContentScale.Fit,
+        )
+        return
+    }
+
+    val safeModifier = if (size == null) {
+        modifier.aspectRatio(2.15f)
+    } else {
+        modifier.height(size)
+    }
+    Surface(
+        modifier = safeModifier,
+        shape = RoundedCornerShape(22.dp),
+        color = Color(0xFFF9F5E8),
+        border = BorderStroke(2.dp, Color(0xFF5E8069)),
+        shadowElevation = 5.dp,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 9.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "SON",
+                color = Color(0xFF3F614E),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp,
+            )
+            Text(
+                text = " HARF",
+                color = Color(0xFF4A6E83),
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp,
+            )
+        }
+    }
+}
+''', encoding='utf-8')
+
+main_activity = ROOT / 'app/src/main/java/com/sonharf/game/MainActivity.kt'
+replace_once(
+    main_activity,
+    '            SonHarfBrandLogo(modifier = Modifier.fillMaxWidth(.58f), size = null)',
+    '''            SonHarfBrandLogo(
+                modifier = Modifier.fillMaxWidth(.58f),
+    
