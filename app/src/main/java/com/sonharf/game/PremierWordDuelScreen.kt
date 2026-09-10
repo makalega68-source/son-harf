@@ -370,30 +370,23 @@ fun PremierWordDuelScreen() {
                             scope.launch {
                                 busy = true
                                 val candidate = input
-                                runCatching { backend.validateCoreWordDetailed(candidate, active.language) }
-                                    .onSuccess { check ->
-                                        if (!check.valid) {
-                                            notice = validationMessage(language, check.reason)
+                                // submit_word_v3 is authoritative and validates atomically. A separate
+                                // validation request could fail first and make the Send button look inert.
+                                runCatching { backend.submitPremierWord(active.id, candidate) }
+                                    .onSuccess { next ->
+                                        room = next
+                                        val failed = next.lastEvent in setOf(
+                                            "word_already_used", "wrong_start_letter", "not_in_dictionary",
+                                            "invalid_word", "ends_with_soft_g", "abbreviation_not_allowed",
+                                            "proper_noun_not_allowed", "not_game_allowed", "turn_expired"
+                                        )
+                                        if (failed) {
+                                            notice = validationMessage(language, next.lastEvent.orEmpty())
                                             haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                                         } else {
-                                            runCatching { backend.submitPremierWord(active.id, candidate) }
-                                                .onSuccess { next ->
-                                                    room = next
-                                                    val failed = next.lastEvent in setOf(
-                                                        "word_already_used", "wrong_start_letter", "not_in_dictionary",
-                                                        "invalid_word", "ends_with_soft_g", "abbreviation_not_allowed",
-                                                        "proper_noun_not_allowed", "not_game_allowed", "turn_expired"
-                                                    )
-                                                    if (failed) {
-                                                        notice = validationMessage(language, next.lastEvent.orEmpty())
-                                                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                    } else {
-                                                        input = ""
-                                                        notice = pt(language, "Hamle kilitlendi.", "Move locked in.")
-                                                        SonHarfSoundFx.scoreTick()
-                                                    }
-                                                }
-                                                .onFailure { notice = premierError(language, it.message.orEmpty()) }
+                                            input = ""
+                                            notice = pt(language, "Hamle kilitlendi.", "Move locked in.")
+                                            SonHarfSoundFx.scoreTick()
                                         }
                                     }
                                     .onFailure { notice = premierError(language, it.message.orEmpty()) }
@@ -765,9 +758,17 @@ private fun PremierArena(
                 if (notice.isNotBlank()) {
                     Text(notice, color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 6.dp))
                 }
-                PremierInputBar(language, input, required, myTurn, busy)
-                Spacer(Modifier.height(if (compact) 4.dp else 7.dp))
             }
+            // Keep the live input outside the flexible arena body. This guarantees visibility on
+            // short screens after the global top banner consumes vertical space.
+            PremierInputBar(
+                language,
+                input,
+                required,
+                myTurn,
+                busy,
+                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+            )
             PremierKeyboard(language, input, enabled = myTurn && !busy, keyHeight = keyHeight, onInput = onInput, onSubmit = onSubmit)
         }
 
@@ -973,8 +974,8 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String) {
 }
 
 @Composable
-private fun PremierInputBar(language: String, input: String, required: String, myTurn: Boolean, busy: Boolean) {
-    Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = PremierUi.Surface, border = BorderStroke(2.dp, if (myTurn) PremierUi.Ocean else PremierUi.Border), shadowElevation = if (myTurn) 5.dp else 0.dp) {
+private fun PremierInputBar(language: String, input: String, required: String, myTurn: Boolean, busy: Boolean, modifier: Modifier = Modifier) {
+    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = PremierUi.Surface, border = BorderStroke(2.dp, if (myTurn) PremierUi.Ocean else PremierUi.Border), shadowElevation = if (myTurn) 5.dp else 0.dp) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.AutoAwesome, null, tint = if (myTurn) PremierUi.Ocean else PremierUi.Muted, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(9.dp))
