@@ -345,6 +345,7 @@ private fun UnifiedHomeScreen(
             Spacer(Modifier.height(8.dp))
             UnifiedModeCard(
                 icon = Icons.Rounded.GridView,
+                logoRes = R.drawable.kelime_kusatma_logo_hd,
                 title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
                 subtitle = sh("Alanı ele geçir, küpleri koru", "Capture territory and protect cubes"),
                 accent = UnifiedUi.Gold,
@@ -353,6 +354,7 @@ private fun UnifiedHomeScreen(
             Spacer(Modifier.height(9.dp))
             UnifiedModeCard(
                 icon = Icons.Rounded.Route,
+                logoRes = R.drawable.harf_yolu_logo,
                 title = sh("HARF YOLU", "LETTER PATH"),
                 subtitle = sh("Hedef kelimeye ulaş", "Reach the target word"),
                 accent = UnifiedUi.Green,
@@ -722,7 +724,14 @@ private fun UnifiedHeroMetric(value: String, label: String) {
 }
 
 @Composable
-private fun UnifiedModeCard(icon: ImageVector, title: String, subtitle: String, accent: Color, onClick: () -> Unit) {
+private fun UnifiedModeCard(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    accent: Color,
+    onClick: () -> Unit,
+    logoRes: Int? = null,
+) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -731,17 +740,37 @@ private fun UnifiedModeCard(icon: ImageVector, title: String, subtitle: String, 
         shape = RoundedCornerShape(20.dp),
         color = UnifiedUi.Surface,
         border = BorderStroke(1.dp, accent.copy(alpha = .32f)),
+        shadowElevation = 2.dp,
     ) {
-        Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = RoundedCornerShape(15.dp), color = accent.copy(alpha = .14f)) {
-                Icon(icon, null, tint = accent, modifier = Modifier.padding(12.dp).size(29.dp))
+        Row(Modifier.padding(horizontal = 13.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (logoRes != null) {
+                Surface(
+                    modifier = Modifier.width(112.dp).height(78.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    color = accent.copy(alpha = .06f),
+                    border = BorderStroke(1.dp, accent.copy(alpha = .16f)),
+                ) {
+                    Box(Modifier.fillMaxSize().padding(4.dp), contentAlignment = Alignment.Center) {
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(logoRes),
+                            contentDescription = "$title logo",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                        )
+                    }
+                }
+            } else {
+                Surface(shape = RoundedCornerShape(15.dp), color = accent.copy(alpha = .14f)) {
+                    Icon(icon, null, tint = accent, modifier = Modifier.padding(12.dp).size(29.dp))
+                }
             }
-            Spacer(Modifier.width(13.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(title, color = UnifiedUi.Text, fontSize = 15.sp, fontWeight = FontWeight.Black)
-                Text(subtitle, color = UnifiedUi.Muted, fontSize = 10.sp)
+                Text(title, color = UnifiedUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                Spacer(Modifier.height(2.dp))
+                Text(subtitle, color = UnifiedUi.Muted, fontSize = 10.sp, lineHeight = 13.sp)
             }
-            Icon(Icons.Rounded.ChevronRight, null, tint = UnifiedUi.Muted)
+            Icon(Icons.Rounded.ChevronRight, null, tint = accent, modifier = Modifier.size(22.dp))
         }
     }
 }
