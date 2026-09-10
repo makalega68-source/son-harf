@@ -308,7 +308,10 @@ private fun UnifiedHomeScreen(
         item {
             Button(
                 onClick = onPlay,
-                modifier = Modifier.fillMaxWidth().height(70.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(70.dp)
+                    .sonHarfPressScale(pressedScale = 0.985f),
                 shape = RoundedCornerShape(22.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = UnifiedUi.Blue),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp),
@@ -360,7 +363,10 @@ private fun UnifiedHomeScreen(
 
         item {
             Surface(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onCompetition),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .sonHarfPressScale(pressedScale = 0.985f)
+                    .clickable(onClick = onCompetition),
                 shape = RoundedCornerShape(20.dp),
                 color = UnifiedUi.Surface,
                 border = BorderStroke(1.dp, UnifiedUi.Border),
@@ -393,6 +399,7 @@ private fun WeeklyChampionPodium(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(16.dp, RoundedCornerShape(26.dp))
+            .sonHarfPressScale(pressedScale = 0.99f)
             .clickable(onClick = onOpenLeague),
         shape = RoundedCornerShape(26.dp),
         color = Color.Transparent,
@@ -587,7 +594,10 @@ private fun UnifiedHeroMetric(value: String, label: String) {
 @Composable
 private fun UnifiedModeCard(icon: ImageVector, title: String, subtitle: String, accent: Color, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = Modifier
+            .fillMaxWidth()
+            .sonHarfPressScale(pressedScale = 0.985f)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(20.dp),
         color = UnifiedUi.Surface,
         border = BorderStroke(1.dp, accent.copy(alpha = .32f)),
@@ -609,7 +619,10 @@ private fun UnifiedModeCard(icon: ImageVector, title: String, subtitle: String, 
 @Composable
 private fun UnifiedQuickTile(icon: ImageVector, title: String, accent: Color, modifier: Modifier, onClick: () -> Unit) {
     Surface(
-        modifier = modifier.height(90.dp).clickable(onClick = onClick),
+        modifier = modifier
+            .height(90.dp)
+            .sonHarfPressScale(pressedScale = 0.96f)
+            .clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         color = accent.copy(alpha = .09f),
         border = BorderStroke(1.dp, accent.copy(alpha = .28f)),
@@ -625,7 +638,10 @@ private fun UnifiedQuickTile(icon: ImageVector, title: String, accent: Color, mo
 @Composable
 private fun UnifiedRoundAction(icon: ImageVector, onClick: () -> Unit) {
     Surface(
-        modifier = Modifier.size(44.dp).clickable(onClick = onClick),
+        modifier = Modifier
+            .size(44.dp)
+            .sonHarfPressScale(pressedScale = 0.94f)
+            .clickable(onClick = onClick),
         shape = CircleShape,
         color = UnifiedUi.Surface,
         border = BorderStroke(1.dp, UnifiedUi.Border),
