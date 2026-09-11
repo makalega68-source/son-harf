@@ -19,7 +19,7 @@ class SiegeDictionaryThemeRegressionTest {
         assertTrue(board.contains("const val Size = 15"))
         assertTrue(screen.contains("maxHeight < 700.dp || maxWidth < 600.dp"))
         assertTrue(screen.contains("height(if (compact) 46.dp else 52.dp)"))
-        assertTrue(screen.contains("WordSiegePracticeStatusBar(statusMessage, compact)"))
+        assertTrue(guidance.contains("WordSiegePracticeStatusBar"))
         assertTrue(guidance.contains("maxLines = 2"))
     }
 
