@@ -26,6 +26,7 @@ class WordSiegeResponsiveLayoutTest {
     @Test
     fun practiceChromeUsesShellInsetsAndKeepsTacticalHudAndFooterAligned() {
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
+        val guidance = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeGuidance.kt").readText()
         val online = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val shell = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
@@ -34,9 +35,10 @@ class WordSiegeResponsiveLayoutTest {
         assertTrue(practice.contains("modifier = Modifier.fillMaxWidth().height(if (compact) 46.dp else 52.dp)"))
         assertTrue(practice.contains("PracticeMapControlBar("))
         assertTrue(practice.contains("PracticeStrategicZoneLegend("))
-        assertTrue(practice.contains("if (notice != null || lastMove != null)"))
-        assertTrue(practice.indexOf("Box(Modifier.fillMaxWidth().weight(1f)") < practice.indexOf("notice?.let { message ->"))
-        assertTrue(practice.indexOf("onClick = ::applyPlayerMove") < practice.indexOf("notice?.let { message ->"))
+        assertTrue(guidance.contains("WordSiegePracticeStatusBar"))
+        assertTrue(guidance.contains("maxLines = 2"))
+        assertTrue(practice.indexOf("Box(Modifier.fillMaxWidth().weight(1f)") < practice.indexOf("val statusMessage ="))
+        assertTrue(practice.indexOf("onClick = ::applyPlayerMove") < practice.indexOf("val statusMessage ="))
 
         assertTrue(online.contains(".statusBarsPadding()\n            .navigationBarsPadding()"))
         assertTrue(online.contains("modifier = Modifier.fillMaxWidth().weight(1f)"))

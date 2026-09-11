@@ -5,6 +5,7 @@ import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -84,6 +85,12 @@ internal fun WordSiegePracticeScreen(
     var shuffleSeed by remember { mutableIntStateOf(0) }
     var actionVfxEvent by remember { mutableIntStateOf(0) }
     var showSiegePulse by remember { mutableStateOf(false) }
+    var zoneInfoCode by remember { mutableStateOf<String?>(null) }
+    var tutorialStep by remember {
+        mutableIntStateOf(
+            if (!matchmakingFallback && !WordSiegePracticeTutorialPrefs.isCompleted(context)) 0 else -1,
+        )
+    }
 
     val playerTargetScore = WordSiegePracticeEngine.totalScore(state, 1)
     val botTargetScore = WordSiegePracticeEngine.totalScore(state, 2)
@@ -160,6 +167,11 @@ internal fun WordSiegePracticeScreen(
         exchangeSelection = emptySet()
     }
 
+    fun completeTutorial() {
+        WordSiegePracticeTutorialPrefs.markCompleted(context)
+        tutorialStep = -1
+    }
+
     fun startAgain() {
         state = WordSiegePracticeEngine.newGame(state.language)
         botProfile = WordSiegePracticeBots.random()
@@ -199,6 +211,7 @@ internal fun WordSiegePracticeScreen(
                     "${move.primaryWord} • Kelime +${move.wordScore} • Bölge +$areaPoints",
                     "${move.primaryWord} • Word +${move.wordScore} • Territory +$areaPoints",
                 )
+                if (tutorialStep == 3) tutorialStep = 4
                 clearSelection()
                 SonHarfSoundFx.wordAccepted()
             }
@@ -221,29 +234,44 @@ internal fun WordSiegePracticeScreen(
     ) {
         if (!dictionaryReady || state.status != "playing" || state.currentOwner != 2) return@LaunchedEffect
         botThinking = true
-        delay(950)
-        val planned = WordSiegePracticeEngine.bestBotMove(
-            state = state,
-            playerRating = playerProfile?.rating ?: 1000,
-            playerWins = playerProfile?.wins ?: 0,
-            playerLosses = playerProfile?.losses ?: 0,
-        )
-        if (planned == null) {
-            state = WordSiegePracticeEngine.pass(state, 2)
-            notice = sh("${botProfile.name} pas verdi. Sıra sende.", "${botProfile.name} passed. Your turn.")
-        } else {
-            val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements)
-            state = next
-            lastMove = move
-            actionVfxEvent += 1
-            val areaPoints = move.capturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS
-            notice = sh(
-                "${botProfile.name}: ${move.primaryWord} • Kelime +${move.wordScore} • Bölge +$areaPoints",
-                "${botProfile.name}: ${move.primaryWord} • Word +${move.wordScore} • Territory +$areaPoints",
+        try {
+            delay(950)
+            val planned = resilientPracticeBotMove(
+                state = state,
+                playerRating = playerProfile?.rating ?: 1000,
+                playerWins = playerProfile?.wins ?: 0,
+                playerLosses = playerProfile?.losses ?: 0,
             )
-            SonHarfSoundFx.scoreTick()
+            if (planned == null) {
+                val exchange = practiceBotExchangeIndices(state)
+                if (exchange.isNotEmpty()) {
+                    state = WordSiegePracticeEngine.exchange(state, 2, exchange)
+                    notice = sh(
+                        "${botProfile.name} uygun hamle bulamadı; 3 harf değiştirdi. Sıra sende.",
+                        "${botProfile.name} found no legal move and exchanged 3 tiles. Your turn.",
+                    )
+                } else {
+                    state = WordSiegePracticeEngine.pass(state, 2)
+                    notice = sh(
+                        "${botProfile.name} oynayacak hamle bulamadı ve pas verdi. Sıra sende.",
+                        "${botProfile.name} found no legal move and passed. Your turn.",
+                    )
+                }
+            } else {
+                val (next, move) = WordSiegePracticeEngine.applyMove(state, 2, planned.placements)
+                state = next
+                lastMove = move
+                actionVfxEvent += 1
+                val areaPoints = move.capturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS
+                notice = sh(
+                    "${botProfile.name}: ${move.primaryWord} • Kelime +${move.wordScore} • Bölge +$areaPoints",
+                    "${botProfile.name}: ${move.primaryWord} • Word +${move.wordScore} • Territory +$areaPoints",
+                )
+                SonHarfSoundFx.scoreTick()
+            }
+        } finally {
+            botThinking = false
         }
-        botThinking = false
     }
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
@@ -287,6 +315,14 @@ internal fun WordSiegePracticeScreen(
                             fontWeight = FontWeight.Black,
                             maxLines = 1,
                         )
+                    }
+                    if (!matchmakingFallback) {
+                        IconButton(
+                            onClick = { tutorialStep = 0 },
+                            modifier = Modifier.size(if (compact) 38.dp else 44.dp),
+                        ) {
+                            Icon(Icons.Rounded.HelpOutline, sh("Nasıl oynanır?", "How to play?"), tint = PracticePlayerAccent)
+                        }
                     }
                     IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(if (compact) 40.dp else 46.dp)) {
                         Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = MainUi.Red)
@@ -341,7 +377,10 @@ internal fun WordSiegePracticeScreen(
                     compact = compact,
                 )
 
-                PracticeStrategicZoneLegend(compact = compact)
+                PracticeStrategicZoneLegend(
+                    compact = compact,
+                    onZoneClick = { zoneInfoCode = it },
+                )
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -398,6 +437,7 @@ internal fun WordSiegePracticeScreen(
                                 if (rackIndex !in placements.values) {
                                     placements = placements + (boardIndex to rackIndex)
                                     selectedRackIndex = null
+                                    if (tutorialStep == 2) tutorialStep = 3
                                 }
                             }
                         },
@@ -416,6 +456,20 @@ internal fun WordSiegePracticeScreen(
                                 color = Color(0xFF33230E),
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Black,
+                            )
+                        }
+                    }
+
+                    if (tutorialStep >= 0 && !matchmakingFallback) {
+                        Box(
+                            modifier = Modifier.align(Alignment.BottomCenter).fillMaxWidth(),
+                        ) {
+                            WordSiegePracticeTutorialCard(
+                                step = tutorialStep,
+                                compact = compact,
+                                onStart = { tutorialStep = 1 },
+                                onFinish = ::completeTutorial,
+                                onSkip = ::completeTutorial,
                             )
                         }
                     }
@@ -451,7 +505,9 @@ internal fun WordSiegePracticeScreen(
                                 onClick = {
                                     val pending = placements.entries.firstOrNull { it.value == rackIndex }?.key
                                     if (pending != null) placements = placements - pending
-                                    selectedRackIndex = if (selectedRackIndex == rackIndex) null else rackIndex
+                                    val selecting = selectedRackIndex != rackIndex
+                                    selectedRackIndex = if (selecting) rackIndex else null
+                                    if (selecting && tutorialStep == 1) tutorialStep = 2
                                 },
                             )
                         }
@@ -557,28 +613,16 @@ internal fun WordSiegePracticeScreen(
                     }
                 }
 
-                if (notice != null || lastMove != null) {
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(if (compact) 24.dp else 32.dp),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        notice?.let { message ->
-                            WordSiegeNotice(message)
-                        } ?: lastMove?.let { move ->
-                            Text(
-                                sh(
-                                    "Son: ${move.formedWords.joinToString(" + ")} • Kelime +${move.wordScore} • Bölge +${move.capturedCells * 2}",
-                                    "Last: ${move.formedWords.joinToString(" + ")} • Word +${move.wordScore} • Territory +${move.capturedCells * 2}",
-                                ),
-                                color = MainUi.Muted,
-                                fontSize = 8.sp,
-                                textAlign = TextAlign.Center,
-                                modifier = Modifier.fillMaxWidth(),
-                                maxLines = 1,
-                            )
-                        }
-                    }
-                }
+                val statusMessage = notice ?: lastMove?.let { move ->
+                    sh(
+                        "Son: ${move.formedWords.joinToString(" + ")} • Kelime +${move.wordScore} • Bölge +${move.capturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
+                        "Last: ${move.formedWords.joinToString(" + ")} • Word +${move.wordScore} • Territory +${move.capturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
+                    )
+                } ?: sh(
+                    "Harf seç → boş hücreye yerleştir → kelimeyi tamamla → HAMLEYİ ONAYLA",
+                    "Pick a tile → place it → complete a word → CONFIRM MOVE",
+                )
+                WordSiegePracticeStatusBar(statusMessage, compact)
             }
         }
     }
@@ -688,6 +732,13 @@ internal fun WordSiegePracticeScreen(
             dismissButton = { TextButton(onClick = { showExchange = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
         )
     }
+
+    zoneInfoCode?.let { code ->
+        WordSiegePracticeZoneInfoDialog(
+            code = code,
+            onDismiss = { zoneInfoCode = null },
+        )
+    }
 }
 
 @Composable
@@ -736,20 +787,31 @@ private fun PracticeMapControlBar(
 }
 
 @Composable
-private fun PracticeStrategicZoneLegend(compact: Boolean) {
+private fun PracticeStrategicZoneLegend(
+    compact: Boolean,
+    onZoneClick: (String) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(3.dp),
     ) {
-        listOf("2H", "3H", "2K", "3K", WordSiegeBoardSpec.CenterBonus).forEach { code ->
+        listOf(
+            "2H",
+            "3H",
+            "2K",
+            "3K",
+            WordSiegeBoardSpec.CenterBonus,
+            WordSiegeBoardSpec.StarBonus,
+        ).forEach { code ->
             Surface(
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).clickable { onZoneClick(code) },
                 shape = RoundedCornerShape(99.dp),
                 color = when (code) {
                     "2H" -> Color(0xFFDCEAF2)
                     "3H" -> Color(0xFFDDEBDD)
                     "2K" -> Color(0xFFEAE2F0)
                     "3K" -> Color(0xFFDED4E8)
+                    WordSiegeBoardSpec.StarBonus -> Color(0xFFEAD59B)
                     else -> Color(0xFFE7DDBB)
                 },
             ) {
