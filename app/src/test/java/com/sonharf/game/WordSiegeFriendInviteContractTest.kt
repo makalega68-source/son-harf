@@ -26,6 +26,10 @@ class WordSiegeFriendInviteContractTest {
         assertTrue(migration.contains("private.word_siege_new_board_v1()"))
         assertTrue(migration.contains("'friend_game_started'"))
 
+        // Expiry must commit rather than be rolled back by a PL/pgSQL exception.
+        assertTrue(migration.contains("set status = 'expired', responded_at = now()"))
+        assertFalse(migration.contains("raise exception 'word_siege_invite_expired'"))
+
         assertTrue(migration.contains("revoke all on function public.invite_friend_to_word_siege_v1(uuid,text) from public, anon, authenticated"))
         assertTrue(migration.contains("revoke all on function public.respond_word_siege_invite_v1(uuid,boolean) from public, anon, authenticated"))
         assertTrue(migration.contains("grant execute on function public.invite_friend_to_word_siege_v1(uuid,text) to authenticated"))
