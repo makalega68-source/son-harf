@@ -11,13 +11,14 @@ class GameModeBrandingAndVisibleActionContractTest {
         val home = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
         val brand = projectFile("app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val localization = projectFile("app/src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
-        val siegeAlias = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml").readText()
+        val siegeRaster = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.png")
 
         assertTrue(home.contains("SonHarfOfficialLogo("))
         assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
         assertTrue(brand.contains("R.drawable.kelime_tahti_app_icon"))
         assertTrue(brand.contains("KELİME\\nTAHTI"))
-        assertTrue(siegeAlias.contains("@drawable/kelime_tahti_logo"))
+        assertTrue(siegeRaster.isFile)
+        assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")?.exists() == true)
         assertTrue(localization.contains("KELİME TAHTI"))
         assertTrue(localization.contains("WORD THRONE"))
         assertTrue(home.contains("logoRes = R.drawable.son_harf_app_icon_master"))
@@ -59,4 +60,7 @@ class GameModeBrandingAndVisibleActionContractTest {
     private fun projectFile(path: String): File =
         listOf(File(path), File("../$path")).firstOrNull(File::exists)
             ?: error("Project path missing: $path")
+
+    private fun projectFileOrNull(path: String): File? =
+        listOf(File(path), File("../$path")).firstOrNull(File::exists)
 }
