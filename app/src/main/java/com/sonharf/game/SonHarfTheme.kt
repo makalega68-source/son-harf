@@ -3,65 +3,71 @@ package com.sonharf.game
 import androidx.compose.ui.graphics.Color
 
 /**
- * Single source of truth for the equipped application-wide visual system.
- * Style selections are cosmetic only and must never alter gameplay state.
+ * Son Harf application-wide visual system.
  *
- * The palette is intentionally layered: backgrounds, cards, navigation,
- * dialogs, gameplay surfaces and interactive accents each have their own
- * semantic token instead of sharing one flat brand color.
+ * The default/light appearance is the premium botanical identity used by the
+ * home reference: warm ivory, sage, soft teal/blue and restrained gold. Every
+ * non-game and compatible game surface resolves through these semantic tokens
+ * so individual screens do not drift back to an unrelated palette.
+ *
+ * Cosmetic themes may still switch the optional dark arena treatment, but they
+ * never change gameplay state, scoring or economy.
  */
 internal object SonHarfTheme {
     private val dark: Boolean get() = SonHarfCosmetics.darkArenaTheme
 
     val IsDark: Boolean get() = dark
 
-    // Foundation layers: sage-tinted off-white / deep desaturated sage.
-    val Background: Color get() = if (dark) Color(0xFF101713) else Color(0xFFF4F7F2)
-    val Surface: Color get() = if (dark) Color(0xFF17221D) else Color(0xFFFFFDF7)
-    val SurfaceSecondary: Color get() = if (dark) Color(0xFF21302A) else Color(0xFFEAF2EE)
-    val SurfaceElevated: Color get() = if (dark) Color(0xFF26343A) else Color(0xFFEFF4F6)
-    val NavigationSurface: Color get() = if (dark) Color(0xFF1B2923) else Color(0xFFEEF3F0)
-    val ModalSurface: Color get() = if (dark) Color(0xFF202B25) else Color(0xFFFAF7F0)
+    // Foundation layers.
+    val Background: Color get() = if (dark) Color(0xFF101914) else Color(0xFFF8FAF4)
+    val Surface: Color get() = if (dark) Color(0xFF18241E) else Color(0xFFFFFEF8)
+    val SurfaceSecondary: Color get() = if (dark) Color(0xFF213129) else Color(0xFFEEF5EF)
+    val SurfaceElevated: Color get() = if (dark) Color(0xFF293A32) else Color(0xFFF5F7F2)
+    val NavigationSurface: Color get() = if (dark) Color(0xFF1A2821) else Color(0xFFF1F5EF)
+    val ModalSurface: Color get() = if (dark) Color(0xFF202E27) else Color(0xFFFFFBF2)
 
-    // Gameplay layers: mint board surface + warm sand tiles.
-    val GameSurface: Color get() = if (dark) Color(0xFF182A27) else Color(0xFFEDF4F2)
-    val GameTile: Color get() = if (dark) Color(0xFF4B4437) else Color(0xFFF1E7D3)
-    val GameTileBorder: Color get() = if (dark) Color(0xFF7C6E50) else Color(0xFFC6AD7D)
+    // Gameplay layers: light mint board and warm sand letter surfaces.
+    val GameSurface: Color get() = if (dark) Color(0xFF1A2B27) else Color(0xFFEDF5F1)
+    val GameTile: Color get() = if (dark) Color(0xFF4A4336) else Color(0xFFF3E8D3)
+    val GameTileBorder: Color get() = if (dark) Color(0xFF817150) else Color(0xFFC8AE78)
 
-    // Calm accent family. Dark mode deliberately keeps filled accents dark
-    // enough for legacy white control labels to remain readable.
-    val Primary: Color get() = if (dark) Color(0xFF527763) else Color(0xFF4F725E) // sage
-    val PrimarySoft: Color get() = if (dark) Color(0xFF273B30) else Color(0xFFDDE9E1)
-    val SoftBlue: Color get() = if (dark) Color(0xFF4A6E83) else Color(0xFF4A6E83)
-    val Turquoise: Color get() = if (dark) Color(0xFF477B78) else Color(0xFF477B78)
-    val Lavender: Color get() = if (dark) Color(0xFF7B6B95) else Color(0xFF7B6B95)
-    val Sand: Color get() = if (dark) Color(0xFFD1BC91) else Color(0xFFD7C49F)
+    // Brand/accent family.
+    val Primary: Color get() = if (dark) Color(0xFF557B67) else Color(0xFF4F7964)
+    val PrimarySoft: Color get() = if (dark) Color(0xFF293D32) else Color(0xFFDDE9E1)
+    val SoftBlue: Color get() = if (dark) Color(0xFF55798A) else Color(0xFF557A87)
+    val Turquoise: Color get() = if (dark) Color(0xFF4C817C) else Color(0xFF4F8B82)
+    val Lavender: Color get() = if (dark) Color(0xFF7C7196) else Color(0xFF7A7396)
+    val Sand: Color get() = if (dark) Color(0xFFD3BE91) else Color(0xFFDCC8A0)
 
     // Text and dividers.
-    val TextPrimary: Color get() = if (dark) Color(0xFFF2F5F0) else Color(0xFF26382F)
-    val TextSecondary: Color get() = if (dark) Color(0xFFB7C5BD) else Color(0xFF65766D)
-    val Border: Color get() = if (dark) Color(0xFF3D5147) else Color(0xFFCCD8D1)
+    val TextPrimary: Color get() = if (dark) Color(0xFFF3F6F2) else Color(0xFF213C31)
+    val TextSecondary: Color get() = if (dark) Color(0xFFB8C8BF) else Color(0xFF687C72)
+    val Border: Color get() = if (dark) Color(0xFF3C5448) else Color(0xFFD1DDD5)
 
-    // Semantic states stay recognizable but use desaturated, calmer tones.
-    val Success: Color get() = if (dark) Color(0xFF4B765D) else Color(0xFF4B765D)
-    val Error: Color get() = if (dark) Color(0xFFA84F59) else Color(0xFFA84F59)
-    val Warning: Color get() = if (dark) Color(0xFF8A6538) else Color(0xFF8A6538)
-    val DisabledBackground: Color get() = if (dark) Color(0xFF29372F) else Color(0xFFE2E8E3)
-    val DisabledContent: Color get() = if (dark) Color(0xFF7F9187) else Color(0xFF809087)
+    // Semantic states; intentionally calm enough to coexist with the botanical UI.
+    val Success: Color get() = if (dark) Color(0xFF5C876C) else Color(0xFF4E7B61)
+    val Error: Color get() = if (dark) Color(0xFFB95C66) else Color(0xFFA9535E)
+    val Warning: Color get() = if (dark) Color(0xFFC19853) else Color(0xFF9B733B)
+    val DisabledBackground: Color get() = if (dark) Color(0xFF2B3932) else Color(0xFFE4EAE5)
+    val DisabledContent: Color get() = if (dark) Color(0xFF83948B) else Color(0xFF829189)
 
-    // Filled controls use one high-contrast content color across both themes.
-    // This also protects legacy composables that still assume white labels.
     val OnPrimary: Color get() = Color.White
     val OnSecondary: Color get() = Color.White
     val OnTertiary: Color get() = Color.White
 
-    // Soft hero gradient used by the home/profile summary layer.
-    val HeroStart: Color get() = if (dark) Color(0xFF20332A) else Color(0xFF607E6B)
-    val HeroMiddle: Color get() = if (dark) Color(0xFF263B3D) else Color(0xFF557A83)
-    val HeroEnd: Color get() = if (dark) Color(0xFF332F43) else Color(0xFF756B8E)
+    // Home/profile hero gradient: sage -> blue teal -> muted lavender.
+    val HeroStart: Color get() = if (dark) Color(0xFF20362C) else Color(0xFF4D7F6C)
+    val HeroMiddle: Color get() = if (dark) Color(0xFF274044) else Color(0xFF4D7881)
+    val HeroEnd: Color get() = if (dark) Color(0xFF342F48) else Color(0xFF6D6B8A)
 
-    // Compatibility aliases. Existing screens keep compiling while every
-    // legacy token now resolves to the new layered calm palette.
+    // Premium leaderboard / CTA accents.
+    val Forest: Color get() = if (dark) Color(0xFF173329) else Color(0xFF245A49)
+    val ForestDeep: Color get() = if (dark) Color(0xFF10261F) else Color(0xFF16483B)
+    val PremiumGold: Color get() = Color(0xFFD7B35C)
+    val PremiumGoldLight: Color get() = Color(0xFFF2D98A)
+
+    // Compatibility aliases. Legacy screens keep compiling while resolving to
+    // the same application-wide botanical palette.
     val PrimaryBlue: Color get() = Primary
     val PrimaryBlueSoft: Color get() = PrimarySoft
     val SecondaryAccent: Color get() = Turquoise
