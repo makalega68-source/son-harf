@@ -108,8 +108,8 @@ internal fun WordDefinitionDialog(
                         Text(
                             text = if (language.lowercase() == "tr") {
                                 sh(
-                                    "Bu kelimenin anlamı şu anda alınamadı. İnternet bağlantısını kontrol edip tekrar deneyebilirsin.",
-                                    "The definition could not be loaded. Check your internet connection and try again.",
+                                    "Kelime oyun sözlüğünde geçerli. TDK anlam servisine şu anda ulaşılamadı. Biraz sonra tekrar deneyebilirsin.",
+                                    "The word is valid in the game dictionary, but the TDK definition service is temporarily unavailable. Please try again shortly.",
                                 )
                             } else {
                                 sh(
