@@ -4,7 +4,7 @@ import kotlin.random.Random
 
 internal object WordSiegeBoardSpec {
     // Keep the 15x15 storage contract for existing online matches. The playable identity is
-    // differentiated through a custom siege-map bonus topology instead of the classic word-board layout.
+    // differentiated through a custom territory-battle topology instead of a classic word-board layout.
     const val Size = 15
     const val CellCount = Size * Size
     const val LastIndex = CellCount - 1
@@ -14,6 +14,8 @@ internal object WordSiegeBoardSpec {
     const val HorizontalDelta = 1
     const val VerticalDelta = Size
 
+    // These compact codes are persisted/server-compatible scoring identifiers only.
+    // They are never shown to players as classic 2H/3H/2K/3K bonus-square labels.
     const val CenterBonus = "4K"
     const val StarBonus = "3Y"
     const val StarBonusPoints = 25
@@ -38,10 +40,8 @@ internal object WordSiegeBoardSpec {
     }
 
     /**
-     * Returns the bonus layout for a newly-created match.
-     * The layout is a Kelime Kuşatması-specific territory topology rather than the
-     * conventional corner/diagonal word-board pattern. Existing matches remain safe because
-     * their persisted cells continue to carry their own bonus values.
+     * Returns the layout for a newly-created Kelime Tahtı arena. Existing matches remain safe
+     * because their persisted cells continue to carry their own scoring identifiers.
      */
     fun newGameBonuses(random: Random = Random.Default): List<String?> {
         val bonuses = MutableList<String?>(CellCount) { index -> bonusAt(index) }
@@ -54,9 +54,25 @@ internal object WordSiegeBoardSpec {
         return bonuses
     }
 
+    /** Player-facing strategic-map label. Never expose persisted multiplier codes in the UI. */
     fun displayBonusLabel(bonus: String?): String = when (bonus) {
-        StarBonus -> "★★★"
-        else -> bonus.orEmpty()
+        "2H" -> "GÖZ"
+        "3H" -> "KRİT"
+        "2K" -> "KALE"
+        "3K" -> "KUŞ"
+        CenterBonus -> "TAÇ"
+        StarBonus -> "ÖDÜL"
+        else -> ""
+    }
+
+    fun bonusLongName(bonus: String?, turkish: Boolean): String = when (bonus) {
+        "2H" -> if (turkish) "Gözetleme Noktası" else "Watch Point"
+        "3H" -> if (turkish) "Kritik Bölge" else "Critical Zone"
+        "2K" -> if (turkish) "Kale" else "Fort"
+        "3K" -> if (turkish) "Kuşatma Noktası" else "Siege Point"
+        CenterBonus -> if (turkish) "Taç Bölgesi" else "Crown Zone"
+        StarBonus -> if (turkish) "Sürpriz Ödül" else "Surprise Reward"
+        else -> ""
     }
 
     fun canonicalBag(language: String): String = if (language.lowercase() == "en") {
@@ -87,19 +103,19 @@ internal object WordSiegeBoardSpec {
         1 to 7, 7 to 1, 7 to 13, 13 to 7,
     )
 
-    /** Letter-focused watch points placed on an outer tactical ring. */
+    /** Watch points placed on an outer tactical ring. */
     private val SiegeWatchZones = setOf(
         2 to 4, 2 to 10, 4 to 2, 4 to 12,
         10 to 2, 10 to 12, 12 to 4, 12 to 10,
     )
 
-    /** Word-focused fort positions surrounding the central crown zone. */
+    /** Fort positions surrounding the central crown zone. */
     private val SiegeFortZones = setOf(
         3 to 6, 3 to 8, 6 to 3, 6 to 11,
         8 to 3, 8 to 11, 11 to 6, 11 to 8,
     )
 
-    /** Lower-value tactical positions that create multiple attack routes rather than diagonals. */
+    /** Tactical positions that create multiple attack routes rather than diagonals. */
     private val SiegeTacticalZones = setOf(
         1 to 3, 1 to 11, 3 to 1, 3 to 13,
         11 to 1, 11 to 13, 13 to 3, 13 to 11,
