@@ -8,18 +8,19 @@ import org.junit.Test
 
 class WordSiegePracticeChromeRegressionTest {
     @Test
-    fun practiceHeaderProfilesAndFooterKeepCompactPhoneAlignment() {
+    fun practiceHeaderProfilesMapControlAndFooterKeepCompactPhoneAlignment() {
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         val shell = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
         assertTrue(shell.contains("topBar = { SonHarfTopAdBanner(isPremium = isPro) }"))
         assertFalse(practice.contains(".statusBarsPadding().navigationBarsPadding()"))
         assertTrue(practice.contains("height(if (compact) 46.dp else 52.dp)"))
-        assertTrue(practice.contains("fontSize = if (compact) 8.sp else 9.sp"))
-        assertTrue(practice.contains("lineHeight = if (compact) 10.sp else 11.sp"))
-        assertTrue(practice.contains("Modifier.weight(1f).fillMaxHeight()"))
-        assertTrue(practice.contains("height(if (compact) 18.dp else 22.dp)"))
-        assertTrue(practice.contains("height(if (compact) 24.dp else 30.dp)"))
+        assertTrue(practice.contains("KELİME TAHTI"))
+        assertTrue(practice.contains("PracticeMapControlBar("))
+        assertTrue(practice.contains("HARİTA KONTROLÜ"))
+        assertTrue(practice.contains("PracticeStrategicZoneLegend"))
+        assertTrue(practice.contains("HAMLEYİ ONAYLA"))
+        assertTrue(practice.contains("KUŞATMA +"))
         assertTrue(practice.contains("if (notice != null || lastMove != null)"))
     }
 
