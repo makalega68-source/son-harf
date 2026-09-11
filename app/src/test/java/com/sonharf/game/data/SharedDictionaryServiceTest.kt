@@ -51,6 +51,29 @@ class SharedDictionaryServiceTest {
     }
 
     @Test
+    fun turkishBotUsesOnlyVerifiedHeadwordSubset() {
+        SharedDictionaryService.installSnapshotForTests(
+            language = "tr",
+            words = listOf("kalem", "zir", "bağın", "masa"),
+            botWords = listOf("kalem", "zir", "masa"),
+        )
+
+        assertTrue(SharedDictionaryService.isValidWordBlocking("BAĞIN", "tr"))
+        assertFalse("Canonical-only corpus entries must not leak into AI play", SharedDictionaryService.isBotAllowedWord("BAĞIN", "tr"))
+        assertTrue("Exact verified headword must remain available to AI", SharedDictionaryService.isBotAllowedWord("ZİR", "tr"))
+    }
+
+    @Test
+    fun tdkHeadwordBuilderIntersectsCanonicalAndAppliesBotSafetyPolicy() {
+        val verified = SharedDictionaryService.buildTurkishBotSnapshot(
+            canonicalWords = setOf("kalem", "zir", "bağın", "penis", "amlat"),
+            tdkHeadwords = listOf("kalem", "zir", "penis", "not in canonical", "iki kelime"),
+        )
+
+        assertEquals(setOf("kalem", "zir"), verified)
+    }
+
+    @Test
     fun invisibleDictionaryArtifactsAreRemovedBeforeCanonicalLookup() {
         assertEquals("istanbul", SharedDictionaryService.normalize("\uFEFFİSTANBUL\r\n", "tr"))
         assertEquals("kalem", SharedDictionaryService.normalize("KA\u200BLEM", "tr"))
