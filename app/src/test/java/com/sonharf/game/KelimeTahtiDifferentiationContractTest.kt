@@ -25,7 +25,7 @@ class KelimeTahtiDifferentiationContractTest {
         assertTrue(screen.contains("HARİTA KONTROLÜ"))
         assertTrue(screen.contains("HAMLEYİ ONAYLA"))
         assertTrue(screen.contains("KUŞATMA +"))
-        assertTrue(screen.contains("Kelime $wordPoints • Bölge $territoryPoints"))
+        assertTrue(screen.contains("Kelime ${'$'}wordPoints • Bölge ${'$'}territoryPoints"))
         assertTrue(screen.contains("PracticePlayerAccent = Color(0xFF567A64)"))
         assertTrue(screen.contains("PracticeRivalAccent = Color(0xFF5C8299)"))
         assertTrue(board.contains("practiceCellThreatened"))
