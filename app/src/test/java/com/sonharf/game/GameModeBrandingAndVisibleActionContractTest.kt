@@ -7,11 +7,13 @@ import org.junit.Test
 
 class GameModeBrandingAndVisibleActionContractTest {
     @Test
-    fun homeUsesRealGameModeLogosInsteadOfOnlyGenericIcons() {
+    fun homeMakesKelimeKusatmasiPrimaryAndKeepsSecondaryModesBranded() {
         val home = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
-        assertTrue(home.contains("R.drawable.kelime_kusatma_logo_hd"))
-        assertTrue(home.contains("R.drawable.harf_yolu_logo"))
-        assertTrue(home.contains("logoRes = R.drawable.kelime_kusatma_logo_hd"))
+        assertTrue(home.contains("SonHarfOfficialLogo("))
+        assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
+        assertTrue(home.contains("sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
+        assertTrue(home.contains("logoRes = R.drawable.son_harf_app_icon_master"))
+        assertTrue(home.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(home.contains("logoRes = R.drawable.harf_yolu_logo"))
         assertTrue(home.contains("painterResource(logoRes)"))
     }
