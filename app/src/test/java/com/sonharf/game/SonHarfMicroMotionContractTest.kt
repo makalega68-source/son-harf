@@ -11,8 +11,7 @@ class SonHarfMicroMotionContractTest {
         val motion = File("src/main/java/com/sonharf/game/SonHarfMicroMotion.kt").readText()
         val home = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
-        // Native Compose implementation only; the purchased Unity package is a visual reference,
-        // not a runtime dependency of the Android app.
+        // Native Compose implementation only; no Unity runtime is introduced for UI polish.
         assertFalse(motion.contains("UnityPlayer"))
         assertFalse(motion.contains("com.unity3d"))
         assertFalse(home.contains("UnityPlayer"))
@@ -28,16 +27,18 @@ class SonHarfMicroMotionContractTest {
         assertTrue(motion.contains("pressedScale: Float = 0.98f"))
         assertTrue(motion.contains("graphicsLayer"))
 
-        // Phase 1 is intentionally limited to small scale deltas on existing entry points.
+        // Premium home keeps restrained press deltas on its primary interactive surfaces.
         assertTrue(home.contains("sonHarfPressScale(pressedScale = 0.985f)"))
-        assertTrue(home.contains("sonHarfPressScale(pressedScale = 0.99f)"))
+        assertTrue(home.contains("sonHarfPressScale(pressedScale = .99f)") || home.contains("sonHarfPressScale(pressedScale = 0.99f)"))
         assertTrue(home.contains("sonHarfPressScale(pressedScale = 0.96f)"))
         assertTrue(home.contains("sonHarfPressScale(pressedScale = 0.94f)"))
 
-        // Core product structure must remain intact.
+        // Core product structure remains intact despite the visual rebuild.
         assertTrue(home.contains("Premier 1v1 kelime düellosu"))
-        assertTrue(home.contains("KELİME KUŞATMASI"))
-        assertTrue(home.contains("HARF YOLU"))
+        assertTrue(home.contains("kelime_kusatma_logo_hd"))
+        assertTrue(home.contains("harf_yolu_logo"))
         assertTrue(home.contains("HAFTANIN ZİRVESİ"))
+        assertTrue(home.contains("PremiumProfileHero("))
+        assertTrue(home.contains("PremiumPlayButton("))
     }
 }
