@@ -160,8 +160,10 @@ internal fun WordSiegePracticeBoard(
                 .clip(RoundedCornerShape(14.dp))
                 .clipToBounds()
                 .onGloballyPositioned { viewport = it.size }
-                .pointerInput(mode, viewport, boardPx, closeScale) {
-                    if (mode == WordSiegeBoardViewportMode.CLOSE) {
+                .pointerInput(mode, viewport, boardPx, closeScale, enabled) {
+                    // While the player can place tiles, board cells own single-touch input.
+                    // This prevents the parent transform detector from swallowing taps.
+                    if (mode == WordSiegeBoardViewportMode.CLOSE && !enabled) {
                         detectTransformGestures { centroid, pan, zoom, _ ->
                             val oldScale = closeScale
                             val newScale = (oldScale * zoom).coerceIn(WORD_SIEGE_PRACTICE_MIN_SCALE, WORD_SIEGE_PRACTICE_MAX_SCALE)
