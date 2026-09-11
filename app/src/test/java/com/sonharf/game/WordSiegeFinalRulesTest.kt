@@ -64,7 +64,6 @@ class WordSiegeFinalRulesTest {
             this[40] = WordSiegeCellDto(letter = "A", owner = 2)
             this[41] = WordSiegeCellDto(letter = "R", owner = 2)
             this[42] = WordSiegeCellDto(letter = "A", owner = 2)
-            // 39 is column 9 on a 15x15 board, so 24 is the directly adjacent cell above it.
             this[24] = WordSiegeCellDto(letter = "M", owner = 2)
         }
         val before = state(board, rack = "KXXXXXX")
@@ -162,8 +161,8 @@ class WordSiegeFinalRulesTest {
         assertTrue(practice.contains("Torba ${'$'}{state.bag.length}"))
         assertTrue(pan.contains("Torba ${'$'}{game.bag.length}"))
         assertTrue(experience.contains("WordSiegeFinalRules.detectOrientation"))
-        assertTrue(pan.contains("0xFF65B58A"))
-        assertTrue(pan.contains("0xFFD98286"))
+        assertTrue(pan.contains("0xFFA8C7B1"))
+        assertTrue(pan.contains("0xFFAFCDE0"))
         assertTrue(experience.contains("0xFF35C878"))
         assertTrue(experience.contains("0xFFFF5F57"))
         assertTrue(practice.contains("animateIntAsState"))
