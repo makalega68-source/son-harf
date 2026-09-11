@@ -16,9 +16,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Shared app-shell palette. This is not part of the removed Son Harf duel runtime. */
+/** Shared app-shell palette, resolved from the single Son Harf botanical theme. */
 internal object MainUi {
-    val Background: Color get() = SonHarfTheme.Background
+    // Light pages are deliberately a touch translucent so the shared botanical
+    // backdrop remains perceptible through screen-level backgrounds.
+    val Background: Color get() = if (SonHarfTheme.IsDark) SonHarfTheme.Background else SonHarfTheme.Background.copy(alpha = .94f)
     val Surface: Color get() = SonHarfTheme.Surface
     val SurfaceSoft: Color get() = SonHarfTheme.SurfaceSecondary
     val SurfaceRaised: Color get() = SonHarfTheme.SurfaceElevated
@@ -30,25 +32,24 @@ internal object MainUi {
     val Text: Color get() = SonHarfTheme.TextPrimary
     val Muted: Color get() = SonHarfTheme.TextSecondary
     val Blue: Color get() = SonHarfTheme.Primary
-    val BlueDeep: Color get() = SonHarfTheme.Primary
+    val BlueDeep: Color get() = SonHarfTheme.ForestDeep
     val BlueSoft: Color get() = SonHarfTheme.PrimarySoft
     val GrayBlue: Color get() = SonHarfTheme.SoftBlue
     val Cyan: Color get() = SonHarfTheme.Turquoise
     val Border: Color get() = SonHarfTheme.Border
     val Green: Color get() = SonHarfTheme.Success
-    val Gold: Color get() = SonHarfTheme.Warning
+    val Gold: Color get() = SonHarfTheme.PremiumGold
     val Red: Color get() = SonHarfTheme.Error
     val Purple: Color get() = SonHarfTheme.Lavender
 }
 
-// Independent/legacy mode tokens now resolve to the same application-wide palette.
-// Keeping these aliases avoids risky broad rewrites while eliminating the old bright portal theme.
-internal val PortalBg: Color get() = SonHarfTheme.Background
+// Independent/legacy mode tokens resolve to the same application-wide palette.
+internal val PortalBg: Color get() = if (SonHarfTheme.IsDark) SonHarfTheme.Background else SonHarfTheme.Background.copy(alpha = .94f)
 internal val PortalCard: Color get() = SonHarfTheme.Surface
 internal val PortalText: Color get() = SonHarfTheme.TextPrimary
 internal val PortalMuted: Color get() = SonHarfTheme.TextSecondary
 internal val PortalBlue: Color get() = SonHarfTheme.SoftBlue
-internal val PortalGold: Color get() = SonHarfTheme.Warning
+internal val PortalGold: Color get() = SonHarfTheme.PremiumGold
 internal val PortalGreen: Color get() = SonHarfTheme.Success
 internal val PortalRed: Color get() = SonHarfTheme.Error
 
