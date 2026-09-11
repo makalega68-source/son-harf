@@ -30,6 +30,7 @@ import kotlinx.coroutines.launch
 internal fun MainSocialScreen(
     backend: OnlineGameBackend,
     onPlay: () -> Unit,
+    onSiege: () -> Unit = onPlay,
 ) {
     val scope = rememberCoroutineScope()
     var tab by remember { mutableIntStateOf(0) }
@@ -37,6 +38,7 @@ internal fun MainSocialScreen(
     var friendships by remember { mutableStateOf<List<FriendshipDto>>(emptyList()) }
     var requests by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var invites by remember { mutableStateOf<List<GameInviteDto>>(emptyList()) }
+    var siegeInvites by remember { mutableStateOf<List<WordSiegeInviteDto>>(emptyList()) }
     var inviteProfiles by remember { mutableStateOf<Map<String, ProfileDto>>(emptyMap()) }
     var rivals by remember { mutableStateOf<List<RivalHistoryDto>>(emptyList()) }
     var matchHistory by remember { mutableStateOf<List<MatchHistoryDto>>(emptyList()) }
@@ -52,19 +54,21 @@ internal fun MainSocialScreen(
         val friendTask = async { runCatching { backend.getFriends() }.getOrDefault(emptyList()) }
         val friendshipTask = async { runCatching { backend.getFriendships() }.getOrDefault(emptyList()) }
         val requestTask = async { runCatching { backend.getIncomingFriendRequests() }.getOrDefault(emptyList()) }
-        val inviteTask = async { runCatching { backend.getIncomingGameInvites() }.getOrDefault(emptyList()) }
+        val legacyInviteTask = async { runCatching { backend.getIncomingGameInvites() }.getOrDefault(emptyList()) }
+        val siegeInviteTask = async { runCatching { backend.getIncomingWordSiegeInvites() }.getOrDefault(emptyList()) }
         val rivalTask = async { runCatching { backend.getRivalHistory(30) }.getOrDefault(emptyList()) }
         val historyTask = async { runCatching { backend.getMatchHistory(30) }.getOrDefault(emptyList()) }
         val archTask = async { runCatching { backend.getArchRival() }.getOrNull() }
         friends = friendTask.await()
         friendships = friendshipTask.await()
         requests = requestTask.await()
-        invites = inviteTask.await()
+        invites = legacyInviteTask.await()
+        siegeInvites = siegeInviteTask.await()
         rivals = rivalTask.await()
         matchHistory = historyTask.await()
         archRival = archTask.await()
         val senders = linkedMapOf<String, ProfileDto>()
-        invites.map { it.senderId }.distinct().forEach { id ->
+        (invites.map { it.senderId } + siegeInvites.map { it.senderId }).distinct().forEach { id ->
             runCatching { backend.getProfile(id) }.getOrNull()?.let { senders[id] = it }
         }
         inviteProfiles = senders
@@ -74,8 +78,7 @@ internal fun MainSocialScreen(
     LaunchedEffect(Unit) { reload() }
 
     val onlineCount = friends.count { it.second.presenceStatus == "online" }
-    val incomingCount = requests.size + invites.size
-    val me = backend.currentUserId()
+    val incomingCount = requests.size + invites.size + siegeInvites.size
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -85,7 +88,7 @@ internal fun MainSocialScreen(
         item {
             MainScreenHeader(
                 title = sh("Sosyal", "Social"),
-                subtitle = sh("Arkadaşların, davetlerin ve ezeli rakiplerin", "Friends, invitations and rivals"),
+                subtitle = sh("Arkadaşların, Kuşatma davetlerin ve ezeli rakiplerin", "Friends, Siege invitations and rivals"),
             )
         }
 
@@ -104,24 +107,24 @@ internal fun MainSocialScreen(
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 Button(
-                    onClick = onPlay,
+                    onClick = onSiege,
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(15.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
                 ) {
-                    Icon(Icons.Rounded.SportsEsports, null, modifier = Modifier.size(18.dp))
+                    Icon(Icons.Rounded.Shield, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(sh("MAÇA DAVET", "GAME INVITE"), fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    Text(sh("KUŞATMA OYNA", "PLAY SIEGE"), fontWeight = FontWeight.Black, fontSize = 10.sp)
                 }
                 OutlinedButton(
-                    onClick = onPlay,
+                    onClick = { tab = 0 },
                     modifier = Modifier.weight(1f).height(48.dp),
                     shape = RoundedCornerShape(15.dp),
                     border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f)),
                 ) {
-                    Icon(Icons.Rounded.Lock, null, tint = MainUi.Gold, modifier = Modifier.size(17.dp))
+                    Icon(Icons.Rounded.GroupAdd, null, tint = MainUi.Gold, modifier = Modifier.size(17.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(sh("ÖZEL ODA", "PRIVATE ROOM"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    Text(sh("ARKADAŞ DAVETİ", "FRIEND INVITE"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 9.sp)
                 }
             }
         }
@@ -178,13 +181,12 @@ internal fun MainSocialScreen(
                             if (busyKey != null) return@MainFriendCard
                             scope.launch {
                                 busyKey = friend.id
-                                runCatching { backend.inviteFriend(friend.id, SonHarfUiState.language) }
+                                runCatching { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
                                     .onSuccess {
-                                        notice = if (friend.presenceStatus == "online") sh("${friend.displayName} davet edildi.", "${friend.displayName} was invited.")
-                                        else sh("Davet çevrimdışı arkadaşına iletilecek.", "The invite will reach your offline friend.")
+                                        notice = sh("${friend.displayName} Kelime Kuşatması'na davet edildi.", "${friend.displayName} was invited to Word Siege.")
                                         SonHarfSoundFx.softNotify()
                                     }
-                                    .onFailure { notice = sh("Davet gönderilemedi.", "Invite could not be sent.") }
+                                    .onFailure { notice = sh("Kuşatma daveti gönderilemedi veya bekleyen bir davet var.", "Siege invite could not be sent or one is already pending.") }
                                 busyKey = null
                             }
                         },
@@ -334,17 +336,17 @@ internal fun MainSocialScreen(
                     }
                 }
 
-                if (invites.isNotEmpty()) item { MainSectionTitle(sh("MAÇ DAVETLERİ", "GAME INVITATIONS")) }
-                items(invites, key = { it.id }) { invite ->
+                if (siegeInvites.isNotEmpty()) item { MainSectionTitle(sh("KELİME KUŞATMASI DAVETLERİ", "WORD SIEGE INVITATIONS")) }
+                items(siegeInvites, key = { "siege:${it.id}" }) { invite ->
                     val sender = inviteProfiles[invite.senderId]
-                    Surface(shape = RoundedCornerShape(17.dp), color = MainUi.BlueSoft, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .25f))) {
+                    Surface(shape = RoundedCornerShape(17.dp), color = Color(0xFFE8F1EB), border = BorderStroke(1.dp, Color(0xFF567A64).copy(alpha = .35f))) {
                         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = MainUi.Blue)
+                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = Color(0xFF567A64))
                                 Spacer(Modifier.width(9.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text(sender?.displayName ?: sh("Maç daveti", "Game invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                                    Text(if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
+                                    Text(sender?.displayName ?: sh("Kuşatma daveti", "Siege invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
+                                    Text(sh("Kelime Kuşatması • ", "Word Siege • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
                                 }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -352,7 +354,57 @@ internal fun MainSocialScreen(
                                     onClick = {
                                         if (busyKey != null) return@OutlinedButton
                                         scope.launch {
-                                            busyKey = invite.id
+                                            busyKey = "siege:${invite.id}"
+                                            runCatching { backend.respondWordSiegeInvite(invite.id, false) }
+                                            reload()
+                                            busyKey = null
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                ) { Text(sh("REDDET", "DECLINE"), color = MainUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                                Button(
+                                    onClick = {
+                                        if (busyKey != null) return@Button
+                                        scope.launch {
+                                            busyKey = "siege:${invite.id}"
+                                            runCatching { backend.respondWordSiegeInvite(invite.id, true) }
+                                                .onSuccess { game ->
+                                                    if (game != null) {
+                                                        notice = sh("Kuşatma maçı hazır.", "Siege match is ready.")
+                                                        onSiege()
+                                                    }
+                                                }
+                                                .onFailure { notice = sh("Kuşatma daveti artık kullanılamıyor.", "The Siege invite is no longer available."); reload() }
+                                            busyKey = null
+                                        }
+                                    },
+                                    modifier = Modifier.weight(1f),
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF567A64)),
+                                ) { Text(if (busyKey == "siege:${invite.id}") "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                            }
+                        }
+                    }
+                }
+
+                if (invites.isNotEmpty()) item { MainSectionTitle(sh("SON HARF DAVETLERİ", "LAST LETTER INVITATIONS")) }
+                items(invites, key = { "legacy:${it.id}" }) { invite ->
+                    val sender = inviteProfiles[invite.senderId]
+                    Surface(shape = RoundedCornerShape(17.dp), color = MainUi.BlueSoft, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .25f))) {
+                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = MainUi.Blue)
+                                Spacer(Modifier.width(9.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(sender?.displayName ?: sh("Son Harf daveti", "Last Letter invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
+                                    Text(sh("Son Harf • ", "Last Letter • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
+                                }
+                            }
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(
+                                    onClick = {
+                                        if (busyKey != null) return@OutlinedButton
+                                        scope.launch {
+                                            busyKey = "legacy:${invite.id}"
                                             runCatching { backend.respondGameInvite(invite.id, false) }
                                             reload()
                                             busyKey = null
@@ -364,22 +416,22 @@ internal fun MainSocialScreen(
                                     onClick = {
                                         if (busyKey != null) return@Button
                                         scope.launch {
-                                            busyKey = invite.id
+                                            busyKey = "legacy:${invite.id}"
                                             runCatching { backend.respondGameInvite(invite.id, true) }
                                                 .onSuccess { room -> if (room != null) onPlay() }
-                                                .onFailure { notice = sh("Davet artık kullanılamıyor.", "The invite is no longer available."); reload() }
+                                                .onFailure { notice = sh("Son Harf daveti artık kullanılamıyor.", "The Last Letter invite is no longer available."); reload() }
                                             busyKey = null
                                         }
                                     },
                                     modifier = Modifier.weight(1f),
                                     colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                                ) { Text(if (busyKey == invite.id) "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                                ) { Text(if (busyKey == "legacy:${invite.id}") "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
                             }
                         }
                     }
                 }
 
-                if (requests.isEmpty() && invites.isEmpty() && results.isEmpty() && !loading) {
+                if (requests.isEmpty() && invites.isEmpty() && siegeInvites.isEmpty() && results.isEmpty() && !loading) {
                     item {
                         Text(sh("Bekleyen istek veya davet yok.", "There are no pending requests or invitations."), Modifier.fillMaxWidth().padding(vertical = 12.dp), color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
                     }
@@ -426,9 +478,9 @@ internal fun MainSocialScreen(
                                     scope.launch {
                                         busyKey = rival.opponentId
                                         if (rival.isFriend) {
-                                            runCatching { backend.inviteFriend(rival.opponentId, SonHarfUiState.language) }
-                                                .onSuccess { notice = sh("Rövanş daveti gönderildi.", "Rematch invite sent.") }
-                                                .onFailure { notice = sh("Rövanş daveti gönderilemedi.", "Rematch invite could not be sent.") }
+                                            runCatching { backend.inviteFriendToWordSiege(rival.opponentId, SonHarfUiState.language) }
+                                                .onSuccess { notice = sh("Kelime Kuşatması rövanş daveti gönderildi.", "Word Siege rematch invite sent.") }
+                                                .onFailure { notice = sh("Rövanş daveti gönderilemedi veya bekleyen bir davet var.", "Rematch invite could not be sent or one is already pending.") }
                                         } else {
                                             runCatching { backend.sendFriendRequest(rival.opponentId) }
                                                 .onSuccess { notice = sh("Önce arkadaşlık isteği gönderildi.", "A friend request was sent first.") }
@@ -478,8 +530,8 @@ internal fun MainSocialScreen(
                             icon = Icons.Rounded.SportsKabaddi,
                             title = sh("Rakip geçmişin henüz yok", "No rival history yet"),
                             body = sh("İlk gerçek oyuncu maçından sonra rakiplerin burada görünür.", "Rivals appear here after your first real-player match."),
-                            action = sh("OYNA", "PLAY"),
-                            onAction = onPlay,
+                            action = sh("KUŞATMA OYNA", "PLAY SIEGE"),
+                            onAction = onSiege,
                         )
                     }
                 }
@@ -535,7 +587,7 @@ private fun MainFriendCard(
                 enabled = !busy,
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp),
-            ) { Text(if (busy) "…" else sh("DAVET", "INVITE"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
+            ) { Text(if (busy) "…" else sh("KUŞAT", "SIEGE"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, sh("Daha fazla", "More"), tint = MainUi.Muted) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
