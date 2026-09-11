@@ -194,7 +194,11 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
                     UnifiedDestination.LETTER -> LetterLadderGameScreen { destination = UnifiedDestination.HOME }
                     UnifiedDestination.LEAGUE -> LeaderboardExperienceScreen { destination = UnifiedDestination.HOME }
                     UnifiedDestination.COMPETITION -> CompetitionHubScreen { destination = UnifiedDestination.HOME }
-                    UnifiedDestination.SOCIAL -> MainSocialScreen(backend = backend, onPlay = { destination = UnifiedDestination.GAME })
+                    UnifiedDestination.SOCIAL -> MainSocialScreen(
+                        backend = backend,
+                        onPlay = { destination = UnifiedDestination.GAME },
+                        onSiege = { destination = UnifiedDestination.SIEGE },
+                    )
                     UnifiedDestination.SHOP -> ShopHubScreen()
                     UnifiedDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,

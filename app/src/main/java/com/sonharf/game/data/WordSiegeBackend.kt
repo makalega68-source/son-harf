@@ -48,6 +48,19 @@ data class WordSiegeGameDto(
 )
 
 @Serializable
+data class WordSiegeInviteDto(
+    val id: String,
+    @SerialName("sender_id") val senderId: String,
+    @SerialName("receiver_id") val receiverId: String,
+    val language: String = "tr",
+    val status: String = "pending",
+    @SerialName("game_id") val gameId: String? = null,
+    @SerialName("expires_at") val expiresAt: String = "",
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("responded_at") val respondedAt: String? = null,
+)
+
+@Serializable
 data class WordSiegeMoveDto(
     val id: Long,
     @SerialName("game_id") val gameId: String,
@@ -109,6 +122,44 @@ suspend fun OnlineGameBackend.findOrCreateWordSiegeGame(language: String): WordS
         "find_or_create_word_siege_game_v1",
         buildJsonObject { put("p_language", if (language.lowercase() == "en") "en" else "tr") },
     ).decodeSingle()
+
+suspend fun OnlineGameBackend.getIncomingWordSiegeInvites(): List<WordSiegeInviteDto> {
+    val me = requireNotNull(currentUserId())
+    return SupabaseProvider.client.from("word_siege_invites")
+        .select {
+            filter {
+                eq("receiver_id", me)
+                eq("status", "pending")
+            }
+        }
+        .decodeList<WordSiegeInviteDto>()
+        .sortedByDescending { it.createdAt }
+}
+
+suspend fun OnlineGameBackend.inviteFriendToWordSiege(
+    friendId: String,
+    language: String,
+): WordSiegeInviteDto = SupabaseProvider.client.postgrest.rpc(
+    "invite_friend_to_word_siege_v1",
+    buildJsonObject {
+        put("p_friend_id", friendId)
+        put("p_language", if (language.lowercase() == "en") "en" else "tr")
+    },
+).decodeSingle()
+
+suspend fun OnlineGameBackend.respondWordSiegeInvite(
+    inviteId: String,
+    accept: Boolean,
+): WordSiegeGameDto? {
+    val response = SupabaseProvider.client.postgrest.rpc(
+        "respond_word_siege_invite_v1",
+        buildJsonObject {
+            put("p_invite_id", inviteId)
+            put("p_accept", accept)
+        },
+    )
+    return if (accept) response.decodeSingle<WordSiegeGameDto>() else null
+}
 
 suspend fun OnlineGameBackend.cancelWordSiegeWaiting(gameId: String): WordSiegeGameDto =
     SupabaseProvider.client.postgrest.rpc(
