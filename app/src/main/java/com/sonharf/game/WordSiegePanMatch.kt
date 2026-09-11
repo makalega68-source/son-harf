@@ -735,8 +735,7 @@ private fun PanSiegeBoardCell(
                             WordSiegeBoardSpec.StarBonus -> Color(0xFF755E21)
                             else -> MainUi.Text
                         },
-                        fontSize = if (activeBonus == WordSiegeBoardSpec.StarBonus) 8.sp else WordSiegeBoardAccessibility.BoardBonus,
-                        letterSpacing = if (activeBonus == WordSiegeBoardSpec.StarBonus) (-.4).sp else 0.sp,
+                        fontSize = WordSiegeBoardAccessibility.BoardBonus,
                         fontWeight = FontWeight.Black,
                     )
                 }
