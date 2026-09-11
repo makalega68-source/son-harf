@@ -7,7 +7,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WordSiegeContractTest {
-    @Test fun siegeReplacesConquestAndRemainsReachableFromUnifiedPro() {
+    @Test fun siegeReplacesConquestAndIsPrimaryFromUnifiedPro() {
         val siege = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGame.kt").readText()
         val home = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
@@ -34,10 +34,11 @@ class WordSiegeContractTest {
         assertTrue(siege.contains("KELİMEYİ GÖNDER"))
         assertTrue(siege.contains("BOT"))
 
-        // The premium home may visually wrap the title, but the branded asset and route stay intact.
-        assertTrue(home.contains("kelime_kusatma_logo_hd"))
-        assertTrue(home.contains("onClick = onSiege"))
+        // Unified home now makes Kelime Kuşatması the primary play route.
+        assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
+        assertTrue(home.contains("sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(home.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
+        assertTrue(home.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertFalse(home.contains("KELİME FETHİ"))
         assertFalse(projectFile("app/src/main/java/com/sonharf/game").resolve("WordConquestGame.kt").exists())
     }
