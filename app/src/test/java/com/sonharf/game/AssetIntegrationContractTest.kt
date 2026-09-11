@@ -89,25 +89,26 @@ class AssetIntegrationContractTest {
         assertFalse(practice.contains("wordSiegeBoardBorderWidthDp(transform.scale)"))
     }
 
-    @Test fun onlineSiegeKeepsCalmOwnershipAndBonusPaletteWhilePracticeUsesCompactSeparation() {
+    @Test fun onlineAndPracticeSiegeUseTheTerritoryFirstCalmPalette() {
         val online = read("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
         listOf(
-            "0xFF8DA19A", "0xFF7E8E91", "0xFF3A7B58", "0xFFA84F59", "0xFFD99818",
-            "0xFFDCEFF8", "0xFFDCEEDC", "0xFFE9E0F2", "0xFFDECBE9", "0xFFF0C75A", "0xFFF6B94A",
+            "0xFF8EA697", "0xFFA8C7B1", "0xFFAFCDE0", "0xFF567A64", "0xFF5C8299",
+            "0xFFDCEAF2", "0xFFDDEBDD", "0xFFEAE2F0", "0xFFDED4E8", "0xFFE7DDBB", "0xFFEAD59B",
         ).forEach { assertTrue(online.contains(it)) }
         assertTrue(online.contains("border.copy(alpha = .92f)"))
+        assertTrue(online.contains("val regionGap = if (letter != null && owner != 0) .55.dp else 1.25.dp"))
 
-        assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFD9E4E7)"))
-        assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFF8FAF9)"))
-        assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFFFF8EA)"))
-        assertTrue(practice.contains(".padding(1.25.dp)"))
+        assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFE8ECE8)"))
+        assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFFAF7EF)"))
+        assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFFAF7EF)"))
+        assertTrue(practice.contains("PracticeSiegeMine = Color(0xFFA8C7B1)"))
+        assertTrue(practice.contains("PracticeSiegeRival = Color(0xFFAFCDE0)"))
+        assertTrue(practice.contains(".padding(regionGap)"))
         val cellStart = practice.indexOf("private fun WordSiegePracticeBoardCell")
         val rackStart = practice.indexOf("internal fun WordSiegePracticeRackTile")
         assertTrue(cellStart >= 0 && rackStart > cellStart)
-        val cellSection = practice.substring(cellStart, rackStart)
-        assertFalse(cellSection.contains("BorderStroke("))
     }
 
     @Test fun purchasedVfxTextureMatchesRegisteredPackageAsset() {
