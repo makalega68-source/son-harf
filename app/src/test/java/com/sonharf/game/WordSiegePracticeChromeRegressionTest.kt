@@ -10,6 +10,7 @@ class WordSiegePracticeChromeRegressionTest {
     @Test
     fun practiceHeaderProfilesMapControlAndFooterKeepCompactPhoneAlignment() {
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
+        val guidance = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeGuidance.kt").readText()
         val shell = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
         assertTrue(shell.contains("topBar = { SonHarfTopAdBanner(isPremium = isPro) }"))
@@ -21,7 +22,8 @@ class WordSiegePracticeChromeRegressionTest {
         assertTrue(practice.contains("PracticeStrategicZoneLegend"))
         assertTrue(practice.contains("HAMLEYİ ONAYLA"))
         assertTrue(practice.contains("KUŞATMA +"))
-        assertTrue(practice.contains("if (notice != null || lastMove != null)"))
+        assertTrue(practice.contains("WordSiegePracticeStatusBar(statusMessage, compact)"))
+        assertTrue(guidance.contains("maxLines = 2"))
     }
 
     private fun projectFile(path: String): File {
