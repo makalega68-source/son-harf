@@ -19,7 +19,13 @@ class BrandStartupRegressionTest {
         assertTrue(manifest.contains("android:label=\"Kelime Tahtı\""))
         assertTrue(manifest.contains("android:icon=\"@drawable/kelime_tahti_app_icon\""))
         assertTrue(manifest.contains("android:roundIcon=\"@drawable/kelime_tahti_app_icon\""))
-        assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_tahti_logo)"))
+
+        // The narrow home header deliberately uses the compact icon + readable wordmark.
+        assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_tahti_app_icon)"))
+        assertTrue(officialLogo.contains("KELİME\\nTAHTI"))
+        assertFalse(officialLogo.contains("painterResource(R.drawable.kelime_tahti_logo)"))
+
+        // Roomy authentication/startup presentation keeps the full approved logo artwork.
         assertTrue(authGate.contains("painterResource(R.drawable.son_harf_gold_teal_logo)"))
 
         assertValidPng(icon)
