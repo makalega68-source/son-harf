@@ -33,7 +33,10 @@ class WordSiegeContractTest {
         assertTrue(siege.contains("KRİTİK!"))
         assertTrue(siege.contains("KELİMEYİ GÖNDER"))
         assertTrue(siege.contains("BOT"))
-        assertTrue(home.contains("KELİME KUŞATMASI"))
+
+        // The premium home may visually wrap the title, but the branded asset and route stay intact.
+        assertTrue(home.contains("kelime_kusatma_logo_hd"))
+        assertTrue(home.contains("onClick = onSiege"))
         assertTrue(home.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
         assertFalse(home.contains("KELİME FETHİ"))
         assertFalse(projectFile("app/src/main/java/com/sonharf/game").resolve("WordConquestGame.kt").exists())
