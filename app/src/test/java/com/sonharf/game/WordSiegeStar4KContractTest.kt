@@ -34,11 +34,12 @@ class WordSiegeStar4KContractTest {
         val board = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt").readText()
         assertFalse(screen.contains("ANA SÖZLÜK"))
         assertFalse(screen.contains("MAIN DICTIONARY"))
-        assertTrue(screen.contains("padding(horizontal = 4.dp, vertical = 2.dp)"))
-        assertTrue(screen.contains("Ortadaki altın 4K karesinden geç"))
+        assertTrue(screen.contains("Taç Bölgesi"))
+        assertTrue(screen.contains("Crown Zone"))
         assertTrue(board.contains("highlightAlpha.animateTo(0.42f"))
-        assertTrue(board.contains("PracticeBonus4K"))
-        assertTrue(board.contains("PracticeBonusStar"))
+        assertTrue(board.contains("PracticeZoneCrown"))
+        assertTrue(board.contains("PracticeZoneReward"))
+        assertTrue(board.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone)"))
     }
 
     private fun projectFile(path: String): File {
