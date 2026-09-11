@@ -5,17 +5,29 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class KelimeKusatmasiPrimaryProductContractTest {
+class KelimeTahtiPrimaryProductContractTest {
     @Test
-    fun kelimeKusatmasiIsThePrimaryProductAndSonHarfIsSecondary() {
+    fun kelimeTahtiIsThePrimaryVisibleProductAndSonHarfIsSecondary() {
         val shell = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
         val manifest = File("src/main/AndroidManifest.xml").readText()
+        val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
+        val logo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
 
-        assertTrue(manifest.contains("android:label=\"Kelime Kuşatması\""))
+        assertTrue(manifest.contains("android:label=\"Kelime Tahtı\""))
+        assertTrue(manifest.contains("@drawable/kelime_tahti_app_icon"))
+        assertTrue(logo.contains("R.drawable.kelime_tahti_logo"))
+        assertTrue(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
+        assertTrue(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
         assertTrue(shell.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(shell.contains("sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(shell.contains("onClick = onPlay"))
+    }
+
+    @Test
+    fun technicalCompatibilityIdentifiersRemainStable() {
+        val manifest = File("src/main/AndroidManifest.xml").readText()
+        assertTrue(manifest.contains("android:scheme=\"sonharf\""))
+        assertTrue(manifest.contains("android:host=\"auth\""))
     }
 
     @Test
