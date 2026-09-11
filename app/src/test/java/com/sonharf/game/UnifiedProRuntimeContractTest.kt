@@ -7,14 +7,16 @@ import org.junit.Test
 
 class UnifiedProRuntimeContractTest {
     @Test
-    fun startupRoutesOnlyToUnifiedProAndCleanPremierDuel() {
+    fun startupRoutesOnlyToUnifiedProAndPrimaryKelimeKusatmasi() {
         val startup = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
         val unified = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
         val integration = File("src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
         assertTrue(startup.contains("UnifiedProApp("))
         assertFalse(startup.contains("LiveDuelRuntimeShell("))
         assertFalse(startup.contains("MonsterExperienceApp("))
-        assertTrue(unified.contains("Premier 1v1"))
+        assertTrue(unified.contains("KELİME KUŞATMASI"))
+        assertTrue(unified.contains("PremiumPlayButton(onClick = onSiege)"))
+        assertTrue(unified.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertFalse(unified.contains("MageCat"))
         assertTrue(integration.contains("PremierWordDuelScreen()"))
         assertFalse(integration.contains("ReactiveMageCatOverlay()"))

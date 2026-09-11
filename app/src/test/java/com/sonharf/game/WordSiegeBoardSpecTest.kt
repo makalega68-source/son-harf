@@ -18,7 +18,7 @@ class WordSiegeBoardSpecTest {
     }
 
     @Test
-    fun `static bonus layout is symmetric on both axes`() {
+    fun `static bonus layout is symmetric and follows siege topology`() {
         repeat(WordSiegeBoardSpec.CellCount) { index ->
             val row = WordSiegeBoardSpec.row(index)
             val column = WordSiegeBoardSpec.column(index)
@@ -27,7 +27,12 @@ class WordSiegeBoardSpecTest {
             assertEquals(WordSiegeBoardSpec.bonusAt(index), WordSiegeBoardSpec.bonusAt(horizontalMirror))
             assertEquals(WordSiegeBoardSpec.bonusAt(index), WordSiegeBoardSpec.bonusAt(verticalMirror))
         }
-        assertTrue((0 until WordSiegeBoardSpec.CellCount).count { WordSiegeBoardSpec.bonusAt(it) != null } >= 50)
+        assertEquals(33, (0 until WordSiegeBoardSpec.CellCount).count { WordSiegeBoardSpec.bonusAt(it) != null })
+        assertEquals("3K", WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(1, 7)))
+        assertEquals("3H", WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(2, 4)))
+        assertEquals("2K", WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(3, 6)))
+        assertEquals("2H", WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(5, 5)))
+        assertEquals(null, WordSiegeBoardSpec.bonusAt(WordSiegeBoardSpec.index(0, 0)))
     }
 
     @Test

@@ -3,6 +3,8 @@ package com.sonharf.game
 import kotlin.random.Random
 
 internal object WordSiegeBoardSpec {
+    // Keep the 15x15 storage contract for existing online matches. The playable identity is
+    // differentiated through a custom siege-map bonus topology instead of the classic word-board layout.
     const val Size = 15
     const val CellCount = Size * Size
     const val LastIndex = CellCount - 1
@@ -27,18 +29,19 @@ internal object WordSiegeBoardSpec {
         val row = row(index)
         val column = column(index)
         return when {
-            row to column in TripleWord -> "3K"
-            row to column in TripleLetter -> "3H"
-            row to column in DoubleWord -> "2K"
-            row to column in DoubleLetter -> "2H"
+            row to column in SiegeMajorZones -> "3K"
+            row to column in SiegeWatchZones -> "3H"
+            row to column in SiegeFortZones -> "2K"
+            row to column in SiegeTacticalZones -> "2H"
             else -> null
         }
     }
 
     /**
      * Returns the bonus layout for a newly-created match.
-     * Static premium cells remain deterministic while exactly one three-star reward cell
-     * is selected from a neutral cell for every new game. The center 4K cell is never replaced.
+     * The layout is a Kelime Kuşatması-specific territory topology rather than the
+     * conventional corner/diagonal word-board pattern. Existing matches remain safe because
+     * their persisted cells continue to carry their own bonus values.
      */
     fun newGameBonuses(random: Random = Random.Default): List<String?> {
         val bonuses = MutableList<String?>(CellCount) { index -> bonusAt(index) }
@@ -79,26 +82,27 @@ internal object WordSiegeBoardSpec {
     fun shuffledBag(language: String, random: Random = Random.Default): String =
         canonicalBag(language).toMutableList().apply { shuffle(random) }.joinToString("")
 
-    private val TripleWord = setOf(
-        0 to 0, 0 to 7, 0 to 14,
-        7 to 0, 7 to 14,
-        14 to 0, 14 to 7, 14 to 14,
+    /** High-value siege lanes: deliberately avoid the classic corner and mid-edge pattern. */
+    private val SiegeMajorZones = setOf(
+        1 to 7, 7 to 1, 7 to 13, 13 to 7,
     )
 
-    private val TripleLetter = setOf(
-        1 to 5, 1 to 9, 5 to 1, 5 to 5, 5 to 9, 5 to 13,
-        9 to 1, 9 to 5, 9 to 9, 9 to 13, 13 to 5, 13 to 9,
+    /** Letter-focused watch points placed on an outer tactical ring. */
+    private val SiegeWatchZones = setOf(
+        2 to 4, 2 to 10, 4 to 2, 4 to 12,
+        10 to 2, 10 to 12, 12 to 4, 12 to 10,
     )
 
-    private val DoubleWord = setOf(
-        1 to 1, 1 to 13, 2 to 2, 2 to 12, 3 to 3, 3 to 11, 4 to 4, 4 to 10,
-        10 to 4, 10 to 10, 11 to 3, 11 to 11, 12 to 2, 12 to 12, 13 to 1, 13 to 13,
+    /** Word-focused fort positions surrounding the central crown zone. */
+    private val SiegeFortZones = setOf(
+        3 to 6, 3 to 8, 6 to 3, 6 to 11,
+        8 to 3, 8 to 11, 11 to 6, 11 to 8,
     )
 
-    private val DoubleLetter = setOf(
-        0 to 3, 0 to 11, 3 to 0, 11 to 0, 14 to 3, 14 to 11, 3 to 14, 11 to 14,
-        2 to 6, 2 to 8, 6 to 2, 8 to 2, 12 to 6, 12 to 8, 6 to 12, 8 to 12,
-        3 to 7, 7 to 3, 7 to 11, 11 to 7,
-        6 to 6, 6 to 8, 8 to 6, 8 to 8,
+    /** Lower-value tactical positions that create multiple attack routes rather than diagonals. */
+    private val SiegeTacticalZones = setOf(
+        1 to 3, 1 to 11, 3 to 1, 3 to 13,
+        11 to 1, 11 to 13, 13 to 3, 13 to 11,
+        5 to 5, 5 to 9, 9 to 5, 9 to 9,
     )
 }

@@ -215,7 +215,7 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
                     UnifiedDestination.TASKS -> MainRetentionScreen(
                         backend,
                         { destination = UnifiedDestination.HOME },
-                        { destination = UnifiedDestination.GAME },
+                        { destination = UnifiedDestination.SIEGE },
                         { destination = UnifiedDestination.DAILY },
                     )
                     UnifiedDestination.DAILY -> DailyCipherScreen { destination = UnifiedDestination.TASKS }
@@ -274,7 +274,7 @@ private fun UnifiedHomeScreen(
         }
 
         item {
-            PremiumPlayButton(onClick = onPlay)
+            PremiumPlayButton(onClick = onSiege)
         }
 
         item {
@@ -295,7 +295,7 @@ private fun UnifiedHomeScreen(
                     modifier = Modifier.weight(1f),
                 )
                 Text(
-                    sh("Daha fazla kelime, daha fazla eğlence!", "More words, more fun!"),
+                    sh("Kısa oyunlar ve farklı meydan okumalar", "Quick games and other challenges"),
                     color = UnifiedUi.Muted,
                     fontSize = 8.sp,
                 )
@@ -307,11 +307,11 @@ private fun UnifiedHomeScreen(
             ) {
                 PremiumModeCard(
                     modifier = Modifier.weight(1f),
-                    logoRes = R.drawable.kelime_kusatma_logo_hd,
-                    title = sh("KELİME\nKUŞATMASI", "WORD\nSIEGE"),
-                    subtitle = sh("Alanı ele geçir,\nküpleri koru", "Capture territory,\nprotect cubes"),
-                    colors = listOf(Color(0xFFCDE7DA), Color(0xFFF2EEDC)),
-                    onClick = onSiege,
+                    logoRes = R.drawable.son_harf_app_icon_master,
+                    title = sh("SON HARF", "LAST LETTER"),
+                    subtitle = sh("Kısa ve hızlı\nkelime düellosu", "Fast, short\nword duel"),
+                    colors = listOf(Color(0xFFE5EFE8), Color(0xFFF5F0E6)),
+                    onClick = onPlay,
                 )
                 PremiumModeCard(
                     modifier = Modifier.weight(1f),
@@ -369,7 +369,7 @@ private fun HomeBrandHeader(onTasks: () -> Unit, onVip: () -> Unit) {
                 modifier = Modifier.width(205.dp).height(61.dp),
             )
             Text(
-                sh("Kelimeyi Sürdür, Rakibini Geç", "Keep the word going, beat your rival"),
+                sh("Kelimeyi kur, alanı kuşat, rakibini geç", "Build words, control territory, beat your rival"),
                 color = Color(0xFF4F7964),
                 fontSize = 9.5.sp,
                 fontWeight = FontWeight.Bold,
@@ -383,7 +383,7 @@ private fun HomeBrandHeader(onTasks: () -> Unit, onVip: () -> Unit) {
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                sh("Her kelime\nyeni bir meydan okuma!", "Every word is\na new challenge!"),
+                sh("Kelime oyunu +\ntaktik alan savaşı", "Word game +\ntactical territory battle"),
                 color = Color(0xFF436C59),
                 fontSize = 7.5.sp,
                 lineHeight = 8.5.sp,
@@ -498,7 +498,7 @@ private fun PremiumPlayButton(onClick: () -> Unit) {
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(72.dp)
+            .height(78.dp)
             .shadow(8.dp, shape)
             .sonHarfPressScale(pressedScale = .985f)
             .clickable(onClick = onClick),
@@ -515,11 +515,11 @@ private fun PremiumPlayButton(onClick: () -> Unit) {
                 Modifier.fillMaxWidth().padding(horizontal = 20.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.Rounded.PlayArrow, null, tint = Color.White, modifier = Modifier.size(35.dp))
+                Icon(Icons.Rounded.Shield, null, tint = Color.White, modifier = Modifier.size(35.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(sh("OYNA", "PLAY"), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Premier 1v1 kelime düellosu", "Premier 1v1 word duel"), color = Color.White.copy(alpha = .82f), fontSize = 10.sp)
+                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Kelime kur • alanı ele geçir • haritayı kontrol et", "Build words • capture territory • control the map"), color = Color.White.copy(alpha = .82f), fontSize = 9.sp)
                 }
                 Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = .88f), modifier = Modifier.size(27.dp))
             }

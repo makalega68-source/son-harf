@@ -7,11 +7,13 @@ import org.junit.Test
 
 class UnifiedHomeWeeklyPodiumContractTest {
     @Test
-    fun homeUsesSinglePremierEntryAndPremiumRealWeeklyPodium() {
+    fun homeUsesKelimeKusatmasiPrimaryEntryAndPremiumRealWeeklyPodium() {
         val source = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
-        // Main PLAY remains the single Premier 1v1 entry point.
-        assertTrue(source.contains("Premier 1v1 kelime düellosu"))
+        // Kelime Kuşatması is the primary play entry; Son Harf remains a secondary quick mode.
+        assertTrue(source.contains("PremiumPlayButton(onClick = onSiege)"))
+        assertTrue(source.contains("KELİME KUŞATMASI"))
+        assertTrue(source.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertFalse(source.contains("title = sh(\"PREMIER 1v1\", \"PREMIER 1v1\")"))
         assertFalse(source.contains("ARENANI SEÇ"))
         assertFalse(source.contains("20 saniyelik baskı"))
@@ -40,11 +42,12 @@ class UnifiedHomeWeeklyPodiumContractTest {
         assertTrue(source.contains("player = players.getOrNull(1)"))
         assertTrue(source.contains("player = players.getOrNull(2)"))
 
-        // Other game modes remain reachable and use their actual branded artwork.
+        // Secondary modes remain reachable with clear hierarchy.
         assertTrue(source.contains("DİĞER OYUNLAR"))
-        assertTrue(source.contains("kelime_kusatma_logo_hd"))
+        assertTrue(source.contains("son_harf_app_icon_master"))
         assertTrue(source.contains("harf_yolu_logo"))
-        assertTrue(source.contains("onClick = onSiege"))
+        assertTrue(source.contains("onClick = onPlay"))
         assertTrue(source.contains("onClick = onLetter"))
+        assertTrue(source.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
     }
 }

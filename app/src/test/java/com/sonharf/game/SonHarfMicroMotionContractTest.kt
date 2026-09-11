@@ -33,9 +33,10 @@ class SonHarfMicroMotionContractTest {
         assertTrue(home.contains("sonHarfPressScale(pressedScale = 0.96f)"))
         assertTrue(home.contains("sonHarfPressScale(pressedScale = 0.94f)"))
 
-        // Core product structure remains intact despite the visual rebuild.
-        assertTrue(home.contains("Premier 1v1 kelime düellosu"))
-        assertTrue(home.contains("kelime_kusatma_logo_hd"))
+        // Core product structure remains intact after Kelime Kuşatması becomes the primary game.
+        assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
+        assertTrue(home.contains("KELİME KUŞATMASI"))
+        assertTrue(home.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(home.contains("harf_yolu_logo"))
         assertTrue(home.contains("HAFTANIN ZİRVESİ"))
         assertTrue(home.contains("PremiumProfileHero("))
