@@ -70,6 +70,17 @@ suspend fun OnlineGameBackend.getInventory(): Set<String> {
         .decodeList<InventoryDto>().map { it.itemId }.toSet()
 }
 
+/**
+ * Ownership outlives storefront rotation. The live RLS policy exposes retired shop metadata only
+ * to the account that owns the item; the client still intersects rows with its own inventory.
+ */
+suspend fun OnlineGameBackend.getOwnedShopItems(owned: Set<String>): List<ShopItemDto> {
+    if (owned.isEmpty()) return emptyList()
+    return SupabaseProvider.client.from("shop_items").select().decodeList<ShopItemDto>()
+        .filter { it.id in owned }
+        .sortedWith(compareBy<ShopItemDto> { it.kind }.thenBy { it.sortOrder }.thenBy { it.id })
+}
+
 suspend fun OnlineGameBackend.getEquippedCosmetics(): EquippedCosmeticsDto? {
     val me = currentUserId() ?: return null
     return SupabaseProvider.client.from("user_equipped_cosmetics")
