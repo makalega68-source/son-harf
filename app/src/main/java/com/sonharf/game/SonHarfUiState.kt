@@ -20,6 +20,14 @@ object SonHarfUiState {
  */
 fun sh(tr: String, en: String): String {
     val localized = if (SonHarfUiState.isEnglish) en else tr
+    val primaryTagline = if (SonHarfUiState.isEnglish) {
+        "Build words, control territory, beat your rival"
+    } else {
+        "Kelimeyi kur, alanı kuşat, rakibini geç"
+    }
+    if (localized == "Kelimeyi Sürdür, Rakibini Geç" || localized == "Continue the Word, Beat Your Rival") {
+        return primaryTagline
+    }
     return localized
         .replace("KELİME KUŞATMASI", "KELİME TAHTI")
         .replace("Kelime Kuşatması", "Kelime Tahtı")
