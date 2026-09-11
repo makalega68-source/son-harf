@@ -32,22 +32,22 @@ import androidx.compose.ui.unit.IntSize
 import com.sonharf.game.data.WordSiegeCellDto
 
 private val PracticeSiegeCellSize = 52.dp
-private val PracticeSiegeTile = Color(0xFFFFE3A5)
-private val PracticeSiegeTileBorder = Color(0xFFD99818)
-internal val PracticeSiegeBoardSurface = Color(0xFFD9E4E7)
-internal val PracticeSiegeNeutral = Color(0xFFF8FAF9)
-private val PracticeSiegeEmpty = Color(0xFFFFF8EA)
-private val PracticeSiegeMine = Color(0xFF65B58A)
-private val PracticeSiegeRival = Color(0xFFD98286)
-private val PracticeSiegeLightTileText = Color(0xFF2F2A1F)
-private val PracticeBonus2H = Color(0xFFDCEFF8)
-private val PracticeBonus3H = Color(0xFFDCEEDC)
-private val PracticeBonus2K = Color(0xFFE9E0F2)
-private val PracticeBonus3K = Color(0xFFDECBE9)
-private val PracticeBonus4K = Color(0xFFF0C75A)
-private val PracticeBonusStar = Color(0xFFF6B94A)
-private val PracticeLastMove = Color(0xFFF1C75B)
-private val PracticeDefinitionBadge = Color(0xFF25AFCF)
+private val PracticeSiegeTile = Color(0xFFF5F0E4)
+private val PracticeSiegeTileBorder = Color(0xFF8EA697)
+internal val PracticeSiegeBoardSurface = Color(0xFFE8ECE8)
+internal val PracticeSiegeNeutral = Color(0xFFFAF7EF)
+private val PracticeSiegeEmpty = Color(0xFFFAF7EF)
+private val PracticeSiegeMine = Color(0xFFA8C7B1)
+private val PracticeSiegeRival = Color(0xFFAFCDE0)
+private val PracticeSiegeLightTileText = Color(0xFF17372C)
+private val PracticeBonus2H = Color(0xFFDCEAF2)
+private val PracticeBonus3H = Color(0xFFDDEBDD)
+private val PracticeBonus2K = Color(0xFFEAE2F0)
+private val PracticeBonus3K = Color(0xFFDED4E8)
+private val PracticeBonus4K = Color(0xFFE7DDBB)
+private val PracticeBonusStar = Color(0xFFEAD59B)
+private val PracticeLastMove = Color(0xFFE7B95E)
+private val PracticeDefinitionBadge = Color(0xFF5C8299)
 
 internal data class PracticeResolvedWord(
     val word: String,
@@ -98,7 +98,6 @@ internal fun WordSiegePracticeBoard(
             highlightAlpha.snapTo(0f)
             highlightAlpha.animateTo(1f, tween(WORD_SIEGE_LAST_MOVE_ENTER_MS))
             delay(WORD_SIEGE_LAST_MOVE_HOLD_MS.toLong())
-            // Keep the most recently placed word subtly visible until the next move.
             highlightAlpha.animateTo(0.42f, tween(WORD_SIEGE_LAST_MOVE_EXIT_MS))
         }
     }
@@ -147,14 +146,14 @@ internal fun WordSiegePracticeBoard(
     Surface(
         modifier = modifier,
         color = PracticeSiegeBoardSurface,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(14.dp),
         border = BorderStroke(1.dp, MainUi.Border.copy(alpha = .70f)),
         shadowElevation = 1.dp,
     ) {
         Box(
             Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(14.dp))
                 .clipToBounds()
                 .onGloballyPositioned { viewport = it.size }
                 .pointerInput(mode, viewport, boardPx, closeScale) {
@@ -263,12 +262,13 @@ private fun WordSiegePracticeBoardCell(
         activeBonus == WordSiegeBoardSpec.StarBonus -> PracticeBonusStar
         else -> PracticeSiegeEmpty
     }
+    val regionGap = if (letter != null && owner != 0) .55.dp else 1.25.dp
 
     Box(
         Modifier
             .size(PracticeSiegeCellSize)
-            .padding(1.25.dp)
-            .clip(RoundedCornerShape(6.dp))
+            .padding(regionGap)
+            .clip(RoundedCornerShape(7.dp))
             .background(cellColor)
             .border(
                 width = if (lastMoveHighlight > 0f) 1.65.dp else 0.45.dp,
@@ -277,7 +277,7 @@ private fun WordSiegePracticeBoardCell(
                 } else {
                     MainUi.Border.copy(alpha = .45f)
                 },
-                shape = RoundedCornerShape(6.dp),
+                shape = RoundedCornerShape(7.dp),
             )
             .combinedClickable(
                 onClick = {
@@ -303,10 +303,10 @@ private fun WordSiegePracticeBoardCell(
             Box(Modifier.matchParentSize().background(PracticeLastMove.copy(alpha = .045f * lastMoveHighlight)))
         }
         if (letter != null) {
-            Text(letter, color = Color.Black, fontSize = 21.sp, fontWeight = FontWeight.Black)
+            Text(letter, color = PracticeSiegeLightTileText, fontSize = 21.sp, fontWeight = FontWeight.Black)
             Text(
                 practiceLetterValue(letter),
-                color = Color.Black.copy(alpha = .78f),
+                color = PracticeSiegeLightTileText.copy(alpha = .78f),
                 fontSize = WordSiegeBoardAccessibility.BoardLetterPoint,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
@@ -335,11 +335,11 @@ private fun WordSiegePracticeBoardCell(
             Text(
                 WordSiegeBoardSpec.displayBonusLabel(activeBonus),
                 color = when (activeBonus) {
-                    "2H" -> Color(0xFF316B86)
-                    "3H" -> Color(0xFF3E6B4C)
-                    "2K", "3K" -> Color(0xFF6D5585)
-                    WordSiegeBoardSpec.CenterBonus -> Color(0xFF6A4B12)
-                    WordSiegeBoardSpec.StarBonus -> Color(0xFF744500)
+                    "2H" -> Color(0xFF456F83)
+                    "3H" -> Color(0xFF4F735A)
+                    "2K", "3K" -> Color(0xFF6D5A7B)
+                    WordSiegeBoardSpec.CenterBonus -> Color(0xFF6B5A2D)
+                    WordSiegeBoardSpec.StarBonus -> Color(0xFF755E21)
                     else -> MainUi.Text
                 },
                 fontSize = if (activeBonus == WordSiegeBoardSpec.StarBonus) 8.sp else WordSiegeBoardAccessibility.BoardBonus,
@@ -363,11 +363,11 @@ internal fun WordSiegePracticeRackTile(
         modifier = modifier.height(48.dp).combinedClickable(onClick = onClick, enabled = enabled),
         color = when {
             used -> MainUi.SurfaceSoft
-            selected -> PracticeSiegeTile
-            else -> Color(0xFFFFF1C9)
+            selected -> Color(0xFFE1ECE4)
+            else -> PracticeSiegeTile
         },
-        shape = RoundedCornerShape(9.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MainUi.Blue else PracticeSiegeTileBorder.copy(alpha = .7f)),
+        shape = RoundedCornerShape(11.dp),
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) Color(0xFF567A64) else PracticeSiegeTileBorder.copy(alpha = .7f)),
         shadowElevation = if (selected) 3.dp else 0.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -379,7 +379,7 @@ internal fun WordSiegePracticeRackTile(
             )
             Text(
                 practiceLetterValue(letter.toString()),
-                color = if (used) MainUi.Muted.copy(alpha = .55f) else Color(0xFF5D4B20),
+                color = if (used) MainUi.Muted.copy(alpha = .55f) else PracticeSiegeLightTileText.copy(alpha = .72f),
                 fontSize = WordSiegeBoardAccessibility.RackPoint,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
