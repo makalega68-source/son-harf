@@ -4,15 +4,26 @@ import com.sonharf.game.data.SharedDictionaryService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+private val PracticeBotCanonicalFallbackWords = listOf(
+    "AD", "AK", "AL", "AN", "AR", "AS", "AT", "AV", "AY", "AZ",
+    "BU", "DA", "DE", "EL", "EN", "ER", "ET", "EV", "İL", "İN",
+    "İP", "İŞ", "İT", "Kİ", "NE", "OY", "ÖN", "SU", "YA",
+    "ADA", "ANA", "ARA", "ARI", "ATA", "AYA", "BAL", "BAR", "BAŞ",
+    "BEL", "BEN", "BİR", "BOL", "BOŞ", "CAN", "ÇAY", "DAL", "DAR",
+    "DİL", "DİŞ", "DÜN", "GEL", "GÖL", "GÜL", "HAL", "KAR", "KAŞ",
+    "KEL", "KOL", "KÖY", "KUŞ", "MAL", "MOR", "NAL", "NAR", "ODA",
+    "OKU", "OL", "ON", "OT", "ÖL", "ÖZ", "PAZ", "SAÇ", "SAL", "SEN",
+    "SES", "SIR", "SİL", "SOL", "SON", "TAŞ", "TEN", "TER", "TOP",
+    "VAR", "VER", "YAR", "YAZ", "YEL", "YER", "YOL", "YÜZ",
+)
+
 /**
  * A resilient second-pass planner for practice matches.
  *
- * The original adaptive planner searches words that can be produced from the rack alone. Once the
- * board contains letters, a legal word can use one or more existing board letters; searching only
- * the rack can therefore miss perfectly legal moves and make the bot pass repeatedly. This helper
- * keeps the adaptive planner as the first choice and, only when it finds no move, expands the
- * candidate pool with verified board-anchor letters. Every candidate still goes through
- * WordSiegePracticeEngine.applyMove(), including canonical dictionary and bot-word filtering.
+ * The adaptive planner prefers the verified bot dictionary. If that snapshot is missing on a fresh
+ * install or because the external TDK endpoint is unavailable, a small conservative common-word
+ * fallback is still tested against the canonical game dictionary before it can be played. This keeps
+ * the bot functional without allowing invented words into the match.
  */
 internal suspend fun resilientPracticeBotMove(
     state: WordSiegePracticeState,
@@ -36,22 +47,26 @@ internal suspend fun resilientPracticeBotMove(
         state.board.asSequence()
             .mapNotNull { it.letter?.firstOrNull() }
             .distinct()
-            .take(10)
+            .take(14)
             .forEach { anchor -> add(rack + anchor) }
     }
 
     val words = linkedSetOf<String>()
     searchRacks.forEach { searchRack ->
-        if (words.size < 360) {
+        if (words.size < 700) {
             SharedDictionaryService.practiceCandidates(
                 language = state.language,
                 rack = searchRack,
-                limit = 90,
+                limit = 180,
             ).forEach { word ->
-                if (words.size < 360) words += word
+                if (words.size < 700) words += word
             }
         }
     }
+
+    // Do not depend on a successfully downloaded verified-bot snapshot. These common words still
+    // have to pass canonical dictionary validation inside WordSiegePracticeEngine.applyMove().
+    words += PracticeBotCanonicalFallbackWords
 
     val candidates = mutableListOf<WordSiegePracticeMove>()
     words.forEach { word ->
