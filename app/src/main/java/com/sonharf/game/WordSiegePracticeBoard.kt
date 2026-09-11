@@ -370,11 +370,7 @@ private fun WordSiegePracticeBoardCell(
                     activeZone == WordSiegeBoardSpec.StarBonus -> Color(0xFF755E21)
                     else -> Color(0xFF52675C)
                 },
-                fontSize = when (WordSiegeBoardSpec.displayBonusLabel(activeZone).length) {
-                    in 0..3 -> 10.sp
-                    4 -> 9.sp
-                    else -> 8.sp
-                },
+                fontSize = WordSiegeBoardAccessibility.BoardBonus,
                 fontWeight = FontWeight.Black,
             )
         }
