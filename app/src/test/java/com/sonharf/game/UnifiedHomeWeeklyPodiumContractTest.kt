@@ -7,7 +7,7 @@ import org.junit.Test
 
 class UnifiedHomeWeeklyPodiumContractTest {
     @Test
-    fun homeUsesSinglePremierEntryAndShowsRealWeeklyTopThree() {
+    fun homeUsesSinglePremierEntryAndPremiumRealWeeklyPodium() {
         val source = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
         // Main PLAY remains the single Premier 1v1 entry point.
@@ -20,27 +20,31 @@ class UnifiedHomeWeeklyPodiumContractTest {
         assertTrue(source.contains("backend.getLeaderboardV2(language, \"week\", 3)"))
         assertTrue(source.contains("WeeklyChampionPodium("))
         assertTrue(source.contains("HAFTANIN ZİRVESİ"))
-        assertTrue(source.contains("WeeklyChampionHero(player = players.first()"))
+        assertTrue(source.contains("players.getOrNull(0)"))
         assertTrue(source.contains("players.getOrNull(1)"))
         assertTrue(source.contains("players.getOrNull(2)"))
 
-        // Premium hierarchy: one champion hero, compact runners, and privacy-safe avatars.
-        assertTrue(source.contains("private fun WeeklyChampionHero"))
-        assertTrue(source.contains("private fun WeeklyRunnerCard"))
+        // Approved premium hierarchy: center champion, two runners, glow/confetti and privacy-safe avatars.
+        assertTrue(source.contains("private fun PodiumColumn"))
+        assertTrue(source.contains("private fun PodiumAmbientDecor"))
         assertTrue(source.contains("ProfilePhotoAvatarWithGender("))
-        assertTrue(source.contains("HAFTA ŞAMPİYONU"))
-        assertTrue(source.contains("Text(\"#1\""))
+        assertTrue(source.contains("ŞAMPİYON"))
+        assertTrue(source.contains("place = 1"))
         assertTrue(source.contains("place = 2"))
         assertTrue(source.contains("place = 3"))
         assertTrue(source.contains("avatarVisibility == \"hidden\""))
 
-        // Real empty/loading state replaces fabricated placeholder podium entries.
-        assertTrue(source.contains("WeeklyPodiumEmptyState("))
+        // No fabricated player names are injected when the backend has no weekly rows.
         assertTrue(source.contains("players.isEmpty()"))
+        assertTrue(source.contains("player = players.getOrNull(0)"))
+        assertTrue(source.contains("player = players.getOrNull(1)"))
+        assertTrue(source.contains("player = players.getOrNull(2)"))
 
-        // Other game modes remain reachable instead of being removed with the duplicate Premier card.
+        // Other game modes remain reachable and use their actual branded artwork.
         assertTrue(source.contains("DİĞER OYUNLAR"))
-        assertTrue(source.contains("KELİME KUŞATMASI"))
-        assertTrue(source.contains("HARF YOLU"))
+        assertTrue(source.contains("kelime_kusatma_logo_hd"))
+        assertTrue(source.contains("harf_yolu_logo"))
+        assertTrue(source.contains("onClick = onSiege"))
+        assertTrue(source.contains("onClick = onLetter"))
     }
 }
