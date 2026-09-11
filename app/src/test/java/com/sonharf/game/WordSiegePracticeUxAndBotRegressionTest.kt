@@ -45,7 +45,7 @@ class WordSiegePracticeUxAndBotRegressionTest {
         assertTrue(screen.contains("WordSiegePracticeTutorialPrefs.isCompleted(context)"))
         assertTrue(screen.contains("Icons.Rounded.HelpOutline"))
         assertTrue(screen.contains("WordSiegePracticeTutorialCard("))
-        assertTrue(screen.contains("if (tutorialStep == 1) tutorialStep = 2"))
+        assertTrue(screen.contains("if (selecting && tutorialStep == 1) tutorialStep = 2"))
         assertTrue(screen.contains("if (tutorialStep == 2) tutorialStep = 3"))
         assertTrue(screen.contains("if (tutorialStep == 3) tutorialStep = 4"))
         assertTrue(guidance.contains("Harflerle kelime kur. Kelimenin geçtiği hücreleri ele geçir."))
