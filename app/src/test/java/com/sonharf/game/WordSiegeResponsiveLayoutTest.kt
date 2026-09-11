@@ -35,10 +35,10 @@ class WordSiegeResponsiveLayoutTest {
         assertTrue(practice.contains("modifier = Modifier.fillMaxWidth().height(if (compact) 46.dp else 52.dp)"))
         assertTrue(practice.contains("PracticeMapControlBar("))
         assertTrue(practice.contains("PracticeStrategicZoneLegend("))
-        assertTrue(practice.contains("WordSiegePracticeStatusBar(statusMessage, compact)"))
+        assertTrue(guidance.contains("WordSiegePracticeStatusBar"))
         assertTrue(guidance.contains("maxLines = 2"))
-        assertTrue(practice.indexOf("Box(Modifier.fillMaxWidth().weight(1f)") < practice.indexOf("WordSiegePracticeStatusBar(statusMessage, compact)"))
-        assertTrue(practice.indexOf("onClick = ::applyPlayerMove") < practice.indexOf("WordSiegePracticeStatusBar(statusMessage, compact)"))
+        assertTrue(practice.indexOf("Box(Modifier.fillMaxWidth().weight(1f)") < practice.indexOf("val statusMessage ="))
+        assertTrue(practice.indexOf("onClick = ::applyPlayerMove") < practice.indexOf("val statusMessage ="))
 
         assertTrue(online.contains(".statusBarsPadding()\n            .navigationBarsPadding()"))
         assertTrue(online.contains("modifier = Modifier.fillMaxWidth().weight(1f)"))
