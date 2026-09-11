@@ -23,7 +23,9 @@ class WordSiegePracticeBoardContractTest {
         assertTrue(board.contains("clipToBounds"))
         assertTrue(board.contains("onGloballyPositioned"))
         assertTrue(board.contains("WordSiegeBoardAccessibility.BoardLetterPoint"))
-        assertTrue(board.contains("WordSiegeBoardAccessibility.BoardBonus"))
+        assertTrue(board.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone)"))
+        assertTrue(board.contains("PracticeZoneCrown"))
+        assertTrue(board.contains("PracticeZoneReward"))
         assertTrue(board.contains("WordSiegeBoardAccessibility.RackPoint"))
         assertTrue(screen.contains("WordSiegePracticeBoard("))
         assertTrue(screen.contains("WordSiegePracticeRackTile("))
@@ -32,11 +34,13 @@ class WordSiegePracticeBoardContractTest {
 
     @Test fun `practice pending controls preserve rack indices`() {
         val screen = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
+        assertTrue(screen.contains("val rackOrder = remember(state.playerRack, shuffleSeed)"))
         assertTrue(screen.contains("wordSiegeShuffledRackIndices"))
         assertTrue(screen.contains("wordSiegeUndoPendingPlacement"))
+        assertTrue(screen.contains("placements.entries.firstOrNull { it.value == rackIndex }?.key"))
+        assertTrue(screen.contains("wordSiegeValidationFeedback"))
         assertTrue(screen.contains("GERİ AL"))
         assertTrue(screen.contains("KARIŞTIR"))
-        assertTrue(screen.contains("wordSiegePracticeMoveNotice"))
     }
 
     @Test fun `new practice games deal from the canonical shuffled bag instead of fixed racks`() {
