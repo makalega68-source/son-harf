@@ -28,6 +28,29 @@ fun sh(tr: String, en: String): String {
     if (localized == "Kelimeyi Sürdür, Rakibini Geç" || localized == "Continue the Word, Beat Your Rival") {
         return primaryTagline
     }
+
+    // The flagship home CTA keeps the product name dominant while making the action explicit.
+    if (localized == "Kelime kur • alanı ele geçir • haritayı kontrol et") {
+        return "OYNA • Kelime kur • alanı ele geçir • haritayı kontrol et"
+    }
+    if (localized == "Build words • capture territory • control the map") {
+        return "PLAY • Build words • capture territory • control the map"
+    }
+
+    // Online move recap: territory gain is the signature siege feedback. Keep backend scoring untouched.
+    val territoryScore = if (SonHarfUiState.isEnglish) {
+        Regex("Territory \\+(\\d+)").find(localized)?.groupValues?.getOrNull(1)?.toIntOrNull()
+    } else {
+        Regex("Bölge \\+(\\d+)").find(localized)?.groupValues?.getOrNull(1)?.toIntOrNull()
+    }
+    if (territoryScore != null && territoryScore > 0 &&
+        ((SonHarfUiState.isEnglish && localized.startsWith("Word +")) ||
+            (!SonHarfUiState.isEnglish && localized.startsWith("Kelime +")))
+    ) {
+        return if (SonHarfUiState.isEnglish) "$localized  •  SIEGE +$territoryScore"
+        else "$localized  •  KUŞATMA +$territoryScore"
+    }
+
     return localized
         .replace("KELİME KUŞATMASI", "KELİME TAHTI")
         .replace("Kelime Kuşatması", "Kelime Tahtı")
@@ -35,4 +58,6 @@ fun sh(tr: String, en: String): String {
         .replace("WORD SIEGE", "WORD THRONE")
         .replace("Word Siege", "Word Throne")
         .replace("word siege", "word throne")
+        .replace("KUŞATMA SENİN!", "TAHT SENİN!")
+        .replace("SIEGE WON!", "THE THRONE IS YOURS!")
 }
