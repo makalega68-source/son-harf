@@ -7,11 +7,15 @@ import org.junit.Test
 
 class GameModeBrandingAndVisibleActionContractTest {
     @Test
-    fun homeMakesKelimeKusatmasiPrimaryAndKeepsSecondaryModesBranded() {
+    fun homeMakesKelimeTahtiPrimaryAndKeepsSecondaryModesBranded() {
         val home = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
+        val brand = projectFile("app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
+        val localization = projectFile("app/src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
         assertTrue(home.contains("SonHarfOfficialLogo("))
         assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(home.contains("sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
+        assertTrue(brand.contains("R.drawable.kelime_tahti_logo"))
+        assertTrue(localization.contains("KELİME TAHTI"))
+        assertTrue(localization.contains("WORD THRONE"))
         assertTrue(home.contains("logoRes = R.drawable.son_harf_app_icon_master"))
         assertTrue(home.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(home.contains("logoRes = R.drawable.harf_yolu_logo"))
