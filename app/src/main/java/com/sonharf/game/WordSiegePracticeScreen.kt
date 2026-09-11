@@ -636,7 +636,7 @@ internal fun WordSiegePracticeScreen(
                     if (matchmakingFallback) {
                         sh("Bot maçı sıfırlanacak. Gerçek rakip araması devam edecek.", "The bot match will reset. Real matchmaking will continue.")
                     } else {
-                        sh("Mevcut alıştırmadaki ilerleme sıfırlanacak.", "Current practice progress will be reset."),
+                        sh("Mevcut alıştırmadaki ilerleme sıfırlanacak.", "Current practice progress will be reset.")
                     },
                     color = MainUi.Muted,
                 )
