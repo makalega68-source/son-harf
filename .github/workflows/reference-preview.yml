@@ -43,7 +43,6 @@ jobs:
           disable-animations: true
           emulator-options: -no-window -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
-            set -e
             mkdir -p preview-output
             adb shell wm size 691x1536
             adb shell wm density 284
@@ -51,14 +50,8 @@ jobs:
             adb install -r app/build/outputs/apk/debug/app-debug.apk
             adb logcat -c
             adb shell am force-stop com.sonharf.game
-            adb shell am start -n com.sonharf.game/.ReferencePreviewActivity || true
-            for i in $(seq 1 30); do
-              if adb shell dumpsys activity activities | grep -q 'ReferencePreviewActivity'; then
-                break
-              fi
-              sleep 1
-            done
-            sleep 5
+            adb shell am start -n com.sonharf.game/.ReferencePreviewActivity
+            sleep 12
             adb shell dumpsys activity activities > preview-output/activity.txt || true
             adb shell dumpsys window windows > preview-output/window.txt || true
             adb logcat -d > preview-output/logcat.txt || true
@@ -67,8 +60,9 @@ jobs:
             adb exec-out screencap -p > preview-output/reference-home-real.png
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: SonHarf-Reference-Home-Real-Screenshot
           path: preview-output/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 7
