@@ -130,7 +130,7 @@ begin
     update public.word_siege_invites
     set status = 'expired', responded_at = now()
     where id = inv.id;
-    raise exception 'word_siege_invite_expired';
+    return null;
   end if;
 
   if not coalesce(p_accept, false) then
