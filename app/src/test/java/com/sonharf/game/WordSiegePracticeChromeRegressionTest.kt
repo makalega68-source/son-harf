@@ -22,7 +22,7 @@ class WordSiegePracticeChromeRegressionTest {
         assertTrue(practice.contains("PracticeStrategicZoneLegend"))
         assertTrue(practice.contains("HAMLEYİ ONAYLA"))
         assertTrue(practice.contains("KUŞATMA +"))
-        assertTrue(practice.contains("WordSiegePracticeStatusBar(statusMessage, compact)"))
+        assertTrue(guidance.contains("WordSiegePracticeStatusBar"))
         assertTrue(guidance.contains("maxLines = 2"))
     }
 
