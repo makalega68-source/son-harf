@@ -49,5 +49,6 @@ begin
 end
 $$;
 
-revoke all on function private.word_siege_new_board_v1() from public, anon;
-grant execute on function private.word_siege_new_board_v1() to authenticated;
+-- Internal board construction stays private. Client access is only through public,
+-- authenticated Word Siege RPC wrappers that perform authorization and validation.
+revoke all on function private.word_siege_new_board_v1() from public, anon, authenticated;
