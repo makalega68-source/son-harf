@@ -20,7 +20,7 @@ class ReferencePreviewActivity : ComponentActivity() {
                     primary = Color(0xFF4F7964),
                 )
             ) {
-                ReferenceHomeScreen()
+                ReferenceHomeV2Screen()
             }
         }
     }
