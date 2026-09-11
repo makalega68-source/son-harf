@@ -142,13 +142,15 @@ class WordSiegeFinalRulesTest {
         )
     }
 
-    @Test fun botAndHumanUseSameApplyMoveValidationAndUiLocksFinalOwnershipColors() {
+    @Test fun botAndHumanUseSameApplyMoveValidationAndUiLocksCurrentTerritoryScoring() {
         val engine = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
         val sharedDictionary = projectFile("app/src/main/java/com/sonharf/game/data/SharedDictionaryService.kt").readText()
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
-        val sql = projectFile("supabase/migrations/20260902090000_word_siege_final_transfer_v2.sql").readText()
+        val areaMigration = projectFile("supabase/migrations/20260909101500_word_siege_15x15_server_parity_v6.sql").readText()
+        val finalScoreMigration = projectFile("supabase/migrations/20260909090000_word_siege_current_territory_score_v5.sql").readText()
+        val submitMigration = projectFile("supabase/migrations/20260909145500_word_siege_star_4k_board_v7.sql").readText()
 
         assertTrue(engine.contains("applyMove(state, 2, placements)"))
         assertTrue(engine.contains("SharedDictionaryService.isValidWordBlocking"))
@@ -169,8 +171,15 @@ class WordSiegeFinalRulesTest {
         assertTrue(pan.contains("animateIntAsState"))
         assertFalse(practice.contains("delay(28)"))
         assertFalse(pan.contains("delay(28)"))
-        assertTrue(sql.contains("(neutral_count + opponent_count) * 2"))
-        assertTrue(sql.contains("r.player_one_word_score + r.player_one_area_score - r.player_two_area_score"))
+        assertTrue(areaMigration.contains("(neutral_count + opponent_count) * 2"))
+        assertTrue(finalScoreMigration.contains("r.player_one_word_score + (r.player_one_area * 2)"))
+        assertTrue(finalScoreMigration.contains("r.player_two_word_score + (r.player_two_area * 2)"))
+        assertTrue(submitMigration.contains("jsonb_array_length(p_placements) not between 1 and 7"))
+        assertTrue(submitMigration.contains("player_one_area = v_one_area"))
+        assertTrue(submitMigration.contains("player_two_area = v_two_area"))
+        assertTrue(pan.contains("WordSiegeFinalRules.currentTerritoryScore"))
+        assertFalse(pan.contains("playerOneAreaScore"))
+        assertFalse(pan.contains("playerTwoAreaScore"))
     }
 
     private fun state(board: List<WordSiegeCellDto>, rack: String) = WordSiegePracticeState(
