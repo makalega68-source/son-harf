@@ -43,7 +43,7 @@ private enum class UnifiedDestination {
     SETTINGS, VIP, ACCOUNT, PROFILE_DETAILS, TASKS, DAILY
 }
 
-private data class WeeklyPodiumPlayer(
+internal data class WeeklyPodiumPlayer(
     val row: LeaderboardV2Row,
     val profile: ProfileDto?,
 )
@@ -282,7 +282,7 @@ private fun UnifiedHomeScreen(
         }
 
         item {
-            WeeklyChampionPodium(
+            WeeklyPodiumCardV210(
                 players = weeklyTop,
                 loading = weeklyTopLoading,
                 onOpenLeague = onLeague,
