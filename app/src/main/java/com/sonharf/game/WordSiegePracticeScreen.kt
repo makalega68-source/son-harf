@@ -90,7 +90,9 @@ internal fun WordSiegePracticeScreen(
     val displayedPlayerScore by animateIntAsState(playerTargetScore, tween(260), label = "practice-player-score")
     val displayedBotScore by animateIntAsState(botTargetScore, tween(260), label = "practice-bot-score")
     val displayedOwner = state.currentOwner
-    val canPlayerAct = dictionaryReady && state.status == "playing" && state.currentOwner == 1 && !botThinking
+    // Tile selection and board placement must stay responsive even while the dictionary snapshot is warming up.
+    // Dictionary readiness is enforced only when the player submits the move.
+    val canPlayerAct = state.status == "playing" && state.currentOwner == 1 && !botThinking
     val rackOrder = remember(state.playerRack, shuffleSeed) {
         if (shuffleSeed == 0) state.playerRack.indices.toList()
         else wordSiegeShuffledRackIndices(state.playerRack.length, shuffleSeed)
@@ -180,9 +182,10 @@ internal fun WordSiegePracticeScreen(
 
     fun applyPlayerMove() {
         if (!dictionaryReady) {
+            if (!dictionaryLoading) dictionaryRetryKey += 1
             notice = sh(
-                "Sözlük henüz hazır değil. Yenile düğmesine basıp tekrar dene.",
-                "Dictionary is not ready yet. Tap refresh and try again.",
+                "Sözlük hazırlanıyor. Harflerini yerleştirebilirsin; doğrulama hazır olduğunda hamleni onayla.",
+                "Dictionary is preparing. You can place tiles now and confirm once validation is ready.",
             )
             return
         }
