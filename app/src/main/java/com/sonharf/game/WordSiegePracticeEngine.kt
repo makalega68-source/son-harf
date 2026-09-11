@@ -115,7 +115,13 @@ internal object WordSiegePracticeEngine {
             if (cells.size < 2) return
             val word = cells.joinToString("") { letterAt(it)?.toString().orEmpty() }
             if (!SharedDictionaryService.isValidWordBlocking(word, state.language)) fail("word_siege_invalid_word:$word")
-            if (owner == 2 && !SharedDictionaryService.isBotAllowedWord(word, state.language)) {
+            // Prefer the verified bot dictionary when it exists, but never make practice depend on
+            // a live TDK fetch. If the verified bot snapshot is unavailable, canonical dictionary
+            // validation above remains authoritative and the planner's conservative fallback list
+            // supplies only common words.
+            if (owner == 2 && SharedDictionaryService.hasBotSnapshot(state.language) &&
+                !SharedDictionaryService.isBotAllowedWord(word, state.language)
+            ) {
                 fail("word_siege_bot_filtered_word:$word")
             }
             words += word
