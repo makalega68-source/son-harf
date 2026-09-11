@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.EmojiEvents
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -56,8 +57,6 @@ internal fun WeeklyPodiumCardV210(
     loading: Boolean,
     onOpenLeague: () -> Unit,
 ) {
-    if (players.size < 3) return
-
     Surface(
         shape = RoundedCornerShape(22.dp),
         color = Color.Transparent,
@@ -70,11 +69,24 @@ internal fun WeeklyPodiumCardV210(
                 .padding(horizontal = 14.dp, vertical = 14.dp),
         ) {
             WeeklyPodiumHeaderV210(onOpenLeague)
+            if (loading || players.size < 3) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = when {
+                        loading -> sh("Haftalık sıralama yükleniyor…", "Loading weekly rankings…")
+                        players.isEmpty() -> sh("Bu haftanın ilk sonuçları bekleniyor", "Waiting for this week's first results")
+                        else -> sh("Zirvenin tamamlanması için ${3 - players.size} oyuncu daha gerekiyor", "${3 - players.size} more player(s) needed to complete the podium")
+                    },
+                    color = PodiumTextDim,
+                    fontSize = 10.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                )
+            }
             Spacer(Modifier.height(14.dp))
             WeeklyPodiumStageV210(players)
             Spacer(Modifier.height(10.dp))
-            WeeklyChampionPlaqueV210()
-            if (loading) Spacer(Modifier.height(1.dp))
+            WeeklyChampionPlaqueV210(hasChampion = players.isNotEmpty())
         }
     }
 }
@@ -137,7 +149,7 @@ private fun WeeklyPodiumStageV210(players: List<WeeklyPodiumPlayer>) {
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             WeeklyPodiumColumnV210(
-                player = players[1],
+                player = players.getOrNull(1),
                 rank = 2,
                 slabHeight = 118.dp,
                 light = PodiumSilverLight,
@@ -146,7 +158,7 @@ private fun WeeklyPodiumStageV210(players: List<WeeklyPodiumPlayer>) {
                 modifier = Modifier.weight(1f),
             )
             WeeklyPodiumColumnV210(
-                player = players[0],
+                player = players.getOrNull(0),
                 rank = 1,
                 slabHeight = 162.dp,
                 light = PodiumGoldLight,
@@ -156,7 +168,7 @@ private fun WeeklyPodiumStageV210(players: List<WeeklyPodiumPlayer>) {
                 modifier = Modifier.weight(1.18f),
             )
             WeeklyPodiumColumnV210(
-                player = players[2],
+                player = players.getOrNull(2),
                 rank = 3,
                 slabHeight = 100.dp,
                 light = PodiumBronzeLight,
@@ -170,7 +182,7 @@ private fun WeeklyPodiumStageV210(players: List<WeeklyPodiumPlayer>) {
 
 @Composable
 private fun WeeklyPodiumColumnV210(
-    player: WeeklyPodiumPlayer,
+    player: WeeklyPodiumPlayer?,
     rank: Int,
     slabHeight: Dp,
     light: Color,
@@ -180,8 +192,8 @@ private fun WeeklyPodiumColumnV210(
     modifier: Modifier = Modifier,
 ) {
     val topPad = if (crowned) 40.dp else 26.dp
-    val profile = player.profile
-    val displayName = player.row.displayName.ifBlank { sh("Oyuncu", "Player") }
+    val profile = player?.profile
+    val displayName = player?.row?.displayName?.ifBlank { sh("Oyuncu", "Player") } ?: "—"
 
     Box(modifier = modifier.height(slabHeight + topPad)) {
         Box(
@@ -240,15 +252,24 @@ private fun WeeklyPodiumColumnV210(
                         Modifier.size(if (crowned) 60.dp else 48.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        ProfilePhotoAvatarWithGender(
-                            avatarPath = if (profile?.avatarVisibility == "hidden") null else profile?.avatarPath,
-                            gender = profile?.gender,
-                            name = displayName,
-                            size = if (crowned) 60.dp else 48.dp,
-                            accent = mid,
-                            visible = profile?.avatarVisibility != "hidden",
-                            showGenderBadge = false,
-                        )
+                        if (player != null) {
+                            ProfilePhotoAvatarWithGender(
+                                avatarPath = if (profile?.avatarVisibility == "hidden") null else profile?.avatarPath,
+                                gender = profile?.gender,
+                                name = displayName,
+                                size = if (crowned) 60.dp else 48.dp,
+                                accent = mid,
+                                visible = profile?.avatarVisibility != "hidden",
+                                showGenderBadge = false,
+                            )
+                        } else {
+                            Icon(
+                                Icons.Rounded.Person,
+                                contentDescription = null,
+                                tint = Color.White.copy(alpha = 0.38f),
+                                modifier = Modifier.size(if (crowned) 32.dp else 26.dp),
+                            )
+                        }
                     }
                 }
                 Spacer(Modifier.height(6.dp))
@@ -262,7 +283,7 @@ private fun WeeklyPodiumColumnV210(
                     textAlign = TextAlign.Center,
                 )
                 Text(
-                    "${player.row.rating} RP",
+                    player?.row?.rating?.let { "$it RP" } ?: "— RP",
                     color = if (crowned) PodiumGoldLight else PodiumTextMain.copy(alpha = 0.85f),
                     fontSize = if (crowned) 16.sp else 13.sp,
                     fontWeight = FontWeight.Black,
@@ -316,7 +337,7 @@ private fun WeeklyRankShieldV210(
 }
 
 @Composable
-private fun WeeklyChampionPlaqueV210() {
+private fun WeeklyChampionPlaqueV210(hasChampion: Boolean) {
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Surface(
             shape = RoundedCornerShape(8.dp),
@@ -324,7 +345,7 @@ private fun WeeklyChampionPlaqueV210() {
             border = BorderStroke(1.dp, PodiumGold.copy(alpha = 0.6f)),
         ) {
             Text(
-                sh("★  ŞAMPİYON  ★", "★  CHAMPION  ★"),
+                if (hasChampion) sh("★  ŞAMPİYON  ★", "★  CHAMPION  ★") else sh("★  ZİRVE BEKLENİYOR  ★", "★  PODIUM AWAITS  ★"),
                 color = PodiumGoldLight,
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
