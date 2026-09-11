@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -44,8 +45,9 @@ class SiegeDictionaryThemeRegressionTest {
 
         assertTrue(profile.contains("ProfileOwnedThemesSection(backend)"))
         assertTrue(themes.contains("Ana Mavi Beyaz"))
-        assertTrue(themes.contains("Son Harf ana teması • Ücretsiz"))
+        assertTrue(themes.contains("Varsayılan görünüm • Ücretsiz"))
         assertTrue(themes.contains("backend.equipDefaultGameTheme()"))
         assertTrue(economy.contains("equip_default_game_theme"))
+        assertFalse(themes.contains("purchaseShopItem"))
     }
 }
