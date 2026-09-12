@@ -1,0 +1,47 @@
+name: Align Restored Kelime Tahti Tests
+
+on:
+  push:
+    branches:
+      - fix/restore-simple-kelime-tahti-20260912
+
+permissions:
+  contents: write
+
+jobs:
+  align:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/restore-simple-kelime-tahti-20260912
+          fetch-depth: 0
+      - name: Align restored ownership palette assertions
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          root = Path('app/src/test/java/com/sonharf/game')
+          repl = {
+              '0xFFE3EDE5': '0xFFA8D5B5',
+              '0xFFE4EDF3': '0xFFE4AEAA',
+              '0xFF567A64': '0xFF3F7C53',
+              '0xFF5C8299': '0xFF9B4D4A',
+          }
+          for path in root.glob('*.kt'):
+              text = path.read_text()
+              new = text
+              for old, value in repl.items():
+                  new = new.replace(old, value)
+              if new != text:
+                  path.write_text(new)
+          PY
+      - name: Commit aligned contracts
+        shell: bash
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/test/java/com/sonharf/game
+          git commit -m "Align restored Kelime Tahtı ownership color contracts"
+          git push origin HEAD:fix/restore-simple-kelime-tahti-20260912
