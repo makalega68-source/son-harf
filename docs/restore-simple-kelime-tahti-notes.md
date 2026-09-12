@@ -1,1 +1,0 @@
-The restored UI comes from the immediately previous simplified Kelime Tahtı candidate, rebased onto the current verified main state. Current PNG branding is preserved instead of reintroducing the broken WebP resource aliases.
