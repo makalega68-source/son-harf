@@ -1,5 +1,6 @@
 -- STAGING ONLY. Do not move into supabase/migrations until issue #340 staging gates pass.
--- Google Play one-time grant provenance, non-negative clawback, and retry-safe RTDN dedupe.
+-- Google Play grant provenance, constraint-safe subscription lifecycle, non-negative clawback,
+-- and retry-safe RTDN dedupe.
 
 create table if not exists public.play_purchase_grants (
   purchase_token text not null,
@@ -24,9 +25,9 @@ create unique index if not exists diamond_ledger_play_reversal_unique
   on public.diamond_ledger(user_id, reason)
   where reason like 'google_play_reversal:%';
 
--- Preserve the current live v2 purchase contract and add provenance recording only on the first
--- successful token processing. A Style row tracks whether Play established/continued the
--- inventory ownership chain, so pre-existing non-Play ownership is never clawed back.
+-- Preserve the live purchase-v2 API while recording grant provenance. Purchases.status has its
+-- own vocabulary (pending/verified/rejected/refunded), store_entitlements has Play lifecycle
+-- states, and the legacy subscriptions table uses British `cancelled` plus `inactive`.
 create or replace function public.apply_verified_play_purchase_v2(
   p_user_id uuid,
   p_product_id text,
@@ -49,8 +50,8 @@ declare
   v_delta integer := 0;
   v_balance integer;
   v_grant record;
-  v_status text := 'verified';
   v_entitlement_status text := 'active';
+  v_subscription_status text := 'active';
   v_is_vip boolean := false;
   v_is_season boolean := false;
   v_style_inserted text;
@@ -64,19 +65,29 @@ begin
 
   v_is_vip := p_product_id in ('vip_monthly','vip_yearly');
   v_is_season := p_product_id in ('season_pass','season_pass_monthly');
+
   if p_play_state='SUBSCRIPTION_STATE_IN_GRACE_PERIOD' then v_entitlement_status:='grace';
   elsif p_play_state in ('SUBSCRIPTION_STATE_ON_HOLD','SUBSCRIPTION_STATE_PAUSED') then v_entitlement_status:='hold';
   elsif p_play_state='SUBSCRIPTION_STATE_CANCELED' then
     v_entitlement_status:=case when p_expires_at is not null and p_expires_at>now() then 'canceled' else 'expired' end;
-  elsif p_play_state='SUBSCRIPTION_STATE_EXPIRED' then v_entitlement_status:='expired';
+  elsif p_play_state in ('SUBSCRIPTION_STATE_EXPIRED','SUBSCRIPTION_STATE_PENDING_PURCHASE_CANCELED') then v_entitlement_status:='expired';
   elsif p_play_state='SUBSCRIPTION_STATE_PENDING' then v_entitlement_status:='pending';
+  else v_entitlement_status:='active';
   end if;
+
+  v_subscription_status := case v_entitlement_status
+    when 'active' then 'active'
+    when 'grace' then 'grace'
+    when 'canceled' then 'cancelled'
+    when 'expired' then 'expired'
+    else 'inactive'
+  end;
 
   insert into public.purchases(
     user_id,product_id,purchase_token,order_id,status,purchased_at,verified_at,purchase_type,
     play_state,acknowledgement_state,last_checked_at,expires_at
   ) values (
-    p_user_id,p_product_id,trim(p_purchase_token),nullif(trim(p_order_id),''),v_status,now(),now(),
+    p_user_id,p_product_id,trim(p_purchase_token),nullif(trim(p_order_id),''),'verified',now(),now(),
     case when v_is_vip or v_is_season then 'subscription' else 'one_time' end,
     p_play_state,p_acknowledgement_state,now(),p_expires_at
   )
@@ -97,17 +108,18 @@ begin
 
   update public.purchases
     set order_id=coalesce(nullif(trim(p_order_id),''),order_id),
-        status=v_status,
+        status='verified',
         play_state=p_play_state,
         acknowledgement_state=coalesce(p_acknowledgement_state,acknowledgement_state),
         last_checked_at=now(),
-        expires_at=coalesce(p_expires_at,expires_at)
+        expires_at=coalesce(p_expires_at,expires_at),
+        revoked_at=null
     where id=v_purchase_id;
 
   if v_is_vip then
     if p_expires_at is null then raise exception 'invalid_subscription_expiry'; end if;
     insert into public.subscriptions(user_id,product_id,status,expires_at,updated_at)
-      values(p_user_id,p_product_id,v_entitlement_status,p_expires_at,now())
+      values(p_user_id,p_product_id,v_subscription_status,p_expires_at,now())
       on conflict(user_id) do update
       set product_id=excluded.product_id,status=excluded.status,expires_at=excluded.expires_at,updated_at=now();
     insert into public.store_entitlements(user_id,entitlement_key,source_type,source_id,status,expires_at,updated_at)
@@ -228,6 +240,111 @@ revoke all on function public.apply_verified_play_purchase_v2(uuid,text,text,tex
 grant execute on function public.apply_verified_play_purchase_v2(uuid,text,text,text,timestamptz,text,text)
   to service_role;
 
+-- Constraint-safe successor body for the existing subscription reconciliation API.
+create or replace function public.reconcile_play_entitlement_v1(
+  p_purchase_token text,
+  p_play_state text,
+  p_expires_at timestamptz default null,
+  p_revoke boolean default false
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path=''
+as $$
+declare
+  v_purchase public.purchases%rowtype;
+  v_entitlement_status text;
+  v_purchase_status text;
+  v_subscription_status text;
+  v_vip_active boolean;
+begin
+  if nullif(trim(p_purchase_token),'') is null then raise exception 'invalid_purchase_token'; end if;
+  select * into v_purchase
+    from public.purchases
+    where purchase_token=trim(p_purchase_token)
+    for update;
+  if not found then return jsonb_build_object('success',true,'known',false); end if;
+
+  v_entitlement_status := case
+    when p_revoke then 'revoked'
+    when p_play_state='SUBSCRIPTION_STATE_IN_GRACE_PERIOD' then 'grace'
+    when p_play_state in ('SUBSCRIPTION_STATE_ON_HOLD','SUBSCRIPTION_STATE_PAUSED') then 'hold'
+    when p_play_state='SUBSCRIPTION_STATE_CANCELED' and coalesce(p_expires_at,v_purchase.expires_at)>now() then 'canceled'
+    when p_play_state in ('SUBSCRIPTION_STATE_EXPIRED','SUBSCRIPTION_STATE_PENDING_PURCHASE_CANCELED') then 'expired'
+    when p_play_state='SUBSCRIPTION_STATE_ACTIVE' then 'active'
+    else 'pending'
+  end;
+  v_purchase_status := case when p_revoke then 'refunded' else 'verified' end;
+  v_subscription_status := case v_entitlement_status
+    when 'active' then 'active'
+    when 'grace' then 'grace'
+    when 'canceled' then 'cancelled'
+    when 'expired' then 'expired'
+    else 'inactive'
+  end;
+
+  update public.purchases
+    set play_state=p_play_state,
+        status=v_purchase_status,
+        expires_at=coalesce(p_expires_at,expires_at),
+        revoked_at=case when p_revoke then coalesce(revoked_at,now()) else revoked_at end,
+        last_checked_at=now()
+    where id=v_purchase.id;
+
+  if v_purchase.product_id in ('vip_monthly','vip_yearly') then
+    update public.subscriptions
+      set status=v_subscription_status,
+          expires_at=coalesce(p_expires_at,expires_at),
+          updated_at=now()
+      where user_id=v_purchase.user_id;
+    update public.store_entitlements
+      set status=v_entitlement_status,
+          expires_at=coalesce(p_expires_at,expires_at),
+          updated_at=now()
+      where user_id=v_purchase.user_id
+        and entitlement_key='vip'
+        and source_type='play'
+        and source_id=trim(p_purchase_token);
+    select exists(
+      select 1 from public.subscriptions
+      where user_id=v_purchase.user_id
+        and status in ('active','grace','cancelled')
+        and expires_at>now()
+    ) into v_vip_active;
+    update public.profiles set is_vip=v_vip_active,updated_at=now() where id=v_purchase.user_id;
+
+  elsif v_purchase.product_id in ('season_pass','season_pass_monthly') then
+    update public.season_pass_entitlements
+      set status=v_entitlement_status,
+          expires_at=coalesce(p_expires_at,expires_at),
+          updated_at=now()
+      where user_id=v_purchase.user_id;
+    update public.store_entitlements
+      set status=v_entitlement_status,
+          expires_at=coalesce(p_expires_at,expires_at),
+          updated_at=now()
+      where user_id=v_purchase.user_id
+        and entitlement_key='season_pass'
+        and source_type='play'
+        and source_id=trim(p_purchase_token);
+  end if;
+
+  return jsonb_build_object(
+    'success',true,
+    'known',true,
+    'status',v_entitlement_status,
+    'purchase_status',v_purchase_status,
+    'product_id',v_purchase.product_id
+  );
+end
+$$;
+
+revoke all on function public.reconcile_play_entitlement_v1(text,text,timestamptz,boolean)
+  from public,anon,authenticated;
+grant execute on function public.reconcile_play_entitlement_v1(text,text,timestamptz,boolean)
+  to service_role;
+
 -- Lower-bound policy: Son Coin can never become negative. If a user has already spent part of a
 -- refunded grant, recover only the available balance and persist the unrecovered amount as
 -- reversal_shortfall for fraud/support audit. Reprocessing the same token is idempotent.
@@ -266,7 +383,7 @@ begin
 
   update public.purchases
     set play_state=p_play_state,
-        status=case when p_revoke then 'revoked' else status end,
+        status=case when p_revoke then 'refunded' else status end,
         revoked_at=case when p_revoke then coalesce(revoked_at,now()) else revoked_at end,
         last_checked_at=now()
     where id=v_purchase.id;
@@ -349,7 +466,7 @@ begin
   return jsonb_build_object(
     'success',true,
     'known',true,
-    'status','revoked',
+    'status','refunded',
     'product_id',v_purchase.product_id,
     'reversed_grants',v_reversed_count,
     'recovered_son_coin',v_recovered_total,
@@ -382,7 +499,7 @@ revoke all on public.play_rtdn_events from public,anon,authenticated;
 grant select,insert,update on public.play_rtdn_events to service_role;
 
 -- Retry-safe claim: completed-success messages dedupe forever; failed or abandoned attempts may be
--- reclaimed. A five-minute lease prevents two concurrent deliveries from reversing twice.
+-- reclaimed. A five-minute lease prevents two concurrent deliveries from processing at once.
 create or replace function public.claim_play_rtdn_event_v2(
   p_message_id text,
   p_event_type text,
