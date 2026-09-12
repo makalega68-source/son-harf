@@ -12,13 +12,14 @@ class KelimeTahtiPrimaryProductContractTest {
         val manifest = File("src/main/AndroidManifest.xml").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
         val logo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
-        val siegeRaster = File("src/main/res/drawable/kelime_kusatma_logo_hd.webp")
+        val siegeRaster = File("src/main/res/drawable/kelime_kusatma_logo_hd.png")
 
         assertTrue(manifest.contains("android:label=\"Kelime Tahtı\""))
         assertTrue(manifest.contains("@drawable/kelime_tahti_app_icon"))
         assertTrue(logo.contains("R.drawable.kelime_tahti_logo_latest"))
         assertTrue(siegeRaster.isFile)
-        assertTrue(isWebp(siegeRaster))
+        assertTrue(isPng(siegeRaster))
+        assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.webp").exists())
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.xml").exists())
         assertTrue(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
         assertTrue(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
@@ -56,10 +57,9 @@ class KelimeTahtiPrimaryProductContractTest {
         assertTrue(match.contains("HAMLEYİ ONAYLA"))
     }
 
-    private fun isWebp(file: File): Boolean {
+    private fun isPng(file: File): Boolean {
         val bytes = file.readBytes()
-        return bytes.size >= 12 &&
-            bytes.copyOfRange(0, 4).toString(Charsets.US_ASCII) == "RIFF" &&
-            bytes.copyOfRange(8, 12).toString(Charsets.US_ASCII) == "WEBP"
+        val signature = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+        return bytes.size >= 8 && bytes.copyOfRange(0, 8).contentEquals(signature)
     }
 }
