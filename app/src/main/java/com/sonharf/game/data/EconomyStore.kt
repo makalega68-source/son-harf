@@ -32,6 +32,8 @@ data class ShopItemDto(
     @SerialName("vip_only") val vipOnly: Boolean = false,
     val active: Boolean = true,
     @SerialName("sort_order") val sortOrder: Int = 0,
+    @SerialName("trial_mode") val trialMode: String? = null,
+    @SerialName("trial_value") val trialValue: Int? = null,
 )
 
 @Serializable
