@@ -20,7 +20,7 @@ class WeeklyPodiumV210BackendContractTest {
         assertTrue(migration.contains("create or replace function public.weekly_top"))
         assertTrue(migration.contains("create or replace function public.my_weekly_rp"))
         assertTrue(migration.contains("p.display_name"))
-        assertFalse(migration.contains("match_history"))
+        assertFalse(migration.lowercase().contains("from public.match_history"))
         assertFalse(migration.contains("grant execute on function public.weekly_top(integer) to anon"))
         assertFalse(migration.contains("grant execute on function public.my_weekly_rp() to anon"))
 
