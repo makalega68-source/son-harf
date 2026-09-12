@@ -2,26 +2,16 @@ package com.sonharf.game
 
 import android.app.Activity
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -59,14 +49,13 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                                     ProductCatalog.COINS_1500 -> sh("1500 Son Coin hesabına eklendi.", "1500 Son Coins added to your account.")
                                     ProductCatalog.COINS_3500 -> sh("3500 Son Coin hesabına eklendi.", "3500 Son Coins added to your account.")
                                     ProductCatalog.COINS_8000 -> sh("8000 Son Coin hesabına eklendi.", "8000 Son Coins added to your account.")
-                                    ProductCatalog.STARTER_STYLE_PACK -> sh("Başlangıç Style Paketi hesabına eklendi.", "Starter Style Pack added to your account.")
                                     else -> sh("Satın alma doğrulandı.", "Purchase verified.")
                                 }
                                 onPurchased()
                             }
                             .onFailure { error ->
                                 notice = when {
-                                    "google_play_not_configured" in error.message.orEmpty() -> sh("Google Play sunucu doğrulaması henüz production hesabıyla yapılandırılmadı.", "Google Play server verification is not configured with the production account yet.")
+                                    "google_play_not_configured" in error.message.orEmpty() -> sh("Google Play sunucu doğrulaması production hesabıyla henüz etkin değil.", "Google Play server verification is not enabled with the production account yet.")
                                     else -> sh("Ödeme doğrulaması tamamlanamadı. Aynı satın alma tekrar ödül vermez; yeniden deneyebilirsin.", "Purchase verification failed. The same purchase cannot grant twice; you can retry.")
                                 }
                             }
@@ -88,7 +77,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
     fun buy(productId: String) {
         val product = products[productId]
         if (activity == null || product == null) {
-            notice = sh("Ürün henüz Google Play'de kullanılabilir değil.", "Product is not available on Google Play yet.")
+            notice = sh("Bu paket Google Play'de henüz satın alınabilir değil.", "This pack is not yet purchasable on Google Play.")
             return
         }
         busy = productId
@@ -100,48 +89,42 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
     }
 
     Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfSurface.copy(alpha = .96f)),
+        colors = CardDefaults.cardColors(containerColor = SonHarfTheme.Surface),
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .28f)),
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(sh("SON COIN & STYLE MARKET", "SON COIN & STYLE MARKET"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 13.sp)
-            Text(sh("Ödeme Google Play üzerinden yapılır; satın alınan ürün yalnızca sunucu doğrulamasından sonra hesaba eklenir. Para ile maç gücü satın alınamaz.", "Payment is handled by Google Play; purchases are granted only after server verification. Money can never buy match power."), color = SonHarfMuted, fontSize = 9.sp)
+            Text(sh("SON COIN", "SON COIN"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
+            Text(
+                sh("Paketler Google Play fiyatı yüklendiğinde satın alınabilir. Coin yalnızca kozmetik ve mağaza ürünlerinde kullanılır; maç gücü satılmaz.", "Packs become purchasable when their Google Play price is loaded. Coins are only for cosmetics and store items; match power is never sold."),
+                color = SonHarfMuted,
+                fontSize = 9.sp,
+            )
 
-            PlayProductRow(
-                title = sh("500 Son Coin", "500 Son Coins"),
-                subtitle = sh("Style mağazası için", "For the Style shop"),
+            CoinProductRow(
+                amount = 500,
+                subtitle = sh("Mini paket", "Mini pack"),
                 product = products[ProductCatalog.COINS_500],
                 busy = busy == ProductCatalog.COINS_500,
             ) { buy(ProductCatalog.COINS_500) }
-
-            PlayProductRow(
-                title = sh("1500 Son Coin", "1500 Son Coins"),
-                subtitle = sh("Orta Son Coin paketi", "Medium Son Coin pack"),
+            CoinProductRow(
+                amount = 1500,
+                subtitle = sh("Standart paket", "Standard pack"),
                 product = products[ProductCatalog.COINS_1500],
                 busy = busy == ProductCatalog.COINS_1500,
             ) { buy(ProductCatalog.COINS_1500) }
-
-            PlayProductRow(
-                title = sh("3500 Son Coin", "3500 Son Coins"),
-                subtitle = sh("Popüler paket • Style alışverişleri için", "Popular pack • for Style purchases"),
+            CoinProductRow(
+                amount = 3500,
+                subtitle = sh("Popüler paket", "Popular pack"),
                 product = products[ProductCatalog.COINS_3500],
                 busy = busy == ProductCatalog.COINS_3500,
             ) { buy(ProductCatalog.COINS_3500) }
-
-            PlayProductRow(
-                title = sh("8000 Son Coin", "8000 Son Coins"),
-                subtitle = sh("En büyük Son Coin paketi", "Largest Son Coin pack"),
+            CoinProductRow(
+                amount = 8000,
+                subtitle = sh("Mega paket", "Mega pack"),
                 product = products[ProductCatalog.COINS_8000],
                 busy = busy == ProductCatalog.COINS_8000,
             ) { buy(ProductCatalog.COINS_8000) }
-
-            PlayProductRow(
-                title = sh("Başlangıç Style Paketi", "Starter Style Pack"),
-                subtitle = sh("800 Son Coin + özel Kurucu Işık Çerçevesi", "800 Son Coins + exclusive Founder Glow Frame"),
-                product = products[ProductCatalog.STARTER_STYLE_PACK],
-                busy = busy == ProductCatalog.STARTER_STYLE_PACK,
-            ) { buy(ProductCatalog.STARTER_STYLE_PACK) }
 
             if (notice.isNotBlank()) Text(notice, color = SonHarfMuted, fontSize = 9.sp)
         }
@@ -149,25 +132,63 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
 }
 
 @Composable
-private fun PlayProductRow(
-    title: String,
+private fun CoinProductRow(
+    amount: Int,
     subtitle: String,
     product: ProductDetails?,
     busy: Boolean,
     onBuy: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-        Column(Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.Black, color = SonHarfText)
-            Text(subtitle, color = SonHarfMuted, fontSize = 9.sp)
-        }
-        Button(
-            onClick = onBuy,
-            enabled = !busy,
-            colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
-            shape = RoundedCornerShape(14.dp),
+    Surface(
+        color = SonHarfTheme.SurfaceSecondary,
+        shape = RoundedCornerShape(16.dp),
+        border = BorderStroke(1.dp, SonHarfTheme.Border),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().padding(10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(if (busy) "…" else product?.oneTimePurchaseOfferDetails?.formattedPrice ?: "PLAY", fontWeight = FontWeight.Black)
+            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
+                Image(
+                    painter = painterResource(R.drawable.style_icon_coin),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit,
+                )
+                Text(
+                    if (amount >= 1000) "${amount / 1000}K" else amount.toString(),
+                    color = SonHarfText,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.align(Alignment.BottomEnd),
+                )
+            }
+            Column(Modifier.weight(1f)) {
+                Text("$amount Son Coin", fontWeight = FontWeight.Black, color = SonHarfText, fontSize = 14.sp)
+                Text(subtitle, color = SonHarfMuted, fontSize = 9.sp)
+            }
+            Button(
+                onClick = onBuy,
+                enabled = !busy && product != null,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = SonHarfTheme.Primary,
+                    disabledContainerColor = SonHarfTheme.DisabledBackground,
+                    disabledContentColor = SonHarfTheme.DisabledContent,
+                ),
+                shape = RoundedCornerShape(12.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+            ) {
+                Text(
+                    when {
+                        busy -> "…"
+                        product != null -> product.oneTimePurchaseOfferDetails?.formattedPrice ?: sh("SATIN AL", "BUY")
+                        else -> sh("PLAY'DE YOK", "NOT ON PLAY")
+                    },
+                    fontWeight = FontWeight.Black,
+                    fontSize = 10.sp,
+                )
+            }
         }
     }
 }
