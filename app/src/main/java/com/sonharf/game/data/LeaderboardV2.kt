@@ -22,8 +22,19 @@ suspend fun OnlineGameBackend.getLeaderboardV2(
     language: String,
     period: String,
     limit: Int = 50,
-): List<LeaderboardV2Row> =
-    SupabaseProvider.client.postgrest.rpc(
+): List<LeaderboardV2Row> {
+    if (period.lowercase() == "week") {
+        return getWeeklyTopV210(limit).map { row ->
+            LeaderboardV2Row(
+                userId = row.userId,
+                displayName = row.username,
+                rating = row.rp,
+                leagueName = "HAFTALIK",
+            )
+        }
+    }
+
+    return SupabaseProvider.client.postgrest.rpc(
         "get_rating_leaderboard_v1",
         buildJsonObject {
             put("p_language", language.lowercase())
@@ -31,3 +42,4 @@ suspend fun OnlineGameBackend.getLeaderboardV2(
             put("p_limit", limit.coerceIn(1, 100))
         },
     ).decodeList()
+}

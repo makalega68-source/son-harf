@@ -27,6 +27,7 @@ import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
 import com.sonharf.game.data.getCompetitiveSeason
 import com.sonharf.game.data.getLeaderboardV2
+import com.sonharf.game.data.getMyWeeklyRpV210
 import com.sonharf.game.data.getSeasonLeaderboard
 
 @Composable
@@ -37,6 +38,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
     var rows by remember { mutableStateOf<List<LeaderboardV2Row>>(emptyList()) }
     var profiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
     var myProfile by remember { mutableStateOf<ProfileDto?>(null) }
+    var myWeeklyRp by remember { mutableIntStateOf(0) }
     var seasonInfo by remember { mutableStateOf<CompetitiveSeasonDto?>(null) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf(false) }
@@ -50,6 +52,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
         loading = true
         error = false
         myProfile = me?.let { runCatching { b.getProfile(it) }.getOrNull() }
+        myWeeklyRp = if (period == "week") runCatching { b.getMyWeeklyRpV210() }.getOrDefault(0) else 0
         seasonInfo = if (period == "season") runCatching { b.getCompetitiveSeason() }.getOrNull() else null
         runCatching {
             if (period == "season") {
@@ -93,8 +96,17 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(sh("LİG & SIRALAMA", "LEAGUE & RANKING"), color = SonHarfText, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Canlı rekabet tablosu", "Live competition table"), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(
+                        if (period == "week") sh("HAFTALIK LİG", "WEEKLY LEAGUE") else sh("LİG & SIRALAMA", "LEAGUE & RANKING"),
+                        color = SonHarfText,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Text(
+                        if (period == "week") sh("Sıralama her pazartesi sıfırlanır.", "Leaderboard resets every Monday.") else sh("Canlı rekabet tablosu", "Live competition table"),
+                        color = SonHarfMuted,
+                        fontSize = 9.sp,
+                    )
                 }
                 Surface(shape = RoundedCornerShape(10.dp), color = SonHarfPink.copy(alpha = .14f)) {
                     Row(Modifier.padding(horizontal = 9.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -116,31 +128,40 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                     Column(verticalArrangement = Arrangement.spacedBy(11.dp)) {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                             Surface(shape = RoundedCornerShape(14.dp), color = SonHarfBlue.copy(alpha = .12f), border = BorderStroke(1.dp, SonHarfBlue.copy(alpha = .26f))) {
-                                Text("◆", Modifier.padding(horizontal = 15.dp, vertical = 11.dp), color = SonHarfBlue, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                                Text(if (period == "week") "🏆" else "◆", Modifier.padding(horizontal = 15.dp, vertical = 11.dp), color = SonHarfBlue, fontSize = 24.sp, fontWeight = FontWeight.Black)
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(if (SonHarfUiState.isEnglish) "${leagueProgress.leagueName} LEAGUE" else "${leagueProgress.leagueName} LİGİ", color = SonHarfText, fontSize = 18.sp, fontWeight = FontWeight.Black)
-                                Text("$currentRating RATING", color = SonHarfBlue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                if (period == "week") {
+                                    Text(sh("HAFTALIK LİG", "WEEKLY LEAGUE"), color = SonHarfText, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                                    Text("$myWeeklyRp RP", color = SonHarfBlue, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                                } else {
+                                    Text(if (SonHarfUiState.isEnglish) "${leagueProgress.leagueName} LEAGUE" else "${leagueProgress.leagueName} LİGİ", color = SonHarfText, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                                    Text("$currentRating RATING", color = SonHarfBlue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                }
                             }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(if (myIndex >= 0) "#${myIndex + 1}" else "—", color = SonHarfText, fontSize = 25.sp, fontWeight = FontWeight.Black)
                                 Text(sh("SIRAN", "YOUR RANK"), color = SonHarfMuted, fontSize = 7.sp, fontWeight = FontWeight.Bold)
                             }
                         }
-                        LinearProgressIndicator(
-                            progress = { leagueProgress.progress },
-                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                            color = SonHarfBlue,
-                            trackColor = SonHarfSurface2,
-                        )
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(
-                                if (leagueProgress.nextAt == null) sh("En üst lig", "Top league") else sh("Sonraki lige ${leagueProgress.pointsToNext} puan", "${leagueProgress.pointsToNext} points to next league"),
-                                color = SonHarfMuted,
-                                fontSize = 8.sp,
+                        if (period == "week") {
+                            Text(sh("Sıralama her pazartesi sıfırlanır.", "Leaderboard resets every Monday."), color = SonHarfMuted, fontSize = 9.sp)
+                        } else {
+                            LinearProgressIndicator(
+                                progress = { leagueProgress.progress },
+                                modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
+                                color = SonHarfBlue,
+                                trackColor = SonHarfSurface2,
                             )
-                            Text(if (period == "season") sh("SEZON", "SEASON") else sh("AKTİF", "ACTIVE"), color = SonHarfBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(
+                                    if (leagueProgress.nextAt == null) sh("En üst lig", "Top league") else sh("Sonraki lige ${leagueProgress.pointsToNext} puan", "${leagueProgress.pointsToNext} points to next league"),
+                                    color = SonHarfMuted,
+                                    fontSize = 8.sp,
+                                )
+                                Text(if (period == "season") sh("SEZON", "SEASON") else sh("AKTİF", "ACTIVE"), color = SonHarfBlue, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            }
                         }
                     }
                 }
@@ -167,7 +188,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
             }
         }
 
-        if (period != "season") item {
+        if (period != "season" && period != "week") item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LeagueLanguagePill("🇹🇷 TR", language == "tr", Modifier.weight(1f)) { language = "tr" }
                 LeagueLanguagePill("🇬🇧 EN", language == "en", Modifier.weight(1f)) { language = "en" }
@@ -179,7 +200,7 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text(sh("OYUNCULAR", "PLAYERS"), color = SonHarfText, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                Text(sh("RATING", "RATING"), color = SonHarfMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                Text(if (period == "week") "RP" else "RATING", color = SonHarfMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
             }
         }
 
@@ -215,12 +236,14 @@ fun LeaderboardExperienceScreen(onBack: () -> Unit) {
                                 }
                             }
                         }
-                        val rate = if (row.winRate % 1.0 == 0.0) row.winRate.toInt().toString() else String.format("%.1f", row.winRate)
-                        Text("${row.leagueName}  •  ${row.wins}W ${row.losses}L  •  %$rate", color = SonHarfMuted, fontSize = 8.sp, maxLines = 1)
+                        if (period != "week") {
+                            val rate = if (row.winRate % 1.0 == 0.0) row.winRate.toInt().toString() else String.format("%.1f", row.winRate)
+                            Text("${row.leagueName}  •  ${row.wins}W ${row.losses}L  •  %$rate", color = SonHarfMuted, fontSize = 8.sp, maxLines = 1)
+                        }
                     }
                     Column(horizontalAlignment = Alignment.End) {
                         Text(row.rating.toString(), color = SonHarfText, fontSize = 15.sp, fontWeight = FontWeight.Black)
-                        Text("RATING", color = SonHarfBlue, fontSize = 6.5.sp, fontWeight = FontWeight.Black)
+                        Text(if (period == "week") "RP" else "RATING", color = SonHarfBlue, fontSize = 6.5.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
