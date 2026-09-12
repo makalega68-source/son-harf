@@ -27,6 +27,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -40,20 +41,20 @@ import com.sonharf.game.data.WordSiegeMoveDto
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-private val PanSiegeTile = Color(0xFFF5F0E4)
+private val PanSiegeTile = Color(0xFFF4F7F5)
 private val PanSiegeTileBorder = Color(0xFF8EA697)
 private val PanSiegeBoardSurface = Color(0xFFE8ECE8)
 private val PanSiegeNeutral = Color(0xFFFAF7EF)
-private val PanSiegeMine = Color(0xFFA8C7B1)
-private val PanSiegeRival = Color(0xFFAFCDE0)
+private val PanSiegeMine = Color(0xFFE3EDE5)
+private val PanSiegeRival = Color(0xFFE4EDF3)
 private val PanSiegeNeutralBorder = Color(0xFFB8C3BC)
 private val PanSiegeBonusBorder = Color(0xFFA79BB2)
 private val PanSiegeMineBorder = Color(0xFF567A64)
 private val PanSiegeRivalBorder = Color(0xFF5C8299)
 private val PanSiegeBonus2H = Color(0xFFDCEAF2)
-private val PanSiegeBonus3H = Color(0xFFDDEBDD)
+private val PanSiegeBonus3H = Color(0xFFDCEAF2)
 private val PanSiegeBonus2K = Color(0xFFEAE2F0)
-private val PanSiegeBonus3K = Color(0xFFDED4E8)
+private val PanSiegeBonus3K = Color(0xFFEAE2F0)
 private val PanSiegeBonus4K = Color(0xFFE7DDBB)
 private val PanSiegeBonusStar = Color(0xFFEAD59B)
 private val PanSiegeLastMove = Color(0xFFE7B95E)
@@ -184,13 +185,6 @@ internal fun WordSiegePanMatch(
             )
         }
 
-        PanSiegeMapControl(
-            myControl = myMapControl,
-            rivalControl = rivalMapControl,
-            myAreaCount = myAreaCount,
-            rivalAreaCount = rivalAreaCount,
-        )
-
         if (game.status == "waiting") {
             Surface(
                 modifier = Modifier.fillMaxWidth().weight(1f),
@@ -270,8 +264,8 @@ internal fun WordSiegePanMatch(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         sh(
-                            "Alan +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS} • kelime puanı HAMLEYİ ONAYLA ile doğrulanır",
-                            "Area +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS} • word score is verified on CONFIRM MOVE",
+                            "Puan hamle onayında hesaplanır",
+                            "Score is calculated when confirmed",
                         ),
                         color = MainUi.Muted,
                         fontSize = 8.sp,
@@ -334,10 +328,15 @@ internal fun WordSiegePanMatch(
                     border = BorderStroke(1.dp, SiegePurple),
                     contentPadding = PaddingValues(horizontal = 3.dp),
                 ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = 8.sp, fontWeight = FontWeight.Black) }
+            }
+            Row(Modifier.fillMaxWidth()) {
                 Button(
                     onClick = onSubmit,
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFFE9D9A5), Color(0xFFAF8C45), Color(0xFFF6EAC7)))),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 1.dp),
                     enabled = canAct && placements.isNotEmpty(),
-                    modifier = Modifier.weight(1.75f).height(46.dp),
+                    modifier = Modifier.weight(1f).height(52.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = PanSiegeMineBorder,
                         contentColor = Color.White,
@@ -347,7 +346,7 @@ internal fun WordSiegePanMatch(
                     contentPadding = PaddingValues(horizontal = 5.dp),
                 ) {
                     if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-                    else Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    else Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 14.sp, fontWeight = FontWeight.Black)
                 }
             }
         } else {
@@ -356,41 +355,6 @@ internal fun WordSiegePanMatch(
 
         notice?.let { PanSiegeNotice(it) }
         lastMove?.let { PanSiegeLastMoveInfo(it) }
-    }
-}
-
-@Composable
-private fun PanSiegeMapControl(
-    myControl: Int,
-    rivalControl: Int,
-    myAreaCount: Int,
-    rivalAreaCount: Int,
-) {
-    val claimed = (myAreaCount + rivalAreaCount).coerceAtLeast(1)
-    val myClaimedShare = myAreaCount.toFloat() / claimed.toFloat()
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = MainUi.Surface.copy(alpha = .95f),
-        border = BorderStroke(1.dp, MainUi.Border),
-    ) {
-        Column(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(sh("HARİTA KONTROLÜ", "MAP CONTROL"), color = MainUi.Text, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.weight(1f))
-                Text("$myControl%", color = PanSiegeMineBorder, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Text("  •  ", color = MainUi.Muted, fontSize = 8.sp)
-                Text("$rivalControl%", color = PanSiegeRivalBorder, fontSize = 9.sp, fontWeight = FontWeight.Black)
-            }
-            Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(99.dp)).background(PanSiegeRival.copy(alpha = .85f))) {
-                Box(
-                    Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(myClaimedShare.coerceIn(0f, 1f))
-                        .background(PanSiegeMine),
-                )
-            }
-        }
     }
 }
 
@@ -674,14 +638,14 @@ private fun PanSiegeBoardCell(
         activeBonus != null -> PanSiegeBonusBorder
         else -> PanSiegeNeutralBorder
     }
-    val regionGap = if (letter != null && owner != 0) .55.dp else 1.25.dp
+    val regionGap = 1.25.dp
 
     Box(
         Modifier
             .size(size)
             .padding(regionGap)
             .clip(RoundedCornerShape(7.dp))
-            .background(baseColor)
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = .9f), baseColor)))
             .border(
                 width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
                 color = PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),
@@ -726,7 +690,15 @@ private fun PanSiegeBoardCell(
                     )
                 } else if (activeBonus != null) {
                     Text(
-                        WordSiegeBoardSpec.displayBonusLabel(activeBonus),
+                        androidx.compose.ui.text.buildAnnotatedString {
+                    val label = WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)
+                    val parts = label.split("\n")
+                    if (parts.size > 1) {
+                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 10.sp)) { append(parts.first()) }
+                        append("\n")
+                        append(parts.last())
+                    } else append(label)
+                },
                         color = when (activeBonus) {
                             "2H" -> Color(0xFF456F83)
                             "3H" -> Color(0xFF4F735A)
@@ -736,6 +708,8 @@ private fun PanSiegeBoardCell(
                             else -> MainUi.Text
                         },
                         fontSize = WordSiegeBoardAccessibility.BoardBonus,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 18.sp,
                         fontWeight = FontWeight.Black,
                     )
                 }

@@ -21,9 +21,9 @@ object SonHarfUiState {
 fun sh(tr: String, en: String): String {
     val localized = if (SonHarfUiState.isEnglish) en else tr
     val primaryTagline = if (SonHarfUiState.isEnglish) {
-        "Build words, control territory, beat your rival"
+        "Build your word, beat your rival"
     } else {
-        "Kelimeyi kur, alanı kuşat, rakibini geç"
+        "Kelimeyi kur, rakibini geç"
     }
     if (localized == "Kelimeyi Sürdür, Rakibini Geç" || localized == "Continue the Word, Beat Your Rival") {
         return primaryTagline
@@ -31,24 +31,10 @@ fun sh(tr: String, en: String): String {
 
     // The flagship home CTA keeps the product name dominant while making the action explicit.
     if (localized == "Kelime kur • alanı ele geçir • haritayı kontrol et") {
-        return "OYNA • Kelime kur • alanı ele geçir • haritayı kontrol et"
+        return "OYNA • Harflerini yerleştir, kelimeni oluştur"
     }
     if (localized == "Build words • capture territory • control the map") {
-        return "PLAY • Build words • capture territory • control the map"
-    }
-
-    // Online move recap: territory gain is the signature siege feedback. Keep backend scoring untouched.
-    val territoryScore = if (SonHarfUiState.isEnglish) {
-        Regex("Territory \\+(\\d+)").find(localized)?.groupValues?.getOrNull(1)?.toIntOrNull()
-    } else {
-        Regex("Bölge \\+(\\d+)").find(localized)?.groupValues?.getOrNull(1)?.toIntOrNull()
-    }
-    if (territoryScore != null && territoryScore > 0 &&
-        ((SonHarfUiState.isEnglish && localized.startsWith("Word +")) ||
-            (!SonHarfUiState.isEnglish && localized.startsWith("Kelime +")))
-    ) {
-        return if (SonHarfUiState.isEnglish) "$localized  •  SIEGE +$territoryScore"
-        else "$localized  •  KUŞATMA +$territoryScore"
+        return "PLAY • Place your tiles, build your word"
     }
 
     return localized
