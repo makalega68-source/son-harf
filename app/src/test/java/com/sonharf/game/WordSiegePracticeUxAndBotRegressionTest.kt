@@ -3,6 +3,7 @@ package com.sonharf.game
 import com.sonharf.game.data.WordSiegeCellDto
 import java.io.File
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -48,9 +49,9 @@ class WordSiegePracticeUxAndBotRegressionTest {
         assertTrue(screen.contains("if (selecting && tutorialStep == 1) tutorialStep = 2"))
         assertTrue(screen.contains("if (tutorialStep == 2) tutorialStep = 3"))
         assertTrue(screen.contains("if (tutorialStep == 3) tutorialStep = 4"))
-        assertTrue(guidance.contains("Harflerle kelime kur. Kelimenin geçtiği hücreleri ele geçir."))
-        assertTrue(guidance.contains("Her sahip olduğun hücre 2 bölge puanı verir"))
-        assertTrue(guidance.contains("Kelime puanın kalıcıdır"))
+        assertTrue(guidance.contains("Harf seç, tahtaya yerleştir ve kelimeni onayla."))
+        assertTrue(guidance.contains("sahip olduğun hücre başına 2 puan"))
+        assertTrue(guidance.contains("kelime puanı kalıcıdır"))
     }
 
     @Test
@@ -59,10 +60,10 @@ class WordSiegePracticeUxAndBotRegressionTest {
         val guidance = source("src/main/java/com/sonharf/game/WordSiegePracticeGuidance.kt")
 
         assertTrue(screen.contains("WordSiegePracticeStatusBar(statusMessage, compact)"))
-        assertTrue(screen.contains("onZoneClick = { zoneInfoCode = it }"))
-        assertTrue(screen.contains("WordSiegeBoardSpec.StarBonus"))
+        assertFalse(screen.contains("onZoneClick = { zoneInfoCode = it }"))
+        assertTrue(guidance.contains("WordSiegeBoardSpec.StarBonus"))
         assertTrue(guidance.contains("WordSiegePracticeStatusBar"))
-        assertTrue(guidance.contains("TAÇ • İlk kelime bu bölgeden geçmelidir"))
+        assertTrue(guidance.contains("BAŞLANGIÇ • İlk kelime bu bölgeden geçmelidir"))
         assertTrue(guidance.contains("ÖDÜL • Bu sürpriz bölge hamlene +"))
         assertTrue(guidance.contains("maxLines = 2"))
     }

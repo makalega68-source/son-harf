@@ -15,22 +15,20 @@ class WordSiegePracticeVisualContractTest {
         }
     }
 
-    @Test fun practiceBoardUsesGreenOwnRedRivalTerritoryStrategicZonesAndThreatBorders() {
+    @Test fun practiceBoardUsesTerritoryFirstPaletteStrategicZonesAndThreatBorders() {
         val text = source()
         assertTrue(text.contains("PracticeSiegeNeutral = Color(0xFFFAF7EF)"))
-        assertTrue(text.contains("PracticeSiegeMine = Color(0xFFA8D5B5)"))
-        assertTrue(text.contains("PracticeSiegeRival = Color(0xFFE4AEAA)"))
-        assertTrue(text.contains("PracticeSiegeMineBorder = Color(0xFF3F7C53)"))
-        assertTrue(text.contains("PracticeSiegeRivalBorder = Color(0xFF9B4D4A)"))
+        assertTrue(text.contains("PracticeSiegeMine = Color(0xFFE3EDE5)"))
+        assertTrue(text.contains("PracticeSiegeRival = Color(0xFFE4EDF3)"))
         assertTrue(text.contains("PracticeSiegeThreat = Color(0xFFD8903D)"))
         assertTrue(text.contains("PracticeZoneWatch"))
         assertTrue(text.contains("PracticeZoneCritical"))
         assertTrue(text.contains("PracticeZoneFort"))
         assertTrue(text.contains("PracticeZoneSiege"))
         assertTrue(text.contains("PracticeZoneCrown"))
-        assertTrue(text.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone)"))
+        assertTrue(text.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)"))
         assertTrue(text.contains("practiceCellThreatened"))
-        assertTrue(text.contains("val regionGap = if (owner != 0) .45.dp else 1.15.dp"))
+        assertTrue(text.contains("val regionGap = 1.25.dp"))
         assertTrue(text.contains("highlightAlpha.animateTo(0.42f"))
     }
 

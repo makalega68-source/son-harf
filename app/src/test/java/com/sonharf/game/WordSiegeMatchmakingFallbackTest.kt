@@ -26,8 +26,8 @@ class WordSiegeMatchmakingFallbackTest {
         assertTrue(practice.contains("BOT MATCH • FINDING REAL RIVAL"))
         assertTrue(practice.contains("Gerçek rakip araması arka planda sürüyor"))
         assertTrue(practice.contains("Real matchmaking continues in the background"))
-        assertTrue(practice.contains("TAKTİK ALIŞTIRMA"))
-        assertTrue(practice.contains("TACTICAL PRACTICE"))
+        assertTrue(practice.contains("ALIŞTIRMA"))
+        assertTrue(practice.contains("PRACTICE"))
         assertTrue(!practice.contains("ANA SÖZLÜK"))
         assertTrue(!practice.contains("MAIN DICTIONARY"))
 

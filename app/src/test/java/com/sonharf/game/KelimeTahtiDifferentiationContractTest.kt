@@ -7,14 +7,11 @@ import org.junit.Test
 
 class KelimeTahtiDifferentiationContractTest {
     @Test
-    fun playerFacingBoardUsesStrategicZoneLanguageNotClassicMultiplierLabels() {
-        val spec = projectFile("app/src/main/java/com/sonharf/game/WordSiegeBoardSpec.kt").readText()
-        assertTrue(spec.contains("\"2H\" -> \"GÖZ\""))
-        assertTrue(spec.contains("\"3H\" -> \"KRİT\""))
-        assertTrue(spec.contains("\"2K\" -> \"KALE\""))
-        assertTrue(spec.contains("\"3K\" -> \"KUŞ\""))
-        assertTrue(spec.contains("CenterBonus -> \"TAÇ\""))
-        assertTrue(spec.contains("StarBonus -> \"ÖDÜL\""))
+    fun bonusLabelsExplainTheActualEffectInBothLanguages() {
+        org.junit.Assert.assertEquals("Harf\n×2", WordSiegeBoardSpec.displayBonusLabel("2H"))
+        org.junit.Assert.assertEquals("Kelime\n×3", WordSiegeBoardSpec.displayBonusLabel("3K"))
+        org.junit.Assert.assertEquals("Word\n×4", WordSiegeBoardSpec.displayBonusLabel("4K", false))
+        org.junit.Assert.assertEquals("+25", WordSiegeBoardSpec.displayBonusLabel("3Y"))
     }
 
     @Test
@@ -22,15 +19,15 @@ class KelimeTahtiDifferentiationContractTest {
         val screen = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         val board = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt").readText()
 
-        assertTrue(screen.contains("HARİTA KONTROLÜ"))
+        assertFalse(screen.contains("HARİTA KONTROLÜ"))
         assertTrue(screen.contains("HAMLEYİ ONAYLA"))
-        assertTrue(screen.contains("KUŞATMA +"))
+        assertFalse(screen.contains("KUŞATMA +"))
         assertTrue(screen.contains("Kelime ${'$'}wordPoints • Bölge ${'$'}territoryPoints"))
         assertTrue(screen.contains("PracticePlayerAccent = Color(0xFF567A64)"))
         assertTrue(screen.contains("PracticeRivalAccent = Color(0xFF5C8299)"))
         assertTrue(board.contains("practiceCellThreatened"))
-        assertTrue(board.contains("val regionGap = if (owner != 0) .45.dp else 1.15.dp"))
-        assertTrue(board.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone)"))
+        assertTrue(board.contains("val regionGap = 1.25.dp"))
+        assertTrue(board.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)"))
         assertFalse(screen.contains("altın 4K karesi"))
     }
 
