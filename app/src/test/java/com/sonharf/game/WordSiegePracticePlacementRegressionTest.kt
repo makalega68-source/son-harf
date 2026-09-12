@@ -19,11 +19,13 @@ class WordSiegePracticePlacementRegressionTest {
     }
 
     @Test
-    fun practiceBoardParentGestureDoesNotSwallowPlacementTapsDuringPlayerTurn() {
+    fun practiceBoardCanPanDuringPlayerTurnAndKeepsCellTapPlacement() {
         val board = source("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
-        assertTrue(board.contains(".pointerInput(mode, viewport, boardPx, closeScale, enabled)"))
-        assertTrue(board.contains("if (mode == WordSiegeBoardViewportMode.CLOSE && !enabled)"))
+        assertTrue(board.contains(".pointerInput(mode, viewport, boardPx, closeScale)"))
+        assertTrue(board.contains("if (mode == WordSiegeBoardViewportMode.CLOSE)"))
+        assertFalse(board.contains("WordSiegeBoardViewportMode.CLOSE && !enabled"))
+        assertTrue(board.contains("detectTransformGestures"))
         assertTrue(board.contains("combinedClickable("))
         assertTrue(board.contains("WordSiegeBoardTapAction.PLACE"))
     }
