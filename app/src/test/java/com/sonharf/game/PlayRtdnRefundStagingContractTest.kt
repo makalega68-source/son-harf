@@ -9,9 +9,15 @@ class PlayRtdnRefundStagingContractTest {
     @Test
     fun `hardening remains staging only until paid staging gate passes`() {
         val staging = repoFile("supabase/staging-migrations/20260912_play_rtdn_refund_hardening.sql")
+        val stagedEdge = repoFile("supabase/staging-functions/google-play-rtdn/index.ts")
+        val productionEdge = repoFile("supabase/functions/google-play-rtdn/index.ts")
         assertTrue(staging.exists())
+        assertTrue(stagedEdge.exists())
         assertFalse(repoFileOrNull("supabase/migrations/20260912_play_rtdn_refund_hardening.sql")?.exists() == true)
         assertTrue(staging.readText().contains("STAGING ONLY"))
+        assertTrue(stagedEdge.readText().contains("verifyIdToken"))
+        assertTrue(productionEdge.readText().contains("GOOGLE_PLAY_RTDN_SECRET"))
+        assertFalse(productionEdge.readText().contains("verifyIdToken"))
     }
 
     @Test
@@ -23,7 +29,7 @@ class PlayRtdnRefundStagingContractTest {
         assertTrue(sql.contains("greatest(0,coalesce(diamonds,0)-v_grant.amount)"))
         assertTrue(sql.contains("v_recovered := least(v_balance,v_grant.amount)"))
         assertTrue(sql.contains("google_play_reversal:"))
-        assertTrue(sql.contains("other.purchase_token" ).not())
+        assertTrue(sql.contains("other.purchase_token").not())
         assertTrue(sql.contains("other.reversed_at is null"))
         assertTrue(sql.contains("other.owns_inventory"))
         assertTrue(sql.contains("grant execute on function public.reconcile_play_entitlement_v2"))
@@ -33,7 +39,7 @@ class PlayRtdnRefundStagingContractTest {
 
     @Test
     fun `rtdn uses oidc identity and retry safe event ledger`() {
-        val edge = repoFile("supabase/functions/google-play-rtdn/index.ts").readText()
+        val edge = repoFile("supabase/staging-functions/google-play-rtdn/index.ts").readText()
         val sql = repoFile("supabase/staging-migrations/20260912_play_rtdn_refund_hardening.sql").readText()
 
         assertTrue(edge.contains("verifyIdToken"))
@@ -60,7 +66,7 @@ class PlayRtdnRefundStagingContractTest {
     @Test
     fun `user verification stays the only one time grant path`() {
         val verify = repoFile("supabase/functions/verify-play-purchase/index.ts").readText()
-        val edge = repoFile("supabase/functions/google-play-rtdn/index.ts").readText()
+        val edge = repoFile("supabase/staging-functions/google-play-rtdn/index.ts").readText()
         assertTrue(verify.contains("apply_verified_play_purchase_v2"))
         assertTrue(verify.contains("userClient.auth.getUser()"))
         assertFalse(edge.contains("apply_verified_play_purchase_v2"))
