@@ -10,7 +10,10 @@ object ProductCatalog {
     const val COINS_3500 = "coins_3500"
     const val COINS_8000 = "coins_8000"
 
+    /** Historical entitlement only. The active shop must not offer it until a matching real asset exists. */
+    @Deprecated("No verified runtime artwork is connected; historical purchases remain recognizable")
     const val STARTER_STYLE_PACK = "starter_style_pack"
+
     /** Kept only so historical purchases can still be recognized by the verifier. */
     @Deprecated("Legacy visual product; no longer offered in the active shop")
     const val THEME_NEON = "theme_neon"
@@ -28,11 +31,11 @@ object ProductCatalog {
         COINS_8000,
     )
 
+    /** Only products with a complete, truthful runtime delivery path belong in the active shop query. */
     val oneTimeProducts = listOf(
         COINS_500,
         COINS_1500,
         COINS_3500,
         COINS_8000,
-        STARTER_STYLE_PACK,
     )
 }
