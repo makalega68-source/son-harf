@@ -52,7 +52,7 @@ class KelimeTahtiPrimaryProductContractTest {
 
         assertTrue(match.contains("wordPoints = myWordPoints"))
         assertTrue(match.contains("territoryPoints = myTerritoryPoints"))
-        assertTrue(match.contains("HARİTA KONTROLÜ"))
+        assertFalse(match.contains("HARİTA KONTROLÜ"))
         assertTrue(match.contains("HAMLEYİ ONAYLA"))
     }
 }

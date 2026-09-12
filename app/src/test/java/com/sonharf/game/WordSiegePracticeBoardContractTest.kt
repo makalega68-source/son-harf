@@ -23,7 +23,7 @@ class WordSiegePracticeBoardContractTest {
         assertTrue(board.contains("clipToBounds"))
         assertTrue(board.contains("onGloballyPositioned"))
         assertTrue(board.contains("WordSiegeBoardAccessibility.BoardLetterPoint"))
-        assertTrue(board.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone)"))
+        assertTrue(board.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)"))
         assertTrue(board.contains("PracticeZoneCrown"))
         assertTrue(board.contains("PracticeZoneReward"))
         assertTrue(board.contains("WordSiegeBoardAccessibility.RackPoint"))
