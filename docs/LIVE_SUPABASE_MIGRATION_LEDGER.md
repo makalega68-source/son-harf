@@ -12,6 +12,20 @@ Bu belge, GitHub kaynak migration'ları ile canlı `supabase_migrations.schema_m
 - Yeni şema değişikliği gerekiyorsa yeni bir ileri migration hazırlanır.
 - Audit snapshot'ın tarihsel davranış göstermesi, o davranışın bugün geçerli olduğu anlamına gelmez. Güncel executable migration zinciri ve canlı fonksiyon tanımları runtime source-of-truth'tur.
 
+## 31 Ağustos 2026 admin security production provenance — #345
+
+PR #191'deki authored migration timestamp'leri production'daki gerçek version değerleri değildir. Aşağıdaki üç kayıt doğrudan canlı `supabase_migrations.schema_migrations.statements` gövdelerinden alınmıştır; snapshot gövde MD5'leri production kaydıyla kontrat testinde birebir doğrulanır.
+
+| Canlı version | Canlı ad | Eski #191 authored dosyası | Live statement MD5 | Audit snapshot / durum |
+|---|---|---|---|---|
+| `20260831161225` | `admin_security_hardening_v3` | `20260831163500_admin_security_hardening_v3.sql` | `4e4936c026dc0b44fa50c8c95543a4a9` | `docs/live-supabase-history/20260831161225_admin_security_hardening_v3.sql` — audit-only. Tarihsel 12 saatlik `find_or_create_word_siege_game_v2` wrapper'ı içerir; güncel Kelime Tahtı matchmaking/lifecycle source-of-truth değildir. |
+| `20260831161544` | `owner_son_coin_purchase_fix` | `20260831165000_owner_son_coin_purchase_fix.sql` | `de99c49d4495bce975af9d58f6eff0cc` | `docs/live-supabase-history/20260831161544_owner_son_coin_purchase_fix.sql` — audit-only; owner unlimited Son Coin satın alma yolunun tarihsel provenance kaydıdır. |
+| `20260831161852` | `admin_rpc_execute_hardening_v1` | `20260831171500_admin_rpc_execute_hardening_v1.sql` | `cb0a0dc7bba55554e7b9284bed760aad` | `docs/live-supabase-history/20260831161852_admin_rpc_execute_hardening_v1.sql` — audit-only; admin RPC execute yüzeyini public/anon'dan kapatan production hardening kaydıdır. |
+
+Eski #191 branch'i aynı zamanda eski async Word Siege UI/runtime koduna dayanır; bu nedenle topluca merge edilmez. Üç authored SQL dosyası da executable migration olarak geri eklenmez.
+
+12 Eylül 2026 read-only canlı ACL doğrulamasında tüm `admin_*` RPC'leri, `is_admin()` ve `buy_mascot_fruit_v1(text,integer)` için `anon` EXECUTE kapalıdır. Application-facing admin RPC'leri `authenticated`/`service_role` ile sınırlıdır ve server-side admin kontrolü kullanır. Trigger-only `enforce_chat_admin_control_v1()` ve `enforce_new_game_admin_controls_v1()` fonksiyonlarında hem `anon` hem doğrudan `authenticated` EXECUTE kapalıdır; `service_role` erişimi korunur. Bu doğrulama sırasında production'a DDL veya data mutation yapılmamıştır.
+
 ## 4 Eylül 2026 Store/VIP production provenance — #344
 
 PR #243'teki authored migration timestamp'leri production'da kullanılan version timestamp'leri değildir. Aşağıdaki sekiz kayıt doğrudan canlı `supabase_migrations.schema_migrations.statements` gövdelerinden alınmıştır. Snapshot gövde MD5'leri production kaydıyla kontrat testinde birebir doğrulanır.
@@ -93,5 +107,6 @@ Neden:
 - Kelime Kuşatması v8 private board constructor doğrudan authenticated client'a açık değildir.
 - Kelime Kuşatması v9 süresi dolmuş arkadaş davetini kabul etmez; daveti `expired` olarak kapatır.
 - Store satın alma RPC'si yalnız aktif ve mevcut satış penceresindeki ürünleri kabul eder; anon execute kapalıdır.
+- Admin RPC execute yüzeyi anon'a kapalıdır; trigger-only admin enforcement fonksiyonları doğrudan authenticated client'a açık değildir.
 
-Son provenance doğrulama tarihi: 12 Eylül 2026. #344 Store/VIP provenance auditi production'a DDL veya data mutation yapmaz. Aynı gün ayrı #343 işi kapsamında uygulanan `20260912090721_shop_sale_window_purchase_enforcement` ileri migration'ı yukarıda ayrıca kayıtlıdır.
+Son provenance doğrulama tarihi: 12 Eylül 2026. #344 ve #345 provenance auditleri production'a DDL veya data mutation yapmaz. Aynı gün ayrı #343 işi kapsamında uygulanan `20260912090721_shop_sale_window_purchase_enforcement` ileri migration'ı yukarıda ayrıca kayıtlıdır.
