@@ -18,9 +18,12 @@ class AssetIntegrationContractTest {
 
     @Test fun styleStoreUsesOneBackendAndRealFramePreviews() {
         val shop = read("src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt")
+        val preview = read("src/main/java/com/sonharf/game/StoreProductPreview.kt")
         val frames = read("src/main/java/com/sonharf/game/PurchasedStyleUi.kt")
         assertTrue(shop.contains("runCatching { OnlineGameBackend() }.getOrNull()"))
-        assertTrue(shop.contains("PurchasedProfileFrameOverlay(frameId = item.id"))
+        assertTrue(shop.contains("StoreProductPreview("))
+        assertTrue(preview.contains("PurchasedProfileFrameOverlay("))
+        assertTrue(preview.contains("frameId = frameId"))
         assertFalse(shop.contains("PurchasedProfileFramesStoreRow(backend = backend)"))
         assertTrue(shop.contains("if (busy != null || loading) return"))
         assertTrue(frames.contains("PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?)"))
