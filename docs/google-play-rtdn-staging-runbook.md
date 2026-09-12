@@ -2,7 +2,9 @@
 
 Status: **staging-only until Issue #340 acceptance tests pass.**
 
-Do not apply `supabase/staging-migrations/20260912_play_rtdn_refund_hardening.sql` to production and do not deploy the branch RTDN Edge Function to production before the isolated staging gate is complete.
+Do not apply `supabase/staging-migrations/20260912_play_rtdn_refund_hardening.sql` to production and do not deploy the staged RTDN Edge Function to production before the isolated staging gate is complete.
+
+The currently deployed/live-compatible source remains at `supabase/functions/google-play-rtdn/index.ts` and is intentionally kept byte-for-byte aligned with the production v1 source while this hardening is unverified. The candidate OIDC implementation lives at `supabase/staging-functions/google-play-rtdn/index.ts`.
 
 ## Required staging configuration
 
@@ -17,7 +19,7 @@ Configure these Edge Function secrets in the isolated staging project:
 
 `GOOGLE_PLAY_RTDN_SECRET` and `X-Son-Harf-RTDN-Secret` are not part of the hardened authentication contract. Google-signed OIDC identity is the perimeter check.
 
-The Pub/Sub push subscription must be configured for authenticated push using the expected service account and the exact audience above. The Edge Function validates the token signature, audience, `email_verified`, and service-account email before parsing or processing the RTDN payload.
+The Pub/Sub push subscription must be configured for authenticated push using the expected service account and the exact audience above. The staged Edge Function validates the token signature, audience, `email_verified`, and service-account email before parsing or processing the RTDN payload.
 
 ## Staging order
 
@@ -29,7 +31,7 @@ The Pub/Sub push subscription must be configured for authenticated push using th
 3. Apply `supabase/staging-migrations/20260912_play_rtdn_refund_hardening.sql` to staging only.
 4. Confirm `play_purchase_grants` and `play_rtdn_events` are RLS-enabled and executable mutation RPCs are service-role only.
 5. Run `supabase/staging-tests/play_rtdn_refund_hardening.sql`. It must complete without exception and roll back its fixtures.
-6. Deploy the branch version of `supabase/functions/google-play-rtdn/index.ts` to staging.
+6. Deploy `supabase/staging-functions/google-play-rtdn/index.ts` as the staging `google-play-rtdn` function. Do not deploy `supabase/functions/google-play-rtdn/index.ts` as the candidate; that path remains the current production source of truth until promotion.
 7. Point a non-production/test Pub/Sub push subscription at the staging endpoint with authenticated OIDC push.
 8. Verify:
    - wrong/missing bearer token is rejected;
@@ -50,20 +52,21 @@ Only after every staging gate is green:
 
 1. Take a fresh production backup and capture the current function definitions/grants again.
 2. Copy the reviewed staging SQL into a new timestamped executable file under `supabase/migrations/`; do not rename/move it before staging evidence exists.
-3. Merge only the exact staging-tested SQL and Edge Function source.
-4. Apply the migration to production first.
-5. Verify tables, constraints, RLS, grants, function definitions and advisors.
-6. Configure production OIDC environment values and Pub/Sub authenticated push.
-7. Deploy `google-play-rtdn` only after the database RPCs exist.
-8. Send a Google test notification and verify the event ledger records exactly one successful processing row.
-9. Monitor refund/reversal telemetry and `reversal_shortfall` for abnormal activity.
+3. Copy the **exact staging-tested** `supabase/staging-functions/google-play-rtdn/index.ts` body into `supabase/functions/google-play-rtdn/index.ts`. At this point the production-source-parity contract must be deliberately updated in the same reviewed promotion PR because the live function will no longer be v1.
+4. Merge only the exact staging-tested SQL and Edge Function source.
+5. Apply the migration to production first.
+6. Verify tables, constraints, RLS, grants, function definitions and advisors.
+7. Configure production OIDC environment values and Pub/Sub authenticated push.
+8. Deploy `google-play-rtdn` only after the database RPCs exist.
+9. Send a Google test notification and verify the event ledger records exactly one successful processing row.
+10. Monitor refund/reversal telemetry and `reversal_shortfall` for abnormal activity.
 
 ## Rollback
 
 If production RTDN hardening misbehaves:
 
 1. Stop or redirect the Pub/Sub push subscription before changing database reconciliation code.
-2. Roll the Edge Function back to the previously captured version.
+2. Roll the Edge Function back to the previously captured version and restore `supabase/functions/google-play-rtdn/index.ts` to the corresponding audited production source in the follow-up rollback commit.
 3. Restore the captured `apply_verified_play_purchase_v2` / `reconcile_play_entitlement_v1` definitions and their service-role-only grants if required.
 4. Do **not** drop `play_purchase_grants` or `play_rtdn_events` during an incident; they are audit/provenance evidence and their presence is non-destructive.
 5. Do not blindly compensate balances. Reconcile each affected token against the Play purchase record and provenance ledger.
