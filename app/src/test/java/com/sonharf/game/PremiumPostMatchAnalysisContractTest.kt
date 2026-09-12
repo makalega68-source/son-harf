@@ -1,15 +1,15 @@
 package com.sonharf.game
 
 import java.io.File
-import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 class PremiumPostMatchAnalysisContractTest {
-    private val data = File("src/main/java/com/sonharf/game/data/VipMatchAnalysis.kt").readText()
-    private val center = File("src/main/java/com/sonharf/game/PremiumAnalysisCenter.kt").readText()
-    private val profile = File("src/main/java/com/sonharf/game/ProfileExperience.kt").readText()
-    private val migration = File("../supabase/migrations/20260912134500_vip_match_analysis_current_territory.sql").readText()
+    private val data = repoFile("app/src/main/java/com/sonharf/game/data/VipMatchAnalysis.kt").readText()
+    private val center = repoFile("app/src/main/java/com/sonharf/game/PremiumAnalysisCenter.kt").readText()
+    private val profile = repoFile("app/src/main/java/com/sonharf/game/ProfileExperience.kt").readText()
+    private val migration = repoFile("supabase/migrations/20260912134500_vip_match_analysis_current_territory.sql").readText()
 
     @Test
     fun `analysis uses authoritative completed-match RPCs only`() {
@@ -58,4 +58,8 @@ class PremiumPostMatchAnalysisContractTest {
         assertTrue(center.contains("getVipRecentCompletedMatches"))
         assertTrue(center.contains("getVipMatchAnalysis"))
     }
+
+    private fun repoFile(path: String): File = sequenceOf(File(path), File("../$path"))
+        .firstOrNull { it.exists() }
+        ?: error("Missing repository file: $path")
 }
