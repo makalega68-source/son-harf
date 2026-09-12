@@ -34,7 +34,7 @@ fun EconomyShopScreen(
     initialTab: Int = 0,
     onBack: (() -> Unit)? = null,
 ) {
-    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 1)) }
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 2)) }
     Column(Modifier.fillMaxSize().background(SonHarfBg)) {
         if (onBack != null) {
             Row(
@@ -46,18 +46,20 @@ fun EconomyShopScreen(
                 }
                 Column {
                     Text(sh("SON HARF MAĞAZASI", "SON HARF SHOP"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Style • Görünüm • Efektler", "Style • Appearance • Effects"), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(sh("Style • Ödüller • Sezon", "Style • Rewards • Season"), color = SonHarfMuted, fontSize = 9.sp)
                 }
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("STYLE", "STYLE"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
             FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("ÖDÜLLER", "REWARDS"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
+            FilterChip(selected = tab == 2, onClick = { tab = 2 }, label = { Text(sh("SEZON", "SEASON"), fontSize = 10.sp) }, modifier = Modifier.weight(1f))
         }
         Box(Modifier.weight(1f)) {
             when (tab) {
                 0 -> EconomyCatalogScreen()
-                else -> RewardCenterScreen()
+                1 -> RewardCenterScreen()
+                else -> SeasonCenterContent()
             }
         }
     }
