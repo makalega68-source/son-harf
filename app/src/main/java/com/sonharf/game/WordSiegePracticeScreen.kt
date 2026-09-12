@@ -135,7 +135,7 @@ internal fun WordSiegePracticeScreen(
                         )
                     } else {
                         sh(
-                            "Sözlük hazır. İlk hamlede Taç Bölgesi'nden geç.",
+                            "Sözlük hazır. İlk hamlede merkezden geç.",
                             "Dictionary ready. Your first move must cross the Crown Zone.",
                         )
                     }
@@ -185,7 +185,7 @@ internal fun WordSiegePracticeScreen(
             )
         } else {
             sh(
-                "İlk hamle sende. Kelimeni Taç Bölgesi'nden geçir.",
+                "İlk hamle sende. Kelimeni merkezden geçir.",
                 "Your first move is yours. Cross the Crown Zone.",
             )
         }
@@ -307,8 +307,8 @@ internal fun WordSiegePracticeScreen(
                             when {
                                 matchmakingFallback && dictionaryReady -> sh("BOT MAÇI • GERÇEK RAKİP ARANIYOR", "BOT MATCH • FINDING REAL RIVAL")
                                 matchmakingFallback -> sh("BOT MAÇI", "BOT MATCH")
-                                dictionaryLoading -> sh("TAKTİK ALIŞTIRMA • HAZIRLANIYOR", "TACTICAL PRACTICE • PREPARING")
-                                else -> sh("TAKTİK ALIŞTIRMA", "TACTICAL PRACTICE")
+                                dictionaryLoading -> sh("ALIŞTIRMA • HAZIRLANIYOR", "PRACTICE • PREPARING")
+                                else -> sh("ALIŞTIRMA", "PRACTICE")
                             },
                             color = PracticePlayerAccent,
                             fontSize = if (compact) 8.sp else 9.sp,
@@ -371,17 +371,6 @@ internal fun WordSiegePracticeScreen(
                     )
                 }
 
-                PracticeMapControlBar(
-                    playerControl = playerMapControl,
-                    rivalControl = botMapControl,
-                    compact = compact,
-                )
-
-                PracticeStrategicZoneLegend(
-                    compact = compact,
-                    onZoneClick = { zoneInfoCode = it },
-                )
-
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = if (displayedOwner == 1) PracticePlayerAccent else PracticeRivalFill.copy(alpha = .42f),
@@ -403,9 +392,9 @@ internal fun WordSiegePracticeScreen(
                         Text(
                             when {
                                 state.status == "finished" && matchmakingFallback -> sh("BOT MAÇI BİTTİ • RAKİP ARAMASI SÜRÜYOR", "BOT MATCH FINISHED • MATCHMAKING CONTINUES")
-                                state.status == "finished" -> sh("TAKTİK ALIŞTIRMA BİTTİ", "TACTICAL PRACTICE FINISHED")
+                                state.status == "finished" -> sh("ALIŞTIRMA BİTTİ", "PRACTICE FINISHED")
                                 botThinking -> sh("${botProfile.name.uppercase()} HAMLESİNİ HAZIRLIYOR", "${botProfile.name.uppercase()} IS PREPARING A MOVE")
-                                displayedOwner == 1 -> sh("SIRA SENDE • Kelime kur, alanı ele geçir", "YOUR TURN • Build a word, capture territory")
+                                displayedOwner == 1 -> sh("SIRA SENDE • Kelimeni oluştur", "YOUR TURN • Build your word")
                                 else -> sh("${botProfile.name.uppercase()} OYNUYOR", "${botProfile.name.uppercase()} IS PLAYING")
                             },
                             color = if (displayedOwner == 1) Color.White else MainUi.Text,
@@ -442,23 +431,6 @@ internal fun WordSiegePracticeScreen(
                             }
                         },
                     )
-
-                    if (showSiegePulse && latestAreaPoints > 0) {
-                        Surface(
-                            modifier = Modifier.align(Alignment.TopCenter).padding(top = 8.dp),
-                            shape = RoundedCornerShape(99.dp),
-                            color = PracticeSiegeWarm.copy(alpha = .96f),
-                            shadowElevation = 8.dp,
-                        ) {
-                            Text(
-                                sh("KUŞATMA +$latestAreaPoints", "SIEGE +$latestAreaPoints"),
-                                modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
-                                color = Color(0xFF33230E),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                        }
-                    }
 
                     if (tutorialStep >= 0 && !matchmakingFallback) {
                         Box(
@@ -525,7 +497,7 @@ internal fun WordSiegePracticeScreen(
                                 }
                             },
                             enabled = canPlayerAct && placements.isNotEmpty(),
-                            modifier = Modifier.weight(1f).height(34.dp),
+                            modifier = Modifier.weight(1f).height(40.dp),
                             contentPadding = PaddingValues(horizontal = 3.dp),
                         ) {
                             Icon(Icons.Rounded.Undo, null, Modifier.size(13.dp))
@@ -535,7 +507,7 @@ internal fun WordSiegePracticeScreen(
                         OutlinedButton(
                             onClick = { shuffleSeed = if (shuffleSeed == Int.MAX_VALUE) 1 else shuffleSeed + 1 },
                             enabled = canPlayerAct && state.playerRack.length > 1,
-                            modifier = Modifier.weight(1f).height(34.dp),
+                            modifier = Modifier.weight(1f).height(40.dp),
                             contentPadding = PaddingValues(horizontal = 3.dp),
                         ) {
                             Icon(Icons.Rounded.Shuffle, null, Modifier.size(13.dp))
@@ -562,10 +534,15 @@ internal fun WordSiegePracticeScreen(
                         ) {
                             Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = if (compact) 10.sp else 11.sp, fontWeight = FontWeight.Black)
                         }
+                    }
+                    Row(Modifier.fillMaxWidth()) {
                         Button(
                             onClick = ::applyPlayerMove,
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFFE9D9A5), Color(0xFFAF8C45), Color(0xFFF6EAC7)))),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 1.dp),
                             enabled = canPlayerAct && placements.isNotEmpty(),
-                            modifier = Modifier.weight(1.65f).height(if (compact) 40.dp else 45.dp),
+                            modifier = Modifier.weight(1f).height(52.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = PracticePlayerAccent,
                                 contentColor = Color.White,
@@ -574,7 +551,7 @@ internal fun WordSiegePracticeScreen(
                             ),
                             contentPadding = PaddingValues(horizontal = 4.dp),
                         ) {
-                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = if (compact) 10.sp else 11.sp, fontWeight = FontWeight.Black)
+                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 14.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 } else {
@@ -742,94 +719,6 @@ internal fun WordSiegePracticeScreen(
 }
 
 @Composable
-private fun PracticeMapControlBar(
-    playerControl: Int,
-    rivalControl: Int,
-    compact: Boolean,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MainUi.Surface,
-        border = BorderStroke(1.dp, MainUi.Border),
-    ) {
-        Column(
-            Modifier.padding(horizontal = 9.dp, vertical = if (compact) 4.dp else 6.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(sh("HARİTA KONTROLÜ", "MAP CONTROL"), color = MainUi.Text, fontSize = if (compact) 8.sp else 9.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.weight(1f))
-                Text("$playerControl%", color = PracticePlayerAccent, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Text("  •  ", color = MainUi.Muted, fontSize = 8.sp)
-                Text("$rivalControl%", color = PracticeRivalAccent, fontSize = 9.sp, fontWeight = FontWeight.Black)
-            }
-            Box(
-                Modifier.fillMaxWidth().height(if (compact) 5.dp else 6.dp)
-                    .clip(RoundedCornerShape(99.dp))
-                    .background(PracticeNeutralFill),
-            ) {
-                Box(
-                    Modifier.fillMaxHeight()
-                        .fillMaxWidth((playerControl / 100f).coerceIn(0f, 1f))
-                        .align(Alignment.CenterStart)
-                        .background(PracticePlayerFill),
-                )
-                Box(
-                    Modifier.fillMaxHeight()
-                        .fillMaxWidth((rivalControl / 100f).coerceIn(0f, 1f))
-                        .align(Alignment.CenterEnd)
-                        .background(PracticeRivalFill),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PracticeStrategicZoneLegend(
-    compact: Boolean,
-    onZoneClick: (String) -> Unit,
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        listOf(
-            "2H",
-            "3H",
-            "2K",
-            "3K",
-            WordSiegeBoardSpec.CenterBonus,
-            WordSiegeBoardSpec.StarBonus,
-        ).forEach { code ->
-            Surface(
-                modifier = Modifier.weight(1f).clickable { onZoneClick(code) },
-                shape = RoundedCornerShape(99.dp),
-                color = when (code) {
-                    "2H" -> Color(0xFFDCEAF2)
-                    "3H" -> Color(0xFFDDEBDD)
-                    "2K" -> Color(0xFFEAE2F0)
-                    "3K" -> Color(0xFFDED4E8)
-                    WordSiegeBoardSpec.StarBonus -> Color(0xFFEAD59B)
-                    else -> Color(0xFFE7DDBB)
-                },
-            ) {
-                Text(
-                    WordSiegeBoardSpec.displayBonusLabel(code),
-                    modifier = Modifier.padding(vertical = if (compact) 2.dp else 3.dp),
-                    color = Color(0xFF3F554A),
-                    fontSize = if (compact) 7.sp else 8.sp,
-                    fontWeight = FontWeight.Black,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun WordSiegePracticeScoreCard(
     name: String,
     score: Int,
@@ -888,7 +777,7 @@ private fun WordSiegePracticeScoreCard(
                     Text(sh("toplam", "total"), color = MainUi.Muted, fontSize = 7.sp, modifier = Modifier.padding(bottom = 3.dp))
                 }
                 Text(
-                    sh("Kelime $wordPoints • Bölge $territoryPoints • $area hücre", "Word $wordPoints • Territory $territoryPoints • $area cells"),
+                    sh("Kelime $wordPoints • Bölge $territoryPoints", "Word $wordPoints • Territory $territoryPoints"),
                     color = MainUi.Muted,
                     fontSize = if (compact) 7.sp else 8.sp,
                     maxLines = 1,

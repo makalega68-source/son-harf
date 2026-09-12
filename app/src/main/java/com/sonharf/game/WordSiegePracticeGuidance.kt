@@ -31,29 +31,29 @@ internal object WordSiegePracticeTutorialPrefs {
 
 internal fun wordSiegePracticeZoneExplanation(code: String, turkish: Boolean): String = when (code) {
     "2H" -> if (turkish) {
-        "GÖZ • Bu hücreye koyduğun harfin puanını 2 katına çıkarır."
+        "HARF ×2 • Bu hücreye koyduğun harfin puanını 2 katına çıkarır."
     } else {
-        "WATCH • Doubles the letter score placed on this cell."
+        "LETTER ×2 • Doubles the letter score placed on this cell."
     }
     "3H" -> if (turkish) {
-        "KRİT • Bu hücreye koyduğun harfin puanını 3 katına çıkarır."
+        "HARF ×3 • Bu hücreye koyduğun harfin puanını 3 katına çıkarır."
     } else {
-        "CRITICAL • Triples the letter score placed on this cell."
+        "LETTER ×3 • Triples the letter score placed on this cell."
     }
     "2K" -> if (turkish) {
-        "KALE • Bu hücreden geçen kelimenin puanını 2 katına çıkarır."
+        "KELİME ×2 • Bu hücreden geçen kelimenin puanını 2 katına çıkarır."
     } else {
-        "FORT • Doubles the score of the word using this cell."
+        "WORD ×2 • Doubles the score of the word using this cell."
     }
     "3K" -> if (turkish) {
-        "KUŞ • Kuşatma Noktasıdır; bu hücreden geçen kelimenin puanını 3 katına çıkarır."
+        "KELİME ×3 • bu hücreden geçen kelimenin puanını 3 katına çıkarır."
     } else {
-        "SIEGE • Triples the score of the word using this cell."
+        "WORD ×3 • Triples the score of the word using this cell."
     }
     WordSiegeBoardSpec.CenterBonus -> if (turkish) {
-        "TAÇ • İlk kelime bu bölgeden geçmelidir. Buradan geçen kelimenin puanını 4 katına çıkarır."
+        "BAŞLANGIÇ • İlk kelime bu bölgeden geçmelidir. Buradan geçen kelimenin puanını 4 katına çıkarır."
     } else {
-        "CROWN • The first word must cross this zone. It multiplies that word score by 4."
+        "START • The first word must cross this zone. It multiplies that word score by 4."
     }
     WordSiegeBoardSpec.StarBonus -> if (turkish) {
         "ÖDÜL • Bu sürpriz bölge hamlene +${WordSiegeBoardSpec.StarBonusPoints} puan ekler."
@@ -105,13 +105,13 @@ internal fun WordSiegePracticeTutorialCard(
         1 -> if (turkish) "1/4 • BİR HARF SEÇ" else "1/4 • PICK A TILE"
         2 -> if (turkish) "2/4 • TAHTAYA YERLEŞTİR" else "2/4 • PLACE IT"
         3 -> if (turkish) "3/4 • KELİMEYİ TAMAMLA" else "3/4 • COMPLETE THE WORD"
-        else -> if (turkish) "4/4 • ALANI KONTROL ET" else "4/4 • CONTROL TERRITORY"
+        else -> if (turkish) "4/4 • SIRA RAKİBİNDE" else "4/4 • YOUR RIVAL PLAYS"
     }
     val body = when (step) {
         0 -> if (turkish) {
-            "Harflerle kelime kur. Kelimenin geçtiği hücreleri ele geçir. Amaç hem kelime puanı toplamak hem haritada daha fazla alan kontrol etmek."
+            "Harf seç, tahtaya yerleştir ve kelimeni onayla. Sonraki kelimeler tahtadaki harflere yatay veya dikey bağlanır. En yüksek toplam puan kazanır."
         } else {
-            "Build words with tiles. Capture the cells your word crosses. Win through word score and map control together."
+            "Pick tiles, place your word and confirm. Connect later words horizontally or vertically to letters on the board. Highest total score wins."
         }
         1 -> if (turkish) {
             "Alttaki raftan bir harfe dokun. Seçilen harf belirginleşecek."
@@ -119,9 +119,9 @@ internal fun WordSiegePracticeTutorialCard(
             "Tap a tile in the rack below. The selected tile will highlight."
         }
         2 -> if (turkish) {
-            "Şimdi boş bir hücreye dokun. İlk kelimen TAÇ Bölgesi'nden geçmeli."
+            "Şimdi boş bir hücreye dokun. İlk kelimen merkezden geçmeli."
         } else {
-            "Now tap an empty cell. Your first word must cross the CROWN Zone."
+            "Now tap an empty cell. Your first word must cross the center."
         }
         3 -> if (turkish) {
             "Harfleri aynı satır veya sütunda kelime olacak şekilde tamamla; sonra HAMLEYİ ONAYLA."
@@ -129,9 +129,9 @@ internal fun WordSiegePracticeTutorialCard(
             "Complete a word in one row or column, then tap CONFIRM MOVE."
         }
         else -> if (turkish) {
-            "Yeşil hücreler senin bölgen. Her sahip olduğun hücre 2 bölge puanı verir; rakip bu hücreleri geri alabilir. Kelime puanın kalıcıdır. Bölge renklerine dokunarak özel alanları öğrenebilirsin."
+            "Harf bonusu yalnız harfi, kelime bonusu tüm kelimeyi çarpar. +25 ödülü hamlene eklenir. Skordaki bölge puanı mevcut maç kuralıdır: sahip olduğun hücre başına 2 puan; kelime puanı kalıcıdır."
         } else {
-            "Green cells are your territory. Each owned cell gives 2 territory points and can be captured back; your word score stays permanent. Tap zone labels to learn their effects."
+            "Letter bonuses multiply one letter; word bonuses multiply the word. +25 adds to the move. Existing matches also award 2 points per owned cell; word points are permanent."
         }
     }
 

@@ -55,22 +55,22 @@ internal object WordSiegeBoardSpec {
     }
 
     /** Player-facing strategic-map label. Never expose persisted multiplier codes in the UI. */
-    fun displayBonusLabel(bonus: String?): String = when (bonus) {
-        "2H" -> "GÖZ"
-        "3H" -> "KRİT"
-        "2K" -> "KALE"
-        "3K" -> "KUŞ"
-        CenterBonus -> "TAÇ"
-        StarBonus -> "ÖDÜL"
+    fun displayBonusLabel(bonus: String?, turkish: Boolean = true): String = when (bonus) {
+        "2H" -> if (turkish) "Harf\n×2" else "Letter\n×2"
+        "3H" -> if (turkish) "Harf\n×3" else "Letter\n×3"
+        "2K" -> if (turkish) "Kelime\n×2" else "Word\n×2"
+        "3K" -> if (turkish) "Kelime\n×3" else "Word\n×3"
+        CenterBonus -> if (turkish) "Kelime\n×4" else "Word\n×4"
+        StarBonus -> "+25"
         else -> ""
     }
 
     fun bonusLongName(bonus: String?, turkish: Boolean): String = when (bonus) {
-        "2H" -> if (turkish) "Gözetleme Noktası" else "Watch Point"
-        "3H" -> if (turkish) "Kritik Bölge" else "Critical Zone"
-        "2K" -> if (turkish) "Kale" else "Fort"
-        "3K" -> if (turkish) "Kuşatma Noktası" else "Siege Point"
-        CenterBonus -> if (turkish) "Taç Bölgesi" else "Crown Zone"
+        "2H" -> if (turkish) "Harf ×2" else "Letter ×2"
+        "3H" -> if (turkish) "Harf ×3" else "Letter ×3"
+        "2K" -> if (turkish) "Kelime ×2" else "Word ×2"
+        "3K" -> if (turkish) "Kelime ×3" else "Word ×3"
+        CenterBonus -> if (turkish) "Başlangıç • Kelime ×4" else "Start • Word ×4"
         StarBonus -> if (turkish) "Sürpriz Ödül" else "Surprise Reward"
         else -> ""
     }

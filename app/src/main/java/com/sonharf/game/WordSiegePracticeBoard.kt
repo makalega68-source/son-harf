@@ -26,6 +26,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,21 +34,21 @@ import com.sonharf.game.data.WordSiegeCellDto
 import kotlinx.coroutines.delay
 
 private val PracticeSiegeCellSize = 52.dp
-private val PracticeSiegeTile = Color(0xFFF5F0E4)
+private val PracticeSiegeTile = Color(0xFFF4F7F5)
 private val PracticeSiegeTileBorder = Color(0xFF8EA697)
 internal val PracticeSiegeBoardSurface = Color(0xFFE5EAE5)
 internal val PracticeSiegeNeutral = Color(0xFFFAF7EF)
 private val PracticeSiegeEmpty = Color(0xFFFAF7EF)
-private val PracticeSiegeMine = Color(0xFFA8D5B5)
-private val PracticeSiegeRival = Color(0xFFE4AEAA)
-private val PracticeSiegeMineBorder = Color(0xFF3F7C53)
-private val PracticeSiegeRivalBorder = Color(0xFF9B4D4A)
+private val PracticeSiegeMine = Color(0xFFE3EDE5)
+private val PracticeSiegeRival = Color(0xFFE4EDF3)
+private val PracticeSiegeMineBorder = Color(0xFF567A64)
+private val PracticeSiegeRivalBorder = Color(0xFF5C8299)
 private val PracticeSiegeThreat = Color(0xFFD8903D)
 private val PracticeSiegeLightTileText = Color(0xFF17372C)
 private val PracticeZoneWatch = Color(0xFFDCEAF2)
-private val PracticeZoneCritical = Color(0xFFDDEBDD)
+private val PracticeZoneCritical = Color(0xFFDCEAF2)
 private val PracticeZoneFort = Color(0xFFEAE2F0)
-private val PracticeZoneSiege = Color(0xFFDED4E8)
+private val PracticeZoneSiege = Color(0xFFEAE2F0)
 private val PracticeZoneCrown = Color(0xFFE7DDBB)
 private val PracticeZoneReward = Color(0xFFEAD59B)
 private val PracticeLastMove = Color(0xFFE7B95E)
@@ -160,8 +161,10 @@ internal fun WordSiegePracticeBoard(
                 .clip(RoundedCornerShape(14.dp))
                 .clipToBounds()
                 .onGloballyPositioned { viewport = it.size }
-                .pointerInput(mode, viewport, boardPx, closeScale) {
-                    if (mode == WordSiegeBoardViewportMode.CLOSE) {
+                .pointerInput(mode, viewport, boardPx, closeScale, enabled) {
+                    // While the player can place tiles, board cells own single-touch input.
+                    // This prevents the parent transform detector from swallowing taps.
+                    if (mode == WordSiegeBoardViewportMode.CLOSE && !enabled) {
                         detectTransformGestures { centroid, pan, zoom, _ ->
                             val oldScale = closeScale
                             val newScale = (oldScale * zoom).coerceIn(WORD_SIEGE_PRACTICE_MIN_SCALE, WORD_SIEGE_PRACTICE_MAX_SCALE)
@@ -203,7 +206,7 @@ internal fun WordSiegePracticeBoard(
                                 pending = pendingRackIndex != null,
                                 myOwner = myOwner,
                                 enabled = enabled,
-                                threatened = practiceCellThreatened(board, index, cell.owner),
+                                threatened = false,
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
                                 showDefinitionBadge = resolvedWord?.badgeIndex == index,
                                 onDefinitionClick = { resolvedWord?.word?.let { definitionWord = it } },
@@ -269,7 +272,7 @@ private fun WordSiegePracticeBoardCell(
     // Territory is the primary visual layer. Strategic-zone tint is only dominant on neutral cells.
     val cellColor = when {
         pending -> PracticeSiegeTile
-        owner != 0 -> territory
+        letter != null -> territory
         zoneSurface != null -> zoneSurface
         else -> PracticeSiegeEmpty
     }
@@ -282,14 +285,14 @@ private fun WordSiegePracticeBoardCell(
         activeZone != null -> MainUi.Border.copy(alpha = .8f)
         else -> MainUi.Border.copy(alpha = .45f)
     }
-    val regionGap = if (owner != 0) .45.dp else 1.15.dp
+    val regionGap = 1.25.dp
 
     Box(
         Modifier
             .size(PracticeSiegeCellSize)
             .padding(regionGap)
-            .clip(RoundedCornerShape(if (owner != 0) 6.dp else 8.dp))
-            .background(cellColor)
+            .clip(RoundedCornerShape(8.dp))
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White.copy(alpha = .9f), cellColor)))
             .border(
                 width = when {
                     lastMoveHighlight > 0f -> 1.7.dp
@@ -299,7 +302,7 @@ private fun WordSiegePracticeBoardCell(
                 color = if (lastMoveHighlight > 0f) {
                     PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
                 } else borderColor,
-                shape = RoundedCornerShape(if (owner != 0) 6.dp else 8.dp),
+                shape = RoundedCornerShape(8.dp),
             )
             .combinedClickable(
                 onClick = {
@@ -360,7 +363,15 @@ private fun WordSiegePracticeBoardCell(
             }
         } else if (activeZone != null) {
             Text(
-                WordSiegeBoardSpec.displayBonusLabel(activeZone),
+                androidx.compose.ui.text.buildAnnotatedString {
+                    val label = WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)
+                    val parts = label.split("\n")
+                    if (parts.size > 1) {
+                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 10.sp)) { append(parts.first()) }
+                        append("\n")
+                        append(parts.last())
+                    } else append(label)
+                },
                 color = when {
                     owner == myOwner -> PracticeSiegeMineBorder
                     owner != 0 -> PracticeSiegeRivalBorder
@@ -369,6 +380,8 @@ private fun WordSiegePracticeBoardCell(
                     else -> Color(0xFF52675C)
                 },
                 fontSize = WordSiegeBoardAccessibility.BoardBonus,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                lineHeight = 18.sp,
                 fontWeight = FontWeight.Black,
             )
         }
@@ -393,7 +406,7 @@ internal fun WordSiegePracticeRackTile(
         },
         shape = RoundedCornerShape(11.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PracticeSiegeMineBorder else PracticeSiegeTileBorder.copy(alpha = .7f)),
-        shadowElevation = if (selected) 3.dp else 0.dp,
+        shadowElevation = if (selected) 4.dp else 2.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
