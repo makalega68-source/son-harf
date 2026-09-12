@@ -12,6 +12,9 @@ class LiveSupabaseMigrationLedgerContractTest {
     fun `live migration provenance stays documented without replaying superseded migrations`() {
         val ledger = repoFile("docs/LIVE_SUPABASE_MIGRATION_LEDGER.md").readText()
         listOf(
+            "20260831161225",
+            "20260831161544",
+            "20260831161852",
             "20260904083102",
             "20260904083134",
             "20260904083238",
@@ -36,6 +39,14 @@ class LiveSupabaseMigrationLedgerContractTest {
         ).forEach { version -> assertTrue("Missing live migration version $version", ledger.contains(version)) }
 
         assertFalse(repoFileExists("supabase/migrations/20260906190500_core_duel_server_authoritative_bot_rpc.sql"))
+
+        listOf(
+            "20260831163500_admin_security_hardening_v3.sql",
+            "20260831165000_owner_son_coin_purchase_fix.sql",
+            "20260831171500_admin_rpc_execute_hardening_v1.sql",
+        ).forEach { staleName ->
+            assertFalse("Stale #191 migration must stay non-executable: $staleName", repoFileExists("supabase/migrations/$staleName"))
+        }
 
         listOf(
             "20260904090000_store_vip_production_hardening.sql",
@@ -81,7 +92,10 @@ class LiveSupabaseMigrationLedgerContractTest {
             "docs/live-supabase-history/20260907200345_fix_midmatch_quiz_longword_steal.sql",
         ).forEach { path -> assertAuditOnlySnapshot(path) }
 
-        val storeVipSnapshots = mapOf(
+        val exactLiveSnapshots = mapOf(
+            "docs/live-supabase-history/20260831161225_admin_security_hardening_v3.sql" to "4e4936c026dc0b44fa50c8c95543a4a9",
+            "docs/live-supabase-history/20260831161544_owner_son_coin_purchase_fix.sql" to "de99c49d4495bce975af9d58f6eff0cc",
+            "docs/live-supabase-history/20260831161852_admin_rpc_execute_hardening_v1.sql" to "cb0a0dc7bba55554e7b9284bed760aad",
             "docs/live-supabase-history/20260904083102_store_vip_production_hardening.sql" to "90a87a9481c9313b9cc3760b71fba46f",
             "docs/live-supabase-history/20260904083238_reward_center_v8.sql" to "435312e09b3ef3c193f11453aec886e4",
             "docs/live-supabase-history/20260904083258_style_trial_direct.sql" to "85a400fd59d26323ffacc7f31c212395",
@@ -91,12 +105,30 @@ class LiveSupabaseMigrationLedgerContractTest {
             "docs/live-supabase-history/20260904083620_season_store_tracks.sql" to "7b32bf574b9f835001bfcbf8a9c812fa",
             "docs/live-supabase-history/20260904083637_season_style_equip_hardening.sql" to "ecc32b097486e24a34b46ce927fd872c",
         )
-        storeVipSnapshots.forEach { (path, expectedMd5) ->
+        exactLiveSnapshots.forEach { (path, expectedMd5) ->
             val snapshot = assertAuditOnlySnapshot(path)
             assertTrue("Snapshot must declare its live MD5: $path", snapshot.contains("Live statement MD5: $expectedMd5"))
             val sqlBody = snapshot.substringAfter("\n\n")
             assertEquals("Live statement body drifted: $path", expectedMd5, md5(sqlBody))
         }
+
+        val adminHardening = repoFile("docs/live-supabase-history/20260831161225_admin_security_hardening_v3.sql").readText()
+        assertTrue(adminHardening.contains("revoke all on function public.is_admin() from public, anon"))
+        assertTrue(adminHardening.contains("revoke all on function public.admin_access_v1() from public, anon"))
+        assertTrue(adminHardening.contains("revoke all on function public.enforce_chat_admin_control_v1() from public, anon, authenticated"))
+        assertTrue(adminHardening.contains("p_turn_duration_hours integer default 12"))
+        assertTrue(ledger.contains("güncel Kelime Tahtı matchmaking/lifecycle source-of-truth değildir"))
+
+        val ownerPurchaseFix = repoFile("docs/live-supabase-history/20260831161544_owner_son_coin_purchase_fix.sql").readText()
+        assertTrue(ownerPurchaseFix.contains("unlimited_son_coin"))
+        assertTrue(ownerPurchaseFix.contains("revoke all on function public.buy_mascot_fruit_v1(text,integer) from public, anon"))
+
+        val adminExecuteHardening = repoFile("docs/live-supabase-history/20260831161852_admin_rpc_execute_hardening_v1.sql").readText()
+        assertTrue(adminExecuteHardening.contains("revoke all on function public.admin_dashboard_v1() from public, anon"))
+        assertTrue(adminExecuteHardening.contains("revoke all on function public.is_admin() from public, anon"))
+        assertTrue(adminExecuteHardening.contains("revoke all on function public.enforce_new_game_admin_controls_v1() from public, anon, authenticated"))
+        assertTrue(adminExecuteHardening.contains("revoke all on function public.enforce_chat_admin_control_v1() from public, anon, authenticated"))
+        assertTrue(adminExecuteHardening.contains("grant execute on function public.admin_dashboard_v1() to authenticated, service_role"))
     }
 
     private fun assertAuditOnlySnapshot(path: String): String {
