@@ -11,13 +11,14 @@ class GameModeBrandingAndVisibleActionContractTest {
         val home = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
         val brand = projectFile("app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val localization = projectFile("app/src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
-        val siegeRaster = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.webp")
+        val siegeRaster = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.png")
 
         assertTrue(home.contains("SonHarfOfficialLogo("))
         assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
         assertTrue(brand.contains("R.drawable.kelime_tahti_logo_latest"))
         assertTrue(siegeRaster.isFile)
-        assertTrue(isWebp(siegeRaster))
+        assertTrue(isPng(siegeRaster))
+        assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.webp")?.exists() == true)
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")?.exists() == true)
         assertTrue(localization.contains("KELİME TAHTI"))
         assertTrue(localization.contains("WORD THRONE"))
@@ -57,11 +58,10 @@ class GameModeBrandingAndVisibleActionContractTest {
         assertFalse(vfx.contains("infiniteRepeatable"))
     }
 
-    private fun isWebp(file: File): Boolean {
+    private fun isPng(file: File): Boolean {
         val bytes = file.readBytes()
-        return bytes.size >= 12 &&
-            bytes.copyOfRange(0, 4).toString(Charsets.US_ASCII) == "RIFF" &&
-            bytes.copyOfRange(8, 12).toString(Charsets.US_ASCII) == "WEBP"
+        val signature = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+        return bytes.size >= 8 && bytes.copyOfRange(0, 8).contentEquals(signature)
     }
 
     private fun projectFile(path: String): File =
