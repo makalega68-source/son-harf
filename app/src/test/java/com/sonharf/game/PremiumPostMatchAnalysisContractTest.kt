@@ -8,7 +8,6 @@ import kotlin.test.assertTrue
 class PremiumPostMatchAnalysisContractTest {
     private val data = File("src/main/java/com/sonharf/game/data/VipMatchAnalysis.kt").readText()
     private val center = File("src/main/java/com/sonharf/game/PremiumAnalysisCenter.kt").readText()
-    private val entry = File("src/main/java/com/sonharf/game/PremiumPostMatchAnalysis.kt").readText()
     private val profile = File("src/main/java/com/sonharf/game/ProfileExperience.kt").readText()
     private val migration = File("../supabase/migrations/20260912134500_vip_match_analysis_current_territory.sql").readText()
 
@@ -35,12 +34,13 @@ class PremiumPostMatchAnalysisContractTest {
 
     @Test
     fun `premium analysis cannot become a live tactical assist`() {
-        assertTrue(entry.contains("if (!terminal) return"))
         assertTrue(center.contains("Completed matches only"))
         assertTrue(center.contains("no word suggestions"))
         assertTrue(center.contains("territory preview"))
         assertTrue(center.contains("extra time"))
         assertTrue(center.contains("rating"))
+        assertTrue(migration.contains("get_vip_recent_completed_matches_v1"))
+        assertFalse(migration.contains("status = 'playing'"))
         assertFalse(center.contains("recommendedMove"))
         assertFalse(center.contains("suggestedWord"))
         assertFalse(center.contains("livePreview"))
