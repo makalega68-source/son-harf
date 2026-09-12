@@ -38,10 +38,10 @@ private val PracticeSiegeTileBorder = Color(0xFF8EA697)
 internal val PracticeSiegeBoardSurface = Color(0xFFE5EAE5)
 internal val PracticeSiegeNeutral = Color(0xFFFAF7EF)
 private val PracticeSiegeEmpty = Color(0xFFFAF7EF)
-private val PracticeSiegeMine = Color(0xFFA8C7B1)
-private val PracticeSiegeRival = Color(0xFFAFCDE0)
-private val PracticeSiegeMineBorder = Color(0xFF567A64)
-private val PracticeSiegeRivalBorder = Color(0xFF5C8299)
+private val PracticeSiegeMine = Color(0xFFA8D5B5)
+private val PracticeSiegeRival = Color(0xFFE4AEAA)
+private val PracticeSiegeMineBorder = Color(0xFF3F7C53)
+private val PracticeSiegeRivalBorder = Color(0xFF9B4D4A)
 private val PracticeSiegeThreat = Color(0xFFD8903D)
 private val PracticeSiegeLightTileText = Color(0xFF17372C)
 private val PracticeZoneWatch = Color(0xFFDCEAF2)
@@ -160,10 +160,8 @@ internal fun WordSiegePracticeBoard(
                 .clip(RoundedCornerShape(14.dp))
                 .clipToBounds()
                 .onGloballyPositioned { viewport = it.size }
-                .pointerInput(mode, viewport, boardPx, closeScale, enabled) {
-                    // While the player can place tiles, board cells own single-touch input.
-                    // This prevents the parent transform detector from swallowing taps.
-                    if (mode == WordSiegeBoardViewportMode.CLOSE && !enabled) {
+                .pointerInput(mode, viewport, boardPx, closeScale) {
+                    if (mode == WordSiegeBoardViewportMode.CLOSE) {
                         detectTransformGestures { centroid, pan, zoom, _ ->
                             val oldScale = closeScale
                             val newScale = (oldScale * zoom).coerceIn(WORD_SIEGE_PRACTICE_MIN_SCALE, WORD_SIEGE_PRACTICE_MAX_SCALE)
