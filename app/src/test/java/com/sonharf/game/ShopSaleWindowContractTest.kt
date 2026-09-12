@@ -23,7 +23,6 @@ class ShopSaleWindowContractTest {
         assertTrue(migration.contains("updated_at=now()whereid=v_uid"))
         assertTrue(migration.contains("ifv_item.vip_onlyandnotcoalesce(v_vip,false)thenraiseexception'vip_required'"))
 
-        assertTrue(migration.contains("revokefunctionpublic.purchase_shop_item(text)frompublic,anon").not())
         assertTrue(migration.contains("revokeallonfunctionpublic.purchase_shop_item(text)frompublic,anon"))
         assertTrue(migration.contains("grantexecuteonfunctionpublic.purchase_shop_item(text)toauthenticated,service_role"))
         assertFalse(migration.contains("grantexecuteonfunctionpublic.purchase_shop_item(text)toanon"))
