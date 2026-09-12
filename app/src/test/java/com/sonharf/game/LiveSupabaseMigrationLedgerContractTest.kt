@@ -108,7 +108,7 @@ class LiveSupabaseMigrationLedgerContractTest {
 
     private fun md5(value: String): String = MessageDigest.getInstance("MD5")
         .digest(value.toByteArray(Charsets.UTF_8))
-        .joinToString("") { "%02x".format(it) }
+        .joinToString("") { "%02x".format(it.toInt() and 0xff) }
 
     private fun repoFile(path: String): File = sequenceOf(File(path), File("../$path"))
         .firstOrNull { it.exists() }
