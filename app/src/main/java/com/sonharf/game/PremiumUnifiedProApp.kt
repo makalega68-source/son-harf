@@ -11,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -98,6 +97,15 @@ private fun PremiumHomeScreen(backend:OnlineGameBackend,onPlay:()->Unit,onSiege:
     }
 }
 
-@Composable private fun PremiumSecondaryMode(title:String,subtitle:String,modifier:Modifier,onClick:()->Unit) { Surface(modifier.height(88.dp),onClick=onClick,shape=RoundedCornerShape(20.dp),color=SonHarfTheme.Surface.copy(alpha=.96f),border=BorderStroke(1.dp,SonHarfTheme.Border)) { Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.Center) { Text(title,color=SonHarfTheme.TextPrimary,fontWeight=FontWeight.Black,fontSize=11.sp); Spacer(Modifier.height(5.dp)); Text(subtitle,color=SonHarfTheme.TextSecondary,fontSize=8.dp.value.sp) } } }
+@Composable
+private fun PremiumSecondaryMode(title:String,subtitle:String,modifier:Modifier,onClick:()->Unit) {
+    Surface(onClick=onClick,modifier=modifier.height(88.dp),shape=RoundedCornerShape(20.dp),color=SonHarfTheme.Surface.copy(alpha=.96f),border=BorderStroke(1.dp,SonHarfTheme.Border)) {
+        Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.Center) {
+            Text(title,color=SonHarfTheme.TextPrimary,fontWeight=FontWeight.Black,fontSize=11.sp)
+            Spacer(Modifier.height(5.dp))
+            Text(subtitle,color=SonHarfTheme.TextSecondary,fontSize=8.sp)
+        }
+    }
+}
 
 @Composable private fun PremiumBottomBar(destination:PremiumDestination,onHome:()->Unit,onLeague:()->Unit,onSocial:()->Unit,onShop:()->Unit,onProfile:()->Unit) { NavigationBar(containerColor=SonHarfTheme.NavigationSurface,tonalElevation=0.dp) { listOf(Triple(PremiumDestination.HOME,Icons.Rounded.Home,sh("ANA","HOME")) to onHome,Triple(PremiumDestination.LEAGUE,Icons.Rounded.EmojiEvents,sh("LİG","LEAGUE")) to onLeague,Triple(PremiumDestination.SOCIAL,Icons.Rounded.Groups,sh("SOSYAL","SOCIAL")) to onSocial,Triple(PremiumDestination.SHOP,Icons.Rounded.Storefront,sh("MAĞAZA","SHOP")) to onShop,Triple(PremiumDestination.PROFILE,Icons.Rounded.Person,sh("PROFİL","PROFILE")) to onProfile).forEach { pair -> val item=pair.first; NavigationBarItem(selected=destination==item.first,onClick=pair.second,icon={Icon(item.second,null)},label={Text(item.third,fontSize=8.sp,fontWeight=if(destination==item.first) FontWeight.Bold else FontWeight.Normal)},colors=NavigationBarItemDefaults.colors(selectedIconColor=SonHarfTheme.Primary,selectedTextColor=SonHarfTheme.Primary,indicatorColor=SonHarfTheme.Primary.copy(alpha=.12f),unselectedIconColor=SonHarfTheme.TextSecondary,unselectedTextColor=SonHarfTheme.TextSecondary)) } } }
