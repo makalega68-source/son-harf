@@ -8,13 +8,16 @@ import org.junit.Test
 class ShopButtonStateContractTest {
 
     @Test
-    fun onlyBusyShopItemLooksBusy() {
+    fun shopSerializesPurchaseActionsAndKeepsRealOwnershipStateVisible() {
         val source = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
 
-        assertTrue(source.contains("val anotherItemBusy = busy != null && busy != item.id"))
-        assertTrue(source.contains("disabledContainerColor = if (anotherItemBusy) buttonContainer"))
-        assertTrue(source.contains("busy == item.id ->"))
-        assertTrue(source.contains("enabled = busy == null"))
+        assertTrue(source.contains("var busy by remember { mutableStateOf<String?>(null) }"))
+        assertTrue(source.contains("if (b == null || busy != null) return@VerifiedStoreProductCard"))
+        assertTrue(source.contains("busy = item.id"))
+        assertTrue(source.contains("busy = null"))
+        assertTrue(source.contains("enabled = !busy && !equipped && !lockedByPro"))
+        assertTrue(source.contains("equipped -> sh(\"AKTİF\", \"ACTIVE\")"))
+        assertTrue(source.contains("owned -> sh(\"SAHİPSİN\", \"OWNED\")"))
     }
 
     private fun projectFile(path: String): File {

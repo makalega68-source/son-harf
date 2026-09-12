@@ -39,8 +39,8 @@ class UnifiedProBoosterContractTest {
         assertTrue(entitlements.contains("rankedLiveAssist: Boolean = false"))
 
         // Store messaging must describe only fair PRO value, never a paid ranked advantage.
-        assertTrue(shop.contains("Dereceli Premier maçlarında satın alınabilir oyun gücü yoktur"))
-        assertTrue(shop.contains("Adil rekabet: PRO"))
+        assertTrue(shop.contains("Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz."))
+        assertTrue(shop.contains("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez."))
         assertFalse(shop.contains("günlük İpucu, Harf Değiştirici ve 2x Skor"))
         assertFalse(shop.contains("daily Hint, Letter Swap and 2x Score"))
         assertFalse(shop.contains("helper boosters with PRO"))
