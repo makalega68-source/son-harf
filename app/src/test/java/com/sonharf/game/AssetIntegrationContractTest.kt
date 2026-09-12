@@ -89,26 +89,24 @@ class AssetIntegrationContractTest {
         assertFalse(practice.contains("wordSiegeBoardBorderWidthDp(transform.scale)"))
     }
 
-    @Test fun onlineAndPracticeSiegeUseGreenOwnRedRivalTerritoryPalette() {
+    @Test fun onlineAndPracticeSiegeUseTheTerritoryFirstCalmPalette() {
         val online = read("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
         listOf(
             "0xFF8EA697", "0xFFA8D5B5", "0xFFE4AEAA", "0xFF3F7C53", "0xFF9B4D4A",
-            "0xFFDCEAF2", "0xFFDDEBDD", "0xFFEAE2F0", "0xFFDED4E8", "0xFFE7DDBB", "0xFFEAD59B",
+            "0xFFDCEAF2", "0xFFDCEAF2", "0xFFEAE2F0", "0xFFEAE2F0", "0xFFE7DDBB", "0xFFEAD59B",
         ).forEach { assertTrue(online.contains(it)) }
         assertTrue(online.contains("border.copy(alpha = .92f)"))
-        assertTrue(online.contains("val regionGap = if (letter != null && owner != 0) .55.dp else 1.25.dp"))
+        assertTrue(online.contains("val regionGap = 1.25.dp"))
 
         assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFE5EAE5)"))
         assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFFAF7EF)"))
         assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFFAF7EF)"))
         assertTrue(practice.contains("PracticeSiegeMine = Color(0xFFA8D5B5)"))
         assertTrue(practice.contains("PracticeSiegeRival = Color(0xFFE4AEAA)"))
-        assertTrue(practice.contains("PracticeSiegeMineBorder = Color(0xFF3F7C53)"))
-        assertTrue(practice.contains("PracticeSiegeRivalBorder = Color(0xFF9B4D4A)"))
         assertTrue(practice.contains("PracticeSiegeThreat = Color(0xFFD8903D)"))
-        assertTrue(practice.contains("val regionGap = if (owner != 0) .45.dp else 1.15.dp"))
+        assertTrue(practice.contains("val regionGap = 1.25.dp"))
         assertTrue(practice.contains(".padding(regionGap)"))
         val cellStart = practice.indexOf("private fun WordSiegePracticeBoardCell")
         val rackStart = practice.indexOf("internal fun WordSiegePracticeRackTile")

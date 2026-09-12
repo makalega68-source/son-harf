@@ -165,8 +165,6 @@ class WordSiegeFinalRulesTest {
         assertTrue(experience.contains("WordSiegeFinalRules.detectOrientation"))
         assertTrue(pan.contains("0xFFA8D5B5"))
         assertTrue(pan.contains("0xFFE4AEAA"))
-        assertTrue(pan.contains("0xFF3F7C53"))
-        assertTrue(pan.contains("0xFF9B4D4A"))
         assertTrue(experience.contains("0xFF35C878"))
         assertTrue(experience.contains("0xFFFF5F57"))
         assertTrue(practice.contains("animateIntAsState"))
