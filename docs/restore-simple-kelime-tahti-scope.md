@@ -1,0 +1,1 @@
+Scope is intentionally limited to Kelime Tahtı game presentation, ownership colors, board panning regression protection, and existing verified branding. No gameplay-rule or backend-authority changes are introduced.
