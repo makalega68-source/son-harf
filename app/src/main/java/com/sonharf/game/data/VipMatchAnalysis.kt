@@ -8,6 +8,14 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 @Serializable
+data class VipRecentCompletedMatchDto(
+    @SerialName("match_id") val matchId: String,
+    val mode: String,
+    @SerialName("completed_at") val completedAt: String? = null,
+    @SerialName("opponent_id") val opponentId: String? = null,
+)
+
+@Serializable
 data class VipMatchAnalysisDto(
     @SerialName("match_id") val matchId: String,
     val mode: String,
@@ -27,6 +35,12 @@ data class VipMatchAnalysisDto(
     @SerialName("turning_point") val turningPoint: JsonObject = JsonObject(emptyMap()),
     @SerialName("score_breakdown") val scoreBreakdown: JsonObject = JsonObject(emptyMap()),
 )
+
+suspend fun OnlineGameBackend.getVipRecentCompletedMatches(limit: Int = 12): List<VipRecentCompletedMatchDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "get_vip_recent_completed_matches_v1",
+        buildJsonObject { put("p_limit", limit.coerceIn(1, 30)) },
+    ).decodeAs()
 
 suspend fun OnlineGameBackend.getVipMatchAnalysis(matchId: String, mode: String): VipMatchAnalysisDto =
     SupabaseProvider.client.postgrest.rpc(
