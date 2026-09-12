@@ -15,7 +15,7 @@ class KelimeTahtiDifferentiationContractTest {
     }
 
     @Test
-    fun practiceSurfaceShowsTerritoryBattleIdentity() {
+    fun practiceSurfaceShowsSimplifiedWordBoardIdentity() {
         val screen = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         val board = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt").readText()
 
@@ -23,8 +23,10 @@ class KelimeTahtiDifferentiationContractTest {
         assertTrue(screen.contains("HAMLEYİ ONAYLA"))
         assertFalse(screen.contains("KUŞATMA +"))
         assertTrue(screen.contains("Kelime ${'$'}wordPoints • Bölge ${'$'}territoryPoints"))
-        assertTrue(screen.contains("PracticePlayerAccent = Color(0xFF3F7C53)"))
-        assertTrue(screen.contains("PracticeRivalAccent = Color(0xFF9B4D4A)"))
+        assertTrue(screen.contains("PracticePlayerAccent = Color(0xFF567A64)"))
+        assertTrue(screen.contains("PracticeRivalAccent = Color(0xFF5C8299)"))
+        assertTrue(board.contains("PracticeSiegeMine = Color(0xFFA8D5B5)"))
+        assertTrue(board.contains("PracticeSiegeRival = Color(0xFFE4AEAA)"))
         assertTrue(board.contains("practiceCellThreatened"))
         assertTrue(board.contains("val regionGap = 1.25.dp"))
         assertTrue(board.contains("WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)"))
