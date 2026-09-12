@@ -7,7 +7,7 @@ insert into public.profiles(id,display_name,diamonds)
 values ('00000000-0000-4000-8000-000000000340'::uuid,'RTDN Staging Fixture',0);
 
 insert into public.shop_items(id,kind,name_tr,name_en,diamond_price,active)
-values ('__rtdn_style_fixture__','style','RTDN Test Stil','RTDN Test Style',0,false);
+values ('__rtdn_style_fixture__','game_theme','RTDN Test Stil','RTDN Test Style',0,false);
 
 insert into public.store_product_grants(product_id,grant_type,grant_key,amount)
 values ('__rtdn_style_pack__','style','__rtdn_style_fixture__',0);
@@ -22,6 +22,8 @@ declare
   v_shortfall integer;
   v_claim boolean;
   v_status text;
+  v_purchase_status text;
+  v_entitlement_status text;
 begin
   -- Same purchase token must never double-grant coin.
   v_json := public.apply_verified_play_purchase_v2(
@@ -51,6 +53,9 @@ begin
   );
   select diamonds into v_balance from public.profiles where id=v_uid;
   if v_balance <> 0 then raise exception 'coin_refund_negative_or_nonzero:%',v_balance; end if;
+
+  select status into v_purchase_status from public.purchases where purchase_token='staging-coin-token-340';
+  if v_purchase_status <> 'refunded' then raise exception 'coin_purchase_not_refunded:%',v_purchase_status; end if;
 
   select reversed_amount,reversal_shortfall into v_reversed,v_shortfall
   from public.play_purchase_grants
@@ -112,30 +117,44 @@ begin
   v_claim := public.claim_play_rtdn_event_v2('staging-msg-340','voided_purchase','staging-coin-token-340',null,now());
   if v_claim is not false then raise exception 'completed_rtdn_event_not_deduped'; end if;
 
-  -- Subscription behavior must remain delegated to v1 for active/grace/canceled/expired/revoked.
+  -- Subscription behavior remains routed through v1, but each table uses its own allowed status
+  -- vocabulary: purchases verified/refunded, store entitlement lifecycle, legacy subscription status.
   perform public.apply_verified_play_purchase_v2(
     v_uid,'vip_monthly','staging-vip-token-340','GPA.staging.vip',now()+interval '2 days',
     'SUBSCRIPTION_STATE_ACTIVE','ACKNOWLEDGED'
   );
   if not (select is_vip from public.profiles where id=v_uid) then raise exception 'vip_active_regression'; end if;
+  select status into v_purchase_status from public.purchases where purchase_token='staging-vip-token-340';
+  if v_purchase_status <> 'verified' then raise exception 'vip_purchase_status_active:%',v_purchase_status; end if;
 
   perform public.reconcile_play_entitlement_v2(
     'staging-vip-token-340','SUBSCRIPTION_STATE_IN_GRACE_PERIOD',now()+interval '2 days',false
   );
   select status into v_status from public.subscriptions where user_id=v_uid;
-  if v_status <> 'grace' or not (select is_vip from public.profiles where id=v_uid) then raise exception 'vip_grace_regression'; end if;
+  select status into v_entitlement_status from public.store_entitlements
+    where user_id=v_uid and entitlement_key='vip' and source_type='play' and source_id='staging-vip-token-340';
+  if v_status <> 'grace' or v_entitlement_status <> 'grace' or not (select is_vip from public.profiles where id=v_uid) then
+    raise exception 'vip_grace_regression:%/%',v_status,v_entitlement_status;
+  end if;
 
   perform public.reconcile_play_entitlement_v2(
     'staging-vip-token-340','SUBSCRIPTION_STATE_CANCELED',now()+interval '1 day',false
   );
   select status into v_status from public.subscriptions where user_id=v_uid;
-  if v_status <> 'canceled' or not (select is_vip from public.profiles where id=v_uid) then raise exception 'vip_canceled_regression'; end if;
+  select status into v_entitlement_status from public.store_entitlements
+    where user_id=v_uid and entitlement_key='vip' and source_type='play' and source_id='staging-vip-token-340';
+  if v_status <> 'cancelled' or v_entitlement_status <> 'canceled' or not (select is_vip from public.profiles where id=v_uid) then
+    raise exception 'vip_canceled_regression:%/%',v_status,v_entitlement_status;
+  end if;
 
   perform public.reconcile_play_entitlement_v2(
     'staging-vip-token-340','SUBSCRIPTION_STATE_EXPIRED',now()-interval '1 minute',false
   );
   select status into v_status from public.subscriptions where user_id=v_uid;
-  if v_status <> 'expired' or (select is_vip from public.profiles where id=v_uid) then raise exception 'vip_expired_regression'; end if;
+  select status into v_purchase_status from public.purchases where purchase_token='staging-vip-token-340';
+  if v_status <> 'expired' or v_purchase_status <> 'verified' or (select is_vip from public.profiles where id=v_uid) then
+    raise exception 'vip_expired_regression:%/%',v_status,v_purchase_status;
+  end if;
 
   perform public.apply_verified_play_purchase_v2(
     v_uid,'vip_monthly','staging-vip-token-340','GPA.staging.vip',now()+interval '2 days',
@@ -145,7 +164,13 @@ begin
     'staging-vip-token-340','SUBSCRIPTION_STATE_ACTIVE',now()+interval '2 days',true
   );
   select status into v_status from public.subscriptions where user_id=v_uid;
-  if v_status <> 'revoked' or (select is_vip from public.profiles where id=v_uid) then raise exception 'vip_revoke_regression'; end if;
+  select status into v_entitlement_status from public.store_entitlements
+    where user_id=v_uid and entitlement_key='vip' and source_type='play' and source_id='staging-vip-token-340';
+  select status into v_purchase_status from public.purchases where purchase_token='staging-vip-token-340';
+  if v_status <> 'inactive' or v_entitlement_status <> 'revoked' or v_purchase_status <> 'refunded'
+     or (select is_vip from public.profiles where id=v_uid) then
+    raise exception 'vip_revoke_regression:%/%/%',v_status,v_entitlement_status,v_purchase_status;
+  end if;
 end
 $$;
 
