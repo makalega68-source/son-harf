@@ -24,9 +24,14 @@ class PremiumPostMatchAnalysisContractTest {
     }
 
     @Test
-    fun `kelime tahtı score uses current owned cells times two`() {
-        assertTrue(migration.contains("coalesce(array_length(r.player_one_area,1),0)*2"))
-        assertTrue(migration.contains("coalesce(array_length(r.player_two_area,1),0)*2"))
+    fun `kelime tahtı score reconstructs current owned cells from capture deltas`() {
+        assertTrue(migration.contains("from public.word_siege_moves m where m.game_id=r.id"))
+        assertTrue(migration.contains("coalesce(m.neutral_captured,0)+coalesce(m.opponent_captured,0)"))
+        assertTrue(migration.contains("-coalesce(m.opponent_captured,0)"))
+        assertTrue(migration.contains("greatest(0,coalesce"))
+        assertTrue(migration.contains(")*2 end my_area_score"))
+        assertTrue(migration.contains(")*2 end opp_area_score"))
+        assertFalse(migration.contains("array_length(r.player_one_area"))
         assertTrue(migration.contains("get_vip_match_analysis_v1_source_drift"))
         assertTrue(migration.contains("revoke all on function public.get_vip_match_analysis_v1(uuid,text) from public, anon"))
         assertTrue(migration.contains("grant execute on function public.get_vip_match_analysis_v1(uuid,text) to authenticated"))
