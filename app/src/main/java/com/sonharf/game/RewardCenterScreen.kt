@@ -30,7 +30,10 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 fun ShopHubScreen() {
     var tab by remember { mutableStateOf(0) }
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("MAĞAZA", "SHOP")) }, modifier = Modifier.weight(1f))
             FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("ÖDÜLLER", "REWARDS")) }, modifier = Modifier.weight(1f))
         }
@@ -77,20 +80,17 @@ fun RewardCenterScreen() {
         }
     }
 
-    LaunchedEffect(Unit) {
-        runCatching { reload() }
-    }
+    LaunchedEffect(Unit) { runCatching { reload() } }
 
     LaunchedEffect(adsAllowed) {
-        if (adsAllowed) {
-            adController.load { adReady = adController.ready }
-        } else {
+        if (adsAllowed) adController.load { adReady = adController.ready }
+        else {
             adController.clear()
             adReady = false
         }
     }
 
-    fun showRewarded(rewardType: String) {
+    fun showRewarded(rewardType: String, trialItemId: String? = null) {
         val a = activity
         val b = backend
         if (a == null || busy != null) return
@@ -98,29 +98,39 @@ fun RewardCenterScreen() {
             notice = sh("Ödül merkezi şu anda çevrimdışı.", "Reward Center is currently offline.")
             return
         }
+        if (rewardType == "trial" && trialItemId.isNullOrBlank()) {
+            notice = sh("Şu anda denemeye uygun bir Style ürünü yok.", "No Style item is currently available for trial.")
+            return
+        }
         busy = rewardType
         adController.show(
             a,
             onEarned = { responseId ->
                 scope.launch {
-                    runCatching { b.claimRewardedAd(rewardType, responseId) }
+                    runCatching { b.claimRewardedAd(rewardType, responseId, trialItemId) }
                         .onSuccess { claim ->
                             notice = when (rewardType) {
-                                "diamonds" -> sh("+${claim?.diamondsAwarded ?: 10} Son Coin hesabına eklendi.", "+${claim?.diamondsAwarded ?: 10} Son Coin added.")
-                                "chest" -> sh("1 ödül sandığı kazandın.", "You earned 1 reward chest.")
-                                else -> sh("24 saatlik VIP Style denemen başladı.", "Your 24-hour VIP Style trial has started.")
+                                "diamonds" -> sh(
+                                    "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 10)} Son Coin hesabına eklendi.",
+                                    "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 10)} Son Coin added.",
+                                )
+                                else -> sh("Style denemen başladı.", "Your Style trial has started.")
                             }
                             reload()
                         }
                         .onFailure { e ->
-                            notice = if ("daily_limit_reached" in e.message.orEmpty()) sh("Bugünkü kota tamamlandı.", "Today's quota is complete.") else sh("Ödül işlenemedi.", "Reward could not be processed.")
+                            notice = when {
+                                "daily_limit_reached" in e.message.orEmpty() -> sh("Bugünkü kota tamamlandı.", "Today's quota is complete.")
+                                "trial_item_unavailable" in e.message.orEmpty() -> sh("Bu deneme ürünü artık kullanılamıyor.", "This trial item is no longer available.")
+                                else -> sh("Ödül işlenemedi.", "Reward could not be processed.")
+                            }
                         }
                     busy = null
                     adReady = adController.ready
                 }
             },
             onUnavailable = {
-                notice = sh("Reklam şu an hazır değil. Biraz sonra tekrar dene.", "The ad is not ready yet. Try again shortly.")
+                notice = sh("Reklam şu an hazır değil. Daha sonra tekrar dene.", "The ad is not ready. Try again later.")
                 busy = null
                 adReady = false
             },
@@ -129,92 +139,84 @@ fun RewardCenterScreen() {
     }
 
     val s = status
-    val trialItem = items.firstOrNull { it.id == s?.trialItemId }
+    val activeTrialItem = items.firstOrNull { it.id == s?.trialItemId }
+    val trialCandidate = items.firstOrNull { !it.trialMode.isNullOrBlank() && (it.trialValue ?: 0) > 0 }
+    val trialCandidateName = trialCandidate?.let { if (SonHarfUiState.isEnglish) it.nameEn else it.nameTr }
+    val trialDescription = trialCandidate?.let {
+        when (it.trialMode) {
+            "minutes" -> sh("${it.trialValue ?: 0} dakika Style denemesi", "${it.trialValue ?: 0}-minute Style trial")
+            "match" -> sh("${it.trialValue ?: 1} maçlık Style denemesi", "${it.trialValue ?: 1}-match Style trial")
+            else -> sh("Style denemesi", "Style trial")
+        }
+    }
 
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
         item {
-            Text(sh("SON HARF ÖDÜLLERİ", "SON HARF REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
-            Text(sh("Ödüllü reklamlar isteğe bağlıdır. İnce banner yalnızca oyun dışı menülerde gösterilir; maçlarda ve oyun alanlarında reklam yoktur.", "Rewarded ads are optional. A thin banner appears only on non-game menus; matches and gameplay areas remain ad-free."), color = SonHarfMuted, fontSize = 10.sp)
+            Text(sh("KELİME TAHTI ÖDÜLLERİ", "KELIME TAHTI REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
+            Text(
+                sh(
+                    "Ödüllü reklamlar isteğe bağlıdır. Maçlarda ve oyun alanında reklam yoktur.",
+                    "Rewarded ads are optional. Matches and gameplay remain ad-free.",
+                ),
+                color = SonHarfMuted,
+                fontSize = 10.sp,
+            )
         }
 
         item {
             RewardAdCard(
-                icon = "◈", title = sh("SON COIN", "SON COIN"),
-                description = sh("Her tamamlanan reklam +10 Son Coin verir. Son Coin'lerini mağazadaki Style ürünlerinde kullan.", "Each completed ad gives +10 Son Coin. Spend it on Style items in the Shop."),
-                progress = "${s?.diamondAdsUsed ?: 0}/${s?.diamondAdsLimit ?: 3}",
-                button = sh("REKLAM İZLE  +10", "WATCH AD  +10"),
-                enabled = adReady && (s?.diamondAdsUsed ?: 0) < (s?.diamondAdsLimit ?: 3) && busy == null,
+                icon = "◈",
+                title = "SON COIN",
+                description = sh(
+                    "Her tamamlanan reklam +${s?.coinPerAd ?: 10} Son Coin verir. Günlük kota sunucu tarafından tutulur.",
+                    "Each completed ad gives +${s?.coinPerAd ?: 10} Son Coin. The daily quota is enforced by the server.",
+                ),
+                progress = "${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 3}",
+                button = sh("REKLAM İZLE", "WATCH AD"),
+                enabled = adReady && (s?.coinAdsUsed ?: 0) < (s?.coinAdsLimit ?: 3) && busy == null,
                 onClick = { showRewarded("diamonds") },
             )
         }
 
         item {
             RewardAdCard(
-                icon = "🎁", title = sh("ÖDÜL SANDIĞI", "REWARD CHEST"),
-                description = sh("Reklam başına 1 sandık hakkı. Sandık açıldığında 15, 25 veya 40 Son Coin çıkar.", "Earn 1 chest per ad. Opening a chest awards 15, 25, or 40 Son Coin."),
-                progress = "${s?.chestAdsUsed ?: 0}/${s?.chestAdsLimit ?: 2}",
-                button = sh("REKLAM İZLE  +1 SANDIK", "WATCH AD  +1 CHEST"),
-                enabled = adReady && (s?.chestAdsUsed ?: 0) < (s?.chestAdsLimit ?: 2) && busy == null,
-                onClick = { showRewarded("chest") },
-            )
-        }
-
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .30f))) {
-                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(sh("ÖDÜL SANDIKLARIM", "MY REWARD CHESTS"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
-                        Text("🎁 ${s?.chestKeys ?: 0}", fontWeight = FontWeight.Black)
-                    }
-                    Text(sh("Topladığın ödül sandıklarını aç. Çıkan Son Coin doğrudan cüzdanına eklenir ve mağazada ya da uygun içeriklerde kullanılır.", "Open collected reward chests. Son Coin goes directly to your wallet and can be used in the Shop or eligible content."), color = SonHarfMuted, fontSize = 9.sp)
-                    Button(
-                        onClick = {
-                            val b = backend
-                            if (b == null) {
-                                notice = sh("Ödül merkezi şu anda çevrimdışı.", "Reward Center is currently offline.")
-                                return@Button
-                            }
-                            scope.launch {
-                                busy = "open_chest"
-                                runCatching { b.openRewardChest() }
-                                    .onSuccess { reward -> notice = sh("Sandıktan ${reward?.diamondsAwarded ?: 0} Son Coin çıktı!", "Chest awarded ${reward?.diamondsAwarded ?: 0} Son Coin!"); reload() }
-                                    .onFailure { notice = sh("Açılacak sandığın yok.", "You do not have a chest to open.") }
-                                busy = null
-                            }
-                        },
-                        enabled = (s?.chestKeys ?: 0) > 0 && busy == null,
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF211830)),
-                    ) { Text(sh("SANDIĞI AÇ", "OPEN CHEST"), fontWeight = FontWeight.Black) }
-                }
-            }
-        }
-
-        item {
-            RewardAdCard(
-                icon = "✨", title = sh("PREMIUM DENEME", "PREMIUM TRIAL"),
-                description = sh("Günde 1 reklamla rastgele bir VIP Style ürününü 24 saat deneyebilirsin.", "Watch 1 ad per day to try a random VIP Style item for 24 hours."),
+                icon = "✨",
+                title = sh("STYLE DENEME", "STYLE TRIAL"),
+                description = listOfNotNull(trialCandidateName, trialDescription).joinToString(" • ").ifBlank {
+                    sh("Sunucu kataloğundaki uygun bir Style ürününü dene.", "Try an eligible Style item from the server catalog.")
+                },
                 progress = "${s?.trialAdsUsed ?: 0}/${s?.trialAdsLimit ?: 1}",
-                button = sh("24 SAAT DENEME", "24-HOUR TRIAL"),
-                enabled = adReady && (s?.trialAdsUsed ?: 0) < (s?.trialAdsLimit ?: 1) && busy == null,
-                onClick = { showRewarded("trial") },
+                button = sh("DENEMEYİ BAŞLAT", "START TRIAL"),
+                enabled = adReady && trialCandidate != null && (s?.trialAdsUsed ?: 0) < (s?.trialAdsLimit ?: 1) && busy == null,
+                onClick = { showRewarded("trial", trialCandidate?.id) },
             )
         }
 
         if (s?.trialItemId != null) item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfPurple.copy(alpha = .12f)), shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .45f))) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = SonHarfPurple.copy(alpha = .12f)),
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .45f)),
+            ) {
                 Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(sh("AKTİF DENEME", "ACTIVE TRIAL"), color = SonHarfPurple, fontWeight = FontWeight.Black)
-                    Text(if (SonHarfUiState.isEnglish) trialItem?.nameEn ?: s.trialItemId else trialItem?.nameTr ?: s.trialItemId, fontWeight = FontWeight.Bold)
-                    Text(sh("Bu VIP Style ürününü 24 saat boyunca kullanabilirsin. Süre dolunca, ürüne sahip değilsen otomatik olarak çıkarılır.", "You can use this VIP Style item for 24 hours. It is automatically unequipped when the trial ends unless you own it."), color = SonHarfMuted, fontSize = 9.sp)
-                    Text(s.trialExpiresAt.orEmpty(), color = SonHarfMuted, fontSize = 8.sp)
+                    Text(
+                        if (SonHarfUiState.isEnglish) activeTrialItem?.nameEn ?: s.trialItemId else activeTrialItem?.nameTr ?: s.trialItemId,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    val remaining = when (s.trialMode) {
+                        "match" -> sh("Kalan maç: ${s.trialMatchesRemaining ?: 0}", "Matches left: ${s.trialMatchesRemaining ?: 0}")
+                        "minutes" -> s.trialExpiresAt.orEmpty()
+                        else -> s.trialExpiresAt.orEmpty()
+                    }
+                    if (remaining.isNotBlank()) Text(remaining, color = SonHarfMuted, fontSize = 9.sp)
                     Button(
                         onClick = {
-                            val b = backend
-                            if (b == null) {
-                                notice = sh("Ödül merkezi şu anda çevrimdışı.", "Reward Center is currently offline.")
-                                return@Button
-                            }
+                            val b = backend ?: return@Button
                             scope.launch {
                                 busy = "equip_trial"
                                 runCatching { b.equipRewardTrial() }
@@ -224,7 +226,7 @@ fun RewardCenterScreen() {
                             }
                         },
                         enabled = busy == null,
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
                     ) { Text(if (busy == "equip_trial") "…" else sh("DENEMEYİ KULLAN", "USE TRIAL"), fontWeight = FontWeight.Black) }
                 }
@@ -232,10 +234,65 @@ fun RewardCenterScreen() {
         }
 
         item {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .30f)),
+            ) {
+                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(sh("KUMBARA", "PIGGY BANK"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
+                        Text("${s?.piggyMatchProgress ?: 0}/${s?.piggyMatchTarget ?: 8}", fontWeight = FontWeight.Black)
+                    }
+                    LinearProgressIndicator(
+                        progress = { ((s?.piggyMatchProgress ?: 0).toFloat() / (s?.piggyMatchTarget ?: 8).coerceAtLeast(1)).coerceIn(0f, 1f) },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Text(
+                        sh(
+                            "Tamamlanan maçlarla Kumbara dolar. Hazır olduğunda ${s?.piggyBonusSc ?: 0} Son Coin sunucu tarafından doğrulanarak açılır.",
+                            "Completed matches fill the Piggy Bank. When ready, ${s?.piggyBonusSc ?: 0} Son Coin is verified and granted by the server.",
+                        ),
+                        color = SonHarfMuted,
+                        fontSize = 9.sp,
+                    )
+                    Button(
+                        onClick = {
+                            val b = backend ?: return@Button
+                            scope.launch {
+                                busy = "piggy"
+                                runCatching { b.openPiggyBank() }
+                                    .onSuccess { reward ->
+                                        notice = sh(
+                                            "Kumbara açıldı: +${reward.bonusSc} Son Coin.",
+                                            "Piggy Bank opened: +${reward.bonusSc} Son Coin.",
+                                        )
+                                        reload()
+                                    }
+                                    .onFailure { notice = sh("Kumbara henüz hazır değil.", "The Piggy Bank is not ready yet.") }
+                                busy = null
+                            }
+                        },
+                        enabled = (s?.piggyBonusSc ?: 0) > 0 && busy == null,
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF211830)),
+                    ) { Text(if (busy == "piggy") "…" else sh("KUMBARAYI AÇ", "OPEN PIGGY BANK"), fontWeight = FontWeight.Black) }
+                }
+            }
+        }
+
+        item {
             Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface2), shape = RoundedCornerShape(16.dp)) {
                 Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(sh("GÜNLÜK YENİLENME", "DAILY RESET"), fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                    Text(sh("Kotalar her gün UTC gün değişiminde sunucuda yenilenir. Cihaz saatini değiştirmek veya uygulamayı silmek kotayı sıfırlamaz.", "Quotas reset on the server each UTC day. Changing device time or reinstalling the app does not reset them."), color = SonHarfMuted, fontSize = 9.sp)
+                    Text(sh("SUNUCU KONTROLLÜ ÖDÜLLER", "SERVER-CONTROLLED REWARDS"), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                    Text(
+                        sh(
+                            "Günlük kotalar, deneme süresi ve Kumbara ilerlemesi sunucuda tutulur; cihaz saatini değiştirmek veya uygulamayı silmek bunları sıfırlamaz.",
+                            "Daily quotas, trial duration and Piggy Bank progress are stored on the server; changing device time or reinstalling the app does not reset them.",
+                        ),
+                        color = SonHarfMuted,
+                        fontSize = 9.sp,
+                    )
                     Text("◈ ${profile?.diamonds ?: 0}", color = SonHarfCyan, fontWeight = FontWeight.Black)
                 }
             }
@@ -259,7 +316,11 @@ private fun RewardAdCard(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface), shape = RoundedCornerShape(20.dp), border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .14f))) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .14f)),
+    ) {
         Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -270,7 +331,9 @@ private fun RewardAdCard(
                 Text(progress, color = SonHarfCyan, fontWeight = FontWeight.Black)
             }
             Text(description, color = SonHarfMuted, fontSize = 9.sp)
-            Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth()) { Text(button, fontWeight = FontWeight.Black) }
+            Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                Text(button, fontWeight = FontWeight.Black)
+            }
         }
     }
 }
