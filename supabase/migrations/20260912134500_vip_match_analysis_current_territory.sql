@@ -29,3 +29,91 @@ $migration$;
 
 revoke all on function public.get_vip_match_analysis_v1(uuid,text) from public, anon;
 grant execute on function public.get_vip_match_analysis_v1(uuid,text) to authenticated;
+
+-- A small server-authoritative index for the Profile analysis launcher.
+-- Only terminal matches are returned. Classic bot matches are excluded because the analysis RPC
+-- intentionally supports competitive human matches only.
+create or replace function public.get_vip_recent_completed_matches_v1(p_limit integer default 12)
+returns jsonb
+language plpgsql
+security definer
+set search_path=''
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_vip boolean := false;
+  v_limit integer := least(greatest(coalesce(p_limit, 12), 1), 30);
+  v_result jsonb;
+begin
+  if v_uid is null then
+    raise exception 'unauthorized';
+  end if;
+
+  select coalesce(is_vip, false)
+    into v_vip
+    from public.profiles
+    where id = v_uid;
+
+  if not v_vip then
+    raise exception 'vip_required';
+  end if;
+
+  with completed as (
+    select
+      g.id as match_id,
+      'classic'::text as mode,
+      coalesce(g.finished_at, g.created_at) as completed_at,
+      case when g.host_id = v_uid then g.guest_id else g.host_id end as opponent_id
+    from public.game_rooms g
+    where g.status = 'finished'
+      and coalesce(g.is_bot, false) = false
+      and v_uid in (g.host_id, g.guest_id)
+
+    union all
+
+    select
+      a.id,
+      'arena'::text,
+      coalesce(a.finished_at, a.ends_at, a.created_at),
+      case when a.host_id = v_uid then a.guest_id else a.host_id end
+    from public.word_arena_rooms a
+    where a.status = 'finished'
+      and a.result_applied
+      and v_uid in (a.host_id, a.guest_id)
+
+    union all
+
+    select
+      s.id,
+      'siege'::text,
+      coalesce(s.finished_at, s.created_at),
+      case when s.player_one_id = v_uid then s.player_two_id else s.player_one_id end
+    from public.word_siege_games s
+    where s.status = 'finished'
+      and v_uid in (s.player_one_id, s.player_two_id)
+  ), limited as (
+    select *
+    from completed
+    order by completed_at desc nulls last, match_id
+    limit v_limit
+  )
+  select coalesce(
+    jsonb_agg(
+      jsonb_build_object(
+        'match_id', match_id,
+        'mode', mode,
+        'completed_at', completed_at,
+        'opponent_id', opponent_id
+      )
+      order by completed_at desc nulls last, match_id
+    ),
+    '[]'::jsonb
+  ) into v_result
+  from limited;
+
+  return v_result;
+end
+$$;
+
+revoke all on function public.get_vip_recent_completed_matches_v1(integer) from public, anon;
+grant execute on function public.get_vip_recent_completed_matches_v1(integer) to authenticated;
