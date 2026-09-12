@@ -12,13 +12,13 @@ class KelimeTahtiPrimaryProductContractTest {
         val manifest = File("src/main/AndroidManifest.xml").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
         val logo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
-        val siegeRaster = File("src/main/res/drawable/kelime_kusatma_logo_hd.png")
+        val siegeRaster = File("src/main/res/drawable/kelime_kusatma_logo_hd.webp")
 
         assertTrue(manifest.contains("android:label=\"Kelime Tahtı\""))
         assertTrue(manifest.contains("@drawable/kelime_tahti_app_icon"))
-        assertTrue(logo.contains("R.drawable.kelime_tahti_app_icon"))
-        assertTrue(logo.contains("KELİME\\nTAHTI"))
+        assertTrue(logo.contains("R.drawable.kelime_tahti_logo_latest"))
         assertTrue(siegeRaster.isFile)
+        assertTrue(isWebp(siegeRaster))
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.xml").exists())
         assertTrue(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
         assertTrue(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
@@ -54,5 +54,12 @@ class KelimeTahtiPrimaryProductContractTest {
         assertTrue(match.contains("territoryPoints = myTerritoryPoints"))
         assertTrue(match.contains("HARİTA KONTROLÜ"))
         assertTrue(match.contains("HAMLEYİ ONAYLA"))
+    }
+
+    private fun isWebp(file: File): Boolean {
+        val bytes = file.readBytes()
+        return bytes.size >= 12 &&
+            bytes.copyOfRange(0, 4).toString(Charsets.US_ASCII) == "RIFF" &&
+            bytes.copyOfRange(8, 12).toString(Charsets.US_ASCII) == "WEBP"
     }
 }

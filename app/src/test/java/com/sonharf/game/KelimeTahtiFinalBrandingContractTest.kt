@@ -34,13 +34,13 @@ class KelimeTahtiFinalBrandingContractTest {
         assertTrue(online.contains("WordSiegeFinalRules.cubeTransfer"))
     }
 
-    @Test fun onlineBoardKeepsTerritoryOwnershipAndStrategicZonePresentation() {
+    @Test fun onlineBoardUsesGreenOwnTerritoryAndRedRivalTerritory() {
         val online = source("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
 
-        assertTrue(online.contains("PanSiegeMine = Color(0xFFA8C7B1)"))
-        assertTrue(online.contains("PanSiegeRival = Color(0xFFAFCDE0)"))
-        assertTrue(online.contains("PanSiegeMineBorder = Color(0xFF567A64)"))
-        assertTrue(online.contains("PanSiegeRivalBorder = Color(0xFF5C8299)"))
+        assertTrue(online.contains("PanSiegeMine = Color(0xFFA8D5B5)"))
+        assertTrue(online.contains("PanSiegeRival = Color(0xFFE4AEAA)"))
+        assertTrue(online.contains("PanSiegeMineBorder = Color(0xFF3F7C53)"))
+        assertTrue(online.contains("PanSiegeRivalBorder = Color(0xFF9B4D4A)"))
         assertTrue(online.contains("WordSiegeBoardSpec.displayBonusLabel(activeBonus)"))
         assertTrue(online.contains("val regionGap = if (letter != null && owner != 0) .55.dp else 1.25.dp"))
         assertTrue(online.contains("HAMLEYİ ONAYLA"))
