@@ -36,7 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
 
-/** Unified Pro startup shell: language -> onboarding -> auth -> rebuilt product. */
+/** Unified Pro startup shell: language -> onboarding -> auth -> premium product. */
 @Composable
 fun StableV1App() {
     val context = LocalContext.current
@@ -74,10 +74,7 @@ fun StableV1App() {
     }
 
     if (!authChecked) {
-        Box(
-            Modifier.fillMaxSize().background(MainUi.Background),
-            contentAlignment = Alignment.Center,
-        ) {
+        Box(Modifier.fillMaxSize().background(MainUi.Background), contentAlignment = Alignment.Center) {
             CircularProgressIndicator(color = MainUi.Blue)
         }
         return
@@ -88,7 +85,7 @@ fun StableV1App() {
         return
     }
 
-    UnifiedProApp(onSignedOut = { authenticated = false })
+    PremiumUnifiedProApp(onSignedOut = { authenticated = false })
 }
 
 @Composable
@@ -97,60 +94,30 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 24.dp),
+            modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            SonHarfOfficialLogo(
-                modifier = Modifier.fillMaxWidth(.66f).height(104.dp),
-            )
+            SonHarfOfficialLogo(modifier = Modifier.fillMaxWidth(.66f).height(104.dp))
             Spacer(Modifier.height(18.dp))
-            Text(
-                text = "Dilini seç / Choose your language",
-                color = MainUi.Muted,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-            )
+            Text(text = "Dilini seç / Choose your language", color = MainUi.Muted, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
             Spacer(Modifier.height(26.dp))
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 FilterChip(
                     selected = selected == "tr",
                     onClick = { selected = "tr" },
                     label = { Text("TÜRKÇE", fontWeight = FontWeight.Black) },
                     modifier = Modifier.weight(1f).height(52.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MainUi.BlueSoft,
-                        selectedLabelColor = MainUi.Blue,
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = selected == "tr",
-                        borderColor = MainUi.Border,
-                        selectedBorderColor = MainUi.Blue,
-                    ),
+                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MainUi.BlueSoft, selectedLabelColor = MainUi.Blue),
+                    border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected == "tr", borderColor = MainUi.Border, selectedBorderColor = MainUi.Blue),
                 )
                 FilterChip(
                     selected = selected == "en",
                     onClick = { selected = "en" },
                     label = { Text("ENGLISH", fontWeight = FontWeight.Black) },
                     modifier = Modifier.weight(1f).height(52.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MainUi.BlueSoft,
-                        selectedLabelColor = MainUi.Blue,
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = selected == "en",
-                        borderColor = MainUi.Border,
-                        selectedBorderColor = MainUi.Blue,
-                    ),
+                    colors = FilterChipDefaults.filterChipColors(selectedContainerColor = MainUi.BlueSoft, selectedLabelColor = MainUi.Blue),
+                    border = FilterChipDefaults.filterChipBorder(enabled = true, selected = selected == "en", borderColor = MainUi.Border, selectedBorderColor = MainUi.Blue),
                 )
             }
             Spacer(Modifier.height(22.dp))
@@ -160,12 +127,7 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                 modifier = Modifier.fillMaxWidth().height(52.dp),
                 shape = RoundedCornerShape(15.dp),
                 contentPadding = PaddingValues(horizontal = 18.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MainUi.Blue,
-                    contentColor = MainUi.Surface,
-                    disabledContainerColor = MainUi.Border,
-                    disabledContentColor = MainUi.Muted,
-                ),
+                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue, contentColor = MainUi.Surface, disabledContainerColor = MainUi.Border, disabledContentColor = MainUi.Muted),
             ) {
                 Text(if (selected == "en") "CONTINUE" else "DEVAM ET", fontWeight = FontWeight.Black)
             }
