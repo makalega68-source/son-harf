@@ -5,7 +5,9 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -13,13 +15,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -229,7 +226,7 @@ private fun BoxWithConstraintsScope.ShowcasePlayer(
 
     Box(
         modifier =
-            Modifier.offset(x = x - avatarSize / 2, y = avatarTop)
+            Modifier.offset(x = x - avatarSize / 2f, y = avatarTop)
                 .size(avatarSize)
                 .clearAndSetSemantics { contentDescription = description },
         contentAlignment = Alignment.Center,
@@ -257,7 +254,7 @@ private fun BoxWithConstraintsScope.ShowcasePlayer(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier =
-            Modifier.offset(x = x - nameWidth / 2, y = nameTop)
+            Modifier.offset(x = x - nameWidth / 2f, y = nameTop)
                 .width(nameWidth),
     )
     Text(
@@ -269,7 +266,7 @@ private fun BoxWithConstraintsScope.ShowcasePlayer(
         textAlign = TextAlign.Center,
         maxLines = 1,
         modifier =
-            Modifier.offset(x = x - nameWidth / 2, y = scoreTop)
+            Modifier.offset(x = x - nameWidth / 2f, y = scoreTop)
                 .width(nameWidth),
     )
 }
