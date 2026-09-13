@@ -1,0 +1,45 @@
+name: Android Repository Probe
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    env:
+      HTTP_PROXY: ""
+      HTTPS_PROXY: ""
+      ALL_PROXY: ""
+      http_proxy: ""
+      https_proxy: ""
+      all_proxy: ""
+      GRADLE_OPTS: "-Djava.net.useSystemProxies=false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+      - name: Sanitize proxy configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global --unset-all http.proxy || true
+          git config --global --unset-all https.proxy || true
+          mkdir -p "$HOME/.gradle"
+          if [ -f "$HOME/.gradle/gradle.properties" ]; then
+            sed -i -E '/^(systemProp\.(http|https)\.proxy(Host|Port|User|Password|NonProxyHosts)|org\.gradle\.systemProp\.(http|https)\.proxy)/d' "$HOME/.gradle/gradle.properties"
+          fi
+      - name: Verify repositories
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --location --retry 3 --head "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/8.12.1/gradle-8.12.1.pom"
+          curl --fail --silent --show-error --location --retry 3 --head "https://repo.maven.apache.org/maven2/"
+          gradle --version
