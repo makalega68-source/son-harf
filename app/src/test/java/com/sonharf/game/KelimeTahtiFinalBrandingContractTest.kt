@@ -12,14 +12,14 @@ class KelimeTahtiFinalBrandingContractTest {
         val state = source("src/main/java/com/sonharf/game/SonHarfUiState.kt")
         val home = source("src/main/java/com/sonharf/game/PremiumHomeV3.kt")
 
-        assertTrue(home.contains("PremiumSiegeHero(onPlay = onSiege)"))
+        assertTrue(home.contains("Button(onClick = onSiege"))
         assertTrue(home.contains("sh(\"OYNA\", \"PLAY\")"))
-        assertTrue(home.contains("Kelime kur. Bölge kazan. Haritanın kontrolünü ele geçir."))
+        assertTrue(home.contains("Kelimeyi kur. Alanı ele geçir. Rakibini geç."))
         assertTrue(state.contains("OYNA • Harflerini yerleştir, kelimeni oluştur"))
         assertTrue(state.contains("PLAY • Place your tiles, build your word"))
         assertFalse(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))
         assertFalse(state.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
-        assertTrue(home.contains("sh(\"KELİME\\nKUŞATMASI\", \"WORD\\nSIEGE\")"))
+        assertTrue(home.contains("Text(\"KELİME TAHTI\""))
     }
 
     @Test fun onlineMatchExposesSignatureSiegeFeedbackWithoutChangingAuthoritativeScoring() {
