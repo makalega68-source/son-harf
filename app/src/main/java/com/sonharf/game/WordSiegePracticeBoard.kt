@@ -53,6 +53,7 @@ private val PracticeZoneCrown = Color(0xFFE7DDBB)
 private val PracticeZoneReward = Color(0xFFEAD59B)
 private val PracticeLastMove = Color(0xFFE7B95E)
 private val PracticeDefinitionBadge = Color(0xFF5C8299)
+private val PracticeSiegeBonusLabel = Color(0xFF68716D)
 
 internal data class PracticeResolvedWord(
     val word: String,
@@ -367,26 +368,20 @@ private fun WordSiegePracticeBoardCell(
                     val label = WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)
                     val parts = label.split("\n")
                     if (parts.size > 1 && overview) {
-                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 22.sp)) {
+                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 20.sp)) {
                             append(parts.first().take(1)); append(parts.last())
                         }
                     } else if (parts.size > 1) {
-                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 11.sp)) { append(parts.first()) }
+                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 10.sp)) { append(parts.first()) }
                         append("\n")
                         append(parts.last())
                     } else append(label)
                 },
-                color = when {
-                    owner == myOwner -> PracticeSiegeMineBorder
-                    owner != 0 -> PracticeSiegeRivalBorder
-                    activeZone == WordSiegeBoardSpec.CenterBonus -> Color(0xFF6B5A2D)
-                    activeZone == WordSiegeBoardSpec.StarBonus -> Color(0xFF755E21)
-                    else -> Color(0xFF52675C)
-                },
+                color = PracticeSiegeBonusLabel,
                 fontSize = WordSiegeBoardAccessibility.BoardBonus,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 18.sp,
-                fontWeight = FontWeight.Black,
+                lineHeight = 17.sp,
+                fontWeight = FontWeight.Light,
             )
         }
     }
