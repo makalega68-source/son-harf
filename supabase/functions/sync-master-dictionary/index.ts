@@ -1,14 +1,24 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
-const TDK_URL = "https://sozluk.gov.tr/autocomplete.json";
+const TDK_URLS = [
+  "https://sozluk.gov.tr/autocomplete.json",
+  "https://www.sozluk.gov.tr/autocomplete.json",
+  "https://eski.sozluk.gov.tr/autocomplete.json",
+];
 const EN_URL = "https://raw.githubusercontent.com/en-wl/wordlist-diff/71d7dd07676edb60ade43552e10b41314b7e9287/en_US.txt";
 const EN_VERSION = "SCOWL/ESDB 2026.02.25";
 const EN_COMMIT = "71d7dd07676edb60ade43552e10b41314b7e9287";
 const BATCH_SIZE = 2500;
 const MIN_SOURCE_WORDS = 20_000;
 
-const headers = { "Content-Type": "application/json" };
+const responseHeaders = { "Content-Type": "application/json" };
+const browserHeaders = {
+  "User-Agent": "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/128.0 Mobile Safari/537.36",
+  "Accept": "application/json,text/plain,*/*",
+  "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.7,en;q=0.6",
+  "Referer": "https://sozluk.gov.tr/",
+};
 
 type StageWord = {
   job_id: string;
@@ -19,7 +29,7 @@ type StageWord = {
 };
 
 function json(status: number, body: Record<string, unknown>) {
-  return new Response(JSON.stringify(body), { status, headers });
+  return new Response(JSON.stringify(body), { status, headers: responseHeaders });
 }
 
 async function sha256Hex(bytes: Uint8Array): Promise<string> {
@@ -30,16 +40,9 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 function normalizeTurkish(raw: string): { word: string; source: string } | null {
   const source = raw.normalize("NFC").trim();
   if (!source || source !== source.toLocaleLowerCase("tr-TR")) return null;
-
-  const word = source
-    .replaceAll("â", "a")
-    .replaceAll("î", "i")
-    .replaceAll("û", "u")
-    .normalize("NFC");
-
-  if (word.length < 2 || word.length > 30) return null;
-  if (!/^[abcçdefgğhıijklmnoöprsştuüvyz]+$/u.test(word)) return null;
-  return { word, source };
+  if (source.length < 2 || source.length > 30) return null;
+  if (!/^[abcçdefgğhıijklmnoöprsştuüvyz]+$/u.test(source)) return null;
+  return { word: source, source };
 }
 
 function normalizeEnglish(raw: string): { word: string; source: string } | null {
@@ -68,13 +71,33 @@ function uniqueWords(
   })).sort((a, b) => a.word.localeCompare(b.word, language === "tr" ? "tr" : "en"));
 }
 
-async function fetchBytes(url: string): Promise<Uint8Array> {
-  const response = await fetch(url, {
-    redirect: "follow",
-    headers: { "User-Agent": "Kelime-Tahti-Dictionary-Sync/1.0" },
-  });
+async function fetchBytes(url: string, headers?: Record<string, string>): Promise<Uint8Array> {
+  const response = await fetch(url, { redirect: "follow", headers });
   if (!response.ok) throw new Error(`source_fetch_failed:${response.status}:${url}`);
   return new Uint8Array(await response.arrayBuffer());
+}
+
+async function fetchOfficialTdk(): Promise<{ bytes: Uint8Array; sourceUrl: string }> {
+  const errors: string[] = [];
+  for (const url of TDK_URLS) {
+    try {
+      const bytes = await fetchBytes(url, browserHeaders);
+      const text = new TextDecoder("utf-8").decode(bytes).trimStart();
+      if (!text.startsWith("[")) {
+        errors.push(`${url}:non_json_prefix:${text.slice(0, 32).replace(/\s+/g, " ")}`);
+        continue;
+      }
+      const parsed = JSON.parse(text);
+      if (!Array.isArray(parsed) || parsed.length < MIN_SOURCE_WORDS) {
+        errors.push(`${url}:invalid_array_size:${Array.isArray(parsed) ? parsed.length : -1}`);
+        continue;
+      }
+      return { bytes, sourceUrl: url };
+    } catch (error) {
+      errors.push(`${url}:${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+  throw new Error(`tdk_official_source_unavailable:${errors.join("|").slice(0, 900)}`);
 }
 
 async function stageBatches(admin: ReturnType<typeof createClient>, rows: StageWord[]) {
@@ -121,17 +144,25 @@ Deno.serve(async (req: Request) => {
 
     const { error: lockError } = await admin
       .from("dictionary_sync_jobs")
-      .update({ token_used_at: new Date().toISOString(), status: "fetching", started_at: new Date().toISOString(), error_message: null })
+      .update({
+        token_used_at: new Date().toISOString(),
+        status: "fetching",
+        started_at: new Date().toISOString(),
+        error_message: null,
+      })
       .eq("id", jobId)
       .eq("status", "pending")
       .is("token_used_at", null);
     if (lockError) throw new Error(`job_lock_failed:${lockError.message}`);
 
-    const [tdkBytes, enBytes] = await Promise.all([fetchBytes(TDK_URL), fetchBytes(EN_URL)]);
+    const [tdkResult, enBytes] = await Promise.all([
+      fetchOfficialTdk(),
+      fetchBytes(EN_URL, { "Accept": "text/plain,*/*" }),
+    ]);
+    const tdkBytes = tdkResult.bytes;
     const [tdkSha, enSha] = await Promise.all([sha256Hex(tdkBytes), sha256Hex(enBytes)]);
 
     const tdkJson = JSON.parse(new TextDecoder("utf-8").decode(tdkBytes)) as Array<{ madde?: unknown }>;
-    if (!Array.isArray(tdkJson)) throw new Error("tdk_payload_not_array");
     const trEntries: Array<{ word: string; source: string }> = [];
     for (const item of tdkJson) {
       if (typeof item?.madde !== "string") continue;
@@ -160,8 +191,8 @@ Deno.serve(async (req: Request) => {
       .from("dictionary_sync_jobs")
       .update({
         status: "staged",
-        tr_source_url: TDK_URL,
-        tr_source_version: `TDK GTS live ${now.slice(0, 10)}`,
+        tr_source_url: tdkResult.sourceUrl,
+        tr_source_version: `TDK GTS official ${now.slice(0, 10)}`,
         tr_source_sha256: tdkSha,
         tr_count: trRows.length,
         en_source_url: EN_URL,
@@ -173,14 +204,26 @@ Deno.serve(async (req: Request) => {
       .eq("id", jobId);
     if (stagedError) throw new Error(`job_stage_update_failed:${stagedError.message}`);
 
-    const { data: activated, error: activateError } = await admin.rpc("activate_dictionary_sync_v1", { p_job_id: jobId });
+    const { data: activated, error: activateError } = await admin.rpc("activate_dictionary_sync_v1", {
+      p_job_id: jobId,
+    });
     if (activateError) throw new Error(`activation_failed:${activateError.message}`);
 
     return json(200, {
       ok: true,
       job_id: jobId,
-      turkish: { count: trRows.length, sha256: tdkSha, source: TDK_URL },
-      english: { count: enRows.length, sha256: enSha, source: EN_URL, version: EN_VERSION, commit: EN_COMMIT },
+      turkish: {
+        count: trRows.length,
+        sha256: tdkSha,
+        source: tdkResult.sourceUrl,
+      },
+      english: {
+        count: enRows.length,
+        sha256: enSha,
+        source: EN_URL,
+        version: EN_VERSION,
+        commit: EN_COMMIT,
+      },
       activation: activated,
     });
   } catch (error) {
@@ -188,7 +231,11 @@ Deno.serve(async (req: Request) => {
     if (jobId) {
       await admin
         .from("dictionary_sync_jobs")
-        .update({ status: "error", error_message: message.slice(0, 1000), completed_at: new Date().toISOString() })
+        .update({
+          status: "error",
+          error_message: message.slice(0, 1000),
+          completed_at: new Date().toISOString(),
+        })
         .eq("id", jobId);
     }
     return json(500, { error: "dictionary_sync_failed", detail: message });
