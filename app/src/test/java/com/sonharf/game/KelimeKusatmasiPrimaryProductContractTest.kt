@@ -7,25 +7,41 @@ import org.junit.Test
 
 class KelimeTahtiPrimaryProductContractTest {
     @Test
-    fun kelimeTahtiIsThePrimaryVisibleProductAndSonHarfIsSecondary() {
-        val shell = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
+    fun kelimeTahtiIsFlagshipAndTopLevelNavigationStaysSimple() {
+        val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        val home = File("src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
         val manifest = File("src/main/AndroidManifest.xml").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
         val logo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeRaster = File("src/main/res/drawable/kelime_kusatma_logo_hd.png")
 
         assertTrue(manifest.contains("android:label=\"Kelime Tahtı\""))
-        assertTrue(manifest.contains("@drawable/kelime_tahti_app_icon"))
+        assertTrue(manifest.contains("@mipmap/ic_kelime_tahti"))
         assertTrue(logo.contains("R.drawable.kelime_tahti_logo_latest"))
         assertTrue(siegeRaster.isFile)
         assertTrue(isPng(siegeRaster))
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.webp").exists())
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.xml").exists())
-        assertTrue(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
-        assertTrue(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
-        assertTrue(shell.contains("PremiumPlayButton(onClick = onSiege)"))
+        assertFalse(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
+        assertFalse(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
+
+        assertTrue(home.contains("sh(\"ANA OYUN\", \"MAIN GAME\")"))
+        assertTrue(home.contains("PremiumSiegeHero(onPlay = onSiege)"))
+        assertTrue(home.contains("onClick = onPlay"))
+        assertTrue(home.contains("sh(\"OYUNLAR\", \"GAMES\")"))
+        assertTrue(home.contains("sh(\"REKABET\", \"COMPETE\")"))
+        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
-        assertTrue(shell.contains("onClick = onPlay"))
+        assertTrue(shell.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
+
+        assertTrue(shell.contains("PremiumDestination.HOME"))
+        assertTrue(shell.contains("PremiumDestination.GAMES"))
+        assertTrue(shell.contains("PremiumDestination.COMPETE"))
+        assertTrue(shell.contains("PremiumDestination.PROFILE"))
+        assertFalse(shell.contains("PremiumDestination.LEAGUE"))
+        assertFalse(shell.contains("PremiumDestination.COMPETITION"))
+        assertFalse(shell.contains("PremiumDestination.SHOP"))
+        assertFalse(shell.contains("PremiumDestination.TASKS"))
     }
 
     @Test

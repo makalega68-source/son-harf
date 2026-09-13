@@ -19,13 +19,15 @@ class LegacySecurityDefinerGrantContractTest {
         assertTrue(migration.contains("set search_path = pg_catalog, public, pg_temp"))
     }
 
-    @Test fun currentDictionaryClientUsesAuthenticatedInvokerV4NotLegacyV3() {
+    @Test fun currentDictionaryClientUsesMasterV5NotLegacySnapshots() {
         val source = projectFile(
             "app/src/main/java/com/sonharf/game/data/SharedDictionaryService.kt",
         ).readText()
 
-        assertTrue(source.contains("\"get_dictionary_snapshot_v4\""))
+        assertTrue(source.contains("\"get_dictionary_snapshot_v5\""))
         assertFalse(source.contains("\"get_dictionary_snapshot_v3\""))
+        assertFalse(source.contains("\"get_dictionary_snapshot_v4\""))
+        assertTrue(source.contains("son_harf_dictionary_snapshot_v5"))
     }
 
     private fun projectFile(path: String): File {

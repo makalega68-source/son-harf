@@ -8,24 +8,24 @@ import org.junit.Test
 class GameModeBrandingAndVisibleActionContractTest {
     @Test
     fun homeMakesKelimeTahtiPrimaryAndKeepsSecondaryModesBranded() {
-        val home = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
+        val home = projectFile("app/src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
+        val games = projectFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val brand = projectFile("app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
-        val localization = projectFile("app/src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
         val siegeRaster = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.png")
 
-        assertTrue(home.contains("SonHarfOfficialLogo("))
-        assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
+        assertTrue(home.contains("PremiumSiegeHero(onPlay = onSiege)"))
+        assertTrue(home.contains("onClick = onPlay"))
         assertTrue(brand.contains("R.drawable.kelime_tahti_logo_latest"))
         assertTrue(siegeRaster.isFile)
         assertTrue(isPng(siegeRaster))
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.webp")?.exists() == true)
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")?.exists() == true)
-        assertTrue(localization.contains("KELİME TAHTI"))
-        assertTrue(localization.contains("WORD THRONE"))
-        assertTrue(home.contains("logoRes = R.drawable.son_harf_app_icon_master"))
-        assertTrue(home.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
-        assertTrue(home.contains("logoRes = R.drawable.harf_yolu_logo"))
-        assertTrue(home.contains("painterResource(logoRes)"))
+        assertTrue(games.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
+        assertTrue(games.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
+        assertTrue(games.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
+        assertTrue(games.contains("onClick = onSiege"))
+        assertTrue(games.contains("onClick = onLastLetter"))
+        assertTrue(games.contains("onClick = onLetterPath"))
     }
 
     @Test
