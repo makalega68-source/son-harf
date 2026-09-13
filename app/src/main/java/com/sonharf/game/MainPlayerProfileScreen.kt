@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Storefront
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -231,6 +232,12 @@ internal fun MainPlayerProfileScreen(
                 }
                 Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary)
             }
+        }
+
+        OutlinedButton(onClick = onVip, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
+            Icon(Icons.Rounded.Storefront, null, Modifier.size(19.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(sh("Mağaza · PRO ve koleksiyon", "Shop · PRO and collection"))
         }
 
         Spacer(Modifier.weight(1f))

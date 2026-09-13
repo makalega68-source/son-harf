@@ -24,7 +24,7 @@ import kotlinx.coroutines.delay
 private enum class PremiumDestination {
     HOME, GAMES, COMPETE, PROFILE,
     LAST_LETTER, SIEGE, LETTER_PATH,
-    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS
+    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP
 }
 
 @Composable
@@ -80,7 +80,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
-            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.SOCIAL -> PremiumDestination.PROFILE
+            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.PROFILE
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
             PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
@@ -126,7 +126,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     MaterialTheme(colorScheme = scheme) {
         Scaffold(
             containerColor = SonHarfTheme.Background,
-            topBar = { SonHarfTopAdBanner(isPremium = isPro) },
+            topBar = {
+                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)) SonHarfTopAdBanner(isPremium = isPro)
+            },
             bottomBar = {
                 if (topLevel) {
                     PremiumBottomBar(
@@ -166,10 +168,11 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE_DETAILS },
-                        { destination = PremiumDestination.PROFILE },
+                        { destination = PremiumDestination.SHOP },
                         { destination = PremiumDestination.SETTINGS },
                         { destination = PremiumDestination.SOCIAL },
                     )
+                    PremiumDestination.SHOP -> EconomyShopScreen(onBack = { destination = PremiumDestination.PROFILE }, onMembershipChanged = { isPro = it })
                     PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()
                     PremiumDestination.SIEGE -> WordSiegeExperienceScreen {
                         leaveGame()

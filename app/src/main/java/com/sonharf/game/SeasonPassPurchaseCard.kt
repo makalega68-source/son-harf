@@ -102,7 +102,7 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
                         fontSize = 9.sp,
                     )
                 }
-                Text("🏆", fontSize = 26.sp)
+                Text(sh("AYLIK", "MONTHLY"), color = SonHarfMuted, fontSize = 11.sp)
             }
 
             Text(
@@ -129,7 +129,7 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
                         notice = sh("Google Play ödeme ekranı açılamadı.", "Google Play billing could not open.")
                     }
                 },
-                enabled = !busy,
+                enabled = !busy && product != null,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
                 shape = RoundedCornerShape(14.dp),
@@ -140,6 +140,10 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
                 )
             }
 
+            Text(sh("Aylık abonelik · Google Play üzerinden iptal edilebilir.", "Monthly subscription · Cancel through Google Play."), color = SonHarfMuted, fontSize = 11.sp)
+            androidx.compose.material3.TextButton(enabled = !busy, onClick = { manager.restorePurchases(setOf(ProductCatalog.SEASON_PASS_MONTHLY)) }) {
+                Text(sh("Satın almayı geri yükle", "Restore purchase"))
+            }
             if (notice.isNotBlank()) {
                 Text(notice, color = SonHarfMuted, fontSize = 9.sp)
             }
