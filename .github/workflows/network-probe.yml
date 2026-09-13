@@ -13,10 +13,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      HTTP_PROXY: ""
-      HTTPS_PROXY: ""
-      ALL_PROXY: ""
-      GRADLE_OPTS: "-Djava.net.useSystemProxies=false"
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
       - uses: actions/checkout@v4
 
@@ -25,12 +23,10 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Clear stale proxy settings
+      - name: Remove stale Gradle and Git proxy settings
         shell: bash
         run: |
           set -euo pipefail
-          unset HTTP_PROXY HTTPS_PROXY ALL_PROXY http_proxy https_proxy all_proxy || true
-          printf '%s\n' 'HTTP_PROXY=' 'HTTPS_PROXY=' 'ALL_PROXY=' 'http_proxy=' 'https_proxy=' 'all_proxy=' >> "$GITHUB_ENV"
           git config --global --unset-all http.proxy || true
           git config --global --unset-all https.proxy || true
           mkdir -p "$HOME/.gradle"
@@ -38,29 +34,47 @@ jobs:
             sed -i -E '/systemProp\.(http|https)\.proxy/d' "$HOME/.gradle/gradle.properties"
           fi
 
-      - uses: android-actions/setup-android@v3
-
-      - name: Install Android SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
-
-      - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: "8.14.4"
-
-      - name: Verify repositories and versions
+      - name: Install Android SDK 36 without proxy variables
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSIL --retry 3 "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/8.12.1/gradle-8.12.1.pom" >/dev/null
-          curl -fsSIL --retry 3 "https://repo.maven.apache.org/maven2/" >/dev/null
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            "$SDKMANAGER" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Install Gradle 8.14.4 without proxy variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            curl -fsSL --retry 3 -o "$RUNNER_TEMP/gradle.zip" \
+            "https://services.gradle.org/distributions/gradle-8.14.4-bin.zip"
+          unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-8.14.4/bin" >> "$GITHUB_PATH"
+
+      - name: Verify Google Maven and Maven Central without proxy variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            curl -fsSIL --retry 3 \
+            "https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/8.12.1/gradle-8.12.1.pom" >/dev/null
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            curl -fsSIL --retry 3 "https://repo.maven.apache.org/maven2/" >/dev/null
           grep -q 'google()' settings.gradle.kts
           grep -q 'mavenCentral()' settings.gradle.kts
           grep -q 'gradlePluginPortal()' settings.gradle.kts
           grep -q 'id("com.android.application") version "8.12.1"' build.gradle.kts
           gradle --version
 
-      - name: Build debug APK
-        run: gradle clean :app:assembleDebug --no-daemon --stacktrace --warning-mode all
+      - name: Build debug APK without proxy variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            GRADLE_OPTS="-Djava.net.useSystemProxies=false" \
+            gradle clean :app:assembleDebug --no-daemon --stacktrace --warning-mode all
 
       - name: Verify APK
         shell: bash
