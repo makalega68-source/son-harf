@@ -11,8 +11,10 @@ class StoreCatalogPolicyTest {
     @Test fun onlyConnectedCosmeticsAreOffered() {
         assertTrue(item("theme_dark_arena", "game_theme").isRuntimeReadyStyle())
         assertFalse(item("theme_monster_blue", "game_theme").isRuntimeReadyStyle())
-        assertTrue(item("name_cyan", "name_style").isRuntimeReadyStyle())
-        assertTrue(item("keyboard_neon", "keyboard_theme").isRuntimeReadyStyle())
+        assertTrue(item("name_sapphire", "name_style").isRuntimeReadyStyle())
+        assertTrue(item("keyboard_crystal", "keyboard_theme").isRuntimeReadyStyle())
+        assertTrue(item("keyboard_obsidian", "keyboard_theme").isRuntimeReadyStyle())
+        assertFalse(item("keyboard_neon", "keyboard_theme").isRuntimeReadyStyle())
         assertTrue(item("frame_asset_red", "profile_frame").isRuntimeReadyStyle())
         assertFalse(item("victory_crown", "victory_effect").isRuntimeReadyStyle())
         assertFalse(item("emoji_vip", "emoji_pack").isRuntimeReadyStyle())
@@ -36,13 +38,17 @@ class StoreCatalogPolicyTest {
         listOf(
             item("frame_asset_red", "profile_frame"),
             item("theme_dark_arena", "game_theme"),
-            item("name_cyan", "name_style"),
-            item("keyboard_neon", "keyboard_theme"),
+            item("name_sapphire", "name_style"),
+            item("keyboard_crystal", "keyboard_theme"),
         ).forEach { product ->
             val retired = product.copy(active = false)
             assertFalse(retired.isRuntimeReadyStyle())
             assertTrue(retired.isSupportedOwnedStyle())
         }
+    }
+
+    @Test fun retiredNeonKeyboardIsNotReintroducedIntoTheCollection() {
+        assertFalse(item("keyboard_neon", "keyboard_theme").isSupportedOwnedStyle())
     }
 
     @Test fun ownershipNeverEnablesUnsupportedOrMismatchedRuntimeAssets() {
