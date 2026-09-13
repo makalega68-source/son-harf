@@ -52,7 +52,7 @@ class WordSiegePanAreaContractTest {
         assertTrue(pan.contains("WordSiegeBoardAccessibility.BoardLetterPoint"))
         assertTrue(pan.contains("WordSiegeBoardAccessibility.BoardBonus"))
         assertTrue(accessibility.contains("BoardLetterPoint: TextUnit = 14.sp"))
-        assertTrue(accessibility.contains("BoardBonus: TextUnit = 18.sp"))
+        assertTrue(accessibility.contains("BoardBonus: TextUnit = 17.sp"))
         assertTrue(pan.contains("Color(0xFF17372C)"))
         assertTrue(pan.contains("val canPlace = enabled && (cell.letter == null || pending)"))
         assertTrue(pan.contains("WordSiegeBoardTapAction.PLACE"))
