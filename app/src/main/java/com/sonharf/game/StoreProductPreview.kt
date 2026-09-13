@@ -2,7 +2,6 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,15 +26,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntRect
-import androidx.compose.ui.unit.IntSize
 import com.sonharf.game.data.ShopItemDto
 
 /**
@@ -127,29 +120,56 @@ private fun RealKeyboardPreview(itemId: String, expanded: Boolean) {
         Modifier.fillMaxSize().background(palette.background).padding(if (expanded) 8.dp else 2.dp),
         contentAlignment = Alignment.Center,
     ) {
-        HiggsfieldKeyboardArtwork(itemId, Modifier.fillMaxSize())
+        PremiumKeyboardProductArtwork(itemId, expanded, Modifier.fillMaxSize())
     }
 }
 
 /**
- * Product art comes from the approved Higgsfield keyboard collection.  The two sellable skins
- * use their own source region, rather than a generic keyboard illustration.
+ * Clean product artwork follows the approved Higgsfield material direction without embedding a
+ * browser screenshot or unrelated labels inside a store card.
  */
 @Composable
-private fun HiggsfieldKeyboardArtwork(itemId: String, modifier: Modifier = Modifier) {
-    val artwork = ImageBitmap.imageResource(LocalContext.current.resources, R.drawable.higgsfield_keyboard_collection)
-    val crop = when (itemId) {
-        "keyboard_crystal" -> IntRect(left = 55, top = 705, right = 338, bottom = 944)
-        "keyboard_obsidian" -> IntRect(left = 347, top = 456, right = 650, bottom = 698)
-        else -> IntRect(left = 54, top = 456, right = 338, bottom = 698)
-    }
-    Canvas(modifier.clip(RoundedCornerShape(14.dp))) {
-        drawImage(
-            image = artwork,
-            srcOffset = IntOffset(crop.left, crop.top),
-            srcSize = IntSize(crop.width, crop.height),
-            dstSize = IntSize(size.width.toInt(), size.height.toInt()),
-        )
+private fun PremiumKeyboardProductArtwork(itemId: String, expanded: Boolean, modifier: Modifier = Modifier) {
+    val palette = SonHarfCosmetics.keyboardPaletteFor(itemId)
+    val crystal = itemId == "keyboard_crystal"
+    val shell = if (crystal) Brush.linearGradient(listOf(Color(0xFFF8FCFF), Color(0xFFC9DCE6), Color(0xFFF7FBFD))) else Brush.linearGradient(listOf(Color(0xFF0E1012), Color(0xFF302A20), Color(0xFF101214)))
+    val rows = if (expanded) listOf("QWERTY", "ASDFG", "ZXCV") else listOf("QWE", "ASD", "ZXC")
+    Box(modifier.clip(RoundedCornerShape(14.dp)).background(shell).padding(if (expanded) 11.dp else 5.dp)) {
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            shape = RoundedCornerShape(if (expanded) 12.dp else 8.dp),
+            color = palette.background.copy(alpha = if (crystal) .68f else .84f),
+            border = BorderStroke(if (expanded) 1.5.dp else 1.dp, palette.secondaryBorder),
+        ) {
+            Column(
+                Modifier.fillMaxSize().padding(if (expanded) 8.dp else 3.dp),
+                verticalArrangement = Arrangement.spacedBy(if (expanded) 6.dp else 2.dp),
+            ) {
+                rows.forEach { row ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(if (expanded) 5.dp else 2.dp)) {
+                        row.forEach { letter ->
+                            Surface(
+                                modifier = Modifier.weight(1f).height(if (expanded) 28.dp else 12.dp),
+                                shape = RoundedCornerShape(if (expanded) 7.dp else 4.dp),
+                                color = palette.key.copy(alpha = if (crystal) .82f else 1f),
+                                border = BorderStroke(1.dp, palette.border),
+                                shadowElevation = if (expanded) 2.dp else 0.dp,
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(letter, color = palette.text, fontSize = if (expanded) 10.sp else 5.sp, fontWeight = FontWeight.Black)
+                                }
+                            }
+                        }
+                    }
+                }
+                Surface(
+                    modifier = Modifier.fillMaxWidth().height(if (expanded) 22.dp else 9.dp),
+                    shape = RoundedCornerShape(if (expanded) 7.dp else 4.dp),
+                    color = palette.action,
+                    border = BorderStroke(1.dp, palette.secondaryBorder),
+                ) {}
+            }
+        }
     }
 }
 

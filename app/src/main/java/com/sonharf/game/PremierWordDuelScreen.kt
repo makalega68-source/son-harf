@@ -1170,7 +1170,7 @@ private fun PremierKeyboard(language: String, value: String, enabled: Boolean, k
         listOf("Z","X","C","V","B","N","M","Ö","Ç"),
     )
     Surface(color = palette.background, shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp), border = BorderStroke(1.dp, palette.border), shadowElevation = 10.dp) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 6.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             rows.forEachIndexed { index, row ->
                 Row(Modifier.fillMaxWidth().padding(horizontal = if (index == 1) 7.dp else if (index == 2) 16.dp else 0.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     row.forEach { key ->

@@ -16,11 +16,11 @@ class PremiumCosmeticApplicationContractTest {
     }
 
     @Test
-    fun storeKeyboardCardsUseApprovedHiggsfieldArtwork() {
+    fun storeKeyboardCardsUseCleanPremiumArtworkInsteadOfScreenshots() {
         val preview = source("StoreProductPreview.kt")
 
-        assertTrue(preview.contains("R.drawable.higgsfield_keyboard_collection"))
-        assertTrue(preview.contains("HiggsfieldKeyboardArtwork(itemId"))
+        assertTrue(preview.contains("PremiumKeyboardProductArtwork(itemId"))
+        assertTrue(preview.contains("browser screenshot"))
     }
 
     private fun source(name: String): String = File("src/main/java/com/sonharf/game/$name").readText()
