@@ -130,6 +130,10 @@ internal fun MainSettingsScreen(
         }
 
         item {
+            ProfileOwnedThemesSection(backend)
+        }
+
+        item {
             MainSettingsGroup(sh("BİLDİRİMLER", "NOTIFICATIONS")) {
                 MainToggleSetting(Icons.Rounded.SportsEsports, sh("Oyun davetleri", "Game invitations"), sh("Arkadaşların düelloya çağırdığında", "When friends invite you to a duel"), gameInvites) {
                     gameInvites = it

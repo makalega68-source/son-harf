@@ -8,16 +8,18 @@ import org.junit.Test
 class KelimeTahtiFinalBrandingContractTest {
     private fun source(path: String): String = File(path).readText()
 
-    @Test fun flagshipHomeCtaIsExplicitlyPlayAndLegacyBrandIsTranslatedAtTheUiBoundary() {
+    @Test fun flagshipHomeCtaIsExplicitlyPlayAndCurrentBrandIsPreserved() {
         val state = source("src/main/java/com/sonharf/game/SonHarfUiState.kt")
-        val home = source("src/main/java/com/sonharf/game/UnifiedProApp.kt")
+        val home = source("src/main/java/com/sonharf/game/PremiumHomeV3.kt")
 
-        assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(home.contains("Kelime kur • alanı ele geçir • haritayı kontrol et"))
+        assertTrue(home.contains("PremiumSiegeHero(onPlay = onSiege)"))
+        assertTrue(home.contains("sh(\"OYNA\", \"PLAY\")"))
+        assertTrue(home.contains("Kelime kur. Bölge kazan. Haritanın kontrolünü ele geçir."))
         assertTrue(state.contains("OYNA • Harflerini yerleştir, kelimeni oluştur"))
         assertTrue(state.contains("PLAY • Place your tiles, build your word"))
-        assertTrue(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))
-        assertTrue(state.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
+        assertFalse(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))
+        assertFalse(state.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
+        assertTrue(home.contains("sh(\"KELİME\\nKUŞATMASI\", \"WORD\\nSIEGE\")"))
     }
 
     @Test fun onlineMatchExposesSignatureSiegeFeedbackWithoutChangingAuthoritativeScoring() {
@@ -29,8 +31,10 @@ class KelimeTahtiFinalBrandingContractTest {
         assertFalse(state.contains("Regex(\"Bölge \\\\+(\\\\d+)\")"))
         assertFalse(state.contains("KUŞATMA +${'$'}territoryScore"))
         assertFalse(state.contains("SIEGE +${'$'}territoryScore"))
-        assertTrue(state.contains(".replace(\"KUŞATMA SENİN!\", \"TAHT SENİN!\")"))
-        assertTrue(state.contains(".replace(\"SIEGE WON!\", \"THE THRONE IS YOURS!\")"))
+        assertFalse(state.contains(".replace(\"KUŞATMA SENİN!\", \"TAHT SENİN!\")"))
+        assertFalse(state.contains(".replace(\"SIEGE WON!\", \"THE THRONE IS YOURS!\")"))
+        assertTrue(online.contains("KUŞATMA SENİN!"))
+        assertTrue(online.contains("SIEGE WON!"))
         assertTrue(online.contains("WordSiegeFinalRules.currentTerritoryScore"))
         assertTrue(online.contains("WordSiegeFinalRules.cubeTransfer"))
     }

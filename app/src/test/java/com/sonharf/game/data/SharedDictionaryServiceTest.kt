@@ -27,15 +27,18 @@ class SharedDictionaryServiceTest {
         listOf("IŞIK", "ışık", "İSİM", "isim", "GÜL", "ŞİŞE", "ÖLÇÜ").forEach { word ->
             assertTrue("Turkish locale normalization failed: $word", SharedDictionaryService.isValidCached(word, "tr") == true)
         }
-        assertFalse("Terminal soft-ğ must never enter the playable snapshot", SharedDictionaryService.isValidCached("ÇIĞ", "tr") == true)
+        assertTrue("Master TDK headwords remain valid regardless of the final letter", SharedDictionaryService.isValidCached("ÇIĞ", "tr") == true)
     }
 
     @Test
-    fun invalidSourceLeakIsRemovedFromAllLocalValidationPaths() {
+    fun refreshedMasterSnapshotRemovesWordsFromAllLocalValidationPaths() {
         SharedDictionaryService.installSnapshotForTests("tr", listOf("amlat", "kalem", "masa"))
+        // Simulate a complete refreshed master snapshot that excludes a rejected source entry.
+        SharedDictionaryService.installSnapshotForTests("tr", listOf("kalem", "masa"))
 
-        assertFalse("AMLAT must never survive a stale or test snapshot", SharedDictionaryService.isValidCached("AMLAT", "tr") == true)
+        assertFalse("Removed words must not survive a master snapshot refresh", SharedDictionaryService.isValidCached("AMLAT", "tr") == true)
         assertFalse("AMLAT must never be accepted by blocking practice validation", SharedDictionaryService.isValidWordBlocking("AMLAT", "tr"))
+        assertFalse(SharedDictionaryService.isBotAllowedWord("AMLAT", "tr"))
         assertTrue(SharedDictionaryService.isValidWordBlocking("KALEM", "tr"))
     }
 
