@@ -16,7 +16,7 @@ class StoreVisualIntegrityContractTest {
         assertTrue(economy.contains("StoreProductPreview("))
         assertTrue(styleStore.contains("StoreProductPreview("))
         assertTrue(preview.contains("PurchasedProfileFrameOverlay("))
-        assertTrue(preview.contains("EmbeddedWordKeyboard("))
+        assertTrue(preview.contains("SonHarfCosmetics.keyboardPaletteFor(itemId)"))
         assertTrue(preview.contains("RealDarkArenaThemePreview"))
 
         assertFalse(economy.contains("Text(\"A\""))
