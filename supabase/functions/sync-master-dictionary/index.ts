@@ -2,9 +2,9 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const TDK_URL = "https://sozluk.gov.tr/autocomplete.json";
-const EN_URL = "https://raw.githubusercontent.com/en-wl/wordlist-diff/71d7dd2a78741837acf11114c4ba4f0b19513dac/en_US.txt";
+const EN_URL = "https://raw.githubusercontent.com/en-wl/wordlist-diff/71d7dd07676edb60ade43552e10b41314b7e9287/en_US.txt";
 const EN_VERSION = "SCOWL/ESDB 2026.02.25";
-const EN_COMMIT = "71d7dd2a78741837acf11114c4ba4f0b19513dac";
+const EN_COMMIT = "71d7dd07676edb60ade43552e10b41314b7e9287";
 const BATCH_SIZE = 2500;
 const MIN_SOURCE_WORDS = 20_000;
 
