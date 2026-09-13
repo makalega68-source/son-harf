@@ -69,7 +69,10 @@ object SonHarfCosmetics {
      * resolves to the default look after its retirement; it never grants a gameplay benefit.
      */
     val keyboardPalette: WordKeyboardPalette
-        get() = when (keyboardThemeId) {
+        get() = keyboardPaletteFor(keyboardThemeId)
+
+    /** Single palette source for the live keyboard and its store preview. */
+    fun keyboardPaletteFor(themeId: String?): WordKeyboardPalette = when (themeId) {
             "keyboard_crystal" -> WordKeyboardPalette(
                 background = Color(0xFFE8F1F5), key = Color(0xFFF8FCFF), keyAlt = Color(0xFFD6E5ED),
                 text = Color(0xFF26353E), action = Color(0xFF537FA1), actionText = Color.White,
