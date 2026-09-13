@@ -156,7 +156,7 @@ private fun PremiumKeyboardProductArtwork(itemId: String, expanded: Boolean, mod
                                 shadowElevation = if (expanded) 2.dp else 0.dp,
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
-                                    Text(letter, color = palette.text, fontSize = if (expanded) 10.sp else 5.sp, fontWeight = FontWeight.Black)
+                                    Text(letter.toString(), color = palette.text, fontSize = if (expanded) 10.sp else 5.sp, fontWeight = FontWeight.Black)
                                 }
                             }
                         }
