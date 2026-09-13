@@ -30,3 +30,8 @@ Source: branch `codex/compact-store-monetization-20260913`, based on verified `8
 5. Unsupported mascots, tile skins and effects need a real runtime delivery path before being offered. Do not sell previews without delivery.
 
 References: [Play purchase security](https://developer.android.com/google/play/billing/security), [AdMob SSV](https://developers.google.com/admob/android/ssv).
+
+## Applied state
+Migration `20260913112201_compact_store_and_verified_rewards.sql` is applied to the active project. The SSV callback is deployed and active; rewarded ads remain off until account configuration. Post-migration SQL tests passed and all generated fixtures were rolled back. Android CI, Final Unified Validation and Frame Provenance Gate passed for `cc647ec`, including 223 unit tests and 6 signature tests.
+
+Security advisors: the three service-only tables intentionally have RLS with no client policy. The bundle history SELECT policy is restricted to the current account, including authenticated guest accounts already supported by the app. It does not expose other players' purchases.
