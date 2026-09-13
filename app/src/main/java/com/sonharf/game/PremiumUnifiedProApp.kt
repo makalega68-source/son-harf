@@ -17,9 +17,13 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
+import com.sonharf.game.data.getLeaderboardV2
 import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.SupabaseProvider
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 
 private enum class PremiumDestination {
     HOME, GAMES, COMPETE, PROFILE,
@@ -150,6 +154,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onGames = { destination = PremiumDestination.GAMES },
                         onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
+                        onShop = { destination = PremiumDestination.SHOP },
+                        onSocial = { destination = PremiumDestination.SOCIAL },
+                        onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
+                        onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
                     )
                     PremiumDestination.GAMES -> PremiumGameCenter(
                         siegeLanguage = siegeLanguage,
@@ -210,30 +218,69 @@ private fun PremiumHomeScreen(
     onGames: () -> Unit,
     onCompete: () -> Unit,
     onProfile: () -> Unit,
+    onShop: () -> Unit,
+    onSocial: () -> Unit,
+    onLastLetter: () -> Unit,
+    onLetterPath: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
-    LaunchedEffect(Unit) {
-        if (SupabaseProvider.configured) {
-            profile = backend.currentUserId()?.let { id ->
-                runCatching { backend.getProfile(id) }.getOrNull()
+    var weeklyTop by remember { mutableStateOf<List<HomePodiumEntry>>(emptyList()) }
+    var weeklyLoading by remember { mutableStateOf(true) }
+    var weeklyFailed by remember { mutableStateOf(false) }
+    var refresh by remember { mutableIntStateOf(0) }
+    val language = if (SonHarfUiState.language == "en") "en" else "tr"
+
+    LaunchedEffect(language, refresh) {
+        weeklyLoading = true
+        weeklyFailed = false
+        suspend fun readProfile(id: String): ProfileDto? = try {
+            backend.getProfile(id)
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            null
+        }
+        try {
+            if (!SupabaseProvider.configured) {
+                weeklyFailed = true
+                return@LaunchedEffect
             }
+            profile = backend.currentUserId()?.let { readProfile(it) }
+            val rows = backend.getLeaderboardV2(language, "week", 3)
+            weeklyTop = rows.map { row ->
+                async {
+                    HomePodiumEntry(row, if (row.userId == profile?.id) profile else readProfile(row.userId))
+                }
+            }.awaitAll()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (_: Exception) {
+            weeklyFailed = true
+        } finally {
+            weeklyLoading = false
         }
     }
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        item {
-            PremiumHomeCommandDeck(
-                profile = profile,
-                onProfile = onProfile,
-                onSiege = onPrimary,
-                onGames = onGames,
-                onCompete = onCompete,
-            )
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
+        LazyColumn(
+            modifier = Modifier.widthIn(max = 600.dp).fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
+        ) {
+            item(key = "home_hero") {
+                PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onSocial)
+            }
+            item(key = "weekly_podium") {
+                PremiumWeeklyPodium(weeklyTop, weeklyLoading, weeklyFailed, onCompete, { refresh++ })
+            }
+            item(key = "league_progress") { PremiumLeagueProgress(profile, onCompete) }
+            item(key = "other_games") {
+                PremiumOtherGames(onLastLetter, onLetterPath)
+                TextButton(onClick = onGames, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
+                    Text(sh("Oyunlar ve dil seçimi", "Games and language options"), fontSize = 13.sp)
+                }
+            }
+            item(key = "daily_social_pro") { PremiumHomeExtras(profile, onShop, onSocial) }
         }
-        item { Spacer(Modifier.height(4.dp)) }
     }
 }
 
