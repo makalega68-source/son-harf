@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -16,6 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
+import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.SupabaseProvider
 import kotlinx.coroutines.delay
 
@@ -31,6 +33,23 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var destination by remember { mutableStateOf(PremiumDestination.HOME) }
     var isPro by remember { mutableStateOf(false) }
     val homeRequest = SonHarfUiState.homeRequest
+    val defaultGameLanguage = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
+    var siegeLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
+    var lastLetterLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
+    var letterPathLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
+    var uiLanguageBeforeGame by rememberSaveable { mutableStateOf<String?>(null) }
+
+    fun openGame(target: PremiumDestination, language: String) {
+        if (uiLanguageBeforeGame == null) uiLanguageBeforeGame = SonHarfUiState.language
+        SonHarfUiState.language = SharedDictionaryService.canonicalLanguage(language)
+        destination = target
+    }
+
+    fun leaveGame(target: PremiumDestination = PremiumDestination.GAMES) {
+        uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
+        uiLanguageBeforeGame = null
+        destination = target
+    }
 
     LaunchedEffect(Unit) {
         backend.currentUserId()?.let { id ->
@@ -39,7 +58,11 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         }
     }
     LaunchedEffect(homeRequest) {
-        if (homeRequest > 0) destination = PremiumDestination.HOME
+        if (homeRequest > 0) {
+            uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
+            uiLanguageBeforeGame = null
+            destination = PremiumDestination.HOME
+        }
     }
     LaunchedEffect(destination) {
         if (destination !in setOf(
@@ -59,7 +82,11 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         destination = when (destination) {
             PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.SOCIAL -> PremiumDestination.PROFILE
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
-            PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> PremiumDestination.GAMES
+            PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
+                uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
+                uiLanguageBeforeGame = null
+                PremiumDestination.GAMES
+            }
             else -> PremiumDestination.HOME
         }
     }
@@ -117,15 +144,21 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
                         backend = backend,
-                        onPrimary = { destination = PremiumDestination.SIEGE },
+                        onPrimary = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                         onGames = { destination = PremiumDestination.GAMES },
                         onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
                     )
                     PremiumDestination.GAMES -> PremiumGameCenter(
-                        onSiege = { destination = PremiumDestination.SIEGE },
-                        onLastLetter = { destination = PremiumDestination.LAST_LETTER },
-                        onLetterPath = { destination = PremiumDestination.LETTER_PATH },
+                        siegeLanguage = siegeLanguage,
+                        lastLetterLanguage = lastLetterLanguage,
+                        letterPathLanguage = letterPathLanguage,
+                        onSiegeLanguage = { siegeLanguage = it },
+                        onLastLetterLanguage = { lastLetterLanguage = it },
+                        onLetterPathLanguage = { letterPathLanguage = it },
+                        onSiege = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
+                        onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
+                        onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
                     )
                     PremiumDestination.COMPETE -> LeaderboardExperienceScreen {
                         destination = PremiumDestination.HOME
@@ -139,15 +172,15 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     )
                     PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()
                     PremiumDestination.SIEGE -> WordSiegeExperienceScreen {
-                        destination = PremiumDestination.GAMES
+                        leaveGame()
                     }
                     PremiumDestination.LETTER_PATH -> LetterLadderGameScreen {
-                        destination = PremiumDestination.GAMES
+                        leaveGame()
                     }
                     PremiumDestination.SOCIAL -> MainSocialScreen(
                         backend = backend,
-                        onPlay = { destination = PremiumDestination.LAST_LETTER },
-                        onSiege = { destination = PremiumDestination.SIEGE },
+                        onPlay = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
+                        onSiege = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                     )
                     PremiumDestination.SETTINGS -> MainSettingsScreen(
                         backend,
@@ -203,6 +236,12 @@ private fun PremiumHomeScreen(
 
 @Composable
 private fun PremiumGameCenter(
+    siegeLanguage: String,
+    lastLetterLanguage: String,
+    letterPathLanguage: String,
+    onSiegeLanguage: (String) -> Unit,
+    onLastLetterLanguage: (String) -> Unit,
+    onLetterPathLanguage: (String) -> Unit,
     onSiege: () -> Unit,
     onLastLetter: () -> Unit,
     onLetterPath: () -> Unit,
@@ -220,7 +259,10 @@ private fun PremiumGameCenter(
                 fontWeight = FontWeight.Black,
             )
             Text(
-                sh("Bir oyun seç ve başla.", "Choose a game and start."),
+                sh(
+                    "Oyunu ve dilini seç. Tüm oyunlar aynı ana sözlüğü kullanır.",
+                    "Choose a game and its language. Every game uses the same master dictionary.",
+                ),
                 color = SonHarfTheme.TextSecondary,
                 fontSize = 12.sp,
             )
@@ -229,8 +271,10 @@ private fun PremiumGameCenter(
         item {
             PremiumGameCard(
                 icon = Icons.Rounded.GridView,
-                title = sh("KELİME TAHTI", "WORD THRONE"),
+                title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
                 subtitle = sh("Ana oyun • taktik alan savaşı", "Main game • tactical territory battle"),
+                language = siegeLanguage,
+                onLanguageChange = onSiegeLanguage,
                 primary = true,
                 onClick = onSiege,
             )
@@ -240,6 +284,8 @@ private fun PremiumGameCenter(
                 icon = Icons.Rounded.Bolt,
                 title = sh("SON HARF", "LAST LETTER"),
                 subtitle = sh("Hızlı kelime düellosu", "Fast word duel"),
+                language = lastLetterLanguage,
+                onLanguageChange = onLastLetterLanguage,
                 onClick = onLastLetter,
             )
         }
@@ -248,6 +294,8 @@ private fun PremiumGameCenter(
                 icon = Icons.Rounded.Route,
                 title = sh("HARF YOLU", "LETTER PATH"),
                 subtitle = sh("Kelime rotanı tamamla", "Complete your word path"),
+                language = letterPathLanguage,
+                onLanguageChange = onLetterPathLanguage,
                 onClick = onLetterPath,
             )
         }
@@ -259,40 +307,81 @@ private fun PremiumGameCard(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
+    language: String,
+    onLanguageChange: (String) -> Unit,
     primary: Boolean = false,
     onClick: () -> Unit,
 ) {
     Surface(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(if (primary) 124.dp else 94.dp),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
         color = if (primary) SonHarfTheme.Primary.copy(alpha = .12f) else SonHarfTheme.Surface.copy(alpha = .98f),
         border = BorderStroke(1.dp, if (primary) SonHarfTheme.Primary.copy(alpha = .34f) else SonHarfTheme.Border),
         shadowElevation = if (primary) 5.dp else 1.dp,
     ) {
-        Row(
-            Modifier.padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = SonHarfTheme.Primary.copy(alpha = .13f),
-            ) {
-                Icon(
-                    icon,
-                    contentDescription = null,
-                    tint = SonHarfTheme.Primary,
-                    modifier = Modifier.padding(12.dp).size(26.dp),
+        Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = SonHarfTheme.Primary.copy(alpha = .13f),
+                ) {
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = SonHarfTheme.Primary,
+                        modifier = Modifier.padding(12.dp).size(26.dp),
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(title, color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                    Spacer(Modifier.height(4.dp))
+                    Text(subtitle, color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
+                }
+            }
+            Spacer(Modifier.height(13.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PremiumLanguageChoice(
+                    language = language,
+                    onLanguageChange = onLanguageChange,
+                    modifier = Modifier.weight(1f),
                 )
+                Spacer(Modifier.width(12.dp))
+                Button(
+                    onClick = onClick,
+                    shape = RoundedCornerShape(14.dp),
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
+                ) {
+                    Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                }
             }
-            Spacer(Modifier.width(14.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                Spacer(Modifier.height(4.dp))
-                Text(subtitle, color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
-            }
-            Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.Primary)
         }
+    }
+}
+
+@Composable
+private fun PremiumLanguageChoice(
+    language: String,
+    onLanguageChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FilterChip(
+            selected = language == "tr",
+            onClick = { onLanguageChange("tr") },
+            label = { Text("TR", fontWeight = FontWeight.Bold, fontSize = 10.sp) },
+            leadingIcon = if (language == "tr") {
+                { Icon(Icons.Rounded.Check, null, Modifier.size(15.dp)) }
+            } else null,
+        )
+        FilterChip(
+            selected = language == "en",
+            onClick = { onLanguageChange("en") },
+            label = { Text("EN", fontWeight = FontWeight.Bold, fontSize = 10.sp) },
+            leadingIcon = if (language == "en") {
+                { Icon(Icons.Rounded.Check, null, Modifier.size(15.dp)) }
+            } else null,
+        )
     }
 }
 
