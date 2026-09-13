@@ -658,7 +658,9 @@ private fun PanSiegeBoardCell(
                     val label = WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)
                     val parts = label.split("\n")
                     if (parts.size > 1 && overview) {
-                        append(parts.first().take(1)); append(parts.last())
+                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 22.sp)) {
+                            append(parts.first().take(1)); append(parts.last())
+                        }
                     } else if (parts.size > 1) {
                         withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 11.sp)) { append(parts.first()) }
                         append("\n")
@@ -673,7 +675,7 @@ private fun PanSiegeBoardCell(
                             WordSiegeBoardSpec.StarBonus -> Color(0xFF755E21)
                             else -> WordSiegeGameUi.Text
                         },
-                        fontSize = if (overview) 22.sp else WordSiegeBoardAccessibility.BoardBonus,
+                        fontSize = WordSiegeBoardAccessibility.BoardBonus,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 lineHeight = 18.sp,
                         fontWeight = FontWeight.Black,
