@@ -5,7 +5,6 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.BoxWithConstraintsScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,8 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -62,6 +59,9 @@ internal fun PremiumWeeklyPodiumShowcase(
                     .aspectRatio(2f)
                     .clip(RoundedCornerShape(22.dp)),
         ) {
+            val cardWidth = maxWidth
+            val cardHeight = maxHeight
+
             Image(
                 painter = painterResource(R.drawable.weekly_podium_showcase),
                 contentDescription = null,
@@ -69,18 +69,16 @@ internal fun PremiumWeeklyPodiumShowcase(
                 contentScale = ContentScale.Crop,
             )
 
-            // The artwork carries the 3D podium, lighting, crown, confetti and metallic frames.
-            // Header copy stays live so Turkish/English localization is never baked into gameplay UI.
             Box(
-                Modifier.offset(x = maxWidth * .13f, y = maxHeight * .045f)
-                    .width(maxWidth * .52f)
-                    .height(maxHeight * .19f)
+                Modifier.offset(x = cardWidth * .13f, y = cardHeight * .045f)
+                    .width(cardWidth * .52f)
+                    .height(cardHeight * .19f)
                     .background(ShowcaseDeepGreen.copy(alpha = .96f), RoundedCornerShape(8.dp))
             )
             Column(
                 modifier =
-                    Modifier.offset(x = maxWidth * .145f, y = maxHeight * .055f)
-                        .width(maxWidth * .50f),
+                    Modifier.offset(x = cardWidth * .145f, y = cardHeight * .055f)
+                        .width(cardWidth * .50f),
             ) {
                 Text(
                     sh("HAFTANIN ZİRVESİ", "WEEKLY ELITE"),
@@ -106,9 +104,9 @@ internal fun PremiumWeeklyPodiumShowcase(
                 color = ShowcaseDeepGreen.copy(alpha = .97f),
                 border = BorderStroke(1.dp, Color.White.copy(alpha = .32f)),
                 modifier =
-                    Modifier.offset(x = maxWidth * .77f, y = maxHeight * .065f)
-                        .width(maxWidth * .18f)
-                        .height(maxHeight * .13f),
+                    Modifier.offset(x = cardWidth * .77f, y = cardHeight * .065f)
+                        .width(cardWidth * .18f)
+                        .height(cardHeight * .13f),
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(
@@ -122,38 +120,37 @@ internal fun PremiumWeeklyPodiumShowcase(
             }
 
             ShowcasePlayer(
-                place = 2,
                 player = players.getOrNull(1),
                 accent = ShowcaseSilver,
-                x = maxWidth * .18f,
-                avatarTop = maxHeight * .45f,
-                avatarSize = maxWidth * .082f,
-                nameTop = maxHeight * .665f,
-                scoreTop = maxHeight * .755f,
-                nameWidth = maxWidth * .19f,
+                centerX = cardWidth * .18f,
+                avatarTop = cardHeight * .45f,
+                avatarSize = cardWidth * .082f,
+                nameTop = cardHeight * .665f,
+                scoreTop = cardHeight * .755f,
+                nameWidth = cardWidth * .19f,
+                champion = false,
             )
             ShowcasePlayer(
-                place = 1,
                 player = players.getOrNull(0),
                 accent = ShowcaseGold,
-                x = maxWidth * .50f,
-                avatarTop = maxHeight * .335f,
-                avatarSize = maxWidth * .105f,
-                nameTop = maxHeight * .585f,
-                scoreTop = maxHeight * .675f,
-                nameWidth = maxWidth * .22f,
+                centerX = cardWidth * .50f,
+                avatarTop = cardHeight * .335f,
+                avatarSize = cardWidth * .105f,
+                nameTop = cardHeight * .585f,
+                scoreTop = cardHeight * .675f,
+                nameWidth = cardWidth * .22f,
                 champion = true,
             )
             ShowcasePlayer(
-                place = 3,
                 player = players.getOrNull(2),
                 accent = ShowcaseBronze,
-                x = maxWidth * .82f,
-                avatarTop = maxHeight * .45f,
-                avatarSize = maxWidth * .082f,
-                nameTop = maxHeight * .665f,
-                scoreTop = maxHeight * .755f,
-                nameWidth = maxWidth * .19f,
+                centerX = cardWidth * .82f,
+                avatarTop = cardHeight * .45f,
+                avatarSize = cardWidth * .082f,
+                nameTop = cardHeight * .665f,
+                scoreTop = cardHeight * .755f,
+                nameWidth = cardWidth * .19f,
+                champion = false,
             )
 
             if (loading) {
@@ -203,32 +200,23 @@ internal fun PremiumWeeklyPodiumShowcase(
 }
 
 @Composable
-private fun BoxWithConstraintsScope.ShowcasePlayer(
-    place: Int,
+private fun ShowcasePlayer(
     player: HomePodiumEntry?,
     accent: Color,
-    x: Dp,
+    centerX: Dp,
     avatarTop: Dp,
     avatarSize: Dp,
     nameTop: Dp,
     scoreTop: Dp,
     nameWidth: Dp,
-    champion: Boolean = false,
+    champion: Boolean,
 ) {
     val name = player?.row?.displayName?.ifBlank { sh("Oyuncu", "Player") } ?: "—"
-    val description =
-        player?.let {
-            sh(
-                "$place. sıra, $name, ${it.row.rating} haftalık RP",
-                "Rank $place, $name, ${it.row.rating} weekly RP",
-            )
-        } ?: sh("$place. sıra henüz boş", "Rank $place is not filled yet")
 
     Box(
         modifier =
-            Modifier.offset(x = x - avatarSize / 2f, y = avatarTop)
-                .size(avatarSize)
-                .clearAndSetSemantics { contentDescription = description },
+            Modifier.offset(x = centerX - avatarSize / 2f, y = avatarTop)
+                .size(avatarSize),
         contentAlignment = Alignment.Center,
     ) {
         if (player != null) {
@@ -254,7 +242,7 @@ private fun BoxWithConstraintsScope.ShowcasePlayer(
         maxLines = 1,
         overflow = TextOverflow.Ellipsis,
         modifier =
-            Modifier.offset(x = x - nameWidth / 2f, y = nameTop)
+            Modifier.offset(x = centerX - nameWidth / 2f, y = nameTop)
                 .width(nameWidth),
     )
     Text(
@@ -266,7 +254,7 @@ private fun BoxWithConstraintsScope.ShowcasePlayer(
         textAlign = TextAlign.Center,
         maxLines = 1,
         modifier =
-            Modifier.offset(x = x - nameWidth / 2f, y = scoreTop)
+            Modifier.offset(x = centerX - nameWidth / 2f, y = scoreTop)
                 .width(nameWidth),
     )
 }
