@@ -115,18 +115,7 @@ private fun RealNameStylePreview(itemId: String, expanded: Boolean) {
 
 @Composable
 private fun RealKeyboardPreview(itemId: String, expanded: Boolean) {
-    val palette = when (itemId) {
-        "keyboard_crystal" -> WordKeyboardPalette(
-            background = Color(0xFFE8F1F5), key = Color(0xFFF8FCFF), keyAlt = Color(0xFFD6E5ED),
-            text = Color(0xFF26353E), action = Color(0xFF537FA1), actionText = Color.White,
-            border = Color(0xFF9ABBCB), secondaryBorder = Color(0xFFA9BFCA),
-        )
-        else -> WordKeyboardPalette(
-            background = Color(0xFF151719), key = Color(0xFF24272A), keyAlt = Color(0xFF343535),
-            text = Color(0xFFF7F1E3), action = Color(0xFFB9914D), actionText = Color(0xFF21180A),
-            border = Color(0xFF6A6254), secondaryBorder = Color(0xFFB9914D),
-        )
-    }
+    val palette = SonHarfCosmetics.keyboardPaletteFor(itemId)
     Box(
         Modifier.fillMaxSize().background(palette.background).padding(if (expanded) 8.dp else 2.dp),
         contentAlignment = Alignment.Center,
