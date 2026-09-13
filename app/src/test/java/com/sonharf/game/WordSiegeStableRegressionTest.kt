@@ -12,6 +12,7 @@ class WordSiegeStableRegressionTest {
         val engine = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
         val sharedDictionary = projectFile("app/src/main/java/com/sonharf/game/data/SharedDictionaryService.kt").readText()
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
+        val scoreCard = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt").readText()
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt").readText()
         val rules = projectFile("app/src/main/java/com/sonharf/game/WordSiegeFinalRules.kt").readText()
 
@@ -21,7 +22,8 @@ class WordSiegeStableRegressionTest {
         assertTrue(experience.contains("WordSiegeFinalRules.detectOrientation"))
         assertTrue(experience.contains("ProfileDto"))
         assertTrue(experience.contains("statusBarsPadding"))
-        assertTrue(pan.contains("ProfilePhotoAvatarWithGender"))
+        assertTrue(pan.contains("WordSiegeScoreCard("))
+        assertTrue(scoreCard.contains("ProfilePhotoAvatarWithGender("))
         assertTrue(!pan.contains("Yön otomatik algılanır"))
         assertTrue(pan.contains("Torba ${'$'}{game.bag.length}"))
         assertTrue(practice.contains("showPass"))
