@@ -1,0 +1,42 @@
+name: Weekly Podium Debug
+
+on:
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK 36
+        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.14.4'
+      - name: Capture compile diagnostics
+        shell: bash
+        run: |
+          set +e
+          gradle :app:compileDebugKotlin --stacktrace --warning-mode all > compile.log 2>&1
+          status=$?
+          {
+            echo '### compileDebugKotlin diagnostics'
+            echo
+            echo '```text'
+            tail -n 180 compile.log
+            echo '```'
+            echo
+            echo "Exit code: $status"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 0
