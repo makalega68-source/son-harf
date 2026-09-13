@@ -43,8 +43,8 @@ private val WordSiegePracticeBots = listOf(
 
 private val PracticePlayerAccent = Color(0xFF567A64)
 private val PracticePlayerFill = Color(0xFFA8C7B1)
-private val PracticeRivalAccent = Color(0xFF5C8299)
-private val PracticeRivalFill = Color(0xFFAFCDE0)
+private val PracticeRivalAccent = Color(0xFF9B4D4A)
+private val PracticeRivalFill = Color(0xFFE4AEAA)
 private val PracticeNeutralFill = Color(0xFFE7E8E1)
 private val PracticeSiegeWarm = Color(0xFFE3A64F)
 
@@ -52,6 +52,16 @@ private val PracticeSiegeWarm = Color(0xFFE3A64F)
 internal fun WordSiegePracticeScreen(
     onExit: () -> Unit,
     matchmakingFallback: Boolean = false,
+) {
+    WordSiegeGameTheme {
+        WordSiegePracticeContent(onExit, matchmakingFallback)
+    }
+}
+
+@Composable
+private fun WordSiegePracticeContent(
+    onExit: () -> Unit,
+    matchmakingFallback: Boolean,
 ) {
     // Profile enrichment is optional. Core practice/fallback actions never require backend availability.
     val backend = remember { runCatching { OnlineGameBackend() }.getOrNull() }
@@ -274,7 +284,7 @@ internal fun WordSiegePracticeScreen(
         }
     }
 
-    Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
+    Surface(Modifier.fillMaxSize(), color = WordSiegeGameUi.Background) {
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 2.dp),
         ) {
@@ -289,7 +299,7 @@ internal fun WordSiegePracticeScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = onExit, modifier = Modifier.size(if (compact) 40.dp else 46.dp)) {
-                        Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
+                        Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = WordSiegeGameUi.Text)
                     }
                     Column(
                         modifier = Modifier.weight(1f).fillMaxHeight(),
@@ -297,7 +307,7 @@ internal fun WordSiegePracticeScreen(
                     ) {
                         Text(
                             sh("KELİME TAHTI", "WORD THRONE"),
-                            color = MainUi.Text,
+                            color = WordSiegeGameUi.Text,
                             fontSize = if (compact) 16.sp else 18.sp,
                             lineHeight = if (compact) 18.sp else 21.sp,
                             fontWeight = FontWeight.Black,
@@ -325,7 +335,7 @@ internal fun WordSiegePracticeScreen(
                         }
                     }
                     IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(if (compact) 40.dp else 46.dp)) {
-                        Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = MainUi.Red)
+                        Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = WordSiegeGameUi.Red)
                     }
                     IconButton(
                         onClick = {
@@ -334,7 +344,7 @@ internal fun WordSiegePracticeScreen(
                         },
                         modifier = Modifier.size(if (compact) 40.dp else 46.dp),
                     ) {
-                        Icon(Icons.Rounded.Refresh, sh("Yeni oyun", "New game"), tint = MainUi.Blue)
+                        Icon(Icons.Rounded.Refresh, sh("Yeni oyun", "New game"), tint = WordSiegeGameUi.Blue)
                     }
                 }
 
@@ -347,6 +357,7 @@ internal fun WordSiegePracticeScreen(
                         area = state.playerArea,
                         accent = PracticePlayerAccent,
                         active = displayedOwner == 1,
+                        leading = playerTargetScore > botTargetScore,
                         compact = compact,
                         avatarPath = playerProfile?.avatarPath,
                         gender = playerProfile?.gender,
@@ -362,6 +373,7 @@ internal fun WordSiegePracticeScreen(
                         area = state.botArea,
                         accent = PracticeRivalAccent,
                         active = displayedOwner == 2,
+                        leading = botTargetScore > playerTargetScore,
                         compact = compact,
                         avatarPath = null,
                         gender = botProfile.gender,
@@ -370,6 +382,8 @@ internal fun WordSiegePracticeScreen(
                         modifier = Modifier.weight(1f),
                     )
                 }
+
+                WordSiegeOwnershipLegend()
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -397,7 +411,7 @@ internal fun WordSiegePracticeScreen(
                                 displayedOwner == 1 -> sh("SIRA SENDE • Kelimeni oluştur", "YOUR TURN • Build your word")
                                 else -> sh("${botProfile.name.uppercase()} OYNUYOR", "${botProfile.name.uppercase()} IS PLAYING")
                             },
-                            color = if (displayedOwner == 1) Color.White else MainUi.Text,
+                            color = if (displayedOwner == 1) Color.White else WordSiegeGameUi.Text,
                             fontSize = if (compact) 11.sp else 13.sp,
                             fontWeight = FontWeight.Black,
                             maxLines = 1,
@@ -457,12 +471,12 @@ internal fun WordSiegePracticeScreen(
                                     "Bölge +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
                                     "Territory +${previewCapturedCells * WordSiegeFinalRules.CUBE_TRANSFER_POINTS}",
                                 ),
-                                color = MainUi.Muted,
+                                color = WordSiegeGameUi.Muted,
                                 fontSize = 8.sp,
                             )
                         }
                         Spacer(Modifier.weight(1f))
-                        Text(sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"), color = MainUi.Muted, fontSize = 8.sp, maxLines = 1)
+                        Text(sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"), color = WordSiegeGameUi.Muted, fontSize = 8.sp, maxLines = 1)
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -502,7 +516,7 @@ internal fun WordSiegePracticeScreen(
                         ) {
                             Icon(Icons.Rounded.Undo, null, Modifier.size(13.dp))
                             Spacer(Modifier.width(3.dp))
-                            Text(sh("GERİ AL", "UNDO"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Text(sh("GERİ AL", "UNDO"), fontSize = 11.sp, fontWeight = FontWeight.Black)
                         }
                         OutlinedButton(
                             onClick = { shuffleSeed = if (shuffleSeed == Int.MAX_VALUE) 1 else shuffleSeed + 1 },
@@ -512,7 +526,7 @@ internal fun WordSiegePracticeScreen(
                         ) {
                             Icon(Icons.Rounded.Shuffle, null, Modifier.size(13.dp))
                             Spacer(Modifier.width(3.dp))
-                            Text(sh("KARIŞTIR", "SHUFFLE"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            Text(sh("KARIŞTIR", "SHUFFLE"), fontSize = 11.sp, fontWeight = FontWeight.Black)
                         }
                     }
 
@@ -546,8 +560,8 @@ internal fun WordSiegePracticeScreen(
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = PracticePlayerAccent,
                                 contentColor = Color.White,
-                                disabledContainerColor = SonHarfTheme.DisabledBackground,
-                                disabledContentColor = SonHarfTheme.DisabledContent,
+                                disabledContainerColor = WordSiegeGameUi.DisabledBackground,
+                                disabledContentColor = WordSiegeGameUi.DisabledContent,
                             ),
                             contentPadding = PaddingValues(horizontal = 4.dp),
                         ) {
@@ -557,7 +571,7 @@ internal fun WordSiegePracticeScreen(
                 } else {
                     val won = state.winnerOwner == 1
                     val draw = state.winnerOwner == null
-                    val color = when { won -> PracticePlayerAccent; draw -> MainUi.Gold; else -> PracticeRivalAccent }
+                    val color = when { won -> PracticePlayerAccent; draw -> WordSiegeGameUi.Gold; else -> PracticeRivalAccent }
                     Surface(
                         Modifier.fillMaxWidth(),
                         color = color.copy(alpha = .08f),
@@ -579,12 +593,12 @@ internal fun WordSiegePracticeScreen(
                                 )
                                 Text(
                                     sh("Kelime ve bölge puanların ayrı hesaplandı.", "Word and territory points were scored separately."),
-                                    color = MainUi.Muted,
+                                    color = WordSiegeGameUi.Muted,
                                     fontSize = 8.sp,
                                 )
                             }
                             TextButton(onClick = ::startAgain) {
-                                Text(sh("YENİ OYUN", "NEW GAME"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                                Text(sh("YENİ OYUN", "NEW GAME"), color = WordSiegeGameUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp)
                             }
                         }
                     }
@@ -615,12 +629,12 @@ internal fun WordSiegePracticeScreen(
                     } else {
                         sh("Mevcut alıştırmadaki ilerleme sıfırlanacak.", "Current practice progress will be reset.")
                     },
-                    color = MainUi.Muted,
+                    color = WordSiegeGameUi.Muted,
                 )
             },
             confirmButton = {
                 TextButton(onClick = { showRestart = false; startAgain() }) {
-                    Text(sh("YENİ OYUN", "NEW GAME"), color = MainUi.Blue, fontWeight = FontWeight.Black)
+                    Text(sh("YENİ OYUN", "NEW GAME"), color = WordSiegeGameUi.Blue, fontWeight = FontWeight.Black)
                 }
             },
             dismissButton = { TextButton(onClick = { showRestart = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
@@ -634,7 +648,7 @@ internal fun WordSiegePracticeScreen(
             text = {
                 Text(
                     sh("İki oyuncu art arda pas verirse maç biter.", "Two consecutive passes end the match."),
-                    color = MainUi.Muted,
+                    color = WordSiegeGameUi.Muted,
                 )
             },
             confirmButton = {
@@ -643,7 +657,7 @@ internal fun WordSiegePracticeScreen(
                     state = WordSiegePracticeEngine.pass(state, 1)
                     clearSelection()
                 }) {
-                    Text(sh("PAS VER", "PASS"), color = MainUi.Gold, fontWeight = FontWeight.Black)
+                    Text(sh("PAS VER", "PASS"), color = WordSiegeGameUi.Gold, fontWeight = FontWeight.Black)
                 }
             },
             dismissButton = { TextButton(onClick = { showPass = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
@@ -654,14 +668,14 @@ internal fun WordSiegePracticeScreen(
         AlertDialog(
             onDismissRequest = { showForfeit = false },
             title = { Text(sh("Pes etmek istiyor musun?", "Do you want to forfeit?"), fontWeight = FontWeight.Black) },
-            text = { Text(sh("Bu maçı rakibin kazanır.", "Your rival wins this match."), color = MainUi.Muted) },
+            text = { Text(sh("Bu maçı rakibin kazanır.", "Your rival wins this match."), color = WordSiegeGameUi.Muted) },
             confirmButton = {
                 TextButton(onClick = {
                     showForfeit = false
                     state = WordSiegePracticeEngine.forfeit(state, 1)
                     clearSelection()
                 }) {
-                    Text(sh("PES ET", "FORFEIT"), color = MainUi.Red, fontWeight = FontWeight.Black)
+                    Text(sh("PES ET", "FORFEIT"), color = WordSiegeGameUi.Red, fontWeight = FontWeight.Black)
                 }
             },
             dismissButton = { TextButton(onClick = { showForfeit = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
@@ -676,7 +690,7 @@ internal fun WordSiegePracticeScreen(
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
                         sh("Seçtiğin harfler torbaya döner ve turun biter.", "Selected tiles return to the bag and your turn ends."),
-                        color = MainUi.Muted,
+                        color = WordSiegeGameUi.Muted,
                         fontSize = 12.sp,
                     )
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -727,6 +741,7 @@ private fun WordSiegePracticeScoreCard(
     area: Int,
     accent: Color,
     active: Boolean,
+    leading: Boolean,
     compact: Boolean,
     avatarPath: String?,
     gender: String?,
@@ -734,56 +749,11 @@ private fun WordSiegePracticeScoreCard(
     isBot: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier.height(if (compact) 64.dp else 78.dp),
-        color = if (active) accent.copy(alpha = .09f) else MainUi.Surface,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) accent else MainUi.Border),
-    ) {
-        Row(
-            Modifier.padding(horizontal = 7.dp, vertical = if (compact) 3.dp else 6.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            ProfilePhotoAvatarWithGender(
-                avatarPath = avatarPath,
-                gender = gender,
-                name = name,
-                size = if (compact) 36.dp else 44.dp,
-                accent = accent,
-                visible = avatarVisible,
-            )
-            Spacer(Modifier.width(if (compact) 5.dp else 6.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        name,
-                        color = MainUi.Text,
-                        fontWeight = FontWeight.Black,
-                        fontSize = if (compact) 11.sp else 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
-                    )
-                    if (isBot) {
-                        Spacer(Modifier.width(4.dp))
-                        Surface(shape = RoundedCornerShape(99.dp), color = accent.copy(alpha = .12f)) {
-                            Text("BOT", Modifier.padding(horizontal = 5.dp, vertical = 1.dp), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                        }
-                    }
-                }
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Text("$score", color = accent, fontWeight = FontWeight.Black, fontSize = if (compact) 19.sp else 23.sp)
-                    Spacer(Modifier.width(5.dp))
-                    Text(sh("toplam", "total"), color = MainUi.Muted, fontSize = 7.sp, modifier = Modifier.padding(bottom = 3.dp))
-                }
-                Text(
-                    sh("Kelime $wordPoints • Bölge $territoryPoints", "Word $wordPoints • Territory $territoryPoints"),
-                    color = MainUi.Muted,
-                    fontSize = if (compact) 7.sp else 8.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-        }
-    }
+    WordSiegeScoreCard(
+        name = name, score = score, wordPoints = wordPoints,
+        territoryPoints = territoryPoints, area = area, accent = accent,
+        active = active, leading = leading, avatarPath = avatarPath,
+        gender = gender, avatarVisible = avatarVisible, isBot = isBot,
+        modifier = modifier.heightIn(min = if (compact) 96.dp else 108.dp),
+    )
 }
