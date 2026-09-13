@@ -14,7 +14,7 @@ class WordSiegeReadabilityContractTest {
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
         assertTrue(tokens.contains("BoardLetterPoint: TextUnit = 14.sp"))
-        assertTrue(tokens.contains("BoardBonus: TextUnit = 18.sp"))
+        assertTrue(tokens.contains("BoardBonus: TextUnit = 17.sp"))
         assertTrue(tokens.contains("RackPoint: TextUnit = 14.sp"))
 
         listOf("BoardLetterPoint", "BoardBonus", "RackPoint").forEach { token ->
