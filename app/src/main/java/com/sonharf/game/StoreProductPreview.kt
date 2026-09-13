@@ -2,6 +2,7 @@ package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,9 +27,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
 import com.sonharf.game.data.ShopItemDto
 
 /**
@@ -120,23 +127,29 @@ private fun RealKeyboardPreview(itemId: String, expanded: Boolean) {
         Modifier.fillMaxSize().background(palette.background).padding(if (expanded) 8.dp else 2.dp),
         contentAlignment = Alignment.Center,
     ) {
-        val rows = if (expanded) listOf(listOf("Q", "W", "E", "R", "T", "Y"), listOf("A", "S", "D", "F", "G"), listOf("Z", "X", "C", "V")) else listOf(listOf("Q", "W", "E"))
-        Column(verticalArrangement = Arrangement.spacedBy(if (expanded) 5.dp else 0.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            rows.forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(if (expanded) 5.dp else 3.dp)) {
-                    row.forEach { letter ->
-                        Surface(shape = RoundedCornerShape(if (expanded) 9.dp else 7.dp), color = palette.key, border = BorderStroke(1.dp, palette.border)) {
-                            Text(letter, Modifier.padding(horizontal = if (expanded) 11.dp else 7.dp, vertical = if (expanded) 9.dp else 8.dp), color = palette.text, fontWeight = FontWeight.Bold, fontSize = if (expanded) 13.sp else 11.sp)
-                        }
-                    }
-                }
-            }
-            if (expanded) {
-                Surface(shape = RoundedCornerShape(9.dp), color = palette.action) {
-                    Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), Modifier.padding(horizontal = 16.dp, vertical = 8.dp), color = palette.actionText, fontWeight = FontWeight.Black, fontSize = 10.sp)
-                }
-            }
-        }
+        HiggsfieldKeyboardArtwork(itemId, Modifier.fillMaxSize())
+    }
+}
+
+/**
+ * Product art comes from the approved Higgsfield keyboard collection.  The two sellable skins
+ * use their own source region, rather than a generic keyboard illustration.
+ */
+@Composable
+private fun HiggsfieldKeyboardArtwork(itemId: String, modifier: Modifier = Modifier) {
+    val artwork = ImageBitmap.imageResource(LocalContext.current.resources, R.drawable.higgsfield_keyboard_collection)
+    val crop = when (itemId) {
+        "keyboard_crystal" -> IntRect(left = 55, top = 705, right = 338, bottom = 944)
+        "keyboard_obsidian" -> IntRect(left = 347, top = 456, right = 650, bottom = 698)
+        else -> IntRect(left = 54, top = 456, right = 338, bottom = 698)
+    }
+    Canvas(modifier.clip(RoundedCornerShape(14.dp))) {
+        drawImage(
+            image = artwork,
+            srcOffset = IntOffset(crop.left, crop.top),
+            srcSize = IntSize(crop.width, crop.height),
+            dstSize = IntSize(size.width.toInt(), size.height.toInt()),
+        )
     }
 }
 
