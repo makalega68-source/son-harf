@@ -127,7 +127,7 @@ internal fun MainPlayerProfileScreen(
                         name = p?.displayName ?: sh("Oyuncu", "Player"),
                         size = 88.dp,
                         frameId = SonHarfCosmetics.profileFrameId,
-                        accent = if (p?.isVip == true) SonHarfTheme.Gold else SonHarfTheme.Primary,
+                        accent = if (p?.isVip == true) SonHarfTheme.PremiumGold else SonHarfTheme.Primary,
                         visible = p?.avatarVisibility != "hidden",
                         showGenderBadge = false,
                     )
@@ -147,7 +147,7 @@ internal fun MainPlayerProfileScreen(
                                 accent = SonHarfTheme.Primary,
                             )
                             if (p?.isVip == true) {
-                                ProfilePill(text = "VIP", accent = SonHarfTheme.Gold)
+                                ProfilePill(text = "VIP", accent = SonHarfTheme.PremiumGold)
                             }
                         }
                         TextButton(
