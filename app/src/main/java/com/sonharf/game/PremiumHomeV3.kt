@@ -116,37 +116,13 @@ internal fun PremiumWeeklyPodium(
     players: List<HomePodiumEntry>, loading: Boolean, failed: Boolean,
     onOpenLeague: () -> Unit, onRetry: () -> Unit,
 ) {
-    val arenaTop = if (SonHarfTheme.IsDark) Color(0xFF17251F) else Color(0xFF24493C)
-    val arenaBottom = if (SonHarfTheme.IsDark) Color(0xFF0E1713) else Color(0xFF17342A)
-    Surface(onClick = onOpenLeague, shape = RoundedCornerShape(20.dp), color = Color.Transparent,
-        border = BorderStroke(1.dp, SonHarfTheme.PremiumGold.copy(alpha = .40f)), shadowElevation = 2.dp) {
-        Column(Modifier.background(Brush.verticalGradient(listOf(arenaTop, arenaBottom))).padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(9.dp), color = SonHarfTheme.PremiumGold.copy(alpha = .15f), border = BorderStroke(1.dp, SonHarfTheme.PremiumGold.copy(alpha = .42f))) {
-                    Icon(Icons.Rounded.EmojiEvents, null, Modifier.padding(6.dp).size(15.dp), tint = SonHarfTheme.PremiumGoldLight)
-                }
-                Spacer(Modifier.width(8.dp))
-                Text(sh("HAFTANIN ZİRVESİ", "WEEKLY ELITE"), Modifier.weight(1f), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
-                Text(sh("REKABET MERKEZİ", "COMPETITION"), color = SonHarfTheme.PremiumGoldLight, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                Icon(Icons.Rounded.ChevronRight, null, Modifier.size(16.dp), tint = SonHarfTheme.PremiumGoldLight)
-            }
-            when {
-                loading -> Box(Modifier.fillMaxWidth().height(58.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(20.dp), color = SonHarfTheme.PremiumGoldLight, strokeWidth = 2.dp)
-                }
-                failed -> Row(Modifier.fillMaxWidth().height(58.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(sh("Sıralama yenilenemedi", "Ranking could not refresh"), Modifier.weight(1f), color = Color.White.copy(alpha = .78f), fontSize = 11.sp)
-                    TextButton(onClick = onRetry, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Text(sh("YENİLE", "RETRY"), color = SonHarfTheme.PremiumGoldLight, fontSize = 10.sp) }
-                }
-                else -> Row(Modifier.fillMaxWidth().heightIn(min = 58.dp).semantics { isTraversalGroup = true }, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    PremiumPodiumPlace(1, players.getOrNull(0), Modifier.weight(1f))
-                    PremiumPodiumPlace(2, players.getOrNull(1), Modifier.weight(1f))
-                    PremiumPodiumPlace(3, players.getOrNull(2), Modifier.weight(1f))
-                }
-            }
-        }
-    }
+    PremiumWeeklyPodiumShowcase(
+        players = players,
+        loading = loading,
+        failed = failed,
+        onOpenLeague = onOpenLeague,
+        onRetry = onRetry,
+    )
 }
 
 @Composable
