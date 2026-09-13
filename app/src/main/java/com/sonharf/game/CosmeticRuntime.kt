@@ -96,7 +96,7 @@ object SonHarfCosmetics {
 }
 
 /** Shared by every embedded word keyboard so a purchased skin is real in every supported mode. */
-internal data class WordKeyboardPalette(
+data class WordKeyboardPalette(
     val background: Color,
     val key: Color,
     val keyAlt: Color,
