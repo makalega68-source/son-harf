@@ -40,7 +40,9 @@ class KelimeTahtiPrimaryProductContractTest {
         assertTrue(shell.contains("PremiumDestination.PROFILE"))
         assertFalse(shell.contains("PremiumDestination.LEAGUE"))
         assertFalse(shell.contains("PremiumDestination.COMPETITION"))
-        assertFalse(shell.contains("PremiumDestination.SHOP"))
+        assertTrue(shell.contains("PremiumDestination.SHOP -> EconomyShopScreen"))
+        val topLevel = shell.substringAfter("val topLevel =").substringBefore("val scheme =")
+        assertFalse(topLevel.contains("PremiumDestination.SHOP"))
         assertFalse(shell.contains("PremiumDestination.TASKS"))
     }
 
