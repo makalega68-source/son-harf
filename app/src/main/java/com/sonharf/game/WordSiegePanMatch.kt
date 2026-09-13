@@ -147,7 +147,7 @@ internal fun WordSiegePanMatch(
                 Icon(Icons.Rounded.ArrowBack, sh("Oyunlar", "Games"), tint = WordSiegeGameUi.Text)
             }
             Column(Modifier.weight(1f)) {
-                Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = WordSiegeGameUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
+                Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = WordSiegeGameUi.Text, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 Text(
                     if (game.status == "playing") {
                         if (visualMyTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")
@@ -157,8 +157,11 @@ internal fun WordSiegePanMatch(
                     fontWeight = FontWeight.Black,
                 )
             }
-            Surface(shape = RoundedCornerShape(99.dp), color = SiegePurpleSoft) {
-                Text(sh("SÜRE YOK", "NO TIMER"), Modifier.padding(horizontal = 9.dp, vertical = 6.dp), color = SiegePurple, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            IconButton(onClick = onChat, enabled = game.playerTwoId != null, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Rounded.Chat, sh("Sohbet", "Chat"), tint = WordSiegeGameUi.Muted)
+            }
+            IconButton(onClick = onForfeit, enabled = game.status == "playing" && !busy, modifier = Modifier.size(40.dp)) {
+                Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = WordSiegeGameUi.Red)
             }
         }
 
@@ -226,6 +229,7 @@ internal fun WordSiegePanMatch(
             return@Column
         }
 
+        Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
         PanSiegeBoard(
             gameId = game.id,
             board = game.board,
@@ -234,33 +238,9 @@ internal fun WordSiegePanMatch(
             myOwner = myOwner,
             enabled = canAct,
             lastMove = lastMove,
-            modifier = Modifier.fillMaxWidth().weight(1f),
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f),
             onCell = onBoardCell,
         )
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            OutlinedButton(
-                onClick = onChat,
-                enabled = game.playerTwoId != null,
-                modifier = Modifier.weight(1f).height(36.dp),
-                border = BorderStroke(1.dp, WordSiegeGameUi.Blue),
-                contentPadding = PaddingValues(horizontal = 6.dp),
-            ) {
-                Icon(Icons.Rounded.Chat, null, Modifier.size(15.dp), tint = WordSiegeGameUi.Blue)
-                Spacer(Modifier.width(4.dp))
-                Text(sh("SOHBET", "CHAT"), color = WordSiegeGameUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black)
-            }
-            OutlinedButton(
-                onClick = onForfeit,
-                enabled = game.status == "playing" && !busy,
-                modifier = Modifier.weight(1f).height(36.dp),
-                border = BorderStroke(1.dp, WordSiegeGameUi.Red),
-                contentPadding = PaddingValues(horizontal = 6.dp),
-            ) {
-                Icon(Icons.Rounded.Flag, null, Modifier.size(15.dp), tint = WordSiegeGameUi.Red)
-                Spacer(Modifier.width(4.dp))
-                Text(sh("PES ET", "FORFEIT"), color = WordSiegeGameUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black)
-            }
         }
 
         if (game.status == "playing") {
@@ -297,50 +277,25 @@ internal fun WordSiegePanMatch(
                 repeat((7 - rack.length).coerceAtLeast(0)) { Spacer(Modifier.weight(1f).height(48.dp)) }
             }
 
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                OutlinedButton(
-                    onClick = { placements.keys.lastOrNull()?.let(onBoardCell) },
-                    enabled = canAct && placements.isNotEmpty(),
-                    modifier = Modifier.weight(1f).height(36.dp),
-                    contentPadding = PaddingValues(horizontal = 3.dp),
-                ) {
-                    Icon(Icons.Rounded.Undo, null, Modifier.size(14.dp))
-                    Spacer(Modifier.width(3.dp))
-                    Text(sh("GERİ AL", "UNDO"), fontSize = 11.sp, fontWeight = FontWeight.Black)
+            Row(Modifier.fillMaxWidth()) {
+                WordSiegeCompactAction(sh("GERİ AL", "UNDO"), Icons.Rounded.Undo,
+                    canAct && placements.isNotEmpty(), Modifier.weight(1f)) {
+                    placements.keys.lastOrNull()?.let(onBoardCell)
                 }
-                OutlinedButton(
-                    onClick = { shuffleSeed = if (shuffleSeed == Int.MAX_VALUE) 1 else shuffleSeed + 1 },
-                    enabled = canAct && rack.length > 1,
-                    modifier = Modifier.weight(1f).height(36.dp),
-                    contentPadding = PaddingValues(horizontal = 3.dp),
-                ) {
-                    Icon(Icons.Rounded.Shuffle, null, Modifier.size(14.dp))
-                    Spacer(Modifier.width(3.dp))
-                    Text(sh("KARIŞTIR", "SHUFFLE"), fontSize = 11.sp, fontWeight = FontWeight.Black)
+                WordSiegeCompactAction(sh("KARIŞTIR", "SHUFFLE"), Icons.Rounded.Shuffle,
+                    canAct && rack.length > 1, Modifier.weight(1f)) {
+                    shuffleSeed = if (shuffleSeed == Int.MAX_VALUE) 1 else shuffleSeed + 1
                 }
-            }
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                OutlinedButton(
-                    onClick = onPass,
-                    enabled = canAct,
-                    modifier = Modifier.weight(.82f).height(46.dp),
-                    contentPadding = PaddingValues(horizontal = 3.dp),
-                ) { Text(sh("PAS", "PASS"), fontSize = 11.sp, fontWeight = FontWeight.Black) }
-                OutlinedButton(
-                    onClick = onExchange,
-                    enabled = canAct && game.bag.isNotEmpty(),
-                    modifier = Modifier.weight(1f).height(46.dp),
-                    border = BorderStroke(1.dp, SiegePurple),
-                    contentPadding = PaddingValues(horizontal = 3.dp),
-                ) { Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = 11.sp, fontWeight = FontWeight.Black) }
+                WordSiegeCompactAction(sh("PAS", "PASS"), Icons.Rounded.SkipNext,
+                    canAct, Modifier.weight(1f), onPass)
+                WordSiegeCompactAction(sh("DEĞİŞTİR", "EXCHANGE"), Icons.Rounded.SwapHoriz,
+                    canAct && game.bag.isNotEmpty(), Modifier.weight(1f), onExchange)
             }
             Row(Modifier.fillMaxWidth()) {
                 Button(
                     onClick = onSubmit,
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFFE9D9A5), Color(0xFFAF8C45), Color(0xFFF6EAC7)))),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 1.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
                     enabled = canAct && placements.isNotEmpty(),
                     modifier = Modifier.weight(1f).height(52.dp),
                     colors = ButtonDefaults.buttonColors(
@@ -388,7 +343,7 @@ private fun PanSiegeBoard(
     var actionVfxMoveId by remember(gameId) { mutableStateOf<Long?>(null) }
     var highlightedIndices by remember(gameId) { mutableStateOf<Set<Int>>(emptySet()) }
     val highlightAlpha = remember(gameId) { Animatable(0f) }
-    var viewportMode by remember(gameId) { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
+    var viewportMode by remember(gameId) { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     val closeScale = remember(viewport, boardPx) {
         wordSiegeOnlineCloseScale(
             viewportWidthPx = viewport.width.toFloat(),
@@ -544,6 +499,7 @@ private fun PanSiegeBoard(
                                 pending = pending,
                                 myOwner = myOwner,
                                 enabled = enabled,
+                                overview = viewportMode == WordSiegeBoardViewportMode.FIT,
                                 size = PanSiegeCellSize,
                                 borderWidth = boardBorderWidth,
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
@@ -607,6 +563,7 @@ private fun PanSiegeBoardCell(
     pending: Boolean,
     myOwner: Int,
     enabled: Boolean,
+    overview: Boolean,
     size: Dp,
     borderWidth: Dp,
     lastMoveHighlight: Float,
@@ -700,7 +657,9 @@ private fun PanSiegeBoardCell(
                         androidx.compose.ui.text.buildAnnotatedString {
                     val label = WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)
                     val parts = label.split("\n")
-                    if (parts.size > 1) {
+                    if (parts.size > 1 && overview) {
+                        append(parts.first().take(1)); append(parts.last())
+                    } else if (parts.size > 1) {
                         withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 11.sp)) { append(parts.first()) }
                         append("\n")
                         append(parts.last())
@@ -714,7 +673,7 @@ private fun PanSiegeBoardCell(
                             WordSiegeBoardSpec.StarBonus -> Color(0xFF755E21)
                             else -> WordSiegeGameUi.Text
                         },
-                        fontSize = WordSiegeBoardAccessibility.BoardBonus,
+                        fontSize = if (overview) 22.sp else WordSiegeBoardAccessibility.BoardBonus,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 lineHeight = 18.sp,
                         fontWeight = FontWeight.Black,

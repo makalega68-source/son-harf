@@ -79,7 +79,7 @@ internal fun WordSiegePracticeBoard(
     var closePan by remember { mutableStateOf(Offset.Zero) }
     var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_CLOSE_SCALE) }
     var initialized by remember { mutableStateOf(false) }
-    var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.CLOSE) }
+    var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     val transform by remember(mode, viewport, boardPx, closePan, closeScale) {
         derivedStateOf {
             wordSiegeBoardTransform(
@@ -204,6 +204,7 @@ internal fun WordSiegePracticeBoard(
                                 pending = pendingRackIndex != null,
                                 myOwner = myOwner,
                                 enabled = enabled,
+                                overview = mode == WordSiegeBoardViewportMode.FIT,
                                 threatened = false,
                                 lastMoveHighlight = if (index in highlightedIndices) highlightAlpha.value else 0f,
                                 showDefinitionBadge = resolvedWord?.badgeIndex == index,
@@ -241,6 +242,7 @@ private fun WordSiegePracticeBoardCell(
     pending: Boolean,
     myOwner: Int,
     enabled: Boolean,
+    overview: Boolean,
     threatened: Boolean,
     lastMoveHighlight: Float,
     showDefinitionBadge: Boolean,
@@ -364,7 +366,9 @@ private fun WordSiegePracticeBoardCell(
                 androidx.compose.ui.text.buildAnnotatedString {
                     val label = WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)
                     val parts = label.split("\n")
-                    if (parts.size > 1) {
+                    if (parts.size > 1 && overview) {
+                        append(parts.first().take(1)); append(parts.last())
+                    } else if (parts.size > 1) {
                         withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 11.sp)) { append(parts.first()) }
                         append("\n")
                         append(parts.last())
@@ -377,7 +381,7 @@ private fun WordSiegePracticeBoardCell(
                     activeZone == WordSiegeBoardSpec.StarBonus -> Color(0xFF755E21)
                     else -> Color(0xFF52675C)
                 },
-                fontSize = WordSiegeBoardAccessibility.BoardBonus,
+                fontSize = if (overview) 22.sp else WordSiegeBoardAccessibility.BoardBonus,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 lineHeight = 18.sp,
                 fontWeight = FontWeight.Black,

@@ -2,6 +2,7 @@ package com.sonharf.game.data
 
 import android.content.Context
 import io.github.jan.supabase.postgrest.postgrest
+import io.github.jan.supabase.postgrest.result.PostgrestResult
 import java.text.Normalizer
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -11,10 +12,13 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 @Serializable
-private data class DictionarySnapshotDto(
+internal data class DictionarySnapshotDto(
     val language: String,
     val words: List<String>,
 )
+
+// Both dictionary RPCs return one JSON object, not a PostgREST row array.
+internal inline fun <reified T> PostgrestResult.decodeDictionaryRpc(): T = decodeAs()
 
 @Serializable
 data class GameWordValidationDto(
@@ -154,7 +158,7 @@ object SharedDictionaryService {
         val payload = SupabaseProvider.client.postgrest.rpc(
             "get_dictionary_snapshot_v5",
             buildJsonObject { put("p_language", lang) },
-        ).decodeSingle<DictionarySnapshotDto>()
+        ).decodeDictionaryRpc<DictionarySnapshotDto>()
 
         require(payload.language == lang) { "canonical_dictionary_language_mismatch" }
 
@@ -215,7 +219,7 @@ object SharedDictionaryService {
                 put("p_word", normalized)
                 put("p_language", lang)
             },
-        ).decodeSingle()
+        ).decodeDictionaryRpc()
     }
 
     /** Snapshot validation for offline/practice surfaces. */

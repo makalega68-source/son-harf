@@ -413,6 +413,7 @@ private fun WordSiegePracticeContent(
                             },
                             color = if (displayedOwner == 1) Color.White else WordSiegeGameUi.Text,
                             fontSize = if (compact) 11.sp else 13.sp,
+                            lineHeight = 16.sp,
                             fontWeight = FontWeight.Black,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -429,7 +430,7 @@ private fun WordSiegePracticeContent(
                         enabled = canPlayerAct,
                         moveEventKey = actionVfxEvent.takeIf { it > 0 },
                         resolvedIndices = lastMove?.placements?.keys ?: emptySet(),
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxWidth().aspectRatio(1f),
                         onCell = { boardIndex ->
                             if (!canPlayerAct) return@WordSiegePracticeBoard
                             if (placements.containsKey(boardIndex)) {
@@ -476,7 +477,7 @@ private fun WordSiegePracticeContent(
                             )
                         }
                         Spacer(Modifier.weight(1f))
-                        Text(sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"), color = WordSiegeGameUi.Muted, fontSize = 8.sp, maxLines = 1)
+                        Text(sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"), color = WordSiegeGameUi.Muted, fontSize = 10.sp, lineHeight = 14.sp, maxLines = 1)
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -502,59 +503,30 @@ private fun WordSiegePracticeContent(
                         }
                     }
 
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        OutlinedButton(
-                            onClick = {
-                                placements.keys.lastOrNull()?.let { boardIndex ->
-                                    selectedRackIndex = placements[boardIndex]
-                                    placements = wordSiegeUndoPendingPlacement(placements, boardIndex)
-                                }
-                            },
-                            enabled = canPlayerAct && placements.isNotEmpty(),
-                            modifier = Modifier.weight(1f).height(40.dp),
-                            contentPadding = PaddingValues(horizontal = 3.dp),
-                        ) {
-                            Icon(Icons.Rounded.Undo, null, Modifier.size(13.dp))
-                            Spacer(Modifier.width(3.dp))
-                            Text(sh("GERİ AL", "UNDO"), fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Row(Modifier.fillMaxWidth()) {
+                        WordSiegeCompactAction(sh("GERİ AL", "UNDO"), Icons.Rounded.Undo,
+                            canPlayerAct && placements.isNotEmpty(), Modifier.weight(1f)) {
+                            placements.keys.lastOrNull()?.let { boardIndex ->
+                                selectedRackIndex = placements[boardIndex]
+                                placements = wordSiegeUndoPendingPlacement(placements, boardIndex)
+                            }
                         }
-                        OutlinedButton(
-                            onClick = { shuffleSeed = if (shuffleSeed == Int.MAX_VALUE) 1 else shuffleSeed + 1 },
-                            enabled = canPlayerAct && state.playerRack.length > 1,
-                            modifier = Modifier.weight(1f).height(40.dp),
-                            contentPadding = PaddingValues(horizontal = 3.dp),
-                        ) {
-                            Icon(Icons.Rounded.Shuffle, null, Modifier.size(13.dp))
-                            Spacer(Modifier.width(3.dp))
-                            Text(sh("KARIŞTIR", "SHUFFLE"), fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        WordSiegeCompactAction(sh("KARIŞTIR", "SHUFFLE"), Icons.Rounded.Shuffle,
+                            canPlayerAct && state.playerRack.length > 1, Modifier.weight(1f)) {
+                            shuffleSeed = if (shuffleSeed == Int.MAX_VALUE) 1 else shuffleSeed + 1
                         }
-                    }
-
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-                        OutlinedButton(
-                            onClick = { showPass = true },
-                            enabled = canPlayerAct,
-                            modifier = Modifier.weight(.75f).height(if (compact) 40.dp else 45.dp),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                        ) {
-                            Text(sh("PAS", "PASS"), fontSize = if (compact) 11.sp else 12.sp, fontWeight = FontWeight.Black)
-                        }
-                        OutlinedButton(
-                            onClick = { exchangeSelection = emptySet(); showExchange = true },
-                            enabled = canPlayerAct && state.bag.isNotEmpty(),
-                            modifier = Modifier.weight(1f).height(if (compact) 40.dp else 45.dp),
-                            border = BorderStroke(1.dp, SiegePurple),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                        ) {
-                            Text(sh("DEĞİŞTİR", "EXCHANGE"), color = SiegePurple, fontSize = if (compact) 10.sp else 11.sp, fontWeight = FontWeight.Black)
+                        WordSiegeCompactAction(sh("PAS", "PASS"), Icons.Rounded.SkipNext,
+                            canPlayerAct, Modifier.weight(1f)) { showPass = true }
+                        WordSiegeCompactAction(sh("DEĞİŞTİR", "EXCHANGE"), Icons.Rounded.SwapHoriz,
+                            canPlayerAct && state.bag.isNotEmpty(), Modifier.weight(1f)) {
+                            exchangeSelection = emptySet(); showExchange = true
                         }
                     }
                     Row(Modifier.fillMaxWidth()) {
                         Button(
                             onClick = ::applyPlayerMove,
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFFE9D9A5), Color(0xFFAF8C45), Color(0xFFF6EAC7)))),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp, pressedElevation = 1.dp),
+                            shape = RoundedCornerShape(12.dp),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
                             enabled = canPlayerAct && placements.isNotEmpty(),
                             modifier = Modifier.weight(1f).height(52.dp),
                             colors = ButtonDefaults.buttonColors(
@@ -754,6 +726,6 @@ private fun WordSiegePracticeScoreCard(
         territoryPoints = territoryPoints, area = area, accent = accent,
         active = active, leading = leading, avatarPath = avatarPath,
         gender = gender, avatarVisible = avatarVisible, isBot = isBot,
-        modifier = modifier.heightIn(min = if (compact) 96.dp else 108.dp),
+        modifier = modifier,
     )
 }
