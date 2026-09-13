@@ -39,7 +39,7 @@ data class RewardClaimDto(
 
 /** Live Reward Center status. Legacy chest RPCs are intentionally not used. */
 suspend fun OnlineGameBackend.getRewardCenterStatus(): RewardCenterStatusDto =
-    SupabaseProvider.client.postgrest.rpc("get_store_reward_status_v1").decodeSingle()
+    SupabaseProvider.client.postgrest.rpc("get_store_reward_status_v1").decodeAs()
 
 /**
  * Claims the live rewarded-ad reward. Trial rewards require an explicit server-catalog item id;
@@ -57,10 +57,10 @@ suspend fun OnlineGameBackend.claimRewardedAd(
             put("p_ad_response_id", adResponseId)
             if (!trialItemId.isNullOrBlank()) put("p_trial_item_id", trialItemId)
         },
-    ).decodeSingle()
+    ).decodeAs()
 
 suspend fun OnlineGameBackend.openPiggyBank(): RewardClaimDto =
-    SupabaseProvider.client.postgrest.rpc("open_piggy_bank_v2").decodeSingle()
+    SupabaseProvider.client.postgrest.rpc("open_piggy_bank_v2").decodeAs()
 
 suspend fun OnlineGameBackend.equipRewardTrial(): RewardClaimDto =
-    SupabaseProvider.client.postgrest.rpc("equip_style_trial_v2").decodeSingle()
+    SupabaseProvider.client.postgrest.rpc("equip_style_trial_v2").decodeAs()
