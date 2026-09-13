@@ -33,15 +33,17 @@ class WeeklyPodiumV210BackendContractTest {
 
     @Test
     fun `weekly league shows RP and Monday reset copy`() {
-        val screen = projectFile("app/src/main/java/com/sonharf/game/LeaderboardExperience.kt").readText()
+        val entry = projectFile("app/src/main/java/com/sonharf/game/LeaderboardExperience.kt").readText()
+        val screen = projectFile("app/src/main/java/com/sonharf/game/PremiumCompetitionSimple.kt").readText()
         val podium = projectFile("app/src/main/java/com/sonharf/game/WeeklyPodiumV210.kt").readText()
 
-        assertTrue(screen.contains("HAFTALIK LİG"))
-        assertTrue(screen.contains("WEEKLY LEAGUE"))
-        assertTrue(screen.contains("Sıralama her pazartesi sıfırlanır."))
-        assertTrue(screen.contains("Leaderboard resets every Monday."))
+        assertTrue(entry.contains("PremiumCompetitionScreen(backend = backend)"))
+        assertTrue(screen.contains("HAFTALIK SIRALAMA"))
+        assertTrue(screen.contains("WEEKLY RANKING"))
+        assertTrue(screen.contains("Pazartesi yenilenir"))
+        assertTrue(screen.contains("Resets Monday"))
         assertTrue(screen.contains("getMyWeeklyRpV210()"))
-        assertTrue(screen.contains("\"RP\""))
+        assertTrue(screen.contains("${'$'}{row.rating} RP"))
         assertTrue(podium.contains("sh(\"Haftanın Zirvesi\", \"Weekly podium\")"))
         assertTrue(podium.contains("Bu haftanın en güçlü oyuncuları"))
         assertTrue(podium.contains("sh(\"Tümü\", \"View all\")"))

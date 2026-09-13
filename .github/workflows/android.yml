@@ -72,6 +72,9 @@ jobs:
           test -f supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
           grep -q 'competitive_booster_disabled' supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
 
+      - name: Verify rewarded-ad callback signatures
+        run: node --test supabase/functions/admob-ssv/ssv.test.mjs
+
       - name: Build debug APK with tests
         run: gradle clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 

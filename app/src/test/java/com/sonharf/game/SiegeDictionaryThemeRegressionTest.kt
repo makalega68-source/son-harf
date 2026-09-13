@@ -40,10 +40,14 @@ class SiegeDictionaryThemeRegressionTest {
 
     @Test fun profileAlwaysOffersBuiltInBlueWhiteThemeWithoutStorePurchase() {
         val profile = appSource("MainPlayerProfileScreen.kt")
+        val shell = appSource("PremiumUnifiedProApp.kt")
+        val settings = appSource("MainSettingsVipScreen.kt")
         val themes = appSource("ProfileOwnedThemesSection.kt")
         val economy = dataSource("EconomyStore.kt")
 
-        assertTrue(profile.contains("ProfileOwnedThemesSection(backend)"))
+        assertTrue(profile.contains("onAction = onSettings"))
+        assertTrue(shell.contains("PremiumDestination.SETTINGS -> MainSettingsScreen("))
+        assertTrue(settings.contains("ProfileOwnedThemesSection(backend)"))
         assertTrue(themes.contains("Ana Mavi Beyaz"))
         assertTrue(themes.contains("Varsayılan görünüm • Ücretsiz"))
         assertTrue(themes.contains("backend.equipDefaultGameTheme()"))

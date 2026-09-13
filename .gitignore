@@ -1,0 +1,22 @@
+# Android / Gradle generated outputs
+.gradle/
+**/build/
+*.apk
+*.aab
+*.apks
+*.idsig
+local.properties
+
+# IDE / local machine files
+.idea/
+*.iml
+.DS_Store
+
+# Local signing material
+*.jks
+*.keystore
+keystore.properties
+
+# Generated local delivery and logs
+dist/
+*.log

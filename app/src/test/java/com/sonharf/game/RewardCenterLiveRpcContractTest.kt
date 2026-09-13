@@ -24,7 +24,9 @@ class RewardCenterLiveRpcContractTest {
         assertTrue(store.contains("@SerialName(\"trial_value\")"))
         assertTrue(screen.contains("piggyBonusSc"))
         assertTrue(screen.contains("openPiggyBank()"))
-        assertTrue(screen.contains("claimRewardedAd(rewardType, responseId, trialItemId)"))
+        assertTrue(screen.contains("awaitVerifiedStoreReward(rewardType, responseId, trialItemId)"))
+        assertTrue(screen.contains("prepareStoreReward(rewardType, trialItemId)"))
+        assertTrue(screen.contains("verificationData = intentId"))
         assertFalse(screen.contains("openRewardChest()"))
         assertFalse(screen.contains("rewardType == \"chest\""))
     }
