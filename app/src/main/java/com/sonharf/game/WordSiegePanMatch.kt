@@ -58,6 +58,7 @@ private val PanSiegeBonus3K = Color(0xFFEAE2F0)
 private val PanSiegeBonus4K = Color(0xFFE7DDBB)
 private val PanSiegeBonusStar = Color(0xFFEAD59B)
 private val PanSiegeLastMove = Color(0xFFE7B95E)
+private val PanSiegeBonusLabel = Color(0xFF68716D)
 private val PanSiegeCellSize = 52.dp
 internal const val WORD_SIEGE_BOT_FALLBACK_DELAY_MS = 15_000L
 
@@ -157,9 +158,6 @@ internal fun WordSiegePanMatch(
                     fontWeight = FontWeight.Black,
                 )
             }
-            IconButton(onClick = onChat, enabled = game.playerTwoId != null, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Rounded.Chat, sh("Sohbet", "Chat"), tint = WordSiegeGameUi.Muted)
-            }
             IconButton(onClick = onForfeit, enabled = game.status == "playing" && !busy, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = WordSiegeGameUi.Red)
             }
@@ -240,6 +238,7 @@ internal fun WordSiegePanMatch(
             lastMove = lastMove,
             modifier = Modifier.fillMaxWidth().aspectRatio(1f),
             onCell = onBoardCell,
+            onChat = onChat,
         )
         }
 
@@ -331,6 +330,7 @@ private fun PanSiegeBoard(
     lastMove: WordSiegeMoveDto?,
     modifier: Modifier = Modifier,
     onCell: (Int) -> Unit,
+    onChat: () -> Unit,
 ) {
     val density = LocalDensity.current
     val tilePx = with(density) { PanSiegeCellSize.toPx() }
@@ -530,6 +530,16 @@ private fun PanSiegeBoard(
             ) {
                 Icon(Icons.Rounded.CenterFocusStrong, sh("Merkeze dön", "Center board"), Modifier.size(19.dp))
             }
+
+            SmallFloatingActionButton(
+                onClick = onChat,
+                modifier = Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp),
+                shape = CircleShape,
+                containerColor = Color.White.copy(alpha = .96f),
+                contentColor = WordSiegeGameUi.Muted,
+            ) {
+                Icon(Icons.Rounded.Chat, sh("Oyun içi sohbet", "In-game chat"), Modifier.size(20.dp))
+            }
         }
     }
 }
@@ -655,30 +665,23 @@ private fun PanSiegeBoardCell(
                 } else if (activeBonus != null) {
                     Text(
                         androidx.compose.ui.text.buildAnnotatedString {
-                    val label = WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)
-                    val parts = label.split("\n")
-                    if (parts.size > 1 && overview) {
-                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 22.sp)) {
-                            append(parts.first().take(1)); append(parts.last())
-                        }
-                    } else if (parts.size > 1) {
-                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 11.sp)) { append(parts.first()) }
-                        append("\n")
-                        append(parts.last())
-                    } else append(label)
-                },
-                        color = when (activeBonus) {
-                            "2H" -> Color(0xFF456F83)
-                            "3H" -> Color(0xFF4F735A)
-                            "2K", "3K" -> Color(0xFF6D5A7B)
-                            WordSiegeBoardSpec.CenterBonus -> Color(0xFF6B5A2D)
-                            WordSiegeBoardSpec.StarBonus -> Color(0xFF755E21)
-                            else -> WordSiegeGameUi.Text
+                            val label = WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)
+                            val parts = label.split("\n")
+                            if (parts.size > 1 && overview) {
+                                withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 20.sp)) {
+                                    append(parts.first().take(1)); append(parts.last())
+                                }
+                            } else if (parts.size > 1) {
+                                withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 10.sp)) { append(parts.first()) }
+                                append("\n")
+                                append(parts.last())
+                            } else append(label)
                         },
+                        color = PanSiegeBonusLabel,
                         fontSize = WordSiegeBoardAccessibility.BoardBonus,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 18.sp,
-                        fontWeight = FontWeight.Black,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        lineHeight = 17.sp,
+                        fontWeight = FontWeight.Light,
                     )
                 }
             }
