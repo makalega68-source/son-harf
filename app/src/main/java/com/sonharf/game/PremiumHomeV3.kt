@@ -10,7 +10,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.GridView
-import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material3.*
@@ -23,11 +22,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.ProfileDto
 
-/** Premium home with one flagship action and two secondary destinations. */
+/**
+ * Premium home intentionally keeps only three decisions visible: play the flagship game,
+ * browse games, or check competition. The visual hierarchy is carried by the territory map,
+ * not by extra dashboard cards.
+ */
 @Composable
 internal fun PremiumHomeCommandDeck(
     profile: ProfileDto?,
@@ -36,24 +40,24 @@ internal fun PremiumHomeCommandDeck(
     onGames: () -> Unit,
     onCompete: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
-        PremiumIdentityCard(profile = profile, onProfile = onProfile)
-        PremiumFlagshipHero(onClick = onSiege)
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        PremiumPlayerStrip(profile = profile, onClick = onProfile)
+        PremiumSiegeHero(onPlay = onSiege)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            horizontalArrangement = Arrangement.spacedBy(11.dp),
         ) {
-            PremiumSimpleDestination(
+            PremiumHomeDestination(
                 icon = Icons.Rounded.SportsEsports,
                 title = sh("OYUNLAR", "GAMES"),
-                subtitle = sh("Tüm oyunlar tek yerde", "All games in one place"),
+                subtitle = sh("Son Harf ve Harf Yolu", "Last Letter and Letter Path"),
                 modifier = Modifier.weight(1f),
                 onClick = onGames,
             )
-            PremiumSimpleDestination(
+            PremiumHomeDestination(
                 icon = Icons.Rounded.EmojiEvents,
                 title = sh("REKABET", "COMPETE"),
-                subtitle = sh("Lig ve sıralama tek yerde", "League and ranking together"),
+                subtitle = sh("Lig ve haftalık sıra", "League and weekly rank"),
                 modifier = Modifier.weight(1f),
                 onClick = onCompete,
             )
@@ -62,152 +66,155 @@ internal fun PremiumHomeCommandDeck(
 }
 
 @Composable
-private fun PremiumIdentityCard(profile: ProfileDto?, onProfile: () -> Unit) {
-    val shape = RoundedCornerShape(26.dp)
+private fun PremiumPlayerStrip(profile: ProfileDto?, onClick: () -> Unit) {
+    val rating = profile?.rating ?: 1000
+    val league = ratingLeagueProgress(rating).leagueName
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, shape)
-            .clickable(onClick = onProfile),
-        shape = shape,
-        color = SonHarfTheme.Surface.copy(alpha = .98f),
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
+        shadowElevation = 2.dp,
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            modifier = Modifier.padding(horizontal = 15.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(SonHarfTheme.Primary, SonHarfTheme.Turquoise)
-                        )
-                    ),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(
-                    (profile?.displayName ?: "K").take(1).uppercase(),
-                    color = Color.White,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 20.sp,
-                )
-            }
+            FramedProfilePhotoAvatar(
+                avatarPath = profile?.avatarPath,
+                gender = profile?.gender,
+                name = profile?.displayName ?: sh("Oyuncu", "Player"),
+                size = 52.dp,
+                frameId = SonHarfCosmetics.profileFrameId,
+                accent = if (profile?.isVip == true) SonHarfTheme.PremiumGold else SonHarfTheme.Primary,
+                visible = profile?.avatarVisibility != "hidden",
+                showGenderBadge = false,
+            )
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
                     profile?.displayName ?: sh("OYUNCU", "PLAYER"),
-                    color = SonHarfTheme.TextPrimary,
+                    color = SonHarfCosmetics.playerNameColor,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Black,
-                    fontSize = 16.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.height(3.dp))
                 Text(
-                    sh("Puan ${profile?.rating ?: 1000}", "Rating ${profile?.rating ?: 1000}"),
+                    "$league  •  $rating ${sh("PUAN", "RATING")}",
                     color = SonHarfTheme.TextSecondary,
-                    fontSize = 10.sp,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
             }
-            Surface(
-                shape = CircleShape,
-                color = SonHarfTheme.Primary.copy(alpha = .10f),
-            ) {
-                Icon(
-                    Icons.Rounded.Person,
-                    contentDescription = null,
-                    tint = SonHarfTheme.Primary,
-                    modifier = Modifier.padding(10.dp).size(20.dp),
-                )
+            if (profile?.isVip == true) {
+                Surface(shape = RoundedCornerShape(9.dp), color = SonHarfTheme.PremiumGold.copy(alpha = .13f)) {
+                    Text(
+                        "VIP",
+                        Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                        color = SonHarfTheme.PremiumGold,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
             }
+            Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary)
         }
     }
 }
 
 @Composable
-private fun PremiumFlagshipHero(onClick: () -> Unit) {
-    val shape = RoundedCornerShape(32.dp)
+private fun PremiumSiegeHero(onPlay: () -> Unit) {
+    val heroShape = RoundedCornerShape(32.dp)
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(12.dp, shape)
-            .clickable(onClick = onClick),
-        shape = shape,
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(1.dp, SonHarfTheme.Primary.copy(alpha = .24f)),
+            .shadow(12.dp, heroShape),
+        shape = heroShape,
+        color = SonHarfTheme.ForestDeep,
+        border = BorderStroke(1.dp, SonHarfTheme.PremiumGold.copy(alpha = .30f)),
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Brush.verticalGradient(
+                    Brush.linearGradient(
                         listOf(
-                            SonHarfTheme.Surface,
-                            SonHarfTheme.Primary.copy(alpha = .105f),
-                            SonHarfTheme.Turquoise.copy(alpha = .075f),
+                            SonHarfTheme.ForestDeep,
+                            SonHarfTheme.Forest,
+                            SonHarfTheme.HeroMiddle,
                         )
                     )
                 )
-                .padding(horizontal = 20.dp, vertical = 18.dp),
+                .padding(20.dp)
         ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Surface(
                         shape = RoundedCornerShape(50),
-                        color = SonHarfTheme.PremiumGold.copy(alpha = .14f),
+                        color = SonHarfTheme.PremiumGold.copy(alpha = .16f),
+                        border = BorderStroke(1.dp, SonHarfTheme.PremiumGold.copy(alpha = .28f)),
                     ) {
                         Text(
                             sh("ANA OYUN", "MAIN GAME"),
                             modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
-                            color = SonHarfTheme.PremiumGold,
+                            color = SonHarfTheme.PremiumGoldLight,
+                            fontSize = 8.sp,
                             fontWeight = FontWeight.Black,
-                            fontSize = 9.sp,
                         )
                     }
                     Spacer(Modifier.weight(1f))
-                    Icon(
-                        Icons.Rounded.GridView,
-                        contentDescription = null,
-                        tint = SonHarfTheme.Primary,
-                        modifier = Modifier.size(25.dp),
+                    Surface(shape = CircleShape, color = Color.White.copy(alpha = .10f)) {
+                        Icon(
+                            Icons.Rounded.GridView,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.padding(9.dp).size(20.dp),
+                        )
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                    Text(
+                        "KELİME\nKUŞATMASI",
+                        color = Color.White,
+                        fontSize = 31.sp,
+                        lineHeight = 30.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-0.4).sp,
+                    )
+                    Text(
+                        sh(
+                            "Kelime kur. Bölge kazan. Haritanın kontrolünü ele geçir.",
+                            "Build words. Claim territory. Take control of the map.",
+                        ),
+                        color = Color.White.copy(alpha = .80f),
+                        fontSize = 11.sp,
+                        lineHeight = 16.sp,
+                        fontWeight = FontWeight.Medium,
                     )
                 }
 
-                SonHarfOfficialLogo(
-                    modifier = Modifier
-                        .fillMaxWidth(.78f)
-                        .height(112.dp)
-                )
-                Text(
-                    sh(
-                        "Kelime kur. Alan kazan. Tahtayı ele geçir.",
-                        "Build words. Gain territory. Take the throne."
-                    ),
-                    color = SonHarfTheme.TextPrimary,
-                    fontSize = 15.sp,
-                    lineHeight = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                )
-                Spacer(Modifier.height(17.dp))
+                PremiumTerritoryPreview()
+
                 Button(
-                    onClick = onClick,
+                    onClick = onPlay,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = SonHarfTheme.Primary,
-                        contentColor = Color.White,
+                        containerColor = SonHarfTheme.PremiumGold,
+                        contentColor = SonHarfTheme.ForestDeep,
                     ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp),
                 ) {
                     Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(7.dp))
-                    Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 16.sp)
+                    Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 15.sp)
                 }
             }
         }
@@ -215,53 +222,101 @@ private fun PremiumFlagshipHero(onClick: () -> Unit) {
 }
 
 @Composable
-private fun PremiumSimpleDestination(
+private fun PremiumTerritoryPreview() {
+    val cells = listOf(
+        listOf(0, 0, 1, 1, 2, 2),
+        listOf(0, 1, 1, 1, 2, 2),
+        listOf(0, 0, 1, 2, 2, 2),
+        listOf(0, 0, 0, 2, 2, 2),
+    )
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = Color.White.copy(alpha = .07f),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = .10f)),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(10.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            cells.forEachIndexed { rowIndex, row ->
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    row.forEachIndexed { columnIndex, owner ->
+                        val isCritical = rowIndex == 1 && columnIndex == 3
+                        val fill = when (owner) {
+                            1 -> SonHarfTheme.Primary
+                            2 -> SonHarfTheme.SoftBlue
+                            else -> Color.White.copy(alpha = .16f)
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(25.dp)
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(
+                                    if (isCritical) SonHarfTheme.PremiumGold.copy(alpha = .92f)
+                                    else fill.copy(alpha = if (owner == 0) .16f else .92f)
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isCritical) {
+                                Text("★", color = SonHarfTheme.ForestDeep, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PremiumHomeDestination(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
     modifier: Modifier,
     onClick: () -> Unit,
 ) {
-    val shape = RoundedCornerShape(23.dp)
+    val shape = RoundedCornerShape(22.dp)
     Surface(
         modifier = modifier
-            .height(112.dp)
+            .height(108.dp)
             .shadow(2.dp, shape)
             .clickable(onClick = onClick),
         shape = shape,
-        color = SonHarfTheme.Surface.copy(alpha = .98f),
+        color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = SonHarfTheme.Primary.copy(alpha = .11f),
+                    shape = RoundedCornerShape(13.dp),
+                    color = SonHarfTheme.Primary.copy(alpha = .10f),
                 ) {
                     Icon(
                         icon,
                         contentDescription = null,
                         tint = SonHarfTheme.Primary,
-                        modifier = Modifier.padding(8.dp).size(20.dp),
+                        modifier = Modifier.padding(8.dp).size(19.dp),
                     )
                 }
                 Spacer(Modifier.weight(1f))
-                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary)
+                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(19.dp))
             }
-            Text(
-                title,
-                color = SonHarfTheme.TextPrimary,
-                fontWeight = FontWeight.Black,
-                fontSize = 12.sp,
-            )
+            Text(title, color = SonHarfTheme.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black)
             Text(
                 subtitle,
                 color = SonHarfTheme.TextSecondary,
-                fontSize = 9.sp,
+                fontSize = 8.5.sp,
                 lineHeight = 11.sp,
+                maxLines = 2,
             )
         }
     }
