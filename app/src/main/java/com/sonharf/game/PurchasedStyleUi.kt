@@ -46,9 +46,20 @@ internal object PurchasedFrameCatalog {
     const val LILAC = "frame_round_lilac"
     const val ROSE = "frame_round_rose"
     const val GOLDEN_AVATAR = "frame_round_golden_avatar"
+    const val RED = "frame_asset_red"
+    const val GREEN = "frame_asset_green"
+    const val MINT = "frame_asset_mint"
+    const val PURPLE = "frame_asset_purple"
+    const val GOLD = "frame_asset_gold"
+    const val GOLD_CROWN = "frame_asset_gold_crown"
+    const val CHRISTMAS = "frame_asset_christmas"
+    const val HALLOWEEN = "frame_asset_halloween"
 
-    /** Only these standardized circular IDs can be rendered by the current client. */
-    val ids = setOf(STARTER_BLUE, STARTER_PINK, STARTER_NEUTRAL, OCEAN, BOTANIC, LILAC, ROSE, GOLDEN_AVATAR)
+    /** These visual-only profile frame IDs are rendered locally; ownership stays server-authoritative. */
+    val ids = setOf(
+        STARTER_BLUE, STARTER_PINK, STARTER_NEUTRAL, OCEAN, BOTANIC, LILAC, ROSE, GOLDEN_AVATAR,
+        RED, GREEN, MINT, PURPLE, GOLD, GOLD_CROWN, CHRISTMAS, HALLOWEEN,
+    )
 
     fun drawable(id: String?): Int? = when (id) {
         STARTER_BLUE -> R.drawable.profile_frame_round_starter_blue
@@ -59,6 +70,14 @@ internal object PurchasedFrameCatalog {
         LILAC -> R.drawable.profile_frame_round_lilac
         ROSE -> R.drawable.profile_frame_round_rose
         GOLDEN_AVATAR -> R.drawable.profile_frame_round_golden_avatar
+        RED -> R.drawable.style_frame_red
+        GREEN -> R.drawable.style_frame_green
+        MINT -> R.drawable.style_frame_mint
+        PURPLE -> R.drawable.style_frame_purple
+        GOLD -> R.drawable.style_frame_gold
+        GOLD_CROWN -> R.drawable.style_frame_gold_crown
+        CHRISTMAS -> R.drawable.style_frame_christmas
+        HALLOWEEN -> R.drawable.style_frame_halloween
         else -> null
     }
 
@@ -69,6 +88,13 @@ internal object PurchasedFrameCatalog {
         BOTANIC -> Color(0xFF2FAE68)
         LILAC -> Color(0xFF7257D8)
         GOLDEN_AVATAR -> Color(0xFFD7A72E)
+        RED -> Color(0xFFC8464B)
+        GREEN -> Color(0xFF2FAE68)
+        MINT -> Color(0xFF2CBFA8)
+        PURPLE -> Color(0xFF7257D8)
+        GOLD, GOLD_CROWN -> Color(0xFFD7A72E)
+        CHRISTMAS -> Color(0xFFC74450)
+        HALLOWEEN -> Color(0xFFE47A2E)
         else -> Color(0xFF8A97A8)
     }
 }
@@ -95,6 +121,14 @@ private val purchasedFrameSpecs = listOf(
     PurchasedFrameSpec(PurchasedFrameCatalog.LILAC, "Lila Halo", "Lilac Halo", "Sadece görünüm için lila yuvarlak çerçeve", "Lilac round frame, visual only", R.drawable.profile_frame_round_lilac, Color(0xFF7257D8), "GOOGLE PLAY", "GOOGLE PLAY", R.drawable.style_icon_coin),
     PurchasedFrameSpec(PurchasedFrameCatalog.ROSE, "Gül Işığı", "Rose Glow", "Sadece görünüm için pembe yuvarlak çerçeve", "Rose round frame, visual only", R.drawable.profile_frame_round_rose, Color(0xFFE45A91), "GOOGLE PLAY", "GOOGLE PLAY", R.drawable.style_icon_coin),
     PurchasedFrameSpec(PurchasedFrameCatalog.GOLDEN_AVATAR, "Golden Avatar", "Golden Avatar", "Yalnızca aktif VIP / PRO oyuncular için", "Only for active VIP / PRO players", R.drawable.profile_frame_round_golden_avatar, Color(0xFFD7A72E), "VIP / PRO", "VIP / PRO", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.RED, "Kızıl İmza", "Crimson Mark", "Kırmızı profil çerçevesi", "Red profile frame", R.drawable.style_frame_red, Color(0xFFC8464B), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.GREEN, "Orman İmzası", "Forest Mark", "Yeşil profil çerçevesi", "Green profile frame", R.drawable.style_frame_green, Color(0xFF2FAE68), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.MINT, "Nane İmza", "Mint Mark", "Nane tonlu profil çerçevesi", "Mint profile frame", R.drawable.style_frame_mint, Color(0xFF2CBFA8), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.PURPLE, "Mor İmza", "Violet Mark", "Mor profil çerçevesi", "Purple profile frame", R.drawable.style_frame_purple, Color(0xFF7257D8), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.GOLD, "Altın İmza", "Gold Mark", "Altın profil çerçevesi", "Gold profile frame", R.drawable.style_frame_gold, Color(0xFFD7A72E), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.GOLD_CROWN, "Taçlı Altın", "Crowned Gold", "Taçlı altın profil çerçevesi", "Crowned gold profile frame", R.drawable.style_frame_gold_crown, Color(0xFFD7A72E), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.CHRISTMAS, "Kış Şenliği", "Winter Fest", "Kış temalı profil çerçevesi", "Winter themed profile frame", R.drawable.style_frame_christmas, Color(0xFFC74450), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.HALLOWEEN, "Gece Bayramı", "Night Festival", "Gece temalı profil çerçevesi", "Night themed profile frame", R.drawable.style_frame_halloween, Color(0xFFE47A2E), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
 )
 
 /**
