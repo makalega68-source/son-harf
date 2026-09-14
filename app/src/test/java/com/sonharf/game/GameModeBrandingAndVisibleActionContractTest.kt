@@ -23,7 +23,7 @@ class GameModeBrandingAndVisibleActionContractTest {
         assertTrue(localization.contains("KELİME TAHTI"))
         assertTrue(localization.contains("WORD THRONE"))
         assertTrue(home.contains("logoRes = R.drawable.son_harf_app_icon_master"))
-        assertTrue(home.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
+        assertTrue(home.contains("SAVAŞA GİR"))
         assertTrue(home.contains("logoRes = R.drawable.harf_yolu_logo"))
         assertTrue(home.contains("painterResource(logoRes)"))
     }
