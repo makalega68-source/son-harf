@@ -17,7 +17,7 @@ object SonHarfCosmetics {
     var emojiPackId by mutableStateOf<String?>(null)
 
     fun apply(e: EquippedCosmeticsDto?) {
-        profileFrameId = e?.profileFrameId?.takeIf { it in PurchasedFrameCatalog.ids }
+        profileFrameId = e?.profileFrameId?.takeIf { !it.isNullOrBlank() }
         nameStyleId = e?.nameStyleId
         gameThemeId = e?.gameThemeId
         keyboardThemeId = e?.keyboardThemeId
@@ -27,7 +27,7 @@ object SonHarfCosmetics {
 
     fun restore(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        profileFrameId = prefs.getString("profile_frame_id", null)?.takeIf { it in PurchasedFrameCatalog.ids }
+        profileFrameId = prefs.getString("profile_frame_id", null)?.takeIf { !it.isNullOrBlank() }
         gameThemeId = prefs.getString("game_theme_id", null)?.takeIf { it == "theme_dark_arena" }
         nameStyleId = prefs.getString("name_style_id", null)
         keyboardThemeId = prefs.getString("keyboard_theme_id", null)
