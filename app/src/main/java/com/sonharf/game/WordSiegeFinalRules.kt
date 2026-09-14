@@ -2,7 +2,7 @@ package com.sonharf.game
 
 import com.sonharf.game.data.WordSiegeCellDto
 
-/** Final Word Siege rules shared by online UI and local BOT practice. */
+/** Final Kelime Tahtı rules shared by online UI and local BOT practice. */
 internal enum class WordSiegeOrientation { HORIZONTAL, VERTICAL }
 
 internal object WordSiegeFinalRules {

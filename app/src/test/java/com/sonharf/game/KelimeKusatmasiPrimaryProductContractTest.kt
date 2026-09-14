@@ -15,7 +15,7 @@ class KelimeTahtiPrimaryProductContractTest {
         val logo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeRaster = File("src/main/res/drawable/kelime_kusatma_logo_hd.png")
 
-        assertTrue(manifest.contains("android:label=\"Kelime Tahtı\""))
+        assertTrue(manifest.contains("android:label=\"@string/app_name\""))
         assertTrue(manifest.contains("@mipmap/ic_kelime_tahti"))
         assertTrue(logo.contains("R.drawable.kelime_tahti_logo_latest"))
         assertTrue(siegeRaster.isFile)
@@ -33,7 +33,7 @@ class KelimeTahtiPrimaryProductContractTest {
         assertFalse(shell.contains("PremiumWeeklyPodium("))
         assertFalse(shell.contains("PremiumOtherGames("))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
-        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
+        assertTrue(shell.contains("title = sh(\"KELİME TAHTI\", \"KELİME TAHTI\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(shell.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
 

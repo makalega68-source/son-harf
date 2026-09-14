@@ -48,14 +48,14 @@ fun SonHarfBrandLogo(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "SON",
+                text = "KELİME",
                 color = Color(0xFF3F614E),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 1.sp,
             )
             Text(
-                text = " HARF",
+                text = " TAHTI",
                 color = Color(0xFF4A6E83),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Black,

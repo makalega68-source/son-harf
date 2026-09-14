@@ -21,7 +21,7 @@ class BrandStartupRegressionTest {
         val adaptiveFallback = File("src/main/res/mipmap-anydpi/ic_kelime_tahti.xml")
         val adaptiveBackground = File("src/main/res/drawable/kelime_tahti_launcher_background.xml")
 
-        assertTrue(manifest.contains("android:label=\"Kelime Tahtı\""))
+        assertTrue(manifest.contains("android:label=\"@string/app_name\""))
         assertTrue(manifest.contains("android:icon=\"@mipmap/ic_kelime_tahti\""))
         assertTrue(manifest.contains("android:roundIcon=\"@mipmap/ic_kelime_tahti\""))
         assertTrue(adaptiveIcon.isFile)

@@ -476,7 +476,7 @@ internal fun WordSiegeGameScreen(onExit: () -> Unit) {
                     Icon(Icons.Rounded.ArrowBack, "Geri", tint = Color.White)
                 }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("KELİME KUŞATMASI", color = Color(0xFFFFD45B), fontSize = 20.sp, fontWeight = FontWeight.Black)
+                    Text("KELİME TAHTI", color = Color(0xFFFFD45B), fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text("BOT ANTRENMANI • Kelimeyi kur. Alanı ele geçir.", color = Color.White.copy(alpha = .78f), fontSize = 9.sp)
                 }
                 IconButton(onClick = { gameId += 1 }) {

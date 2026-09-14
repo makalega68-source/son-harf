@@ -14,7 +14,7 @@ object SonHarfUiState {
     val isEnglish: Boolean get() = language == "en"
 }
 
-/** Shared UI localization. Visible product branding remains Kelime Kuşatması / Word Siege. */
+/** Shared UI localization. Visible product branding remains Kelime Tahtı / Kelime Tahtı. */
 fun sh(tr: String, en: String): String {
     val localized = if (SonHarfUiState.isEnglish) en else tr
     val primaryTagline = if (SonHarfUiState.isEnglish) {

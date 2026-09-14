@@ -46,7 +46,7 @@ fun EconomyShopScreen(
             }
             Column(Modifier.padding(horizontal = 8.dp)) {
                 Text(sh("Mağaza", "Shop"), color = SonHarfText, fontSize = 22.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold)
-                Text(sh("Kelime Kuşatması · Tarzını seç", "Word Siege · Make it yours"), color = SonHarfMuted, fontSize = 11.sp, lineHeight = 16.sp)
+                Text(sh("Kelime Tahtı · Tarzını seç", "Kelime Tahtı · Make it yours"), color = SonHarfMuted, fontSize = 11.sp, lineHeight = 16.sp)
             }
         }
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp, containerColor = Color.Transparent, divider = {}) {

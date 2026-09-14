@@ -300,7 +300,7 @@ private fun PremiumGameCenter(
         item {
             PremiumGameCard(
                 icon = Icons.Rounded.GridView,
-                title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                title = sh("KELİME TAHTI", "KELİME TAHTI"),
                 subtitle = sh("Ana oyun • taktik alan savaşı", "Main game • tactical territory battle"),
                 language = siegeLanguage,
                 onLanguageChange = onSiegeLanguage,

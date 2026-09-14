@@ -183,7 +183,7 @@ internal fun MainSocialScreen(
                                 busyKey = friend.id
                                 runCatching { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
                                     .onSuccess {
-                                        notice = sh("${friend.displayName} Kelime Kuşatması'na davet edildi.", "${friend.displayName} was invited to Word Siege.")
+                                        notice = sh("${friend.displayName} Kelime Tahtı'na davet edildi.", "${friend.displayName} was invited to Kelime Tahtı.")
                                         SonHarfSoundFx.softNotify()
                                     }
                                     .onFailure { notice = sh("Kuşatma daveti gönderilemedi veya bekleyen bir davet var.", "Siege invite could not be sent or one is already pending.") }
@@ -336,7 +336,7 @@ internal fun MainSocialScreen(
                     }
                 }
 
-                if (siegeInvites.isNotEmpty()) item { MainSectionTitle(sh("KELİME KUŞATMASI DAVETLERİ", "WORD SIEGE INVITATIONS")) }
+                if (siegeInvites.isNotEmpty()) item { MainSectionTitle(sh("KELİME TAHTI DAVETLERİ", "KELİME TAHTI INVITATIONS")) }
                 items(siegeInvites, key = { "siege:${it.id}" }) { invite ->
                     val sender = inviteProfiles[invite.senderId]
                     Surface(shape = RoundedCornerShape(17.dp), color = Color(0xFFE8F1EB), border = BorderStroke(1.dp, Color(0xFF567A64).copy(alpha = .35f))) {
@@ -346,7 +346,7 @@ internal fun MainSocialScreen(
                                 Spacer(Modifier.width(9.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(sender?.displayName ?: sh("Kuşatma daveti", "Siege invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                                    Text(sh("Kelime Kuşatması • ", "Word Siege • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
+                                    Text(sh("Kelime Tahtı • ", "Kelime Tahtı • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
                                 }
                             }
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -479,7 +479,7 @@ internal fun MainSocialScreen(
                                         busyKey = rival.opponentId
                                         if (rival.isFriend) {
                                             runCatching { backend.inviteFriendToWordSiege(rival.opponentId, SonHarfUiState.language) }
-                                                .onSuccess { notice = sh("Kelime Kuşatması rövanş daveti gönderildi.", "Word Siege rematch invite sent.") }
+                                                .onSuccess { notice = sh("Kelime Tahtı rövanş daveti gönderildi.", "Kelime Tahtı rematch invite sent.") }
                                                 .onFailure { notice = sh("Rövanş daveti gönderilemedi veya bekleyen bir davet var.", "Rematch invite could not be sent or one is already pending.") }
                                         } else {
                                             runCatching { backend.sendFriendRequest(rival.opponentId) }
