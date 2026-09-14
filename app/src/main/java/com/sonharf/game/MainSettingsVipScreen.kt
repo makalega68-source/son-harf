@@ -40,7 +40,6 @@ internal fun MainSettingsScreen(
     var music by remember { mutableStateOf(SonHarfPreferences.musicEnabled(context)) }
     var sound by remember { mutableStateOf(SonHarfPreferences.soundEnabled(context)) }
     var vibration by remember { mutableStateOf(SonHarfPreferences.vibrationEnabled(context)) }
-    var language by remember { mutableStateOf(SonHarfPreferences.language(context)) }
     var gameInvites by remember { mutableStateOf(SonHarfPreferences.gameInviteNotificationsEnabled(context)) }
     var friendRequests by remember { mutableStateOf(SonHarfPreferences.friendRequestNotificationsEnabled(context)) }
     var systemNotifications by remember { mutableStateOf(SonHarfPreferences.systemNotificationsEnabled(context)) }
@@ -102,30 +101,6 @@ internal fun MainSettingsScreen(
                     SonHarfPreferences.setVibrationEnabled(context, it)
                     if (it) SonHarfPreferences.hapticTap(context)
                 }
-            }
-        }
-
-        item {
-            MainSettingsGroup(sh("DİL", "LANGUAGE")) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = language == "tr",
-                        onClick = { language = "tr"; SonHarfPreferences.setLanguage(context, "tr") },
-                        label = { Text("🇹🇷 TÜRKÇE", fontWeight = FontWeight.Bold) },
-                        modifier = Modifier.weight(1f),
-                    )
-                    FilterChip(
-                        selected = language == "en",
-                        onClick = { language = "en"; SonHarfPreferences.setLanguage(context, "en") },
-                        label = { Text("🇬🇧 ENGLISH", fontWeight = FontWeight.Bold) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                Text(
-                    sh("Dil değişikliği açık ekranlarda hemen uygulanır.", "Language changes apply immediately to open screens."),
-                    color = MainUi.Muted,
-                    fontSize = 9.sp,
-                )
             }
         }
 
