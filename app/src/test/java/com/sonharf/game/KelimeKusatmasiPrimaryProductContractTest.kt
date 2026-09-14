@@ -27,8 +27,11 @@ class KelimeTahtiPrimaryProductContractTest {
 
         assertTrue(home.contains("Text(\"KELİME TAHTI\""))
         assertTrue(home.contains("Button(onClick = onSiege"))
+        assertTrue(home.contains("sh(\"SAVAŞA GİR\", \"ENTER BATTLE\")"))
         assertTrue(shell.contains("PremiumBottomBar("))
-        assertTrue(shell.contains("backend.getLeaderboardV2(language, \"week\", 3)"))
+        assertFalse(shell.contains("backend.getLeaderboardV2(language, \"week\", 3)"))
+        assertFalse(shell.contains("PremiumWeeklyPodium("))
+        assertFalse(shell.contains("PremiumOtherGames("))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
         assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))

@@ -8,12 +8,12 @@ import org.junit.Test
 class KelimeTahtiFinalBrandingContractTest {
     private fun source(path: String): String = File(path).readText()
 
-    @Test fun flagshipHomeCtaIsExplicitlyPlayAndCurrentBrandIsPreserved() {
+    @Test fun flagshipHomeCtaIsExplicitlyBattleAndCurrentBrandIsPreserved() {
         val state = source("src/main/java/com/sonharf/game/SonHarfUiState.kt")
         val home = source("src/main/java/com/sonharf/game/PremiumHomeV3.kt")
 
         assertTrue(home.contains("Button(onClick = onSiege"))
-        assertTrue(home.contains("sh(\"OYNA\", \"PLAY\")"))
+        assertTrue(home.contains("sh(\"SAVAŞA GİR\", \"ENTER BATTLE\")"))
         assertTrue(home.contains("Kelimeyi kur. Alanı ele geçir. Rakibini geç."))
         assertTrue(state.contains("OYNA • Harflerini yerleştir, kelimeni oluştur"))
         assertTrue(state.contains("PLAY • Place your tiles, build your word"))
