@@ -27,7 +27,7 @@ class StoreCatalogPolicyTest {
     }
 
     @Test fun equippedStateUsesTheCorrectSlot() {
-        val selected = EquippedCosmeticsDto(userId = "test", gameThemeId = "theme_dark_arena", profileFrameId = "frame_asset_red")
+        val selected = EquippedCosmeticsDto(userId = "test", gameThemeId = "theme_dark_arena", profileFrameId = "frame_round_ocean")
         assertTrue(selected.isEquipped(item("theme_dark_arena", "game_theme")))
         assertTrue(selected.isEquipped(item("profile_frame_ocean", "profile_frame")))
         assertFalse(selected.isEquipped(item("profile_frame_botanic", "profile_frame")))
@@ -36,7 +36,7 @@ class StoreCatalogPolicyTest {
 
     @Test fun retiringSupportedItemsStopsSalesButPreservesCollectionUse() {
         listOf(
-            item("frame_asset_red", "profile_frame"),
+            item("frame_round_ocean", "profile_frame"),
             item("theme_dark_arena", "game_theme"),
             item("name_sapphire", "name_style"),
             item("keyboard_crystal", "keyboard_theme"),
@@ -53,7 +53,7 @@ class StoreCatalogPolicyTest {
 
     @Test fun ownershipNeverEnablesUnsupportedOrMismatchedRuntimeAssets() {
         assertFalse(item("unknown", "profile_frame").isSupportedOwnedStyle())
-        assertFalse(item("frame_asset_red", "game_theme").isSupportedOwnedStyle())
+        assertFalse(item("frame_round_ocean", "game_theme").isSupportedOwnedStyle())
         assertFalse(item("victory_crown", "victory_effect").isSupportedOwnedStyle())
     }
 }
