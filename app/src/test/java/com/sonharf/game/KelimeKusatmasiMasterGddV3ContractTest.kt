@@ -39,6 +39,17 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     }
 
     @Test
+    fun homeSurfacesProfileCoinProAndNotificationEntry() {
+        val home = File("src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
+
+        assertTrue(home.contains("FramedProfilePhotoAvatar("))
+        assertTrue(home.contains("Son Coin"))
+        assertTrue(home.contains("PRO ÜYE"))
+        assertTrue(home.contains("Icons.Rounded.Notifications"))
+        assertTrue(home.contains("Bildirimler ve davetler"))
+    }
+
+    @Test
     fun clubUsesDedicatedFullPageChatWithoutReplacingManagementSurface() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
