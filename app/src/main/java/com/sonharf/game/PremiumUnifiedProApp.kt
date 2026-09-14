@@ -176,9 +176,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     )
                     // Rekabet merkezi; kulüpler, haftalık kupa ve rakip geçmişinin
                     // ana navigasyondan erişilen sosyal giriş noktasıdır.
-                    PremiumDestination.COMPETE -> CompetitionHubScreen {
-                        destination = PremiumDestination.HOME
-                    }
+                    PremiumDestination.COMPETE -> CompetitionHubScreen(
+                        onBack = { destination = PremiumDestination.HOME },
+                    )
                     PremiumDestination.CLUB -> CompetitionHubScreen(
                         onBack = { destination = PremiumDestination.HOME },
                         clubEntry = true,

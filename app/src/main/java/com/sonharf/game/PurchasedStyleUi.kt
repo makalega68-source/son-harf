@@ -219,7 +219,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                     scope.launch {
                         busyId = productId
                         runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
-                            .onSuccess { reload() }
+                            .onSuccess { refreshPurchasedFrames() }
                             .onFailure { notice = sh("Google Play satın alması doğrulanamadı.", "Google Play purchase could not be verified.") }
                         busyId = null
                     }
@@ -234,7 +234,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         onDispose { billing.close() }
     }
 
-    suspend fun reload() {
+    suspend fun refreshPurchasedFrames() {
         loading = true
         val b = backend
         if (b == null) {
