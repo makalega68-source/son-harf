@@ -61,6 +61,8 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(club.contains("b.sendClubMessage(current.clubId, outgoing)"))
         assertTrue(club.contains("CompetitionHubScreen(onBack = { showClubCenter = false }, clubEntry = true)"))
         assertTrue(club.contains("onValueChange = { input = it.take(300) }"))
+        assertTrue(club.contains("now - lastMessageSentAt < 1_500L"))
+        assertTrue(club.contains("Mesajları çok hızlı gönderiyorsun."))
     }
 
     @Test
