@@ -1,0 +1,37 @@
+name: Export JDK 17 for offline exact build
+
+on:
+  push:
+    branches: [recovery/import-80b5099]
+    paths: [.github/workflows/export-jdk17.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Pack JDK 17
+        shell: bash
+        run: |
+          set -euo pipefail
+          java -version
+          echo "JAVA_HOME=$JAVA_HOME"
+          tar -C "$JAVA_HOME" -I 'zstd -3 -T0' -cf "$RUNNER_TEMP/jdk17.tar.zst" .
+          sha256sum "$RUNNER_TEMP/jdk17.tar.zst" > "$RUNNER_TEMP/jdk17.sha256"
+          ls -lh "$RUNNER_TEMP/jdk17.tar.zst"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: temurin-jdk17-offline
+          path: |
+            ${{ runner.temp }}/jdk17.tar.zst
+            ${{ runner.temp }}/jdk17.sha256
+          compression-level: 0
+          retention-days: 3
