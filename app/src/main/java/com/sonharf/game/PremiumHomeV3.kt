@@ -40,7 +40,7 @@ internal fun PremiumHomeCommandDeck(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.weight(1f))
                 IconButton(onClick = onSocial, modifier = Modifier.size(48.dp)) {
-                    Icon(Icons.Rounded.Groups, sh("Sosyal merkez", "Social hub"), tint = SonHarfTheme.Primary)
+                    Icon(Icons.Rounded.Notifications, sh("Bildirimler ve davetler", "Notifications and invites"), tint = SonHarfTheme.Primary)
                 }
             }
             Surface(onClick = onProfile, color = Color.Transparent, shape = RoundedCornerShape(20.dp)) {
