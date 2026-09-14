@@ -15,7 +15,7 @@ class StoreCatalogPolicyTest {
         assertTrue(item("keyboard_crystal", "keyboard_theme").isRuntimeReadyStyle())
         assertTrue(item("keyboard_obsidian", "keyboard_theme").isRuntimeReadyStyle())
         assertFalse(item("keyboard_neon", "keyboard_theme").isRuntimeReadyStyle())
-        assertTrue(item("profile_frame_ocean", "profile_frame").isRuntimeReadyStyle())
+        assertTrue(item("frame_round_ocean", "profile_frame").isRuntimeReadyStyle())
         assertFalse(item("victory_crown", "victory_effect").isRuntimeReadyStyle())
         assertFalse(item("emoji_vip", "emoji_pack").isRuntimeReadyStyle())
         assertFalse(item("unknown", "profile_frame").isRuntimeReadyStyle())
@@ -29,8 +29,8 @@ class StoreCatalogPolicyTest {
     @Test fun equippedStateUsesTheCorrectSlot() {
         val selected = EquippedCosmeticsDto(userId = "test", gameThemeId = "theme_dark_arena", profileFrameId = "frame_round_ocean")
         assertTrue(selected.isEquipped(item("theme_dark_arena", "game_theme")))
-        assertTrue(selected.isEquipped(item("profile_frame_ocean", "profile_frame")))
-        assertFalse(selected.isEquipped(item("profile_frame_botanic", "profile_frame")))
+        assertTrue(selected.isEquipped(item("frame_round_ocean", "profile_frame")))
+        assertFalse(selected.isEquipped(item("frame_round_botanic", "profile_frame")))
         assertFalse((null as EquippedCosmeticsDto?).isEquipped(item("theme_dark_arena", "game_theme")))
     }
 
