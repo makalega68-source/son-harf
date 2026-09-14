@@ -14,6 +14,8 @@ Bu belge, 2026-09-15 tarihli Master GDD v3.0 talimatının mevcut çalışan And
 - En baskın kart Kelime Kuşatması ve doğrudan savaş CTA'sıdır.
 - Son Harf ve Harf Yolu ana kartın altında ikincil oyunlar olarak gösterilir.
 - Alt navigasyon: **Ana Sayfa · Kulüp · Arkadaşlar · Mağaza · Profil**.
+- Profil, Son Coin ve PRO durumu ana ekran üst alanında görünür kalır.
+- Bildirim zili mevcut sosyal aktivite/davet merkezine bağlanır; kaynakta ayrı bir notification backend'i bulunmadığı için sahte veya paralel veri katmanı oluşturulmaz.
 - Günlük hedef/rekabet yüzeyi ana ekranda retention giriş noktası olarak korunur.
 
 ### 3. Görsel sistem
@@ -44,7 +46,11 @@ Mevcut doğrulanmış sözleşme korunur:
 - Maç yüzeyinde kelime ve bölge puanı ayrı kaynaklar olarak korunur.
 
 ### 6. Sosyal/kulüp
-Mevcut kulüp, arkadaş/rakip, çevrimiçi durum, rövanş ve rekabet altyapısı yeniden yazılmaz. GDD navigasyonu bu mevcut yüzeylere bağlanır. Güvenlik/RLS ve moderasyon sınırları backend tarafında korunur.
+- Mevcut kulüp, arkadaş/rakip, çevrimiçi durum, rövanş ve rekabet altyapısı yeniden yazılmaz.
+- Alt menüdeki **Kulüp** girişi `KelimeKusatmasiClubScreen` üzerinden ayrı tam ekran sohbet deneyimine açılır.
+- Tam ekran sohbet mevcut `getClubMessages` / `sendClubMessage` backend sözleşmesini kullanır; mesaj girişi 300 karakter istemci sınırını korur ve canlı mesajlar mevcut polling sözleşmesiyle yenilenir.
+- Kulüp merkezi, üyeler, görevler, sıralama ve kulüpler arası meydan okuma yüzeyleri mevcut `CompetitionHubScreen` üzerinden erişilebilir kalır.
+- Güvenlik/RLS, rate-limit ve moderasyon sınırları backend tarafında korunur; istemci bunları atlatan yeni bir yol oluşturmaz.
 
 ### 7. Mağaza, koleksiyon ve çerçeveler
 Mevcut profil çerçevesi sözleşmesi GDD katalog yapısıyla uyumludur:
@@ -72,4 +78,4 @@ Yalnız Türkçe ve İngilizce. Yeni dil eklenmez.
 
 ## Regresyon sınırı
 
-Bu uygulama paketi mevcut oyun motorunu, sözlük v5 sözleşmesini, online eşleşmeyi, bot/maç akışını, güvenli backend doğrulamasını veya Supabase şemasını topluca yeniden yazmaz. GDD ile zaten uyumlu çalışan sistemler korunur; değişiklikler marka, ürün hiyerarşisi, navigasyon, görsel tokenlar, dokümantasyon ve bunları kilitleyen testlerle sınırlı tutulur.
+Bu uygulama paketi mevcut oyun motorunu, sözlük v5 sözleşmesini, online eşleşmeyi, bot/maç akışını, güvenli backend doğrulamasını veya Supabase şemasını topluca yeniden yazmaz. GDD ile zaten uyumlu çalışan sistemler korunur; değişiklikler marka, ürün hiyerarşisi, navigasyon, kulüp sohbet yüzeyi, görsel tokenlar, dokümantasyon ve bunları kilitleyen testlerle sınırlı tutulur.
