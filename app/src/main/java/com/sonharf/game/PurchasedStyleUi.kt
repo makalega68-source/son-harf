@@ -211,13 +211,13 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         )
     }
 
-    val refreshPurchasedFrames: suspend () -> Unit = {
+    val refreshPurchasedFrames: suspend () -> Unit = refresh@{
         loading = true
         val b = backend
         if (b == null) {
             notice = sh("Profil Style sunucusu kullanılamıyor; çerçeveler güvenli önizleme modunda gösteriliyor.", "Profile Style server is unavailable; frames are shown in safe preview mode.")
             loading = false
-            return
+            return@refresh
         }
         runCatching {
             withTimeout(12_000L) {
