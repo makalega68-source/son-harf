@@ -18,7 +18,7 @@ jobs:
       TARGET_SHA: 80b5099911d6ddaf82d89a0fe13af42db8358915
       TARGET_BRANCH: codex/premium-home-and-store-test-20260913
       EXPECTED_OLD_SHA: cbcdfb0cda9feac5cc78332efeb3ea1b265d9e98
-      TRANSFER_ISSUE: '376'
+      TRANSFER_ISSUE: '375'
       ANDROID_HOME: /usr/local/lib/android/sdk
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
     steps:
@@ -49,20 +49,20 @@ jobs:
               if not rows:
                   break
               for row in rows:
-                  body = row.get('body') or ''
-                  m = re.fullmatch(r'XFER_(\d{3}):([A-Za-z0-9+/=]+)', body.strip())
+                  body = (row.get('body') or '').strip()
+                  m = re.fullmatch(r'X85_(\d{3}):(.+)', body)
                   if m:
                       blocks[int(m.group(1))] = m.group(2)
               if len(rows) < 100:
                   break
               page += 1
           if not blocks:
-              raise SystemExit('No transfer blocks found')
-          expected = list(range(max(blocks) + 1))
+              raise SystemExit('No X85 transfer blocks found')
+          expected = list(range(42))
           if sorted(blocks) != expected:
               missing = sorted(set(expected) - set(blocks))
-              raise SystemExit(f'Missing transfer blocks: {missing}')
-          raw = base64.b64decode(''.join(blocks[i] for i in expected), validate=True)
+              raise SystemExit(f'Missing X85 transfer blocks: {missing}')
+          raw = base64.b85decode(''.join(blocks[i] for i in expected))
           sha = hashlib.sha256(raw).hexdigest()
           expected_sha = '0946e0340190e3f3f07c9849386f461b2158bd8496a3d0e70291ba260df10e7c'
           if sha != expected_sha:
