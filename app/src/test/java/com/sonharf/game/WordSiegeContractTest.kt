@@ -11,7 +11,7 @@ class WordSiegeContractTest {
         val siege = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGame.kt").readText()
         val home = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
-        assertTrue(siege.contains("KELİME KUŞATMASI"))
+        assertTrue(siege.contains("KELİME TAHTI"))
         assertTrue(siege.contains("Kelimeyi kur. Alanı ele geçir."))
         assertTrue(siege.contains("initialSiegeTerritory"))
         assertTrue(siege.contains("claimSiegeTerritory"))
@@ -34,7 +34,7 @@ class WordSiegeContractTest {
         assertTrue(siege.contains("KELİMEYİ GÖNDER"))
         assertTrue(siege.contains("BOT"))
 
-        // Unified home now makes Kelime Kuşatması the primary play route.
+        // Legacy UnifiedProApp remains untouched; the active StableV1App -> PremiumUnifiedProApp flow owns the current brand.
         assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
         assertTrue(home.contains("sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(home.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))

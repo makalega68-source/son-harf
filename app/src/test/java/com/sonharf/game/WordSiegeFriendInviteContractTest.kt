@@ -54,7 +54,7 @@ class WordSiegeFriendInviteContractTest {
         assertTrue(backend.contains("invite_friend_to_word_siege_v1"))
         assertTrue(backend.contains("respond_word_siege_invite_v1"))
 
-        assertTrue(social.contains("KELİME KUŞATMASI DAVETLERİ"))
+        assertTrue(social.contains("KELİME TAHTI DAVETLERİ"))
         assertTrue(social.contains("SON HARF DAVETLERİ"))
         assertTrue(social.contains("backend.inviteFriendToWordSiege(friend.id"))
         assertTrue(social.contains("backend.inviteFriendToWordSiege(rival.opponentId"))

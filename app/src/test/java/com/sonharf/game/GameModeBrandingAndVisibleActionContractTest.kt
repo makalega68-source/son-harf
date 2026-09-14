@@ -20,7 +20,7 @@ class GameModeBrandingAndVisibleActionContractTest {
         assertTrue(isPng(siegeRaster))
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.webp")?.exists() == true)
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")?.exists() == true)
-        assertTrue(games.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
+        assertTrue(games.contains("title = sh(\"KELİME TAHTI\", \"KELİME TAHTI\")"))
         assertTrue(games.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(games.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
         assertTrue(games.contains("onClick = onSiege"))
