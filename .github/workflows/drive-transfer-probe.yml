@@ -1,0 +1,18 @@
+name: Drive transfer probe
+on:
+  push:
+    branches: [recovery/import-80b5099]
+    paths: [.github/workflows/drive-transfer-probe.yml]
+permissions:
+  contents: read
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe anonymous bundle download
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L --fail --retry 2 -o /tmp/bundle 'https://drive.usercontent.google.com/download?id=1VOKE_qa2w5JXQuKXIHGC2HMOsXlT0yIR&export=download&confirm=t'
+          wc -c /tmp/bundle
+          sha256sum /tmp/bundle
