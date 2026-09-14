@@ -43,6 +43,7 @@ internal fun KelimeKusatmasiClubScreen() {
     var input by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
     var sending by remember { mutableStateOf(false) }
+    var lastMessageSentAt by remember { mutableStateOf(0L) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     suspend fun refresh() {
@@ -183,6 +184,12 @@ internal fun KelimeKusatmasiClubScreen() {
                             val current = club ?: return@IconButton
                             val outgoing = input.trim()
                             if (outgoing.isEmpty() || sending) return@IconButton
+                            val now = System.currentTimeMillis()
+                            if (now - lastMessageSentAt < 1_500L) {
+                                notice = sh("Mesajları çok hızlı gönderiyorsun.", "You're sending messages too quickly.")
+                                return@IconButton
+                            }
+                            lastMessageSentAt = now
                             scope.launch {
                                 val b = backend ?: return@launch
                                 sending = true
