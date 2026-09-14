@@ -27,7 +27,7 @@ class KelimeTahtiPrimaryProductContractTest {
 
         assertTrue(home.contains("Text(\"KELİME TAHTI\""))
         assertTrue(home.contains("Button(onClick = onSiege"))
-        assertTrue(shell.contains("PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onSocial)"))
+        assertTrue(shell.contains("PremiumBottomBar("))
         assertTrue(shell.contains("backend.getLeaderboardV2(language, \"week\", 3)"))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
         assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
@@ -42,7 +42,7 @@ class KelimeTahtiPrimaryProductContractTest {
         assertFalse(shell.contains("PremiumDestination.COMPETITION"))
         assertTrue(shell.contains("PremiumDestination.SHOP -> EconomyShopScreen"))
         val topLevel = shell.substringAfter("val topLevel =").substringBefore("val scheme =")
-        assertFalse(topLevel.contains("PremiumDestination.SHOP"))
+        assertTrue(topLevel.contains("PremiumDestination.SHOP"))
         assertFalse(shell.contains("PremiumDestination.TASKS"))
     }
 
