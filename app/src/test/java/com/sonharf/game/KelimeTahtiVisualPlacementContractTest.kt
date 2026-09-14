@@ -6,16 +6,16 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class KelimeTahtiVisualPlacementContractTest {
+class KelimeKusatmasiVisualPlacementContractTest {
     @Test
-    fun requestedBrandSurfacesUseAndroidDecodableKelimeTahtiPngLogo() {
+    fun requestedBrandSurfacesUseAndroidDecodableKelimeKusatmasiPngLogo() {
         val source = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val approved = File("src/main/res/drawable-nodpi/kelime_tahti_logo.png")
         val latest = File("src/main/res/drawable-nodpi/kelime_tahti_logo_latest.png")
         val authAlias = File("src/main/res/drawable-nodpi/son_harf_gold_teal_logo.png")
         val gameEntryAlias = File("src/main/res/drawable/kelime_kusatma_logo_hd.png")
 
-        assertTrue(source.contains("R.drawable.kelime_tahti_logo_latest"))
+        assertTrue(source.contains("R.drawable.kelime_kusatma_logo_hd"))
         assertFalse(source.contains("R.drawable.kelime_tahti_app_icon"))
         assertValidPng(approved)
         assertValidPng(latest)
@@ -30,7 +30,7 @@ class KelimeTahtiVisualPlacementContractTest {
     }
 
     @Test
-    fun untouchedLegacySiegeLogoIdsRemainApprovedRasterPngs() {
+    fun compatibilitySiegeLogoIdsRemainApprovedRasterPngs() {
         val approved = File("src/main/res/drawable-nodpi/kelime_tahti_logo.png")
         assertValidPng(approved)
 
@@ -40,7 +40,7 @@ class KelimeTahtiVisualPlacementContractTest {
         ).forEach { path ->
             val file = File(path)
             assertValidPng(file)
-            assertEquals("Legacy drawable must use approved Kelime Tahtı raster bytes: $path", approved.readBytes().toList(), file.readBytes().toList())
+            assertEquals("Compatibility drawable must use the approved raster bytes: $path", approved.readBytes().toList(), file.readBytes().toList())
         }
 
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo.xml").exists())
@@ -48,7 +48,7 @@ class KelimeTahtiVisualPlacementContractTest {
     }
 
     @Test
-    fun wordThroneHubResourceResolvesToDecodablePngAlias() {
+    fun wordSiegeHubResourceResolvesToDecodablePngAlias() {
         val screen = File("src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
         assertTrue(screen.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(File("src/main/res/drawable/kelime_kusatma_logo_hd.png").isFile)
