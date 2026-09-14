@@ -47,7 +47,7 @@ class SiegeDictionaryThemeRegressionTest {
 
         assertTrue(profile.contains("Koleksiyonum") || profile.contains("Collection"))
         assertTrue(themes.contains("ProfileOwnedThemesSection") || themes.contains("equipDefaultGameTheme"))
-        assertTrue(themes.contains("Ana Mavi Beyaz"))
+        assertTrue(themes.contains("Ana Yeşil Beyaz"))
         assertTrue(themes.contains("Varsayılan görünüm • Ücretsiz"))
         assertTrue(themes.contains("backend.equipDefaultGameTheme()"))
         assertTrue(economy.contains("equip_default_game_theme"))
