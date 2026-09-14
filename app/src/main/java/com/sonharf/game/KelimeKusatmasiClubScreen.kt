@@ -6,9 +6,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Groups
-import androidx.compose.material.icons.rounded.Hub
+import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -98,7 +97,7 @@ internal fun KelimeKusatmasiClubScreen() {
                 onClick = { showClubCenter = true },
                 shape = RoundedCornerShape(14.dp),
             ) {
-                Icon(Icons.Rounded.Hub, null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Rounded.Groups, null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(sh("MERKEZ", "CENTER"), fontSize = 10.sp, fontWeight = FontWeight.Black)
             }
@@ -203,7 +202,7 @@ internal fun KelimeKusatmasiClubScreen() {
                         },
                         enabled = input.isNotBlank() && !sending,
                     ) {
-                        Icon(Icons.AutoMirrored.Rounded.Send, sh("Gönder", "Send"), tint = SonHarfTheme.Primary)
+                        Icon(Icons.Rounded.Send, sh("Gönder", "Send"), tint = SonHarfTheme.Primary)
                     }
                 }
             }
