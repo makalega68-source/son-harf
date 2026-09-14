@@ -118,7 +118,6 @@ class LetterLadderEngineTest {
             sourceWords = chain.toSet(),
             language = "tr",
             seed = 42L,
-            preferCurated = true,
         )
         assertNotNull(generated)
         generated!!
@@ -126,5 +125,25 @@ class LetterLadderEngineTest {
         assertEquals(generated.start, generated.solution.first())
         assertEquals(generated.target, generated.solution.last())
         assertTrue((0 until 5).all { generated.start[it] != generated.target[it] })
+    }
+
+    @Test
+    fun generatorExcludesRecentlyPlayedRouteInEitherDirection() {
+        val firstRoute = listOf("abcde", "fbcde", "fgcde", "fghde", "fghie", "fghij")
+        val secondRoute = listOf("klmno", "plmno", "pqmno", "pqrno", "pqrso", "pqrst")
+        val source = (firstRoute + secondRoute).toSet()
+        val first = LetterLadderEngine.generate(source, "en", seed = 7L)
+        assertNotNull(first)
+
+        val next = LetterLadderEngine.generate(
+            sourceWords = source,
+            language = "en",
+            seed = 7L,
+            excludedPuzzleIds = setOf(first!!.id),
+        )
+
+        assertNotNull(next)
+        assertTrue("Recent puzzle must not repeat", next!!.id != first.id)
+        assertTrue(next.solution.toSet().intersect(first.solution.toSet()).isEmpty())
     }
 }

@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import android.graphics.BitmapFactory
+import android.app.Activity
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
@@ -28,47 +29,46 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
+import com.sonharf.game.billing.BillingManager
+import com.sonharf.game.billing.PlayPurchaseVerification
+import com.sonharf.game.billing.ProductCatalog
+import com.android.billingclient.api.BillingClient
+import com.android.billingclient.api.ProductDetails
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 internal object PurchasedFrameCatalog {
-    const val GOLD = "frame_asset_gold"
-    const val MINT = "frame_asset_mint"
-    const val PURPLE = "frame_asset_purple"
-    const val GREEN = "frame_asset_green"
-    const val RED = "frame_asset_red"
-    const val GOLD_CROWN = "frame_asset_gold_crown"
-    const val CHRISTMAS = "frame_asset_christmas"
-    const val HALLOWEEN = "frame_asset_halloween"
+    const val STARTER_BLUE = "frame_round_starter_blue"
+    const val STARTER_PINK = "frame_round_starter_pink"
+    const val STARTER_NEUTRAL = "frame_round_starter_neutral"
+    const val OCEAN = "frame_round_ocean"
+    const val BOTANIC = "frame_round_botanic"
+    const val LILAC = "frame_round_lilac"
+    const val ROSE = "frame_round_rose"
+    const val GOLDEN_AVATAR = "frame_round_golden_avatar"
 
-    val ids = setOf(GOLD, MINT, PURPLE, GREEN, RED, GOLD_CROWN, CHRISTMAS, HALLOWEEN)
+    /** Only these standardized circular IDs can be rendered by the current client. */
+    val ids = setOf(STARTER_BLUE, STARTER_PINK, STARTER_NEUTRAL, OCEAN, BOTANIC, LILAC, ROSE, GOLDEN_AVATAR)
 
     fun drawable(id: String?): Int? = when (id) {
-        GOLD -> R.drawable.style_frame_gold
-        MINT -> R.drawable.style_frame_mint
-        PURPLE -> R.drawable.style_frame_purple
-        GREEN -> R.drawable.style_frame_green
-        RED -> R.drawable.style_frame_red
-        GOLD_CROWN -> R.drawable.style_frame_gold_crown
-        CHRISTMAS -> R.drawable.style_frame_christmas
-        HALLOWEEN -> R.drawable.style_frame_halloween
+        STARTER_BLUE -> R.drawable.profile_frame_round_starter_blue
+        STARTER_PINK -> R.drawable.profile_frame_round_starter_pink
+        STARTER_NEUTRAL -> R.drawable.profile_frame_round_starter_neutral
+        OCEAN -> R.drawable.profile_frame_round_ocean
+        BOTANIC -> R.drawable.profile_frame_round_botanic
+        LILAC -> R.drawable.profile_frame_round_lilac
+        ROSE -> R.drawable.profile_frame_round_rose
+        GOLDEN_AVATAR -> R.drawable.profile_frame_round_golden_avatar
         else -> null
     }
 
     fun accent(id: String?): Color = when (id) {
-        RED -> Color(0xFFD84C4C)
-        GREEN -> Color(0xFF2FAE68)
-        MINT -> Color(0xFF32BFB3)
-        PURPLE -> Color(0xFF7257D8)
-        GOLD -> Color(0xFFD7A72E)
-        GOLD_CROWN -> Color(0xFFE0A51C)
-        CHRISTMAS -> Color(0xFFC73D3D)
-        HALLOWEEN -> Color(0xFFEF7D22)
-        "frame_neon", "frame_modern_neon" -> Color(0xFF1677FF)
-        "frame_starter", "frame_ice", "frame_crystal" -> Color(0xFF32BFB3)
-        "frame_gold", "frame_royal_gold" -> Color(0xFFD7A72E)
-        "frame_black_gold" -> Color(0xFF5E5140)
-        "frame_purple_prestige" -> Color(0xFF7257D8)
+        STARTER_BLUE, OCEAN -> Color(0xFF1677FF)
+        STARTER_PINK, ROSE -> Color(0xFFE45A91)
+        STARTER_NEUTRAL -> Color(0xFF718096)
+        BOTANIC -> Color(0xFF2FAE68)
+        LILAC -> Color(0xFF7257D8)
+        GOLDEN_AVATAR -> Color(0xFFD7A72E)
         else -> Color(0xFF8A97A8)
     }
 }
@@ -87,14 +87,14 @@ private data class PurchasedFrameSpec(
 )
 
 private val purchasedFrameSpecs = listOf(
-    PurchasedFrameSpec(PurchasedFrameCatalog.RED, "Kırmızı Hat", "Red Line", "Sade başlangıç ve günlük kullanım çerçevesi", "Clean starter and everyday frame", R.drawable.style_frame_red, Color(0xFFD84C4C), "SIRADAN", "STANDARD", R.drawable.style_icon_user),
-    PurchasedFrameSpec(PurchasedFrameCatalog.GREEN, "Zümrüt Hat", "Emerald Line", "Dengeli zümrüt profil çerçevesi", "Balanced emerald profile frame", R.drawable.style_frame_green, Color(0xFF2FAE68), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
-    PurchasedFrameSpec(PurchasedFrameCatalog.MINT, "Buz Mint", "Ice Mint", "Temiz ve modern mint çerçeve", "Clean modern mint frame", R.drawable.style_frame_mint, Color(0xFF32BFB3), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
-    PurchasedFrameSpec(PurchasedFrameCatalog.PURPLE, "Mor Spektrum", "Violet Spectrum", "Premium mor profil vurgusu", "Premium violet profile accent", R.drawable.style_frame_purple, Color(0xFF7257D8), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
-    PurchasedFrameSpec(PurchasedFrameCatalog.GOLD, "Altın Hat", "Gold Line", "VIP ve prestij koleksiyonuna uygun metalik çerçeve", "Metallic frame for VIP and prestige collection", R.drawable.style_frame_gold, Color(0xFFD7A72E), "VIP / PREMIUM", "VIP / PREMIUM", R.drawable.style_icon_trophy),
-    PurchasedFrameSpec(PurchasedFrameCatalog.GOLD_CROWN, "Altın Taç", "Gold Crown", "Yüksek lig ve prestij ödülü", "High-league prestige reward", R.drawable.style_frame_gold_crown, Color(0xFFE0A51C), "LİG ÖDÜLÜ", "LEAGUE REWARD", R.drawable.style_icon_trophy),
-    PurchasedFrameSpec(PurchasedFrameCatalog.CHRISTMAS, "Yılbaşı", "Christmas", "Sezonluk yılbaşı etkinlik çerçevesi", "Seasonal Christmas event frame", R.drawable.style_frame_christmas, Color(0xFFC73D3D), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
-    PurchasedFrameSpec(PurchasedFrameCatalog.HALLOWEEN, "Halloween", "Halloween", "Sezonluk Halloween etkinlik çerçevesi", "Seasonal Halloween event frame", R.drawable.style_frame_halloween, Color(0xFFEF7D22), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.STARTER_BLUE, "Başlangıç Mavi", "Starter Blue", "Yeni hesaplar için ücretsiz yuvarlak çerçeve", "Free round frame for new accounts", R.drawable.profile_frame_round_starter_blue, Color(0xFF1677FF), "ÜCRETSİZ", "FREE", R.drawable.style_icon_user),
+    PurchasedFrameSpec(PurchasedFrameCatalog.STARTER_PINK, "Başlangıç Pembe", "Starter Pink", "Yeni hesaplar için ücretsiz yuvarlak çerçeve", "Free round frame for new accounts", R.drawable.profile_frame_round_starter_pink, Color(0xFFE45A91), "ÜCRETSİZ", "FREE", R.drawable.style_icon_user),
+    PurchasedFrameSpec(PurchasedFrameCatalog.STARTER_NEUTRAL, "Başlangıç Nötr", "Starter Neutral", "Yeni hesaplar için ücretsiz yuvarlak çerçeve", "Free round frame for new accounts", R.drawable.profile_frame_round_starter_neutral, Color(0xFF718096), "ÜCRETSİZ", "FREE", R.drawable.style_icon_user),
+    PurchasedFrameSpec(PurchasedFrameCatalog.OCEAN, "Okyanus Halkası", "Ocean Ring", "Sadece görünüm için mavi yuvarlak çerçeve", "Blue round frame, visual only", R.drawable.profile_frame_round_ocean, Color(0xFF1677FF), "GOOGLE PLAY", "GOOGLE PLAY", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.BOTANIC, "Botanik Halka", "Botanic Ring", "Sadece görünüm için yeşil yuvarlak çerçeve", "Green round frame, visual only", R.drawable.profile_frame_round_botanic, Color(0xFF2FAE68), "GOOGLE PLAY", "GOOGLE PLAY", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.LILAC, "Lila Halo", "Lilac Halo", "Sadece görünüm için lila yuvarlak çerçeve", "Lilac round frame, visual only", R.drawable.profile_frame_round_lilac, Color(0xFF7257D8), "GOOGLE PLAY", "GOOGLE PLAY", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.ROSE, "Gül Işığı", "Rose Glow", "Sadece görünüm için pembe yuvarlak çerçeve", "Rose round frame, visual only", R.drawable.profile_frame_round_rose, Color(0xFFE45A91), "GOOGLE PLAY", "GOOGLE PLAY", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.GOLDEN_AVATAR, "Golden Avatar", "Golden Avatar", "Yalnızca aktif VIP / PRO oyuncular için", "Only for active VIP / PRO players", R.drawable.profile_frame_round_golden_avatar, Color(0xFFD7A72E), "VIP / PRO", "VIP / PRO", R.drawable.style_icon_trophy),
 )
 
 /**
@@ -158,9 +158,10 @@ private fun SafeFrameArtwork(
     Box(
         modifier = modifier
             .padding(5.dp)
-            .border(4.dp, accent, RoundedCornerShape(18.dp))
+            .clip(CircleShape)
+            .border(4.dp, accent, CircleShape)
             .padding(4.dp)
-            .border(2.dp, accent.copy(alpha = .45f), RoundedCornerShape(14.dp)),
+            .border(2.dp, accent.copy(alpha = .45f), CircleShape),
     )
     return false
 }
@@ -190,13 +191,48 @@ private fun legacyFrameSpec(item: ShopItemDto): PurchasedFrameSpec = PurchasedFr
 
 @Composable
 internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
+    val context = LocalContext.current
+    val activity = context as? Activity
     val scope = rememberCoroutineScope()
     var shopItems by remember { mutableStateOf<Map<String, ShopItemDto>>(emptyMap()) }
     var inventory by remember { mutableStateOf<Set<String>>(emptySet()) }
     var equippedId by remember { mutableStateOf<String?>(SonHarfCosmetics.profileFrameId) }
+    var vipFrameAccess by remember { mutableStateOf(false) }
     var busyId by remember { mutableStateOf<String?>(null) }
     var loading by remember { mutableStateOf(true) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var playProducts by remember { mutableStateOf<Map<String, ProductDetails>>(emptyMap()) }
+    val playProductByFrame = remember {
+        mapOf(
+            PurchasedFrameCatalog.OCEAN to ProductCatalog.PROFILE_FRAME_OCEAN,
+            PurchasedFrameCatalog.BOTANIC to ProductCatalog.PROFILE_FRAME_BOTANIC,
+            PurchasedFrameCatalog.LILAC to ProductCatalog.PROFILE_FRAME_LILAC,
+            PurchasedFrameCatalog.ROSE to ProductCatalog.PROFILE_FRAME_ROSE,
+        )
+    }
+    val billing = remember {
+        BillingManager(
+            context = context,
+            onPurchase = { purchase ->
+                val productId = purchase.products.firstOrNull()
+                if (productId != null) {
+                    scope.launch {
+                        busyId = productId
+                        runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
+                            .onSuccess { reload() }
+                            .onFailure { notice = sh("Google Play satın alması doğrulanamadı.", "Google Play purchase could not be verified.") }
+                        busyId = null
+                    }
+                }
+            },
+            onMessage = { notice = it },
+        )
+    }
+
+    DisposableEffect(billing) {
+        billing.connect { billing.queryOneTimeProducts(playProductByFrame.values.toList()) { playProducts = it } }
+        onDispose { billing.close() }
+    }
 
     suspend fun reload() {
         loading = true
@@ -209,11 +245,13 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         runCatching {
             withTimeout(12_000L) {
                 val shop = b.getShopItems().filter { it.kind == "profile_frame" }
-                val owned = b.getInventory().toSet()
+                val state = b.getProfileFrameState()
+                val owned = state?.ownedProfileFrames?.toSet() ?: b.getInventory()
                 val equipped = b.getEquippedCosmetics()
                 shopItems = shop.associateBy { it.id }
                 inventory = owned
-                equippedId = equipped?.profileFrameId
+                equippedId = state?.equippedProfileFrame ?: equipped?.profileFrameId
+                vipFrameAccess = state?.vipProFrameAccess == true
                 SonHarfCosmetics.apply(equipped)
             }
         }.onFailure {
@@ -229,7 +267,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         }
     }
 
-    val displaySpecs = remember(shopItems, inventory, equippedId) {
+    val displaySpecs = remember(shopItems, inventory, equippedId, vipFrameAccess) {
         val knownById = purchasedFrameSpecs.associateBy { it.id }
         // Backend active shop_items is authoritative for discovery and pricing. Known purchased
         // package IDs receive their verified artwork; unknown/legacy IDs keep procedural rendering.
@@ -241,7 +279,8 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         val recoveryOwned = purchasedFrameSpecs.filter { spec ->
             spec.id !in shopItems && (spec.id in inventory || equippedId == spec.id)
         }
-        (activeCatalog + recoveryOwned).distinctBy { it.id }
+        val playCatalog = purchasedFrameSpecs.filter { it.id in playProductByFrame || it.id == PurchasedFrameCatalog.GOLDEN_AVATAR }
+        (activeCatalog + recoveryOwned + playCatalog).distinctBy { it.id }
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -254,8 +293,10 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         ) {
             items(displaySpecs, key = { it.id }) { spec ->
                 val item = shopItems[spec.id]
+                val playProduct = playProductByFrame[spec.id]?.let(playProducts::get)
                 val owned = spec.id in inventory
                 val equipped = equippedId == spec.id
+                val vipLocked = spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR && !vipFrameAccess
                 val frameBitmap = rememberStyleBitmap(spec.drawable)
                 val assetReady = spec.drawable == null || frameBitmap != null
                 Surface(
@@ -287,9 +328,9 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                 } else {
                                     Box(
                                         Modifier.size(82.dp)
-                                            .border(4.dp, spec.accent, RoundedCornerShape(17.dp))
+                                            .border(4.dp, spec.accent, CircleShape)
                                             .padding(4.dp)
-                                            .border(2.dp, spec.accent.copy(alpha = .45f), RoundedCornerShape(13.dp)),
+                                            .border(2.dp, spec.accent.copy(alpha = .45f), CircleShape),
                                     )
                                 }
                             }
@@ -324,8 +365,10 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                             }
                             Text(
                                 when {
-                                    equipped -> sh("AKTİF", "ACTIVE")
+                                    equipped -> sh("KULLANIMDA", "EQUIPPED")
                                     owned -> sh("SAHİPSİN", "OWNED")
+                                    vipLocked -> sh("VIP / PRO KİLİTLİ", "VIP / PRO LOCKED")
+                                    playProduct?.oneTimePurchaseOfferDetails != null -> playProduct.oneTimePurchaseOfferDetails?.formattedPrice.orEmpty()
                                     item != null -> "${item.diamondPrice} SC"
                                     else -> sh(spec.accessTr, spec.accessEn)
                                 },
@@ -336,6 +379,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                             )
                             when {
                                 equipped -> Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF2FAE68), modifier = Modifier.size(22.dp))
+                                vipLocked -> Text(sh("VIP", "VIP"), color = spec.accent, fontSize = 7.sp, fontWeight = FontWeight.Black)
                                 !assetReady && !owned -> Text(sh("KAPALI", "LOCKED"), color = Color(0xFF8A97A8), fontSize = 7.sp, fontWeight = FontWeight.Black)
                                 else -> Button(
                                     onClick = {
@@ -345,8 +389,15 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                             try {
                                                 runCatching {
                                                     withTimeout(12_000L) {
-                                                        if (!owned) b.purchaseShopItem(spec.id)
-                                                        b.equipShopItem(spec.id)
+                                                        if (spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR) {
+                                                            b.equipShopItem(spec.id)
+                                                        } else if (!owned && playProduct != null) {
+                                                            val host = activity ?: error("activity_required")
+                                                            val result = billing.launchProduct(host, playProduct)
+                                                            if (result.responseCode != BillingClient.BillingResponseCode.OK) error("billing_unavailable")
+                                                        } else {
+                                                            b.equipShopItem(spec.id)
+                                                        }
                                                     }
                                                 }.onSuccess {
                                                     notice = sh("${spec.titleTr} kullanılıyor.", "${spec.titleEn} equipped.")
@@ -363,12 +414,12 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                             }
                                         }
                                     },
-                                    enabled = backend != null && (owned || (item != null && assetReady)) && busyId == null,
+                                    enabled = backend != null && !vipLocked && (spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR || owned || (playProduct?.oneTimePurchaseOfferDetails != null && assetReady)) && busyId == null,
                                     contentPadding = PaddingValues(horizontal = 9.dp, vertical = 3.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = spec.accent, contentColor = Color.White),
                                     shape = RoundedCornerShape(10.dp),
                                 ) {
-                                    Text(if (busyId == spec.id) "…" else if (owned) sh("KULLAN", "EQUIP") else sh("AL", "BUY"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                    Text(if (busyId == spec.id) "…" else if (owned || spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR) sh("KULLAN", "EQUIP") else sh("SATIN AL", "BUY"), fontSize = 8.sp, fontWeight = FontWeight.Black)
                                 }
                             }
                         }

@@ -10,8 +10,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Storefront
+import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -38,6 +40,7 @@ internal fun MainPlayerProfileScreen(
     backend: OnlineGameBackend,
     onEdit: () -> Unit,
     onVip: () -> Unit,
+    onCollection: () -> Unit,
     onSettings: () -> Unit,
     onSocial: () -> Unit,
 ) {
@@ -101,32 +104,46 @@ internal fun MainPlayerProfileScreen(
             )
         }
 
+        val profileAccent = if (p?.isVip == true) SonHarfTheme.PremiumGold else SonHarfTheme.Primary
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(28.dp),
-            color = SonHarfTheme.Surface,
-            border = BorderStroke(1.dp, SonHarfTheme.Primary.copy(alpha = .22f)),
-            shadowElevation = 4.dp,
+            shape = RoundedCornerShape(30.dp),
+            color = Color.Transparent,
+            border = BorderStroke(1.dp, profileAccent.copy(alpha = .38f)),
+            shadowElevation = 7.dp,
         ) {
             Box(
                 Modifier.fillMaxWidth().background(
                     Brush.horizontalGradient(
                         listOf(
-                            SonHarfTheme.Primary.copy(alpha = .13f),
-                            SonHarfTheme.Surface,
-                            SonHarfTheme.Turquoise.copy(alpha = .08f),
+                            if (p?.isVip == true) SonHarfTheme.ForestDeep else SonHarfTheme.Primary.copy(alpha = .22f),
+                            if (p?.isVip == true) Color(0xFF244B3B) else SonHarfTheme.Surface,
+                            if (p?.isVip == true) Color(0xFF1B3329) else SonHarfTheme.Turquoise.copy(alpha = .12f),
                         )
                     )
-                ).padding(18.dp)
+                ).padding(20.dp)
             ) {
+                if (p?.isVip == true) {
+                    Surface(
+                        modifier = Modifier.align(Alignment.TopEnd),
+                        shape = RoundedCornerShape(99.dp),
+                        color = SonHarfTheme.PremiumGoldLight,
+                    ) {
+                        Row(Modifier.padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.WorkspacePremium, null, Modifier.size(14.dp), tint = SonHarfTheme.ForestDeep)
+                            Spacer(Modifier.width(4.dp))
+                            Text("PRO ÜYE", color = SonHarfTheme.ForestDeep, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     FramedProfilePhotoAvatar(
                         avatarPath = p?.avatarPath,
                         gender = p?.gender,
                         name = p?.displayName ?: sh("Oyuncu", "Player"),
-                        size = 88.dp,
+                        size = 94.dp,
                         frameId = SonHarfCosmetics.profileFrameId,
-                        accent = if (p?.isVip == true) SonHarfTheme.PremiumGold else SonHarfTheme.Primary,
+                        accent = profileAccent,
                         visible = p?.avatarVisibility != "hidden",
                         showGenderBadge = false,
                     )
@@ -134,8 +151,8 @@ internal fun MainPlayerProfileScreen(
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             p?.displayName ?: sh("Oyuncu", "Player"),
-                            color = SonHarfCosmetics.playerNameColor,
-                            fontSize = 22.sp,
+                            color = if (p?.isVip == true) Color.White else SonHarfCosmetics.playerNameColor,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Black,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -143,19 +160,19 @@ internal fun MainPlayerProfileScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
                             ProfilePill(
                                 text = g?.nextTitle ?: sh("OYUNCU", "PLAYER"),
-                                accent = SonHarfTheme.Primary,
+                                accent = if (p?.isVip == true) SonHarfTheme.PremiumGoldLight else SonHarfTheme.Primary,
                             )
                             if (p?.isVip == true) {
-                                ProfilePill(text = "VIP", accent = SonHarfTheme.PremiumGold)
+                                ProfilePill(text = "PRO", accent = SonHarfTheme.PremiumGoldLight)
                             }
                         }
                         TextButton(
                             onClick = onEdit,
                             contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp),
                         ) {
-                            Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp))
+                            Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp), tint = if (p?.isVip == true) SonHarfTheme.PremiumGoldLight else SonHarfTheme.Primary)
                             Spacer(Modifier.width(5.dp))
-                            Text(sh("Profili düzenle", "Edit profile"), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                            Text(sh("Profili düzenle", "Edit profile"), color = if (p?.isVip == true) Color.White.copy(alpha = .86f) else SonHarfTheme.Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                         }
                     }
                 }
@@ -234,12 +251,28 @@ internal fun MainPlayerProfileScreen(
             }
         }
 
-        OutlinedButton(onClick = onVip, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(14.dp)) {
-            Icon(Icons.Rounded.Storefront, null, Modifier.size(19.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(sh("Mağaza · PRO ve koleksiyon", "Shop · PRO and collection"))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            Button(
+                onClick = onCollection,
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary, contentColor = SonHarfTheme.OnPrimary),
+            ) {
+                Icon(Icons.Rounded.Palette, null, Modifier.size(19.dp))
+                Spacer(Modifier.width(7.dp))
+                Text(sh("KOLEKSİYONUM", "MY COLLECTION"), fontWeight = FontWeight.Black, fontSize = 10.sp)
+            }
+            Button(
+                onClick = onVip,
+                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.PremiumGoldLight, contentColor = SonHarfTheme.ForestDeep),
+            ) {
+                Icon(Icons.Rounded.Storefront, null, Modifier.size(19.dp))
+                Spacer(Modifier.width(7.dp))
+                Text(sh("MAĞAZA", "SHOP"), fontWeight = FontWeight.Black, fontSize = 10.sp)
+            }
         }
-
         Spacer(Modifier.weight(1f))
 
         Text(
@@ -282,3 +315,4 @@ private fun InlineProfileStat(value: String, label: String) {
         Text(label, color = SonHarfTheme.TextSecondary, fontSize = 8.sp, textAlign = TextAlign.Center)
     }
 }
+�

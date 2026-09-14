@@ -205,6 +205,7 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
                         { destination = UnifiedDestination.PROFILE_DETAILS },
                         { destination = UnifiedDestination.VIP },
                         { destination = UnifiedDestination.SETTINGS },
+                        { destination = UnifiedDestination.SETTINGS },
                         { destination = UnifiedDestination.SOCIAL },
                     )
                     UnifiedDestination.SETTINGS -> MainSettingsScreen(

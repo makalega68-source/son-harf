@@ -28,6 +28,7 @@ fun EconomyShopScreen(
     initialTab: Int = 0,
     onBack: (() -> Unit)? = null,
     onMembershipChanged: (Boolean) -> Unit = {},
+    onCollection: () -> Unit = {},
 ) {
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 4)) }
     var rewards by remember { mutableStateOf(false) }
@@ -58,14 +59,20 @@ fun EconomyShopScreen(
         }
         Box(Modifier.weight(1f)) {
             if (tab == 1) SeasonCenterContent()
-            else EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged)
+            else EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EconomyCatalogScreen(section: Int, onSection: (Int) -> Unit, onRewards: () -> Unit, onMembershipChanged: (Boolean) -> Unit) {
+private fun EconomyCatalogScreen(
+    section: Int,
+    onSection: (Int) -> Unit,
+    onRewards: () -> Unit,
+    onMembershipChanged: (Boolean) -> Unit,
+    onCollection: () -> Unit,
+) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
@@ -213,18 +220,11 @@ private fun EconomyCatalogScreen(section: Int, onSection: (Int) -> Unit, onRewar
                     busy = item.id
                     val displayName = if (SonHarfUiState.isEnglish) item.nameEn else item.nameTr
                     if (mine) {
-                        runCatching { b.equipShopItem(item.id) }
-                            .onSuccess {
-                                notice = sh("$displayName kullanıma alındı.", "$displayName equipped.")
-                                reload()
-                            }
-                            .onFailure { notice = sh("Ürün etkinleştirilemedi.", "The item could not be equipped.") }
+                        onCollection()
                     } else {
                         runCatching { b.purchaseShopItem(item.id) }
                             .onSuccess {
-                                val applied = runCatching { b.equipShopItem(item.id) }.isSuccess
-                                notice = if (applied) sh("Satın alındı ve uygulandı.", "Purchased and equipped.")
-                                    else sh("Satın alındı. Koleksiyonundan kullanabilirsin.", "Purchased. You can equip it from your collection.")
+                                notice = sh("$displayName satın alındı. Profil > Koleksiyonum'dan kullanabilirsin.", "$displayName purchased. Equip it from Profile > My Collection.")
                                 reload()
                             }
                             .onFailure {
@@ -414,7 +414,7 @@ private fun VerifiedStoreProductCard(
                         Text(
                             when {
                                 equipped -> sh("AKTİF", "ACTIVE")
-                                owned -> sh("KULLAN", "EQUIP")
+                                owned -> sh("PROFİLDE KULLAN", "USE IN PROFILE")
                                 lockedByPro -> "PRO"
                                 else -> sh("SATIN AL", "BUY")
                             },

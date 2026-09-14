@@ -26,7 +26,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 
 private enum class PremiumDestination {
-    HOME, GAMES, COMPETE, PROFILE,
+    HOME, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
     LAST_LETTER, SIEGE, LETTER_PATH,
     SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP
 }
@@ -84,7 +84,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
-            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.PROFILE
+            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.SOCIAL, PremiumDestination.COLLECTION -> PremiumDestination.PROFILE
+            PremiumDestination.SHOP -> PremiumDestination.HOME
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
             PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
@@ -98,7 +99,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     val topLevel = destination in setOf(
         PremiumDestination.HOME,
         PremiumDestination.GAMES,
+        PremiumDestination.CLUB,
         PremiumDestination.COMPETE,
+        PremiumDestination.SHOP,
         PremiumDestination.PROFILE,
     )
     val scheme = if (SonHarfTheme.IsDark) {
@@ -138,7 +141,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumBottomBar(
                         destination = destination,
                         onHome = { destination = PremiumDestination.HOME },
-                        onGames = { destination = PremiumDestination.GAMES },
+                        onShop = { destination = PremiumDestination.SHOP },
+                        onClub = { destination = PremiumDestination.CLUB },
                         onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
                     )
@@ -170,17 +174,29 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
                     )
-                    PremiumDestination.COMPETE -> LeaderboardExperienceScreen {
+                    // Rekabet merkezi; kulüpler, haftalık kupa ve rakip geçmişinin
+                    // ana navigasyondan erişilen sosyal giriş noktasıdır.
+                    PremiumDestination.COMPETE -> CompetitionHubScreen {
                         destination = PremiumDestination.HOME
                     }
+                    PremiumDestination.CLUB -> CompetitionHubScreen(
+                        onBack = { destination = PremiumDestination.HOME },
+                        clubEntry = true,
+                    )
                     PremiumDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE_DETAILS },
                         { destination = PremiumDestination.SHOP },
+                        { destination = PremiumDestination.COLLECTION },
                         { destination = PremiumDestination.SETTINGS },
                         { destination = PremiumDestination.SOCIAL },
                     )
-                    PremiumDestination.SHOP -> EconomyShopScreen(onBack = { destination = PremiumDestination.PROFILE }, onMembershipChanged = { isPro = it })
+                    PremiumDestination.COLLECTION -> PlayerCollectionScreen(backend) { destination = PremiumDestination.PROFILE }
+                    PremiumDestination.SHOP -> EconomyShopScreen(
+                        onBack = { destination = PremiumDestination.PROFILE },
+                        onMembershipChanged = { isPro = it },
+                        onCollection = { destination = PremiumDestination.COLLECTION },
+                    )
                     PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()
                     PremiumDestination.SIEGE -> WordSiegeExperienceScreen {
                         leaveGame()
@@ -303,15 +319,15 @@ private fun PremiumGameCenter(
     ) {
         item {
             Text(
-                sh("OYUNLAR", "GAMES"),
+                sh("OYUN MODLARI", "GAME MODES"),
                 color = SonHarfTheme.TextPrimary,
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Black,
             )
             Text(
                 sh(
-                    "Oyunu ve dilini seç. Tüm oyunlar aynı ana sözlüğü kullanır.",
-                    "Choose a game and its language. Every game uses the same master dictionary.",
+                    "Modunu seç, dilini ayarla ve doğrudan arenaya gir.",
+                    "Pick a mode, set your language, and enter the arena.",
                 ),
                 color = SonHarfTheme.TextSecondary,
                 fontSize = 12.sp,
@@ -370,15 +386,30 @@ private fun PremiumGameCard(
         shadowElevation = if (primary) 5.dp else 1.dp,
     ) {
         Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
+            if (primary) {
+                Surface(
+                    shape = RoundedCornerShape(99.dp),
+                    color = SonHarfTheme.PremiumGold.copy(alpha = .16f),
+                ) {
+                    Text(
+                        sh("ANA ARENA", "MAIN ARENA"),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        color = SonHarfTheme.PremiumGold,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+                Spacer(Modifier.height(10.dp))
+            }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
                     shape = RoundedCornerShape(18.dp),
-                    color = SonHarfTheme.Primary.copy(alpha = .13f),
+                    color = if (primary) SonHarfTheme.Primary.copy(alpha = .18f) else SonHarfTheme.Turquoise.copy(alpha = .12f),
                 ) {
                     Icon(
                         icon,
                         contentDescription = null,
-                        tint = SonHarfTheme.Primary,
+                        tint = if (primary) SonHarfTheme.Primary else SonHarfTheme.Turquoise,
                         modifier = Modifier.padding(12.dp).size(26.dp),
                     )
                 }
@@ -401,8 +432,12 @@ private fun PremiumGameCard(
                     onClick = onClick,
                     shape = RoundedCornerShape(14.dp),
                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (primary) SonHarfTheme.Primary else SonHarfTheme.Forest,
+                        contentColor = SonHarfTheme.OnPrimary,
+                    ),
                 ) {
-                    Text(sh("OYNA", "PLAY"), fontWeight = FontWeight.Black, fontSize = 11.sp)
+                    Text(sh("ARENA'YA GİR", "ENTER"), fontWeight = FontWeight.Black, fontSize = 10.sp)
                 }
             }
         }
@@ -439,13 +474,15 @@ private fun PremiumLanguageChoice(
 private fun PremiumBottomBar(
     destination: PremiumDestination,
     onHome: () -> Unit,
-    onGames: () -> Unit,
+    onShop: () -> Unit,
+    onClub: () -> Unit,
     onCompete: () -> Unit,
     onProfile: () -> Unit,
 ) {
     val items = listOf(
         Triple(PremiumDestination.HOME, Icons.Rounded.Home, sh("ANA", "HOME")) to onHome,
-        Triple(PremiumDestination.GAMES, Icons.Rounded.SportsEsports, sh("OYUNLAR", "GAMES")) to onGames,
+        Triple(PremiumDestination.SHOP, Icons.Rounded.Storefront, sh("MAĞAZA", "SHOP")) to onShop,
+        Triple(PremiumDestination.CLUB, Icons.Rounded.Groups, sh("KULÜP", "CLUB")) to onClub,
         Triple(PremiumDestination.COMPETE, Icons.Rounded.EmojiEvents, sh("REKABET", "COMPETE")) to onCompete,
         Triple(PremiumDestination.PROFILE, Icons.Rounded.Person, sh("PROFİL", "PROFILE")) to onProfile,
     )

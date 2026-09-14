@@ -87,6 +87,7 @@ private fun WordSiegePracticeContent(
     }
     var lastMove by remember { mutableStateOf<WordSiegePracticeMove?>(null) }
     var botThinking by remember { mutableStateOf(false) }
+    var botDecisionSalt by remember { mutableStateOf(kotlin.random.Random.nextLong()) }
     var showPass by remember { mutableStateOf(false) }
     var showForfeit by remember { mutableStateOf(false) }
     var showRestart by remember { mutableStateOf(false) }
@@ -185,6 +186,7 @@ private fun WordSiegePracticeContent(
     fun startAgain() {
         state = WordSiegePracticeEngine.newGame(state.language)
         botProfile = WordSiegePracticeBots.random()
+        botDecisionSalt = kotlin.random.Random.nextLong()
         lastMove = null
         shuffleSeed = 0
         actionVfxEvent = 0
@@ -251,6 +253,7 @@ private fun WordSiegePracticeContent(
                 playerRating = playerProfile?.rating ?: 1000,
                 playerWins = playerProfile?.wins ?: 0,
                 playerLosses = playerProfile?.losses ?: 0,
+                decisionSalt = botDecisionSalt,
             )
             if (planned == null) {
                 val exchange = practiceBotExchangeIndices(state)

@@ -39,7 +39,7 @@ internal fun PremiumHomeCommandDeck(
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Column {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                SonHarfOfficialLogo(Modifier.weight(1f).height(62.dp))
+                Spacer(Modifier.weight(1f))
                 IconButton(onClick = onSocial, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.Groups, sh("Sosyal merkez", "Social hub"), tint = SonHarfTheme.Primary)
                 }
@@ -76,7 +76,7 @@ internal fun PremiumHomeCommandDeck(
                         tint = if (profile?.isVip == true) SonHarfTheme.Warning else SonHarfTheme.TextSecondary)
                     Spacer(Modifier.width(6.dp))
                     Text(when (profile?.isVip) {
-                        true -> sh("PRO üyesi", "PRO member")
+                        true -> sh("PRO ÜYE", "PRO MEMBER")
                         false -> sh("Standart üyelik", "Standard plan")
                         null -> "—"
                     }, fontSize = 13.sp, color = SonHarfTheme.TextSecondary)
@@ -86,25 +86,38 @@ internal fun PremiumHomeCommandDeck(
         Surface(shape = RoundedCornerShape(28.dp), color = SonHarfTheme.ForestDeep,
             border = BorderStroke(1.dp, Color.White.copy(alpha = .08f)), shadowElevation = 3.dp) {
             Column(Modifier.fillMaxWidth().padding(22.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Shield, null, tint = SonHarfTheme.PremiumGoldLight, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(sh("KELİMELERLE ALAN SAVAŞI", "A BATTLE OF WORDS & TERRITORY"),
-                        color = Color.White.copy(alpha = .8f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Shield, null, tint = SonHarfTheme.PremiumGoldLight, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(sh("KELİMELERLE ALAN SAVAŞI", "A BATTLE OF WORDS & TERRITORY"),
+                                color = Color.White.copy(alpha = .8f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        }
+                        Text("KELİME TAHTI", color = Color.White, fontSize = 27.sp,
+                            lineHeight = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.5).sp)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Image(
+                        painter = painterResource(R.drawable.kelime_tahti_logo),
+                        contentDescription = null,
+                        modifier = Modifier.size(width = 132.dp, height = 88.dp),
+                        contentScale = ContentScale.Fit,
+                    )
                 }
-                Text("KELİME TAHTI", color = Color.White, fontSize = 27.sp,
-                    lineHeight = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.5).sp)
                 Text(sh("Kelimeyi kur. Alanı ele geçir. Rakibini geç.",
                     "Build your word. Claim territory. Outplay your rival."),
                     color = Color.White.copy(alpha = .85f), fontSize = 14.sp, lineHeight = 20.sp)
-                Button(onClick = onSiege, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFF3F5EA), contentColor = SonHarfTheme.ForestDeep),
+                Button(onClick = onSiege, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp),
+                    shape = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.PremiumGoldLight, contentColor = SonHarfTheme.ForestDeep),
                     contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)) {
-                    Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(25.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(sh("OYNA", "PLAY"), fontSize = 18.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 1.dp)) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(27.dp))
+                        Spacer(Modifier.width(9.dp))
+                        Text(sh("OYNA", "PLAY"), fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                    }
                 }
             }
         }
@@ -116,13 +129,40 @@ internal fun PremiumWeeklyPodium(
     players: List<HomePodiumEntry>, loading: Boolean, failed: Boolean,
     onOpenLeague: () -> Unit, onRetry: () -> Unit,
 ) {
-    PremiumWeeklyPodiumShowcase(
-        players = players,
-        loading = loading,
-        failed = failed,
-        onOpenLeague = onOpenLeague,
-        onRetry = onRetry,
-    )
+    Surface(onClick = onOpenLeague, shape = RoundedCornerShape(24.dp), color = Color.Transparent, shadowElevation = 3.dp) {
+        Box(Modifier.fillMaxWidth().height(164.dp)) {
+            Image(
+                painter = painterResource(R.drawable.weekly_elite_gold_panel),
+                contentDescription = null,
+                modifier = Modifier.matchParentSize(),
+                contentScale = ContentScale.FillBounds,
+            )
+            Column(Modifier.padding(horizontal = 24.dp, vertical = 16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.width(42.dp))
+                Text(sh("HAFTANIN ZİRVESİ", "WEEKLY ELITE"), Modifier.weight(1f), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp, textAlign = TextAlign.Center)
+                Row(Modifier.width(42.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(sh("LİG", "LEAGUE"), color = SonHarfTheme.PremiumGoldLight, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    Icon(Icons.Rounded.ChevronRight, null, Modifier.size(14.dp), tint = SonHarfTheme.PremiumGoldLight)
+                }
+            }
+            when {
+                loading -> Box(Modifier.fillMaxWidth().height(58.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(Modifier.size(20.dp), color = SonHarfTheme.PremiumGoldLight, strokeWidth = 2.dp)
+                }
+                failed -> Row(Modifier.fillMaxWidth().height(58.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(sh("Sıralama yenilenemedi", "Ranking could not refresh"), Modifier.weight(1f), color = Color.White.copy(alpha = .78f), fontSize = 11.sp)
+                    TextButton(onClick = onRetry, contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Text(sh("YENİLE", "RETRY"), color = SonHarfTheme.PremiumGoldLight, fontSize = 10.sp) }
+                }
+                else -> Row(Modifier.fillMaxWidth().weight(1f).semantics { isTraversalGroup = true }, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PremiumPodiumPlace(1, players.getOrNull(0), Modifier.weight(1f))
+                    PremiumPodiumPlace(2, players.getOrNull(1), Modifier.weight(1f))
+                    PremiumPodiumPlace(3, players.getOrNull(2), Modifier.weight(1f))
+                }
+            }
+        }
+        }
+    }
 }
 
 @Composable
@@ -136,22 +176,23 @@ private fun PremiumPodiumPlace(place: Int, player: HomePodiumEntry?, modifier: M
     val name = player?.row?.displayName?.ifBlank { sh("Oyuncu", "Player") } ?: "—"
     val spoken = player?.let { sh("$place. sıra, $name, ${it.row.rating} haftalık RP",
         "Rank $place, $name, ${it.row.rating} weekly RP") } ?: sh("$place. sıra henüz boş", "Rank $place is not filled yet")
-    Row(modifier.clearAndSetSemantics { contentDescription = spoken; traversalIndex = place.toFloat() },
-        verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(38.dp).background(Brush.linearGradient(frame), CircleShape).padding(2.dp), contentAlignment = Alignment.Center) {
+    Column(modifier.clearAndSetSemantics { contentDescription = spoken; traversalIndex = place.toFloat() },
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Text("$place.", color = accent, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        Box(Modifier.size(if (place == 1) 54.dp else 46.dp).background(Brush.linearGradient(frame), CircleShape).padding(2.dp), contentAlignment = Alignment.Center) {
             if (player != null) {
                 ProfilePhotoAvatarWithGender(
                     avatarPath = if (player.profile?.avatarVisibility == "hidden") null else player.profile?.avatarPath,
-                    gender = player.profile?.gender, name = name, size = 34.dp, accent = accent,
+                    gender = player.profile?.gender, name = name, size = if (place == 1) 50.dp else 42.dp, accent = accent,
                     visible = player.profile?.avatarVisibility != "hidden", showGenderBadge = false,
                 )
             } else Surface(Modifier.fillMaxSize(), shape = CircleShape, color = Color(0xFF31453B)) {
                 Box(contentAlignment = Alignment.Center) { Text("$place", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black) }
             }
         }
-        Spacer(Modifier.width(6.dp))
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-            Text(name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(3.dp))
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(name, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
             Text(player?.let { "${it.row.rating} RP" } ?: "— RP", color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
@@ -267,3 +308,4 @@ private fun homeLeagueName(value: String): String = when (value) {
     "EFSANE" -> sh("Efsane", "Legend")
     else -> value
 }
+�

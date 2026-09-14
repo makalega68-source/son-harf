@@ -126,7 +126,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ProfileThemeCard(
-                title = sh("Ana Mavi Beyaz", "Main Blue & White"),
+                title = sh("Ana Yeşil Beyaz", "Main Green & White"),
                 subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
                 active = !darkActive,
                 enabled = !busy && !loading,
@@ -157,7 +157,9 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
             }
         }
 
-        val styles = collection.filter { it.id != DarkArenaThemeId }
+        // Historical ownership stays safely on the server, but products with no live game
+        // integration must not occupy the player's visible profile collection.
+        val styles = collection.filter { it.id != DarkArenaThemeId && it.isSupportedOwnedStyle() }
         Text(
             sh("STYLE KOLEKSİYONUM", "MY STYLE COLLECTION"),
             color = MainUi.Text,
@@ -215,7 +217,7 @@ private fun ProfileThemeCard(
                     brush = if (dark) {
                         Brush.linearGradient(listOf(Color(0xFF070A12), Color(0xFF1A2331), Color(0xFF5A431A)))
                     } else {
-                        Brush.linearGradient(listOf(Color.White, Color(0xFFE8F1FF), Color(0xFF1769E0)))
+                        Brush.linearGradient(listOf(Color(0xFFFFFEF8), Color(0xFFE4F0E8), Color(0xFF2F6B52)))
                     },
                     shape = RoundedCornerShape(12.dp),
                 ),
@@ -224,7 +226,7 @@ private fun ProfileThemeCard(
                     Icon(
                         Icons.Rounded.CheckCircle,
                         null,
-                        tint = if (dark) Color(0xFFF0B84D) else Color(0xFF1769E0),
+                        tint = if (dark) Color(0xFFF0B84D) else Color(0xFF2F6B52),
                         modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(20.dp),
                     )
                 }

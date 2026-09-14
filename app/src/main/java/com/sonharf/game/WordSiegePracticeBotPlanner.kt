@@ -30,12 +30,14 @@ internal suspend fun resilientPracticeBotMove(
     playerRating: Int,
     playerWins: Int,
     playerLosses: Int,
+    decisionSalt: Long = 0L,
 ): WordSiegePracticeMove? = withContext(Dispatchers.Default) {
     WordSiegePracticeEngine.bestBotMove(
         state = state,
         playerRating = playerRating,
         playerWins = playerWins,
         playerLosses = playerLosses,
+        decisionSalt = decisionSalt,
     )?.let { return@withContext it }
 
     if (state.currentOwner != 2 || state.status != "playing") return@withContext null
@@ -97,7 +99,12 @@ internal suspend fun resilientPracticeBotMove(
         playerWins = playerWins,
         playerLosses = playerLosses,
     )
-    val targetIndex = ((ordered.lastIndex * percentile) / 100).coerceIn(0, ordered.lastIndex)
+    val targetIndex = WordSiegePracticeEngine.adaptiveCandidateIndex(
+        candidateCount = ordered.size,
+        targetPercentile = percentile,
+        variationSeed = state.botRack.hashCode().toLong().shl(32) xor
+            state.bag.hashCode().toLong() xor decisionSalt,
+    )
     ordered[targetIndex]
 }
 
@@ -142,3 +149,4 @@ internal fun practiceBotExchangeIndices(state: WordSiegePracticeState): Set<Int>
     val count = minOf(3, state.botRack.length, state.bag.length)
     return (0 until count).toSet()
 }
+ëŽ

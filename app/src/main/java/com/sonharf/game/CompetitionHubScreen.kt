@@ -28,8 +28,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @Composable
-fun CompetitionHubScreen(onBack: () -> Unit) {
-    var tab by remember { mutableIntStateOf(0) }
+fun CompetitionHubScreen(onBack: () -> Unit, clubEntry: Boolean = false) {
+    var tab by remember { mutableIntStateOf(if (clubEntry) 0 else 1) }
     Column(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))
@@ -43,8 +43,8 @@ fun CompetitionHubScreen(onBack: () -> Unit) {
                 Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = SonHarfText)
             }
             Column(Modifier.weight(1f)) {
-                Text(sh("REKABET MERKEZİ", "COMPETITION HUB"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                Text(sh("Kulüp • Haftalık Kupa • Rakipler", "Club • Weekly Cup • Rivals"), color = SonHarfMuted, fontSize = 9.sp)
+                Text(if (clubEntry) sh("KULÜP MERKEZİ", "CLUB CENTER") else sh("REKABET MERKEZİ", "COMPETITION HUB"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                Text(if (clubEntry) sh("Kulübün • Üyeler • Görevler • Meydan okuma", "Your club • Members • Missions • Challenge") else sh("Kulüp • Haftalık Kupa • Rakipler", "Club • Weekly Cup • Rivals"), color = SonHarfMuted, fontSize = 9.sp)
             }
             Text("⚔", fontSize = 25.sp)
         }
@@ -96,12 +96,17 @@ private fun ClubCompetitionTab() {
     var memberProfiles by remember { mutableStateOf<Map<String, ProfileDto?>>(emptyMap()) }
     var messages by remember { mutableStateOf<List<ClubMessageDto>>(emptyList()) }
     var clubMissions by remember { mutableStateOf<List<ClubWeeklyMissionDto>>(emptyList()) }
+    var clubChallenge by remember { mutableStateOf<ClubChallengeDto?>(null) }
+    var challengeContributions by remember { mutableStateOf<List<ClubChallengeContributionDto>>(emptyList()) }
+    var challengeCandidates by remember { mutableStateOf<List<ClubDirectoryRowDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var createOpen by remember { mutableStateOf(false) }
     var leaveConfirm by remember { mutableStateOf(false) }
+    var challengePickerOpen by remember { mutableStateOf(false) }
     var messageInput by remember { mutableStateOf("") }
+    var clubSection by remember { mutableIntStateOf(0) }
 
     suspend fun reload() {
         val b = backend ?: return
@@ -116,7 +121,7 @@ private fun ClubCompetitionTab() {
                     clubMissions = emptyList()
                     directory = runCatching { b.getClubDirectory(50) }.getOrDefault(emptyList())
                 } else {
-                    directory = emptyList()
+                    directory = runCatching { b.getClubDirectory(50) }.getOrDefault(emptyList())
                     val nextMembers = runCatching { b.getClubMembers(club.clubId) }.getOrDefault(emptyList())
                     members = nextMembers
                     val nextProfiles = memberProfiles.toMutableMap()
@@ -129,6 +134,11 @@ private fun ClubCompetitionTab() {
                     memberProfiles = nextProfiles.filterKeys { it in activeMemberIds }
                     messages = runCatching { b.getClubMessages(club.clubId) }.getOrDefault(emptyList())
                     clubMissions = runCatching { b.getClubWeeklyMissions() }.getOrDefault(emptyList())
+                    challengeCandidates = runCatching { b.getClubDirectory(100).filter { it.clubId != club.clubId } }.getOrDefault(emptyList())
+                    clubChallenge = runCatching { b.getMyClubChallenge() }.getOrNull()
+                    challengeContributions = clubChallenge?.takeIf { it.status == "active" }?.let { challenge ->
+                        runCatching { b.getClubChallengeContributions(challenge.challengeId) }.getOrDefault(emptyList())
+                    }.orEmpty()
                 }
             }
             .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
@@ -165,6 +175,23 @@ private fun ClubCompetitionTab() {
         }
 
         val club = myClub
+        if (club != null) {
+            item {
+                ScrollableTabRow(selectedTabIndex = clubSection, edgePadding = 0.dp, containerColor = Color.Transparent, divider = {}) {
+                    listOf(
+                        sh("KULÜBÜM", "MY CLUB"),
+                        sh("ÜYELER", "MEMBERS"),
+                        sh("GÖREVLER", "MISSIONS"),
+                        sh("MEYDAN", "CHALLENGE"),
+                        sh("SIRALAMA", "RANKING"),
+                    ).forEachIndexed { index, label ->
+                        Tab(selected = clubSection == index, onClick = { clubSection = index }, text = {
+                            Text(label, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        })
+                    }
+                }
+            }
+        }
         if (club == null && !loading) {
             item {
                 CompetitionHero(
@@ -221,7 +248,26 @@ private fun ClubCompetitionTab() {
                 }
             }
         } else if (club != null) {
-            item {
+            if (clubSection == 4) {
+                item {
+                    Text(sh("KULÜPLER SIRALAMASI", "CLUB RANKING"), color = SonHarfGold, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Haftalık toplam katkıya göre güncellenir.", "Updates by weekly total contribution."), color = SonHarfMuted, fontSize = 9.sp)
+                }
+                items(directory, key = { "club-rank-${it.clubId}" }) { row ->
+                    val rank = directory.indexOfFirst { it.clubId == row.clubId } + 1
+                    Surface(shape = RoundedCornerShape(16.dp), color = SonHarfSurface, border = BorderStroke(1.dp, if (row.clubId == club.clubId) SonHarfGold.copy(alpha = .55f) else SonHarfMuted.copy(alpha = .14f))) {
+                        Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text("#$rank", color = if (rank <= 3) SonHarfGold else SonHarfMuted, fontWeight = FontWeight.Black, fontSize = 13.sp, modifier = Modifier.width(34.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("[${row.tag}] ${row.name}", color = SonHarfText, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                Text("${row.memberCount}/${row.maxMembers} ${sh("üye", "members")}", color = SonHarfMuted, fontSize = 9.sp)
+                            }
+                            Text("${row.weeklyPoints}", color = SonHarfGreen, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+            if (clubSection == 0) item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                     shape = RoundedCornerShape(23.dp),
@@ -249,7 +295,83 @@ private fun ClubCompetitionTab() {
                 }
             }
 
-            item {
+            if (clubSection == 3) item {
+                val challenge = clubChallenge
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .35f)),
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("⚔", fontSize = 20.sp)
+                            Spacer(Modifier.width(7.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(sh("KULÜP MEYDAN OKUMASI", "CLUB CHALLENGE"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                                Text(sh("24 saatlik, beceri temelli ortak mücadele.", "24-hour, skill-based team challenge."), color = SonHarfMuted, fontSize = 9.sp)
+                            }
+                        }
+                        when (challenge?.status) {
+                            "pending" -> {
+                                val waitingFor = if (challenge.challengerClubId == club.clubId) challenge.challengedName else challenge.challengerName
+                                Text(sh("$waitingFor kulübünün kabulü bekleniyor.", "Waiting for $waitingFor to accept."), color = SonHarfText, fontSize = 11.sp)
+                                if (challenge.canRespond) {
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Button(onClick = {
+                                            scope.launch {
+                                                busy = true
+                                                runCatching { backend?.respondClubChallenge(challenge.challengeId, true) }
+                                                    .onSuccess { notice = sh("Meydan okuma başladı: 24 saat.", "Challenge started: 24 hours."); reload() }
+                                                    .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                                                busy = false
+                                            }
+                                        }, enabled = !busy, modifier = Modifier.weight(1f)) { Text(sh("KABUL ET", "ACCEPT"), fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                                        OutlinedButton(onClick = {
+                                            scope.launch {
+                                                busy = true
+                                                runCatching { backend?.respondClubChallenge(challenge.challengeId, false) }
+                                                    .onSuccess { notice = sh("Meydan okuma reddedildi.", "Challenge declined."); reload() }
+                                                    .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                                                busy = false
+                                            }
+                                        }, enabled = !busy, modifier = Modifier.weight(1f)) { Text(sh("REDDET", "DECLINE"), fontSize = 10.sp) }
+                                    }
+                                }
+                            }
+                            "active" -> {
+                                val ours = if (challenge.challengerClubId == club.clubId) challenge.challengerPoints else challenge.challengedPoints
+                                val theirs = if (challenge.challengerClubId == club.clubId) challenge.challengedPoints else challenge.challengerPoints
+                                val rivalName = if (challenge.challengerClubId == club.clubId) challenge.challengedName else challenge.challengerName
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(club.name, color = SonHarfText, fontSize = 10.sp, fontWeight = FontWeight.Bold); Text(ours.toString(), color = SonHarfGold, fontSize = 22.sp, fontWeight = FontWeight.Black) }
+                                    Text(sh("24 SAAT", "24 HOURS"), color = SonHarfMuted, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) { Text(rivalName, color = SonHarfText, fontSize = 10.sp, fontWeight = FontWeight.Bold); Text(theirs.toString(), color = SonHarfGold, fontSize = 22.sp, fontWeight = FontWeight.Black) }
+                                }
+                                Text(sh("MEYDAN OKUMA KATKILARI", "CHALLENGE CONTRIBUTIONS"), color = SonHarfMuted, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                challengeContributions.forEach { contribution ->
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                        Text("[${contribution.clubTag}]", color = SonHarfBlue, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(contribution.displayName, color = SonHarfText, fontSize = 11.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                        Text("+${contribution.points}", color = SonHarfGreen, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                                    }
+                                }
+                            }
+                            else -> {
+                                if (challenge != null) {
+                                    Text(sh("Son mücadele tamamlandı. Yeni bir kulübe meydan okuyabilirsin.", "The last challenge is complete. You can challenge a new club."), color = SonHarfMuted, fontSize = 10.sp)
+                                    if (club.role == "owner") Button(onClick = { challengePickerOpen = true }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(sh("YENİ MEYDAN OKUMA", "NEW CHALLENGE"), fontWeight = FontWeight.Black) }
+                                }
+                            }
+                        }
+                        if (challenge == null && club.role == "owner") {
+                            Button(onClick = { challengePickerOpen = true }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text(sh("KULÜBE MEYDAN OKU", "CHALLENGE A CLUB"), fontWeight = FontWeight.Black) }
+                        }
+                    }
+                }
+            }
+
+            if (clubSection == 2) item {
                 Text(sh("TAKIM SANDIĞI", "TEAM CHEST"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black)
                 Text(
                     sh(
@@ -261,7 +383,7 @@ private fun ClubCompetitionTab() {
                 )
             }
 
-            items(clubMissions, key = { "club-mission-${it.tier}" }) { mission ->
+            if (clubSection == 2) items(clubMissions, key = { "club-mission-${it.tier}" }) { mission ->
                 ClubMissionCard(
                     mission = mission,
                     busy = busy,
@@ -288,8 +410,8 @@ private fun ClubCompetitionTab() {
                 )
             }
 
-            item { Text(sh("ÜYELER & KATKI", "MEMBERS & CONTRIBUTION"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black) }
-            items(members, key = { it.userId }) { member ->
+            if (clubSection == 1) item { Text(sh("ÜYELER & KATKI", "MEMBERS & CONTRIBUTION"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black) }
+            if (clubSection == 1) items(members, key = { it.userId }) { member ->
                 Surface(shape = RoundedCornerShape(14.dp), color = SonHarfSurface, border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .13f))) {
                     Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
                         ProfilePhotoAvatar(
@@ -327,8 +449,8 @@ private fun ClubCompetitionTab() {
                 }
             }
 
-            item { Text(sh("KULÜP SOHBETİ", "CLUB CHAT"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black) }
-            item {
+            if (clubSection == 0) item { Text(sh("KULÜP SOHBETİ", "CLUB CHAT"), color = SonHarfGold, fontSize = 13.sp, fontWeight = FontWeight.Black) }
+            if (clubSection == 0) item {
                 Card(
                     colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
                     shape = RoundedCornerShape(18.dp),
@@ -377,7 +499,7 @@ private fun ClubCompetitionTab() {
                 }
             }
 
-            item {
+            if (clubSection == 0) item {
                 OutlinedButton(
                     onClick = { leaveConfirm = true },
                     modifier = Modifier.fillMaxWidth(),
@@ -394,11 +516,25 @@ private fun ClubCompetitionTab() {
             onDismiss = { if (!busy) createOpen = false },
             onCreate = { name, tag, description ->
                 scope.launch {
+                    val b = backend
+                    if (b == null) {
+                        notice = sh("Kulüp için sunucu bağlantısı gerekli.", "A server connection is required for clubs.")
+                        return@launch
+                    }
                     busy = true
-                    runCatching { backend?.createClub(name, tag, description) }
+                    runCatching {
+                        // A successful HTTP response alone is not enough to tell the player that a
+                        // club exists. Confirm the server-side membership written by the same RPC
+                        // before publishing the success state, so a dropped/partial connection can
+                        // never produce a misleading “created” message.
+                        val createdClubId = b.createClub(name, tag, description)
+                        val confirmedClub = b.getMyClub()
+                        check(confirmedClub?.clubId == createdClubId) { "club_creation_not_confirmed" }
+                    }
                         .onSuccess {
                             createOpen = false
                             notice = sh("Kulübün oluşturuldu.", "Your club was created.")
+                            SonHarfSoundFx.bonus()
                             reload()
                         }
                         .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
@@ -436,6 +572,48 @@ private fun ClubCompetitionTab() {
             dismissButton = { TextButton(onClick = { leaveConfirm = false }, enabled = !busy) { Text(sh("VAZGEÇ", "CANCEL")) } },
         )
     }
+
+    if (challengePickerOpen) {
+        ClubChallengePickerDialog(
+            candidates = challengeCandidates,
+            busy = busy,
+            onDismiss = { if (!busy) challengePickerOpen = false },
+            onChallenge = { target ->
+                scope.launch {
+                    busy = true
+                    runCatching { backend?.createClubChallenge(target.clubId) }
+                        .onSuccess { notice = sh("[${target.tag}] ${target.name} kulübüne meydan okuma gönderildi.", "Challenge sent to [${target.tag}] ${target.name}."); challengePickerOpen = false; reload() }
+                        .onFailure { notice = friendlyCompetitionError(it.message.orEmpty()) }
+                    busy = false
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun ClubChallengePickerDialog(
+    candidates: List<ClubDirectoryRowDto>,
+    busy: Boolean,
+    onDismiss: () -> Unit,
+    onChallenge: (ClubDirectoryRowDto) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(sh("KULÜBE MEYDAN OKU", "CHALLENGE A CLUB"), fontWeight = FontWeight.Black) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text(sh("Kabul edilirse mücadele 24 saat sürer. Puanlar yalnızca sunucunun kaydettiği gerçek maçlardan gelir.", "Once accepted, the challenge lasts 24 hours. Points come only from server-recorded matches."), color = SonHarfMuted, fontSize = 10.sp)
+                candidates.take(8).forEach { candidate ->
+                    OutlinedButton(onClick = { onChallenge(candidate) }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                        Text("[${candidate.tag}] ${candidate.name} • ${candidate.weeklyPoints}", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                if (candidates.isEmpty()) Text(sh("Uygun rakip kulüp bulunamadı.", "No eligible rival club found."), color = SonHarfMuted, fontSize = 10.sp)
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss, enabled = !busy) { Text(sh("KAPAT", "CLOSE")) } },
+    )
 }
 
 @Composable
@@ -1275,6 +1453,11 @@ private fun CompetitionMetric(value: String, label: String, modifier: Modifier) 
 private fun friendlyCompetitionError(raw: String): String = when {
     "insufficient_club_creation_balance" in raw ->
         sh("Kulüp kurmak için 1.000 Son Coin gerekir.", "You need 1,000 Son Coin to create a club.")
+    "club_creation_not_confirmed" in raw ->
+        sh(
+            "Kulüp kurulumu bağlantı nedeniyle doğrulanamadı. Bağlantıyı kontrol edip kulüp merkezini yenile.",
+            "Club creation could not be confirmed because of the connection. Check your connection and refresh Club Center.",
+        )
     "club_name_or_tag_taken" in raw -> sh("Bu kulüp adı veya etiketi kullanılıyor.", "That club name or tag is already used.")
     "already_in_club" in raw -> sh("Zaten bir kulüptesin.", "You are already in a club.")
     "club_full" in raw -> sh("Kulüp dolu.", "The club is full.")
@@ -1286,6 +1469,10 @@ private fun friendlyCompetitionError(raw: String): String = when {
     "club_required" in raw -> sh("Takım Sandığı için önce bir kulübe katıl.", "Join a club before using Team Chest.")
     "club_mission_locked" in raw -> sh("Kulüp hedefi henüz tamamlanmadı.", "The club goal is not complete yet.")
     "club_contribution_required" in raw -> sh("Bu sandık için kişisel katkı barajını tamamla.", "Complete your personal contribution requirement for this chest.")
+    "club_challenge_already_open" in raw -> sh("Bu kulüp için zaten bekleyen veya aktif bir meydan okuma var.", "This club already has a pending or active challenge.")
+    "club_owner_required" in raw || "challenged_club_owner_required" in raw -> sh("Meydan okuma için kulüp sahibi olmalısın.", "You must be the club owner for a challenge.")
+    "invalid_challenge_target" in raw -> sh("Geçerli başka bir kulüp seç.", "Choose a different valid club.")
     "unauthorized" in raw || "not_authenticated" in raw -> sh("Oturumunu yenileyip tekrar dene.", "Refresh your session and try again.")
     else -> sh("İşlem tamamlanamadı. Tekrar dene.", "The action could not be completed. Try again.")
 }
+�
