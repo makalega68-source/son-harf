@@ -13,7 +13,7 @@ class ProfileThemeBackendContractTest {
         assertFalse(economy.contains("theme_main_blue_white"))
         assertFalse(economy.contains("theme_monster_blue"))
         assertTrue(profileThemes.contains("backend.equipDefaultGameTheme()"))
-        assertTrue(profileThemes.contains("Ana Mavi Beyaz"))
+        assertTrue(profileThemes.contains("Ana Yeşil Beyaz"))
         assertFalse(profileThemes.contains("purchaseShopItem"))
     }
 }
