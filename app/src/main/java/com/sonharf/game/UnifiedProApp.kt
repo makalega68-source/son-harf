@@ -269,45 +269,6 @@ private fun UnifiedHomeScreen(
 
 
         item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
-                Text(
-                    sh("DİĞER OYUNLAR", "OTHER GAMES"),
-                    color = UnifiedUi.Text,
-                    fontWeight = FontWeight.Black,
-                    fontSize = 16.sp,
-                    modifier = Modifier.weight(1f),
-                )
-                Text(
-                    sh("Kısa oyunlar ve farklı meydan okumalar", "Quick games and other challenges"),
-                    color = UnifiedUi.Muted,
-                    fontSize = 8.sp,
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                PremiumModeCard(
-                    modifier = Modifier.weight(1f),
-                    logoRes = R.drawable.son_harf_app_icon_master,
-                    title = sh("SON HARF", "LAST LETTER"),
-                    subtitle = sh("Kısa ve hızlı\nkelime düellosu", "Fast, short\nword duel"),
-                    colors = listOf(Color(0xFFE5EFE8), Color(0xFFF5F0E6)),
-                    onClick = onPlay,
-                )
-                PremiumModeCard(
-                    modifier = Modifier.weight(1f),
-                    logoRes = R.drawable.harf_yolu_logo,
-                    title = sh("HARF YOLU", "LETTER PATH"),
-                    subtitle = sh("Her kelime seni\nhedefe yaklaştırır", "Every word moves\nyou closer"),
-                    colors = listOf(Color(0xFFCBE7EE), Color(0xFFE8F4E7)),
-                    onClick = onLetter,
-                )
-            }
-        }
-
-        item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                 UnifiedQuickTile(Icons.Rounded.EmojiEvents, sh("LİG", "LEAGUE"), UnifiedUi.Gold, Modifier.weight(1f), onLeague)
                 UnifiedQuickTile(Icons.Rounded.Groups, sh("SOSYAL", "SOCIAL"), UnifiedUi.Green, Modifier.weight(1f), onSocial)
@@ -477,12 +438,12 @@ private fun UnifiedHeroMetric(value: String, label: String, modifier: Modifier =
 
 @Composable
 private fun PremiumPlayButton(onClick: () -> Unit) {
-    val shape = RoundedCornerShape(22.dp)
+    val shape = RoundedCornerShape(26.dp)
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .height(78.dp)
-            .shadow(8.dp, shape)
+            .height(184.dp)
+            .shadow(10.dp, shape)
             .sonHarfPressScale(pressedScale = .985f)
             .clickable(onClick = onClick),
         shape = shape,
@@ -491,20 +452,47 @@ private fun PremiumPlayButton(onClick: () -> Unit) {
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Brush.horizontalGradient(listOf(UnifiedUi.Forest, UnifiedUi.ForestDeep))),
-            contentAlignment = Alignment.Center,
+                .background(Brush.linearGradient(listOf(UnifiedUi.Forest, UnifiedUi.ForestDeep))),
         ) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Icon(
+                Icons.Rounded.Shield,
+                null,
+                tint = Color.White.copy(alpha = .10f),
+                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(118.dp),
+            )
+            Column(
+                Modifier.fillMaxSize().padding(20.dp),
+                verticalArrangement = Arrangement.SpaceBetween,
             ) {
-                Icon(Icons.Rounded.Shield, null, tint = Color.White, modifier = Modifier.size(35.dp))
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Kelime kur • alanı ele geçir • haritayı kontrol et", "Build words • capture territory • control the map"), color = Color.White.copy(alpha = .82f), fontSize = 9.sp)
+                Surface(
+                    shape = RoundedCornerShape(99.dp),
+                    color = Color.White.copy(alpha = .13f),
+                    border = BorderStroke(1.dp, Color.White.copy(alpha = .18f)),
+                ) {
+                    Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Public, null, tint = Color(0xFFF0D37A), modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(5.dp))
+                        Text(sh("TAKTİK ALAN SAVAŞI", "TACTICAL TERRITORY BATTLE"), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    }
                 }
-                Icon(Icons.Rounded.ChevronRight, null, tint = Color.White.copy(alpha = .88f), modifier = Modifier.size(27.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Kelimeyi kur. Bölgeyi ele geçir. Rakibini geride bırak.", "Build words. Capture territory. Leave your rival behind."), color = Color.White.copy(alpha = .84f), fontSize = 11.sp, lineHeight = 15.sp)
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(shape = RoundedCornerShape(15.dp), color = Color(0xFFF6D87E), shadowElevation = 3.dp) {
+                        Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.PlayArrow, null, tint = Color(0xFF174837), modifier = Modifier.size(22.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text(sh("SAVAŞA GİR", "ENTER BATTLE"), color = Color(0xFF174837), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(sh("HARİTA KONTROLÜ", "MAP CONTROL"), color = Color.White.copy(alpha = .65f), fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                        Text(sh("Her hamle bir bölge", "Every move claims ground"), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
     }
