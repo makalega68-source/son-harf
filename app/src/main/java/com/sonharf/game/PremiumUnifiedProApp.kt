@@ -240,40 +240,11 @@ private fun PremiumHomeScreen(
     onLetterPath: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
-    var weeklyTop by remember { mutableStateOf<List<HomePodiumEntry>>(emptyList()) }
-    var weeklyLoading by remember { mutableStateOf(true) }
-    var weeklyFailed by remember { mutableStateOf(false) }
-    var refresh by remember { mutableIntStateOf(0) }
-    val language = if (SonHarfUiState.language == "en") "en" else "tr"
 
-    LaunchedEffect(language, refresh) {
-        weeklyLoading = true
-        weeklyFailed = false
-        suspend fun readProfile(id: String): ProfileDto? = try {
-            backend.getProfile(id)
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (_: Exception) {
-            null
-        }
-        try {
-            if (!SupabaseProvider.configured) {
-                weeklyFailed = true
-                return@LaunchedEffect
-            }
-            profile = backend.currentUserId()?.let { readProfile(it) }
-            val rows = backend.getLeaderboardV2(language, "week", 3)
-            weeklyTop = rows.map { row ->
-                async {
-                    HomePodiumEntry(row, if (row.userId == profile?.id) profile else readProfile(row.userId))
-                }
-            }.awaitAll()
-        } catch (cancelled: CancellationException) {
-            throw cancelled
-        } catch (_: Exception) {
-            weeklyFailed = true
-        } finally {
-            weeklyLoading = false
+    LaunchedEffect(Unit) {
+        if (!SupabaseProvider.configured) return@LaunchedEffect
+        profile = backend.currentUserId()?.let { id ->
+            runCatching { backend.getProfile(id) }.getOrNull()
         }
     }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
@@ -285,17 +256,9 @@ private fun PremiumHomeScreen(
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onSocial)
             }
-            item(key = "weekly_podium") {
-                PremiumWeeklyPodium(weeklyTop, weeklyLoading, weeklyFailed, onCompete, { refresh++ })
+            item(key = "daily_objective") {
+                PremiumDailyObjective(onClick = onCompete)
             }
-            item(key = "league_progress") { PremiumLeagueProgress(profile, onCompete) }
-            item(key = "other_games") {
-                PremiumOtherGames(onLastLetter, onLetterPath)
-                TextButton(onClick = onGames, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                    Text(sh("Oyunlar ve dil seçimi", "Games and language options"), fontSize = 13.sp)
-                }
-            }
-            item(key = "daily_social_pro") { PremiumHomeExtras(profile, onShop, onSocial) }
         }
     }
 }
