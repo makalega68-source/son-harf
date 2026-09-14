@@ -240,32 +240,6 @@ internal fun MainPlayerProfileScreen(
             }
         }
 
-        item {
-            MainSectionTitle(
-                sh("ARKADAŞLAR", "FRIENDS"),
-                sh("TÜMÜNÜ GÖR", "VIEW ALL"),
-                onSocial,
-            )
-            Spacer(Modifier.height(8.dp))
-            Surface(
-                modifier = Modifier.fillMaxWidth().clickable(onClick = onSocial),
-                shape = RoundedCornerShape(18.dp),
-                color = MainUi.Surface,
-                border = BorderStroke(1.dp, MainUi.Border),
-            ) {
-                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = MainUi.BlueSoft) {
-                        Icon(Icons.Rounded.Groups, null, tint = MainUi.Blue, modifier = Modifier.padding(9.dp).size(21.dp))
-                    }
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text("${friends.size} ${sh("arkadaş", "friends")}", color = MainUi.Text, fontWeight = FontWeight.Black)
-                        Text("$onlineFriends ${sh("çevrimiçi", "online")}", color = if (onlineFriends > 0) MainUi.Green else MainUi.Muted, fontSize = 10.sp)
-                    }
-                    Icon(Icons.Rounded.ChevronRight, null, tint = MainUi.Muted)
-                }
-            }
-        }
 
         item {
             MainSectionTitle(sh("BAŞARIMLAR", "ACHIEVEMENTS"))
