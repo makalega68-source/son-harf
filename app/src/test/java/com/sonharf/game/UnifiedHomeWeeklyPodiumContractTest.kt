@@ -22,12 +22,9 @@ class UnifiedHomeWeeklyPodiumContractTest {
         assertFalse(source.contains("WeeklyPodiumCardV210("))
         assertFalse(source.contains("backend.getLeaderboardV2(language, \"week\", 3)"))
 
-        // Secondary modes remain reachable with clear hierarchy.
+        // The home lobby deliberately avoids duplicate mode-navigation cards.
         assertFalse(source.contains("DİĞER OYUNLAR"))
-        assertTrue(source.contains("son_harf_app_icon_master"))
-        assertTrue(source.contains("harf_yolu_logo"))
-        assertTrue(source.contains("onClick = onPlay"))
-        assertTrue(source.contains("onClick = onLetter"))
+        assertTrue(source.contains("DailyObjectiveCard(onClick = onTasks)"))
         assertTrue(source.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
     }
 }
