@@ -171,10 +171,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.COMPETE -> CompetitionHubScreen(
                         onBack = { destination = PremiumDestination.HOME },
                     )
-                    PremiumDestination.CLUB -> CompetitionHubScreen(
-                        onBack = { destination = PremiumDestination.HOME },
-                        clubEntry = true,
-                    )
+                    PremiumDestination.CLUB -> KelimeKusatmasiClubScreen()
                     PremiumDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE_DETAILS },
