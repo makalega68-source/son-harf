@@ -32,15 +32,16 @@ class CalmLayeredThemeContractTest {
             "val PremiumGold: Color get()",
         ).forEach { token -> assertTrue("Missing theme layer: $token", theme.contains(token)) }
 
-        // Approved premium botanical identity: warm ivory + sage + soft blue/teal + lavender/gold.
-        assertTrue(theme.contains("Color(0xFFF8FAF4)"))
-        assertTrue(theme.contains("Color(0xFFFFFEF8)"))
-        assertTrue(theme.contains("Color(0xFFEEF5EF)"))
-        assertTrue(theme.contains("Color(0xFF4F7964)"))
-        assertTrue(theme.contains("Color(0xFF557A87)"))
-        assertTrue(theme.contains("Color(0xFF4F8B82)"))
-        assertTrue(theme.contains("Color(0xFF7A7396)"))
-        assertTrue(theme.contains("Color(0xFFDCC8A0)"))
+        // Master GDD v3 identity: sage + off-white + soft blue/turquoise + beige/lavender/slate/mint/warm accent.
+        assertTrue(theme.contains("Color(0xFF8A9A86)"))
+        assertTrue(theme.contains("Color(0xFFF9F8F6)"))
+        assertTrue(theme.contains("Color(0xFF7A9AEE)"))
+        assertTrue(theme.contains("Color(0xFF40E0D0)"))
+        assertTrue(theme.contains("Color(0xFFF2EFE9)"))
+        assertTrue(theme.contains("Color(0xFFB5A2FF)"))
+        assertTrue(theme.contains("Color(0xFF5C6F84)"))
+        assertTrue(theme.contains("Color(0xFFA3E4D7)"))
+        assertTrue(theme.contains("Color(0xFFE07A5F)"))
         assertTrue(theme.contains("Color(0xFFD7B35C)"))
     }
 
