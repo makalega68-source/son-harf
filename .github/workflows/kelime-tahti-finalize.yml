@@ -1,0 +1,112 @@
+name: Kelime Tahti Source Finalizer
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/kelime-tahti-finalize.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply Kelime Tahti source and release contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def required_replace(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f"Required text not found in {path}: {old!r}")
+              p.write_text(text.replace(old, new), encoding='utf-8')
+
+          required_replace(
+              'app/src/main/AndroidManifest.xml',
+              'android:label="Kelime Tahtı"',
+              'android:label="@string/app_name"',
+          )
+
+          strings = Path('app/src/main/res/values/strings.xml')
+          strings.write_text(
+              '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="app_name">Kelime Tahtı</string>\n</resources>\n',
+              encoding='utf-8',
+          )
+
+          required_replace(
+              'app/src/main/java/com/sonharf/game/MainActivity.kt',
+              'Text("SON HARF hazırlanıyor...")',
+              'Text("Kelime Tahtı hazırlanıyor...")',
+          )
+          required_replace(
+              'app/src/main/java/com/sonharf/game/SonHarfBrandLogo.kt',
+              'text = "SON",',
+              'text = "KELİME",',
+          )
+          required_replace(
+              'app/src/main/java/com/sonharf/game/SonHarfBrandLogo.kt',
+              'text = " HARF",',
+              'text = " TAHTI",',
+          )
+
+          # Remove old main-product wording from runtime sources, while deliberately leaving the
+          # unused UnifiedProApp source untouched as required by the product owner.
+          runtime_root = Path('app/src/main/java/com/sonharf/game')
+          for p in runtime_root.rglob('*.kt'):
+              if p.name == 'UnifiedProApp.kt':
+                  continue
+              text = p.read_text(encoding='utf-8')
+              updated = (text
+                  .replace('KELİME KUŞATMASI', 'KELİME TAHTI')
+                  .replace('Kelime Kuşatması', 'Kelime Tahtı')
+                  .replace('WORD SIEGE', 'KELİME TAHTI')
+                  .replace('Word Siege', 'Kelime Tahtı'))
+              if updated != text:
+                  p.write_text(updated, encoding='utf-8')
+
+          # Fresh install/update identity for this release.
+          required_replace('app/build.gradle.kts', 'versionCode = 30', 'versionCode = 31')
+          required_replace('app/build.gradle.kts', 'versionName = "0.9.14"', 'versionName = "0.9.15"')
+
+          workflow = Path('.github/workflows/android.yml')
+          text = workflow.read_text(encoding='utf-8')
+          text = text.replace('SonHarf-Final-Test.apk', 'Kelime-Tahti-Test.apk')
+          text = text.replace('SonHarf-Final-Test.sha256', 'Kelime-Tahti-Test.sha256')
+          text = text.replace('name: son-harf-debug-apk', 'name: kelime-tahti-debug-apk')
+          text = text.replace('gh release view final-test >/dev/null 2>&1 || gh release create final-test --title "Son Harf Final Test" --notes "Son Harf Android final test build."',
+                              'gh release view final-test >/dev/null 2>&1 || gh release create final-test --title "Kelime Tahtı Final Test" --notes "Kelime Tahtı Android final test build."')
+
+          marker = '''      - name: Upload signed release artifacts\n        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'\n        uses: actions/upload-artifact@v4\n        with:\n          name: son-harf-release-${{ github.run_number }}\n          path: |\n            app/build/outputs/apk/release/app-release.apk\n            app/build/outputs/bundle/release/app-release.aab\n          if-no-files-found: error\n'''
+          replacement = '''      - name: Stage and verify signed release APK\n        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'\n        shell: bash\n        run: |\n          set -euo pipefail\n          cp app/build/outputs/apk/release/app-release.apk Kelime-Tahti-Guncel.apk\n          sha256sum Kelime-Tahti-Guncel.apk | tee Kelime-Tahti-Guncel.sha256\n          AAPT2="$(find "$ANDROID_HOME/build-tools" -name aapt2 -type f | sort -V | tail -1)"\n          "$AAPT2" dump badging Kelime-Tahti-Guncel.apk | tee Kelime-Tahti-Guncel.badging.txt\n          grep -Fq "application-label:'Kelime Tahtı'" Kelime-Tahti-Guncel.badging.txt\n          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"\n          "$APKSIGNER" verify --verbose --print-certs Kelime-Tahti-Guncel.apk\n          VERSION_CODE="$(grep -m1 'versionCode =' app/build.gradle.kts | sed -E 's/.*versionCode = ([0-9]+).*/\\1/')"\n          VERSION_NAME="$(grep -m1 'versionName =' app/build.gradle.kts | sed -E 's/.*versionName = "([^"]+)".*/\\1/')"\n          {\n            echo "commit=$(git rev-parse HEAD)"\n            echo "versionCode=$VERSION_CODE"\n            echo "versionName=$VERSION_NAME"\n          } | tee Kelime-Tahti-build-info.txt\n\n      - name: Upload signed release artifacts\n        if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'\n        uses: actions/upload-artifact@v4\n        with:\n          name: kelime-tahti-release-${{ github.run_number }}\n          path: |\n            Kelime-Tahti-Guncel.apk\n            Kelime-Tahti-Guncel.sha256\n            Kelime-Tahti-Guncel.badging.txt\n            Kelime-Tahti-build-info.txt\n            app/build/outputs/bundle/release/app-release.aab\n          if-no-files-found: error\n'''
+          if marker not in text:
+              raise SystemExit('Signed release artifact block not found in android.yml')
+          text = text.replace(marker, replacement)
+
+          verify_anchor = '''      - name: Verify rewarded-ad callback signatures\n        run: node --test supabase/functions/admob-ssv/ssv.test.mjs\n'''
+          verify_block = '''      - name: Verify Kelime Tahti brand and preserved UI contract\n        shell: bash\n        run: |\n          set -euo pipefail\n          grep -Fq '<string name="app_name">Kelime Tahtı</string>' app/src/main/res/values/strings.xml\n          grep -Fq 'android:label="@string/app_name"' app/src/main/AndroidManifest.xml\n          grep -Fq 'Text("Kelime Tahtı hazırlanıyor...")' app/src/main/java/com/sonharf/game/MainActivity.kt\n          grep -Fq 'text = "KELİME",' app/src/main/java/com/sonharf/game/SonHarfBrandLogo.kt\n          grep -Fq 'text = " TAHTI",' app/src/main/java/com/sonharf/game/SonHarfBrandLogo.kt\n          grep -Fq 'PremiumUnifiedProApp(' app/src/main/java/com/sonharf/game/StableV1App.kt\n          grep -Fq '"SAVAŞA GİR"' app/src/main/java/com/sonharf/game/PremiumHomeV3.kt\n          grep -Fq 'it.kind == "profile_frame"' app/src/main/java/com/sonharf/game/EconomyShopScreen.kt\n          grep -Fq 'SonHarfCosmetics.applyAndPersist(context, nextEquipped)' app/src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt\n          grep -Fq 'SonHarfCosmetics.restore(context)' app/src/main/java/com/sonharf/game/StableV1App.kt\n          ! grep -Fq 'KELİME KUŞATMASI' app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt\n          ! grep -Fq 'Kelime Kuşatması' app/src/main/java/com/sonharf/game/EconomyShopScreen.kt\n\n''' + verify_anchor
+          if verify_anchor not in text:
+              raise SystemExit('Verification anchor not found in android.yml')
+          text = text.replace(verify_anchor, verify_block)
+          workflow.write_text(text, encoding='utf-8')
+          PY
+
+          git diff --check
+          git status --short
+      - name: Commit finalized source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app .github/workflows/android.yml
+          git commit -m "release: finalize Kelime Tahtı branding and APK contract"
+          git push origin HEAD:main
