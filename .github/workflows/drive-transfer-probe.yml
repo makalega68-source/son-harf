@@ -13,6 +13,10 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          curl -L --fail --retry 2 -o /tmp/bundle 'https://drive.usercontent.google.com/download?id=1VOKE_qa2w5JXQuKXIHGC2HMOsXlT0yIR&export=download&confirm=t'
+          URL='https://drive.usercontent.google.com/download?id=1VOKE_qa2w5JXQuKXIHGC2HMOsXlT0yIR&export=download&confirm=t'
+          curl -L --fail --retry 2 -D /tmp/headers -o /tmp/bundle "$URL"
+          cat /tmp/headers
           wc -c /tmp/bundle
           sha256sum /tmp/bundle
+          file /tmp/bundle
+          head -c 120 /tmp/bundle | base64
