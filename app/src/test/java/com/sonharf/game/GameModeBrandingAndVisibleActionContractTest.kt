@@ -22,10 +22,9 @@ class GameModeBrandingAndVisibleActionContractTest {
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")?.exists() == true)
         assertTrue(localization.contains("KELİME TAHTI"))
         assertTrue(localization.contains("WORD THRONE"))
-        assertTrue(home.contains("logoRes = R.drawable.son_harf_app_icon_master"))
         assertTrue(home.contains("SAVAŞA GİR"))
-        assertTrue(home.contains("logoRes = R.drawable.harf_yolu_logo"))
-        assertTrue(home.contains("painterResource(logoRes)"))
+        assertTrue(home.contains("DailyObjectiveCard(onClick = onTasks)"))
+        assertFalse(home.contains("DİĞER OYUNLAR"))
     }
 
     @Test
