@@ -13,7 +13,7 @@ class UnifiedHomeWeeklyPodiumContractTest {
         // Kelime Kuşatması is the primary play entry; Son Harf remains a secondary quick mode.
         assertTrue(source.contains("PremiumPlayButton(onClick = onSiege)"))
         assertTrue(source.contains("KELİME KUŞATMASI"))
-        assertTrue(source.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
+        assertTrue(source.contains("SAVAŞA GİR"))
         assertFalse(source.contains("title = sh(\"PREMIER 1v1\", \"PREMIER 1v1\")"))
         assertFalse(source.contains("ARENANI SEÇ"))
         assertFalse(source.contains("20 saniyelik baskı"))
