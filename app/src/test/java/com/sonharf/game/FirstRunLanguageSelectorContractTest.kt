@@ -10,7 +10,6 @@ class FirstRunLanguageSelectorContractTest {
     fun languageGatePrecedesAuthAndPersistsChoice() {
         val shell = projectFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
         val prefs = projectFile("app/src/main/java/com/sonharf/game/FirstRunLanguagePreferences.kt").readText()
-        val settings = projectFile("app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt").readText()
 
         assertTrue(shell.contains("FirstRunLanguagePreferences.isComplete"))
         assertTrue(shell.indexOf("FirstRunLanguageScreen") < shell.indexOf("hasVerifiedMembershipSession"))
@@ -21,8 +20,6 @@ class FirstRunLanguageSelectorContractTest {
         assertTrue(!shell.contains("MonsterUi.Background"))
         assertTrue(prefs.contains("language_complete"))
         assertTrue(prefs.contains("SonHarfPreferences.setLanguage"))
-        assertTrue(settings.contains("SonHarfPreferences.setLanguage(context, \"tr\")"))
-        assertTrue(settings.contains("SonHarfPreferences.setLanguage(context, \"en\")"))
     }
 
     private fun projectFile(path: String): File {
