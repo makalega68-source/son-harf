@@ -251,27 +251,16 @@ internal fun MainPlayerProfileScreen(
             }
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-            Button(
-                onClick = onCollection,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary, contentColor = SonHarfTheme.OnPrimary),
-            ) {
-                Icon(Icons.Rounded.Palette, null, Modifier.size(19.dp))
-                Spacer(Modifier.width(7.dp))
-                Text(sh("KOLEKSİYONUM", "MY COLLECTION"), fontWeight = FontWeight.Black, fontSize = 10.sp)
-            }
-            Button(
-                onClick = onVip,
-                modifier = Modifier.weight(1f).heightIn(min = 52.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.PremiumGoldLight, contentColor = SonHarfTheme.ForestDeep),
-            ) {
-                Icon(Icons.Rounded.Storefront, null, Modifier.size(19.dp))
-                Spacer(Modifier.width(7.dp))
-                Text(sh("MAĞAZA", "SHOP"), fontWeight = FontWeight.Black, fontSize = 10.sp)
-            }
+        OutlinedButton(
+            onClick = onCollection,
+            modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = SonHarfTheme.Primary),
+            border = BorderStroke(1.dp, SonHarfTheme.Primary.copy(alpha = .34f)),
+        ) {
+            Icon(Icons.Rounded.Palette, null, Modifier.size(19.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(sh("KOLEKSİYONUM", "MY COLLECTION"), fontWeight = FontWeight.Black, fontSize = 11.sp)
         }
         Spacer(Modifier.weight(1f))
 
