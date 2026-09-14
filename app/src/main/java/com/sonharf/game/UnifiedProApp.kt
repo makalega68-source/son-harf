@@ -244,24 +244,10 @@ private fun UnifiedHomeScreen(
     onVip: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
-    var weeklyTop by remember { mutableStateOf<List<WeeklyPodiumPlayer>>(emptyList()) }
-    var weeklyTopLoading by remember { mutableStateOf(false) }
-
     LaunchedEffect(Unit) {
         if (!SupabaseProvider.configured) return@LaunchedEffect
         val id = backend.currentUserId()
         profile = id?.let { runCatching { backend.getProfile(it) }.getOrNull() }
-        weeklyTopLoading = true
-        val language = if (SonHarfUiState.language == "en") "en" else "tr"
-        weeklyTop = runCatching {
-            backend.getLeaderboardV2(language, "week", 3).map { row ->
-                WeeklyPodiumPlayer(
-                    row = row,
-                    profile = runCatching { backend.getProfile(row.userId) }.getOrNull(),
-                )
-            }
-        }.getOrDefault(emptyList())
-        weeklyTopLoading = false
     }
 
     LazyColumn(
@@ -281,13 +267,6 @@ private fun UnifiedHomeScreen(
             PremiumPlayButton(onClick = onSiege)
         }
 
-        item {
-            WeeklyPodiumCardV210(
-                players = weeklyTop,
-                loading = weeklyTopLoading,
-                onOpenLeague = onLeague,
-            )
-        }
 
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
@@ -370,7 +349,7 @@ private fun HomeBrandHeader(onTasks: () -> Unit, onVip: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
         Column(Modifier.weight(1f)) {
             SonHarfOfficialLogo(
-                modifier = Modifier.width(205.dp).height(61.dp),
+                modifier = Modifier.width(238.dp).height(72.dp),
             )
             Text(
                 sh("Kelimeyi kur, alanı kuşat, rakibini geç", "Build words, control territory, beat your rival"),
