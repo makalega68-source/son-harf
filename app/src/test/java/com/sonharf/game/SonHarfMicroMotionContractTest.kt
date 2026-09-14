@@ -36,7 +36,7 @@ class SonHarfMicroMotionContractTest {
         // Core product structure remains intact after Kelime Kuşatması becomes the primary game.
         assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
         assertTrue(home.contains("KELİME KUŞATMASI"))
-        assertTrue(home.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
+        assertTrue(home.contains("SAVAŞA GİR"))
         assertTrue(home.contains("harf_yolu_logo"))
         assertTrue(home.contains("HAFTANIN ZİRVESİ"))
         assertTrue(home.contains("PremiumProfileHero("))
