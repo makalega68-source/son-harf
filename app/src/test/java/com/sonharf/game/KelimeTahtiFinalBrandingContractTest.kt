@@ -5,10 +5,10 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.assertFalse
 import org.junit.Test
 
-class KelimeTahtiFinalBrandingContractTest {
+class KelimeKusatmasiFinalBrandingContractTest {
     private fun source(path: String): String = File(path).readText()
 
-    @Test fun flagshipHomeCtaIsExplicitlyBattleAndCurrentBrandIsPreserved() {
+    @Test fun flagshipHomeCtaIsExplicitlyBattleAndCanonicalBrandIsPreserved() {
         val state = source("src/main/java/com/sonharf/game/SonHarfUiState.kt")
         val home = source("src/main/java/com/sonharf/game/PremiumHomeV3.kt")
 
@@ -17,9 +17,11 @@ class KelimeTahtiFinalBrandingContractTest {
         assertTrue(home.contains("Kelimeyi kur. Alanı ele geçir. Rakibini geç."))
         assertTrue(state.contains("OYNA • Harflerini yerleştir, kelimeni oluştur"))
         assertTrue(state.contains("PLAY • Place your tiles, build your word"))
+        assertTrue(state.contains(".replace(\"KELİME TAHTI\", \"KELİME KUŞATMASI\")"))
+        assertTrue(state.contains(".replace(\"Kelime Tahtı\", \"Kelime Kuşatması\")"))
         assertFalse(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))
         assertFalse(state.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
-        assertTrue(home.contains("Text(\"KELİME TAHTI\""))
+        assertTrue(home.contains("Text(\"KELİME KUŞATMASI\""))
     }
 
     @Test fun onlineMatchExposesSignatureSiegeFeedbackWithoutChangingAuthoritativeScoring() {
