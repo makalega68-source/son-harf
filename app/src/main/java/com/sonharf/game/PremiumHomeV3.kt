@@ -33,7 +33,6 @@ internal fun PremiumHomeCommandDeck(
     profile: ProfileDto?,
     onProfile: () -> Unit,
     onSiege: () -> Unit,
-    onShop: () -> Unit,
     onSocial: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -63,24 +62,16 @@ internal fun PremiumHomeCommandDeck(
                     Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary)
                 }
             }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                TextButton(onClick = onShop, modifier = Modifier.heightIn(min = 48.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp)) {
-                    Icon(Icons.Rounded.Toll, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("${profile?.diamonds?.toString() ?: "—"} Son Coin", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                }
-                TextButton(onClick = onShop, modifier = Modifier.heightIn(min = 48.dp),
-                    contentPadding = PaddingValues(horizontal = 8.dp)) {
-                    Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(18.dp),
-                        tint = if (profile?.isVip == true) SonHarfTheme.Warning else SonHarfTheme.TextSecondary)
-                    Spacer(Modifier.width(6.dp))
-                    Text(when (profile?.isVip) {
-                        true -> sh("PRO ÜYE", "PRO MEMBER")
-                        false -> sh("Standart üyelik", "Standard plan")
-                        null -> "—"
-                    }, fontSize = 13.sp, color = SonHarfTheme.TextSecondary)
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Toll, null, modifier = Modifier.size(18.dp), tint = SonHarfTheme.Primary)
+                Text("${profile?.diamonds?.toString() ?: "—"} Son Coin", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(18.dp),
+                    tint = if (profile?.isVip == true) SonHarfTheme.Warning else SonHarfTheme.TextSecondary)
+                Text(when (profile?.isVip) {
+                    true -> sh("PRO ÜYE", "PRO MEMBER")
+                    false -> sh("Standart üyelik", "Standard plan")
+                    null -> "—"
+                }, fontSize = 13.sp, color = SonHarfTheme.TextSecondary)
             }
         }
         Surface(shape = RoundedCornerShape(28.dp), color = SonHarfTheme.ForestDeep,
@@ -101,7 +92,7 @@ internal fun PremiumHomeCommandDeck(
                     Image(
                         painter = painterResource(R.drawable.kelime_tahti_logo),
                         contentDescription = null,
-                        modifier = Modifier.size(width = 132.dp, height = 88.dp),
+                        modifier = Modifier.size(width = 158.dp, height = 104.dp),
                         contentScale = ContentScale.Fit,
                     )
                 }
@@ -116,7 +107,7 @@ internal fun PremiumHomeCommandDeck(
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(27.dp))
                         Spacer(Modifier.width(9.dp))
-                        Text(sh("OYNA", "PLAY"), fontSize = 20.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                        Text(sh("SAVAŞA GİR", "ENTER BATTLE"), fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
                     }
                 }
             }
@@ -257,6 +248,28 @@ private fun PremiumHomeMode(logo: Int, title: String, subtitle: String, onPlay: 
                     fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
             }
             Icon(Icons.Rounded.PlayArrow, null, tint = SonHarfTheme.Primary)
+        }
+    }
+}
+
+@Composable
+internal fun PremiumDailyObjective(onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = SonHarfTheme.Surface,
+        border = BorderStroke(1.dp, SonHarfTheme.Border),
+    ) {
+        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = SonHarfTheme.Lavender.copy(alpha = .18f)) {
+                Icon(Icons.Rounded.Flag, null, tint = SonHarfTheme.Lavender, modifier = Modifier.padding(10.dp).size(22.dp))
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(sh("BUGÜNÜN HEDEFİ", "TODAY'S OBJECTIVE"), color = SonHarfTheme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                Text(sh("Meydan okumaya katıl, XP'ni ve serini büyüt.", "Join the challenge to grow XP and your streak."), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
+            }
+            Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.Primary)
         }
     }
 }
