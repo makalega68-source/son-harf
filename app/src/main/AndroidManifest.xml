@@ -5,8 +5,8 @@
     <application
         android:theme="@style/Theme.SonHarf"
         android:label="Kelime Tahtı"
-        android:icon="@drawable/kelime_tahti_app_icon"
-        android:roundIcon="@drawable/kelime_tahti_app_icon"
+        android:icon="@mipmap/ic_kelime_tahti"
+        android:roundIcon="@mipmap/ic_kelime_tahti"
         android:allowBackup="false"
         android:supportsRtl="true">
         <meta-data

@@ -40,7 +40,6 @@ internal fun MainSettingsScreen(
     var music by remember { mutableStateOf(SonHarfPreferences.musicEnabled(context)) }
     var sound by remember { mutableStateOf(SonHarfPreferences.soundEnabled(context)) }
     var vibration by remember { mutableStateOf(SonHarfPreferences.vibrationEnabled(context)) }
-    var language by remember { mutableStateOf(SonHarfPreferences.language(context)) }
     var gameInvites by remember { mutableStateOf(SonHarfPreferences.gameInviteNotificationsEnabled(context)) }
     var friendRequests by remember { mutableStateOf(SonHarfPreferences.friendRequestNotificationsEnabled(context)) }
     var systemNotifications by remember { mutableStateOf(SonHarfPreferences.systemNotificationsEnabled(context)) }
@@ -103,6 +102,10 @@ internal fun MainSettingsScreen(
                     if (it) SonHarfPreferences.hapticTap(context)
                 }
             }
+        }
+
+        item {
+            ProfileOwnedThemesSection(backend)
         }
 
         item {

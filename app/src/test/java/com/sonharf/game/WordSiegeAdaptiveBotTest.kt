@@ -38,6 +38,15 @@ class WordSiegeAdaptiveBotTest {
         assertTrue(whenBehind > base)
     }
 
+    @Test fun adaptiveChoiceVariesInsideTheRequestedSkillBand() {
+        val choices = (1L..30L).map {
+            WordSiegePracticeEngine.adaptiveCandidateIndex(60, 50, it)
+        }.toSet()
+
+        assertTrue("AI should vary between similarly strong legal moves", choices.size > 1)
+        assertTrue(choices.all { it in 24..34 })
+    }
+
     private fun state(
         moveCount: Int,
         playerWordScore: Int = 0,

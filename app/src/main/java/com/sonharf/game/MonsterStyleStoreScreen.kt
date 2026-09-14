@@ -161,8 +161,8 @@ internal fun MonsterStyleStoreScreen() {
 internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) {
     "game_theme" -> id == "theme_dark_arena"
     "profile_frame" -> id in PurchasedFrameCatalog.ids
-    "name_style" -> id == "name_cyan"
-    "keyboard_theme" -> id == "keyboard_neon"
+    "name_style" -> id in setOf("name_cyan", "name_sapphire", "name_amethyst", "name_aurelia")
+    "keyboard_theme" -> id in setOf("keyboard_crystal", "keyboard_obsidian")
     // Effects, emoji and action products remain hidden until a real runtime asset is connected.
     else -> false
 }

@@ -736,7 +736,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
         Text(pt(language, "RAKİP BULUNDU!", "RIVAL FOUND!"), color = PremierUi.Ocean, fontSize = 24.sp, fontWeight = FontWeight.Black, letterSpacing = 1.3.sp)
         Text(pt(language, "Maç 3 saniye içinde başlıyor", "Match starts in 3 seconds"), color = PremierUi.Muted, fontSize = 12.sp)
         Spacer(Modifier.weight(1f))
-        PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Ocean)
+        PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Ocean, nameColor = SonHarfCosmetics.playerNameColor)
         Spacer(Modifier.height(16.dp))
         Surface(shape = RoundedCornerShape(99.dp), color = Color.Transparent) {
             Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.Ocean, PremierUi.OceanDeep))).padding(horizontal = 27.dp, vertical = 10.dp)) {
@@ -755,7 +755,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
 }
 
 @Composable
-private fun PremierVsPlayerCard(language: String, name: String, avatar: String?, gender: String?, visible: Boolean, rating: Int, winRate: Int, accent: Color, bot: Boolean = false) {
+private fun PremierVsPlayerCard(language: String, name: String, avatar: String?, gender: String?, visible: Boolean, rating: Int, winRate: Int, accent: Color, bot: Boolean = false, nameColor: Color = PremierUi.Ink) {
     Surface(modifier = Modifier.fillMaxWidth().shadow(10.dp, RoundedCornerShape(23.dp)), shape = RoundedCornerShape(23.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, accent.copy(alpha = .22f))) {
         Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
             if (bot) PremierBotAvatar(size = 70.dp, accent = accent)
@@ -770,7 +770,7 @@ private fun PremierVsPlayerCard(language: String, name: String, avatar: String?,
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
-                Text(name, color = PremierUi.Ink, fontSize = 18.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(name, color = nameColor, fontSize = 18.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(if (bot) pt(language, "ADAPTİF BOT", "ADAPTIVE BOT") else pt(language, "PREMIER OYUNCU", "PREMIER PLAYER"), color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(7.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -990,7 +990,7 @@ private fun PremierArenaHeader(
                 )
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, PremierUi.Ocean, false, Modifier.weight(1f))
+                PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor)
                 Surface(shape = CircleShape, color = Color.Transparent) {
                     Box(Modifier.size(60.dp).background(Brush.radialGradient(listOf(timerStart, if (danger) PremierUi.Red else PremierUi.Ocean, timerEnd)), CircleShape), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1006,7 +1006,7 @@ private fun PremierArenaHeader(
 }
 
 @Composable
-private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, visible: Boolean, rounds: Int, streak: Int, accent: Color, bot: Boolean, modifier: Modifier) {
+private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, visible: Boolean, rounds: Int, streak: Int, accent: Color, bot: Boolean, modifier: Modifier, nameColor: Color = PremierUi.Ink) {
     val isLeft = accent == PremierUi.Ocean
     Row(
         modifier = modifier,
@@ -1029,7 +1029,7 @@ private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, vi
             modifier = Modifier.widthIn(max = 68.dp),
             horizontalAlignment = if (isLeft) Alignment.Start else Alignment.End,
         ) {
-            Text(name, color = PremierUi.Ink, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(name, color = nameColor, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 repeat(3) { i -> Box(Modifier.size(9.dp).clip(CircleShape).background(if (i < rounds) PremierUi.Gold else PremierUi.Border)) }
             }
@@ -1159,6 +1159,7 @@ private fun PremierInputBar(language: String, input: String, required: String, m
 
 @Composable
 private fun PremierKeyboard(language: String, value: String, enabled: Boolean, keyHeight: Dp, onInput: (String) -> Unit, onSubmit: () -> Unit) {
+    val palette = SonHarfCosmetics.keyboardPalette
     val rows = if (language == "en") listOf(
         listOf("Q","W","E","R","T","Y","U","I","O","P"),
         listOf("A","S","D","F","G","H","J","K","L"),
@@ -1168,8 +1169,8 @@ private fun PremierKeyboard(language: String, value: String, enabled: Boolean, k
         listOf("A","S","D","F","G","H","J","K","L","Ş","İ"),
         listOf("Z","X","C","V","B","N","M","Ö","Ç"),
     )
-    Surface(color = PremierUi.Ice, shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp), shadowElevation = 10.dp) {
-        Column(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 6.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+    Surface(color = palette.background, shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp), border = BorderStroke(1.dp, palette.border), shadowElevation = 10.dp) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             rows.forEachIndexed { index, row ->
                 Row(Modifier.fillMaxWidth().padding(horizontal = if (index == 1) 7.dp else if (index == 2) 16.dp else 0.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                     row.forEach { key ->
@@ -1191,6 +1192,7 @@ private fun PremierKeyboard(language: String, value: String, enabled: Boolean, k
 
 @Composable
 private fun PremierKey(label: String, enabled: Boolean, modifier: Modifier, keyHeight: Dp, alt: Boolean = false, action: Boolean = false, onClick: () -> Unit) {
+    val palette = SonHarfCosmetics.keyboardPalette
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -1198,12 +1200,13 @@ private fun PremierKey(label: String, enabled: Boolean, modifier: Modifier, keyH
         contentPadding = PaddingValues(0.dp),
         shape = RoundedCornerShape(9.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = when { action -> PremierUi.Ocean; alt -> PremierUi.Border; else -> PremierUi.Surface },
-            contentColor = when { action -> Color.White; alt -> PremierUi.Ink; else -> PremierUi.Ink },
-            disabledContainerColor = PremierUi.Background,
-            disabledContentColor = PremierUi.Muted.copy(alpha = .50f),
+            containerColor = when { action -> palette.action; alt -> palette.keyAlt; else -> palette.key },
+            contentColor = if (action) palette.actionText else palette.text,
+            disabledContainerColor = if (alt) palette.keyAlt.copy(alpha = .55f) else palette.key.copy(alpha = .55f),
+            disabledContentColor = palette.text.copy(alpha = .42f),
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = if (action) 4.dp else 1.dp),
+        border = BorderStroke(1.dp, when { action -> palette.action.copy(alpha = .82f); alt -> palette.secondaryBorder.copy(alpha = .55f); else -> palette.border }),
     ) {
         Text(label, fontSize = if (label.length > 5) 9.sp else 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }

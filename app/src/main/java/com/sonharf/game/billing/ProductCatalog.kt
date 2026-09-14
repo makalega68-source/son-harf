@@ -9,6 +9,10 @@ object ProductCatalog {
     const val COINS_1500 = "coins_1500"
     const val COINS_3500 = "coins_3500"
     const val COINS_8000 = "coins_8000"
+    const val PROFILE_FRAME_OCEAN = "profile_frame_ocean"
+    const val PROFILE_FRAME_BOTANIC = "profile_frame_botanic"
+    const val PROFILE_FRAME_LILAC = "profile_frame_lilac"
+    const val PROFILE_FRAME_ROSE = "profile_frame_rose"
 
     /** Historical entitlement only. The active shop must not offer it until a matching real asset exists. */
     @Deprecated("No verified runtime artwork is connected; historical purchases remain recognizable")
@@ -29,6 +33,10 @@ object ProductCatalog {
         COINS_1500,
         COINS_3500,
         COINS_8000,
+        PROFILE_FRAME_OCEAN,
+        PROFILE_FRAME_BOTANIC,
+        PROFILE_FRAME_LILAC,
+        PROFILE_FRAME_ROSE,
     )
 
     /** Only products with a complete, truthful runtime delivery path belong in the active shop query. */

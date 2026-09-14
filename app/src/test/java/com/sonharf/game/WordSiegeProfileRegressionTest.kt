@@ -9,6 +9,7 @@ class WordSiegeProfileRegressionTest {
     @Test
     fun practiceProfilesUseSharedRendererAndStableGenderCorrectBotPool() {
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
+        val scoreCard = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt").readText()
         val profileRuntime = projectFile("app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt").readText()
 
         listOf("Mesut", "İmran", "Ayaz", "Eren", "Esin", "Can", "Deniz", "Mert", "Selin", "Burak", "Elif", "Kerem", "Derya", "Arda", "Zeynep", "Emre", "Ceren").forEach {
@@ -25,8 +26,9 @@ class WordSiegeProfileRegressionTest {
         assertTrue(practice.contains("avatarVisible = playerProfile?.avatarVisibility != \"hidden\""))
         assertTrue(practice.contains("var botProfile by remember { mutableStateOf(WordSiegePracticeBots.random()) }"))
         assertTrue(practice.contains("botProfile = WordSiegePracticeBots.random()"))
-        assertTrue(practice.contains("ProfilePhotoAvatarWithGender("))
-        assertTrue(practice.contains("Text(\"BOT\""))
+        assertTrue(practice.contains("WordSiegeScoreCard("))
+        assertTrue(scoreCard.contains("ProfilePhotoAvatarWithGender("))
+        assertTrue(scoreCard.contains("Text(\"BOT\""))
 
         assertTrue(profileRuntime.contains("SyntheticProfilePortrait"))
         assertTrue(profileRuntime.contains("Icons.Rounded.Face"))

@@ -40,7 +40,7 @@ data class SeasonClaimResultDto(
 )
 
 suspend fun OnlineGameBackend.getStoreSeason(): StoreSeasonDto =
-    SupabaseProvider.client.postgrest.rpc("get_store_season_v1").decodeSingle()
+    SupabaseProvider.client.postgrest.rpc("get_store_season_v1").decodeAs()
 
 suspend fun OnlineGameBackend.claimStoreSeasonReward(reward: SeasonRewardDto): SeasonClaimResultDto =
     SupabaseProvider.client.postgrest.rpc(
@@ -51,4 +51,4 @@ suspend fun OnlineGameBackend.claimStoreSeasonReward(reward: SeasonRewardDto): S
             put("p_reward_type", reward.rewardType)
             put("p_reward_key", reward.rewardKey)
         },
-    ).decodeSingle()
+    ).decodeAs()

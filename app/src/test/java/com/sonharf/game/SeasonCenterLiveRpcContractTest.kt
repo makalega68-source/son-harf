@@ -63,9 +63,9 @@ class SeasonCenterLiveRpcContractTest {
         val shop = repoFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
         val pass = repoFile("app/src/main/java/com/sonharf/game/SeasonPassPurchaseCard.kt").readText()
 
-        assertTrue(shop.contains("initialTab.coerceIn(0, 2)"))
-        assertTrue(shop.contains("Text(sh(\"SEZON\", \"SEASON\")"))
-        assertTrue(shop.contains("else -> SeasonCenterContent()"))
+        assertTrue(shop.contains("initialTab.coerceIn(0, 4)"))
+        assertTrue(shop.contains("sh(\"Sezon\", \"Season\")"))
+        assertTrue(shop.contains("if (tab == 1) SeasonCenterContent()"))
         assertTrue(screen.contains("SeasonPassPurchaseCard"))
         assertTrue(screen.contains("heightIn(min = 48.dp)"))
         assertTrue(screen.contains("maç gücü, rating, süre veya rekabet avantajı vermez"))

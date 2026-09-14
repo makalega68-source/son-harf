@@ -8,26 +8,31 @@ import org.junit.Test
 
 class BrandStartupRegressionTest {
     @Test
-    fun startupBrandUsesAndroidDecodableKelimeTahtiPngAssets() {
+    fun startupBrandUsesAndroidDecodableKelimeTahtiAssetsAndAdaptiveLauncherIcon() {
         val authGate = File("src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
         val officialLogo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeHub = File("src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
         val manifest = File("src/main/AndroidManifest.xml").readText()
-        val icon = File("src/main/res/drawable-nodpi/kelime_tahti_app_icon.png")
         val latestLogo = File("src/main/res/drawable-nodpi/kelime_tahti_logo_latest.png")
         val authLogo = File("src/main/res/drawable-nodpi/son_harf_gold_teal_logo.png")
         val gameEntryLogo = File("src/main/res/drawable/kelime_kusatma_logo_hd.png")
         val approvedLogo = File("src/main/res/drawable-nodpi/kelime_tahti_logo.png")
+        val adaptiveIcon = File("src/main/res/mipmap-anydpi-v26/ic_kelime_tahti.xml")
+        val adaptiveFallback = File("src/main/res/mipmap-anydpi/ic_kelime_tahti.xml")
+        val adaptiveBackground = File("src/main/res/drawable/kelime_tahti_launcher_background.xml")
 
         assertTrue(manifest.contains("android:label=\"Kelime Tahtı\""))
-        assertTrue(manifest.contains("android:icon=\"@drawable/kelime_tahti_app_icon\""))
-        assertTrue(manifest.contains("android:roundIcon=\"@drawable/kelime_tahti_app_icon\""))
+        assertTrue(manifest.contains("android:icon=\"@mipmap/ic_kelime_tahti\""))
+        assertTrue(manifest.contains("android:roundIcon=\"@mipmap/ic_kelime_tahti\""))
+        assertTrue(adaptiveIcon.isFile)
+        assertTrue(adaptiveFallback.isFile)
+        assertTrue(adaptiveBackground.isFile)
+        assertTrue(adaptiveIcon.readText().contains("@drawable/kelime_tahti_app_icon"))
 
         assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_tahti_logo_latest)"))
         assertTrue(authGate.contains("painterResource(R.drawable.son_harf_gold_teal_logo)"))
         assertTrue(siegeHub.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
 
-        assertValidPng(icon)
         assertValidPng(approvedLogo)
         assertValidPng(latestLogo)
         assertValidPng(authLogo)
@@ -36,12 +41,9 @@ class BrandStartupRegressionTest {
         assertEquals(approvedLogo.readBytes().toList(), authLogo.readBytes().toList())
         assertEquals(approvedLogo.readBytes().toList(), gameEntryLogo.readBytes().toList())
 
-        // Startup-critical brand resources must never regress to the malformed WebP aliases
-        // that compiled successfully but returned null BitmapDrawable at runtime.
         assertFalse(File("src/main/res/drawable-nodpi/kelime_tahti_logo_latest.webp").exists())
         assertFalse(File("src/main/res/drawable-nodpi/son_harf_gold_teal_logo.webp").exists())
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.webp").exists())
-
         assertFalse(File("src/main/res/drawable/son_harf_app_icon_safe.xml").exists())
         assertFalse(File("src/main/res/drawable/son_harf_splash_logo.webp").exists())
         assertFalse(File("src/main/res/drawable/son_harf_app_icon.webp").exists())

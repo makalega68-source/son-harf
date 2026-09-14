@@ -14,14 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val SharedKeyboardBg = Color(0xFF070A18)
-private val SharedKeyboardKey = Color(0xFF121833)
-private val SharedKeyboardKeyAlt = Color(0xFF1C2347)
-private val SharedKeyboardText = Color(0xFFF7F8FF)
-private val SharedKeyboardAction = Color(0xFFFFB31A)
-private val SharedKeyboardBlue = Color(0xFF2188FF)
-private val SharedKeyboardViolet = Color(0xFF8A5CFF)
-
 /** Generic keyboard retained for independent game modes; no classic Son Harf duel logic lives here. */
 @Composable
 internal fun EmbeddedWordKeyboard(
@@ -34,6 +26,7 @@ internal fun EmbeddedWordKeyboard(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val palette = SonHarfCosmetics.keyboardPalette
     val rows = if (language.lowercase() == "en") {
         listOf(
             listOf("Q","W","E","R","T","Y","U","I","O","P"),
@@ -50,9 +43,9 @@ internal fun EmbeddedWordKeyboard(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = SharedKeyboardBg,
+        color = palette.background,
         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-        border = BorderStroke(1.dp, SharedKeyboardViolet.copy(alpha = .30f)),
+        border = BorderStroke(1.dp, palette.border),
     ) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp),
@@ -128,10 +121,11 @@ internal fun EmbeddedNumberKeyboard(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val palette = SonHarfCosmetics.keyboardPalette
     val rows = listOf(listOf("1","2","3"), listOf("4","5","6"), listOf("7","8","9"))
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = SharedKeyboardBg,
+        color = palette.background,
         shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
     ) {
         Column(
@@ -210,6 +204,7 @@ private fun SharedKeyboardKeyButton(
     action: Boolean = false,
     onClick: () -> Unit,
 ) {
+    val palette = SonHarfCosmetics.keyboardPalette
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -218,21 +213,21 @@ private fun SharedKeyboardKeyButton(
         shape = RoundedCornerShape(11.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = when {
-                action -> SharedKeyboardAction
-                alt -> SharedKeyboardKeyAlt
-                else -> SharedKeyboardKey
+                action -> palette.action
+                alt -> palette.keyAlt
+                else -> palette.key
             },
-            contentColor = if (action) Color(0xFF241300) else SharedKeyboardText,
-            disabledContainerColor = if (alt) SharedKeyboardKeyAlt.copy(alpha = .55f) else SharedKeyboardKey.copy(alpha = .55f),
-            disabledContentColor = SharedKeyboardText.copy(alpha = .42f),
+            contentColor = if (action) palette.actionText else palette.text,
+            disabledContainerColor = if (alt) palette.keyAlt.copy(alpha = .55f) else palette.key.copy(alpha = .55f),
+            disabledContentColor = palette.text.copy(alpha = .42f),
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp),
         border = BorderStroke(
             1.dp,
             when {
-                action -> SharedKeyboardAction.copy(alpha = .82f)
-                alt -> SharedKeyboardBlue.copy(alpha = .32f)
-                else -> SharedKeyboardViolet.copy(alpha = .24f)
+                action -> palette.action.copy(alpha = .82f)
+                alt -> palette.secondaryBorder.copy(alpha = .55f)
+                else -> palette.border
             },
         ),
     ) {

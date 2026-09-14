@@ -30,12 +30,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - name: Install Android SDK 36
-        run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.14.4'
+          validate-wrappers: false
 
       - name: Verify committed source state
         run: |
@@ -72,8 +73,11 @@ jobs:
           test -f supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
           grep -q 'competitive_booster_disabled' supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
 
+      - name: Verify rewarded-ad callback signatures
+        run: node --test supabase/functions/admob-ssv/ssv.test.mjs
+
       - name: Build debug APK with tests
-        run: gradle clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
       - name: Prepare test APK artifact
         run: cp app/build/outputs/apk/debug/app-debug.apk SonHarf-Final-Test.apk
@@ -108,7 +112,7 @@ jobs:
           SON_HARF_ADMOB_BANNER_ID: ${{ secrets.SON_HARF_ADMOB_BANNER_ID }}
         run: |
           printf '%s' "$RELEASE_KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/son-harf-upload.jks"
-          gradle assembleRelease bundleRelease --stacktrace --warning-mode all \
+          ./gradlew assembleRelease bundleRelease --stacktrace --warning-mode all \
             -PSON_HARF_RELEASE_STORE_FILE="$RUNNER_TEMP/son-harf-upload.jks" \
             -PSON_HARF_RELEASE_STORE_PASSWORD="$SON_HARF_RELEASE_STORE_PASSWORD" \
             -PSON_HARF_RELEASE_KEY_ALIAS="$SON_HARF_RELEASE_KEY_ALIAS" \

@@ -193,7 +193,9 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
                     UnifiedDestination.SIEGE -> WordSiegeExperienceScreen { destination = UnifiedDestination.HOME }
                     UnifiedDestination.LETTER -> LetterLadderGameScreen { destination = UnifiedDestination.HOME }
                     UnifiedDestination.LEAGUE -> LeaderboardExperienceScreen { destination = UnifiedDestination.HOME }
-                    UnifiedDestination.COMPETITION -> CompetitionHubScreen { destination = UnifiedDestination.HOME }
+                    UnifiedDestination.COMPETITION -> CompetitionHubScreen(
+                        onBack = { destination = UnifiedDestination.HOME },
+                    )
                     UnifiedDestination.SOCIAL -> MainSocialScreen(
                         backend = backend,
                         onPlay = { destination = UnifiedDestination.GAME },
@@ -204,6 +206,7 @@ fun UnifiedProApp(onSignedOut: () -> Unit) {
                         backend,
                         { destination = UnifiedDestination.PROFILE_DETAILS },
                         { destination = UnifiedDestination.VIP },
+                        { destination = UnifiedDestination.SETTINGS },
                         { destination = UnifiedDestination.SETTINGS },
                         { destination = UnifiedDestination.SOCIAL },
                     )

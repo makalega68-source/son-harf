@@ -14,12 +14,21 @@ class WordSiegeReadabilityContractTest {
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
 
         assertTrue(tokens.contains("BoardLetterPoint: TextUnit = 14.sp"))
-        assertTrue(tokens.contains("BoardBonus: TextUnit = 18.sp"))
+        assertTrue(tokens.contains("BoardBonus: TextUnit = 17.sp"))
         assertTrue(tokens.contains("RackPoint: TextUnit = 14.sp"))
 
         listOf("BoardLetterPoint", "BoardBonus", "RackPoint").forEach { token ->
             assertTrue(online.contains("WordSiegeBoardAccessibility.$token"))
             assertTrue(practice.contains("WordSiegeBoardAccessibility.$token"))
+        }
+
+        assertTrue(online.contains("PanSiegeBonusLabel = Color(0xFF68716D)"))
+        assertTrue(practice.contains("PracticeSiegeBonusLabel = Color(0xFF68716D)"))
+        listOf(online, practice).forEach { board ->
+            assertTrue(board.contains("SpanStyle(fontSize = 20.sp)"))
+            assertTrue(board.contains("SpanStyle(fontSize = 10.sp)"))
+            assertTrue(board.contains("lineHeight = 17.sp"))
+            assertTrue(board.contains("fontWeight = FontWeight.Light"))
         }
     }
 }

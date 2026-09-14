@@ -8,14 +8,13 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 private val supportedProfileFrameIds = setOf(
-    "frame_asset_red",
-    "frame_asset_green",
-    "frame_asset_mint",
-    "frame_asset_purple",
-    "frame_asset_gold",
-    "frame_asset_gold_crown",
-    "frame_asset_christmas",
-    "frame_asset_halloween",
+    "frame_round_starter_blue",
+    "frame_round_starter_pink",
+    "frame_round_starter_neutral",
+    "frame_round_ocean",
+    "frame_round_botanic",
+    "frame_round_lilac",
+    "frame_round_rose",
 )
 
 private val supportedGameThemeIds = setOf("theme_dark_arena")
@@ -53,6 +52,21 @@ data class EquippedCosmeticsDto(
     @SerialName("emoji_pack_id") val emojiPackId: String? = null,
     @SerialName("mascot_id") val mascotId: String? = null,
 )
+
+@Serializable
+data class ProfileFrameStateDto(
+    @SerialName("owned_profile_frames") val ownedProfileFrames: List<String> = emptyList(),
+    @SerialName("equipped_profile_frame") val equippedProfileFrame: String? = null,
+    @SerialName("default_profile_frame") val defaultProfileFrame: String? = null,
+    @SerialName("vip_pro_frame_access") val vipProFrameAccess: Boolean = false,
+)
+
+suspend fun OnlineGameBackend.getProfileFrameState(): ProfileFrameStateDto? {
+    val me = currentUserId() ?: return null
+    return SupabaseProvider.client.from("profile_frame_state_v1")
+        .select { filter { eq("user_id", me) } }
+        .decodeList<ProfileFrameStateDto>().firstOrNull()
+}
 
 suspend fun OnlineGameBackend.getShopItems(): List<ShopItemDto> =
     SupabaseProvider.client.from("shop_items").select().decodeList<ShopItemDto>()

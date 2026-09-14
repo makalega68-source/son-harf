@@ -105,27 +105,30 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 amount = 500,
                 subtitle = sh("Mini paket", "Mini pack"),
                 product = products[ProductCatalog.COINS_500],
-                busy = busy == ProductCatalog.COINS_500,
+                busy = busy != null,
             ) { buy(ProductCatalog.COINS_500) }
             CoinProductRow(
                 amount = 1500,
                 subtitle = sh("Standart paket", "Standard pack"),
                 product = products[ProductCatalog.COINS_1500],
-                busy = busy == ProductCatalog.COINS_1500,
+                busy = busy != null,
             ) { buy(ProductCatalog.COINS_1500) }
             CoinProductRow(
                 amount = 3500,
                 subtitle = sh("Popüler paket", "Popular pack"),
                 product = products[ProductCatalog.COINS_3500],
-                busy = busy == ProductCatalog.COINS_3500,
+                busy = busy != null,
             ) { buy(ProductCatalog.COINS_3500) }
             CoinProductRow(
                 amount = 8000,
                 subtitle = sh("Mega paket", "Mega pack"),
                 product = products[ProductCatalog.COINS_8000],
-                busy = busy == ProductCatalog.COINS_8000,
+                busy = busy != null,
             ) { buy(ProductCatalog.COINS_8000) }
 
+            androidx.compose.material3.TextButton(enabled = busy == null, onClick = { manager.restorePurchases(ProductCatalog.consumableProducts) }) {
+                Text(sh("Satın almaları geri yükle", "Restore purchases"))
+            }
             if (notice.isNotBlank()) Text(notice, color = SonHarfMuted, fontSize = 9.sp)
         }
     }
@@ -170,7 +173,7 @@ private fun CoinProductRow(
             }
             Button(
                 onClick = onBuy,
-                enabled = !busy && product != null,
+                enabled = !busy && product?.oneTimePurchaseOfferDetails != null,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = SonHarfTheme.Primary,
                     disabledContainerColor = SonHarfTheme.DisabledBackground,
