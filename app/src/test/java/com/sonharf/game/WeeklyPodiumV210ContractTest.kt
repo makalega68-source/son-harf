@@ -11,7 +11,7 @@ class WeeklyPodiumV210ContractTest {
         val shell = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
         assertFalse(shell.contains("WeeklyPodiumCardV210("))
-        assertFalse(shell.contains("getLeaderboardV2(language, \\"week\\", 3)"))
+        assertFalse(shell.contains("getLeaderboardV2(language, \"week\", 3)"))
         assertTrue(shell.contains("PremiumPlayButton(onClick = onSiege)"))
         assertFalse(shell.contains("DİĞER OYUNLAR"))
     }
