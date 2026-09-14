@@ -218,4 +218,3 @@ grant execute on function public.create_club_challenge_v1(uuid) to authenticated
 grant execute on function public.respond_club_challenge_v1(uuid,boolean) to authenticated;
 grant execute on function public.get_my_club_challenge_v1() to authenticated;
 grant execute on function public.get_club_challenge_contributions_v1(uuid) to authenticated;
-ëŽ

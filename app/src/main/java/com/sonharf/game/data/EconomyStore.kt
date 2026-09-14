@@ -120,4 +120,3 @@ suspend fun OnlineGameBackend.equipDefaultGameTheme() {
 suspend fun OnlineGameBackend.claimVipMonthlyDiamonds() {
     SupabaseProvider.client.postgrest.rpc("claim_vip_monthly_diamonds")
 }
-ëŽ

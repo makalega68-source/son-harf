@@ -315,4 +315,3 @@ private fun InlineProfileStat(value: String, label: String) {
         Text(label, color = SonHarfTheme.TextSecondary, fontSize = 8.sp, textAlign = TextAlign.Center)
     }
 }
-ëŽ

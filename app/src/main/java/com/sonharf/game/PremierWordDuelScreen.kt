@@ -1439,4 +1439,3 @@ private fun premierError(language: String, raw: String): String = when {
     "word_already_used" in raw -> validationMessage(language, "word_already_used")
     else -> pt(language, "Bağlantı yenileniyor. Tekrar deneyebilirsin.", "Connection refreshed. You can try again.")
 }
-�

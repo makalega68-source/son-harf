@@ -234,4 +234,3 @@ private fun SharedKeyboardKeyButton(
         Text(label, fontSize = if (label.length > 4) 10.sp else 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
     }
 }
-ëŽ

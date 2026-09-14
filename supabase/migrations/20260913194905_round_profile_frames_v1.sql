@@ -122,4 +122,3 @@ left join public.user_equipped_cosmetics e on e.user_id=p.id
 group by p.id,e.profile_frame_id,p.default_profile_frame_id,p.is_vip;
 
 select pg_notify('pgrst','reload schema');
-ëŽ

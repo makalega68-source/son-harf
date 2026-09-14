@@ -62,4 +62,3 @@ class WordSiegeAdaptiveBotTest {
         botWordScore = botWordScore,
     )
 }
-ëŽ

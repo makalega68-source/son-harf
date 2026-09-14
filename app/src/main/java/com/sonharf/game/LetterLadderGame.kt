@@ -812,4 +812,3 @@ private fun MiniLadderWord(word: String, locked: Set<Int>) {
         }
     }
 }
-ëŽ

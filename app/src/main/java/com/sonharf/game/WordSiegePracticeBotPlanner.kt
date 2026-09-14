@@ -149,4 +149,3 @@ internal fun practiceBotExchangeIndices(state: WordSiegePracticeState): Set<Int>
     val count = minOf(3, state.botRack.length, state.bag.length)
     return (0 until count).toSet()
 }
-ëŽ

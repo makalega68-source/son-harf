@@ -13,4 +13,3 @@ internal fun ShopItemDto.isSupportedOwnedStyle(): Boolean = when (kind) {
     "keyboard_theme" -> id in setOf("keyboard_crystal", "keyboard_obsidian")
     else -> false
 }
-ë

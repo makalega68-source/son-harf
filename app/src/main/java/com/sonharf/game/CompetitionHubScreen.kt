@@ -1475,4 +1475,3 @@ private fun friendlyCompetitionError(raw: String): String = when {
     "unauthorized" in raw || "not_authenticated" in raw -> sh("Oturumunu yenileyip tekrar dene.", "Refresh your session and try again.")
     else -> sh("İşlem tamamlanamadı. Tekrar dene.", "The action could not be completed. Try again.")
 }
-�

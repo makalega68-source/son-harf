@@ -308,4 +308,3 @@ private fun homeLeagueName(value: String): String = when (value) {
     "EFSANE" -> sh("Efsane", "Legend")
     else -> value
 }
-ë
