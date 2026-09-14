@@ -16,7 +16,7 @@ class UnifiedProRuntimeContractTest {
         assertFalse(startup.contains("MonsterExperienceApp("))
         assertTrue(unified.contains("KELİME KUŞATMASI"))
         assertTrue(unified.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(unified.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
+        assertTrue(unified.contains("SAVAŞA GİR"))
         assertFalse(unified.contains("MageCat"))
         assertTrue(integration.contains("PremierWordDuelScreen()"))
         assertFalse(integration.contains("ReactiveMageCatOverlay()"))
