@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Face
 import androidx.compose.material3.Icon
@@ -266,17 +265,19 @@ internal fun ProfilePhotoAvatarRectWithGender(
         bytes = if (!avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
-    val shape = RoundedCornerShape(14.dp)
+    // Historical callers supplied rectangular slots. The slot may remain rectangular, but the
+    // player image itself is always circular so every social/game surface uses one avatar rule.
+    val diameter = minOf(width, height)
     Box(
         Modifier.size(width, height + 4.dp),
-        contentAlignment = Alignment.TopCenter,
+        contentAlignment = Alignment.Center,
     ) {
         Box(
             Modifier
-                .size(width, height)
-                .clip(shape)
+                .size(diameter)
+                .clip(CircleShape)
                 .background(
-                    Brush.linearGradient(
+                    Brush.sweepGradient(
                         listOf(Color.White, accent.copy(alpha = .86f), Color(0xFF57C7F3), Color.White)
                     )
                 )
@@ -287,16 +288,16 @@ internal fun ProfilePhotoAvatarRectWithGender(
                 Image(
                     bitmap.asImageBitmap(),
                     null,
-                    Modifier.fillMaxSize().clip(shape),
+                    Modifier.fillMaxSize().clip(CircleShape),
                     contentScale = ContentScale.Crop,
                 )
             } else {
-                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(shape), accent)
+                SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
         if (showGenderBadge) {
             Box(Modifier.align(Alignment.BottomEnd)) {
-                FramelessGenderSymbol(gender, height)
+                FramelessGenderSymbol(gender, diameter)
             }
         }
     }

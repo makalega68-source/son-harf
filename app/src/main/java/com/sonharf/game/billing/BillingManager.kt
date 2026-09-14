@@ -11,6 +11,7 @@ import com.android.billingclient.api.ProductDetails
 import com.android.billingclient.api.Purchase
 import com.android.billingclient.api.PurchasesUpdatedListener
 import com.android.billingclient.api.QueryProductDetailsParams
+import com.android.billingclient.api.QueryPurchasesParams
 
 class BillingManager(
     context: Context,
@@ -114,6 +115,21 @@ class BillingManager(
             BillingClient.BillingResponseCode.USER_CANCELED -> onMessage("Satın alma iptal edildi.")
             BillingClient.BillingResponseCode.ITEM_ALREADY_OWNED -> onMessage("Bu ürün zaten hesabında görünüyor.")
             else -> onMessage("Google Play işlemi tamamlanamadı (${result.responseCode}).")
+        }
+    }
+
+    /** Re-deliver completed, unconsumed purchases to the existing server verifier after interruptions. */
+    fun restorePurchases(productIds: Set<String>) {
+        if (!client.isReady) { connect { restorePurchases(productIds) }; return }
+        listOf(BillingClient.ProductType.SUBS, BillingClient.ProductType.INAPP).forEach { type ->
+            client.queryPurchasesAsync(QueryPurchasesParams.newBuilder().setProductType(type).build()) { result, purchases ->
+                if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                    onMessage("Satın almalar yenilenemedi. Lütfen tekrar dene.")
+                } else {
+                    purchases.filter { it.purchaseState == Purchase.PurchaseState.PURCHASED && it.products.any(productIds::contains) }
+                        .forEach(onPurchase)
+                }
+            }
         }
     }
 

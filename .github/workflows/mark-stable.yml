@@ -42,13 +42,13 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.14.4"
+          validate-wrappers: false
 
       - name: Verify candidate
         shell: bash
         run: |
           set -o pipefail
-          gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+          ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
       - name: Create approved stable tag
         env:

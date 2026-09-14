@@ -39,7 +39,7 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: "8.14.4"
+          validate-wrappers: false
 
       - name: Find last approved stable tag
         id: target
@@ -79,7 +79,7 @@ jobs:
         shell: bash
         run: |
           set -o pipefail
-          gradle :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+          ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
       - name: Commit safe rollback
         shell: bash

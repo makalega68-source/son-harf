@@ -50,7 +50,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SharedDictionaryService
-import java.time.LocalDate
 import java.util.Locale
 import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
@@ -107,10 +106,6 @@ internal object LetterLadderEngine {
     const val MOVE_COUNT = 5
 
     private val tr = Locale.forLanguageTag("tr-TR")
-
-    private val curatedTurkish = listOf(
-        listOf("kalın", "yalın", "yalan", "yalak", "yamak", "yumak"),
-    )
 
     fun changedIndex(from: String, to: String): Int? {
         if (from.length != WORD_LENGTH || to.length != WORD_LENGTH) return null
@@ -186,7 +181,7 @@ internal object LetterLadderEngine {
         sourceWords: Set<String>,
         language: String,
         seed: Long,
-        preferCurated: Boolean = false,
+        excludedPuzzleIds: Set<String> = emptySet(),
     ): LetterLadderPuzzle? {
         val locale = if (language.lowercase(Locale.ROOT) == "en") Locale.ENGLISH else tr
         val words = sourceWords.asSequence()
@@ -194,12 +189,6 @@ internal object LetterLadderEngine {
             .filter { word -> word.length == WORD_LENGTH && word.all(Char::isLetter) }
             .toSet()
         if (words.size < MOVE_COUNT + 1) return null
-
-        if (preferCurated && language.lowercase(Locale.ROOT) != "en") {
-            curatedTurkish.firstOrNull { chain -> chain.all { it in words } }?.let { chain ->
-                return puzzleFromPath(chain, language, "curated")
-            }
-        }
 
         val wildcard = Array(WORD_LENGTH) { mutableMapOf<String, MutableList<String>>() }
         words.forEach { word ->
@@ -214,7 +203,10 @@ internal object LetterLadderEngine {
         val nodeBudget = 45_000
 
         fun search(path: MutableList<String>, used: MutableSet<Int>): List<String>? {
-            if (path.size == MOVE_COUNT + 1) return path.toList()
+            if (path.size == MOVE_COUNT + 1) {
+                val candidate = puzzleFromPath(path, language) ?: return null
+                return path.toList().takeIf { candidate.id !in excludedPuzzleIds }
+            }
             if (visitedNodes++ >= nodeBudget) return null
 
             val current = path.last()
@@ -241,12 +233,12 @@ internal object LetterLadderEngine {
 
         for (start in starts) {
             val path = search(mutableListOf(start), mutableSetOf()) ?: continue
-            return puzzleFromPath(path, language, seed.toString())
+            return puzzleFromPath(path, language)
         }
         return null
     }
 
-    private fun puzzleFromPath(path: List<String>, language: String, suffix: String): LetterLadderPuzzle? {
+    private fun puzzleFromPath(path: List<String>, language: String): LetterLadderPuzzle? {
         if (path.size != MOVE_COUNT + 1) return null
         val used = mutableSetOf<Int>()
         for (index in 1..MOVE_COUNT) {
@@ -257,8 +249,11 @@ internal object LetterLadderEngine {
         val start = path.first()
         val target = path.last()
         if ((0 until WORD_LENGTH).any { start[it] == target[it] }) return null
+        val routeEndpoints = listOf(start, target).sorted().joinToString("-")
         return LetterLadderPuzzle(
-            id = "${language.lowercase(Locale.ROOT)}-$suffix-$start-$target",
+            // The id represents puzzle content, not the random attempt. This makes recent-history
+            // exclusion reliable across app restarts and across different random seeds.
+            id = "${language.lowercase(Locale.ROOT)}-$routeEndpoints",
             start = start,
             target = target,
             solution = path,
@@ -267,6 +262,41 @@ internal object LetterLadderEngine {
 
     private fun pattern(word: String, index: Int): String = buildString(WORD_LENGTH) {
         word.forEachIndexed { i, char -> append(if (i == index) '*' else char) }
+    }
+}
+
+private object LetterLadderPuzzleHistory {
+    private const val PREFS = "son_harf_letter_ladder_history_v2"
+    private const val IDS_PREFIX = "recent_ids_"
+    private const val SEED_PREFIX = "next_seed_"
+    private const val HISTORY_LIMIT = 24
+
+    fun recentIds(context: android.content.Context, language: String): Set<String> =
+        context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+            .getString(IDS_PREFIX + SharedDictionaryService.canonicalLanguage(language), "")
+            .orEmpty()
+            .lineSequence()
+            .filter(String::isNotBlank)
+            .toSet()
+
+    fun nextSeed(context: android.content.Context, language: String): Long {
+        val lang = SharedDictionaryService.canonicalLanguage(language)
+        val prefs = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+        val counter = prefs.getLong(SEED_PREFIX + lang, 0L) + 1L
+        prefs.edit().putLong(SEED_PREFIX + lang, counter).apply()
+        return System.currentTimeMillis() xor System.nanoTime() xor (counter * 104_729L)
+    }
+
+    fun remember(context: android.content.Context, language: String, puzzleId: String) {
+        val lang = SharedDictionaryService.canonicalLanguage(language)
+        val prefs = context.getSharedPreferences(PREFS, android.content.Context.MODE_PRIVATE)
+        val key = IDS_PREFIX + lang
+        val ordered = prefs.getString(key, "").orEmpty().lineSequence()
+            .filter(String::isNotBlank)
+            .filterNot { it == puzzleId }
+            .toMutableList()
+        ordered.add(0, puzzleId)
+        prefs.edit().putString(key, ordered.take(HISTORY_LIMIT).joinToString("\n")).apply()
     }
 }
 
@@ -308,15 +338,20 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
             return@LaunchedEffect
         }
         dictionary = loaded
-        val daySeed = LocalDate.now().toEpochDay() + puzzleNonce.toLong() * 104_729L
+        val recentPuzzleIds = LetterLadderPuzzleHistory.recentIds(context, language)
+        val gameSeed = LetterLadderPuzzleHistory.nextSeed(context, language) + puzzleNonce.toLong() * 104_729L
         val generated = withContext(Dispatchers.Default) {
             LetterLadderEngine.generate(
                 sourceWords = loaded,
                 language = language,
-                seed = daySeed,
-                preferCurated = puzzleNonce == 0,
+                seed = gameSeed,
+                excludedPuzzleIds = recentPuzzleIds,
             )
+                // Very small custom dictionaries may contain only recently played routes. In that
+                // exceptional case, keep the mode playable instead of showing a false load error.
+                ?: LetterLadderEngine.generate(loaded, language, gameSeed xor Long.MIN_VALUE)
         }
+        if (generated != null) LetterLadderPuzzleHistory.remember(context, language, generated.id)
         puzzle = generated
         path = generated?.let { listOf(it.start) }.orEmpty()
         usedPositions = emptySet()

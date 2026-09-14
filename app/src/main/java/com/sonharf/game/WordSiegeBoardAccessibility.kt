@@ -12,6 +12,6 @@ import androidx.compose.ui.unit.sp
  */
 internal object WordSiegeBoardAccessibility {
     val BoardLetterPoint: TextUnit = 14.sp
-    val BoardBonus: TextUnit = 18.sp
+    val BoardBonus: TextUnit = 17.sp
     val RackPoint: TextUnit = 14.sp
 }

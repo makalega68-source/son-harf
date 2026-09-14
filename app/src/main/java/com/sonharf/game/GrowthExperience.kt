@@ -54,7 +54,7 @@ suspend fun OnlineGameBackend.getGrowthDashboard(): GrowthDashboardDto =
     SupabaseProvider.client.postgrest.rpc("get_growth_dashboard_v1").decodeSingle()
 
 suspend fun OnlineGameBackend.claimDailyCheckin(): Int =
-    SupabaseProvider.client.postgrest.rpc("claim_daily_checkin_v1").decodeSingle()
+    SupabaseProvider.client.postgrest.rpc("claim_daily_checkin_v1").decodeAs()
 
 suspend fun OnlineGameBackend.claimDailyChallenge(): Int =
     SupabaseProvider.client.postgrest.rpc("claim_daily_challenge_v1").decodeSingle()

@@ -5,6 +5,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,21 +26,21 @@ import com.sonharf.game.billing.PlayPurchaseVerification
 import com.sonharf.game.billing.ProductCatalog
 import kotlinx.coroutines.launch
 
-private val ProBg = Color(0xFF020617)
-private val ProSurface = Color(0xFF0F172A)
-private val ProBorder = Color(0xFF334155)
-private val ProText = Color(0xFFF8FAFC)
-private val ProMuted = Color(0xFF94A3B8)
-private val ProBlue = Color(0xFF3B82F6)
-private val ProGold = Color(0xFFF59E0B)
-private val ProGreen = Color(0xFF10B981)
+private val ProBg: Color get() = SonHarfTheme.Background
+private val ProSurface: Color get() = SonHarfTheme.Surface
+private val ProBorder: Color get() = SonHarfTheme.Border
+private val ProText: Color get() = SonHarfTheme.TextPrimary
+private val ProMuted: Color get() = SonHarfTheme.TextSecondary
+private val ProBlue: Color get() = SonHarfTheme.Primary
+private val ProGold: Color get() = SonHarfTheme.Warning
+private val ProGreen: Color get() = SonHarfTheme.Success
 
 @Composable
 fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
-    var yearly by remember { mutableStateOf(true) }
+    var yearly by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var connected by remember { mutableStateOf(false) }
@@ -77,7 +80,7 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
     DisposableEffect(manager) {
         manager.connect {
             connected = true
-            manager.querySubscriptions(ProductCatalog.subscriptions) { products = it }
+            manager.querySubscriptions(listOf(ProductCatalog.VIP_MONTHLY, ProductCatalog.VIP_YEARLY)) { products = it }
         }
         onDispose { manager.close() }
     }
@@ -101,17 +104,17 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("SON HARF PRO", color = ProText, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                        Text(sh("Kelime Kuşatması PRO", "Word Siege PRO"), color = ProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
                         Text(sh("Adil premium üyelik", "Fair-play premium membership"), color = ProBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                     TextButton(onClick = onDismiss, enabled = !busy) { Text("✕", color = ProText, fontSize = 18.sp) }
                 }
 
-                ProBenefit("🚫", sh("REKLAMSIZ", "AD-FREE"), sh("Menü ve mağazada reklamsız deneyim", "Ad-free menus and shop"))
-                ProBenefit("🎨", sh("PRO STYLE", "PRO STYLE"), sh("Özel görünüm ve profil ayrıcalıkları", "Exclusive appearance and profile benefits"))
-                ProBenefit("♛", sh("ÖZEL ODALAR", "PRIVATE ROOMS"), sh("Arkadaşlarınla özel oyun alanları", "Private play spaces with friends"))
-                ProBenefit("📊", sh("GELİŞMİŞ İSTATİSTİK", "ADVANCED STATS"), sh("Detaylı maç analizi ve performans", "Detailed match analysis and performance"))
-                ProBenefit("👥", sh("SOSYAL AYRICALIKLAR", "SOCIAL BENEFITS"), sh("Kaydedilmiş arkadaş listesi ve PRO profil değeri", "Saved friend list and PRO profile value"))
+                ProBenefit(Icons.Rounded.Block, sh("REKLAMSIZ", "AD-FREE"), sh("Menü ve mağazada reklamsız deneyim", "Ad-free menus and shop"))
+                ProBenefit(Icons.Rounded.Palette, sh("PRO STYLE", "PRO STYLE"), sh("Özel görünüm ve profil ayrıcalıkları", "Exclusive appearance and profile benefits"))
+                ProBenefit(Icons.Rounded.MeetingRoom, sh("ÖZEL ODALAR", "PRIVATE ROOMS"), sh("Arkadaşlarınla özel oyun alanları", "Private play spaces with friends"))
+                ProBenefit(Icons.Rounded.Insights, sh("GELİŞMİŞ İSTATİSTİK", "ADVANCED STATS"), sh("Detaylı maç analizi ve performans", "Detailed match analysis and performance"))
+                ProBenefit(Icons.Rounded.Groups, sh("SOSYAL AYRICALIKLAR", "SOCIAL BENEFITS"), sh("Kaydedilmiş arkadaş listesi ve PRO profil değeri", "Saved friend list and PRO profile value"))
 
                 Surface(shape = RoundedCornerShape(14.dp), color = ProGreen.copy(alpha = .10f), border = BorderStroke(1.dp, ProGreen.copy(alpha = .35f))) {
                     Text(
@@ -147,7 +150,7 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                             notice = sh("Google Play ödeme ekranı açılamadı (${result.responseCode}).", "Google Play billing could not open (${result.responseCode}).")
                         }
                     },
-                    enabled = !busy,
+                    enabled = !busy && selectedProduct != null,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ProBlue),
@@ -155,6 +158,9 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                     Text(if (busy) sh("DOĞRULANIYOR…", "VERIFYING…") else sh("PRO'YA GEÇ", "GET PRO"), fontWeight = FontWeight.Black, fontSize = 15.sp)
                 }
 
+                TextButton(enabled = !busy, onClick = { manager.restorePurchases(setOf(ProductCatalog.VIP_MONTHLY, ProductCatalog.VIP_YEARLY)) }) {
+                    Text(sh("Satın almaları geri yükle", "Restore purchases"))
+                }
                 if (notice.isNotBlank()) Text(notice, Modifier.fillMaxWidth(), color = ProMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
                 Text(sh("Google Play ile güvenli ödeme • İstediğin zaman iptal", "Secure Google Play billing • Cancel anytime"), Modifier.fillMaxWidth(), color = ProMuted, fontSize = 8.sp, textAlign = TextAlign.Center)
             }
@@ -163,10 +169,10 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun ProBenefit(icon: String, title: String, subtitle: String) {
+private fun ProBenefit(icon: ImageVector, title: String, subtitle: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Surface(modifier = Modifier.size(40.dp), shape = RoundedCornerShape(12.dp), color = ProBlue.copy(alpha = .13f)) {
-            Box(contentAlignment = Alignment.Center) { Text(icon, color = ProGold, fontSize = 17.sp, fontWeight = FontWeight.Black) }
+            Box(contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(20.dp), tint = ProBlue) }
         }
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {

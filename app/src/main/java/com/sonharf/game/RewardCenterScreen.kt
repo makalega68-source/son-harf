@@ -27,21 +27,7 @@ private tailrec fun Context.findActivity(): Activity? = when (this) {
 }
 
 @Composable
-fun ShopHubScreen() {
-    var tab by remember { mutableStateOf(0) }
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            FilterChip(selected = tab == 0, onClick = { tab = 0 }, label = { Text(sh("MAĞAZA", "SHOP")) }, modifier = Modifier.weight(1f))
-            FilterChip(selected = tab == 1, onClick = { tab = 1 }, label = { Text(sh("ÖDÜLLER", "REWARDS")) }, modifier = Modifier.weight(1f))
-        }
-        Box(Modifier.weight(1f)) {
-            if (tab == 0) EconomyShopScreen() else RewardCenterScreen()
-        }
-    }
-}
+fun ShopHubScreen() { EconomyShopScreen() }
 
 @Composable
 fun RewardCenterScreen() {
@@ -103,11 +89,19 @@ fun RewardCenterScreen() {
             return
         }
         busy = rewardType
+        scope.launch {
+        val intentId = runCatching { b.prepareStoreReward(rewardType, trialItemId) }.getOrElse {
+            notice = sh("Ödüllü reklam şu anda kullanılamıyor.", "Rewarded ads are currently unavailable.")
+            busy = null
+            return@launch
+        }
         adController.show(
             a,
+            verificationUserId = b.currentUserId(),
+            verificationData = intentId,
             onEarned = { responseId ->
                 scope.launch {
-                    runCatching { b.claimRewardedAd(rewardType, responseId, trialItemId) }
+                    runCatching { b.awaitVerifiedStoreReward(rewardType, responseId, trialItemId) }
                         .onSuccess { claim ->
                             notice = when (rewardType) {
                                 "diamonds" -> sh(
@@ -121,6 +115,7 @@ fun RewardCenterScreen() {
                         .onFailure { e ->
                             notice = when {
                                 "daily_limit_reached" in e.message.orEmpty() -> sh("Bugünkü kota tamamlandı.", "Today's quota is complete.")
+                                "ad_verification_pending" in e.message.orEmpty() -> sh("Ödül doğrulandığında hesabına eklenecek.", "Your reward will be added after verification.")
                                 "trial_item_unavailable" in e.message.orEmpty() -> sh("Bu deneme ürünü artık kullanılamıyor.", "This trial item is no longer available.")
                                 else -> sh("Ödül işlenemedi.", "Reward could not be processed.")
                             }
@@ -134,8 +129,9 @@ fun RewardCenterScreen() {
                 busy = null
                 adReady = false
             },
-            onClosed = { adController.load { adReady = adController.ready } },
+            onClosed = { busy = null; adController.load { adReady = adController.ready } },
         )
+        }
     }
 
     val s = status

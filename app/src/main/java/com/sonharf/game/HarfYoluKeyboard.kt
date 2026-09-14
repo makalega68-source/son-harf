@@ -20,14 +20,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-private val HarfYoluKeyboardBg = Color(0xFF070A18)
-private val HarfYoluKey = Color(0xFF121833)
-private val HarfYoluKeyAlt = Color(0xFF1C2347)
-private val HarfYoluText = Color(0xFFF7F8FF)
-private val HarfYoluAction = Color(0xFFFFB31A)
-private val HarfYoluBlue = Color(0xFF2188FF)
-private val HarfYoluViolet = Color(0xFF8A5CFF)
-
 /**
  * Harf Yolu'na özel kompakt klavye overload'u.
  * Ortak EmbeddedGameKeyboard dosyasını ve diğer oyunların klavye davranışını değiştirmez.
@@ -45,6 +37,7 @@ internal fun EmbeddedWordKeyboard(
     keySound: () -> Unit,
     actionSound: () -> Unit,
 ) {
+    val palette = SonHarfCosmetics.keyboardPalette
     val rows = if (language.lowercase() == "en") {
         listOf(
             listOf("Q","W","E","R","T","Y","U","I","O","P"),
@@ -66,9 +59,9 @@ internal fun EmbeddedWordKeyboard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = HarfYoluKeyboardBg,
+        color = palette.background,
         shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-        border = BorderStroke(1.dp, HarfYoluViolet.copy(alpha = .30f)),
+        border = BorderStroke(1.dp, palette.border),
     ) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = if (compact) 4.dp else 6.dp),
@@ -150,6 +143,7 @@ private fun HarfYoluKeyButton(
     action: Boolean = false,
     onClick: () -> Unit,
 ) {
+    val palette = SonHarfCosmetics.keyboardPalette
     Button(
         onClick = onClick,
         enabled = enabled,
@@ -158,21 +152,21 @@ private fun HarfYoluKeyButton(
         shape = RoundedCornerShape(9.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = when {
-                action -> HarfYoluAction
-                alt -> HarfYoluKeyAlt
-                else -> HarfYoluKey
+                action -> palette.action
+                alt -> palette.keyAlt
+                else -> palette.key
             },
-            contentColor = if (action) Color(0xFF241300) else HarfYoluText,
-            disabledContainerColor = if (alt) HarfYoluKeyAlt.copy(alpha = .55f) else HarfYoluKey.copy(alpha = .55f),
-            disabledContentColor = HarfYoluText.copy(alpha = .42f),
+            contentColor = if (action) palette.actionText else palette.text,
+            disabledContainerColor = if (alt) palette.keyAlt.copy(alpha = .55f) else palette.key.copy(alpha = .55f),
+            disabledContentColor = palette.text.copy(alpha = .42f),
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp, pressedElevation = 0.dp),
         border = BorderStroke(
             1.dp,
             when {
-                action -> HarfYoluAction.copy(alpha = .82f)
-                alt -> HarfYoluBlue.copy(alpha = .32f)
-                else -> HarfYoluViolet.copy(alpha = .24f)
+                action -> palette.action.copy(alpha = .82f)
+                alt -> palette.secondaryBorder.copy(alpha = .55f)
+                else -> palette.border
             },
         ),
     ) {

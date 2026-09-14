@@ -109,6 +109,33 @@ data class ClubWeeklyMissionClaimDto(
 )
 
 @Serializable
+data class ClubChallengeDto(
+    @SerialName("challenge_id") val challengeId: String,
+    @SerialName("challenger_club_id") val challengerClubId: String,
+    @SerialName("challenger_name") val challengerName: String,
+    @SerialName("challenger_tag") val challengerTag: String,
+    @SerialName("challenged_club_id") val challengedClubId: String,
+    @SerialName("challenged_name") val challengedName: String,
+    @SerialName("challenged_tag") val challengedTag: String,
+    val status: String,
+    @SerialName("starts_at") val startsAt: String? = null,
+    @SerialName("ends_at") val endsAt: String? = null,
+    @SerialName("challenger_points") val challengerPoints: Long = 0,
+    @SerialName("challenged_points") val challengedPoints: Long = 0,
+    @SerialName("can_respond") val canRespond: Boolean = false,
+    @SerialName("can_create") val canCreate: Boolean = false,
+)
+
+@Serializable
+data class ClubChallengeContributionDto(
+    @SerialName("user_id") val userId: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("club_id") val clubId: String,
+    @SerialName("club_tag") val clubTag: String,
+    val points: Long = 0,
+)
+
+@Serializable
 data class WeeklyTournamentHistoryDto(
     @SerialName("tournament_id") val tournamentId: String,
     val name: String,
@@ -211,6 +238,30 @@ suspend fun OnlineGameBackend.claimClubWeeklyMission(tier: Int): ClubWeeklyMissi
         "claim_club_weekly_mission_v1",
         buildJsonObject { put("p_tier", tier.coerceIn(1, 3)) },
     ).decodeSingle()
+
+suspend fun OnlineGameBackend.getMyClubChallenge(): ClubChallengeDto? =
+    SupabaseProvider.client.postgrest.rpc("get_my_club_challenge_v1").decodeList<ClubChallengeDto>().firstOrNull()
+
+suspend fun OnlineGameBackend.createClubChallenge(targetClubId: String): String =
+    SupabaseProvider.client.postgrest.rpc(
+        "create_club_challenge_v1",
+        buildJsonObject { put("p_target_club_id", targetClubId) },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.respondClubChallenge(challengeId: String, accept: Boolean): String =
+    SupabaseProvider.client.postgrest.rpc(
+        "respond_club_challenge_v1",
+        buildJsonObject {
+            put("p_challenge_id", challengeId)
+            put("p_accept", accept)
+        },
+    ).decodeSingle()
+
+suspend fun OnlineGameBackend.getClubChallengeContributions(challengeId: String): List<ClubChallengeContributionDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "get_club_challenge_contributions_v1",
+        buildJsonObject { put("p_challenge_id", challengeId) },
+    ).decodeList()
 
 suspend fun OnlineGameBackend.getWeeklyTournamentHistory(limit: Int = 12): List<WeeklyTournamentHistoryDto> =
     SupabaseProvider.client.postgrest.rpc(

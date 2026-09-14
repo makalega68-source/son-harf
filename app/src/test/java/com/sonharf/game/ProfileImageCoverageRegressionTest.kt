@@ -12,6 +12,7 @@ class ProfileImageCoverageRegressionTest {
         val runtime = projectFile("app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt").readText()
         val sharedCompetition = projectFile("app/src/main/java/com/sonharf/game/SharedCompetitionPrimitives.kt").readText()
         val siege = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
+        val siegeCard = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt").readText()
         val competition = projectFile("app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt").readText()
 
         assertTrue(runtime.contains("ProfilePhotoAvatar"))
@@ -21,7 +22,8 @@ class ProfileImageCoverageRegressionTest {
         assertTrue(sharedCompetition.contains("ProfilePhotoAvatarWithGender"))
         assertTrue(sharedCompetition.contains("myAvatarPath"))
         assertTrue(sharedCompetition.contains("opponentAvatarPath"))
-        assertTrue(siege.contains("ProfilePhotoAvatarWithGender"))
+        assertTrue(siege.contains("WordSiegeScoreCard("))
+        assertTrue(siegeCard.contains("ProfilePhotoAvatarWithGender("))
         assertTrue(siege.contains("avatarVisibility"))
         assertTrue(competition.contains("ProfilePhotoAvatar"))
         assertFalse(projectFile("app/src/main/java/com/sonharf/game").resolve("LightDuelUi.kt").exists())

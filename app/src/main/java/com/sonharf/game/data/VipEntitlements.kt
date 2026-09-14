@@ -36,7 +36,7 @@ data class VipDailyHelperClaimDto(
 )
 
 suspend fun OnlineGameBackend.getVipEntitlements(): VipEntitlementsDto =
-    SupabaseProvider.client.postgrest.rpc("get_vip_entitlements_v7").decodeSingle()
+    SupabaseProvider.client.postgrest.rpc("get_vip_entitlements_v7").decodeAs()
 
 suspend fun OnlineGameBackend.claimVipDailyHelpers(): VipDailyHelperClaimDto =
-    SupabaseProvider.client.postgrest.rpc("claim_vip_daily_jokers_v7").decodeSingle()
+    SupabaseProvider.client.postgrest.rpc("claim_vip_daily_jokers_v7").decodeAs()

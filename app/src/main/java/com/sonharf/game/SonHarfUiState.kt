@@ -14,10 +14,7 @@ object SonHarfUiState {
     val isEnglish: Boolean get() = language == "en"
 }
 
-/**
- * Shared UI localization with a visible-brand compatibility layer.
- * Internal WordSiege/SonHarf technical identifiers intentionally remain unchanged.
- */
+/** Shared UI localization. Visible product branding remains Kelime Kuşatması / Word Siege. */
 fun sh(tr: String, en: String): String {
     val localized = if (SonHarfUiState.isEnglish) en else tr
     val primaryTagline = if (SonHarfUiState.isEnglish) {
@@ -29,7 +26,6 @@ fun sh(tr: String, en: String): String {
         return primaryTagline
     }
 
-    // The flagship home CTA keeps the product name dominant while making the action explicit.
     if (localized == "Kelime kur • alanı ele geçir • haritayı kontrol et") {
         return "OYNA • Harflerini yerleştir, kelimeni oluştur"
     }
@@ -38,12 +34,4 @@ fun sh(tr: String, en: String): String {
     }
 
     return localized
-        .replace("KELİME KUŞATMASI", "KELİME TAHTI")
-        .replace("Kelime Kuşatması", "Kelime Tahtı")
-        .replace("kelime kuşatması", "kelime tahtı")
-        .replace("WORD SIEGE", "WORD THRONE")
-        .replace("Word Siege", "Word Throne")
-        .replace("word siege", "word throne")
-        .replace("KUŞATMA SENİN!", "TAHT SENİN!")
-        .replace("SIEGE WON!", "THE THRONE IS YOURS!")
 }

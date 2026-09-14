@@ -234,6 +234,7 @@ internal object WordSiegePracticeEngine {
         playerRating: Int = 1000,
         playerWins: Int = 0,
         playerLosses: Int = 0,
+        decisionSalt: Long = 0L,
     ): WordSiegePracticeMove? {
         if (state.currentOwner != 2 || state.status != "playing") return null
         val rack = state.botRack
@@ -252,13 +253,17 @@ internal object WordSiegePracticeEngine {
         val ordered = candidates
             .distinctBy { it.placements }
             .sortedWith(
-                compareBy<WordSiegePracticeMove> { moveStrength(it) }
+                compareBy<WordSiegePracticeMove> { moveStrength(state, it) }
                     .thenBy { it.primaryWord }
                     .thenBy { it.placements.keys.minOrNull() ?: -1 },
             )
         val percentile = botTargetPercentile(state, playerRating, playerWins, playerLosses)
-        val targetIndex = ((ordered.lastIndex * percentile) / 100).coerceIn(0, ordered.lastIndex)
-        return ordered[targetIndex]
+        val choiceIndex = adaptiveCandidateIndex(
+            candidateCount = ordered.size,
+            targetPercentile = percentile,
+            variationSeed = botDecisionSeed(state, decisionSalt),
+        )
+        return ordered[choiceIndex]
     }
 
     internal fun botTargetPercentile(
@@ -295,8 +300,37 @@ internal object WordSiegePracticeEngine {
         return target.coerceIn(25, 90)
     }
 
-    private fun moveStrength(move: WordSiegePracticeMove): Int =
-        move.wordScore + WordSiegeFinalRules.cubeTransfer(move.capturedCells)
+    /**
+     * Selects inside a narrow skill band. The bot remains difficulty-controlled but does not repeat
+     * the exact same ranked choice whenever several similarly good moves exist.
+     */
+    internal fun adaptiveCandidateIndex(
+        candidateCount: Int,
+        targetPercentile: Int,
+        variationSeed: Long,
+    ): Int {
+        if (candidateCount <= 1) return 0
+        val lastIndex = candidateCount - 1
+        val target = ((lastIndex * targetPercentile.coerceIn(0, 100)) / 100).coerceIn(0, lastIndex)
+        val radius = (candidateCount / 12).coerceIn(1, 8)
+        val from = (target - radius).coerceAtLeast(0)
+        val to = (target + radius).coerceAtMost(lastIndex)
+        return Random(variationSeed).nextInt(from, to + 1)
+    }
+
+    private fun botDecisionSeed(state: WordSiegePracticeState, salt: Long): Long =
+        state.botRack.hashCode().toLong().shl(32) xor
+            state.bag.hashCode().toLong() xor
+            state.moveCount.toLong().times(104_729L) xor salt
+
+    private fun moveStrength(state: WordSiegePracticeState, move: WordSiegePracticeMove): Int {
+        val opponentTakeovers = move.placements.keys.count { state.board[it].owner == 1 }
+        val crownControl = if (WordSiegeBoardSpec.CenterIndex in move.placements.keys) 4 else 0
+        return move.wordScore +
+            WordSiegeFinalRules.cubeTransfer(move.capturedCells) +
+            opponentTakeovers * WordSiegeFinalRules.CUBE_TRANSFER_POINTS +
+            crownControl
+    }
 
     private fun placementsForWord(
         state: WordSiegePracticeState,

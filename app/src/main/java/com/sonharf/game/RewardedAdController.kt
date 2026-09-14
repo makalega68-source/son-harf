@@ -8,7 +8,7 @@ import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.rewarded.RewardedAd
 import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
-import java.util.UUID
+import com.google.android.gms.ads.rewarded.ServerSideVerificationOptions
 
 /** Optional rewarded ads. The thin non-game banner is handled separately by the app shell. */
 class RewardedAdController(private val context: Context) {
@@ -63,8 +63,10 @@ class RewardedAdController(private val context: Context) {
         onEarned: (String) -> Unit,
         onUnavailable: () -> Unit,
         onClosed: (() -> Unit)? = null,
+        verificationUserId: String? = null,
+        verificationData: String? = null,
     ) {
-        if (!AdPrivacyManager.adsAllowed) {
+        if (!AdPrivacyManager.adsAllowed || verificationUserId.isNullOrBlank() || verificationData.isNullOrBlank()) {
             onUnavailable()
             return
         }
@@ -76,7 +78,8 @@ class RewardedAdController(private val context: Context) {
         }
         rewardedAd = null
         ready = false
-        val responseId = ad.responseInfo.responseId.orEmpty().ifBlank { "reward-${UUID.randomUUID()}" }
+        ad.setServerSideVerificationOptions(ServerSideVerificationOptions.Builder()
+            .setUserId(verificationUserId).setCustomData(verificationData).build())
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 onClosed?.invoke()
@@ -89,6 +92,6 @@ class RewardedAdController(private val context: Context) {
                 load()
             }
         }
-        ad.show(activity) { onEarned(responseId) }
+        ad.show(activity) { onEarned(verificationData) }
     }
 }
