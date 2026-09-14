@@ -1,0 +1,175 @@
+name: Import exact 80b5099 and build APK
+
+on:
+  push:
+    branches:
+      - recovery/import-80b5099
+    paths:
+      - .github/workflows/import-exact-80b5099.yml
+
+permissions:
+  contents: write
+  issues: read
+
+jobs:
+  import-and-build:
+    runs-on: ubuntu-latest
+    env:
+      TARGET_SHA: 80b5099911d6ddaf82d89a0fe13af42db8358915
+      TARGET_BRANCH: codex/premium-home-and-store-test-20260913
+      EXPECTED_OLD_SHA: cbcdfb0cda9feac5cc78332efeb3ea1b265d9e98
+      TRANSFER_ISSUE: '376'
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Reassemble exact Git bundle from transfer issue
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, hashlib, json, os, re, urllib.request
+          repo = os.environ['GITHUB_REPOSITORY']
+          issue = os.environ['TRANSFER_ISSUE']
+          token = os.environ['GH_TOKEN']
+          blocks = {}
+          page = 1
+          while True:
+              req = urllib.request.Request(
+                  f'https://api.github.com/repos/{repo}/issues/{issue}/comments?per_page=100&page={page}',
+                  headers={'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'}
+              )
+              with urllib.request.urlopen(req) as r:
+                  rows = json.load(r)
+              if not rows:
+                  break
+              for row in rows:
+                  body = row.get('body') or ''
+                  m = re.fullmatch(r'XFER_(\d{3}):([A-Za-z0-9+/=]+)', body.strip())
+                  if m:
+                      blocks[int(m.group(1))] = m.group(2)
+              if len(rows) < 100:
+                  break
+              page += 1
+          if not blocks:
+              raise SystemExit('No transfer blocks found')
+          expected = list(range(max(blocks) + 1))
+          if sorted(blocks) != expected:
+              missing = sorted(set(expected) - set(blocks))
+              raise SystemExit(f'Missing transfer blocks: {missing}')
+          raw = base64.b64decode(''.join(blocks[i] for i in expected), validate=True)
+          sha = hashlib.sha256(raw).hexdigest()
+          expected_sha = '0946e0340190e3f3f07c9849386f461b2158bd8496a3d0e70291ba260df10e7c'
+          if sha != expected_sha:
+              raise SystemExit(f'Bundle SHA-256 mismatch: {sha}')
+          open('/tmp/80b5099.bundle','wb').write(raw)
+          print(f'Reassembled {len(raw)} bytes, sha256={sha}, blocks={len(blocks)}')
+          PY
+          git bundle verify /tmp/80b5099.bundle
+          git fetch /tmp/80b5099.bundle HEAD:refs/remotes/exact/80b5099
+          test "$(git rev-parse refs/remotes/exact/80b5099)" = "$TARGET_SHA"
+
+      - name: Push exact commit with lease
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote_now="$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | awk '{print $1}')"
+          test "$remote_now" = "$EXPECTED_OLD_SHA"
+          git push origin "$TARGET_SHA:refs/heads/$TARGET_BRANCH" --force-with-lease="refs/heads/$TARGET_BRANCH:$EXPECTED_OLD_SHA"
+          remote_after="$(git ls-remote origin "refs/heads/$TARGET_BRANCH" | awk '{print $1}')"
+          test "$remote_after" = "$TARGET_SHA"
+
+      - name: Checkout exact 80b5099 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git checkout --detach "$TARGET_SHA"
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          test -z "$(git status --porcelain)"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Remove stale proxy settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config --global --unset-all http.proxy || true
+          git config --global --unset-all https.proxy || true
+          mkdir -p "$HOME/.gradle"
+          if [ -f "$HOME/.gradle/gradle.properties" ]; then
+            sed -i -E '/systemProp\.(http|https)\.proxy/d' "$HOME/.gradle/gradle.properties"
+          fi
+
+      - name: Install Android SDK 36 without proxy variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          test -x "$SDKMANAGER"
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            "$SDKMANAGER" 'platforms;android-36' 'build-tools;36.0.0'
+
+      - name: Install Gradle 8.14.4 without proxy variables
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            curl -fsSL --retry 3 -o "$RUNNER_TEMP/gradle.zip" \
+            'https://services.gradle.org/distributions/gradle-8.14.4-bin.zip'
+          unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-8.14.4/bin" >> "$GITHUB_PATH"
+
+      - name: Verify repositories and AGP access
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'google()' settings.gradle.kts
+          grep -q 'mavenCentral()' settings.gradle.kts
+          grep -q 'gradlePluginPortal()' settings.gradle.kts
+          grep -q 'id("com.android.application") version "8.12.1"' build.gradle.kts
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            curl -fsSIL --retry 3 'https://dl.google.com/dl/android/maven2/com/android/tools/build/gradle/8.12.1/gradle-8.12.1.pom' >/dev/null
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            curl -fsSIL --retry 3 'https://repo.maven.apache.org/maven2/' >/dev/null
+          gradle --version
+
+      - name: Build only exact 80b5099
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            GRADLE_OPTS='-Djava.net.useSystemProxies=false' \
+            gradle clean :app:testDebugUnitTest :app:assembleDebug --no-daemon --stacktrace --warning-mode all
+          test "$(git rev-parse HEAD)" = "$TARGET_SHA"
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$(find app/build/outputs/apk/debug -maxdepth 1 -type f -name '*.apk' | head -n1)"
+          test -n "$APK"
+          test -s "$APK"
+          unzip -t "$APK" >/dev/null
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --verbose --print-certs "$APK"
+          sha256sum "$APK" | tee apk.sha256
+          cp "$APK" "Kelime-Kusatmasi-80b5099-debug.apk"
+          printf '%s\n' "$TARGET_SHA" > source-commit.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kelime-kusatmasi-80b5099-debug
+          path: |
+            Kelime-Kusatmasi-80b5099-debug.apk
+            apk.sha256
+            source-commit.txt
+          if-no-files-found: error
+          retention-days: 30
