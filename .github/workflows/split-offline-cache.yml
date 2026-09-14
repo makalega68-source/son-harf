@@ -25,8 +25,11 @@ jobs:
             --name android-offline-build-cache-8.14.4-agp8.12.1 \
             --dir "$RUNNER_TEMP/cache"
           test -s "$RUNNER_TEMP/cache/android-offline-cache.tar.zst"
-          cat "$RUNNER_TEMP/cache/android-offline-cache.sha256"
-          sha256sum -c "$RUNNER_TEMP/cache/android-offline-cache.sha256"
+          EXPECTED="$(awk '{print $1}' "$RUNNER_TEMP/cache/android-offline-cache.sha256")"
+          ACTUAL="$(sha256sum "$RUNNER_TEMP/cache/android-offline-cache.tar.zst" | awk '{print $1}')"
+          echo "expected=$EXPECTED"
+          echo "actual=$ACTUAL"
+          test "$ACTUAL" = "$EXPECTED"
 
       - name: Split cache into connector-safe parts
         shell: bash
