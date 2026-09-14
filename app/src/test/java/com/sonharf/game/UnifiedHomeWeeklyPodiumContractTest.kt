@@ -23,7 +23,7 @@ class UnifiedHomeWeeklyPodiumContractTest {
         assertFalse(source.contains("backend.getLeaderboardV2(language, \"week\", 3)"))
 
         // Secondary modes remain reachable with clear hierarchy.
-        assertTrue(source.contains("DİĞER OYUNLAR"))
+        assertFalse(source.contains("DİĞER OYUNLAR"))
         assertTrue(source.contains("son_harf_app_icon_master"))
         assertTrue(source.contains("harf_yolu_logo"))
         assertTrue(source.contains("onClick = onPlay"))
