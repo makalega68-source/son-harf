@@ -267,6 +267,9 @@ private fun UnifiedHomeScreen(
             PremiumPlayButton(onClick = onSiege)
         }
 
+        item {
+            DailyObjectiveCard(onClick = onTasks)
+        }
 
         item {
             Surface(
@@ -294,6 +297,35 @@ private fun UnifiedHomeScreen(
         }
 
         item { Spacer(Modifier.height(6.dp)) }
+    }
+}
+
+@Composable
+private fun DailyObjectiveCard(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(20.dp)
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .sonHarfPressScale(pressedScale = .985f)
+            .clickable(onClick = onClick),
+        shape = shape,
+        color = UnifiedUi.Surface.copy(alpha = .96f),
+        border = BorderStroke(1.dp, UnifiedUi.Border),
+        shadowElevation = 2.dp,
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = UnifiedUi.Purple.copy(alpha = .18f)) {
+                Icon(Icons.Rounded.Flag, null, tint = UnifiedUi.Purple, modifier = Modifier.padding(10.dp).size(22.dp))
+            }
+            Spacer(Modifier.width(11.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(sh("BUGÜNÜN HEDEFİ", "TODAY'S OBJECTIVE"), color = UnifiedUi.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Text(sh("Görevini tamamla, XP'ni ve serini büyüt.", "Complete your task to grow XP and your streak."), color = UnifiedUi.Muted, fontSize = 9.sp)
+            }
+            Surface(shape = RoundedCornerShape(99.dp), color = UnifiedUi.Purple.copy(alpha = .14f)) {
+                Text(sh("GÖR", "VIEW"), Modifier.padding(horizontal = 9.dp, vertical = 6.dp), color = UnifiedUi.Purple, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            }
+        }
     }
 }
 
