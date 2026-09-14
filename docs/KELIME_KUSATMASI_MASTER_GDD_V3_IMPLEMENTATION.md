@@ -48,9 +48,10 @@ Mevcut doğrulanmış sözleşme korunur:
 ### 6. Sosyal/kulüp
 - Mevcut kulüp, arkadaş/rakip, çevrimiçi durum, rövanş ve rekabet altyapısı yeniden yazılmaz.
 - Alt menüdeki **Kulüp** girişi `KelimeKusatmasiClubScreen` üzerinden ayrı tam ekran sohbet deneyimine açılır.
-- Tam ekran sohbet mevcut `getClubMessages` / `sendClubMessage` backend sözleşmesini kullanır; mesaj girişi 300 karakter istemci sınırını korur ve canlı mesajlar mevcut polling sözleşmesiyle yenilenir.
+- Tam ekran sohbet mevcut `getClubMessages` / `sendClubMessage` backend sözleşmesini kullanır; mesaj girişi 300 karakterle sınırlandırılır, gönderimler arasında 1,5 saniyelik istemci anti-spam bekleme uygulanır ve canlı mesajlar mevcut polling sözleşmesiyle yenilenir.
+- Mevcut gönderim sözleşmesi kulüp üyeliğini doğrular; istemci üyelik kontrolünü atlatan paralel bir mesaj yolu oluşturmaz.
 - Kulüp merkezi, üyeler, görevler, sıralama ve kulüpler arası meydan okuma yüzeyleri mevcut `CompetitionHubScreen` üzerinden erişilebilir kalır.
-- Güvenlik/RLS, rate-limit ve moderasyon sınırları backend tarafında korunur; istemci bunları atlatan yeni bir yol oluşturmaz.
+- Bu entegrasyon kapsamında bağımsız, otoritatif sunucu-side rate-limit/moderasyon katmanı doğrulanmadığı için varmış gibi belgelenmez. Böyle bir güvenlik katmanı ayrıca devreye alınacaksa Supabase/RLS ve abuse politikalarıyla birlikte ayrı backend hardening işi olarak ele alınmalıdır.
 
 ### 7. Mağaza, koleksiyon ve çerçeveler
 Mevcut profil çerçevesi sözleşmesi GDD katalog yapısıyla uyumludur:
