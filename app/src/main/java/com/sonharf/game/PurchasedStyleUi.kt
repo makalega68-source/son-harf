@@ -210,6 +210,31 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
             PurchasedFrameCatalog.ROSE to ProductCatalog.PROFILE_FRAME_ROSE,
         )
     }
+
+    val refreshPurchasedFrames: suspend () -> Unit = {
+        loading = true
+        val b = backend
+        if (b == null) {
+            notice = sh("Profil Style sunucusu kullanılamıyor; çerçeveler güvenli önizleme modunda gösteriliyor.", "Profile Style server is unavailable; frames are shown in safe preview mode.")
+            loading = false
+            return
+        }
+        runCatching {
+            withTimeout(12_000L) {
+                val shop = b.getShopItems().filter { it.kind == "profile_frame" }
+                val state = b.getProfileFrameState()
+                val owned = state?.ownedProfileFrames?.toSet() ?: b.getInventory()
+                val equipped = b.getEquippedCosmetics()
+                shopItems = shop.associateBy { it.id }
+                inventory = owned
+                equippedId = state?.equippedProfileFrame ?: equipped?.profileFrameId
+                vipFrameAccess = state?.vipProFrameAccess == true
+                SonHarfCosmetics.apply(equipped)
+            }
+        }.onFailure {
+            notice = sh("Profil Style verileri alınamadı; bölüm açık kalacak ve daha sonra yeniden denenebilir.", "Profile Style data could not be loaded; the section remains open and can be retried later.")
+        }
+        loading = false\n    }
     val billing = remember {
         BillingManager(
             context = context,
@@ -234,34 +259,10 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         onDispose { billing.close() }
     }
 
-    suspend fun refreshPurchasedFrames() {
-        loading = true
-        val b = backend
-        if (b == null) {
-            notice = sh("Profil Style sunucusu kullanılamıyor; çerçeveler güvenli önizleme modunda gösteriliyor.", "Profile Style server is unavailable; frames are shown in safe preview mode.")
-            loading = false
-            return
-        }
-        runCatching {
-            withTimeout(12_000L) {
-                val shop = b.getShopItems().filter { it.kind == "profile_frame" }
-                val state = b.getProfileFrameState()
-                val owned = state?.ownedProfileFrames?.toSet() ?: b.getInventory()
-                val equipped = b.getEquippedCosmetics()
-                shopItems = shop.associateBy { it.id }
-                inventory = owned
-                equippedId = state?.equippedProfileFrame ?: equipped?.profileFrameId
-                vipFrameAccess = state?.vipProFrameAccess == true
-                SonHarfCosmetics.apply(equipped)
-            }
-        }.onFailure {
-            notice = sh("Profil Style verileri alınamadı; bölüm açık kalacak ve daha sonra yeniden denenebilir.", "Profile Style data could not be loaded; the section remains open and can be retried later.")
-        }
-        loading = false
-    }
+
 
     LaunchedEffect(backend) {
-        runCatching { reload() }.onFailure {
+        runCatching { refreshPurchasedFrames() }.onFailure {
             loading = false
             notice = sh("Profil Style geçici olarak kullanılamıyor.", "Profile Style is temporarily unavailable.")
         }
@@ -401,7 +402,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                                     }
                                                 }.onSuccess {
                                                     notice = sh("${spec.titleTr} kullanılıyor.", "${spec.titleEn} equipped.")
-                                                    reload()
+                                                    refreshPurchasedFrames()
                                                 }.onFailure { error ->
                                                     notice = if ("insufficient_diamonds" in error.message.orEmpty()) {
                                                         sh("Yeterli Son Coin'in yok.", "Not enough Son Coin.")
