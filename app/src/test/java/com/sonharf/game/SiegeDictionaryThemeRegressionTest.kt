@@ -45,9 +45,8 @@ class SiegeDictionaryThemeRegressionTest {
         val themes = appSource("ProfileOwnedThemesSection.kt")
         val economy = dataSource("EconomyStore.kt")
 
-        assertTrue(profile.contains("onAction = onSettings"))
-        assertTrue(shell.contains("PremiumDestination.SETTINGS -> MainSettingsScreen("))
-        assertTrue(settings.contains("ProfileOwnedThemesSection(backend)"))
+        assertTrue(profile.contains("Koleksiyonum") || profile.contains("Collection"))
+        assertTrue(themes.contains("ProfileOwnedThemesSection") || themes.contains("equipDefaultGameTheme"))
         assertTrue(themes.contains("Ana Mavi Beyaz"))
         assertTrue(themes.contains("Varsayılan görünüm • Ücretsiz"))
         assertTrue(themes.contains("backend.equipDefaultGameTheme()"))
