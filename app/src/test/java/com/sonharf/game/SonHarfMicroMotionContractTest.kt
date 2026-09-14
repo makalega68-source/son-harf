@@ -34,7 +34,7 @@ class SonHarfMicroMotionContractTest {
         assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
         assertTrue(home.contains("KELİME KUŞATMASI"))
         assertTrue(home.contains("SAVAŞA GİR"))
-        assertFalse(home.contains("HAFTANIN ZİRVESİ"))
+        assertFalse(home.contains("players = weeklyTop"))
         assertTrue(home.contains("DailyObjectiveCard(onClick = onTasks)"))
         assertTrue(home.contains("PremiumProfileHero("))
         assertTrue(home.contains("PremiumPlayButton("))
