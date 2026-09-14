@@ -14,7 +14,14 @@ object SonHarfUiState {
     val isEnglish: Boolean get() = language == "en"
 }
 
-/** Shared UI localization. Visible product branding remains Kelime Tahtı / Kelime Tahtı. */
+/**
+ * Shared UI localization.
+ *
+ * Kelime Kuşatması is the canonical user-visible product brand. Older source strings may still
+ * contain the previous Kelime Tahtı label for compatibility with untouched screens, but they are
+ * normalized here before rendering. Technical identifiers (WordSiege, package names, database
+ * contracts and deep links) are intentionally unaffected.
+ */
 fun sh(tr: String, en: String): String {
     val localized = if (SonHarfUiState.isEnglish) en else tr
     val primaryTagline = if (SonHarfUiState.isEnglish) {
@@ -34,4 +41,6 @@ fun sh(tr: String, en: String): String {
     }
 
     return localized
+        .replace("KELİME TAHTI", "KELİME KUŞATMASI")
+        .replace("Kelime Tahtı", "Kelime Kuşatması")
 }
