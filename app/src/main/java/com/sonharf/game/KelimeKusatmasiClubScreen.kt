@@ -6,7 +6,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Hub
@@ -134,7 +133,7 @@ internal fun KelimeKusatmasiClubScreen() {
             }
             else -> {
                 notice?.let {
-                    Surface(shape = RoundedCornerShape(12.dp), color = SonHarfTheme.WarmAccent.copy(alpha = .12f)) {
+                    Surface(shape = RoundedCornerShape(12.dp), color = SonHarfTheme.Error.copy(alpha = .12f)) {
                         Text(it, Modifier.fillMaxWidth().padding(10.dp), color = SonHarfTheme.TextPrimary, fontSize = 11.sp)
                     }
                     Spacer(Modifier.height(8.dp))
