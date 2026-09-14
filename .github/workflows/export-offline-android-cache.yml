@@ -1,0 +1,83 @@
+name: Export offline Android build cache
+
+on:
+  push:
+    branches: [recovery/import-80b5099]
+    paths: [.github/workflows/export-offline-android-cache.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  export-cache:
+    runs-on: ubuntu-latest
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Remove proxy variables and stale Gradle proxy settings
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.gradle"
+          if [ -f "$HOME/.gradle/gradle.properties" ]; then
+            sed -i -E '/systemProp\.(http|https)\.proxy/d' "$HOME/.gradle/gradle.properties"
+          fi
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            "$SDKMANAGER" 'platforms;android-36' 'build-tools;36.0.0' 'platform-tools'
+
+      - name: Install Gradle 8.14.4
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            curl -fsSL --retry 3 -o "$RUNNER_TEMP/gradle.zip" \
+            'https://services.gradle.org/distributions/gradle-8.14.4-bin.zip'
+          unzip -q "$RUNNER_TEMP/gradle.zip" -d "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/gradle-8.14.4/bin" >> "$GITHUB_PATH"
+
+      - name: Hydrate all debug build dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy \
+            GRADLE_OPTS='-Djava.net.useSystemProxies=false' \
+            gradle clean :app:testDebugUnitTest :app:assembleDebug --no-daemon --stacktrace
+
+      - name: Pack offline toolchain and dependency cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/offline/gradle" "$RUNNER_TEMP/offline/sdk"
+          cp -a "$RUNNER_TEMP/gradle-8.14.4" "$RUNNER_TEMP/offline/gradle/"
+          cp -a "$HOME/.gradle" "$RUNNER_TEMP/offline/gradle/user-home"
+          cp -a "$ANDROID_HOME/platforms/android-36" "$RUNNER_TEMP/offline/sdk/"
+          mkdir -p "$RUNNER_TEMP/offline/sdk/build-tools"
+          cp -a "$ANDROID_HOME/build-tools/36.0.0" "$RUNNER_TEMP/offline/sdk/build-tools/"
+          cp -a "$ANDROID_HOME/platform-tools" "$RUNNER_TEMP/offline/sdk/"
+          cp -a "$ANDROID_HOME/licenses" "$RUNNER_TEMP/offline/sdk/" || true
+          tar -C "$RUNNER_TEMP/offline" -I 'zstd -3 -T0' -cf "$RUNNER_TEMP/android-offline-cache.tar.zst" .
+          sha256sum "$RUNNER_TEMP/android-offline-cache.tar.zst" | tee "$RUNNER_TEMP/android-offline-cache.sha256"
+          ls -lh "$RUNNER_TEMP/android-offline-cache.tar.zst"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-offline-build-cache-8.14.4-agp8.12.1
+          path: |
+            ${{ runner.temp }}/android-offline-cache.tar.zst
+            ${{ runner.temp }}/android-offline-cache.sha256
+          if-no-files-found: error
+          retention-days: 3
