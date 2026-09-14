@@ -45,7 +45,6 @@ jobs:
           test -f "$RUNNER_TEMP/parts/cache.part.00"
           test -f "$RUNNER_TEMP/parts/cache.part.01"
           test -f "$RUNNER_TEMP/parts/cache.part.02"
-          test -f "$RUNNER_TEMP/parts/cache.part.03"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -64,15 +63,8 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: offline-cache-part-02
-          path: ${{ runner.temp }}/parts/cache.part.02
-          compression-level: 0
-          retention-days: 3
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: offline-cache-part-03
           path: |
-            ${{ runner.temp }}/parts/cache.part.03
+            ${{ runner.temp }}/parts/cache.part.02
             ${{ runner.temp }}/parts/android-offline-cache.sha256
             ${{ runner.temp }}/parts/parts.sha256
           compression-level: 0
