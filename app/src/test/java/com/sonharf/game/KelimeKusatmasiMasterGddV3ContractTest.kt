@@ -39,6 +39,20 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     }
 
     @Test
+    fun clubUsesDedicatedFullPageChatWithoutReplacingManagementSurface() {
+        val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
+
+        assertTrue(shell.contains("PremiumDestination.CLUB -> KelimeKusatmasiClubScreen()"))
+        assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
+        assertTrue(club.contains("Modifier.fillMaxSize()"))
+        assertTrue(club.contains("b.getClubMessages(current.clubId)"))
+        assertTrue(club.contains("b.sendClubMessage(current.clubId, outgoing)"))
+        assertTrue(club.contains("CompetitionHubScreen(onBack = { showClubCenter = false }, clubEntry = true)"))
+        assertTrue(club.contains("onValueChange = { input = it.take(300) }"))
+    }
+
+    @Test
     fun economyKeepsVerifiedFramesAndZeroPayToWinPromise() {
         val economy = File("src/main/java/com/sonharf/game/data/EconomyStore.kt").readText()
         val shop = File("src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
