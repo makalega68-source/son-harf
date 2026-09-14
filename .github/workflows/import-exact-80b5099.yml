@@ -49,26 +49,30 @@ jobs:
               if not rows:
                   break
               for row in rows:
-                  body = (row.get('body') or '').strip()
-                  m = re.fullmatch(r'X85_(\d{3}):(.+)', body)
-                  if m:
-                      blocks[int(m.group(1))] = m.group(2)
+                  body = row.get('body') or ''
+                  for n, payload in re.findall(r'BUNDLE_CHUNK_(\d{3}):([A-Za-z0-9+/=]+)', body):
+                      blocks[int(n)] = payload
               if len(rows) < 100:
                   break
               page += 1
           if not blocks:
-              raise SystemExit('No X85 transfer blocks found')
-          expected = list(range(42))
+              raise SystemExit('No BUNDLE_CHUNK transfer blocks found')
+          expected = list(range(max(blocks) + 1))
           if sorted(blocks) != expected:
               missing = sorted(set(expected) - set(blocks))
-              raise SystemExit(f'Missing X85 transfer blocks: {missing}')
-          raw = base64.b85decode(''.join(blocks[i] for i in expected))
+              raise SystemExit(f'Missing transfer blocks: {missing}; present={sorted(blocks)}')
+          encoded = ''.join(blocks[i] for i in expected)
+          print(f'present={sorted(blocks)} encoded_chars={len(encoded)}')
+          try:
+              raw = base64.b64decode(encoded, validate=True)
+          except Exception as e:
+              raise SystemExit(f'Base64 decode failed: {e}')
           sha = hashlib.sha256(raw).hexdigest()
+          print(f'decoded_bytes={len(raw)} sha256={sha}')
           expected_sha = '0946e0340190e3f3f07c9849386f461b2158bd8496a3d0e70291ba260df10e7c'
           if sha != expected_sha:
-              raise SystemExit(f'Bundle SHA-256 mismatch: {sha}')
+              raise SystemExit(f'Bundle SHA-256 mismatch: got={sha} expected={expected_sha}')
           open('/tmp/80b5099.bundle','wb').write(raw)
-          print(f'Reassembled {len(raw)} bytes, sha256={sha}, blocks={len(blocks)}')
           PY
           git bundle verify /tmp/80b5099.bundle
           git fetch /tmp/80b5099.bundle HEAD:refs/remotes/exact/80b5099
