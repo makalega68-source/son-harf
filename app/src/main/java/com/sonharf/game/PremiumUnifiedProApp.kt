@@ -254,7 +254,7 @@ private fun PremiumHomeScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             item(key = "home_hero") {
-                PremiumHomeCommandDeck(profile, onProfile, onPrimary, onShop, onSocial)
+                PremiumHomeCommandDeck(profile, onProfile, onPrimary, onSocial)
             }
             item(key = "daily_objective") {
                 PremiumDailyObjective(onClick = onCompete)
