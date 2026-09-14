@@ -12,7 +12,7 @@ class AssetIntegrationContractTest {
 
     @Test fun frameCatalogContainsIntegratedPurchasedVariantsAndNoPowerFields() {
         val src = read("src/main/java/com/sonharf/game/PurchasedStyleUi.kt")
-        listOf("RED", "GREEN", "MINT", "PURPLE", "GOLD", "GOLD_CROWN").forEach { assertTrue(src.contains(it)) }
+        listOf("OCEAN", "BOTANIC", "LILAC", "ROSE", "GOLDEN_AVATAR").forEach { assertTrue(src.contains(it)) }
         assertTrue(src.contains("only change appearance") || src.contains("yalnızca görünümü"))
     }
 
