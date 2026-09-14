@@ -5,47 +5,63 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class KelimeTahtiPrimaryProductContractTest {
+class KelimeKusatmasiPrimaryProductContractTest {
     @Test
-    fun kelimeTahtiIsFlagshipAndTopLevelNavigationStaysSimple() {
+    fun kelimeKusatmasiIsFlagshipAndTopLevelNavigationMatchesMasterGdd() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val home = File("src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
         val manifest = File("src/main/AndroidManifest.xml").readText()
+        val strings = File("src/main/res/values/strings.xml").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
         val logo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeRaster = File("src/main/res/drawable/kelime_kusatma_logo_hd.png")
 
         assertTrue(manifest.contains("android:label=\"@string/app_name\""))
+        // Resource/deep-link identifiers remain stable even though the visible product brand changes.
         assertTrue(manifest.contains("@mipmap/ic_kelime_tahti"))
-        assertTrue(logo.contains("R.drawable.kelime_tahti_logo_latest"))
+        assertTrue(strings.contains("<string name=\"app_name\">Kelime Kuşatması</string>"))
+        assertTrue(logo.contains("R.drawable.kelime_kusatma_logo_hd"))
         assertTrue(siegeRaster.isFile)
         assertTrue(isPng(siegeRaster))
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.webp").exists())
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.xml").exists())
+        assertTrue(localization.contains("replace(\"Kelime Tahtı\", \"Kelime Kuşatması\")"))
         assertFalse(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
         assertFalse(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
 
-        assertTrue(home.contains("Text(\"KELİME TAHTI\""))
+        assertTrue(home.contains("Text(\"KELİME KUŞATMASI\""))
+        assertTrue(home.contains("R.drawable.kelime_kusatma_logo_hd"))
         assertTrue(home.contains("Button(onClick = onSiege"))
         assertTrue(home.contains("sh(\"SAVAŞA GİR\", \"ENTER BATTLE\")"))
         assertTrue(shell.contains("PremiumBottomBar("))
-        assertFalse(shell.contains("backend.getLeaderboardV2(language, \"week\", 3)"))
-        assertFalse(shell.contains("PremiumWeeklyPodium("))
-        assertFalse(shell.contains("PremiumOtherGames("))
+        assertTrue(shell.contains("PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)"))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
-        assertTrue(shell.contains("title = sh(\"KELİME TAHTI\", \"KELİME TAHTI\")"))
+        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(shell.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
 
         assertTrue(shell.contains("PremiumDestination.HOME"))
         assertTrue(shell.contains("PremiumDestination.GAMES"))
         assertTrue(shell.contains("PremiumDestination.COMPETE"))
+        assertTrue(shell.contains("PremiumDestination.SOCIAL"))
         assertTrue(shell.contains("PremiumDestination.PROFILE"))
         assertFalse(shell.contains("PremiumDestination.LEAGUE"))
         assertFalse(shell.contains("PremiumDestination.COMPETITION"))
         assertTrue(shell.contains("PremiumDestination.SHOP -> EconomyShopScreen"))
+
         val topLevel = shell.substringAfter("val topLevel =").substringBefore("val scheme =")
+        assertTrue(topLevel.contains("PremiumDestination.HOME"))
+        assertTrue(topLevel.contains("PremiumDestination.CLUB"))
+        assertTrue(topLevel.contains("PremiumDestination.SOCIAL"))
         assertTrue(topLevel.contains("PremiumDestination.SHOP"))
+        assertTrue(topLevel.contains("PremiumDestination.PROFILE"))
+        assertFalse(topLevel.contains("PremiumDestination.GAMES"))
+        assertFalse(topLevel.contains("PremiumDestination.COMPETE"))
+        assertTrue(shell.contains("sh(\"ANA SAYFA\", \"HOME\")"))
+        assertTrue(shell.contains("sh(\"KULÜP\", \"CLUB\")"))
+        assertTrue(shell.contains("sh(\"ARKADAŞLAR\", \"FRIENDS\")"))
+        assertTrue(shell.contains("sh(\"MAĞAZA\", \"STORE\")"))
+        assertTrue(shell.contains("sh(\"PROFİL\", \"PROFILE\")"))
         assertFalse(shell.contains("PremiumDestination.TASKS"))
     }
 
