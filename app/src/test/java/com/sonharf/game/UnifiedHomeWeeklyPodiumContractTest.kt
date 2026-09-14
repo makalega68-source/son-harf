@@ -7,47 +7,24 @@ import org.junit.Test
 
 class UnifiedHomeWeeklyPodiumContractTest {
     @Test
-    fun homeUsesKelimeKusatmasiPrimaryEntryAndPremiumRealWeeklyPodium() {
+    fun homeKeepsKelimeKusatmasiPrimaryEntryWithoutWeeklyPodium() {
         val source = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
         // Kelime Kuşatması is the primary play entry; Son Harf remains a secondary quick mode.
         assertTrue(source.contains("PremiumPlayButton(onClick = onSiege)"))
         assertTrue(source.contains("KELİME KUŞATMASI"))
-        assertTrue(source.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
+        assertTrue(source.contains("SAVAŞA GİR"))
         assertFalse(source.contains("title = sh(\"PREMIER 1v1\", \"PREMIER 1v1\")"))
         assertFalse(source.contains("ARENANI SEÇ"))
         assertFalse(source.contains("20 saniyelik baskı"))
 
-        // Home podium still uses the authoritative weekly top-three source.
-        assertTrue(source.contains("backend.getLeaderboardV2(language, \"week\", 3)"))
-        assertTrue(source.contains("WeeklyChampionPodium("))
-        assertTrue(source.contains("HAFTANIN ZİRVESİ"))
-        assertTrue(source.contains("players.getOrNull(0)"))
-        assertTrue(source.contains("players.getOrNull(1)"))
-        assertTrue(source.contains("players.getOrNull(2)"))
+        // Weekly podium is intentionally removed from the home feed until its live data presentation is repaired.
+        assertFalse(source.contains("WeeklyPodiumCardV210("))
+        assertFalse(source.contains("backend.getLeaderboardV2(language, \"week\", 3)"))
 
-        // Approved premium hierarchy: center champion, two runners, glow/confetti and privacy-safe avatars.
-        assertTrue(source.contains("private fun PodiumColumn"))
-        assertTrue(source.contains("private fun PodiumAmbientDecor"))
-        assertTrue(source.contains("ProfilePhotoAvatarWithGender("))
-        assertTrue(source.contains("ŞAMPİYON"))
-        assertTrue(source.contains("place = 1"))
-        assertTrue(source.contains("place = 2"))
-        assertTrue(source.contains("place = 3"))
-        assertTrue(source.contains("avatarVisibility == \"hidden\""))
-
-        // No fabricated player names are injected when the backend has no weekly rows.
-        assertTrue(source.contains("players.isEmpty()"))
-        assertTrue(source.contains("player = players.getOrNull(0)"))
-        assertTrue(source.contains("player = players.getOrNull(1)"))
-        assertTrue(source.contains("player = players.getOrNull(2)"))
-
-        // Secondary modes remain reachable with clear hierarchy.
-        assertTrue(source.contains("DİĞER OYUNLAR"))
-        assertTrue(source.contains("son_harf_app_icon_master"))
-        assertTrue(source.contains("harf_yolu_logo"))
-        assertTrue(source.contains("onClick = onPlay"))
-        assertTrue(source.contains("onClick = onLetter"))
+        // The home lobby deliberately avoids duplicate mode-navigation cards.
+        assertFalse(source.contains("DİĞER OYUNLAR"))
+        assertTrue(source.contains("DailyObjectiveCard(onClick = onTasks)"))
         assertTrue(source.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
     }
 }

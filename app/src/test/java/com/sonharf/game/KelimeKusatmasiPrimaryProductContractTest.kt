@@ -24,8 +24,8 @@ class KelimeTahtiPrimaryProductContractTest {
         assertTrue(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
         assertTrue(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
         assertTrue(shell.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
-        assertTrue(shell.contains("onClick = onPlay"))
+        assertTrue(shell.contains("SAVAŞA GİR"))
+        assertTrue(shell.contains("UnifiedDestination.GAME -> OnlineGameScreenV6()"))
     }
 
     @Test

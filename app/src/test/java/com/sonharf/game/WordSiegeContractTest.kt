@@ -38,7 +38,7 @@ class WordSiegeContractTest {
         assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
         assertTrue(home.contains("sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(home.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
-        assertTrue(home.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
+        assertTrue(home.contains("SAVAŞA GİR"))
         assertFalse(home.contains("KELİME FETHİ"))
         assertFalse(projectFile("app/src/main/java/com/sonharf/game").resolve("WordConquestGame.kt").exists())
     }

@@ -106,30 +106,6 @@ internal fun MainSettingsScreen(
         }
 
         item {
-            MainSettingsGroup(sh("DİL", "LANGUAGE")) {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = language == "tr",
-                        onClick = { language = "tr"; SonHarfPreferences.setLanguage(context, "tr") },
-                        label = { Text("🇹🇷 TÜRKÇE", fontWeight = FontWeight.Bold) },
-                        modifier = Modifier.weight(1f),
-                    )
-                    FilterChip(
-                        selected = language == "en",
-                        onClick = { language = "en"; SonHarfPreferences.setLanguage(context, "en") },
-                        label = { Text("🇬🇧 ENGLISH", fontWeight = FontWeight.Bold) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                Text(
-                    sh("Dil değişikliği açık ekranlarda hemen uygulanır.", "Language changes apply immediately to open screens."),
-                    color = MainUi.Muted,
-                    fontSize = 9.sp,
-                )
-            }
-        }
-
-        item {
             MainSettingsGroup(sh("BİLDİRİMLER", "NOTIFICATIONS")) {
                 MainToggleSetting(Icons.Rounded.SportsEsports, sh("Oyun davetleri", "Game invitations"), sh("Arkadaşların düelloya çağırdığında", "When friends invite you to a duel"), gameInvites) {
                     gameInvites = it

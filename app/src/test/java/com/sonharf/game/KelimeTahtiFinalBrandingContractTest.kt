@@ -13,7 +13,7 @@ class KelimeTahtiFinalBrandingContractTest {
         val home = source("src/main/java/com/sonharf/game/UnifiedProApp.kt")
 
         assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(home.contains("Kelime kur • alanı ele geçir • haritayı kontrol et"))
+        assertTrue(home.contains("SAVAŞA GİR"))
         assertTrue(state.contains("OYNA • Harflerini yerleştir, kelimeni oluştur"))
         assertTrue(state.contains("PLAY • Place your tiles, build your word"))
         assertTrue(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))
