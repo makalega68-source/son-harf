@@ -234,7 +234,8 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         }.onFailure {
             notice = sh("Profil Style verileri alınamadı; bölüm açık kalacak ve daha sonra yeniden denenebilir.", "Profile Style data could not be loaded; the section remains open and can be retried later.")
         }
-        loading = false\n    }
+        loading = false
+    }
     val billing = remember {
         BillingManager(
             context = context,
