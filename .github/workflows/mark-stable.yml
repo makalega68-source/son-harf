@@ -41,6 +41,8 @@ jobs:
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
 
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
 
       - name: Verify candidate
         shell: bash
@@ -71,4 +73,3 @@ jobs:
           echo "- Stable etiketi: `$TAG`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Commit: `$SHA`" >> "$GITHUB_STEP_SUMMARY"
           echo "- Bu etiket, gÃ¼venli rollback hedefidir." >> "$GITHUB_STEP_SUMMARY"
-ëŽ

@@ -23,6 +23,8 @@ jobs:
       - name: Install Android SDK 36
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'

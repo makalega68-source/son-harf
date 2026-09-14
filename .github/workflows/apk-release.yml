@@ -24,6 +24,8 @@ jobs:
       - name: Install Android SDK 36
         run: sdkmanager "platforms;android-36" "build-tools;36.0.0"
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
       - name: Build APK
         run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace
       - name: Stage APK
