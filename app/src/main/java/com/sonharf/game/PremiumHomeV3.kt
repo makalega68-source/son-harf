@@ -85,13 +85,13 @@ internal fun PremiumHomeCommandDeck(
                             Text(sh("KELİMELERLE ALAN SAVAŞI", "A BATTLE OF WORDS & TERRITORY"),
                                 color = Color.White.copy(alpha = .8f), fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                         }
-                        Text("KELİME TAHTI", color = Color.White, fontSize = 27.sp,
+                        Text("KELİME KUŞATMASI", color = Color.White, fontSize = 27.sp,
                             lineHeight = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.5).sp)
                     }
                     Spacer(Modifier.width(12.dp))
                     Image(
-                        painter = painterResource(R.drawable.kelime_tahti_logo),
-                        contentDescription = null,
+                        painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
+                        contentDescription = sh("Kelime Kuşatması", "Kelime Kuşatması"),
                         modifier = Modifier.size(width = 158.dp, height = 104.dp),
                         contentScale = ContentScale.Fit,
                     )
