@@ -17,13 +17,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
-import com.sonharf.game.data.getLeaderboardV2
 import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.SupabaseProvider
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
 
 private enum class PremiumDestination {
     HOME, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
@@ -84,8 +80,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
-            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.SOCIAL, PremiumDestination.COLLECTION -> PremiumDestination.PROFILE
-            PremiumDestination.SHOP -> PremiumDestination.HOME
+            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION -> PremiumDestination.PROFILE
+            PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.HOME
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
             PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
@@ -96,11 +92,11 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         }
     }
 
+    // Master GDD v3 top-level navigation: Home, Club, Friends/Social, Store, Profile.
     val topLevel = destination in setOf(
         PremiumDestination.HOME,
-        PremiumDestination.GAMES,
         PremiumDestination.CLUB,
-        PremiumDestination.COMPETE,
+        PremiumDestination.SOCIAL,
         PremiumDestination.SHOP,
         PremiumDestination.PROFILE,
     )
@@ -141,9 +137,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumBottomBar(
                         destination = destination,
                         onHome = { destination = PremiumDestination.HOME },
-                        onShop = { destination = PremiumDestination.SHOP },
                         onClub = { destination = PremiumDestination.CLUB },
-                        onCompete = { destination = PremiumDestination.COMPETE },
+                        onSocial = { destination = PremiumDestination.SOCIAL },
+                        onShop = { destination = PremiumDestination.SHOP },
                         onProfile = { destination = PremiumDestination.PROFILE },
                     )
                 }
@@ -155,10 +151,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
                         backend = backend,
                         onPrimary = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
-                        onGames = { destination = PremiumDestination.GAMES },
                         onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
-                        onShop = { destination = PremiumDestination.SHOP },
                         onSocial = { destination = PremiumDestination.SOCIAL },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
@@ -174,15 +168,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
                     )
-                    // Rekabet merkezi; kulüpler, haftalık kupa ve rakip geçmişinin
-                    // ana navigasyondan erişilen sosyal giriş noktasıdır.
                     PremiumDestination.COMPETE -> CompetitionHubScreen(
                         onBack = { destination = PremiumDestination.HOME },
                     )
-                    PremiumDestination.CLUB -> CompetitionHubScreen(
-                        onBack = { destination = PremiumDestination.HOME },
-                        clubEntry = true,
-                    )
+                    PremiumDestination.CLUB -> KelimeKusatmasiClubScreen()
                     PremiumDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE_DETAILS },
@@ -193,7 +182,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     )
                     PremiumDestination.COLLECTION -> PlayerCollectionScreen(backend) { destination = PremiumDestination.PROFILE }
                     PremiumDestination.SHOP -> EconomyShopScreen(
-                        onBack = { destination = PremiumDestination.PROFILE },
+                        onBack = { destination = PremiumDestination.HOME },
                         onMembershipChanged = { isPro = it },
                         onCollection = { destination = PremiumDestination.COLLECTION },
                     )
@@ -231,10 +220,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 private fun PremiumHomeScreen(
     backend: OnlineGameBackend,
     onPrimary: () -> Unit,
-    onGames: () -> Unit,
     onCompete: () -> Unit,
     onProfile: () -> Unit,
-    onShop: () -> Unit,
     onSocial: () -> Unit,
     onLastLetter: () -> Unit,
     onLetterPath: () -> Unit,
@@ -255,6 +242,9 @@ private fun PremiumHomeScreen(
         ) {
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onSocial)
+            }
+            item(key = "home_secondary_modes") {
+                PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)
             }
             item(key = "daily_objective") {
                 PremiumDailyObjective(onClick = onCompete)
@@ -300,7 +290,7 @@ private fun PremiumGameCenter(
         item {
             PremiumGameCard(
                 icon = Icons.Rounded.GridView,
-                title = sh("KELİME TAHTI", "KELİME TAHTI"),
+                title = sh("KELİME KUŞATMASI", "KELİME KUŞATMASI"),
                 subtitle = sh("Ana oyun • taktik alan savaşı", "Main game • tactical territory battle"),
                 language = siegeLanguage,
                 onLanguageChange = onSiegeLanguage,
@@ -437,16 +427,16 @@ private fun PremiumLanguageChoice(
 private fun PremiumBottomBar(
     destination: PremiumDestination,
     onHome: () -> Unit,
-    onShop: () -> Unit,
     onClub: () -> Unit,
-    onCompete: () -> Unit,
+    onSocial: () -> Unit,
+    onShop: () -> Unit,
     onProfile: () -> Unit,
 ) {
     val items = listOf(
-        Triple(PremiumDestination.HOME, Icons.Rounded.Home, sh("ANA", "HOME")) to onHome,
-        Triple(PremiumDestination.SHOP, Icons.Rounded.Storefront, sh("MAĞAZA", "SHOP")) to onShop,
+        Triple(PremiumDestination.HOME, Icons.Rounded.Home, sh("ANA SAYFA", "HOME")) to onHome,
         Triple(PremiumDestination.CLUB, Icons.Rounded.Groups, sh("KULÜP", "CLUB")) to onClub,
-        Triple(PremiumDestination.COMPETE, Icons.Rounded.EmojiEvents, sh("REKABET", "COMPETE")) to onCompete,
+        Triple(PremiumDestination.SOCIAL, Icons.Rounded.People, sh("ARKADAŞLAR", "FRIENDS")) to onSocial,
+        Triple(PremiumDestination.SHOP, Icons.Rounded.Storefront, sh("MAĞAZA", "STORE")) to onShop,
         Triple(PremiumDestination.PROFILE, Icons.Rounded.Person, sh("PROFİL", "PROFILE")) to onProfile,
     )
     NavigationBar(containerColor = SonHarfTheme.NavigationSurface, tonalElevation = 0.dp) {

@@ -5,7 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class SimpleKelimeTahtiRestoreContractTest {
+class SimpleKelimeKusatmasiRestoreContractTest {
     @Test fun simplifiedGameChromeAndCubeOwnershipColorsStayRestored() {
         val online = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
@@ -26,8 +26,8 @@ class SimpleKelimeTahtiRestoreContractTest {
         assertTrue(board.contains("if (mode == WordSiegeBoardViewportMode.CLOSE)"))
         assertFalse(board.contains("WordSiegeBoardViewportMode.CLOSE && !enabled"))
 
-        assertTrue(logo.contains("R.drawable.kelime_tahti_logo_latest"))
-        assertTrue(projectFile("app/src/main/res/drawable-nodpi/kelime_tahti_logo_latest.png").isFile)
+        assertTrue(logo.contains("R.drawable.kelime_kusatma_logo_hd"))
+        assertTrue(projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.png").isFile)
     }
 
     private fun projectFile(path: String): File {

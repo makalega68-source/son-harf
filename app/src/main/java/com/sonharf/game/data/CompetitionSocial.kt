@@ -218,6 +218,27 @@ suspend fun OnlineGameBackend.sendClubMessage(clubId: String, text: String) {
         .insert(ClubMessageWrite(clubId, me, body))
 }
 
+suspend fun OnlineGameBackend.reportClubMember(userId: String) {
+    val me = currentUserId() ?: error("not_authenticated")
+    require(userId != me) { "cannot_report_self" }
+    SupabaseProvider.client.postgrest.rpc(
+        "report_player",
+        buildJsonObject {
+            put("p_reported_id", userId)
+            put("p_reason", "club_chat_spam_or_abuse")
+        },
+    )
+}
+
+suspend fun OnlineGameBackend.blockClubMember(userId: String) {
+    val me = currentUserId() ?: error("not_authenticated")
+    require(userId != me) { "cannot_block_self" }
+    SupabaseProvider.client.postgrest.rpc(
+        "block_user",
+        buildJsonObject { put("p_blocked_id", userId) },
+    )
+}
+
 suspend fun OnlineGameBackend.getWeeklyTournament(): WeeklyTournamentDto =
     SupabaseProvider.client.postgrest.rpc("get_weekly_tournament_v1").decodeSingle()
 

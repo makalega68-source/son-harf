@@ -412,8 +412,6 @@ internal object WordSiegePracticeEngine {
 
     private fun finish(state: WordSiegePracticeState, reason: String, forcedWinner: Int? = null): WordSiegePracticeState {
         val winner = forcedWinner ?: when {
-            totalScore(state, 1) > totalScore(state, 2) -> 1
-            totalScore(state, 2) > totalScore(state, 1) -> 2
             state.playerArea > state.botArea -> 1
             state.botArea > state.playerArea -> 2
             else -> null

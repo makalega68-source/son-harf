@@ -7,22 +7,24 @@ import org.junit.Test
 
 class GameModeBrandingAndVisibleActionContractTest {
     @Test
-    fun homeMakesKelimeTahtiPrimaryAndKeepsSecondaryModesBranded() {
+    fun homeMakesKelimeKusatmasiPrimaryAndKeepsSecondaryModesBranded() {
         val home = projectFile("app/src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
         val games = projectFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val brand = projectFile("app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeRaster = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.png")
 
+        assertTrue(home.contains("Text(\"KELİME KUŞATMASI\""))
         assertTrue(home.contains("Button(onClick = onSiege"))
         assertTrue(home.contains("onClick = onPlay"))
-        assertTrue(brand.contains("R.drawable.kelime_tahti_logo_latest"))
+        assertTrue(brand.contains("R.drawable.kelime_kusatma_logo_hd"))
         assertTrue(siegeRaster.isFile)
         assertTrue(isPng(siegeRaster))
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.webp")?.exists() == true)
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")?.exists() == true)
-        assertTrue(games.contains("title = sh(\"KELİME TAHTI\", \"KELİME TAHTI\")"))
+        assertTrue(games.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
         assertTrue(games.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(games.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
+        assertTrue(games.contains("PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)"))
         assertTrue(games.contains("onClick = onSiege"))
         assertTrue(games.contains("onClick = onLastLetter"))
         assertTrue(games.contains("onClick = onLetterPath"))

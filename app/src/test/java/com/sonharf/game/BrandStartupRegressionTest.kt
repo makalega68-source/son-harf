@@ -8,7 +8,7 @@ import org.junit.Test
 
 class BrandStartupRegressionTest {
     @Test
-    fun startupBrandUsesAndroidDecodableKelimeTahtiAssetsAndAdaptiveLauncherIcon() {
+    fun startupBrandUsesAndroidDecodableKelimeKusatmasiAssetsAndAdaptiveLauncherIcon() {
         val authGate = File("src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
         val officialLogo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeHub = File("src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
@@ -29,7 +29,7 @@ class BrandStartupRegressionTest {
         assertTrue(adaptiveBackground.isFile)
         assertTrue(adaptiveIcon.readText().contains("@drawable/kelime_tahti_app_icon"))
 
-        assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_tahti_logo_latest)"))
+        assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(authGate.contains("painterResource(R.drawable.son_harf_gold_teal_logo)"))
         assertTrue(siegeHub.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
 
