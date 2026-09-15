@@ -31,6 +31,7 @@ import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SupabaseProvider
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
 import io.ktor.client.HttpClient
 import io.ktor.client.engine.okhttp.OkHttp
 import io.ktor.client.request.get
@@ -40,12 +41,23 @@ import io.ktor.http.HttpHeaders
 import io.ktor.http.isSuccess
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.io.ByteArrayOutputStream
+
+@Serializable
+private data class PublicProfileFrameDto(
+    @SerialName("user_id") val userId: String,
+    @SerialName("profile_frame_id") val profileFrameId: String? = null,
+)
 
 internal object ProfilePhotoRuntime {
     private val http = HttpClient(OkHttp)
     private val cache = LinkedHashMap<String, ByteArray>()
     private val genderCache = LinkedHashMap<String, String?>()
+    private val frameCache = LinkedHashMap<String, String?>()
 
     suspend fun load(path: String): ByteArray? {
         if (path.isBlank() || !SupabaseProvider.configured) return null
@@ -79,6 +91,34 @@ internal object ProfilePhotoRuntime {
             while (genderCache.size > 80) genderCache.remove(genderCache.keys.first())
         }
         return gender
+    }
+
+    /**
+     * Resolves only the public equipped profile-frame id for the avatar owner. The server RPC
+     * exposes no private inventory or entitlement data. Current-user frames bypass the cache so an
+     * APPLY action is reflected immediately across every screen in the running app.
+     */
+    suspend fun frameForAvatar(path: String?): String? {
+        if (path.isNullOrBlank() || !SupabaseProvider.configured) return null
+        val ownerId = path.substringBefore('/').takeIf { it.isNotBlank() } ?: return null
+        val currentOwner = SupabaseProvider.client.auth.currentSessionOrNull()?.user?.id
+        if (currentOwner == ownerId) return SonHarfCosmetics.profileFrameId
+        synchronized(frameCache) {
+            if (frameCache.containsKey(ownerId)) return frameCache[ownerId]
+        }
+        val frameId = runCatching {
+            SupabaseProvider.client.postgrest
+                .rpc("get_public_profile_frame_v1", buildJsonObject { put("p_user_id", ownerId) })
+                .decodeList<PublicProfileFrameDto>()
+                .firstOrNull()
+                ?.profileFrameId
+                ?.takeIf { it in PurchasedFrameCatalog.ids }
+        }.getOrNull()
+        synchronized(frameCache) {
+            frameCache[ownerId] = frameId
+            while (frameCache.size > 120) frameCache.remove(frameCache.keys.first())
+        }
+        return frameId
     }
 
     suspend fun compactForUpload(source: ByteArray, maxSide: Int = 720, maxBytes: Int = 420_000): ByteArray = withContext(Dispatchers.Default) {
@@ -185,6 +225,43 @@ internal fun SyntheticBotPortrait(
 }
 
 @Composable
+private fun rememberResolvedProfileFrame(avatarPath: String?, explicitFrameId: String? = null): String? {
+    var resolved by remember(avatarPath) { mutableStateOf<String?>(null) }
+    val explicit = explicitFrameId?.takeIf { it in PurchasedFrameCatalog.ids }
+    val localFrameVersion = SonHarfCosmetics.profileFrameId
+    LaunchedEffect(avatarPath, explicit, localFrameVersion) {
+        resolved = explicit ?: ProfilePhotoRuntime.frameForAvatar(avatarPath)
+    }
+    return explicit ?: resolved
+}
+
+@Composable
+private fun CircularProfileAvatarShell(
+    size: Dp,
+    frameId: String?,
+    gender: String?,
+    showGenderBadge: Boolean,
+    content: @Composable () -> Unit,
+) {
+    val hasFrame = !frameId.isNullOrBlank()
+    val frameSize = size + 16.dp
+    Box(
+        Modifier.size(if (hasFrame) frameSize else size + 5.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        content()
+        if (hasFrame) {
+            PurchasedProfileFrameOverlay(frameId = frameId, modifier = Modifier.size(frameSize))
+        }
+        if (showGenderBadge) {
+            Box(Modifier.align(Alignment.BottomEnd)) {
+                FramelessGenderSymbol(gender, size)
+            }
+        }
+    }
+}
+
+@Composable
 internal fun ProfilePhotoAvatar(
     avatarPath: String?,
     name: String,
@@ -199,7 +276,8 @@ internal fun ProfilePhotoAvatar(
         gender = ProfilePhotoRuntime.genderForAvatar(avatarPath)
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
-    Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
+    val frameId = rememberResolvedProfileFrame(avatarPath)
+    CircularProfileAvatarShell(size, frameId, gender, showGenderBadge = true) {
         Box(
             Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
             contentAlignment = Alignment.Center,
@@ -209,9 +287,6 @@ internal fun ProfilePhotoAvatar(
             } else {
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
-        }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, size)
         }
     }
 }
@@ -225,13 +300,15 @@ internal fun ProfilePhotoAvatarWithGender(
     accent: Color = SonHarfCyan,
     visible: Boolean = true,
     showGenderBadge: Boolean = true,
+    frameId: String? = null,
 ) {
     var bytes by remember(avatarPath) { mutableStateOf<ByteArray?>(null) }
     LaunchedEffect(avatarPath, visible) {
         bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
-    Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
+    val resolvedFrameId = rememberResolvedProfileFrame(avatarPath, frameId)
+    CircularProfileAvatarShell(size, resolvedFrameId, gender, showGenderBadge) {
         Box(
             Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
             contentAlignment = Alignment.Center,
@@ -240,11 +317,6 @@ internal fun ProfilePhotoAvatarWithGender(
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
             } else {
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
-            }
-        }
-        if (showGenderBadge) {
-            Box(Modifier.align(Alignment.BottomEnd)) {
-                FramelessGenderSymbol(gender, size)
             }
         }
     }
@@ -268,8 +340,12 @@ internal fun ProfilePhotoAvatarRectWithGender(
     // Historical callers supplied rectangular slots. The slot may remain rectangular, but the
     // player image itself is always circular so every social/game surface uses one avatar rule.
     val diameter = minOf(width, height)
+    val frameId = rememberResolvedProfileFrame(avatarPath)
+    val frameSize = diameter + 16.dp
+    val shellWidth = if (!frameId.isNullOrBlank() && frameSize > width) frameSize else width
+    val shellHeight = if (!frameId.isNullOrBlank() && frameSize > height) frameSize else height
     Box(
-        Modifier.size(width, height + 4.dp),
+        Modifier.size(shellWidth, shellHeight + 4.dp),
         contentAlignment = Alignment.Center,
     ) {
         Box(
@@ -294,6 +370,9 @@ internal fun ProfilePhotoAvatarRectWithGender(
             } else {
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
+        }
+        if (!frameId.isNullOrBlank()) {
+            PurchasedProfileFrameOverlay(frameId = frameId, modifier = Modifier.size(frameSize))
         }
         if (showGenderBadge) {
             Box(Modifier.align(Alignment.BottomEnd)) {

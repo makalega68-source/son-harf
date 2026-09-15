@@ -45,7 +45,9 @@ object SonHarfCosmetics {
 
     val profileAccent: Color
         get() = when (profileFrameId) {
-            PurchasedFrameCatalog.GOLDEN_AVATAR -> SonHarfGold
+            PurchasedFrameCatalog.GOLDEN_AVATAR,
+            PurchasedFrameCatalog.GOLD,
+            PurchasedFrameCatalog.GOLD_CROWN -> SonHarfGold
             PurchasedFrameCatalog.OCEAN -> SonHarfCyan
             PurchasedFrameCatalog.LILAC -> SonHarfPurple
             PurchasedFrameCatalog.BOTANIC -> Color(0xFF2FAE68)

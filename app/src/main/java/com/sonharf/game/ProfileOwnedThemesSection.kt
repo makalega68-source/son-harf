@@ -168,8 +168,8 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
         )
         Text(
             sh(
-                "Satın aldıkların burada kalır; vitrin değişse de sahipliğin korunur.",
-                "Your purchases stay here; ownership is preserved when the storefront changes.",
+                "Satın aldıkların ve PRO hediyelerin burada kalır; vitrin değişse de sahipliğin korunur.",
+                "Your purchases and PRO rewards stay here; ownership is preserved when the storefront changes.",
             ),
             color = MainUi.Muted,
             fontSize = 13.sp,
@@ -264,7 +264,7 @@ private fun OwnedStyleCard(
             Text(sh(item.descriptionTr, item.descriptionEn), color = MainUi.Muted, fontSize = 13.sp)
             Text(
                 if (item.active) sh("Koleksiyonunda", "In your collection")
-                else sh("Arşiv ürünü • Koleksiyonunda", "Retired item • In your collection"),
+                else sh("Arşiv/üyelik ürünü • Koleksiyonunda", "Retired/membership item • In your collection"),
                 color = MainUi.Blue,
                 fontSize = 12.sp,
             )
@@ -283,7 +283,7 @@ private fun OwnedStyleCard(
                 enabled = enabled && supported && !active,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             ) {
-                Text(if (active) sh("AKTİF", "EQUIPPED") else sh("KULLAN", "EQUIP"))
+                Text(if (active) sh("AKTİF", "EQUIPPED") else sh("UYGULA", "APPLY"))
             }
         }
     }
