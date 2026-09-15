@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: android-${{ github.ref }}
@@ -76,6 +77,21 @@ jobs:
       - name: Verify rewarded-ad callback signatures
         run: node --test supabase/functions/admob-ssv/ssv.test.mjs
 
+      - name: Purge obsolete APK artifacts and duplicate legacy release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release delete mobile-latest --cleanup-tag -y >/dev/null 2>&1 || true
+          gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | select(.name == "son-harf-debug-apk" or .name == "SonHarf-Unified-Pro-APK" or (.name | startswith("son-harf-release-"))) | .id' \
+            | while read -r artifact_id; do
+                test -n "$artifact_id" || continue
+                gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
+              done
+
       - name: Build debug APK with tests
         run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
@@ -99,6 +115,7 @@ jobs:
             SonHarf-Final-Test.apk
             SonHarf-Final-Test.sha256
           if-no-files-found: error
+          retention-days: 7
 
       - name: Build signed release APK and AAB
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'
@@ -130,6 +147,7 @@ jobs:
             app/build/outputs/apk/release/app-release.apk
             app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
+          retention-days: 7
 
       - name: Report missing release secrets
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG != 'true'
