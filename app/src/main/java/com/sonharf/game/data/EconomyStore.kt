@@ -15,6 +15,12 @@ private val supportedProfileFrameIds = setOf(
     "frame_round_botanic",
     "frame_round_lilac",
     "frame_round_rose",
+    "frame_wing_silver",
+    "frame_wing_gold",
+    "frame_wing_aurora",
+    "frame_wing_pink",
+    "frame_wing_blue",
+    "frame_flower_pink_blossom",
 )
 
 private val supportedGameThemeIds = setOf("theme_dark_arena")
