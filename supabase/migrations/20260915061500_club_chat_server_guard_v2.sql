@@ -1,7 +1,8 @@
 -- Kelime Kuşatması Master GDD v3.0
--- Server-authoritative club chat anti-spam guard.
+-- Server-authoritative club chat anti-spam and abuse guard.
 -- Existing RLS remains authoritative for visibility and membership; this trigger closes the gap
 -- where a modified client could bypass the local cooldown and submit bursts directly to PostgREST.
+-- It also enforces the existing report_player -> profiles.chat_suspended_until moderation system.
 
 create index if not exists club_messages_club_sender_created_idx
   on public.club_messages (club_id, sender_id, created_at desc);
@@ -37,6 +38,17 @@ begin
       and cm.user_id = v_uid
   ) then
     raise exception 'club_membership_required';
+  end if;
+
+  -- Reuse the existing global chat moderation penalty applied by public.report_player().
+  if exists (
+    select 1
+    from public.profiles p
+    where p.id = v_uid
+      and p.chat_suspended_until is not null
+      and p.chat_suspended_until > clock_timestamp()
+  ) then
+    raise exception 'chat_suspended';
   end if;
 
   -- Serialize one member's writes inside one club so parallel requests cannot race the cooldown.
