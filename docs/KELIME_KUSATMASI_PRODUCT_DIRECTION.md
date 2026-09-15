@@ -17,7 +17,7 @@ Ana ürün kimliği:
 5. Rakibin stratejik alanlarına baskı kur.
 6. Lig, rövanş, sosyal rekabet, görev ve ilerleme sistemleriyle tekrar oyna.
 
-Kelime puanı ve bölge puanı birbirinden ayrı izlenir. Toplam skor bu iki bileşenin toplamıdır. Temel kural değişmez: sahip olunan her küp 2 bölge puanıdır; bir küp kaybedildiğinde yalnız o küpün bölge puanı düşer, daha önce kazanılmış kelime puanı geri alınmaz.
+Kelime puanı ve bölge puanı birbirinden ayrı izlenir. Toplam skor bu iki bileşenin toplamı olarak sunulabilir; ancak **normal maçın kazananını toplam skor değil, maç bittiği andaki bölge hâkimiyeti belirler**. Sahip olunan her küp 2 bölge puanıdır; bir küp kaybedildiğinde yalnız o küpün bölge puanı düşer, daha önce kazanılmış kelime puanı geri alınmaz. Bölge sayısı eşitse maç berabere biter. Açık bir pes/forfeit durumunda rakip doğrudan kazanır.
 
 ## Görsel kimlik
 
@@ -68,6 +68,7 @@ Profil çerçeveleri ve satın alınan diğer kozmetikler `Profil > Koleksiyon` 
 - Ana CTA Kelime Kuşatması'nı açar.
 - Son Harf ikinci oyun olarak açıkça ayrıştırılır.
 - Maç ekranında Kelime Puanı, Bölge Puanı ve Toplam ayrı okunabilir olmalıdır.
+- Oyuncuya kimin önde olduğu gösterilecekse zafer metriği olan bölge hâkimiyeti esas alınmalıdır; toplam skor yalnız açıklayıcı performans metriğidir.
 - Ana hamle eylemi “Hamleyi Onayla”dır; Pas/Karıştır/Değiştir ikincil eylemlerdir.
 - Alan ele geçirme geri bildirimi hızlı ve güçlü olmalı; mevcut çalışan VFX korunmalı ve ileride 1–1,5 saniyelik imza ele geçirme animasyonlarına evrilmelidir.
 - Bot fallback, online senkronizasyon, güvenli backend doğrulaması ve mevcut çalışan maç sözleşmeleri görsel dönüşüm uğruna bozulmamalıdır.
