@@ -18,9 +18,9 @@ object SonHarfUiState {
  * Shared UI localization.
  *
  * Kelime Kuşatması is the canonical user-visible product brand. Older source strings may still
- * contain the previous Kelime Tahtı label for compatibility with untouched screens, but they are
- * normalized here before rendering. Technical identifiers (WordSiege, package names, database
- * contracts and deep links) are intentionally unaffected.
+ * contain the previous Kelime Tahtı / Word Throne labels for compatibility with untouched screens,
+ * but they are normalized here before rendering. Technical identifiers (WordSiege, package names,
+ * database contracts and deep links) are intentionally unaffected.
  */
 fun sh(tr: String, en: String): String {
     val localized = if (SonHarfUiState.isEnglish) en else tr
@@ -43,4 +43,8 @@ fun sh(tr: String, en: String): String {
     return localized
         .replace("KELİME TAHTI", "KELİME KUŞATMASI")
         .replace("Kelime Tahtı", "Kelime Kuşatması")
+        .replace("WORD THRONE", "KELİME KUŞATMASI")
+        .replace("Word Throne", "Kelime Kuşatması")
+        .replace("TAHT SENİN!", "KUŞATMA SENİN!")
+        .replace("THE THRONE IS YOURS!", "SIEGE WON!")
 }
