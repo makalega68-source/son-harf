@@ -228,7 +228,8 @@ internal fun SyntheticBotPortrait(
 private fun rememberResolvedProfileFrame(avatarPath: String?, explicitFrameId: String? = null): String? {
     var resolved by remember(avatarPath) { mutableStateOf<String?>(null) }
     val explicit = explicitFrameId?.takeIf { it in PurchasedFrameCatalog.ids }
-    LaunchedEffect(avatarPath, explicit) {
+    val localFrameVersion = SonHarfCosmetics.profileFrameId
+    LaunchedEffect(avatarPath, explicit, localFrameVersion) {
         resolved = explicit ?: ProfilePhotoRuntime.frameForAvatar(avatarPath)
     }
     return explicit ?: resolved
