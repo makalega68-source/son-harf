@@ -11,16 +11,16 @@ class GameModeBrandingAndVisibleActionContractTest {
         val home = projectFile("app/src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
         val games = projectFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val brand = projectFile("app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
-        val siegeRaster = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.png")
+        val siegeDrawable = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")
 
         assertTrue(home.contains("Text(\"KELİME KUŞATMASI\""))
         assertTrue(home.contains("Button(onClick = onSiege"))
         assertTrue(home.contains("onClick = onPlay"))
         assertTrue(brand.contains("R.drawable.kelime_kusatma_logo_hd"))
-        assertTrue(siegeRaster.isFile)
-        assertTrue(isPng(siegeRaster))
+        assertTrue(siegeDrawable.isFile)
+        assertTrue(siegeDrawable.readText().contains("<vector"))
+        assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.png")?.exists() == true)
         assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.webp")?.exists() == true)
-        assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")?.exists() == true)
         assertTrue(games.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
         assertTrue(games.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(games.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
@@ -34,6 +34,7 @@ class GameModeBrandingAndVisibleActionContractTest {
     fun letterPathUsesItsLogoAndTriggersVisibleSuccessVfxOnlyOnAcceptedMoves() {
         val ladder = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
         assertTrue(ladder.contains("R.drawable.harf_yolu_logo"))
+        assertTrue(projectFile("app/src/main/res/drawable-nodpi/harf_yolu_logo.webp").isFile)
         assertTrue(ladder.contains("successVfxNonce += 1"))
         assertTrue(ladder.contains("PurchasedVictoryVfx("))
         assertTrue(ladder.contains("eventKey = \"letter:${'$'}{puzzle?.id}:${'$'}successVfxNonce\""))
@@ -58,12 +59,6 @@ class GameModeBrandingAndVisibleActionContractTest {
         assertFalse(vfx.contains("pointerInput"))
         assertFalse(vfx.contains("clickable"))
         assertFalse(vfx.contains("infiniteRepeatable"))
-    }
-
-    private fun isPng(file: File): Boolean {
-        val bytes = file.readBytes()
-        val signature = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
-        return bytes.size >= 8 && bytes.copyOfRange(0, 8).contentEquals(signature)
     }
 
     private fun projectFile(path: String): File =

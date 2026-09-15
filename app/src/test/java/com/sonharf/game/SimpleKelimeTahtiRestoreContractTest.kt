@@ -27,7 +27,8 @@ class SimpleKelimeKusatmasiRestoreContractTest {
         assertFalse(board.contains("WordSiegeBoardViewportMode.CLOSE && !enabled"))
 
         assertTrue(logo.contains("R.drawable.kelime_kusatma_logo_hd"))
-        assertTrue(projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.png").isFile)
+        assertTrue(projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml").isFile)
+        assertFalse(File("app/src/main/res/drawable/kelime_kusatma_logo_hd.png").exists())
     }
 
     private fun projectFile(path: String): File {
