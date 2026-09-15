@@ -24,7 +24,8 @@ internal fun FramedProfilePhotoAvatar(
     visible: Boolean = true,
     showGenderBadge: Boolean = false,
 ) {
-    val frameSize = size + 16.dp
+    val isDecorativeOversize = frameId?.startsWith("frame_wing_") == true || frameId == "frame_flower_pink_blossom"
+    val frameSize = size + if (isDecorativeOversize) 28.dp else 16.dp
     Box(
         modifier = Modifier.size(frameSize),
         contentAlignment = Alignment.Center,

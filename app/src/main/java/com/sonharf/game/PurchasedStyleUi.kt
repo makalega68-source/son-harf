@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,6 +47,12 @@ internal object PurchasedFrameCatalog {
     const val LILAC = "frame_round_lilac"
     const val ROSE = "frame_round_rose"
     const val GOLDEN_AVATAR = "frame_round_golden_avatar"
+    const val WING_SILVER = "frame_wing_silver"
+    const val WING_GOLD = "frame_wing_gold"
+    const val WING_AURORA = "frame_wing_aurora"
+    const val WING_PINK = "frame_wing_pink"
+    const val WING_BLUE = "frame_wing_blue"
+    const val FLOWER_PINK_BLOSSOM = "frame_flower_pink_blossom"
     const val RED = "frame_asset_red"
     const val GREEN = "frame_asset_green"
     const val MINT = "frame_asset_mint"
@@ -55,11 +62,23 @@ internal object PurchasedFrameCatalog {
     const val CHRISTMAS = "frame_asset_christmas"
     const val HALLOWEEN = "frame_asset_halloween"
 
+    private val scalableVectorIds = setOf(
+        WING_SILVER,
+        WING_GOLD,
+        WING_AURORA,
+        WING_PINK,
+        WING_BLUE,
+        FLOWER_PINK_BLOSSOM,
+    )
+
     /** These visual-only profile frame IDs are rendered locally; ownership stays server-authoritative. */
     val ids = setOf(
         STARTER_BLUE, STARTER_PINK, STARTER_NEUTRAL, OCEAN, BOTANIC, LILAC, ROSE, GOLDEN_AVATAR,
+        WING_SILVER, WING_GOLD, WING_AURORA, WING_PINK, WING_BLUE, FLOWER_PINK_BLOSSOM,
         RED, GREEN, MINT, PURPLE, GOLD, GOLD_CROWN, CHRISTMAS, HALLOWEEN,
     )
+
+    fun isVectorFrame(id: String?): Boolean = id in scalableVectorIds
 
     fun drawable(id: String?): Int? = when (id) {
         STARTER_BLUE -> R.drawable.profile_frame_round_starter_blue
@@ -70,6 +89,12 @@ internal object PurchasedFrameCatalog {
         LILAC -> R.drawable.profile_frame_round_lilac
         ROSE -> R.drawable.profile_frame_round_rose
         GOLDEN_AVATAR -> R.drawable.profile_frame_round_golden_avatar
+        WING_SILVER -> R.drawable.profile_frame_wing_silver
+        WING_GOLD -> R.drawable.profile_frame_wing_gold
+        WING_AURORA -> R.drawable.profile_frame_wing_aurora
+        WING_PINK -> R.drawable.profile_frame_wing_pink
+        WING_BLUE -> R.drawable.profile_frame_wing_blue
+        FLOWER_PINK_BLOSSOM -> R.drawable.profile_frame_flower_pink_blossom
         RED -> R.drawable.style_frame_red
         GREEN -> R.drawable.style_frame_green
         MINT -> R.drawable.style_frame_mint
@@ -82,12 +107,12 @@ internal object PurchasedFrameCatalog {
     }
 
     fun accent(id: String?): Color = when (id) {
-        STARTER_BLUE, OCEAN -> Color(0xFF1677FF)
-        STARTER_PINK, ROSE -> Color(0xFFE45A91)
-        STARTER_NEUTRAL -> Color(0xFF718096)
+        STARTER_BLUE, OCEAN, WING_BLUE -> Color(0xFF1677FF)
+        STARTER_PINK, ROSE, WING_PINK, FLOWER_PINK_BLOSSOM -> Color(0xFFE45A91)
+        STARTER_NEUTRAL, WING_SILVER -> Color(0xFF718096)
         BOTANIC -> Color(0xFF2FAE68)
-        LILAC -> Color(0xFF7257D8)
-        GOLDEN_AVATAR -> Color(0xFFD7A72E)
+        LILAC, WING_AURORA -> Color(0xFF7257D8)
+        GOLDEN_AVATAR, WING_GOLD -> Color(0xFFD7A72E)
         RED -> Color(0xFFC8464B)
         GREEN -> Color(0xFF2FAE68)
         MINT -> Color(0xFF2CBFA8)
@@ -121,6 +146,12 @@ private val purchasedFrameSpecs = listOf(
     PurchasedFrameSpec(PurchasedFrameCatalog.LILAC, "Lila Halo", "Lilac Halo", "Sadece görünüm için lila yuvarlak çerçeve", "Lilac round frame, visual only", R.drawable.profile_frame_round_lilac, Color(0xFF7257D8), "GOOGLE PLAY", "GOOGLE PLAY", R.drawable.style_icon_coin),
     PurchasedFrameSpec(PurchasedFrameCatalog.ROSE, "Gül Işığı", "Rose Glow", "Sadece görünüm için pembe yuvarlak çerçeve", "Rose round frame, visual only", R.drawable.profile_frame_round_rose, Color(0xFFE45A91), "GOOGLE PLAY", "GOOGLE PLAY", R.drawable.style_icon_coin),
     PurchasedFrameSpec(PurchasedFrameCatalog.GOLDEN_AVATAR, "Golden Avatar", "Golden Avatar", "Yalnızca aktif VIP / PRO oyuncular için", "Only for active VIP / PRO players", R.drawable.profile_frame_round_golden_avatar, Color(0xFFD7A72E), "VIP / PRO", "VIP / PRO", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.WING_SILVER, "Gümüş Kanat", "Silver Wings", "Metalik gümüş kanatlı profil çerçevesi", "Metallic silver winged profile frame", R.drawable.profile_frame_wing_silver, Color(0xFF718096), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.WING_BLUE, "Mavi Kanat", "Blue Wings", "Buz mavisi kanatlı profil çerçevesi", "Icy blue winged profile frame", R.drawable.profile_frame_wing_blue, Color(0xFF1677FF), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.FLOWER_PINK_BLOSSOM, "Pembe Çiçek Çelengi", "Pink Blossom Wreath", "Pembe çiçekli sarmaşık profil çerçevesi", "Pink blossom vine profile frame", R.drawable.profile_frame_flower_pink_blossom, Color(0xFFE45A91), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.WING_PINK, "Pembe Kanat", "Pink Wings", "Pembe ve beyaz kanatlı profil çerçevesi", "Pink and white winged profile frame", R.drawable.profile_frame_wing_pink, Color(0xFFE45A91), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.WING_GOLD, "Altın Kanat", "Golden Wings", "Parlak altın kanatlı profil çerçevesi", "Bright gold winged profile frame", R.drawable.profile_frame_wing_gold, Color(0xFFD7A72E), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.WING_AURORA, "Aurora Kanat", "Aurora Wings", "Renk geçişli özel kanatlı profil çerçevesi", "Premium gradient winged profile frame", R.drawable.profile_frame_wing_aurora, Color(0xFF7257D8), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
     PurchasedFrameSpec(PurchasedFrameCatalog.RED, "Kızıl İmza", "Crimson Mark", "Kırmızı profil çerçevesi", "Red profile frame", R.drawable.style_frame_red, Color(0xFFC8464B), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
     PurchasedFrameSpec(PurchasedFrameCatalog.GREEN, "Orman İmzası", "Forest Mark", "Yeşil profil çerçevesi", "Green profile frame", R.drawable.style_frame_green, Color(0xFF2FAE68), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
     PurchasedFrameSpec(PurchasedFrameCatalog.MINT, "Nane İmza", "Mint Mark", "Nane tonlu profil çerçevesi", "Mint profile frame", R.drawable.style_frame_mint, Color(0xFF2CBFA8), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
@@ -132,9 +163,9 @@ private val purchasedFrameSpecs = listOf(
 )
 
 /**
- * Decode drawable-nodpi assets through a raw stream instead of Compose's resource decoder.
- * Some purchased PNGs are accepted by Android packaging but fail through ImageBitmap.imageResource
- * on specific devices. decodeStream is bounded to the local APK resource and cannot trigger network IO.
+ * Decode drawable-nodpi bitmap assets through a raw stream instead of Compose's resource decoder.
+ * Existing purchased PNG/WebP assets keep their proven decoder path; new wing/blossom frames are
+ * vector drawables and are rendered through painterResource below.
  */
 @Composable
 private fun rememberStyleBitmap(@DrawableRes drawable: Int?): ImageBitmap? {
@@ -176,6 +207,16 @@ private fun SafeFrameArtwork(
     frameId: String,
     modifier: Modifier,
 ): Boolean {
+    if (drawable != null && PurchasedFrameCatalog.isVectorFrame(frameId)) {
+        Image(
+            painter = painterResource(id = drawable),
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = ContentScale.Fit,
+        )
+        return true
+    }
+
     val bitmap = rememberStyleBitmap(drawable)
     if (bitmap != null) {
         Image(
@@ -187,7 +228,7 @@ private fun SafeFrameArtwork(
         return true
     }
 
-    // Fail-safe visual frame: avatar stays visible and usable even if the packaged PNG cannot decode.
+    // Fail-safe visual frame: avatar stays visible and usable even if the packaged art cannot decode.
     val accent = PurchasedFrameCatalog.accent(frameId)
     Box(
         modifier = modifier
@@ -294,8 +335,6 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         onDispose { billing.close() }
     }
 
-
-
     LaunchedEffect(backend) {
         runCatching { refreshPurchasedFrames() }.onFailure {
             loading = false
@@ -333,8 +372,9 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                 val owned = spec.id in inventory
                 val equipped = equippedId == spec.id
                 val vipLocked = spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR && !vipFrameAccess
-                val frameBitmap = rememberStyleBitmap(spec.drawable)
-                val assetReady = spec.drawable == null || frameBitmap != null
+                val vectorFrame = PurchasedFrameCatalog.isVectorFrame(spec.id)
+                val frameBitmap = if (vectorFrame) null else rememberStyleBitmap(spec.drawable)
+                val assetReady = spec.drawable == null || vectorFrame || frameBitmap != null
                 Surface(
                     modifier = Modifier.width(164.dp),
                     shape = RoundedCornerShape(18.dp),
@@ -354,15 +394,20 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                         tint = Color(0xFF142033),
                                     )
                                 }
-                                if (frameBitmap != null) {
-                                    Image(
+                                when {
+                                    vectorFrame && spec.drawable != null -> Image(
+                                        painter = painterResource(spec.drawable),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(94.dp),
+                                        contentScale = ContentScale.Fit,
+                                    )
+                                    frameBitmap != null -> Image(
                                         bitmap = frameBitmap,
                                         contentDescription = null,
                                         modifier = Modifier.size(86.dp),
                                         contentScale = ContentScale.Fit,
                                     )
-                                } else {
-                                    Box(
+                                    else -> Box(
                                         Modifier.size(82.dp)
                                             .border(4.dp, spec.accent, CircleShape)
                                             .padding(4.dp)
@@ -431,6 +476,9 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                                             val host = activity ?: error("activity_required")
                                                             val result = billing.launchProduct(host, playProduct)
                                                             if (result.responseCode != BillingClient.BillingResponseCode.OK) error("billing_unavailable")
+                                                        } else if (!owned && item != null) {
+                                                            b.purchaseShopItem(spec.id)
+                                                            b.equipShopItem(spec.id)
                                                         } else {
                                                             b.equipShopItem(spec.id)
                                                         }
@@ -450,7 +498,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                             }
                                         }
                                     },
-                                    enabled = backend != null && !vipLocked && (spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR || owned || (playProduct?.oneTimePurchaseOfferDetails != null && assetReady)) && busyId == null,
+                                    enabled = backend != null && !vipLocked && assetReady && (spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR || owned || playProduct?.oneTimePurchaseOfferDetails != null || item != null) && busyId == null,
                                     contentPadding = PaddingValues(horizontal = 9.dp, vertical = 3.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = spec.accent, contentColor = Color.White),
                                     shape = RoundedCornerShape(10.dp),

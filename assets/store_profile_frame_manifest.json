@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "date": "2026-09-15",
+  "source": "User-provided winged and floral profile-frame reference screenshots in the ChatGPT project conversation; production assets were recreated as original scalable Android vector drawables for reliable in-game rendering.",
+  "canvas": "512x512",
+  "format": "Android VectorDrawable",
+  "assets": [
+    {"id":"frame_wing_silver","resource":"profile_frame_wing_silver.xml"},
+    {"id":"frame_wing_blue","resource":"profile_frame_wing_blue.xml"},
+    {"id":"frame_flower_pink_blossom","resource":"profile_frame_flower_pink_blossom.xml"},
+    {"id":"frame_wing_pink","resource":"profile_frame_wing_pink.xml"},
+    {"id":"frame_wing_gold","resource":"profile_frame_wing_gold.xml"},
+    {"id":"frame_wing_aurora","resource":"profile_frame_wing_aurora.xml"}
+  ],
+  "notes": "Visual-only cosmetics. PRO Golden is excluded and remains a separate entitlement."
+}
