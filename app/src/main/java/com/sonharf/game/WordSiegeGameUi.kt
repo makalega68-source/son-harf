@@ -77,7 +77,7 @@ internal fun WordSiegeScoreCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ProfilePhotoAvatarWithGender(
                     avatarPath = avatarPath, gender = gender, name = name,
-                    size = 26.dp, accent = accent, visible = avatarVisible,
+                    size = 36.dp, accent = accent, visible = avatarVisible,
                 )
                 Spacer(Modifier.width(5.dp))
                 Column(Modifier.weight(1f)) {
