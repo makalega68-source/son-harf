@@ -1,16 +1,90 @@
 {
-  "version": 1,
-  "date": "2026-09-15",
-  "source": "User-provided winged and floral profile-frame reference screenshots in the ChatGPT project conversation; production assets were recreated as original scalable Android vector drawables for reliable in-game rendering.",
+  "version": 2,
+  "date": "2026-09-16",
   "canvas": "512x512",
-  "format": "Android VectorDrawable",
+  "format": "WebP with alpha",
+  "pipeline": "Original EPS artwork rendered to transparent RGBA, normalized to the verified 512x512 avatar-opening geometry, then packaged as Android drawable-nodpi WebP. No VectorDrawable recreation is used.",
+  "sources": {
+    "wings_20237042": {
+      "archive": "vecteezy_cartoon-set-of-round-avatar-frames-on-background_20237042_905.zip",
+      "sha256": "a1d2879dae5624cdc305e76a7aebb1f06b9d05ed999ed6039a48caab6000bf2b",
+      "indices": "3,4,5,6,7"
+    },
+    "flowers_foliage": {
+      "archive": "set-round-avatar-frames-with-flowers-foliage.zip",
+      "sha256": "d40bff56e3539278852e744097ebe48d2b3e4b6c70f21adb66015aa8e6600c11",
+      "index": 2
+    },
+    "golden_set": {
+      "archive": "set-round-golden-avatar-frames(1).zip",
+      "sha256": "87854292e4276c1a80a6ea90d902e38ac352b74cf7f2c5793b13e11157454c98",
+      "index": 5
+    }
+  },
   "assets": [
-    {"id":"frame_wing_silver","resource":"profile_frame_wing_silver.xml"},
-    {"id":"frame_wing_blue","resource":"profile_frame_wing_blue.xml"},
-    {"id":"frame_flower_pink_blossom","resource":"profile_frame_flower_pink_blossom.xml"},
-    {"id":"frame_wing_pink","resource":"profile_frame_wing_pink.xml"},
-    {"id":"frame_wing_gold","resource":"profile_frame_wing_gold.xml"},
-    {"id":"frame_wing_aurora","resource":"profile_frame_wing_aurora.xml"}
+    {
+      "id": "frame_wing_silver",
+      "resource": "profile_frame_wing_silver.webp",
+      "source": "wings_20237042",
+      "source_index": 3,
+      "sha256": "c7b8e040f4c01d965f61f1abbc45d8c8803920c61b5c78e202936a0fcf4848b6",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "frame_wing_blue",
+      "resource": "profile_frame_wing_blue.webp",
+      "source": "wings_20237042",
+      "source_index": 7,
+      "sha256": "b1cfbc14377bb201694660748b018095dcb472c6dc95f6a213f4a01fb8fc6019",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "frame_flower_pink_blossom",
+      "resource": "profile_frame_flower_pink_blossom.webp",
+      "source": "flowers_foliage",
+      "source_index": 2,
+      "sha256": "49c2f5833f19b0e5ebf5cdfc5ec3a91cf1928a27f88faf54a38bddf23a7d86f1",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "frame_wing_pink",
+      "resource": "profile_frame_wing_pink.webp",
+      "source": "wings_20237042",
+      "source_index": 6,
+      "sha256": "5e70bc9cb223e2339b184bd867682ffaf5ef6d8bc4bc71a274be90341d55d40a",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "frame_wing_gold",
+      "resource": "profile_frame_wing_gold.webp",
+      "source": "wings_20237042",
+      "source_index": 4,
+      "sha256": "cb95e26e2f84400dafaf02a4abce49f832ca8527ecdbaa878469f0af96bd221a",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "frame_wing_aurora",
+      "resource": "profile_frame_wing_aurora.webp",
+      "source": "wings_20237042",
+      "source_index": 5,
+      "sha256": "9b3aa48f7ffda366145c83e859b880fb66399b449b463f1299de52b676e9c00c",
+      "width": 512,
+      "height": 512
+    },
+    {
+      "id": "frame_round_golden_avatar",
+      "resource": "profile_frame_round_golden_avatar.webp",
+      "source": "golden_set",
+      "source_index": 5,
+      "sha256": "ac3bd7cd4b9431d2324d756890cc8fd77d2e2d5adbe90b1c6cbbab7a6219a1da",
+      "width": 512,
+      "height": 512
+    }
   ],
-  "notes": "Visual-only cosmetics. PRO Golden is excluded and remains a separate entitlement."
+  "notes": "Wing/blossom items remain normal Son Coin cosmetics. Golden Avatar remains the separate PRO entitlement; existing permanent ownership semantics are unchanged. Vecteezy license information is included in the user-supplied archive; release attribution must follow the user's license tier."
 }
