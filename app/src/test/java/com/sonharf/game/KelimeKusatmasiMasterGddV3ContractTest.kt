@@ -57,6 +57,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     fun clubUsesDedicatedFullPageChatWithoutReplacingManagementSurface() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
+        val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
 
         assertTrue(shell.contains("PremiumDestination.CLUB -> KelimeKusatmasiClubScreen()"))
         assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
@@ -66,15 +67,23 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(club.contains("CompetitionHubScreen(onBack = { showClubCenter = false }, clubEntry = true)"))
         assertTrue(club.contains("onValueChange = { input = it.take(300) }"))
         assertTrue(club.contains("now - lastMessageSentAt < 1_500L"))
-        assertTrue(club.contains("Mesajları çok hızlı gönderiyorsun."))
+        assertTrue(club.contains("b.reportClubMember(message.senderId)"))
+        assertTrue(club.contains("b.blockClubMember(message.senderId)"))
+        assertTrue(club.contains("Rapor moderasyona iletildi."))
+        assertTrue(club.contains("Oyuncu engellendi."))
+        assertTrue(social.contains("\"report_player\""))
+        assertTrue(social.contains("\"block_user\""))
+        assertTrue(social.contains("\"club_chat_spam_or_abuse\""))
     }
 
     @Test
-    fun clubChatHasServerAuthoritativeAntiSpamGuard() {
+    fun clubChatHasServerAuthoritativeAntiSpamAndAbuseGuard() {
         val migration = File("../supabase/migrations/20260915061500_club_chat_server_guard_v2.sql").readText()
 
         assertTrue(migration.contains("create or replace function private.guard_club_message_insert_v2()"))
         assertTrue(migration.contains("security definer"))
+        assertTrue(migration.contains("p.chat_suspended_until > clock_timestamp()"))
+        assertTrue(migration.contains("raise exception 'chat_suspended'"))
         assertTrue(migration.contains("pg_advisory_xact_lock"))
         assertTrue(migration.contains("interval '1500 milliseconds'"))
         assertTrue(migration.contains("v_recent_count >= 8"))
@@ -84,6 +93,9 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(migration.contains("create trigger club_messages_server_guard_v2"))
         assertTrue(migration.contains("before insert on public.club_messages"))
         assertTrue(migration.contains("revoke all on function private.guard_club_message_insert_v2()"))
+        assertTrue(migration.contains("drop policy if exists club_messages_read_members"))
+        assertTrue(migration.contains("from public.user_blocks ub"))
+        assertTrue(migration.contains("ub.blocked_id = club_messages.sender_id"))
     }
 
     @Test
