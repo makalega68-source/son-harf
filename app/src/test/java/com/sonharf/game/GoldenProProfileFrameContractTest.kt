@@ -33,8 +33,9 @@ class GoldenProProfileFrameContractTest {
         val collection = read("src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt")
         assertTrue(collection.contains("backend.getInventory()"))
         assertTrue(collection.contains("backend.getOwnedShopItems(nextOwned)"))
-        assertTrue(collection.contains("PurchasedProfileFrameOverlay(item.id"))
-        assertTrue(collection.contains("backend.equipShopItem(item.id)"))
+        assertTrue(collection.contains("PurchasedProfileFrameOverlay(frameId = item.id"))
+        assertTrue(collection.contains("onEquip = { equipStyle(item.id) }"))
+        assertTrue(collection.contains("backend.equipShopItem(itemId)"))
     }
 
     @Test
