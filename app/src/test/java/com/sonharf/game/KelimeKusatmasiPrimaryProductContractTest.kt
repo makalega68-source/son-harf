@@ -14,17 +14,17 @@ class KelimeKusatmasiPrimaryProductContractTest {
         val strings = File("src/main/res/values/strings.xml").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
         val logo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
-        val siegeRaster = File("src/main/res/drawable/kelime_kusatma_logo_hd.png")
+        val siegeVector = File("src/main/res/drawable/kelime_kusatma_logo_hd.xml")
 
         assertTrue(manifest.contains("android:label=\"@string/app_name\""))
         // Resource/deep-link identifiers remain stable even though the visible product brand changes.
         assertTrue(manifest.contains("@mipmap/ic_kelime_tahti"))
         assertTrue(strings.contains("<string name=\"app_name\">Kelime Kuşatması</string>"))
         assertTrue(logo.contains("R.drawable.kelime_kusatma_logo_hd"))
-        assertTrue(siegeRaster.isFile)
-        assertTrue(isPng(siegeRaster))
+        assertTrue(siegeVector.isFile)
+        assertTrue(siegeVector.readText().contains("<vector"))
+        assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.png").exists())
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.webp").exists())
-        assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.xml").exists())
         assertTrue(localization.contains("replace(\"Kelime Tahtı\", \"Kelime Kuşatması\")"))
         assertFalse(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
         assertFalse(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
@@ -92,11 +92,5 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(match.contains("territoryPoints = myTerritoryPoints"))
         assertFalse(match.contains("HARİTA KONTROLÜ"))
         assertTrue(match.contains("HAMLEYİ ONAYLA"))
-    }
-
-    private fun isPng(file: File): Boolean {
-        val bytes = file.readBytes()
-        val signature = byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
-        return bytes.size >= 8 && bytes.copyOfRange(0, 8).contentEquals(signature)
     }
 }
