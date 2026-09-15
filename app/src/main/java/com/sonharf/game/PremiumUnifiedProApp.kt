@@ -45,7 +45,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         destination = target
     }
 
-    fun leaveGame(target: PremiumDestination = PremiumDestination.GAMES) {
+    fun leaveGame(target: PremiumDestination = PremiumDestination.HOME) {
         uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
         uiLanguageBeforeGame = null
         destination = target
@@ -86,7 +86,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
                 uiLanguageBeforeGame = null
-                PremiumDestination.GAMES
+                PremiumDestination.HOME
             }
             else -> PremiumDestination.HOME
         }
@@ -171,7 +171,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.COMPETE -> CompetitionHubScreen(
                         onBack = { destination = PremiumDestination.HOME },
                     )
-                    PremiumDestination.CLUB -> KelimeKusatmasiClubScreen()
+                    PremiumDestination.CLUB -> CompetitionHubScreen(
+                        onBack = { destination = PremiumDestination.HOME },
+                        clubEntry = true,
+                    )
                     PremiumDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE_DETAILS },
