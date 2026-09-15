@@ -209,7 +209,7 @@ private fun SafeFrameArtwork(
 ): Boolean {
     if (drawable != null && PurchasedFrameCatalog.isVectorFrame(frameId)) {
         Image(
-            painter = painterResource(drawable),
+            painter = painterResource(id = drawable),
             contentDescription = null,
             modifier = modifier,
             contentScale = ContentScale.Fit,
