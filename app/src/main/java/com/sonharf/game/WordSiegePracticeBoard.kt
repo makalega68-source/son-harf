@@ -26,7 +26,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -363,26 +362,43 @@ private fun WordSiegePracticeBoardCell(
                 }
             }
         } else if (activeZone != null) {
-            Text(
-                androidx.compose.ui.text.buildAnnotatedString {
-                    val label = WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)
-                    val parts = label.split("\n")
-                    if (parts.size > 1 && overview) {
-                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 20.sp)) {
-                            append(parts.first().take(1)); append(parts.last())
-                        }
-                    } else if (parts.size > 1) {
-                        withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 10.sp)) { append(parts.first()) }
-                        append("\n")
-                        append(parts.last())
-                    } else append(label)
-                },
-                color = PracticeSiegeBonusLabel,
-                fontSize = WordSiegeBoardAccessibility.BoardBonus,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 17.sp,
-                fontWeight = FontWeight.Light,
-            )
+            val label = WordSiegeBoardSpec.displayBonusLabel(activeZone, !SonHarfUiState.isEnglish)
+            val parts = label.split("\n")
+            if (parts.size > 1) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = parts.first(),
+                        color = PracticeSiegeBonusLabel.copy(alpha = .92f),
+                        fontSize = if (overview) 8.5.sp else 10.sp,
+                        lineHeight = if (overview) 9.sp else 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = .12.sp,
+                        maxLines = 1,
+                    )
+                    Text(
+                        text = parts.last(),
+                        color = PracticeSiegeBonusLabel,
+                        fontSize = if (overview) 14.sp else 16.sp,
+                        lineHeight = if (overview) 14.sp else 16.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-.15).sp,
+                        maxLines = 1,
+                    )
+                }
+            } else {
+                Text(
+                    text = label,
+                    color = PracticeSiegeBonusLabel,
+                    fontSize = if (overview) 12.sp else 14.sp,
+                    lineHeight = if (overview) 13.sp else 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = .1.sp,
+                    maxLines = 1,
+                )
+            }
         }
     }
 }
