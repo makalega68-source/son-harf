@@ -94,4 +94,21 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(rules.contains("Word points are permanent"))
         assertTrue(rules.contains("only a rival capture of one"))
     }
+
+    @Test
+    fun normalMatchVictoryDependsOnlyOnCurrentTerritoryControl() {
+        val migration = File("../supabase/migrations/20260915060000_word_siege_territory_victory_v10.sql").readText()
+        val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
+
+        assertTrue(migration.contains("when r.player_one_area > r.player_two_area then r.player_one_id"))
+        assertTrue(migration.contains("when r.player_two_area > r.player_one_area then r.player_two_id"))
+        assertTrue(migration.contains("if p_forfeit_winner is not null then"))
+        assertFalse(migration.contains("v_one_total > v_two_total"))
+        assertFalse(migration.contains("v_two_total > v_one_total"))
+
+        assertTrue(practice.contains("state.playerArea > state.botArea -> 1"))
+        assertTrue(practice.contains("state.botArea > state.playerArea -> 2"))
+        assertFalse(practice.contains("totalScore(state, 1) > totalScore(state, 2) -> 1"))
+        assertFalse(practice.contains("totalScore(state, 2) > totalScore(state, 1) -> 2"))
+    }
 }
