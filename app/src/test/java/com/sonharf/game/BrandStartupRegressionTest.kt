@@ -11,10 +11,12 @@ class BrandStartupRegressionTest {
         val authGate = File("src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
         val officialLogo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeHub = File("src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
+        val home = File("src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
         val manifest = File("src/main/AndroidManifest.xml").readText()
         val adaptiveIcon = File("src/main/res/mipmap-anydpi-v26/ic_kelime_tahti.xml")
         val adaptiveFallback = File("src/main/res/mipmap-anydpi/ic_kelime_tahti.xml")
         val launcherVector = File("src/main/res/drawable/kelime_tahti_app_icon.xml")
+        val homeVector = File("src/main/res/drawable/son_harf_app_icon_master.xml")
         val authVector = File("src/main/res/drawable/son_harf_gold_teal_logo.xml")
         val gameVector = File("src/main/res/drawable/kelime_kusatma_logo_hd.xml")
 
@@ -29,7 +31,8 @@ class BrandStartupRegressionTest {
         assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(authGate.contains("painterResource(R.drawable.son_harf_gold_teal_logo)"))
         assertTrue(siegeHub.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
-        listOf(launcherVector, authVector, gameVector).forEach {
+        assertTrue(home.contains("R.drawable.son_harf_app_icon_master"))
+        listOf(launcherVector, homeVector, authVector, gameVector).forEach {
             assertTrue("Missing raster-free drawable: ${it.path}", it.isFile)
             assertTrue(it.readText().contains("<vector"))
         }
