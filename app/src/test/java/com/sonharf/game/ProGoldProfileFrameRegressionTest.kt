@@ -34,6 +34,8 @@ class ProGoldProfileFrameRegressionTest {
 
         assertTrue(runtime.contains("frameForAvatar"))
         assertTrue(runtime.contains("get_public_profile_frame_v1"))
+        assertTrue(runtime.contains("val localFrameVersion = SonHarfCosmetics.profileFrameId"))
+        assertTrue(runtime.contains("LaunchedEffect(avatarPath, explicit, localFrameVersion)"))
         assertTrue(runtime.contains("PurchasedProfileFrameOverlay(frameId = frameId, modifier = Modifier.size(frameSize))"))
         assertTrue(runtime.contains("Modifier.size(size).clip(CircleShape)"))
         assertTrue(runtime.contains("contentScale = ContentScale.Crop"))
