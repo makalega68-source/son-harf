@@ -102,3 +102,25 @@ create trigger club_messages_server_guard_v2
 before insert on public.club_messages
 for each row
 execute function private.guard_club_message_insert_v2();
+
+-- Existing global block_user()/unblock_user() state now applies to club chat at RLS level.
+-- A blocked sender's messages are not returned to the blocker even via direct PostgREST access.
+drop policy if exists club_messages_read_members on public.club_messages;
+create policy club_messages_read_members
+on public.club_messages
+for select
+to authenticated
+using (
+  exists (
+    select 1
+    from public.club_members cm
+    where cm.club_id = club_messages.club_id
+      and cm.user_id = (select auth.uid())
+  )
+  and not exists (
+    select 1
+    from public.user_blocks ub
+    where ub.blocker_id = (select auth.uid())
+      and ub.blocked_id = club_messages.sender_id
+  )
+);
