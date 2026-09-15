@@ -27,7 +27,6 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -158,6 +157,17 @@ internal fun WordSiegePanMatch(
                     fontWeight = FontWeight.Black,
                 )
             }
+            IconButton(
+                onClick = onChat,
+                enabled = game.playerTwoId != null,
+                modifier = Modifier.size(40.dp),
+            ) {
+                Icon(
+                    Icons.Rounded.Chat,
+                    sh("Oyun içi sohbet", "In-game chat"),
+                    tint = if (game.playerTwoId != null) PanSiegeMineBorder else WordSiegeGameUi.DisabledContent,
+                )
+            }
             IconButton(onClick = onForfeit, enabled = game.status == "playing" && !busy, modifier = Modifier.size(40.dp)) {
                 Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = WordSiegeGameUi.Red)
             }
@@ -238,7 +248,6 @@ internal fun WordSiegePanMatch(
             lastMove = lastMove,
             modifier = Modifier.fillMaxWidth().aspectRatio(1f),
             onCell = onBoardCell,
-            onChat = onChat,
         )
         }
 
@@ -330,7 +339,6 @@ private fun PanSiegeBoard(
     lastMove: WordSiegeMoveDto?,
     modifier: Modifier = Modifier,
     onCell: (Int) -> Unit,
-    onChat: () -> Unit,
 ) {
     val density = LocalDensity.current
     val tilePx = with(density) { PanSiegeCellSize.toPx() }
@@ -530,16 +538,6 @@ private fun PanSiegeBoard(
             ) {
                 Icon(Icons.Rounded.CenterFocusStrong, sh("Merkeze dön", "Center board"), Modifier.size(19.dp))
             }
-
-            SmallFloatingActionButton(
-                onClick = onChat,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp),
-                shape = CircleShape,
-                containerColor = Color.White.copy(alpha = .96f),
-                contentColor = WordSiegeGameUi.Muted,
-            ) {
-                Icon(Icons.Rounded.Chat, sh("Oyun içi sohbet", "In-game chat"), Modifier.size(20.dp))
-            }
         }
     }
 }
@@ -663,26 +661,43 @@ private fun PanSiegeBoardCell(
                         modifier = Modifier.align(Alignment.BottomEnd).padding(4.dp),
                     )
                 } else if (activeBonus != null) {
-                    Text(
-                        androidx.compose.ui.text.buildAnnotatedString {
-                            val label = WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)
-                            val parts = label.split("\n")
-                            if (parts.size > 1 && overview) {
-                                withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 20.sp)) {
-                                    append(parts.first().take(1)); append(parts.last())
-                                }
-                            } else if (parts.size > 1) {
-                                withStyle(androidx.compose.ui.text.SpanStyle(fontSize = 10.sp)) { append(parts.first()) }
-                                append("\n")
-                                append(parts.last())
-                            } else append(label)
-                        },
-                        color = PanSiegeBonusLabel,
-                        fontSize = WordSiegeBoardAccessibility.BoardBonus,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                        lineHeight = 17.sp,
-                        fontWeight = FontWeight.Light,
-                    )
+                    val label = WordSiegeBoardSpec.displayBonusLabel(activeBonus, !SonHarfUiState.isEnglish)
+                    val parts = label.split("\n")
+                    if (parts.size > 1) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Text(
+                                text = parts.first(),
+                                color = PanSiegeBonusLabel.copy(alpha = .92f),
+                                fontSize = if (overview) 8.5.sp else 10.sp,
+                                lineHeight = if (overview) 9.sp else 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                letterSpacing = .12.sp,
+                                maxLines = 1,
+                            )
+                            Text(
+                                text = parts.last(),
+                                color = PanSiegeBonusLabel,
+                                fontSize = if (overview) 14.sp else 16.sp,
+                                lineHeight = if (overview) 14.sp else 16.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = (-.15).sp,
+                                maxLines = 1,
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = label,
+                            color = PanSiegeBonusLabel,
+                            fontSize = if (overview) 12.sp else 14.sp,
+                            lineHeight = if (overview) 13.sp else 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = .1.sp,
+                            maxLines = 1,
+                        )
+                    }
                 }
             }
         }
