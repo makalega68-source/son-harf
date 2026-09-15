@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -61,12 +62,23 @@ internal object PurchasedFrameCatalog {
     const val CHRISTMAS = "frame_asset_christmas"
     const val HALLOWEEN = "frame_asset_halloween"
 
+    private val scalableVectorIds = setOf(
+        WING_SILVER,
+        WING_GOLD,
+        WING_AURORA,
+        WING_PINK,
+        WING_BLUE,
+        FLOWER_PINK_BLOSSOM,
+    )
+
     /** These visual-only profile frame IDs are rendered locally; ownership stays server-authoritative. */
     val ids = setOf(
         STARTER_BLUE, STARTER_PINK, STARTER_NEUTRAL, OCEAN, BOTANIC, LILAC, ROSE, GOLDEN_AVATAR,
         WING_SILVER, WING_GOLD, WING_AURORA, WING_PINK, WING_BLUE, FLOWER_PINK_BLOSSOM,
         RED, GREEN, MINT, PURPLE, GOLD, GOLD_CROWN, CHRISTMAS, HALLOWEEN,
     )
+
+    fun isVectorFrame(id: String?): Boolean = id in scalableVectorIds
 
     fun drawable(id: String?): Int? = when (id) {
         STARTER_BLUE -> R.drawable.profile_frame_round_starter_blue
@@ -151,9 +163,9 @@ private val purchasedFrameSpecs = listOf(
 )
 
 /**
- * Decode drawable-nodpi assets through a raw stream instead of Compose's resource decoder.
- * Some purchased PNGs are accepted by Android packaging but fail through ImageBitmap.imageResource
- * on specific devices. decodeStream is bounded to the local APK resource and cannot trigger network IO.
+ * Decode drawable-nodpi bitmap assets through a raw stream instead of Compose's resource decoder.
+ * Existing purchased PNG/WebP assets keep their proven decoder path; new wing/blossom frames are
+ * vector drawables and are rendered through painterResource below.
  */
 @Composable
 private fun rememberStyleBitmap(@DrawableRes drawable: Int?): ImageBitmap? {
@@ -195,6 +207,16 @@ private fun SafeFrameArtwork(
     frameId: String,
     modifier: Modifier,
 ): Boolean {
+    if (drawable != null && PurchasedFrameCatalog.isVectorFrame(frameId)) {
+        Image(
+            painter = painterResource(drawable),
+            contentDescription = null,
+            modifier = modifier,
+            contentScale = ContentScale.Fit,
+        )
+        return true
+    }
+
     val bitmap = rememberStyleBitmap(drawable)
     if (bitmap != null) {
         Image(
@@ -206,7 +228,7 @@ private fun SafeFrameArtwork(
         return true
     }
 
-    // Fail-safe visual frame: avatar stays visible and usable even if the packaged PNG cannot decode.
+    // Fail-safe visual frame: avatar stays visible and usable even if the packaged art cannot decode.
     val accent = PurchasedFrameCatalog.accent(frameId)
     Box(
         modifier = modifier
@@ -350,8 +372,9 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                 val owned = spec.id in inventory
                 val equipped = equippedId == spec.id
                 val vipLocked = spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR && !vipFrameAccess
-                val frameBitmap = rememberStyleBitmap(spec.drawable)
-                val assetReady = spec.drawable == null || frameBitmap != null
+                val vectorFrame = PurchasedFrameCatalog.isVectorFrame(spec.id)
+                val frameBitmap = if (vectorFrame) null else rememberStyleBitmap(spec.drawable)
+                val assetReady = spec.drawable == null || vectorFrame || frameBitmap != null
                 Surface(
                     modifier = Modifier.width(164.dp),
                     shape = RoundedCornerShape(18.dp),
@@ -371,15 +394,20 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                         tint = Color(0xFF142033),
                                     )
                                 }
-                                if (frameBitmap != null) {
-                                    Image(
+                                when {
+                                    vectorFrame && spec.drawable != null -> Image(
+                                        painter = painterResource(spec.drawable),
+                                        contentDescription = null,
+                                        modifier = Modifier.size(94.dp),
+                                        contentScale = ContentScale.Fit,
+                                    )
+                                    frameBitmap != null -> Image(
                                         bitmap = frameBitmap,
                                         contentDescription = null,
                                         modifier = Modifier.size(86.dp),
                                         contentScale = ContentScale.Fit,
                                     )
-                                } else {
-                                    Box(
+                                    else -> Box(
                                         Modifier.size(82.dp)
                                             .border(4.dp, spec.accent, CircleShape)
                                             .padding(4.dp)
