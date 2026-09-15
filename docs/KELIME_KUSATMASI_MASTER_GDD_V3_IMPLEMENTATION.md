@@ -7,7 +7,7 @@ Bu belge, 2026-09-15 tarihli Master GDD v3.0 talimatının mevcut çalışan And
 ### 1. Ana ürün ve marka
 - Kullanıcı görünür uygulama adı: **Kelime Kuşatması**.
 - Ana ürün kimliği: **kelime oyunu + taktik alan savaşı + sosyal rekabet**.
-- Eski `Kelime Tahtı` metinleri, dokunulmamış uyumluluk yüzeylerinde ortak yerelleştirme katmanında Kelime Kuşatması olarak normalize edilir.
+- Eski `Kelime Tahtı` / `Word Throne` metinleri, dokunulmamış uyumluluk yüzeylerinde ortak yerelleştirme katmanında Kelime Kuşatması olarak normalize edilir.
 - `applicationId`, Kotlin package adları, `WordSiege` sınıf adları, `word_siege` Supabase nesneleri ve `sonharf://auth` deep-link şeması değiştirilmez.
 
 ### 2. Ana ekran hiyerarşisi
@@ -53,12 +53,15 @@ Ambient yüzeyler GDD tokenlarını kullanır. Ana aksiyon rengi erişilebilir k
 - Mevcut kulüp, arkadaş/rakip, çevrimiçi durum, rövanş ve rekabet altyapısı yeniden yazılmaz.
 - Alt menüdeki **Kulüp** girişi `KelimeKusatmasiClubScreen` üzerinden ayrı tam ekran sohbet deneyimine açılır.
 - Tam ekran sohbet mevcut `getClubMessages` / `sendClubMessage` backend sözleşmesini kullanır; mesaj girişi 300 karakterle sınırlandırılır ve canlı mesajlar mevcut polling sözleşmesiyle yenilenir.
+- Her yabancı kulüp mesajının menüsünde **Raporla** ve **Engelle** eylemleri bulunur. Bunlar yeni paralel veri üretmez; canlı backend'de zaten bulunan `report_player` ve `block_user` sözleşmelerine bağlanır.
+- Mevcut `report_player` sistemi aynı oyuncuya farklı raporculardan gelen raporları sayar ve 3, 6, 9... ayrı raporcu eşiklerinde sohbet askı seviyesini yükseltir; mevcut backend politikasına göre askı süreleri 24 saat, 3 gün ve sonraki seviyelerde 7 gündür. Kulüp sohbeti yeni server guard sayesinde `profiles.chat_suspended_until` değerini doğrudan uygular.
+- `block_user` durumu `user_blocks` tablosunda korunur. Yeni kulüp mesaj SELECT politikası bu tabloyu kontrol eder; engellenen oyuncunun kulüp mesajları engelleyen kullanıcıya RLS seviyesinde dönmez.
 - İstemci katmanında gönderimler arasında 1,5 saniyelik bekleme bulunur; ancak bu tek güvenlik katmanı değildir.
-- Yeni `20260915061500_club_chat_server_guard_v2.sql` migration'ı `club_messages` INSERT işlemlerine otoritatif sunucu guard'ı ekler. Guard; `auth.uid()` ile gönderici eşleşmesini, aktif kulüp üyeliğini ve 1–300 karakter sınırını tekrar doğrular; aynı kulüp/üye yazımlarını transaction advisory lock ile seri hale getirir.
+- Yeni `20260915061500_club_chat_server_guard_v2.sql` migration'ı `club_messages` INSERT işlemlerine otoritatif sunucu guard'ı ekler. Guard; `auth.uid()` ile gönderici eşleşmesini, kulüp üyeliğini ve 1–300 karakter sınırını tekrar doğrular; aynı kulüp/üye yazımlarını transaction advisory lock ile seri hale getirir.
 - Sunucu anti-spam politikası: mesajlar arasında en az 1,5 saniye, 30 saniyede en fazla 8 mesaj ve aynı normalize mesajın 30 saniye içinde tekrar gönderilmemesi. Mesaj gövdesi ve zaman damgası sunucuda normalize edilir; değiştirilmiş istemci bu pencereleri kendi `created_at` değeriyle atlayamaz.
-- Mevcut RLS açık kalır; SELECT yalnız kulüp üyelerine, INSERT ise üyelik/gönderici/uzunluk şartlarına bağlıdır. Trigger RLS'nin yerine geçmez, ek savunma katmanıdır.
+- Mevcut RLS açık kalır; Trigger RLS'nin yerine geçmez, ek savunma katmanıdır.
 - Kulüp merkezi, üyeler, görevler, sıralama ve kulüpler arası meydan okuma yüzeyleri mevcut `CompetitionHubScreen` üzerinden erişilebilir kalır.
-- Kaynak GDD belirli bir yasaklı kelime listesi veya insan moderasyon akışı tanımlamadığı için keyfi içerik sansürü eklenmez. Bu sürümde “spam/abuse moderation” otomatik hız, burst ve tekrar kötüye kullanımını sunucuda engelleyen guard ile uygulanır; ileride rapor/engel veya insan moderasyonu tasarlanırsa ayrı ürün ve güvenlik sözleşmesiyle eklenmelidir.
+- Kaynak GDD belirli bir yasaklı kelime listesi tanımlamadığı için keyfi sözlük tabanlı sansür eklenmez. Moderasyon; mevcut rapor/engel/sohbet askısı sistemi ile yeni server-side hız, burst ve tekrar kötüye kullanım kontrollerinin birlikte uygulanmasıyla sağlanır.
 
 ### 7. Mağaza, koleksiyon ve çerçeveler
 Mevcut profil çerçevesi sözleşmesi GDD katalog yapısıyla uyumludur:
@@ -86,4 +89,4 @@ Yalnız Türkçe ve İngilizce. Yeni dil eklenmez.
 
 ## Regresyon sınırı
 
-Bu uygulama paketi mevcut oyun motorunu, sözlük v5 sözleşmesini, online eşleşmeyi, bot/maç akışını veya güvenli backend doğrulamasını topluca yeniden yazmaz. Supabase tarafında yalnız Master GDD ile çeliştiği doğrulanan otoritatif kazanan hesabı ve kulüp sohbetinin eksik sunucu anti-spam katmanı ileri yönlü migration'larla tamamlanır. Diğer çalışan sistemler korunur; değişiklikler marka, ürün hiyerarşisi, navigasyon, kulüp sohbet yüzeyi, görsel tokenlar, zafer kuralı, dokümantasyon ve bunları kilitleyen testlerle sınırlı tutulur.
+Bu uygulama paketi mevcut oyun motorunu, sözlük v5 sözleşmesini, online eşleşmeyi, bot/maç akışını veya güvenli backend doğrulamasını topluca yeniden yazmaz. Supabase tarafında yalnız Master GDD ile çeliştiği doğrulanan otoritatif kazanan hesabı ve kulüp sohbetinin eksik server-side enforcement katmanı ileri yönlü migration'larla tamamlanır. Diğer çalışan sistemler korunur; değişiklikler marka, ürün hiyerarşisi, navigasyon, kulüp sohbet yüzeyi, görsel tokenlar, zafer kuralı, dokümantasyon ve bunları kilitleyen testlerle sınırlı tutulur.
