@@ -70,6 +70,23 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     }
 
     @Test
+    fun clubChatHasServerAuthoritativeAntiSpamGuard() {
+        val migration = File("../supabase/migrations/20260915061500_club_chat_server_guard_v2.sql").readText()
+
+        assertTrue(migration.contains("create or replace function private.guard_club_message_insert_v2()"))
+        assertTrue(migration.contains("security definer"))
+        assertTrue(migration.contains("pg_advisory_xact_lock"))
+        assertTrue(migration.contains("interval '1500 milliseconds'"))
+        assertTrue(migration.contains("v_recent_count >= 8"))
+        assertTrue(migration.contains("club_chat_duplicate_message"))
+        assertTrue(migration.contains("new.body := v_body"))
+        assertTrue(migration.contains("new.created_at := clock_timestamp()"))
+        assertTrue(migration.contains("create trigger club_messages_server_guard_v2"))
+        assertTrue(migration.contains("before insert on public.club_messages"))
+        assertTrue(migration.contains("revoke all on function private.guard_club_message_insert_v2()"))
+    }
+
+    @Test
     fun economyKeepsVerifiedFramesAndZeroPayToWinPromise() {
         val economy = File("src/main/java/com/sonharf/game/data/EconomyStore.kt").readText()
         val shop = File("src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
