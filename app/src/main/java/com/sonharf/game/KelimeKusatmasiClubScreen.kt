@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Groups
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -40,6 +41,8 @@ internal fun KelimeKusatmasiClubScreen() {
     var club by remember { mutableStateOf<MyClubDto?>(null) }
     var members by remember { mutableStateOf<List<ClubMemberDto>>(emptyList()) }
     var messages by remember { mutableStateOf<List<ClubMessageDto>>(emptyList()) }
+    var myUserId by remember { mutableStateOf<String?>(null) }
+    var menuMessageId by remember { mutableStateOf<String?>(null) }
     var input by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
     var sending by remember { mutableStateOf(false) }
@@ -54,6 +57,7 @@ internal fun KelimeKusatmasiClubScreen() {
             return
         }
         loading = true
+        myUserId = b.currentUserId()
         runCatching { b.getMyClub() }
             .onSuccess { current ->
                 club = current
@@ -157,9 +161,52 @@ internal fun KelimeKusatmasiClubScreen() {
                                 color = SonHarfTheme.Surface,
                                 border = BorderStroke(1.dp, SonHarfTheme.Border.copy(alpha = .7f)),
                             ) {
-                                Column(Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 10.dp)) {
-                                    Text(sender, color = SonHarfTheme.Primary, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                                    Spacer(Modifier.height(3.dp))
+                                Column(Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 8.dp)) {
+                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                        Text(sender, modifier = Modifier.weight(1f), color = SonHarfTheme.Primary, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                        if (message.senderId != myUserId) {
+                                            Box {
+                                                IconButton(
+                                                    onClick = { menuMessageId = message.id },
+                                                    modifier = Modifier.size(34.dp),
+                                                ) {
+                                                    Icon(Icons.Rounded.MoreVert, sh("Mesaj seçenekleri", "Message options"), modifier = Modifier.size(18.dp), tint = SonHarfTheme.TextSecondary)
+                                                }
+                                                DropdownMenu(
+                                                    expanded = menuMessageId == message.id,
+                                                    onDismissRequest = { menuMessageId = null },
+                                                ) {
+                                                    DropdownMenuItem(
+                                                        text = { Text(sh("Raporla", "Report")) },
+                                                        onClick = {
+                                                            menuMessageId = null
+                                                            scope.launch {
+                                                                val b = backend ?: return@launch
+                                                                runCatching { b.reportClubMember(message.senderId) }
+                                                                    .onSuccess { notice = sh("Rapor moderasyona iletildi.", "Report sent to moderation.") }
+                                                                    .onFailure { notice = sh("Rapor gönderilemedi.", "Report could not be sent.") }
+                                                            }
+                                                        },
+                                                    )
+                                                    DropdownMenuItem(
+                                                        text = { Text(sh("Engelle", "Block")) },
+                                                        onClick = {
+                                                            menuMessageId = null
+                                                            scope.launch {
+                                                                val b = backend ?: return@launch
+                                                                runCatching { b.blockClubMember(message.senderId) }
+                                                                    .onSuccess {
+                                                                        messages = messages.filterNot { it.senderId == message.senderId }
+                                                                        notice = sh("Oyuncu engellendi.", "Player blocked.")
+                                                                    }
+                                                                    .onFailure { notice = sh("Oyuncu engellenemedi.", "Player could not be blocked.") }
+                                                            }
+                                                        },
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
                                     Text(message.body, color = SonHarfTheme.TextPrimary, fontSize = 14.sp, lineHeight = 19.sp)
                                 }
                             }
@@ -199,7 +246,7 @@ internal fun KelimeKusatmasiClubScreen() {
                                         messages = runCatching { b.getClubMessages(current.clubId) }.getOrDefault(messages)
                                         notice = null
                                     }
-                                    .onFailure { notice = sh("Mesaj gönderilemedi.", "Message could not be sent.") }
+                                    .onFailure { notice = clubChatSendError(it) }
                                 sending = false
                             }
                         },
@@ -210,5 +257,18 @@ internal fun KelimeKusatmasiClubScreen() {
                 }
             }
         }
+    }
+}
+
+private fun clubChatSendError(error: Throwable): String {
+    val raw = error.message.orEmpty()
+    return when {
+        raw.contains("chat_suspended", ignoreCase = true) ->
+            sh("Sohbet erişimin geçici olarak askıya alınmış.", "Your chat access is temporarily suspended.")
+        raw.contains("club_chat_rate_limited", ignoreCase = true) ->
+            sh("Mesajları çok hızlı gönderiyorsun. Kısa süre sonra tekrar dene.", "You're sending messages too quickly. Try again shortly.")
+        raw.contains("club_chat_duplicate_message", ignoreCase = true) ->
+            sh("Aynı mesajı art arda gönderemezsin.", "You can't repeat the same message immediately.")
+        else -> sh("Mesaj gönderilemedi.", "Message could not be sent.")
     }
 }
