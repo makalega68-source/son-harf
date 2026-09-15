@@ -466,9 +466,20 @@ private fun WordSiegePracticeContent(
                 }
 
                 if (state.status == "playing") {
-                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        Modifier.fillMaxWidth().height(16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
                         if (placements.isNotEmpty()) {
-                            Text(readyFeedback.message, color = PracticePlayerAccent, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text(
+                                readyFeedback.message,
+                                color = PracticePlayerAccent,
+                                fontSize = 9.sp,
+                                lineHeight = 12.sp,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                                overflow = TextOverflow.Clip,
+                            )
                             Spacer(Modifier.width(5.dp))
                             Text(
                                 sh(
@@ -477,10 +488,18 @@ private fun WordSiegePracticeContent(
                                 ),
                                 color = WordSiegeGameUi.Muted,
                                 fontSize = 8.sp,
+                                lineHeight = 12.sp,
+                                maxLines = 1,
                             )
                         }
                         Spacer(Modifier.weight(1f))
-                        Text(sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"), color = WordSiegeGameUi.Muted, fontSize = 10.sp, lineHeight = 14.sp, maxLines = 1)
+                        Text(
+                            sh("Torba ${state.bag.length}", "Bag ${state.bag.length}"),
+                            color = WordSiegeGameUi.Muted,
+                            fontSize = 10.sp,
+                            lineHeight = 14.sp,
+                            maxLines = 1,
+                        )
                     }
 
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(3.dp)) {

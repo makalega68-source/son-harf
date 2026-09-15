@@ -54,12 +54,13 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     }
 
     @Test
-    fun clubUsesDedicatedFullPageChatWithoutReplacingManagementSurface() {
+    fun clubOpensManagementCenterWhileDedicatedChatRemainsAvailable() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
         val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
 
-        assertTrue(shell.contains("PremiumDestination.CLUB -> KelimeKusatmasiClubScreen()"))
+        assertTrue(shell.contains("PremiumDestination.CLUB -> CompetitionHubScreen("))
+        assertTrue(shell.contains("clubEntry = true"))
         assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
         assertTrue(club.contains("Modifier.fillMaxSize()"))
         assertTrue(club.contains("b.getClubMessages(current.clubId)"))
@@ -74,6 +75,19 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(social.contains("\"report_player\""))
         assertTrue(social.contains("\"block_user\""))
         assertTrue(social.contains("\"club_chat_spam_or_abuse\""))
+    }
+
+    @Test
+    fun gameExitReturnsHomeAndPracticeMoveStatusKeepsFixedHeight() {
+        val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
+
+        assertTrue(shell.contains("fun leaveGame(target: PremiumDestination = PremiumDestination.HOME)"))
+        assertTrue(shell.contains("PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH ->"))
+        assertTrue(shell.contains("PremiumDestination.HOME\n            }"))
+        assertTrue(practice.contains("Modifier.fillMaxWidth().height(16.dp)"))
+        assertTrue(practice.contains("readyFeedback.message"))
+        assertTrue(practice.contains("lineHeight = 12.sp"))
     }
 
     @Test
