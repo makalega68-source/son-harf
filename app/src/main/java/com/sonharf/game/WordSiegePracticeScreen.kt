@@ -337,6 +337,17 @@ private fun WordSiegePracticeContent(
                             Icon(Icons.Rounded.HelpOutline, sh("Nasıl oynanır?", "How to play?"), tint = PracticePlayerAccent)
                         }
                     }
+                    IconButton(
+                        onClick = {
+                            notice = sh(
+                                "Sohbet çevrimiçi maçlarda kullanılabilir.",
+                                "Chat is available in online matches.",
+                            )
+                        },
+                        modifier = Modifier.size(if (compact) 38.dp else 44.dp),
+                    ) {
+                        Icon(Icons.Rounded.Chat, sh("Sohbet", "Chat"), tint = PracticePlayerAccent)
+                    }
                     IconButton(onClick = { showForfeit = true }, enabled = state.status == "playing", modifier = Modifier.size(if (compact) 40.dp else 46.dp)) {
                         Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = WordSiegeGameUi.Red)
                     }
