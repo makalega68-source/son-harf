@@ -4,8 +4,6 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -181,12 +179,16 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
                 fontSize = 13.sp,
             )
         }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(styles, key = { it.id }) { item ->
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            styles.forEach { item ->
                 OwnedStyleCard(
                     item = item,
                     active = equipped.isEquipped(item),
                     enabled = !loading && !busy,
+                    modifier = Modifier.fillMaxWidth(),
                     onEquip = { equipStyle(item.id) },
                 )
             }
@@ -242,48 +244,77 @@ private fun OwnedStyleCard(
     item: ShopItemDto,
     active: Boolean,
     enabled: Boolean,
+    modifier: Modifier = Modifier,
     onEquip: () -> Unit,
 ) {
     val supported = item.isSupportedOwnedStyle()
     Card(
-        modifier = Modifier.width(248.dp),
+        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = MainUi.Surface),
         shape = RoundedCornerShape(18.dp),
         border = BorderStroke(if (active) 2.dp else 1.dp, if (active) MainUi.Green else MainUi.Border),
     ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.fillMaxWidth().height(76.dp), contentAlignment = Alignment.Center) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier.size(88.dp),
+                contentAlignment = Alignment.Center,
+            ) {
                 if (item.kind == "profile_frame" && supported) {
-                    Icon(Icons.Rounded.Person, null, Modifier.size(36.dp), tint = MainUi.Blue)
-                    PurchasedProfileFrameOverlay(frameId = item.id, modifier = Modifier.size(76.dp))
+                    Icon(Icons.Rounded.Person, null, Modifier.size(34.dp), tint = MainUi.Blue)
+                    PurchasedProfileFrameOverlay(frameId = item.id, modifier = Modifier.size(82.dp))
                 } else {
                     Icon(Icons.Rounded.Palette, null, Modifier.size(38.dp), tint = MainUi.Blue)
                 }
             }
-            Text(sh(item.nameTr, item.nameEn), color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text(sh(item.descriptionTr, item.descriptionEn), color = MainUi.Muted, fontSize = 13.sp)
-            Text(
-                if (item.active) sh("Koleksiyonunda", "In your collection")
-                else sh("Arşiv/üyelik ürünü • Koleksiyonunda", "Retired/membership item • In your collection"),
-                color = MainUi.Blue,
-                fontSize = 12.sp,
-            )
-            if (!supported) {
-                Text(
-                    sh(
-                        "Bu sürümde kullanılamıyor. Sahipliğin korunuyor.",
-                        "Unavailable in this version. You still own this item.",
-                    ),
-                    color = MainUi.Muted,
-                    fontSize = 13.sp,
-                )
-            }
-            Button(
-                onClick = onEquip,
-                enabled = enabled && supported && !active,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp),
             ) {
-                Text(if (active) sh("AKTİF", "EQUIPPED") else sh("UYGULA", "APPLY"))
+                Text(
+                    sh(item.nameTr, item.nameEn),
+                    color = MainUi.Text,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 2,
+                )
+                Text(
+                    sh(item.descriptionTr, item.descriptionEn),
+                    color = MainUi.Muted,
+                    fontSize = 12.sp,
+                    maxLines = 2,
+                )
+                Text(
+                    if (item.active) sh("Koleksiyonunda", "In your collection")
+                    else sh("Arşiv/üyelik ürünü • Koleksiyonunda", "Retired/membership item • In your collection"),
+                    color = MainUi.Blue,
+                    fontSize = 11.sp,
+                    maxLines = 2,
+                )
+                if (!supported) {
+                    Text(
+                        sh(
+                            "Bu sürümde kullanılamıyor. Sahipliğin korunuyor.",
+                            "Unavailable in this version. You still own this item.",
+                        ),
+                        color = MainUi.Muted,
+                        fontSize = 12.sp,
+                    )
+                }
+                Button(
+                    onClick = onEquip,
+                    enabled = enabled && supported && !active,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 44.dp),
+                    shape = RoundedCornerShape(14.dp),
+                ) {
+                    Text(
+                        if (active) sh("AKTİF", "EQUIPPED") else sh("UYGULA", "APPLY"),
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
             }
         }
     }
