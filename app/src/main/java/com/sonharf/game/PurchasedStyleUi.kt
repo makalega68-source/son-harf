@@ -121,10 +121,10 @@ private val purchasedFrameSpecs = listOf(
     PurchasedFrameSpec(PurchasedFrameCatalog.LILAC, "Lila Halo", "Lilac Halo", "Sadece görünüm için lila yuvarlak çerçeve", "Lilac round frame, visual only", R.drawable.profile_frame_round_lilac, Color(0xFF7257D8), "GOOGLE PLAY", "GOOGLE PLAY", R.drawable.style_icon_coin),
     PurchasedFrameSpec(PurchasedFrameCatalog.ROSE, "Gül Işığı", "Rose Glow", "Sadece görünüm için pembe yuvarlak çerçeve", "Rose round frame, visual only", R.drawable.profile_frame_round_rose, Color(0xFFE45A91), "GOOGLE PLAY", "GOOGLE PLAY", R.drawable.style_icon_coin),
     PurchasedFrameSpec(PurchasedFrameCatalog.GOLDEN_AVATAR, "Golden Avatar", "Golden Avatar", "Yalnızca aktif VIP / PRO oyuncular için", "Only for active VIP / PRO players", R.drawable.profile_frame_round_golden_avatar, Color(0xFFD7A72E), "VIP / PRO", "VIP / PRO", R.drawable.style_icon_trophy),
-    PurchasedFrameSpec(PurchasedFrameCatalog.RED, "Kızıl İmza", "Crimson Mark", "Kırmızı profil çerçevesi", "Red profile frame", R.drawable.style_frame_red, Color(0xFFC8464B), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
-    PurchasedFrameSpec(PurchasedFrameCatalog.GREEN, "Orman İmzası", "Forest Mark", "Yeşil profil çerçevesi", "Green profile frame", R.drawable.style_frame_green, Color(0xFF2FAE68), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
-    PurchasedFrameSpec(PurchasedFrameCatalog.MINT, "Nane İmza", "Mint Mark", "Nane tonlu profil çerçevesi", "Mint profile frame", R.drawable.style_frame_mint, Color(0xFF2CBFA8), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
-    PurchasedFrameSpec(PurchasedFrameCatalog.PURPLE, "Mor İmza", "Violet Mark", "Mor profil çerçevesi", "Purple profile frame", R.drawable.style_frame_purple, Color(0xFF7257D8), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
+    PurchasedFrameSpec(PurchasedFrameCatalog.RED, "Kırmızı Hat", "Red Line", "Canlı kırmızı profil çerçevesi", "Vivid red profile frame", R.drawable.style_frame_red, Color(0xFFC8464B), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.GREEN, "Zümrüt Hat", "Emerald Line", "Zümrüt tonlu profil çerçevesi", "Emerald profile frame", R.drawable.style_frame_green, Color(0xFF2FAE68), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.MINT, "Buz Mint", "Ice Mint", "Mint tonlu profil çerçevesi", "Mint profile frame", R.drawable.style_frame_mint, Color(0xFF2CBFA8), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
+    PurchasedFrameSpec(PurchasedFrameCatalog.PURPLE, "Mor Spektrum", "Violet Spectrum", "Mor profil çerçevesi", "Violet profile frame", R.drawable.style_frame_purple, Color(0xFF7257D8), "MAĞAZA", "SHOP", R.drawable.style_icon_coin),
     PurchasedFrameSpec(PurchasedFrameCatalog.GOLD, "Altın İmza", "Gold Mark", "Altın profil çerçevesi", "Gold profile frame", R.drawable.style_frame_gold, Color(0xFFD7A72E), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
     PurchasedFrameSpec(PurchasedFrameCatalog.GOLD_CROWN, "Taçlı Altın", "Crowned Gold", "Taçlı altın profil çerçevesi", "Crowned gold profile frame", R.drawable.style_frame_gold_crown, Color(0xFFD7A72E), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
     PurchasedFrameSpec(PurchasedFrameCatalog.CHRISTMAS, "Kış Şenliği", "Winter Fest", "Kış temalı profil çerçevesi", "Winter themed profile frame", R.drawable.style_frame_christmas, Color(0xFFC74450), "ETKİNLİK", "EVENT", R.drawable.style_icon_trophy),
@@ -294,8 +294,6 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
         onDispose { billing.close() }
     }
 
-
-
     LaunchedEffect(backend) {
         runCatching { refreshPurchasedFrames() }.onFailure {
             loading = false
@@ -335,6 +333,8 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                 val vipLocked = spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR && !vipFrameAccess
                 val frameBitmap = rememberStyleBitmap(spec.drawable)
                 val assetReady = spec.drawable == null || frameBitmap != null
+                val coinPriced = item != null && spec.id !in playProductByFrame
+                val canBuyWithCoin = !owned && coinPriced && assetReady
                 Surface(
                     modifier = Modifier.width(164.dp),
                     shape = RoundedCornerShape(18.dp),
@@ -405,7 +405,8 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                     owned -> sh("SAHİPSİN", "OWNED")
                                     vipLocked -> sh("VIP / PRO KİLİTLİ", "VIP / PRO LOCKED")
                                     playProduct?.oneTimePurchaseOfferDetails != null -> playProduct.oneTimePurchaseOfferDetails?.formattedPrice.orEmpty()
-                                    item != null -> "${item.diamondPrice} SC"
+                                    coinPriced -> "${item?.diamondPrice ?: 0} SC"
+                                    spec.id in playProductByFrame -> sh("GOOGLE PLAY", "GOOGLE PLAY")
                                     else -> sh(spec.accessTr, spec.accessEn)
                                 },
                                 modifier = Modifier.weight(1f),
@@ -423,6 +424,7 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                         scope.launch {
                                             busyId = spec.id
                                             try {
+                                                val buyingWithCoin = canBuyWithCoin
                                                 runCatching {
                                                     withTimeout(12_000L) {
                                                         if (spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR) {
@@ -431,12 +433,18 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                                             val host = activity ?: error("activity_required")
                                                             val result = billing.launchProduct(host, playProduct)
                                                             if (result.responseCode != BillingClient.BillingResponseCode.OK) error("billing_unavailable")
+                                                        } else if (buyingWithCoin) {
+                                                            b.purchaseShopItem(spec.id)
                                                         } else {
                                                             b.equipShopItem(spec.id)
                                                         }
                                                     }
                                                 }.onSuccess {
-                                                    notice = sh("${spec.titleTr} kullanılıyor.", "${spec.titleEn} equipped.")
+                                                    notice = if (buyingWithCoin) {
+                                                        sh("${spec.titleTr} envanterine eklendi.", "${spec.titleEn} added to your inventory.")
+                                                    } else {
+                                                        sh("${spec.titleTr} kullanılıyor.", "${spec.titleEn} equipped.")
+                                                    }
                                                     refreshPurchasedFrames()
                                                 }.onFailure { error ->
                                                     notice = if ("insufficient_diamonds" in error.message.orEmpty()) {
@@ -450,7 +458,12 @@ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
                                             }
                                         }
                                     },
-                                    enabled = backend != null && !vipLocked && (spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR || owned || (playProduct?.oneTimePurchaseOfferDetails != null && assetReady)) && busyId == null,
+                                    enabled = backend != null && !vipLocked && (
+                                        spec.id == PurchasedFrameCatalog.GOLDEN_AVATAR ||
+                                            owned ||
+                                            (playProduct?.oneTimePurchaseOfferDetails != null && assetReady) ||
+                                            canBuyWithCoin
+                                        ) && busyId == null,
                                     contentPadding = PaddingValues(horizontal = 9.dp, vertical = 3.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = spec.accent, contentColor = Color.White),
                                     shape = RoundedCornerShape(10.dp),
