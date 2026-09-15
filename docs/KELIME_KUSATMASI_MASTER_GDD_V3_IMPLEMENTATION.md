@@ -38,12 +38,16 @@ Ambient yüzeyler GDD tokenlarını kullanır. Ana aksiyon rengi erişilebilir k
 - Harf Yolu doğrudan ana ekrandan erişilen üçüncü moddur.
 - Her mod mevcut TR/EN seçim sözleşmesini korur.
 
-### 5. Skor ve alan kuralları
-Mevcut doğrulanmış sözleşme korunur:
+### 5. Skor, alan ve zafer kuralları
 - Kelime puanı kalıcı birikimdir.
 - Sahip olunan her küp 2 bölge puanıdır.
 - Rakip bir küpü geri aldığında yalnız o küpün 2 bölge puanı kaybedilir; geçmiş kelime puanı geri alınmaz.
-- Maç yüzeyinde kelime ve bölge puanı ayrı kaynaklar olarak korunur.
+- Maç yüzeyinde kelime ve bölge puanı ayrı kaynaklar olarak korunur; toplam skor açıklayıcı performans metriği olarak gösterilebilir.
+- Master GDD v3 gereği normal maç kazananı **yalnız maç bittiği andaki bölge hâkimiyetiyle** belirlenir. Kelime puanı veya toplam skor gizli tie-break olarak kullanılmaz.
+- Bölge sayısı eşitse normal maç berabere biter.
+- Pes/forfeit özel durumunda rakip doğrudan kazanır; bu güvenli ve mevcut davranış korunur.
+- Otoritatif online kural yeni `20260915060000_word_siege_territory_victory_v10.sql` migration'ında, aynı kural bot/alıştırma tarafında `WordSiegePracticeEngine` içinde uygulanır.
+- GDD “grid saturation or time expiry” der; kaynak herhangi bir global maç süresi belirtmez. Bu nedenle keyfi bir dakika değeri uydurulmamıştır. Mevcut güvenli bitiş tetikleri (ör. torba/rack tükenmesi ve ardışık pas) korunur; gelecekte zamanlı Kelime Kuşatması varyantı `finish_word_siege_game_v1` üzerinden bittiğinde aynı bölge-hâkimiyeti zafer kuralını otomatik kullanır.
 
 ### 6. Sosyal/kulüp
 - Mevcut kulüp, arkadaş/rakip, çevrimiçi durum, rövanş ve rekabet altyapısı yeniden yazılmaz.
@@ -79,4 +83,4 @@ Yalnız Türkçe ve İngilizce. Yeni dil eklenmez.
 
 ## Regresyon sınırı
 
-Bu uygulama paketi mevcut oyun motorunu, sözlük v5 sözleşmesini, online eşleşmeyi, bot/maç akışını, güvenli backend doğrulamasını veya Supabase şemasını topluca yeniden yazmaz. GDD ile zaten uyumlu çalışan sistemler korunur; değişiklikler marka, ürün hiyerarşisi, navigasyon, kulüp sohbet yüzeyi, görsel tokenlar, dokümantasyon ve bunları kilitleyen testlerle sınırlı tutulur.
+Bu uygulama paketi mevcut oyun motorunu, sözlük v5 sözleşmesini, online eşleşmeyi, bot/maç akışını veya güvenli backend doğrulamasını topluca yeniden yazmaz. Supabase tarafında yalnız Master GDD ile çeliştiği doğrulanan otoritatif kazanan hesabı yeni, ileri yönlü migration ile değiştirilir. Diğer çalışan sistemler korunur; değişiklikler marka, ürün hiyerarşisi, navigasyon, kulüp sohbet yüzeyi, görsel tokenlar, zafer kuralı, dokümantasyon ve bunları kilitleyen testlerle sınırlı tutulur.
