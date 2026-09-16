@@ -11,10 +11,10 @@ DRAWABLE = ROOT / 'app' / 'src' / 'main' / 'res' / 'drawable'
 EXPECTED = {
     'profile_frame_wing_silver.webp': 'c7b8e040f4c01d965f61f1abbc45d8c8803920c61b5c78e202936a0fcf4848b6',
     'profile_frame_wing_blue.webp': 'b1cfbc14377bb201694660748b018095dcb472c6dc95f6a213f4a01fb8fc6019',
-    'profile_frame_flower_pink_blossom.webp': '49c2f5833f19b0e5ebf5cdfc5ec3a91cf1928a27f88faf54a38bddf23a7d86f1',
+    'profile_frame_flower_pink_blossom.webp': '0b638a5fd9be51c3ccf2f6f3fe6f09ac36a78837eec71881a6d27fa540796324',
     'profile_frame_wing_pink.webp': '5e70bc9cb223e2339b184bd867682ffaf5ef6d8bc4bc71a274be90341d55d40a',
     'profile_frame_wing_gold.webp': 'cb95e26e2f84400dafaf02a4abce49f832ca8527ecdbaa878469f0af96bd221a',
-    'profile_frame_wing_aurora.webp': '9b3aa48f7ffda366145c83e859b880fb66399b449b463f1299de52b676e9c00c',
+    'profile_frame_wing_aurora.webp': '6e021bbd253dd82ce36b259fa891b6d7bbe6ccbff746359a4898024046eb0a4f',
     'profile_frame_round_golden_avatar.webp': 'ac3bd7cd4b9431d2324d756890cc8fd77d2e2d5adbe90b1c6cbbab7a6219a1da',
 }
 
