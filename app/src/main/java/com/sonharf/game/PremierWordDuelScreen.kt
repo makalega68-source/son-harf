@@ -989,7 +989,11 @@ private fun PremierArenaHeader(
                 )
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor)
+                // G4.1: pull the current lives count from the room. Host is
+                // always "me" on the left card in this screen's layout.
+                val myLives = room.hostLives
+                val rivalLives = room.guestLives
+                PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, myLives, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor)
                 Surface(shape = CircleShape, color = Color.Transparent) {
                     Box(Modifier.size(60.dp).background(Brush.radialGradient(listOf(timerStart, if (danger) PremierUi.Red else PremierUi.Ocean, timerEnd)), CircleShape), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -998,14 +1002,14 @@ private fun PremierArenaHeader(
                         }
                     }
                 }
-                PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, PremierUi.OceanDeep, room.isBot, Modifier.weight(1f))
+                PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, rivalLives, PremierUi.OceanDeep, room.isBot, Modifier.weight(1f))
             }
         }
     }
 }
 
 @Composable
-private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, visible: Boolean, rounds: Int, streak: Int, accent: Color, bot: Boolean, modifier: Modifier, nameColor: Color = PremierUi.Ink) {
+private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, visible: Boolean, rounds: Int, streak: Int, lives: Int, accent: Color, bot: Boolean, modifier: Modifier, nameColor: Color = PremierUi.Ink) {
     val isLeft = accent == PremierUi.Ocean
     Row(
         modifier = modifier,
@@ -1030,6 +1034,17 @@ private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, vi
             Text(name, color = nameColor, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 repeat(3) { i -> Box(Modifier.size(9.dp).clip(CircleShape).background(if (i < rounds) PremierUi.Gold else PremierUi.Border)) }
+            }
+            // G4.1: three heart pips per player, filled = life remaining, empty = life lost.
+            Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                repeat(3) { i ->
+                    Text(
+                        text = if (i < lives) "❤" else "🖤",
+                        color = if (i < lives) PremierUi.Red else PremierUi.Border,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
             }
             if (streak >= 2) Text("🔥 $streak", color = PremierUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black)
         }

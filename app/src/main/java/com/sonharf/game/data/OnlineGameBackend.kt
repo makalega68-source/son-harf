@@ -73,6 +73,12 @@ data class GameRoomDto(
     @SerialName("reconnect_deadline") val reconnectDeadline: String? = null,
     @SerialName("game_mode") val gameMode: String = "normal",
     @SerialName("winner_is_bot") val winnerIsBot: Boolean = false,
+    // G4.1: shrinking-turn + lives + bonuses (server-managed via triggers).
+    // Defaults keep older rows serializing cleanly when the DB migration
+    // hasn't run yet.
+    @SerialName("host_lives") val hostLives: Int = 3,
+    @SerialName("guest_lives") val guestLives: Int = 3,
+    @SerialName("turn_shrink_step") val turnShrinkStep: Int = 0,
 )
 
 @Serializable
