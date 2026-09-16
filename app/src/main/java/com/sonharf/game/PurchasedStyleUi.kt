@@ -241,9 +241,13 @@ private fun SafeFrameArtwork(
     return false
 }
 
+private const val PROFILE_FRAMES_RETIRED = true
+
 @Composable
 internal fun PurchasedProfileFrameOverlay(frameId: String?, modifier: Modifier = Modifier) {
     if (frameId.isNullOrBlank()) return
+    // Historical artwork remains in the repository for provenance/rollback only.
+    if (PROFILE_FRAMES_RETIRED) return
     SafeFrameArtwork(
         drawable = PurchasedFrameCatalog.drawable(frameId),
         frameId = frameId,
@@ -266,6 +270,9 @@ private fun legacyFrameSpec(item: ShopItemDto): PurchasedFrameSpec = PurchasedFr
 
 @Composable
 internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
+    // Frames are retired product-wide. Preserve legacy implementation below for purchase-history
+    // auditability, but do not expose a sale/equip surface in the live UI.
+    if (PROFILE_FRAMES_RETIRED) return
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
