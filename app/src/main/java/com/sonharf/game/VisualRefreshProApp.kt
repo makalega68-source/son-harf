@@ -289,9 +289,7 @@ private fun RefreshHomeScreen(
                         containerColor = Color.White.copy(alpha = .80f),
                         contentColor = SonHarfTheme.Primary,
                     ),
-                    border = ButtonDefaults.outlinedButtonBorder.copy(
-                        brush = androidx.compose.ui.graphics.SolidColor(SonHarfTheme.Border)
-                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, SonHarfTheme.Border),
                 ) {
                     Icon(Icons.Rounded.EmojiEvents, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(7.dp))
