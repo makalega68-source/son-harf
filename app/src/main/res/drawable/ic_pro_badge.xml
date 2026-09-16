@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- G4.7: PRO badge. Gold crown + "PRO" wordmark. Rendered next to Pro
+     player names in profile, leaderboard, chat and match cards. Uses a
+     single gradient so tinting stays consistent across screens. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="40dp"
+    android:height="20dp"
+    android:viewportWidth="80"
+    android:viewportHeight="40">
+
+    <!-- Base pill with gold gradient. -->
+    <path
+        android:pathData="M6 6 L74 6 A14 14 0 0 1 74 34 L6 34 A14 14 0 0 1 6 6 Z"
+        android:strokeColor="#8A6A1F"
+        android:strokeWidth="1.5">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:angle="270"
+                android:type="linear"
+                android:startColor="#FFF3C4"
+                android:endColor="#D4AF37" />
+        </aapt:attr>
+    </path>
+
+    <!-- Crown above the wordmark. -->
+    <path
+        android:pathData="M22 14 L28 8 L34 14 L40 6 L46 14 L52 8 L58 14 L58 20 L22 20 Z"
+        android:fillColor="#F5C542"
+        android:strokeColor="#8A6A1F"
+        android:strokeWidth="1" />
+
+    <!-- Three gems on the crown. -->
+    <path
+        android:pathData="M28 15 m-1.6 0 a1.6 1.6 0 1 0 3.2 0 a1.6 1.6 0 1 0 -3.2 0"
+        android:fillColor="#8B5CF6" />
+    <path
+        android:pathData="M40 12 m-1.6 0 a1.6 1.6 0 1 0 3.2 0 a1.6 1.6 0 1 0 -3.2 0"
+        android:fillColor="#E85555" />
+    <path
+        android:pathData="M52 15 m-1.6 0 a1.6 1.6 0 1 0 3.2 0 a1.6 1.6 0 1 0 -3.2 0"
+        android:fillColor="#14B8A6" />
+
+    <!-- Wordmark: PRO. -->
+    <group>
+        <!-- P -->
+        <path
+            android:pathData="M27 24 L27 33 M27 24 L32 24 A2.5 2.5 0 0 1 32 29 L27 29"
+            android:strokeColor="#4A2E00"
+            android:strokeWidth="2"
+            android:fillColor="#00000000" />
+        <!-- R -->
+        <path
+            android:pathData="M36 33 L36 24 L41 24 A2.5 2.5 0 0 1 41 29 L36 29 M40 29 L43 33"
+            android:strokeColor="#4A2E00"
+            android:strokeWidth="2"
+            android:fillColor="#00000000" />
+        <!-- O -->
+        <path
+            android:pathData="M50 24 A2.5 4.5 0 0 1 50 33 A2.5 4.5 0 0 1 50 24"
+            android:strokeColor="#4A2E00"
+            android:strokeWidth="2"
+            android:fillColor="#00000000" />
+    </group>
+</vector>

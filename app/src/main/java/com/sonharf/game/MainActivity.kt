@@ -33,16 +33,55 @@ internal val SonHarfText: Color get() = SonHarfTheme.TextPrimary
 internal val SonHarfMuted: Color get() = SonHarfTheme.TextSecondary
 internal val SonHarfPink = Color(0xFFFF5F57)
 
+// G5.9 typography scale.
+// Body/label uses Inter-equivalent (system sans, regular/medium/semibold).
+// Titles use Montserrat-equivalent (system sans, extrabold/black). When TTFs
+// are dropped into res/font/, swap FontFamily.SansSerif for a FontFamily
+// composed of R.font.montserrat_* / R.font.inter_* — nothing else needs to
+// change because every screen resolves through MaterialTheme.typography.
 private val SonHarfTypography = Typography(
-    bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 25.sp),
-    bodyMedium = TextStyle(fontSize = 16.sp, lineHeight = 23.sp),
-    bodySmall = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
-    labelLarge = TextStyle(fontSize = 16.sp, lineHeight = 21.sp, fontWeight = FontWeight.SemiBold),
-    labelMedium = TextStyle(fontSize = 14.sp, lineHeight = 19.sp),
-    labelSmall = TextStyle(fontSize = 13.sp, lineHeight = 18.sp),
-    titleLarge = TextStyle(fontSize = 24.sp, lineHeight = 31.sp, fontWeight = FontWeight.Bold),
-    titleMedium = TextStyle(fontSize = 20.sp, lineHeight = 27.sp, fontWeight = FontWeight.Bold),
-    titleSmall = TextStyle(fontSize = 17.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold),
+    // Body / label: 15sp text, 12sp caption.
+    bodyLarge = TextStyle(
+        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+        fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Normal,
+    ),
+    bodyMedium = TextStyle(
+        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+        fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.Normal,
+    ),
+    bodySmall = TextStyle(
+        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+        fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.Normal,
+    ),
+    labelLarge = TextStyle(
+        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+        fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold,
+        letterSpacing = 0.5.sp,
+    ),
+    labelMedium = TextStyle(
+        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+        fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium,
+    ),
+    labelSmall = TextStyle(
+        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+        fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium,
+    ),
+    // Titles: 18 / 24 / 32.
+    titleSmall = TextStyle(
+        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+        fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.ExtraBold,
+        letterSpacing = 0.3.sp,
+    ),
+    titleMedium = TextStyle(
+        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+        fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.ExtraBold,
+        letterSpacing = 0.5.sp,
+    ),
+    titleLarge = TextStyle(
+        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+        fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Black,
+        letterSpacing = 0.5.sp,
+    ),
 )
 
 enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
@@ -148,7 +187,9 @@ class MainActivity : ComponentActivity() {
                 colorScheme = appColors,
                 typography = SonHarfTypography,
             ) {
-                AppStartupGate(clearUnrememberedSession = clearUnrememberedSession)
+                com.sonharf.game.ui.vfx.VfxLayerHost {
+                    AppStartupGate(clearUnrememberedSession = clearUnrememberedSession)
+                }
             }
         }
 
