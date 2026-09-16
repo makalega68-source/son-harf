@@ -528,8 +528,6 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                         for (move in 1..LetterLadderEngine.MOVE_COUNT) {
                             LadderMoveRow(
                                 word = path.getOrNull(move)?.uppercase(locale),
-                                isActive = !completed && move == path.size,
-                                activeInput = input.uppercase(locale),
                                 usedPositions = usedPositions,
                                 modifier = Modifier.fillMaxWidth().weight(1f),
                             )
@@ -715,12 +713,12 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
 @Composable
 private fun LadderMoveRow(
     word: String?,
-    isActive: Boolean,
-    activeInput: String,
     usedPositions: Set<Int>,
     modifier: Modifier = Modifier,
 ) {
-    val display = word ?: if (isActive) activeInput.padEnd(5, ' ') else "     "
+    // The live input already exists in the keyboard/input area below. Do not mirror it in the
+    // active ladder row; that duplicate made the bottom word appear twice.
+    val display = word ?: "     "
     LadderWordTiles(
         word = display,
         locked = usedPositions,

@@ -28,18 +28,18 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
 internal const val PURCHASED_DUEL_WORD_VFX_MS = 720
-internal const val PURCHASED_DUEL_WORD_MAX_ALPHA = .76f
-internal const val PURCHASED_DUEL_WORD_STAR_COUNT = 4
-internal const val PURCHASED_DUEL_WORD_CENTER_STAR_DP = 28f
+internal const val PURCHASED_DUEL_WORD_MAX_ALPHA = .92f
+internal const val PURCHASED_DUEL_WORD_STAR_COUNT = 6
+internal const val PURCHASED_DUEL_WORD_CENTER_STAR_DP = 34f
 
 internal const val PURCHASED_BOARD_PLACE_VFX_MS = 650
 internal const val PURCHASED_BOARD_RESOLVE_VFX_MS = 800
-internal const val PURCHASED_BOARD_PLACE_MAX_ALPHA = .82f
-internal const val PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .85f
-internal const val PURCHASED_BOARD_PLACE_STAR_COUNT = 4
-internal const val PURCHASED_BOARD_RESOLVE_STAR_COUNT = 5
-internal const val PURCHASED_BOARD_PLACE_MIN_STAR_DP = 12f
-internal const val PURCHASED_BOARD_RESOLVE_MIN_STAR_DP = 13f
+internal const val PURCHASED_BOARD_PLACE_MAX_ALPHA = .94f
+internal const val PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .98f
+internal const val PURCHASED_BOARD_PLACE_STAR_COUNT = 5
+internal const val PURCHASED_BOARD_RESOLVE_STAR_COUNT = 6
+internal const val PURCHASED_BOARD_PLACE_MIN_STAR_DP = 14f
+internal const val PURCHASED_BOARD_RESOLVE_MIN_STAR_DP = 16f
 
 internal enum class PurchasedBoardVfxKind { PLACEMENT, RESOLVED }
 
@@ -54,6 +54,8 @@ private val PurchasedDuelWordVfxDirections = listOf(
     0.86f to -0.44f,
     -0.68f to 0.62f,
     0.68f to 0.66f,
+    0.00f to -1.00f,
+    0.02f to 1.00f,
 )
 
 private val PurchasedBoardVfxDirections = listOf(
@@ -88,8 +90,8 @@ internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier
         Canvas(Modifier.fillMaxSize()) {
             val ringRadiusPx = with(density) { (30f + 58f * p).dp.toPx() }
             val innerRadiusPx = with(density) { (20f + 38f * p).dp.toPx() }
-            val glowStrokePx = with(density) { 8.dp.toPx() }
-            val ringStrokePx = with(density) { 3.dp.toPx() }
+            val glowStrokePx = with(density) { 11.dp.toPx() }
+            val ringStrokePx = with(density) { 4.dp.toPx() }
             drawCircle(
                 color = PurchasedWordSuccessGreen.copy(alpha = alpha * .22f),
                 radius = ringRadiusPx,
@@ -112,8 +114,8 @@ internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier
 
         repeat(PURCHASED_DUEL_WORD_STAR_COUNT) { index ->
             val (xDirection, yDirection) = PurchasedDuelWordVfxDirections[index]
-            val distance = 32f + 46f * p
-            val starSize = 14f + (index % 2) * 3f + p * 3f
+            val distance = 36f + 56f * p
+            val starSize = 17f + (index % 2) * 3f + p * 4f
             Image(
                 painter = painterResource(R.drawable.vfx_twinkle),
                 contentDescription = null,

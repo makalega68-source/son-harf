@@ -1,17 +1,13 @@
 package com.sonharf.game
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.dp
 
 /**
- * Single source of truth for rendering a user profile photo with an equipped Style frame.
- * The avatar remains centered and visible even when no frame is equipped or artwork falls back.
+ * Profile avatar renderer kept source-compatible with older call sites.
+ * Profile frames are intentionally disabled product-wide; frameId is ignored so existing
+ * profiles cannot accidentally render legacy frame artwork while stored data is retired.
  */
 @Composable
 internal fun FramedProfilePhotoAvatar(
@@ -24,24 +20,15 @@ internal fun FramedProfilePhotoAvatar(
     visible: Boolean = true,
     showGenderBadge: Boolean = false,
 ) {
-    val isDecorativeOversize = frameId?.startsWith("frame_wing_") == true || frameId == "frame_flower_pink_blossom"
-    val frameSize = size + if (isDecorativeOversize) 28.dp else 16.dp
-    Box(
-        modifier = Modifier.size(frameSize),
-        contentAlignment = Alignment.Center,
-    ) {
-        ProfilePhotoAvatarWithGender(
-            avatarPath = avatarPath,
-            gender = gender,
-            name = name,
-            size = size,
-            accent = accent,
-            visible = visible,
-            showGenderBadge = showGenderBadge,
-        )
-        PurchasedProfileFrameOverlay(
-            frameId = frameId,
-            modifier = Modifier.size(frameSize),
-        )
-    }
+    @Suppress("UNUSED_VARIABLE")
+    val legacyFrameId = frameId
+    ProfilePhotoAvatarWithGender(
+        avatarPath = avatarPath,
+        gender = gender,
+        name = name,
+        size = size,
+        accent = accent,
+        visible = visible,
+        showGenderBadge = showGenderBadge,
+    )
 }
