@@ -21,7 +21,7 @@ data class WeeklyLeaguePositionDto(
 
 @Serializable
 data class ActiveWeeklyTournamentDto(
-    @SerialName("tournament_id") val tournamentId: Long,
+    @SerialName("tournament_id") val tournamentId: String,
     @SerialName("week_start") val weekStart: String,
     val language: String = "tr",
     val status: String = "scheduled",
