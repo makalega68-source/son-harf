@@ -101,10 +101,19 @@ fun GrowthCenterScreen(onPlay: (() -> Unit)? = null) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val vfx = com.sonharf.game.ui.vfx.LocalVfx.current
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val configuration = androidx.compose.ui.platform.LocalConfiguration.current
+    val screenWidthPx = with(density) { configuration.screenWidthDp.dp.toPx() }
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }
+    val rewardAnchor = androidx.compose.ui.geometry.Offset(screenWidthPx * .50f, screenHeightPx * .62f)
+    val diamondCounterAnchor = androidx.compose.ui.geometry.Offset(screenWidthPx * .88f, screenHeightPx * .08f)
+    val levelAnchor = androidx.compose.ui.geometry.Offset(screenWidthPx * .50f, screenHeightPx * .20f)
     var dashboard by remember { mutableStateOf<GrowthDashboardDto?>(null) }
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var notice by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
+    var previousLevel by remember { mutableStateOf<Int?>(null) }
 
     suspend fun reload() {
         dashboard = runCatching { backend?.getGrowthDashboard() }.getOrNull()
@@ -114,6 +123,15 @@ fun GrowthCenterScreen(onPlay: (() -> Unit)? = null) {
     LaunchedEffect(Unit) {
         reload()
         runCatching { backend?.logEvent("growth_center_open") }
+    }
+
+    LaunchedEffect(dashboard?.level) {
+        val current = dashboard?.level ?: return@LaunchedEffect
+        val before = previousLevel
+        if (before != null && current > before) {
+            vfx.play(com.sonharf.game.ui.vfx.VfxEvent.LevelUp(current, levelAnchor))
+        }
+        previousLevel = current
     }
 
     val d = dashboard
@@ -176,6 +194,9 @@ fun GrowthCenterScreen(onPlay: (() -> Unit)? = null) {
                             scope.launch {
                                 busy = true
                                 val reward = runCatching { backend?.claimDailyCheckin() ?: 0 }.getOrDefault(0)
+                                if (reward > 0) {
+                                    vfx.play(com.sonharf.game.ui.vfx.VfxEvent.DiamondGain(reward, rewardAnchor, diamondCounterAnchor))
+                                }
                                 notice = if (reward > 0) sh("Günlük ödül: +$reward elmas", "Daily reward: +$reward diamonds") else sh("Bugünün ödülünü zaten aldın.", "Today's reward is already claimed.")
                                 reload(); busy = false
                             }
@@ -198,7 +219,20 @@ fun GrowthCenterScreen(onPlay: (() -> Unit)? = null) {
                         LinearProgressIndicator(progress={ (d.matchesToday.coerceAtMost(3)/3f) },modifier=Modifier.fillMaxWidth())
                         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                             Text("${d.matchesToday.coerceAtMost(3)}/3",fontWeight=FontWeight.Bold)
-                            Button(onClick={ scope.launch { busy=true; val r=runCatching { backend?.claimDailyChallenge() ?: 0 }.getOrDefault(0); notice=if(r>0) "+$r 💎" else sh("Henüz tamamlanmadı veya ödül alındı.","Not completed yet or already claimed."); reload(); busy=false } },enabled=!busy && d.matchesToday>=3 && !d.dailyChallengeClaimed) { Text(if(d.dailyChallengeClaimed) sh("ALINDI","CLAIMED") else sh("TOPLA","CLAIM")) }
+                            Button(
+                                onClick={
+                                    scope.launch {
+                                        busy=true
+                                        val r=runCatching { backend?.claimDailyChallenge() ?: 0 }.getOrDefault(0)
+                                        if (r > 0) {
+                                            vfx.play(com.sonharf.game.ui.vfx.VfxEvent.DiamondGain(r, rewardAnchor, diamondCounterAnchor))
+                                        }
+                                        notice=if(r>0) "+$r 💎" else sh("Henüz tamamlanmadı veya ödül alındı.","Not completed yet or already claimed.")
+                                        reload(); busy=false
+                                    }
+                                },
+                                enabled=!busy && d.matchesToday>=3 && !d.dailyChallengeClaimed,
+                            ) { Text(if(d.dailyChallengeClaimed) sh("ALINDI","CLAIMED") else sh("TOPLA","CLAIM")) }
                         }
                     }
                 }
