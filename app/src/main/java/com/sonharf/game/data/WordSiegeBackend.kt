@@ -221,6 +221,7 @@ suspend fun OnlineGameBackend.getWordSiegeMoves(gameId: String): List<WordSiegeM
         .select { filter { eq("game_id", gameId) } }
         .decodeList<WordSiegeMoveDto>()
         .sortedBy { it.id }
+        .also(WordSiegeVfxMoveRegistry::remember)
 
 suspend fun OnlineGameBackend.getWordSiegeMessages(gameId: String): List<WordSiegeMessageDto> =
     SupabaseProvider.client.from("word_siege_messages")
