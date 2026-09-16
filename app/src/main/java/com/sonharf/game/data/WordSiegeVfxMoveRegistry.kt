@@ -28,7 +28,7 @@ internal object WordSiegeVfxMoveRegistry {
                 gameMoves.asSequence()
                     .filter { move -> move.id > previousMax && move.formedWords.size >= 2 }
                     .sortedBy(WordSiegeMoveDto::id)
-                    .forEach(_comboEvents::tryEmit)
+                    .forEach { move -> _comboEvents.tryEmit(move) }
             }
             latestSeenByGame[gameId] = maxOf(previousMax ?: currentMax, currentMax)
         }
