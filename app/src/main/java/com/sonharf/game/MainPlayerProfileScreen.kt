@@ -145,7 +145,7 @@ internal fun MainPlayerProfileScreen(
                         frameId = SonHarfCosmetics.profileFrameId,
                         accent = profileAccent,
                         visible = p?.avatarVisibility != "hidden",
-                        showGenderBadge = false,
+                        isPro = p?.isVip == true,
                     )
                     Spacer(Modifier.width(15.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -296,7 +296,6 @@ private fun WeeklyPodiumAccessibleRowV210(player: WeeklyPodiumPlayer?, rank: Int
                     size = 44.dp,
                     accent = accent,
                     visible = profile?.avatarVisibility != "hidden",
-                    showGenderBadge = false,
                 )
             } else {
                 Icon(Icons.Rounded.Person, null, tint = accent, modifier = Modifier.size(44.dp))
@@ -434,7 +433,6 @@ private fun WeeklyPodiumColumnV210(
                                 size = if (crowned) 68.dp else 50.dp,
                                 accent = mid,
                                 visible = profile?.avatarVisibility != "hidden",
-                                showGenderBadge = false,
                             )
                         } else {
                             Icon(

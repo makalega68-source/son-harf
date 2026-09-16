@@ -50,6 +50,7 @@ internal fun PremiumHomeCommandDeck(
                         name = profile?.displayName ?: sh("Oyuncu", "Player"),
                         size = 44.dp, frameId = SonHarfCosmetics.profileFrameId,
                         accent = SonHarfTheme.Primary, visible = profile?.avatarVisibility != "hidden",
+                        isPro = profile?.isVip == true,
                     )
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
@@ -175,7 +176,7 @@ private fun PremiumPodiumPlace(place: Int, player: HomePodiumEntry?, modifier: M
                 ProfilePhotoAvatarWithGender(
                     avatarPath = if (player.profile?.avatarVisibility == "hidden") null else player.profile?.avatarPath,
                     gender = player.profile?.gender, name = name, size = if (place == 1) 50.dp else 42.dp, accent = accent,
-                    visible = player.profile?.avatarVisibility != "hidden", showGenderBadge = false,
+                    visible = player.profile?.avatarVisibility != "hidden",
                 )
             } else Surface(Modifier.fillMaxSize(), shape = CircleShape, color = Color(0xFF31453B)) {
                 Box(contentAlignment = Alignment.Center) { Text("$place", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black) }
