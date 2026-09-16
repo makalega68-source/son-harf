@@ -8,13 +8,19 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.zIndex
+import com.sonharf.game.data.WordSiegeVfxMoveRegistry
 import com.sonharf.game.ui.premium.rememberReducedMotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -61,6 +67,7 @@ fun VfxLayerHost(content: @Composable () -> Unit) {
     Box(modifier = Modifier.fillMaxSize()) {
         CompositionLocalProvider(LocalVfx provides controller) {
             content()
+            WordSiegeComboVfxBridge()
         }
         VfxLayer(
             controller = controller,
@@ -72,6 +79,27 @@ fun VfxLayerHost(content: @Composable () -> Unit) {
                 .pointerInput(Unit) { /* consume nothing */ },
         )
     }
+}
+
+/**
+ * Converts fresh authoritative multi-word Word Siege moves into a cosmetic Combo event.
+ * The registry suppresses historical moves when a match is first opened, so this is one-shot.
+ */
+@Composable
+private fun WordSiegeComboVfxBridge() {
+    val vfx = LocalVfx.current
+    var hostSize by remember { mutableStateOf(IntSize.Zero) }
+
+    LaunchedEffect(vfx) {
+        WordSiegeVfxMoveRegistry.comboEvents.collect {
+            if (hostSize.width > 0 && hostSize.height > 0) {
+                val center = Offset(hostSize.width / 2f, hostSize.height / 2f)
+                vfx.play(VfxEvent.Combo(listOf(center)))
+            }
+        }
+    }
+
+    Box(Modifier.fillMaxSize().onSizeChanged { hostSize = it })
 }
 
 /**
