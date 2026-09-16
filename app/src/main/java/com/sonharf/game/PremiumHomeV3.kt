@@ -222,33 +222,63 @@ internal fun PremiumLeagueProgress(profile: ProfileDto?, onLeague: () -> Unit) {
 @Composable
 internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(sh("Diğer Oyunlar", "More Games"), color = SonHarfTheme.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Surface(shape = RoundedCornerShape(22.dp), color = SonHarfTheme.Surface,
-            border = BorderStroke(1.dp, SonHarfTheme.Border.copy(alpha = .65f))) {
-            Column {
-                PremiumHomeMode(R.drawable.son_harf_app_icon_master, sh("Son Harf", "Last Letter"),
-                    sh("Hızlı kelime düellosu", "A quick word duel"), onLastLetter)
-                HorizontalDivider(Modifier.padding(horizontal = 18.dp), color = SonHarfTheme.Border.copy(alpha = .5f))
-                PremiumHomeMode(R.drawable.harf_yolu_logo, sh("Harf Yolu", "Letter Path"),
-                    sh("Kelime rotanı tamamla", "Complete your word path"), onLetterPath)
-            }
-        }
+        Text(sh("DİĞER OYUNLAR", "MORE GAMES"), color = SonHarfTheme.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
+        PremiumHomeModeCard(
+            logo = R.drawable.son_harf_app_icon_master,
+            title = sh("SON HARF", "LAST LETTER"),
+            subtitle = sh("Hızlı kelime düellosu", "A quick word duel"),
+            accent = Color(0xFF7A9AEE),
+            accentDark = Color(0xFF4C6BC0),
+            onPlay = onLastLetter,
+        )
+        PremiumHomeModeCard(
+            logo = R.drawable.harf_yolu_logo,
+            title = sh("HARF YOLU", "LETTER PATH"),
+            subtitle = sh("Kelime rotanı tamamla", "Complete your word path"),
+            accent = Color(0xFFB5A2FF),
+            accentDark = Color(0xFF7863C7),
+            onPlay = onLetterPath,
+        )
     }
 }
 
 @Composable
-private fun PremiumHomeMode(logo: Int, title: String, subtitle: String, onPlay: () -> Unit) {
-    Surface(onClick = onPlay, color = Color.Transparent) {
-        Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            Image(painterResource(logo), contentDescription = null, modifier = Modifier.size(48.dp), contentScale = ContentScale.Fit)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, color = SonHarfTheme.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text(subtitle, color = SonHarfTheme.TextSecondary, fontSize = 13.sp, lineHeight = 18.sp)
-                Text(sh("Oyna", "Play"), modifier = Modifier.padding(top = 6.dp), color = SonHarfTheme.Primary,
-                    fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+private fun PremiumHomeModeCard(
+    logo: Int,
+    title: String,
+    subtitle: String,
+    accent: Color,
+    accentDark: Color,
+    onPlay: () -> Unit,
+) {
+    Surface(
+        onClick = onPlay,
+        shape = RoundedCornerShape(22.dp),
+        color = Color.Transparent,
+        shadowElevation = 3.dp,
+    ) {
+        Box(Modifier.background(Brush.linearGradient(listOf(accentDark, accent)), RoundedCornerShape(22.dp))) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Surface(shape = CircleShape, color = Color.White.copy(alpha = .18f)) {
+                    Image(
+                        painter = painterResource(logo),
+                        contentDescription = null,
+                        modifier = Modifier.padding(8.dp).size(48.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
+                Spacer(Modifier.width(14.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(title, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Black, letterSpacing = .3.sp)
+                    Text(subtitle, color = Color.White.copy(alpha = .85f), fontSize = 12.sp, lineHeight = 16.sp)
+                }
+                Surface(shape = CircleShape, color = Color.White) {
+                    Icon(Icons.Rounded.PlayArrow, null, tint = accentDark, modifier = Modifier.padding(8.dp).size(22.dp))
+                }
             }
-            Icon(Icons.Rounded.PlayArrow, null, tint = SonHarfTheme.Primary)
         }
     }
 }
