@@ -37,6 +37,9 @@ data class ProfileDto(
     val wins: Int = 0,
     val losses: Int = 0,
     val rating: Int = 1000,
+    // G4.6: opsiyonel doğum yılı. Boş = yaş bilinmiyor -> yetişkin
+    // varsayılır (server-side is_minor_user aynı davranışı zorlar).
+    @SerialName("birth_year") val birthYear: Int? = null,
 )
 
 @Serializable
