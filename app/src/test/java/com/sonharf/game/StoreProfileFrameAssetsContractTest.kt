@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -15,22 +16,37 @@ class StoreProfileFrameAssetsContractTest {
     )
 
     private val drawableFiles = listOf(
-        "profile_frame_wing_silver.xml",
-        "profile_frame_wing_blue.xml",
-        "profile_frame_flower_pink_blossom.xml",
-        "profile_frame_wing_pink.xml",
-        "profile_frame_wing_gold.xml",
-        "profile_frame_wing_aurora.xml",
+        "profile_frame_wing_silver.webp",
+        "profile_frame_wing_blue.webp",
+        "profile_frame_flower_pink_blossom.webp",
+        "profile_frame_wing_pink.webp",
+        "profile_frame_wing_gold.webp",
+        "profile_frame_wing_aurora.webp",
     )
 
+    private fun littleEndian24(bytes: ByteArray, offset: Int): Int =
+        (bytes[offset].toInt() and 0xff) or
+            ((bytes[offset + 1].toInt() and 0xff) shl 8) or
+            ((bytes[offset + 2].toInt() and 0xff) shl 16)
+
     @Test
-    fun newFrameVectorsUseOneStandard512Canvas() {
+    fun realStoreFrameArtworkUsesOneStandard512WebpCanvas() {
         drawableFiles.forEach { fileName ->
-            val xml = File("src/main/res/drawable/$fileName").readText()
-            assertTrue("$fileName width", xml.contains("android:width=\"512dp\""))
-            assertTrue("$fileName height", xml.contains("android:height=\"512dp\""))
-            assertTrue("$fileName viewport width", xml.contains("android:viewportWidth=\"512\""))
-            assertTrue("$fileName viewport height", xml.contains("android:viewportHeight=\"512\""))
+            val bytes = File("src/main/res/drawable-nodpi/$fileName").readBytes()
+            assertTrue("$fileName too small", bytes.size > 1_000)
+            assertEquals("RIFF", String(bytes, 0, 4, Charsets.US_ASCII))
+            assertEquals("WEBP", String(bytes, 8, 4, Charsets.US_ASCII))
+            assertEquals("VP8X", String(bytes, 12, 4, Charsets.US_ASCII))
+            assertEquals(512, littleEndian24(bytes, 24) + 1)
+            assertEquals(512, littleEndian24(bytes, 27) + 1)
+        }
+    }
+
+    @Test
+    fun simplifiedVectorRecreationsAreNotPackaged() {
+        drawableFiles.forEach { fileName ->
+            val xmlName = fileName.removeSuffix(".webp") + ".xml"
+            assertTrue("legacy vector still present: $xmlName", !File("src/main/res/drawable/$xmlName").exists())
         }
     }
 
@@ -42,7 +58,6 @@ class StoreProfileFrameAssetsContractTest {
             assertTrue("UI missing $id", ui.contains("\"$id\""))
             assertTrue("EconomyStore missing $id", economy.contains("\"$id\""))
         }
-        assertTrue(ui.contains("fun isVectorFrame"))
         assertTrue(ui.contains("painterResource(spec.drawable)"))
     }
 
@@ -57,11 +72,13 @@ class StoreProfileFrameAssetsContractTest {
     }
 
     @Test
-    fun decorativeFramesGetExtraAvatarClearance() {
+    fun realArtworkGetsVerifiedAvatarOpeningGeometry() {
         val avatar = File("src/main/java/com/sonharf/game/FramedProfileAvatar.kt").readText()
         assertTrue(avatar.contains("frameId?.startsWith(\"frame_wing_\")"))
         assertTrue(avatar.contains("frame_flower_pink_blossom"))
-        assertTrue(avatar.contains("28.dp"))
+        assertTrue(avatar.contains("frame_round_golden_avatar"))
+        assertTrue(avatar.contains("2.064516f"))
+        assertTrue(avatar.contains("requiredSize(frameSize)"))
     }
 
     @Test

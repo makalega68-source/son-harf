@@ -111,6 +111,14 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
 
+val materializeProfileFrames = tasks.register<Exec>("materializeProfileFrames") {
+    workingDir(rootProject.projectDir)
+    commandLine("python3", "scripts/materialize_profile_frames.py")
+}
+
+tasks.matching { it.name == "preBuild" }.configureEach {
+    dependsOn(materializeProfileFrames)
+}
 
 tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
     doFirst {
