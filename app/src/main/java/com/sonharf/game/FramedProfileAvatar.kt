@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 
@@ -31,6 +30,5 @@ internal fun FramedProfilePhotoAvatar(
         accent = accent,
         visible = visible,
         showGenderBadge = showGenderBadge,
-        modifier = Modifier,
     )
 }
