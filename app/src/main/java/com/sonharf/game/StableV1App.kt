@@ -78,7 +78,11 @@ fun StableV1App() {
         return
     }
 
-    PremiumUnifiedProApp(onSignedOut = { authenticated = false })
+    // VFX is intentionally mounted only after startup + language + auth are complete.
+    // This keeps all first-run controls outside the full-screen cosmetic overlay tree.
+    com.sonharf.game.ui.vfx.VfxLayerHost {
+        PremiumUnifiedProApp(onSignedOut = { authenticated = false })
+    }
 }
 
 /**
