@@ -1,21 +1,21 @@
--- G4.2 Rekabet: haftalık lig anlık görüntüsü + turnuva iskeleti.
+-- G4.2 Rekabet: haftalık lig anlık görüntüsü + mevcut haftalık turnuva entegrasyonu.
 --
--- Mevcut rating-tabanlı lig sistemi (public.profiles.rating) korunur.
--- LeagueRating.kt istemci-tarafı yardımcı zaten Bronz/Gümüş/Altın/
--- Platin/Elmas/Efsane isim eşlemesini yapıyor.
+-- Mevcut rating-tabanlı lig sistemi (public.profiles.rating) ve mevcut
+-- weekly_tournaments / weekly_tournament_entries / weekly_tournament_match_events
+-- tabloları korunur. Bu migration ikinci bir turnuva şeması oluşturmaz.
 --
 -- Bu migration eklenenler:
 --   1) weekly_league_snapshots: her hafta bir kere alınan rating
 --      anlık görüntüsü. Hafta sonu promosyon/demosyon algoritması
 --      bunu okur.
---   2) weekly_tournament: 8 kişilik eleme turnuvası iskeleti
---      (bracket + rozet).
+--   2) weekly_tournament_badges: mevcut haftalık turnuvayı kazanan
+--      oyuncuya verilecek kalıcı rozet kaydı.
 --   3) get_my_weekly_league_position(): oyuncunun hafta içi rating
---      değişimini ve kendi ligindeki yaklaşık sırasını döner. Karar
---      tabanlı: pozitif delta = yükseliş yolunda, negatif = tehlike.
+--      değişimini döner.
+--   4) get_my_active_weekly_tournament(): mevcut turnuva şemasına
+--      uyumlu, geriye dönük istemci özeti.
 --
--- Cezalandırıcı sistem yok; Bronz'dan düşme yok (algoritma zaten
--- current_league='BRONZ' iken demote yapmaz).
+-- Cezalandırıcı sistem yok; Bronz'dan düşme yok.
 
 set search_path = public, pg_temp;
 
@@ -29,7 +29,6 @@ create table if not exists public.weekly_league_snapshots (
     rating_end int,
     league_start text not null,
     league_end text,
-    -- Promoted / demoted flag filled by the weekly closer RPC below.
     promoted boolean,
     demoted boolean,
     created_at timestamptz not null default now(),
@@ -45,77 +44,21 @@ revoke insert, update, delete on public.weekly_league_snapshots
     from anon, authenticated;
 
 -- ---------------------------------------------------------------------
--- 2) weekly_tournament + weekly_tournament_participants + matches
+-- 2) Existing weekly tournament system: winner badge only.
+--    weekly_tournaments.id production'da UUID'dir; yeni/çakışan bracket
+--    tabloları oluşturulmaz.
 -- ---------------------------------------------------------------------
-create table if not exists public.weekly_tournaments (
-    id bigserial primary key,
-    week_start date not null unique,
-    language text not null default 'tr' check (language in ('tr', 'en')),
-    status text not null default 'scheduled'
-        check (status in ('scheduled', 'in_progress', 'finished')),
-    winner_id uuid references auth.users(id),
-    created_at timestamptz not null default now(),
-    finished_at timestamptz
-);
-
-create table if not exists public.weekly_tournament_participants (
-    tournament_id bigint not null references public.weekly_tournaments(id) on delete cascade,
-    user_id uuid not null references auth.users(id) on delete cascade,
-    seed int not null check (seed between 1 and 8),
-    eliminated_round int,
-    primary key (tournament_id, user_id),
-    unique (tournament_id, seed)
-);
-
--- Bracket rounds: 1 = quarterfinal (4 matches), 2 = semifinal (2),
--- 3 = final (1). Persist bracket state so a client refresh doesn't
--- lose it. room_id ties back to the actual playable duel room.
-create table if not exists public.weekly_tournament_matches (
-    id bigserial primary key,
-    tournament_id bigint not null references public.weekly_tournaments(id) on delete cascade,
-    round int not null check (round in (1, 2, 3)),
-    slot int not null check (slot >= 1 and slot <= 4),
-    player_a uuid references auth.users(id),
-    player_b uuid references auth.users(id),
-    room_id uuid,
-    winner_id uuid references auth.users(id),
-    created_at timestamptz not null default now(),
-    finished_at timestamptz,
-    unique (tournament_id, round, slot)
-);
-
--- 3) Badge earned by winning a weekly tournament.
 create table if not exists public.weekly_tournament_badges (
     user_id uuid not null references auth.users(id) on delete cascade,
-    tournament_id bigint not null references public.weekly_tournaments(id) on delete cascade,
+    tournament_id uuid not null references public.weekly_tournaments(id) on delete cascade,
     awarded_at timestamptz not null default now(),
     primary key (user_id, tournament_id)
 );
 
-alter table public.weekly_tournaments enable row level security;
-alter table public.weekly_tournament_participants enable row level security;
-alter table public.weekly_tournament_matches enable row level security;
 alter table public.weekly_tournament_badges enable row level security;
-
-drop policy if exists weekly_tournaments_read on public.weekly_tournaments;
-create policy weekly_tournaments_read on public.weekly_tournaments
-    for select using (true);
-drop policy if exists weekly_tournament_participants_read on public.weekly_tournament_participants;
-create policy weekly_tournament_participants_read on public.weekly_tournament_participants
-    for select using (true);
-drop policy if exists weekly_tournament_matches_read on public.weekly_tournament_matches;
-create policy weekly_tournament_matches_read on public.weekly_tournament_matches
-    for select using (true);
 drop policy if exists weekly_tournament_badges_read on public.weekly_tournament_badges;
 create policy weekly_tournament_badges_read on public.weekly_tournament_badges
     for select using (true);
-
-revoke insert, update, delete on public.weekly_tournaments
-    from anon, authenticated;
-revoke insert, update, delete on public.weekly_tournament_participants
-    from anon, authenticated;
-revoke insert, update, delete on public.weekly_tournament_matches
-    from anon, authenticated;
 revoke insert, update, delete on public.weekly_tournament_badges
     from anon, authenticated;
 
@@ -192,7 +135,6 @@ declare
 begin
     if v_user is null then raise exception 'not_authenticated'; end if;
 
-    -- Auto-issue snapshot if missing so the client doesn't have to.
     perform public.sonharf_g42_touch_weekly_snapshot();
 
     select * into v_snap
@@ -223,11 +165,14 @@ $$;
 
 grant execute on function public.get_my_weekly_league_position() to authenticated;
 
--- Read the caller's active weekly tournament, if any. Client uses this
--- to render bracket + "your next match".
+-- Existing weekly tournament schema compatibility layer.
+-- Legacy tournament rows have UUID id, starts_at/ends_at and membership
+-- in weekly_tournament_entries. There is no separate participant/round
+-- table, so unsupported seed/next-room fields stay NULL instead of
+-- inventing a second bracket model.
 create or replace function public.get_my_active_weekly_tournament()
 returns table (
-    tournament_id bigint,
+    tournament_id uuid,
     week_start date,
     language text,
     status text,
@@ -247,19 +192,56 @@ begin
     if v_user is null then raise exception 'not_authenticated'; end if;
 
     return query
-        select t.id, t.week_start, t.language, t.status, p.seed, t.winner_id,
-               (select m.room_id
-                  from public.weekly_tournament_matches m
-                 where m.tournament_id = t.id
-                   and (m.player_a = v_user or m.player_b = v_user)
-                   and m.winner_id is null
-                 order by m.round
-                 limit 1)
+    with selected_tournament as (
+        select t.id, t.week_start, t.starts_at, t.ends_at
         from public.weekly_tournaments t
-        join public.weekly_tournament_participants p
-             on p.tournament_id = t.id and p.user_id = v_user
+        join public.weekly_tournament_entries e
+          on e.tournament_id = t.id
+         and e.user_id = v_user
         where t.week_start = v_week
-          and t.status in ('scheduled', 'in_progress');
+        order by t.starts_at desc, t.id
+        limit 1
+    ), score as (
+        select
+            e.tournament_id,
+            e.user_id,
+            coalesce(sum(m.points), 0)::bigint as pts,
+            count(*) filter (where m.won)::bigint as wins,
+            count(m.id)::bigint as matches
+        from public.weekly_tournament_entries e
+        left join public.weekly_tournament_match_events m
+          on m.tournament_id = e.tournament_id
+         and m.user_id = e.user_id
+        where e.tournament_id = (select st.id from selected_tournament st)
+        group by e.tournament_id, e.user_id
+    ), ranked as (
+        select
+            s.*,
+            row_number() over (
+                partition by s.tournament_id
+                order by s.pts desc, s.wins desc, s.matches desc, s.user_id
+            ) as rnk
+        from score s
+        where s.matches > 0
+    )
+    select
+        st.id,
+        st.week_start,
+        'tr'::text,
+        case
+            when now() < st.starts_at then 'scheduled'::text
+            when now() < st.ends_at then 'in_progress'::text
+            else 'finished'::text
+        end,
+        null::int,
+        case
+            when now() >= st.ends_at then (
+                select r.user_id from ranked r where r.rnk = 1 limit 1
+            )
+            else null::uuid
+        end,
+        null::uuid
+    from selected_tournament st;
 end;
 $$;
 
