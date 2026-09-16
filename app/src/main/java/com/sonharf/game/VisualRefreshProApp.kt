@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.People
@@ -19,17 +20,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.SharedDictionaryService
 import kotlinx.coroutines.delay
 
 private enum class RefreshDestination {
-    HOME, CLUB, SOCIAL, SHOP, PROFILE, COLLECTION,
+    HOME, CLUB, COMPETE, SOCIAL, SHOP, PROFILE, COLLECTION,
     LAST_LETTER, SIEGE, LETTER_PATH,
     SETTINGS, ACCOUNT, PROFILE_DETAILS,
 }
@@ -155,60 +158,74 @@ fun VisualRefreshProApp(onSignedOut: () -> Unit) {
                 },
             ) { padding ->
                 Box(Modifier.fillMaxSize().padding(padding)) {
-                    when (destination) {
-                        RefreshDestination.HOME -> RefreshHomeScreen(
-                            onSiege = { openGame(RefreshDestination.SIEGE, siegeLanguage) },
-                            onLastLetter = { openGame(RefreshDestination.LAST_LETTER, lastLetterLanguage) },
-                            onLetterPath = { openGame(RefreshDestination.LETTER_PATH, letterPathLanguage) },
-                        )
+                    // Existing screens keep their proven layouts. A tiny layer transparency on
+                    // non-home pages lets the shared artwork remain perceptible even where an
+                    // older screen still paints an opaque root surface.
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .graphicsLayer(alpha = if (destination == RefreshDestination.HOME) 1f else .96f)
+                    ) {
+                        when (destination) {
+                            RefreshDestination.HOME -> RefreshHomeScreen(
+                                onSiege = { openGame(RefreshDestination.SIEGE, siegeLanguage) },
+                                onLastLetter = { openGame(RefreshDestination.LAST_LETTER, lastLetterLanguage) },
+                                onLetterPath = { openGame(RefreshDestination.LETTER_PATH, letterPathLanguage) },
+                                onCompete = { destination = RefreshDestination.COMPETE },
+                            )
 
-                        RefreshDestination.CLUB -> CompetitionHubScreen(
-                            onBack = { destination = RefreshDestination.HOME },
-                            clubEntry = true,
-                        )
+                            RefreshDestination.CLUB -> CompetitionHubScreen(
+                                onBack = { destination = RefreshDestination.HOME },
+                                clubEntry = true,
+                            )
 
-                        RefreshDestination.SOCIAL -> MainSocialScreen(
-                            backend = backend,
-                            onPlay = { openGame(RefreshDestination.LAST_LETTER, lastLetterLanguage) },
-                            onSiege = { openGame(RefreshDestination.SIEGE, siegeLanguage) },
-                        )
+                            RefreshDestination.COMPETE -> CompetitionHubScreen(
+                                onBack = { destination = RefreshDestination.HOME },
+                            )
 
-                        RefreshDestination.SHOP -> EconomyShopScreen(
-                            onBack = { destination = RefreshDestination.HOME },
-                            onMembershipChanged = { isPro = it },
-                            onCollection = { destination = RefreshDestination.COLLECTION },
-                        )
+                            RefreshDestination.SOCIAL -> MainSocialScreen(
+                                backend = backend,
+                                onPlay = { openGame(RefreshDestination.LAST_LETTER, lastLetterLanguage) },
+                                onSiege = { openGame(RefreshDestination.SIEGE, siegeLanguage) },
+                            )
 
-                        RefreshDestination.PROFILE -> MainPlayerProfileScreen(
-                            backend,
-                            { destination = RefreshDestination.PROFILE_DETAILS },
-                            { destination = RefreshDestination.SHOP },
-                            { destination = RefreshDestination.COLLECTION },
-                            { destination = RefreshDestination.SETTINGS },
-                            { destination = RefreshDestination.SOCIAL },
-                        )
+                            RefreshDestination.SHOP -> EconomyShopScreen(
+                                onBack = { destination = RefreshDestination.HOME },
+                                onMembershipChanged = { isPro = it },
+                                onCollection = { destination = RefreshDestination.COLLECTION },
+                            )
 
-                        RefreshDestination.COLLECTION -> PlayerCollectionScreen(backend) {
-                            destination = RefreshDestination.PROFILE
-                        }
+                            RefreshDestination.PROFILE -> MainPlayerProfileScreen(
+                                backend,
+                                { destination = RefreshDestination.PROFILE_DETAILS },
+                                { destination = RefreshDestination.SHOP },
+                                { destination = RefreshDestination.COLLECTION },
+                                { destination = RefreshDestination.SETTINGS },
+                                { destination = RefreshDestination.SOCIAL },
+                            )
 
-                        RefreshDestination.LAST_LETTER -> OnlineGameScreenV6()
-                        RefreshDestination.SIEGE -> WordSiegeExperienceScreen { leaveGame() }
-                        RefreshDestination.LETTER_PATH -> LetterLadderGameScreen { leaveGame() }
+                            RefreshDestination.COLLECTION -> PlayerCollectionScreen(backend) {
+                                destination = RefreshDestination.PROFILE
+                            }
 
-                        RefreshDestination.SETTINGS -> MainSettingsScreen(
-                            backend,
-                            { destination = RefreshDestination.PROFILE },
-                            { destination = RefreshDestination.ACCOUNT },
-                            onSignedOut,
-                        )
+                            RefreshDestination.LAST_LETTER -> OnlineGameScreenV6()
+                            RefreshDestination.SIEGE -> WordSiegeExperienceScreen { leaveGame() }
+                            RefreshDestination.LETTER_PATH -> LetterLadderGameScreen { leaveGame() }
 
-                        RefreshDestination.ACCOUNT -> CompleteProfileScreen(1) {
-                            destination = RefreshDestination.SETTINGS
-                        }
+                            RefreshDestination.SETTINGS -> MainSettingsScreen(
+                                backend,
+                                { destination = RefreshDestination.PROFILE },
+                                { destination = RefreshDestination.ACCOUNT },
+                                onSignedOut,
+                            )
 
-                        RefreshDestination.PROFILE_DETAILS -> CompleteProfileScreen(0) {
-                            destination = RefreshDestination.PROFILE
+                            RefreshDestination.ACCOUNT -> CompleteProfileScreen(1) {
+                                destination = RefreshDestination.SETTINGS
+                            }
+
+                            RefreshDestination.PROFILE_DETAILS -> CompleteProfileScreen(0) {
+                                destination = RefreshDestination.PROFILE
+                            }
                         }
                     }
                 }
@@ -222,6 +239,7 @@ private fun RefreshHomeScreen(
     onSiege: () -> Unit,
     onLastLetter: () -> Unit,
     onLetterPath: () -> Unit,
+    onCompete: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
@@ -261,6 +279,24 @@ private fun RefreshHomeScreen(
                     aspectRatio = 3f,
                     onClick = onLetterPath,
                 )
+            }
+            item(key = "competition") {
+                OutlinedButton(
+                    onClick = onCompete,
+                    modifier = Modifier.fillMaxWidth(.72f).height(44.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = Color.White.copy(alpha = .80f),
+                        contentColor = SonHarfTheme.Primary,
+                    ),
+                    border = ButtonDefaults.outlinedButtonBorder.copy(
+                        brush = androidx.compose.ui.graphics.SolidColor(SonHarfTheme.Border)
+                    ),
+                ) {
+                    Icon(Icons.Rounded.EmojiEvents, null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text(sh("Rekabet Merkezi", "Competition Hub"), fontWeight = FontWeight.Bold)
+                }
             }
             item { Spacer(Modifier.height(4.dp)) }
         }
