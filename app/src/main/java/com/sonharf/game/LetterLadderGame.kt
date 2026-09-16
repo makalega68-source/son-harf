@@ -328,6 +328,11 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
     var hintDefinition by remember { mutableStateOf<String?>(null) }
     var successVfxNonce by remember { mutableIntStateOf(0) }
     val hintScope = rememberCoroutineScope()
+    val vfx = com.sonharf.game.ui.vfx.LocalVfx.current
+    val vfxAnchor = remember(context) {
+        val metrics = context.resources.displayMetrics
+        androidx.compose.ui.geometry.Offset(metrics.widthPixels * .5f, metrics.heightPixels * .5f)
+    }
 
     LaunchedEffect(language, puzzleNonce) {
         loading = true
@@ -443,6 +448,9 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
         hintHighlight = null
         hintDefinition = null
         successVfxNonce += 1
+        if (nextUsed.size == 2) {
+            vfx.play(com.sonharf.game.ui.vfx.VfxEvent.SpecialNode(vfxAnchor))
+        }
         // G5.8 SORUN 1: player only writes 4 intermediate words. After the
         // 4th valid move (usedPositions.size == MOVE_COUNT - 1), the last
         // position is deterministic — its target letter — so we auto-fill
@@ -478,6 +486,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
         // Advance the hint stage in-place so repeated presses reveal more
         // (but the answer is NEVER spelled out).
         SonHarfSoundFx.puzzleHint()
+        vfx.play(com.sonharf.game.ui.vfx.VfxEvent.HintReveal(vfxAnchor))
         if (next == null || changed == null) {
             hintStage = 3
             hintHighlight = null
