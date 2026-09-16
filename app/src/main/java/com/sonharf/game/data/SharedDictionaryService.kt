@@ -3,9 +3,12 @@ package com.sonharf.game.data
 import android.content.Context
 import io.github.jan.supabase.postgrest.postgrest
 import io.github.jan.supabase.postgrest.result.PostgrestResult
+import java.io.File
 import java.text.Normalizer
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
@@ -90,7 +93,12 @@ object SharedDictionaryService {
             .replace('\t', ' ')
             .trim()
         val lower = if (lang == "tr") cleaned.lowercase(turkishLocale) else cleaned.lowercase(englishLocale)
-        return Normalizer.normalize(lower, Normalizer.Form.NFC)
+        val stripped = if (lang == "tr") {
+            lower.replace('â', 'a').replace('î', 'i').replace('û', 'u')
+        } else {
+            lower
+        }
+        return Normalizer.normalize(stripped, Normalizer.Form.NFC)
     }
 
     private fun validCharacters(word: String, language: String): Boolean =
@@ -101,6 +109,12 @@ object SharedDictionaryService {
 
     private fun validNormalized(word: String, language: String): Boolean =
         word.length in MIN_WORD_LENGTH..MAX_WORD_LENGTH && validCharacters(word, language)
+
+    /** Server-parity shape check: whitespace, digits and punctuation are invalid. */
+    fun hasValidShape(word: String, language: String): Boolean {
+        val lang = canonicalLanguage(language)
+        return validNormalized(normalize(word, lang), lang)
+    }
 
     private fun install(language: String, words: Set<String>) {
         val lang = canonicalLanguage(language)
@@ -125,32 +139,53 @@ object SharedDictionaryService {
     fun hasBotSnapshot(language: String): Boolean =
         botSnapshots[canonicalLanguage(language)]?.isNotEmpty() == true
 
+    private fun snapshotFile(context: Context, lang: String): File =
+        File(context.filesDir, "dictionary_snapshot_v5_$lang.txt")
+
+    private fun writeAtomically(target: File, content: String) {
+        val tmp = File(target.parentFile, target.name + ".tmp")
+        tmp.bufferedWriter(Charsets.UTF_8).use { it.write(content) }
+        if (!tmp.renameTo(target)) {
+            target.delete()
+            check(tmp.renameTo(target)) { "dictionary_snapshot_write_failed" }
+        }
+    }
+
+    /** Move the legacy SharedPreferences snapshot into a plain file exactly once. */
+    private fun migrateLegacyPreference(context: Context, lang: String) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        val key = WORDS_PREFIX + lang
+        if (!prefs.contains(key)) return
+        val file = snapshotFile(context, lang)
+        runCatching {
+            if (!file.isFile) {
+                val raw = prefs.getString(key, null).orEmpty()
+                if (raw.isNotBlank()) writeAtomically(file, raw)
+            }
+        }
+        prefs.edit().remove(key).apply()
+    }
+
     /** Restore the last complete v5 master snapshot without network access. */
     fun restorePersisted(context: Context, language: String): Boolean {
         val lang = canonicalLanguage(language)
         if (snapshots[lang]?.isNotEmpty() == true) return true
-
-        val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .getString(WORDS_PREFIX + lang, null)
-            .orEmpty()
-        if (raw.isBlank()) return false
-
-        val indexed = raw.lineSequence()
-            .map { normalize(it, lang) }
-            .filter { validNormalized(it, lang) }
-            .toHashSet()
+        migrateLegacyPreference(context, lang)
+        val file = snapshotFile(context, lang)
+        if (!file.isFile || file.length() == 0L) return false
+        val indexed = runCatching {
+            file.bufferedReader(Charsets.UTF_8).useLines { lines ->
+                lines.map { normalize(it, lang) }.filter { validNormalized(it, lang) }.toHashSet()
+            }
+        }.getOrNull().orEmpty()
         if (indexed.isEmpty()) return false
-
         install(lang, indexed)
         return true
     }
 
     private fun persist(context: Context, language: String, words: Set<String>) {
         val lang = canonicalLanguage(language)
-        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-            .edit()
-            .putString(WORDS_PREFIX + lang, words.sorted().joinToString("\n"))
-            .apply()
+        writeAtomically(snapshotFile(context, lang), words.sorted().joinToString("\n"))
     }
 
     private suspend fun fetchCanonical(language: String): Set<String> {
@@ -184,12 +219,14 @@ object SharedDictionaryService {
      */
     suspend fun preloadCanonical(context: Context, language: String): Set<String> {
         val lang = canonicalLanguage(language)
-        restorePersisted(context, lang)
+        withContext(Dispatchers.IO) { restorePersisted(context, lang) }
         val refreshed = runCatching { fetchCanonical(lang) }.getOrNull()
         val canonical = refreshed
             ?: snapshots[lang]
             ?: throw IllegalStateException("canonical_dictionary_unavailable")
-        if (refreshed != null) persist(context, lang, refreshed)
+        if (refreshed != null) {
+            withContext(Dispatchers.IO) { runCatching { persist(context, lang, refreshed) } }
+        }
         return canonical
     }
 

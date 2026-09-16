@@ -606,7 +606,6 @@ private fun PremierLobby(
                         width = 76.dp,
                         height = 58.dp,
                         accent = Color.White,
-                        showGenderBadge = false,
                     )
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
@@ -766,7 +765,6 @@ private fun PremierVsPlayerCard(language: String, name: String, avatar: String?,
                 width = 84.dp,
                 height = 64.dp,
                 accent = accent,
-                showGenderBadge = false,
             )
             Spacer(Modifier.width(14.dp))
             Column(Modifier.weight(1f)) {
@@ -1021,7 +1019,6 @@ private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, vi
                 width = 70.dp,
                 height = 54.dp,
                 accent = accent,
-                showGenderBadge = false,
             )
             Spacer(Modifier.width(8.dp))
         }
@@ -1045,7 +1042,6 @@ private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, vi
                 width = 70.dp,
                 height = 54.dp,
                 accent = accent,
-                showGenderBadge = false,
             )
         }
     }

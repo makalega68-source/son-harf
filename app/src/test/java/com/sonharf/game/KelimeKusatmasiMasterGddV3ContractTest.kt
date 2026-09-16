@@ -54,24 +54,20 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     }
 
     @Test
-    fun clubOpensManagementCenterWhileDedicatedChatRemainsAvailable() {
+    fun clubSurfaceStaysAuthoredButNeverReachesUsers() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
         val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
 
-        assertTrue(shell.contains("PremiumDestination.CLUB -> CompetitionHubScreen("))
-        assertTrue(shell.contains("clubEntry = true"))
+        // Retired: CLUB destination is intercepted and bounced to HOME, never renders CompetitionHubScreen anymore.
+        assertFalse(shell.contains("PremiumDestination.CLUB -> CompetitionHubScreen("))
+        assertTrue(shell.contains("PremiumDestination.CLUB -> {"))
+        assertTrue(shell.contains("destination = PremiumDestination.HOME"))
+
+        // Club source stays for audit but nothing opens it.
         assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
-        assertTrue(club.contains("Modifier.fillMaxSize()"))
         assertTrue(club.contains("b.getClubMessages(current.clubId)"))
         assertTrue(club.contains("b.sendClubMessage(current.clubId, outgoing)"))
-        assertTrue(club.contains("CompetitionHubScreen(onBack = { showClubCenter = false }, clubEntry = true)"))
-        assertTrue(club.contains("onValueChange = { input = it.take(300) }"))
-        assertTrue(club.contains("now - lastMessageSentAt < 1_500L"))
-        assertTrue(club.contains("b.reportClubMember(message.senderId)"))
-        assertTrue(club.contains("b.blockClubMember(message.senderId)"))
-        assertTrue(club.contains("Rapor moderasyona iletildi."))
-        assertTrue(club.contains("Oyuncu engellendi."))
         assertTrue(social.contains("\"report_player\""))
         assertTrue(social.contains("\"block_user\""))
         assertTrue(social.contains("\"club_chat_spam_or_abuse\""))

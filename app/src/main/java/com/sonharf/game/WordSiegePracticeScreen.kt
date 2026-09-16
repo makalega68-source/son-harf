@@ -25,7 +25,9 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SharedDictionaryService
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 
 private data class PracticeBotProfile(val name: String, val gender: String)
 
@@ -133,7 +135,9 @@ private fun WordSiegePracticeContent(
 
     LaunchedEffect(state.language, dictionaryRetryKey) {
         dictionaryLoading = true
-        val restored = SharedDictionaryService.restorePersisted(context, state.language)
+        val restored = withContext(Dispatchers.IO) {
+            SharedDictionaryService.restorePersisted(context, state.language)
+        }
         dictionaryReady = restored
         runCatching { SharedDictionaryService.preloadCanonical(context, state.language) }
             .onSuccess {

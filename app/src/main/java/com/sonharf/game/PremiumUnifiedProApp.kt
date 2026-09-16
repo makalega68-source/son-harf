@@ -92,10 +92,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         }
     }
 
-    // Master GDD v3 top-level navigation: Home, Club, Friends/Social, Store, Profile.
+    // Top-level navigation: Home, Friends/Social, Store, Profile. Club is hidden.
     val topLevel = destination in setOf(
         PremiumDestination.HOME,
-        PremiumDestination.CLUB,
         PremiumDestination.SOCIAL,
         PremiumDestination.SHOP,
         PremiumDestination.PROFILE,
@@ -137,7 +136,6 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumBottomBar(
                         destination = destination,
                         onHome = { destination = PremiumDestination.HOME },
-                        onClub = { destination = PremiumDestination.CLUB },
                         onSocial = { destination = PremiumDestination.SOCIAL },
                         onShop = { destination = PremiumDestination.SHOP },
                         onProfile = { destination = PremiumDestination.PROFILE },
@@ -171,10 +169,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.COMPETE -> CompetitionHubScreen(
                         onBack = { destination = PremiumDestination.HOME },
                     )
-                    PremiumDestination.CLUB -> CompetitionHubScreen(
-                        onBack = { destination = PremiumDestination.HOME },
-                        clubEntry = true,
-                    )
+                    PremiumDestination.CLUB -> {
+                        LaunchedEffect(Unit) { destination = PremiumDestination.HOME }
+                    }
                     PremiumDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE_DETAILS },
@@ -430,14 +427,12 @@ private fun PremiumLanguageChoice(
 private fun PremiumBottomBar(
     destination: PremiumDestination,
     onHome: () -> Unit,
-    onClub: () -> Unit,
     onSocial: () -> Unit,
     onShop: () -> Unit,
     onProfile: () -> Unit,
 ) {
     val items = listOf(
         Triple(PremiumDestination.HOME, Icons.Rounded.Home, sh("ANA SAYFA", "HOME")) to onHome,
-        Triple(PremiumDestination.CLUB, Icons.Rounded.Groups, sh("KULÜP", "CLUB")) to onClub,
         Triple(PremiumDestination.SOCIAL, Icons.Rounded.People, sh("ARKADAŞLAR", "FRIENDS")) to onSocial,
         Triple(PremiumDestination.SHOP, Icons.Rounded.Storefront, sh("MAĞAZA", "STORE")) to onShop,
         Triple(PremiumDestination.PROFILE, Icons.Rounded.Person, sh("PROFİL", "PROFILE")) to onProfile,

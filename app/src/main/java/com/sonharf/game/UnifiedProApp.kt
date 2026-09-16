@@ -388,7 +388,6 @@ private fun PremiumProfileHero(profile: ProfileDto?, onProfile: () -> Unit) {
                     size = 61.dp,
                     accent = Color(0xFFF4FFF8),
                     visible = profile?.avatarVisibility != "hidden",
-                    showGenderBadge = false,
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
@@ -680,7 +679,6 @@ private fun PodiumColumn(
                         size = avatarSize,
                         accent = accent,
                         visible = profile?.avatarVisibility != "hidden",
-                        showGenderBadge = false,
                     )
                 } else {
                     Icon(Icons.Rounded.Person, null, tint = Color.White.copy(alpha = .42f), modifier = Modifier.size(avatarSize * .52f))

@@ -23,8 +23,10 @@ object DictionaryEngine {
         return cleaned.filter { it.isLetter() }
     }
 
-    fun calculatePoints(word: String, language: String): Int =
-        normalize(word, language).sumOf { getLetterPoint(it, language) }
+    fun calculatePoints(word: String, language: String): Int {
+        if (!SharedDictionaryService.hasValidShape(word, language)) return 0
+        return normalize(word, language).sumOf { getLetterPoint(it, language) }
+    }
 
     fun getLetterPoint(letter: Char, language: String): Int =
         if (SharedDictionaryService.canonicalLanguage(language) == "tr") {
@@ -37,7 +39,7 @@ object DictionaryEngine {
                 'F', 'Ö', 'V' -> 7
                 'Ğ' -> 8
                 'J' -> 10
-                else -> 1
+                else -> 0
             }
         } else {
             when (letter.uppercaseChar()) {
@@ -48,7 +50,7 @@ object DictionaryEngine {
                 'K' -> 5
                 'J', 'X' -> 8
                 'Q', 'Z' -> 10
-                else -> 1
+                else -> 0
             }
         }
 }

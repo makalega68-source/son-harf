@@ -29,7 +29,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun CompetitionHubScreen(onBack: () -> Unit, clubEntry: Boolean = false) {
-    var tab by remember { mutableIntStateOf(if (clubEntry) 0 else 1) }
+    // clubEntry retained for source compatibility; the club surface is hidden everywhere.
+    @Suppress("UNUSED_PARAMETER") val ignoredClubEntry = clubEntry
+    var tab by remember { mutableIntStateOf(1) }
     Column(
         Modifier.fillMaxSize().background(
             Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))
@@ -43,8 +45,8 @@ fun CompetitionHubScreen(onBack: () -> Unit, clubEntry: Boolean = false) {
                 Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = SonHarfText)
             }
             Column(Modifier.weight(1f)) {
-                Text(if (clubEntry) sh("KULÜP MERKEZİ", "CLUB CENTER") else sh("REKABET MERKEZİ", "COMPETITION HUB"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                Text(if (clubEntry) sh("Kulübün • Üyeler • Görevler • Meydan okuma", "Your club • Members • Missions • Challenge") else sh("Kulüp • Haftalık Kupa • Rakipler", "Club • Weekly Cup • Rivals"), color = SonHarfMuted, fontSize = 9.sp)
+                Text(sh("REKABET MERKEZİ", "COMPETITION HUB"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                Text(sh("Haftalık Kupa • Rakipler", "Weekly Cup • Rivals"), color = SonHarfMuted, fontSize = 9.sp)
             }
             Text("⚔", fontSize = 25.sp)
         }
@@ -53,13 +55,6 @@ fun CompetitionHubScreen(onBack: () -> Unit, clubEntry: Boolean = false) {
             Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 5.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            FilterChip(
-                selected = tab == 0,
-                onClick = { tab = 0 },
-                leadingIcon = { Icon(Icons.Rounded.Groups, null, Modifier.size(16.dp)) },
-                label = { Text(sh("KULÜP", "CLUB"), fontWeight = FontWeight.Black, fontSize = 9.sp) },
-                modifier = Modifier.weight(1f),
-            )
             FilterChip(
                 selected = tab == 1,
                 onClick = { tab = 1 },
@@ -78,7 +73,6 @@ fun CompetitionHubScreen(onBack: () -> Unit, clubEntry: Boolean = false) {
 
         Box(Modifier.weight(1f)) {
             when (tab) {
-                0 -> ClubCompetitionTab()
                 1 -> WeeklyTournamentTab()
                 else -> RivalHistoryTab()
             }
