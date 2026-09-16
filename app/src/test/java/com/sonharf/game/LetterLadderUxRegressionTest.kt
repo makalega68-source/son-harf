@@ -21,6 +21,15 @@ class LetterLadderUxRegressionTest {
     }
 
     @Test
+    fun harfYoluDoesNotMirrorLiveInputIntoTheActiveRow() {
+        val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
+
+        assertFalse(source.contains("activeInput = input.uppercase(locale)"))
+        assertFalse(source.contains("activeInput.padEnd"))
+        assertTrue(source.contains("val display = word ?: \"     \""))
+    }
+
+    @Test
     fun harfYoluUsesIsolatedCompactKeyboardAndQuietDedicatedFeedback() {
         val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
         val sound = projectFile("app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt").readText()
