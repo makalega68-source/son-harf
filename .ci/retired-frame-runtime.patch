@@ -1,0 +1,28 @@
+diff --git a/app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt b/app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt
+index c92b176..f416a14 100644
+--- a/app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt
++++ b/app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt
+@@ -240,9 +240,13 @@ private fun isPurchasedFrameAssetReady(
+     return false
+ }
+ 
++private const val PROFILE_FRAMES_RETIRED = true
++
+ @Composable
+ internal fun PurchasedProfileFrameOverlay(frameId: String?, modifier: Modifier = Modifier) {
+     if (frameId.isNullOrBlank()) return
++    // Historical artwork remains in the repository for provenance/rollback only.
++    if (PROFILE_FRAMES_RETIRED) return
+     SafeFrameArtwork(
+         drawable = PurchasedFrameCatalog.drawable(frameId),
+         frameId = frameId,
+@@ -264,6 +268,9 @@ private fun legacyFrameSpec(item: ShopItemDto): PurchasedFrameSpec = PurchasedF
+ 
+ @Composable
+ internal fun PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?) {
++    // Frames are retired product-wide. Preserve legacy implementation below for purchase-history
++    // auditability, but do not expose a sale/equip surface in the live UI.
++    if (PROFILE_FRAMES_RETIRED) return
+     val context = LocalContext.current
+     val activity = context as? Activity
+     val scope = rememberCoroutineScope()
