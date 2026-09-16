@@ -16,18 +16,15 @@ class AssetIntegrationContractTest {
         assertTrue(src.contains("only change appearance") || src.contains("yalnızca görünümü"))
     }
 
-    @Test fun styleStoreUsesOneBackendAndRealFramePreviews() {
-        val shop = read("src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt")
+    @Test fun retiredFramesStayInProvenanceCodeButAreNotRenderedOrSold() {
         val preview = read("src/main/java/com/sonharf/game/StoreProductPreview.kt")
         val frames = read("src/main/java/com/sonharf/game/PurchasedStyleUi.kt")
-        assertTrue(shop.contains("runCatching { OnlineGameBackend() }.getOrNull()"))
-        assertTrue(shop.contains("StoreProductPreview("))
+        val avatar = read("src/main/java/com/sonharf/game/FramedProfileAvatar.kt")
+        assertTrue(frames.contains("PROFILE_FRAMES_RETIRED = true"))
+        assertTrue(frames.contains("if (PROFILE_FRAMES_RETIRED) return"))
         assertTrue(preview.contains("PurchasedProfileFrameOverlay("))
-        assertTrue(preview.contains("frameId = frameId"))
-        assertFalse(shop.contains("PurchasedProfileFramesStoreRow(backend = backend)"))
-        assertTrue(shop.contains("if (busy != null || loading) return"))
-        assertTrue(frames.contains("PurchasedProfileFramesStoreRow(backend: OnlineGameBackend?)"))
-        assertFalse(frames.contains("OnlineGameBackend()"))
+        assertTrue(avatar.contains("val legacyFrameId = frameId"))
+        assertFalse(avatar.contains("PurchasedProfileFrameOverlay("))
     }
 
     @Test fun styleStoreUsesDecodeStreamAndNeverPaintsBrokenImageOverAvatar() {
@@ -52,17 +49,17 @@ class AssetIntegrationContractTest {
     @Test fun purchasedVfxIsVisibleOneShotAndInputTransparent() {
         val src = read("src/main/java/com/sonharf/game/PurchasedVfxOverlay.kt")
         assertTrue(src.contains("PURCHASED_DUEL_WORD_VFX_MS = 720"))
-        assertTrue(src.contains("PURCHASED_DUEL_WORD_MAX_ALPHA = .76f"))
-        assertTrue(src.contains("PURCHASED_DUEL_WORD_STAR_COUNT = 4"))
+        assertTrue(src.contains("PURCHASED_DUEL_WORD_MAX_ALPHA = .92f"))
+        assertTrue(src.contains("PURCHASED_DUEL_WORD_STAR_COUNT = 6"))
         assertTrue(src.contains("Cosmetic-only"))
         assertTrue(src.contains("PURCHASED_BOARD_PLACE_VFX_MS = 650"))
         assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_VFX_MS = 800"))
-        assertTrue(src.contains("PURCHASED_BOARD_PLACE_MAX_ALPHA = .82f"))
-        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .85f"))
-        assertTrue(src.contains("PURCHASED_BOARD_PLACE_STAR_COUNT = 4"))
-        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_STAR_COUNT = 5"))
-        assertTrue(src.contains("PURCHASED_BOARD_PLACE_MIN_STAR_DP = 12f"))
-        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_MIN_STAR_DP = 13f"))
+        assertTrue(src.contains("PURCHASED_BOARD_PLACE_MAX_ALPHA = .94f"))
+        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .98f"))
+        assertTrue(src.contains("PURCHASED_BOARD_PLACE_STAR_COUNT = 5"))
+        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_STAR_COUNT = 6"))
+        assertTrue(src.contains("PURCHASED_BOARD_PLACE_MIN_STAR_DP = 14f"))
+        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_MIN_STAR_DP = 16f"))
         assertTrue(src.contains("PurchasedBoardActionVfxOverlay"))
         assertTrue(src.contains("wordSiegeCellCenterInViewport"))
         assertTrue(src.contains("clipToBounds()"))
