@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -24,7 +25,7 @@ class StoreProfileFrameAssetsContractTest {
     )
 
     @Test
-    fun newFrameVectorsUseOneStandard512Canvas() {
+    fun retiredFrameVectorsRemainAvailableForProvenanceAndRollback() {
         drawableFiles.forEach { fileName ->
             val xml = File("src/main/res/drawable/$fileName").readText()
             assertTrue("$fileName width", xml.contains("android:width=\"512dp\""))
@@ -35,37 +36,41 @@ class StoreProfileFrameAssetsContractTest {
     }
 
     @Test
-    fun catalogAndBackendExposeEveryNewStoreFrame() {
+    fun retiredFrameCatalogDataMayRemainButRuntimeRenderingIsDisabled() {
         val ui = File("src/main/java/com/sonharf/game/PurchasedStyleUi.kt").readText()
         val economy = File("src/main/java/com/sonharf/game/data/EconomyStore.kt").readText()
+        val avatar = File("src/main/java/com/sonharf/game/FramedProfileAvatar.kt").readText()
         frameIds.forEach { id ->
-            assertTrue("UI missing $id", ui.contains("\"$id\""))
-            assertTrue("EconomyStore missing $id", economy.contains("\"$id\""))
+            assertTrue("UI provenance missing $id", ui.contains("\"$id\""))
+            assertTrue("EconomyStore provenance missing $id", economy.contains("\"$id\""))
         }
-        assertTrue(ui.contains("fun isVectorFrame"))
-        assertTrue(ui.contains("painterResource(spec.drawable)"))
+        assertTrue(ui.contains("PROFILE_FRAMES_RETIRED = true"))
+        assertTrue(ui.contains("if (PROFILE_FRAMES_RETIRED) return"))
+        assertFalse(avatar.contains("PurchasedProfileFrameOverlay("))
     }
 
     @Test
-    fun sonCoinPurchaseIsServerAuthoritativeThenEquipsOwnedFrame() {
+    fun historicalServerPurchaseHooksRemainAuditableButAreUnreachableFromRetiredRow() {
         val ui = File("src/main/java/com/sonharf/game/PurchasedStyleUi.kt").readText()
         val economy = File("src/main/java/com/sonharf/game/data/EconomyStore.kt").readText()
         assertTrue(ui.contains("b.purchaseShopItem(spec.id)"))
         assertTrue(ui.contains("b.equipShopItem(spec.id)"))
         assertTrue(economy.contains("rpc(\"purchase_shop_item\""))
         assertTrue(economy.contains("rpc(\"equip_shop_item\""))
+        assertTrue(ui.contains("if (PROFILE_FRAMES_RETIRED) return"))
     }
 
     @Test
-    fun decorativeFramesGetExtraAvatarClearance() {
+    fun avatarDoesNotReserveDecorativeFrameClearanceAfterRetirement() {
         val avatar = File("src/main/java/com/sonharf/game/FramedProfileAvatar.kt").readText()
-        assertTrue(avatar.contains("frameId?.startsWith(\"frame_wing_\")"))
-        assertTrue(avatar.contains("frame_flower_pink_blossom"))
-        assertTrue(avatar.contains("28.dp"))
+        assertTrue(avatar.contains("val legacyFrameId = frameId"))
+        assertFalse(avatar.contains("frameId?.startsWith(\"frame_wing_\")"))
+        assertFalse(avatar.contains("frame_flower_pink_blossom"))
+        assertFalse(avatar.contains("PurchasedProfileFrameOverlay("))
     }
 
     @Test
-    fun migrationListsExpectedPricesAndDoesNotTouchProGolden() {
+    fun historicalMigrationStillDocumentsOriginalPricesWithoutMutatingProGolden() {
         val migration = File("../supabase/migrations/20260915183000_store_wing_blossom_frames_v1.sql").readText()
         val expected = mapOf(
             "frame_wing_silver" to 180,
