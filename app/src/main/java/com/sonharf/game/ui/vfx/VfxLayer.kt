@@ -14,7 +14,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -74,9 +73,7 @@ fun VfxLayerHost(content: @Composable () -> Unit) {
             reducedMotion = reducedMotion,
             modifier = Modifier
                 .fillMaxSize()
-                .zIndex(10000f)
-                // Let touches pass through to the game underneath.
-                .pointerInput(Unit) { /* consume nothing */ },
+                .zIndex(10000f),
         )
     }
 }
