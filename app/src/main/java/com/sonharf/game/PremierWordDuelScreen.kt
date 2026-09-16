@@ -890,10 +890,21 @@ private fun PremierArena(
             )
         }
 
-        AnimatedVisibility(visible = floatingMessage != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 132.dp, start = 22.dp, end = 22.dp)) {
-            Surface(shape = RoundedCornerShape(16.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Sky.copy(alpha = .45f)), shadowElevation = 9.dp) {
-                Text(floatingMessage?.body.orEmpty(), Modifier.padding(horizontal = 16.dp, vertical = 10.dp), color = PremierUi.OceanDeep, fontWeight = FontWeight.Black, fontSize = 13.sp)
-            }
+        // G4.6 balon: rakibin son mesajı 2sn'liğine yukarıda görünür.
+        // Server-side `message_key` varsa TR/EN etiketi QuickChatKey'den
+        // çözülür; serbest yazı gelirse body kullanılır.
+        AnimatedVisibility(
+            visible = floatingMessage != null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 132.dp, start = 22.dp, end = 22.dp),
+        ) {
+            com.sonharf.game.ui.premium.ChatBubble(
+                messageKey = floatingMessage?.messageKey,
+                body = floatingMessage?.body,
+                triggerToken = floatingMessage?.id,
+                language = language,
+            )
         }
 
         AnimatedVisibility(
@@ -1002,7 +1013,7 @@ private fun PremierArenaHeader(
                 // always "me" on the left card in this screen's layout.
                 val myLives = room.hostLives
                 val rivalLives = room.guestLives
-                PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, myLives, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor)
+                PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, myLives, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor, isPro = me?.isVip == true)
                 Surface(shape = CircleShape, color = Color.Transparent) {
                     Box(Modifier.size(60.dp).background(Brush.radialGradient(listOf(timerStart, if (danger) PremierUi.Red else PremierUi.Ocean, timerEnd)), CircleShape), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -1011,14 +1022,14 @@ private fun PremierArenaHeader(
                         }
                     }
                 }
-                PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, rivalLives, PremierUi.OceanDeep, room.isBot, Modifier.weight(1f))
+                PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, rivalLives, PremierUi.OceanDeep, room.isBot, Modifier.weight(1f), isPro = opponent?.isVip == true)
             }
         }
     }
 }
 
 @Composable
-private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, visible: Boolean, rounds: Int, streak: Int, lives: Int, accent: Color, bot: Boolean, modifier: Modifier, nameColor: Color = PremierUi.Ink) {
+private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, visible: Boolean, rounds: Int, streak: Int, lives: Int, accent: Color, bot: Boolean, modifier: Modifier, nameColor: Color = PremierUi.Ink, isPro: Boolean = false) {
     val isLeft = accent == PremierUi.Ocean
     Row(
         modifier = modifier,
@@ -1040,7 +1051,17 @@ private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, vi
             modifier = Modifier.widthIn(max = 68.dp),
             horizontalAlignment = if (isLeft) Alignment.Start else Alignment.End,
         ) {
-            Text(name, color = nameColor, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // G4.7: Pro rozeti oyuncu adının yanına gelir. Bot Pro değildir.
+            com.sonharf.game.ui.premium.ProNameLabel(
+                name = name,
+                isPro = isPro && !bot,
+                style = androidx.compose.ui.text.TextStyle(
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Black,
+                ),
+                color = nameColor,
+                maxLines = 1,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 repeat(3) { i -> Box(Modifier.size(9.dp).clip(CircleShape).background(if (i < rounds) PremierUi.Gold else PremierUi.Border)) }
             }
