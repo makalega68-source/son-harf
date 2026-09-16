@@ -16,7 +16,7 @@ class FirstRunLanguageSelectorContractTest {
         assertTrue(shell.contains("Dilini seç / Choose your language"))
         assertTrue(shell.contains("TÜRKÇE"))
         assertTrue(shell.contains("ENGLISH"))
-        assertTrue(shell.contains("MainUi.Background"))
+        assertTrue(shell.contains("AppBackground"))
         assertTrue(!shell.contains("MonsterUi.Background"))
         assertTrue(prefs.contains("language_complete"))
         assertTrue(prefs.contains("SonHarfPreferences.setLanguage"))
