@@ -820,6 +820,15 @@ private fun PremierArena(
     val required = premierRequiredToken(room, words)
     val latestPlayedWord = words.lastOrNull()?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
 
+    PremierVfxBridge(
+        room = room,
+        meId = meId,
+        words = words,
+        input = input,
+        turnSeconds = turnSeconds,
+        myTurn = myTurn,
+    )
+
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val veryCompact = maxHeight < 610.dp
         val compact = maxHeight < 700.dp
