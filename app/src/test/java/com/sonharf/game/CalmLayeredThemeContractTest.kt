@@ -46,18 +46,28 @@ class CalmLayeredThemeContractTest {
     }
 
     @Test
-    fun sharedShellUsesBotanicalThemeAndAllowsBackdropToRemainVisible() {
+    fun sharedShellUsesSingleArtworkBackgroundAndTransparentPageRoots() {
         val primitives = source("AppUiPrimitives.kt")
+        val backdrop = source("AppBackground.kt")
+        val refreshedShell = source("VisualRefreshProApp.kt")
         val styles = projectFile("app/src/main/res/values/styles.xml").readText()
 
-        assertTrue(primitives.contains("internal val PortalBg: Color get() = if (SonHarfTheme.IsDark)"))
-        assertTrue(primitives.contains("SonHarfTheme.Background.copy(alpha = .94f)"))
+        assertTrue(primitives.contains("val Background: Color get() = Color.Transparent"))
+        assertTrue(primitives.contains("internal val PortalBg: Color get() = Color.Transparent"))
         assertTrue(primitives.contains("internal val PortalCard: Color get() = SonHarfTheme.Surface"))
         assertTrue(primitives.contains("internal val PortalBlue: Color get() = SonHarfTheme.SoftBlue"))
         assertFalse(primitives.contains("internal val PortalBlue = Color(0xFF1769E0)"))
         assertFalse(primitives.contains("internal val PortalGold = Color(0xFFF3A81A)"))
 
-        // Native startup background stays in the same calm family while Compose takes over.
+        assertTrue(backdrop.contains("R.drawable.app_background"))
+        assertTrue(backdrop.contains("ContentScale.FillBounds"))
+        assertTrue(refreshedShell.contains("containerColor = Color.Transparent"))
+        assertTrue(refreshedShell.contains("R.drawable.mode_kelime_kusatmasi"))
+        assertTrue(refreshedShell.contains("R.drawable.mode_son_harf"))
+        assertTrue(refreshedShell.contains("R.drawable.mode_kelime_yolu"))
+        assertTrue(refreshedShell.contains("R.drawable.app_logo"))
+
+        // Native startup background stays light while Compose takes over with app_background.webp.
         assertTrue(styles.contains("<item name=\"android:windowBackground\">#F4F7F2</item>"))
         assertTrue(styles.contains("<item name=\"android:statusBarColor\">#F4F7F2</item>"))
         assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#EEF3F0</item>"))
