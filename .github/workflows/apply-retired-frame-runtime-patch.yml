@@ -1,0 +1,30 @@
+name: Apply retired frame runtime patch
+
+on:
+  push:
+    branches:
+      - codex/full-gameplay-polish-20260916
+    paths:
+      - .ci/retired-frame-runtime.patch
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: codex/full-gameplay-polish-20260916
+          fetch-depth: 0
+      - name: Apply reviewed runtime patch
+        run: |
+          git apply --check .ci/retired-frame-runtime.patch
+          git apply .ci/retired-frame-runtime.patch
+          rm .ci/retired-frame-runtime.patch
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat: disable profile frame runtime surfaces"
+          git push origin HEAD:codex/full-gameplay-polish-20260916
