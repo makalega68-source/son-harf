@@ -14,13 +14,16 @@ class KelimeKusatmasiPrimaryProductContractTest {
         val strings = File("src/main/res/values/strings.xml").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
         val logo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
+        val appLogo = File("src/main/res/drawable-nodpi/app_logo.webp")
         val siegeVector = File("src/main/res/drawable/kelime_kusatma_logo_hd.xml")
 
         assertTrue(manifest.contains("android:label=\"@string/app_name\""))
         // Resource/deep-link identifiers remain stable even though the visible product brand changes.
         assertTrue(manifest.contains("@mipmap/ic_kelime_tahti"))
         assertTrue(strings.contains("<string name=\"app_name\">Kelime Kuşatması</string>"))
-        assertTrue(logo.contains("R.drawable.kelime_kusatma_logo_hd"))
+        assertTrue(logo.contains("R.drawable.app_logo"))
+        assertTrue(logo.contains("contentScale = ContentScale.Fit"))
+        assertTrue(appLogo.isFile)
         assertTrue(siegeVector.isFile)
         assertTrue(siegeVector.readText().contains("<vector"))
         assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.png").exists())
