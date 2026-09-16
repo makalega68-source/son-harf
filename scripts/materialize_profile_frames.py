@@ -18,6 +18,12 @@ EXPECTED = {
     'profile_frame_round_golden_avatar.webp': 'ac3bd7cd4b9431d2324d756890cc8fd77d2e2d5adbe90b1c6cbbab7a6219a1da',
 }
 
+FIX_CHUNKS = {
+    'profile_frame_wing_aurora.webp': [f'profile_frame_wing_aurora.webp.b64.fix{i:02d}' for i in range(5)],
+    'profile_frame_flower_pink_blossom.webp': [f'profile_frame_flower_pink_blossom.webp.b64.fix{i:02d}' for i in range(9)],
+    'profile_frame_round_golden_avatar.webp': [f'profile_frame_round_golden_avatar.webp.b64.fix{i:02d}' for i in range(6)],
+}
+
 LEGACY_XML = [
     'profile_frame_wing_silver.xml',
     'profile_frame_wing_blue.xml',
@@ -29,10 +35,16 @@ LEGACY_XML = [
 
 
 def load_payload(name: str) -> bytes:
-    prefix = f'{name}.b64.part'
-    parts = sorted(p for p in PAYLOAD.iterdir() if p.name.startswith(prefix))
-    if not parts:
-        raise SystemExit(f'missing payload chunks for {name}')
+    if name in FIX_CHUNKS:
+        parts = [PAYLOAD / p for p in FIX_CHUNKS[name]]
+        missing = [p.name for p in parts if not p.is_file()]
+        if missing:
+            raise SystemExit(f'missing payload chunks for {name}: {missing}')
+    else:
+        prefix = f'{name}.b64.part'
+        parts = sorted(p for p in PAYLOAD.iterdir() if p.name.startswith(prefix))
+        if not parts:
+            raise SystemExit(f'missing payload chunks for {name}')
     encoded = ''.join(p.read_text(encoding='ascii').strip() for p in parts)
     data = base64.b64decode(encoded, validate=True)
     digest = hashlib.sha256(data).hexdigest()
