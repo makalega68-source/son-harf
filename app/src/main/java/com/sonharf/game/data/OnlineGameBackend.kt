@@ -99,6 +99,9 @@ data class ChatMessageDto(
     @SerialName("sender_id") val senderId: String,
     val body: String,
     @SerialName("created_at") val createdAt: String,
+    // G4.6: allowlisted key for quick messages; null for future
+    // free-text (Kuşatma serbest yazı, arkadaş sohbeti).
+    @SerialName("message_key") val messageKey: String? = null,
 )
 
 @Serializable
