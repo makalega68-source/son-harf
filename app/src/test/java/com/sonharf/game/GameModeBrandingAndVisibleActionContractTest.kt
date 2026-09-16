@@ -8,23 +8,40 @@ import org.junit.Test
 class GameModeBrandingAndVisibleActionContractTest {
     @Test
     fun homeMakesKelimeKusatmasiPrimaryAndKeepsSecondaryModesBranded() {
-        val home = projectFile("app/src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
+        val home = projectFile("app/src/main/java/com/sonharf/game/PremiumHomeImageLayout.kt").readText()
         val games = projectFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
-        val brand = projectFile("app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
-        val siegeDrawable = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")
 
-        assertTrue(home.contains("Text(\"KELİME KUŞATMASI\""))
-        assertTrue(home.contains("Button(onClick = onSiege"))
-        assertTrue(home.contains("onClick = onPlay"))
-        assertTrue(brand.contains("R.drawable.kelime_kusatma_logo_hd"))
-        assertTrue(siegeDrawable.isFile)
-        assertTrue(siegeDrawable.readText().contains("<vector"))
-        assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.png")?.exists() == true)
-        assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.webp")?.exists() == true)
+        assertTrue(home.contains("internal fun PremiumHomeProfileStrip("))
+        assertTrue(home.contains("internal fun PremiumModeArtworkButton("))
+        assertTrue(home.contains("internal fun PremiumHomeWeeklyTop3("))
+        assertTrue(projectFile("app/src/main/res/drawable-nodpi/mode_kelime_kusatmasi.webp").isFile)
+        assertTrue(projectFile("app/src/main/res/drawable-nodpi/mode_son_harf.webp").isFile)
+        assertTrue(projectFile("app/src/main/res/drawable-nodpi/mode_kelime_yolu.webp").isFile)
+        assertTrue(projectFile("app/src/main/res/drawable-nodpi/app_background.webp").isFile)
+
+        assertTrue(games.contains("drawable = R.drawable.mode_kelime_kusatmasi"))
+        assertTrue(games.contains("drawable = R.drawable.mode_son_harf"))
+        assertTrue(games.contains("drawable = R.drawable.mode_kelime_yolu"))
+        assertTrue(games.contains("PremiumDailyObjective(onClick = onTasks)"))
+        assertTrue(games.contains("PremiumHomeWeeklyTop3("))
+        assertFalse(games.contains("HomeBrandHeader("))
+
+        val profileIndex = games.indexOf("item(key = \"profile_header\")")
+        val siegeIndex = games.indexOf("item(key = \"kelime_kusatmasi\")")
+        val tasksIndex = games.indexOf("item(key = \"daily_tasks\")")
+        val lastLetterIndex = games.indexOf("item(key = \"son_harf\")")
+        val letterPathIndex = games.indexOf("item(key = \"kelime_yolu\")")
+        val weeklyIndex = games.indexOf("item(key = \"weekly_top_3\")")
+        assertTrue(profileIndex >= 0)
+        assertTrue(profileIndex < siegeIndex)
+        assertTrue(siegeIndex < tasksIndex)
+        assertTrue(tasksIndex < lastLetterIndex)
+        assertTrue(lastLetterIndex < letterPathIndex)
+        assertTrue(letterPathIndex < weeklyIndex)
+
         assertTrue(games.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
         assertTrue(games.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(games.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
-        assertTrue(games.contains("PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)"))
         assertTrue(games.contains("onClick = onSiege"))
         assertTrue(games.contains("onClick = onLastLetter"))
         assertTrue(games.contains("onClick = onLetterPath"))
@@ -64,7 +81,4 @@ class GameModeBrandingAndVisibleActionContractTest {
     private fun projectFile(path: String): File =
         listOf(File(path), File("../$path")).firstOrNull(File::exists)
             ?: error("Project path missing: $path")
-
-    private fun projectFileOrNull(path: String): File? =
-        listOf(File(path), File("../$path")).firstOrNull(File::exists)
 }
