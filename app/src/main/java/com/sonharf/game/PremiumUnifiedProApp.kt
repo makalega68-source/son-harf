@@ -24,7 +24,8 @@ import kotlinx.coroutines.delay
 private enum class PremiumDestination {
     HOME, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
     LAST_LETTER, SIEGE, LETTER_PATH,
-    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP
+    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP,
+    LEAGUE, TASKS, DAILY
 }
 
 @Composable
@@ -69,6 +70,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 PremiumDestination.LAST_LETTER,
                 PremiumDestination.SIEGE,
                 PremiumDestination.LETTER_PATH,
+                PremiumDestination.DAILY,
             )
         ) {
             while (true) {
@@ -81,8 +83,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
             PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION -> PremiumDestination.PROFILE
-            PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.HOME
+            PremiumDestination.SOCIAL, PremiumDestination.SHOP, PremiumDestination.LEAGUE, PremiumDestination.TASKS -> PremiumDestination.HOME
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
+            PremiumDestination.DAILY -> PremiumDestination.TASKS
             PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
                 uiLanguageBeforeGame = null
@@ -92,7 +95,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         }
     }
 
-    // Top-level navigation: Home, Friends/Social, Store, Profile. Club is hidden.
+    // Top-level navigation: Home, Friends/Social, Store, Profile. Club remains retired.
     val topLevel = destination in setOf(
         PremiumDestination.HOME,
         PremiumDestination.SOCIAL,
@@ -129,7 +132,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         Scaffold(
             containerColor = SonHarfTheme.Background,
             topBar = {
-                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)) SonHarfTopAdBanner(isPremium = isPro)
+                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)) {
+                    SonHarfTopAdBanner(isPremium = isPro)
+                }
             },
             bottomBar = {
                 if (topLevel) {
@@ -154,6 +159,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onSocial = { destination = PremiumDestination.SOCIAL },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
+                        onTasks = { destination = PremiumDestination.TASKS },
+                        onLeague = { destination = PremiumDestination.LEAGUE },
                     )
                     PremiumDestination.GAMES -> PremiumGameCenter(
                         siegeLanguage = siegeLanguage,
@@ -180,7 +187,9 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         { destination = PremiumDestination.SETTINGS },
                         { destination = PremiumDestination.SOCIAL },
                     )
-                    PremiumDestination.COLLECTION -> PlayerCollectionScreen(backend) { destination = PremiumDestination.PROFILE }
+                    PremiumDestination.COLLECTION -> PlayerCollectionScreen(backend) {
+                        destination = PremiumDestination.PROFILE
+                    }
                     PremiumDestination.SHOP -> EconomyShopScreen(
                         onBack = { destination = PremiumDestination.HOME },
                         onMembershipChanged = { isPro = it },
@@ -210,6 +219,18 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.PROFILE_DETAILS -> CompleteProfileScreen(0) {
                         destination = PremiumDestination.PROFILE
                     }
+                    PremiumDestination.LEAGUE -> LeaderboardExperienceScreen {
+                        destination = PremiumDestination.HOME
+                    }
+                    PremiumDestination.TASKS -> MainRetentionScreen(
+                        backend,
+                        { destination = PremiumDestination.HOME },
+                        { openGame(PremiumDestination.SIEGE, siegeLanguage) },
+                        { destination = PremiumDestination.DAILY },
+                    )
+                    PremiumDestination.DAILY -> DailyCipherScreen {
+                        destination = PremiumDestination.TASKS
+                    }
                 }
             }
         }
@@ -225,6 +246,8 @@ private fun PremiumHomeScreen(
     onSocial: () -> Unit,
     onLastLetter: () -> Unit,
     onLetterPath: () -> Unit,
+    onTasks: () -> Unit,
+    onLeague: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
 
@@ -238,17 +261,52 @@ private fun PremiumHomeScreen(
         LazyColumn(
             modifier = Modifier.widthIn(max = 600.dp).fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            item(key = "home_hero") {
-                PremiumHomeCommandDeck(profile, onProfile, onPrimary, onSocial)
+            item(key = "profile_header") {
+                PremiumHomeProfileStrip(
+                    profile = profile,
+                    onProfile = onProfile,
+                    onSocial = onSocial,
+                )
             }
-            item(key = "home_secondary_modes") {
-                PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)
+            item(key = "kelime_kusatmasi") {
+                PremiumModeArtworkButton(
+                    drawable = R.drawable.mode_kelime_kusatmasi,
+                    description = sh("Kelime Kuşatması oyna", "Play Kelime Kuşatması"),
+                    aspectRatio = 8f / 3f,
+                    onClick = onPrimary,
+                )
             }
-            item(key = "daily_objective") {
-                PremiumDailyObjective(onClick = onCompete)
+            item(key = "daily_tasks") {
+                PremiumDailyObjective(onClick = onTasks)
             }
+            item(key = "son_harf") {
+                PremiumModeArtworkButton(
+                    drawable = R.drawable.mode_son_harf,
+                    description = sh("Son Harf oyna", "Play Last Letter"),
+                    aspectRatio = 3f,
+                    onClick = onLastLetter,
+                )
+            }
+            item(key = "kelime_yolu") {
+                PremiumModeArtworkButton(
+                    drawable = R.drawable.mode_kelime_yolu,
+                    description = sh("Kelime Yolu oyna", "Play Word Path"),
+                    aspectRatio = 3f,
+                    onClick = onLetterPath,
+                )
+            }
+            item(key = "weekly_top_3") {
+                PremiumHomeWeeklyTop3(
+                    backend = backend,
+                    onOpenLeague = onLeague,
+                )
+            }
+            item(key = "competition_shortcut") {
+                PremiumCompetitionShortcut(onClick = onCompete)
+            }
+            item { Spacer(Modifier.height(6.dp)) }
         }
     }
 }
