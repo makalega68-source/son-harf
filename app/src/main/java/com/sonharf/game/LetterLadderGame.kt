@@ -352,6 +352,12 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
             usedPositions = emptySet()
             loadError = true
             loading = false
+            // G5.4: İngilizce bölüm yoksa "Yakında" göster, çökme.
+            message = if (language.lowercase(Locale.ROOT) == "en") {
+                sh("İngilizce bölümler yakında geliyor.", "English levels are coming soon.")
+            } else {
+                sh("Bulmaca açılamadı", "Puzzle unavailable")
+            }
             return@LaunchedEffect
         }
         dictionary = loaded
@@ -373,7 +379,13 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
         path = generated?.let { listOf(it.start) }.orEmpty()
         usedPositions = emptySet()
         message = if (generated == null) {
-            sh("Bu sözlükte uygun 5 adımlı bulmaca üretilemedi.", "No valid five-step puzzle could be generated.")
+            // G5.4: aynı fallback English için "Yakında" ile yumuşatılır.
+            if (language.lowercase(Locale.ROOT) == "en") {
+                sh("İngilizce bölümler yakında geliyor.", "English levels are coming soon.")
+            } else {
+                sh("Bu sözlükte uygun 5 adımlı bulmaca üretilemedi.",
+                    "No valid five-step puzzle could be generated.")
+            }
         } else {
             sh("Her hamlede yalnızca 1 harfi değiştir.", "Change exactly one letter on each move.")
         }

@@ -24,6 +24,9 @@ object SonHarfPreferences {
     private const val SYSTEM_NOTIFICATIONS = "system_notifications_enabled"
     private const val DARK_MODE = "dark_mode_enabled"
     private const val LANGUAGE = "app_language"
+    // G5.4: her oyun ekranı için tek bir "oyun dili" prefs. UI dili
+    // ayrı (LANGUAGE); oyuncu UI TR kalırken oyunu EN oynayabilir.
+    private const val GAME_LANGUAGE = "game_language"
     private const val BOT_DIFFICULTY = "bot_difficulty"
     private const val PENDING_REGISTER_EMAIL = "pending_register_email"
     private const val PENDING_REGISTER_NAME = "pending_register_name"
@@ -84,6 +87,16 @@ object SonHarfPreferences {
         val normalized = if (value == "en") "en" else "tr"
         prefs(context).edit().putString(LANGUAGE, normalized).apply()
         SonHarfUiState.language = normalized
+    }
+
+    // G5.4 oyun dili. Varsayılan Türkçe. UI dilinden bağımsızdır.
+    fun gameLanguage(context: Context): String =
+        prefs(context).getString(GAME_LANGUAGE, "tr")
+            ?.takeIf { it in setOf("tr", "en") } ?: "tr"
+
+    fun setGameLanguage(context: Context, value: String) {
+        val normalized = if (value == "en") "en" else "tr"
+        prefs(context).edit().putString(GAME_LANGUAGE, normalized).apply()
     }
 
     fun setNotificationsEnabled(context: Context, value: Boolean) {
