@@ -327,6 +327,19 @@ private fun PremiumGameCenter(
                 onClick = onSiege,
             )
         }
+        // G5.5 adopsiyon: her oyun kartının altına kısa "Nasıl oynanır?"
+        // açılır kartı. Kullanıcı ilk açtığında görmezden gelinir; merak
+        // ederse tıklar. 3 madde + kısa emoji ikon.
+        item {
+            com.sonharf.game.ui.premium.HowToPlayCard(
+                steps = listOf(
+                    com.sonharf.game.ui.premium.HowToStep("🗺️", sh("Hücrelere harf yerleştirerek bölgeni büyüt.", "Place letters on cells to grow your territory.")),
+                    com.sonharf.game.ui.premium.HowToStep("💥", sh("Rakip hücrelerini ele geçir; birden fazlasını al 'KUŞATMA' bonusu.", "Capture opponent cells; multiple at once earns 'SIEGE' bonus.")),
+                    com.sonharf.game.ui.premium.HowToStep("🏰", sh("Kritik bölgeleri veya kaleyi al, harita %'ini artır.", "Take critical zones and the castle to raise your map %.")),
+                ),
+                accent = SonHarfTheme.KusatmaPurple,
+            )
+        }
         item {
             PremiumGameCard(
                 icon = Icons.Rounded.Bolt,
@@ -338,6 +351,16 @@ private fun PremiumGameCenter(
             )
         }
         item {
+            com.sonharf.game.ui.premium.HowToPlayCard(
+                steps = listOf(
+                    com.sonharf.game.ui.premium.HowToStep("🔤", sh("Rakibin bıraktığı son harfle başlayan bir kelime yaz.", "Type a word that starts with the opponent's last letter.")),
+                    com.sonharf.game.ui.premium.HowToStep("⏱️", sh("Süre 15sn'den başlar; her hamlede kısalır (min 8sn).", "Turn starts at 15s and shrinks each move (min 8s).")),
+                    com.sonharf.game.ui.premium.HowToStep("❤️", sh("3 canın var; geçersiz kelime veya süre bitişi 1 can götürür.", "You get 3 lives; an invalid word or timeout costs one.")),
+                ),
+                accent = SonHarfTheme.SonHarfOrange,
+            )
+        }
+        item {
             PremiumGameCard(
                 icon = Icons.Rounded.Route,
                 title = sh("HARF YOLU", "LETTER PATH"),
@@ -345,6 +368,16 @@ private fun PremiumGameCenter(
                 language = letterPathLanguage,
                 onLanguageChange = onLetterPathLanguage,
                 onClick = onLetterPath,
+            )
+        }
+        item {
+            com.sonharf.game.ui.premium.HowToPlayCard(
+                steps = listOf(
+                    com.sonharf.game.ui.premium.HowToStep("🧩", sh("Başlangıç ve hedef kelime hazır — sen ara 4 kelimeyi yaz.", "Start and target words are set — you fill the 4 middle words.")),
+                    com.sonharf.game.ui.premium.HowToStep("🔁", sh("Her adımda tek harf değiştir; her kelime sözlükte olmalı.", "Change exactly one letter per step; every word must be in the dictionary.")),
+                    com.sonharf.game.ui.premium.HowToStep("💡", sh("İpucu 3 aşamalı: kutu → tanım → 3 harf seçeneği.", "Hint is 3 stages: cell → definition → 3 letter choices.")),
+                ),
+                accent = SonHarfTheme.KelimeYoluTeal,
             )
         }
     }

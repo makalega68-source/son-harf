@@ -20,6 +20,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.sonharf.game.data.updateMyBirthYear
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
@@ -48,6 +49,10 @@ internal fun MainSettingsScreen(
     var notice by remember { mutableStateOf<String?>(null) }
     var helpDialog by remember { mutableStateOf(false) }
     var logoutDialog by remember { mutableStateOf(false) }
+    // G4.6 sohbet ayarları + doğum yılı
+    var chatDisabled by remember { mutableStateOf(SonHarfPreferences.chatDisabled(context)) }
+    var chatQuickOnly by remember { mutableStateOf(SonHarfPreferences.chatQuickOnly(context)) }
+    var birthYearDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         val id = backend.currentUserId()
@@ -157,6 +162,43 @@ internal fun MainSettingsScreen(
             }
         }
 
+        // G4.6 sohbet ayarları: kapat / sadece hazır mesajlar + doğum yılı.
+        item {
+            MainSettingsGroup(sh("SOHBET", "CHAT")) {
+                MainToggleSetting(
+                    icon = Icons.Rounded.ChatBubbleOutline,
+                    title = sh("Sohbeti kapat", "Disable chat"),
+                    subtitle = sh("Mesajlar gelmez, gönderemezsin", "No messages in or out"),
+                    checked = chatDisabled,
+                ) {
+                    chatDisabled = it
+                    SonHarfPreferences.setChatDisabled(context, it)
+                }
+                HorizontalDivider(color = MainUi.Border)
+                MainToggleSetting(
+                    icon = Icons.Rounded.Bolt,
+                    title = sh("Sadece hazır mesajlar", "Quick messages only"),
+                    subtitle = sh("Serbest yazıyı gizle, yalnızca hazır mesajlar ve emojiler", "Hide free text; only quick messages and emoji"),
+                    checked = chatQuickOnly,
+                ) {
+                    chatQuickOnly = it
+                    SonHarfPreferences.setChatQuickOnly(context, it)
+                }
+                HorizontalDivider(color = MainUi.Border)
+                MainSettingsLink(
+                    icon = Icons.Rounded.Cake,
+                    title = sh("Doğum yılı", "Birth year"),
+                    subtitle = sh(
+                        profile?.birthYear?.let { "Kayıtlı: $it" }
+                            ?: "18 yaş altı korumasını etkinleştirmek için opsiyonel",
+                        profile?.birthYear?.let { "Saved: $it" }
+                            ?: "Optional — enables under-18 protection",
+                    ),
+                    onClick = { birthYearDialog = true },
+                )
+            }
+        }
+
         item {
             MainSettingsGroup(sh("GİZLİLİK VE DESTEK", "PRIVACY & SUPPORT")) {
                 MainSettingsLink(Icons.Rounded.PrivacyTip, sh("Reklam gizlilik seçenekleri", "Ad privacy options"), sh("Google UMP tercihlerini yönet", "Manage Google UMP choices")) {
@@ -244,6 +286,32 @@ internal fun MainSettingsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = MainUi.Red),
                 ) { Text(sh("ÇIKIŞ YAP", "SIGN OUT"), fontWeight = FontWeight.Black) }
             },
+        )
+    }
+
+    // G4.6 doğum yılı seçici. Kullanıcı isterse boş bırakabilir.
+    if (birthYearDialog) {
+        com.sonharf.game.ui.premium.BirthYearPickerDialog(
+            initial = profile?.birthYear,
+            onDismiss = { birthYearDialog = false },
+            onConfirm = { picked ->
+                birthYearDialog = false
+                scope.launch {
+                    runCatching { backend.updateMyBirthYear(picked) }
+                        .onSuccess {
+                            val id = backend.currentUserId()
+                            profile = id?.let { runCatching { backend.getProfile(it) }.getOrNull() }
+                            notice = sh("Doğum yılı kaydedildi.", "Birth year saved.")
+                        }
+                        .onFailure {
+                            notice = sh(
+                                "Doğum yılı kaydedilemedi.",
+                                "Could not save birth year.",
+                            )
+                        }
+                }
+            },
+            language = SonHarfUiState.language,
         )
     }
 }
