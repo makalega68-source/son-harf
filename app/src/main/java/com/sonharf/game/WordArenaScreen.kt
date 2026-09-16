@@ -910,7 +910,7 @@ private fun friendlyArenaError(raw: String): String = when {
     "team_arena_active" in raw || "team_arena_already_active" in raw ->
         sh("Takım Arenası maçın sürüyor. Önce 2v2 maçı bitir.", "Your Team Arena match is active. Finish the 2v2 match first.")
     "daily_arena_active" in raw ->
-        sh("Önce aktif Resmî Koşuyu bitir.", "Finish your active Official Run first.")
+        sh("Önce aktif Resmi Koşuyu bitir.", "Finish your active Official Run first.")
     "player_already_in_game" in raw -> sh("Önce aktif Son Harf maçını bitir.", "Finish your active Son Harf match first.")
     "arena_not_started" in raw -> sh("Düello henüz başlamadı.", "The duel has not started yet.")
     "arena_word_length" in raw -> sh("Kelime 3–10 harf olmalı.", "Words must be 3–10 letters.")

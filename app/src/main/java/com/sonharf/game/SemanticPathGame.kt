@@ -67,9 +67,9 @@ internal object SemanticPathEngine {
         connect("güneş", "yaz")
         connect("yaz", "tatil")
 
-        connect("kitap", "hikâye")
+        connect("kitap", "hikaye")
         connect("kitap", "bilgi")
-        connect("hikâye", "karakter")
+        connect("hikaye", "karakter")
         connect("karakter", "insan")
         connect("bilgi", "insan")
         connect("insan", "dostluk")

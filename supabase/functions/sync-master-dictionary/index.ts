@@ -39,10 +39,12 @@ async function sha256Hex(bytes: Uint8Array): Promise<string> {
 
 function normalizeTurkish(raw: string): { word: string; source: string } | null {
   const source = raw.normalize("NFC").trim();
-  if (!source || source !== source.toLocaleLowerCase("tr-TR")) return null;
-  if (source.length < 2 || source.length > 30) return null;
-  if (!/^[abcçdefgğhıijklmnoöprsştuüvyzâîû]+$/u.test(source)) return null;
-  return { word: source, source };
+  if (!source) return null;
+  const lowered = source.toLocaleLowerCase("tr-TR");
+  const stripped = lowered.replace(/â/g, "a").replace(/î/g, "i").replace(/û/g, "u");
+  if (stripped.length < 2 || stripped.length > 30) return null;
+  if (!/^[abcçdefgğhıijklmnoöprsştuüvyz]+$/u.test(stripped)) return null;
+  return { word: stripped, source };
 }
 
 function normalizeEnglish(raw: string): { word: string; source: string } | null {

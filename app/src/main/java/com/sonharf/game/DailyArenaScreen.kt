@@ -92,7 +92,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
     BackHandler {
         if (status?.status == "playing") {
             notice = sh(
-                "Resmî koşu sürüyor; süre arka planda devam eder.",
+                "Resmi koşu sürüyor; süre arka planda devam eder.",
                 "Official run is active; the timer keeps running.",
             )
         } else onBack()
@@ -168,7 +168,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                 onClick = {
                     if (status?.status == "playing") {
                         notice = sh(
-                            "Resmî koşu sürüyor; süre devam ediyor.",
+                            "Resmi koşu sürüyor; süre devam ediyor.",
                             "Official run is active; timer continues.",
                         )
                     } else onBack()
@@ -184,7 +184,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                 )
                 Text(
                     sh(
-                        "Aynı harfler • Tek resmî deneme • 60 saniye",
+                        "Aynı harfler • Tek resmi deneme • 60 saniye",
                         "Same letters • One official run • 60 seconds",
                     ),
                     color = SonHarfMuted,
@@ -219,7 +219,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                             Text(
                                 when (s.status) {
                                     "not_started" -> sh(
-                                        "BUGÜNÜN RESMÎ KOŞUSU",
+                                        "BUGÜNÜN RESMI KOŞUSU",
                                         "TODAY'S OFFICIAL RUN",
                                     )
                                     "playing" -> if (prepSeconds > 0)
@@ -320,7 +320,7 @@ fun DailyArenaScreen(onBack: () -> Unit) {
                                 ) {
                                     Text(
                                         sh(
-                                            "RESMÎ KOŞUYU BAŞLAT",
+                                            "RESMI KOŞUYU BAŞLAT",
                                             "START OFFICIAL RUN",
                                         ),
                                         fontWeight = FontWeight.Black,

@@ -90,7 +90,12 @@ object SharedDictionaryService {
             .replace('\t', ' ')
             .trim()
         val lower = if (lang == "tr") cleaned.lowercase(turkishLocale) else cleaned.lowercase(englishLocale)
-        return Normalizer.normalize(lower, Normalizer.Form.NFC)
+        val stripped = if (lang == "tr") {
+            lower.replace('â', 'a').replace('î', 'i').replace('û', 'u')
+        } else {
+            lower
+        }
+        return Normalizer.normalize(stripped, Normalizer.Form.NFC)
     }
 
     private fun validCharacters(word: String, language: String): Boolean =
