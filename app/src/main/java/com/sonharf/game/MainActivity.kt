@@ -39,48 +39,60 @@ internal val SonHarfPink = Color(0xFFFF5F57)
 // are dropped into res/font/, swap FontFamily.SansSerif for a FontFamily
 // composed of R.font.montserrat_* / R.font.inter_* — nothing else needs to
 // change because every screen resolves through MaterialTheme.typography.
+// G5.9 tabular numerals ("tnum") added to every style so scoreboards,
+// timers, streak counters and lives don't horizontally re-flow as digits
+// change (10 -> 9 -> 8 keeps the same width). Locale-aware Turkish
+// uppercase is still done per call site via `.uppercase(Locale("tr"))`;
+// tnum is orthogonal to it and safe to enable on all styles.
+private const val TNUM = "tnum"
+
 private val SonHarfTypography = Typography(
     // Body / label: 15sp text, 12sp caption.
     bodyLarge = TextStyle(
         fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
         fontSize = 16.sp, lineHeight = 22.sp, fontWeight = FontWeight.Normal,
+        fontFeatureSettings = TNUM,
     ),
     bodyMedium = TextStyle(
         fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
         fontSize = 15.sp, lineHeight = 21.sp, fontWeight = FontWeight.Normal,
+        fontFeatureSettings = TNUM,
     ),
     bodySmall = TextStyle(
         fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
         fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.Normal,
+        fontFeatureSettings = TNUM,
     ),
     labelLarge = TextStyle(
         fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
         fontSize = 15.sp, lineHeight = 20.sp, fontWeight = FontWeight.SemiBold,
-        letterSpacing = 0.5.sp,
+        letterSpacing = 0.5.sp, fontFeatureSettings = TNUM,
     ),
     labelMedium = TextStyle(
         fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
         fontSize = 13.sp, lineHeight = 18.sp, fontWeight = FontWeight.Medium,
+        fontFeatureSettings = TNUM,
     ),
     labelSmall = TextStyle(
         fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
         fontSize = 12.sp, lineHeight = 16.sp, fontWeight = FontWeight.Medium,
+        fontFeatureSettings = TNUM,
     ),
     // Titles: 18 / 24 / 32.
     titleSmall = TextStyle(
         fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
         fontSize = 18.sp, lineHeight = 24.sp, fontWeight = FontWeight.ExtraBold,
-        letterSpacing = 0.3.sp,
+        letterSpacing = 0.3.sp, fontFeatureSettings = TNUM,
     ),
     titleMedium = TextStyle(
         fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
         fontSize = 24.sp, lineHeight = 30.sp, fontWeight = FontWeight.ExtraBold,
-        letterSpacing = 0.5.sp,
+        letterSpacing = 0.5.sp, fontFeatureSettings = TNUM,
     ),
     titleLarge = TextStyle(
         fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
         fontSize = 32.sp, lineHeight = 38.sp, fontWeight = FontWeight.Black,
-        letterSpacing = 0.5.sp,
+        letterSpacing = 0.5.sp, fontFeatureSettings = TNUM,
     ),
 )
 
