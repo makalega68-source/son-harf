@@ -57,7 +57,8 @@ val LocalVfx = compositionLocalOf<VfxController> { VfxController() }
 
 /**
  * Host that provides a VfxController and stacks the VfxLayer above content.
- * Wrap the app root (below the theme) with this once.
+ * The visual overlay deliberately has no pointer-input modifier so taps are
+ * hit-tested against the interactive app content underneath it.
  */
 @Composable
 fun VfxLayerHost(content: @Composable () -> Unit) {
