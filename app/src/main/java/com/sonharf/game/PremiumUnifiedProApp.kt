@@ -249,6 +249,18 @@ private fun PremiumHomeScreen(
             item(key = "daily_objective") {
                 PremiumDailyObjective(onClick = onCompete)
             }
+            // G4.3 istemci adopsiyonu — ana ekrandaki 3 günlük görev.
+            item(key = "daily_quests_card") {
+                com.sonharf.game.ui.premium.DailyQuestsCard(
+                    language = SonHarfUiState.language,
+                )
+            }
+            // G4.4 istemci adopsiyonu — streak + kelime koleksiyonu + tema.
+            item(key = "retention_card") {
+                com.sonharf.game.ui.premium.RetentionCard(
+                    language = SonHarfUiState.language,
+                )
+            }
         }
     }
 }

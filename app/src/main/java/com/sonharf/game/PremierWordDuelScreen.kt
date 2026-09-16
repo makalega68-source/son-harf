@@ -1412,10 +1412,33 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
             Text(notice, color = PremierUi.OceanDeep, fontSize = 11.sp, textAlign = TextAlign.Center)
         }
         Spacer(Modifier.height(24.dp))
-        Button(onClick = onRematch, enabled = !busy, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean)) {
+        // G4.2: 10-second rematch window. When the countdown reaches 0 the
+        // button locks so we don't nag an opponent who's already left the
+        // result screen. onRematch itself is unchanged.
+        var rematchSecondsLeft by remember(room.id) { mutableIntStateOf(10) }
+        androidx.compose.runtime.LaunchedEffect(room.id) {
+            rematchSecondsLeft = 10
+            while (rematchSecondsLeft > 0) {
+                kotlinx.coroutines.delay(1000)
+                rematchSecondsLeft -= 1
+            }
+        }
+        val rematchOpen = rematchSecondsLeft > 0
+        Button(
+            onClick = onRematch,
+            enabled = !busy && rematchOpen,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(17.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean),
+        ) {
             Icon(Icons.Rounded.Replay, null)
             Spacer(Modifier.width(7.dp))
-            Text(if (busy) pt(language, "BEKLENİYOR…", "WAITING…") else pt(language, "HEMEN RÖVANŞ", "INSTANT REMATCH"), fontWeight = FontWeight.Black)
+            val label = when {
+                busy -> pt(language, "BEKLENİYOR…", "WAITING…")
+                !rematchOpen -> pt(language, "SÜRE DOLDU", "TIME UP")
+                else -> pt(language, "HEMEN RÖVANŞ ($rematchSecondsLeft)", "INSTANT REMATCH ($rematchSecondsLeft)")
+            }
+            Text(label, fontWeight = FontWeight.Black)
         }
         Spacer(Modifier.height(9.dp))
         OutlinedButton(onClick = onHome, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), border = BorderStroke(1.dp, PremierUi.Border)) {

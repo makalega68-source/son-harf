@@ -9,6 +9,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.lerp
@@ -67,19 +68,30 @@ internal fun WordSiegeScoreCard(
     isBot: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // G5.2: player whose turn it is gets a soft glow ring + 5% grow so
+    // the active card visually pops without shifting layout above it.
+    val scaleModifier = if (active) {
+        modifier.graphicsLayer(scaleX = 1.05f, scaleY = 1.05f)
+    } else {
+        modifier
+    }
     Surface(
-        modifier = modifier,
-        color = lerp(WordSiegeGameUi.Surface, accent, .04f),
+        modifier = scaleModifier,
+        color = lerp(WordSiegeGameUi.Surface, accent, if (active) .10f else .04f),
         shape = RoundedCornerShape(9.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = if (active) .5f else .18f)),
+        border = BorderStroke(if (active) 2.dp else 1.dp, accent.copy(alpha = if (active) .75f else .18f)),
+        shadowElevation = if (active) 6.dp else 0.dp,
     ) {
-        Column(Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // G5.2: bump avatar to 64dp (spec minimum). Small phone
+                // (360dp) still fits because the name column stays weight(1f)
+                // with single-line + ellipsis.
                 ProfilePhotoAvatarWithGender(
                     avatarPath = avatarPath, gender = gender, name = name,
-                    size = 26.dp, accent = accent, visible = avatarVisible,
+                    size = 64.dp, accent = accent, visible = avatarVisible,
                 )
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(name, color = WordSiegeGameUi.Text, fontSize = 12.sp, lineHeight = 14.sp,
                         fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
