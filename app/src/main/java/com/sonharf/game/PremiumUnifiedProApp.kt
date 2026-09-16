@@ -33,7 +33,12 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var destination by remember { mutableStateOf(PremiumDestination.HOME) }
     var isPro by remember { mutableStateOf(false) }
     val homeRequest = SonHarfUiState.homeRequest
-    val defaultGameLanguage = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // G5.4: default is the persisted "game language" pref, not the UI
+    // language. Kullanıcı UI TR kalırken maçı EN oynayabilir.
+    val defaultGameLanguage = SharedDictionaryService.canonicalLanguage(
+        SonHarfPreferences.gameLanguage(context),
+    )
     var siegeLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var lastLetterLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var letterPathLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
@@ -159,9 +164,21 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         siegeLanguage = siegeLanguage,
                         lastLetterLanguage = lastLetterLanguage,
                         letterPathLanguage = letterPathLanguage,
-                        onSiegeLanguage = { siegeLanguage = it },
-                        onLastLetterLanguage = { lastLetterLanguage = it },
-                        onLetterPathLanguage = { letterPathLanguage = it },
+                        // G5.4: persist the last picked language per game
+                        // so the choice survives app restarts (spec:
+                        // "Son seçim cihazda hatırlanır").
+                        onSiegeLanguage = {
+                            siegeLanguage = it
+                            SonHarfPreferences.setGameLanguage(context, it)
+                        },
+                        onLastLetterLanguage = {
+                            lastLetterLanguage = it
+                            SonHarfPreferences.setGameLanguage(context, it)
+                        },
+                        onLetterPathLanguage = {
+                            letterPathLanguage = it
+                            SonHarfPreferences.setGameLanguage(context, it)
+                        },
                         onSiege = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
@@ -249,6 +266,18 @@ private fun PremiumHomeScreen(
             item(key = "daily_objective") {
                 PremiumDailyObjective(onClick = onCompete)
             }
+            // G4.3 istemci adopsiyonu — ana ekrandaki 3 günlük görev.
+            item(key = "daily_quests_card") {
+                com.sonharf.game.ui.premium.DailyQuestsCard(
+                    language = SonHarfUiState.language,
+                )
+            }
+            // G4.4 istemci adopsiyonu — streak + kelime koleksiyonu + tema.
+            item(key = "retention_card") {
+                com.sonharf.game.ui.premium.RetentionCard(
+                    language = SonHarfUiState.language,
+                )
+            }
         }
     }
 }
@@ -298,6 +327,19 @@ private fun PremiumGameCenter(
                 onClick = onSiege,
             )
         }
+        // G5.5 adopsiyon: her oyun kartının altına kısa "Nasıl oynanır?"
+        // açılır kartı. Kullanıcı ilk açtığında görmezden gelinir; merak
+        // ederse tıklar. 3 madde + kısa emoji ikon.
+        item {
+            com.sonharf.game.ui.premium.HowToPlayCard(
+                steps = listOf(
+                    com.sonharf.game.ui.premium.HowToStep("🗺️", sh("Hücrelere harf yerleştirerek bölgeni büyüt.", "Place letters on cells to grow your territory.")),
+                    com.sonharf.game.ui.premium.HowToStep("💥", sh("Rakip hücrelerini ele geçir; birden fazlasını al 'KUŞATMA' bonusu.", "Capture opponent cells; multiple at once earns 'SIEGE' bonus.")),
+                    com.sonharf.game.ui.premium.HowToStep("🏰", sh("Kritik bölgeleri veya kaleyi al, harita %'ini artır.", "Take critical zones and the castle to raise your map %.")),
+                ),
+                accent = SonHarfTheme.KusatmaPurple,
+            )
+        }
         item {
             PremiumGameCard(
                 icon = Icons.Rounded.Bolt,
@@ -309,6 +351,16 @@ private fun PremiumGameCenter(
             )
         }
         item {
+            com.sonharf.game.ui.premium.HowToPlayCard(
+                steps = listOf(
+                    com.sonharf.game.ui.premium.HowToStep("🔤", sh("Rakibin bıraktığı son harfle başlayan bir kelime yaz.", "Type a word that starts with the opponent's last letter.")),
+                    com.sonharf.game.ui.premium.HowToStep("⏱️", sh("Süre 15sn'den başlar; her hamlede kısalır (min 8sn).", "Turn starts at 15s and shrinks each move (min 8s).")),
+                    com.sonharf.game.ui.premium.HowToStep("❤️", sh("3 canın var; geçersiz kelime veya süre bitişi 1 can götürür.", "You get 3 lives; an invalid word or timeout costs one.")),
+                ),
+                accent = SonHarfTheme.SonHarfOrange,
+            )
+        }
+        item {
             PremiumGameCard(
                 icon = Icons.Rounded.Route,
                 title = sh("HARF YOLU", "LETTER PATH"),
@@ -316,6 +368,16 @@ private fun PremiumGameCenter(
                 language = letterPathLanguage,
                 onLanguageChange = onLetterPathLanguage,
                 onClick = onLetterPath,
+            )
+        }
+        item {
+            com.sonharf.game.ui.premium.HowToPlayCard(
+                steps = listOf(
+                    com.sonharf.game.ui.premium.HowToStep("🧩", sh("Başlangıç ve hedef kelime hazır — sen ara 4 kelimeyi yaz.", "Start and target words are set — you fill the 4 middle words.")),
+                    com.sonharf.game.ui.premium.HowToStep("🔁", sh("Her adımda tek harf değiştir; her kelime sözlükte olmalı.", "Change exactly one letter per step; every word must be in the dictionary.")),
+                    com.sonharf.game.ui.premium.HowToStep("💡", sh("İpucu 3 aşamalı: kutu → tanım → 3 harf seçeneği.", "Hint is 3 stages: cell → definition → 3 letter choices.")),
+                ),
+                accent = SonHarfTheme.KelimeYoluTeal,
             )
         }
     }

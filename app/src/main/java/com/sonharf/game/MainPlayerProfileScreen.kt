@@ -149,13 +149,16 @@ internal fun MainPlayerProfileScreen(
                     )
                     Spacer(Modifier.width(15.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text(
-                            p?.displayName ?: sh("Oyuncu", "Player"),
+                        // G4.7: Pro rozeti oyuncu adının yanına gelir.
+                        com.sonharf.game.ui.premium.ProNameLabel(
+                            name = p?.displayName ?: sh("Oyuncu", "Player"),
+                            isPro = p?.isVip == true,
+                            style = androidx.compose.ui.text.TextStyle(
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Black,
+                            ),
                             color = if (p?.isVip == true) Color.White else SonHarfCosmetics.playerNameColor,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
                         )
                         Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
                             ProfilePill(

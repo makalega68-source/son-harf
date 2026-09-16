@@ -39,6 +39,14 @@ internal fun PremiumHomeCommandDeck(
         Column {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.weight(1f))
+                // G4.6 adopsiyon: okunmamış sohbet ikonu. onSocial'a
+                // yönlendirir (sohbet ekranı henüz ayrı değil; sosyal
+                // ekranı içinde yer alacak).
+                com.sonharf.game.ui.premium.UnreadChatIcon(
+                    unreadCount = 0,   // TODO: sosyal ekranından beslenecek
+                    onClick = onSocial,
+                    tint = SonHarfTheme.Primary,
+                )
                 IconButton(onClick = onSocial, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.Notifications, sh("Bildirimler ve davetler", "Notifications and invites"), tint = SonHarfTheme.Primary)
                 }

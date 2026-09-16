@@ -26,7 +26,9 @@ class SimpleKelimeKusatmasiRestoreContractTest {
         assertTrue(board.contains("if (mode == WordSiegeBoardViewportMode.CLOSE)"))
         assertFalse(board.contains("WordSiegeBoardViewportMode.CLOSE && !enabled"))
 
-        assertTrue(logo.contains("R.drawable.kelime_kusatma_logo_hd"))
+        assertTrue(logo.contains("R.drawable.app_logo"))
+        assertTrue(logo.contains("contentScale = ContentScale.Fit"))
+        assertTrue(projectFile("app/src/main/res/drawable-nodpi/app_logo.webp").isFile)
         assertTrue(projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml").isFile)
         assertFalse(File("app/src/main/res/drawable/kelime_kusatma_logo_hd.png").exists())
     }

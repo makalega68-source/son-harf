@@ -7,13 +7,16 @@ import org.junit.Test
 
 class KelimeKusatmasiVisualPlacementContractTest {
     @Test
-    fun requestedBrandSurfacesUseRasterFreeCompatibilityDrawables() {
+    fun requestedBrandSurfacesUseApprovedAppLogoAndCompatibilityDrawables() {
         val source = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
+        val appLogo = File("src/main/res/drawable-nodpi/app_logo.webp")
         val authAlias = File("src/main/res/drawable/son_harf_gold_teal_logo.xml")
         val gameEntryAlias = File("src/main/res/drawable/kelime_kusatma_logo_hd.xml")
 
-        assertTrue(source.contains("R.drawable.kelime_kusatma_logo_hd"))
+        assertTrue(source.contains("R.drawable.app_logo"))
+        assertTrue(source.contains("contentScale = ContentScale.Fit"))
         assertFalse(source.contains("R.drawable.kelime_tahti_app_icon"))
+        assertTrue(appLogo.isFile)
         listOf(authAlias, gameEntryAlias).forEach {
             assertTrue(it.isFile)
             assertTrue(it.readText().contains("<vector"))

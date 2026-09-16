@@ -84,4 +84,26 @@ internal object SonHarfTheme {
     val PrimaryBlueSoft: Color get() = PrimarySoft
     val SecondaryAccent: Color get() = Turquoise
     val Purple: Color get() = Lavender
+
+    // G5.0 premium tokens. Additive: do not replace existing tokens.
+    // Deep purple gradient reserved for premium screens (menus, results, store).
+    val PremiumBgStart: Color = Color(0xFF1B1440)
+    val PremiumBgEnd: Color = Color(0xFF3A1F6E)
+    val PremiumPanel: Color = Color(0xFF2A1D5A)
+    val PremiumPanelBorder: Color = Color(0xFF4A3A7A)
+
+    // Per-mode accents used by VFX + premium components.
+    val SonHarfOrange: Color = Color(0xFFFF7A3D)
+    val KusatmaPurple: Color = Color(0xFF8B5CF6)
+    val KelimeYoluTeal: Color = Color(0xFF14B8A6)
+
+    // Metallic accents.
+    val GoldBright: Color = Color(0xFFF5C542)
+    val GoldDeep: Color = Color(0xFFD4AF37)
+    val GoldEdge: Color = Color(0xFF8A6A1F)
+    val GoldPale: Color = Color(0xFFFFF3C4)
+    val DiamondBlue: Color = Color(0xFF5CC8FF)
+
+    val PremiumTextPrimary: Color = Color.White
+    val PremiumTextSecondary: Color = Color.White.copy(alpha = 0.7f)
 }

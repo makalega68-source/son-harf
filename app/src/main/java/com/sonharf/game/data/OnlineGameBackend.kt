@@ -37,6 +37,9 @@ data class ProfileDto(
     val wins: Int = 0,
     val losses: Int = 0,
     val rating: Int = 1000,
+    // G4.6: opsiyonel doğum yılı. Boş = yaş bilinmiyor -> yetişkin
+    // varsayılır (server-side is_minor_user aynı davranışı zorlar).
+    @SerialName("birth_year") val birthYear: Int? = null,
 )
 
 @Serializable
@@ -73,6 +76,12 @@ data class GameRoomDto(
     @SerialName("reconnect_deadline") val reconnectDeadline: String? = null,
     @SerialName("game_mode") val gameMode: String = "normal",
     @SerialName("winner_is_bot") val winnerIsBot: Boolean = false,
+    // G4.1: shrinking-turn + lives + bonuses (server-managed via triggers).
+    // Defaults keep older rows serializing cleanly when the DB migration
+    // hasn't run yet.
+    @SerialName("host_lives") val hostLives: Int = 3,
+    @SerialName("guest_lives") val guestLives: Int = 3,
+    @SerialName("turn_shrink_step") val turnShrinkStep: Int = 0,
 )
 
 @Serializable
@@ -93,6 +102,9 @@ data class ChatMessageDto(
     @SerialName("sender_id") val senderId: String,
     val body: String,
     @SerialName("created_at") val createdAt: String,
+    // G4.6: allowlisted key for quick messages; null for future
+    // free-text (Kuşatma serbest yazı, arkadaş sohbeti).
+    @SerialName("message_key") val messageKey: String? = null,
 )
 
 @Serializable

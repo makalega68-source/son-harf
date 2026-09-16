@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Pre-O launcher fallback. Renders the same app_logo.webp on devices
+     that don't support adaptive icons. -->
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:drawable="@drawable/kelime_tahti_app_icon" />
+    <item android:drawable="@drawable/app_logo" />
 </layer-list>

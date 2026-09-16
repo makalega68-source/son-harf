@@ -23,6 +23,12 @@ class WordChainEngine {
         if (state.chain.any { it.word == word }) {
             return state.copy(message = "Bu kelime daha önce kullanıldı")
         }
+        // G4.0: Ğ ile biten kelime bir sonraki oyuncuya imkansız "Ğ ile başlayan"
+        // bırakır. Sunucu tarafında reject_terminal_soft_g_game_word tetikleyicisi
+        // aynı kuralı zorlar; istemci burada da erken uyarır.
+        if (word.last() == 'ğ') {
+            return state.copy(message = "Ğ ile biten kelime oynanamaz")
+        }
         val previous = state.chain.lastOrNull()?.word
         if (previous != null && previous.last() != word.first()) {
             return state.copy(message = "Kelime '${previous.last().uppercaseChar()}' ile başlamalı")

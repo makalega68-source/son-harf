@@ -820,6 +820,15 @@ private fun PremierArena(
     val required = premierRequiredToken(room, words)
     val latestPlayedWord = words.lastOrNull()?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
 
+    PremierVfxBridge(
+        room = room,
+        meId = meId,
+        words = words,
+        input = input,
+        turnSeconds = turnSeconds,
+        myTurn = myTurn,
+    )
+
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val veryCompact = maxHeight < 610.dp
         val compact = maxHeight < 700.dp
@@ -881,10 +890,21 @@ private fun PremierArena(
             )
         }
 
-        AnimatedVisibility(visible = floatingMessage != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 132.dp, start = 22.dp, end = 22.dp)) {
-            Surface(shape = RoundedCornerShape(16.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Sky.copy(alpha = .45f)), shadowElevation = 9.dp) {
-                Text(floatingMessage?.body.orEmpty(), Modifier.padding(horizontal = 16.dp, vertical = 10.dp), color = PremierUi.OceanDeep, fontWeight = FontWeight.Black, fontSize = 13.sp)
-            }
+        // G4.6 balon: rakibin son mesajı 2sn'liğine yukarıda görünür.
+        // Server-side `message_key` varsa TR/EN etiketi QuickChatKey'den
+        // çözülür; serbest yazı gelirse body kullanılır.
+        AnimatedVisibility(
+            visible = floatingMessage != null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 132.dp, start = 22.dp, end = 22.dp),
+        ) {
+            com.sonharf.game.ui.premium.ChatBubble(
+                messageKey = floatingMessage?.messageKey,
+                body = floatingMessage?.body,
+                triggerToken = floatingMessage?.id,
+                language = language,
+            )
         }
 
         AnimatedVisibility(
@@ -989,7 +1009,11 @@ private fun PremierArenaHeader(
                 )
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor)
+                // G4.1: pull the current lives count from the room. Host is
+                // always "me" on the left card in this screen's layout.
+                val myLives = room.hostLives
+                val rivalLives = room.guestLives
+                PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, myLives, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor, isPro = me?.isVip == true)
                 Surface(shape = CircleShape, color = Color.Transparent) {
                     Box(Modifier.size(60.dp).background(Brush.radialGradient(listOf(timerStart, if (danger) PremierUi.Red else PremierUi.Ocean, timerEnd)), CircleShape), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -998,14 +1022,14 @@ private fun PremierArenaHeader(
                         }
                     }
                 }
-                PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, PremierUi.OceanDeep, room.isBot, Modifier.weight(1f))
+                PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, rivalLives, PremierUi.OceanDeep, room.isBot, Modifier.weight(1f), isPro = opponent?.isVip == true)
             }
         }
     }
 }
 
 @Composable
-private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, visible: Boolean, rounds: Int, streak: Int, accent: Color, bot: Boolean, modifier: Modifier, nameColor: Color = PremierUi.Ink) {
+private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, visible: Boolean, rounds: Int, streak: Int, lives: Int, accent: Color, bot: Boolean, modifier: Modifier, nameColor: Color = PremierUi.Ink, isPro: Boolean = false) {
     val isLeft = accent == PremierUi.Ocean
     Row(
         modifier = modifier,
@@ -1027,9 +1051,30 @@ private fun PremierMiniPlayer(name: String, avatar: String?, gender: String?, vi
             modifier = Modifier.widthIn(max = 68.dp),
             horizontalAlignment = if (isLeft) Alignment.Start else Alignment.End,
         ) {
-            Text(name, color = nameColor, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            // G4.7: Pro rozeti oyuncu adının yanına gelir. Bot Pro değildir.
+            com.sonharf.game.ui.premium.ProNameLabel(
+                name = name,
+                isPro = isPro && !bot,
+                style = androidx.compose.ui.text.TextStyle(
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Black,
+                ),
+                color = nameColor,
+                maxLines = 1,
+            )
             Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 repeat(3) { i -> Box(Modifier.size(9.dp).clip(CircleShape).background(if (i < rounds) PremierUi.Gold else PremierUi.Border)) }
+            }
+            // G4.1: three heart pips per player, filled = life remaining, empty = life lost.
+            Row(horizontalArrangement = Arrangement.spacedBy(1.dp)) {
+                repeat(3) { i ->
+                    Text(
+                        text = if (i < lives) "❤" else "🖤",
+                        color = if (i < lives) PremierUi.Red else PremierUi.Border,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
             }
             if (streak >= 2) Text("🔥 $streak", color = PremierUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black)
         }
@@ -1353,6 +1398,15 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
         room.isBot -> room.winnerId == meId && !room.winnerIsBot
         else -> room.winnerId == meId
     }
+    // G3.6: fire the match-end VFX event exactly once per room resolution.
+    // The controller drops the event silently when the app hasn't opted the
+    // screen in yet, so this is safe on every result render.
+    val vfx = com.sonharf.game.ui.vfx.LocalVfx.current
+    androidx.compose.runtime.LaunchedEffect(room.id, room.winnerId, room.winnerIsBot) {
+        val anchor = androidx.compose.ui.geometry.Offset.Zero
+        vfx.play(if (won) com.sonharf.game.ui.vfx.VfxEvent.Victory(anchor)
+                 else com.sonharf.game.ui.vfx.VfxEvent.Defeat(anchor))
+    }
     Column(
         Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1378,11 +1432,41 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
             Spacer(Modifier.height(10.dp))
             Text(notice, color = PremierUi.OceanDeep, fontSize = 11.sp, textAlign = TextAlign.Center)
         }
-        Spacer(Modifier.height(24.dp))
-        Button(onClick = onRematch, enabled = !busy, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(17.dp), colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean)) {
+        // G4.2b: haftalık lig hareketi çipi. Snapshot lazy açılır;
+        // maçtan sonra ratingdeki bu-haftaki delta ▲/▼ ile görünür.
+        Spacer(Modifier.height(10.dp))
+        com.sonharf.game.ui.premium.WeeklyLeagueChip(
+            language = language,
+            refreshTick = room.hostScore + room.guestScore,
+        )
+        Spacer(Modifier.height(14.dp))
+        // G4.2: 10-second rematch window. When the countdown reaches 0 the
+        // button locks so we don't nag an opponent who's already left the
+        // result screen. onRematch itself is unchanged.
+        var rematchSecondsLeft by remember(room.id) { mutableIntStateOf(10) }
+        androidx.compose.runtime.LaunchedEffect(room.id) {
+            rematchSecondsLeft = 10
+            while (rematchSecondsLeft > 0) {
+                kotlinx.coroutines.delay(1000)
+                rematchSecondsLeft -= 1
+            }
+        }
+        val rematchOpen = rematchSecondsLeft > 0
+        Button(
+            onClick = onRematch,
+            enabled = !busy && rematchOpen,
+            modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(17.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean),
+        ) {
             Icon(Icons.Rounded.Replay, null)
             Spacer(Modifier.width(7.dp))
-            Text(if (busy) pt(language, "BEKLENİYOR…", "WAITING…") else pt(language, "HEMEN RÖVANŞ", "INSTANT REMATCH"), fontWeight = FontWeight.Black)
+            val label = when {
+                busy -> pt(language, "BEKLENİYOR…", "WAITING…")
+                !rematchOpen -> pt(language, "SÜRE DOLDU", "TIME UP")
+                else -> pt(language, "HEMEN RÖVANŞ ($rematchSecondsLeft)", "INSTANT REMATCH ($rematchSecondsLeft)")
+            }
+            Text(label, fontWeight = FontWeight.Black)
         }
         Spacer(Modifier.height(9.dp))
         OutlinedButton(onClick = onHome, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), border = BorderStroke(1.dp, PremierUi.Border)) {

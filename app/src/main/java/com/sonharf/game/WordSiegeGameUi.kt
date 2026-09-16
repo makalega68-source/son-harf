@@ -67,19 +67,26 @@ internal fun WordSiegeScoreCard(
     isBot: Boolean,
     modifier: Modifier = Modifier,
 ) {
+    // Keep each profile card inside its own measured slot. The previous
+    // active-card scale expanded outside the slot, causing overlap and
+    // pushing the left card beyond the screen edge on compact devices.
     Surface(
-        modifier = modifier,
-        color = lerp(WordSiegeGameUi.Surface, accent, .04f),
+        modifier = modifier.padding(horizontal = 3.dp),
+        color = lerp(WordSiegeGameUi.Surface, accent, if (active) .10f else .04f),
         shape = RoundedCornerShape(9.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = if (active) .5f else .18f)),
+        border = BorderStroke(if (active) 2.dp else 1.dp, accent.copy(alpha = if (active) .75f else .18f)),
+        shadowElevation = if (active) 6.dp else 0.dp,
     ) {
-        Column(Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // G5.2: bump avatar to 64dp (spec minimum). Small phone
+                // (360dp) still fits because the name column stays weight(1f)
+                // with single-line + ellipsis.
                 ProfilePhotoAvatarWithGender(
                     avatarPath = avatarPath, gender = gender, name = name,
-                    size = 26.dp, accent = accent, visible = avatarVisible,
+                    size = 64.dp, accent = accent, visible = avatarVisible,
                 )
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(8.dp))
                 Column(Modifier.weight(1f)) {
                     Text(name, color = WordSiegeGameUi.Text, fontSize = 12.sp, lineHeight = 14.sp,
                         fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -114,6 +121,7 @@ private fun WordSiegeScoreLine(label: String, value: Int) {
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
 internal fun WordSiegeCompactAction(
     label: String,
@@ -121,19 +129,7 @@ internal fun WordSiegeCompactAction(
     enabled: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-) {
-    TextButton(
-        onClick = onClick, enabled = enabled, modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(2.dp),
-        colors = ButtonDefaults.textButtonColors(contentColor = WordSiegeGameUi.Muted),
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Icon(icon, null, Modifier.size(17.dp))
-            Text(label, fontSize = 11.sp, lineHeight = 14.sp,
-                fontWeight = FontWeight.Medium, maxLines = 1)
-        }
-    }
-}
+) = Unit
 
 @Composable
 internal fun WordSiegeOwnershipLegend() {

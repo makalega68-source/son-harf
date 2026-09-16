@@ -10,8 +10,11 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -21,10 +24,15 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import com.sonharf.game.data.WordSiegeVfxMoveRegistry
+import com.sonharf.game.ui.vfx.LocalVfx
+import com.sonharf.game.ui.vfx.VfxEvent
 import kotlin.math.roundToInt
 
 internal const val PURCHASED_DUEL_WORD_VFX_MS = 720
@@ -40,6 +48,8 @@ internal const val PURCHASED_BOARD_PLACE_STAR_COUNT = 5
 internal const val PURCHASED_BOARD_RESOLVE_STAR_COUNT = 6
 internal const val PURCHASED_BOARD_PLACE_MIN_STAR_DP = 14f
 internal const val PURCHASED_BOARD_RESOLVE_MIN_STAR_DP = 16f
+private const val BIG_SIEGE_CAPTURE_THRESHOLD = 4
+private const val CASTLE_FALL_OPPONENT_CAPTURE_THRESHOLD = 3
 
 internal enum class PurchasedBoardVfxKind { PLACEMENT, RESOLVED }
 
@@ -73,20 +83,46 @@ private val PurchasedWordSuccessGreen = Color(0xFF4B765D)
  * Cosmetic-only, bounded Compose adaptation of a purchased Eric Wang VFX texture.
  * The one-shot ring makes successful word feedback clearly readable without turning it into a
  * full-screen celebration or a persistent idle effect.
+ *
+ * G3 adoption: existing callers keep their purchased effect. Son Harf authoritative events are
+ * emitted by PremierVfxBridge; the letter: event key continues to bridge Kelime Yolu progress.
  */
 @Composable
 internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier) {
     val progress = remember(eventKey) { Animatable(0f) }
     val density = LocalDensity.current
+    val vfx = LocalVfx.current
+    var hostSize by remember(eventKey) { mutableStateOf(IntSize.Zero) }
+    var routedToLocalVfx by remember(eventKey) { mutableStateOf(false) }
+
     LaunchedEffect(eventKey) {
         progress.snapTo(0f)
         progress.animateTo(1f, tween(PURCHASED_DUEL_WORD_VFX_MS))
     }
+    LaunchedEffect(eventKey, hostSize) {
+        if (routedToLocalVfx || hostSize.width <= 0 || hostSize.height <= 0) return@LaunchedEffect
+        routedToLocalVfx = true
+        val center = Offset(hostSize.width / 2f, hostSize.height / 2f)
+        if (eventKey.startsWith("letter:")) {
+            val step = eventKey.substringAfterLast(':').toIntOrNull() ?: 0
+            if (step >= 4) {
+                vfx.play(VfxEvent.UnlockLevel(center))
+                vfx.play(VfxEvent.Reward(center))
+                vfx.play(VfxEvent.PathComplete(center))
+            } else {
+                vfx.play(VfxEvent.PathStep(center))
+            }
+        }
+    }
+
     val p = progress.value
     val envelope = if (p < .16f) p / .16f else ((1f - p) / .84f).coerceIn(0f, 1f)
     val alpha = envelope * PURCHASED_DUEL_WORD_MAX_ALPHA
 
-    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    Box(
+        modifier.fillMaxSize().onGloballyPositioned { hostSize = it.size },
+        contentAlignment = Alignment.Center,
+    ) {
         Canvas(Modifier.fillMaxSize()) {
             val ringRadiusPx = with(density) { (30f + 58f * p).dp.toPx() }
             val innerRadiusPx = with(density) { (20f + 38f * p).dp.toPx() }
@@ -143,6 +179,10 @@ internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier
 /**
  * Input-transparent screen-space overlay for board action feedback.
  * The overlay is clipped only at the board viewport, while event centers follow board pan/scale.
+ *
+ * G3.1 adoption: the already-authoritative resolved move id is encoded in the existing event key.
+ * The fetched DTO cache supplies score/capture metadata without another network call or gameplay
+ * mutation. Practice mode still receives WordAccepted because its resolved event has no DTO cache.
  */
 @Composable
 internal fun PurchasedBoardActionVfxOverlay(
@@ -151,6 +191,51 @@ internal fun PurchasedBoardActionVfxOverlay(
     cellSizePx: Float,
     modifier: Modifier = Modifier,
 ) {
+    val vfx = LocalVfx.current
+    val resolvedEvents = events.filter { it.kind == PurchasedBoardVfxKind.RESOLVED }
+    val resolvedSignature = resolvedEvents.joinToString("|") { it.eventKey }
+
+    // Only a new resolved-event signature may start G3 VFX. Pan/zoom changes update the legacy
+    // overlay coordinates but must never replay the one-shot LocalVfx event.
+    LaunchedEffect(resolvedSignature) {
+        if (resolvedEvents.isEmpty()) return@LaunchedEffect
+
+        val groups = resolvedEvents.groupBy { event ->
+            event.eventKey.split(':').getOrNull(1)?.toLongOrNull()
+        }
+        groups.forEach { (moveId, moveEvents) ->
+            val anchors = moveEvents
+                .map { event -> wordSiegeCellCenterInViewport(event.index, transform, cellSizePx) }
+                .filterNot { it == Offset.Unspecified }
+            val anchor = anchors.firstOrNull() ?: return@forEach
+            val move = moveId?.let(WordSiegeVfxMoveRegistry::get)
+
+            vfx.play(
+                VfxEvent.WordAccepted(
+                    score = move?.wordScore ?: 0,
+                    anchor = anchor,
+                    tint = SonHarfTheme.KusatmaPurple,
+                ),
+            )
+
+            val captured = move?.capturedCells ?: 0
+            when {
+                captured >= BIG_SIEGE_CAPTURE_THRESHOLD -> {
+                    vfx.play(VfxEvent.BigSiege(score = move?.totalScore ?: 0, anchors = anchors))
+                }
+                captured > 0 -> {
+                    vfx.play(VfxEvent.CellCaptured(anchors = anchors, tint = SonHarfTheme.KusatmaPurple))
+                }
+            }
+
+            if ((move?.opponentCaptured ?: 0) >= CASTLE_FALL_OPPONENT_CAPTURE_THRESHOLD) {
+                vfx.play(VfxEvent.CastleFall(anchor))
+            } else if (captured > 0) {
+                vfx.play(VfxEvent.MapWave(anchor))
+            }
+        }
+    }
+
     Box(modifier.fillMaxSize().clipToBounds()) {
         events.forEach { event ->
             key(event.eventKey) {
