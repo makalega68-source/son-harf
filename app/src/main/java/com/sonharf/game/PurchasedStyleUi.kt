@@ -46,3 +46,8 @@ internal fun PurchasedProfileFramesSection(
     modifier: Modifier = Modifier,
     onFrameEquipped: ((String?) -> Unit)? = null,
 ) = Unit
+
+@Composable
+internal fun PurchasedStyleShopContent(
+    modifier: Modifier = Modifier,
+) = Unit
