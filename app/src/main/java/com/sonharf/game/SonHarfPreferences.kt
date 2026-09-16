@@ -27,6 +27,14 @@ object SonHarfPreferences {
     // G5.4: her oyun ekranı için tek bir "oyun dili" prefs. UI dili
     // ayrı (LANGUAGE); oyuncu UI TR kalırken oyunu EN oynayabilir.
     private const val GAME_LANGUAGE = "game_language"
+    // G4.6: sohbet gizlilik ayarları.
+    //   CHAT_DISABLED = tümüyle sessize alır (rakip mesajları
+    //     görünmez, kullanıcı gönderemez).
+    //   CHAT_QUICK_ONLY = serbest yazıyı gizler; sadece hazır
+    //     mesajlar ve emoji.
+    // İkisi de false ise varsayılan sohbet açık.
+    private const val CHAT_DISABLED = "chat_disabled"
+    private const val CHAT_QUICK_ONLY = "chat_quick_only"
     private const val BOT_DIFFICULTY = "bot_difficulty"
     private const val PENDING_REGISTER_EMAIL = "pending_register_email"
     private const val PENDING_REGISTER_NAME = "pending_register_name"
@@ -97,6 +105,21 @@ object SonHarfPreferences {
     fun setGameLanguage(context: Context, value: String) {
         val normalized = if (value == "en") "en" else "tr"
         prefs(context).edit().putString(GAME_LANGUAGE, normalized).apply()
+    }
+
+    // G4.6 sohbet ayarları. Default: her ikisi de kapalı => sohbet açık.
+    fun chatDisabled(context: Context): Boolean =
+        prefs(context).getBoolean(CHAT_DISABLED, false)
+
+    fun setChatDisabled(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(CHAT_DISABLED, value).apply()
+    }
+
+    fun chatQuickOnly(context: Context): Boolean =
+        prefs(context).getBoolean(CHAT_QUICK_ONLY, false)
+
+    fun setChatQuickOnly(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(CHAT_QUICK_ONLY, value).apply()
     }
 
     fun setNotificationsEnabled(context: Context, value: Boolean) {
