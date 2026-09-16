@@ -37,7 +37,7 @@ internal val SonHarfPink = Color(0xFFFF5F57)
 // Body/label uses Inter-equivalent (system sans, regular/medium/semibold).
 // Titles use Montserrat-equivalent (system sans, extrabold/black). When TTFs
 // are dropped into res/font/, swap FontFamily.SansSerif for a FontFamily
-// composed of R.font.montserrat_* / R.font/inter_* — nothing else needs to
+// composed of R.font.montserrat_* / R.font.inter_* — nothing else needs to
 // change because every screen resolves through MaterialTheme.typography.
 private val SonHarfTypography = Typography(
     // Body / label: 15sp text, 12sp caption.
@@ -89,6 +89,10 @@ enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
 class MainActivity : ComponentActivity() {
     private fun bestEffortStartup(name: String, block: () -> Unit) {
         runCatching(block).onFailure { Log.e("SonHarfStartup", "$name failed; continuing launch", it) }
+    }
+
+    internal fun refreshAdPrivacyAfterLanguageChoice() {
+        bestEffortStartup("ad privacy") { AdPrivacyManager.requestConsent(this) }
     }
 
     private fun handleAuthDeepLink(intent: Intent) {
