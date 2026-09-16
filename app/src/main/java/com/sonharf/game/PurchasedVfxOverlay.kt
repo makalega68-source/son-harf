@@ -84,9 +84,9 @@ private val PurchasedWordSuccessGreen = Color(0xFF4B765D)
  * The one-shot ring makes successful word feedback clearly readable without turning it into a
  * full-screen celebration or a persistent idle effect.
  *
- * G3 adoption: existing callers keep their purchased effect while the same eventKey also feeds
- * the new LocalVfx layer. Prefixes already used by the live screens identify the game safely:
- * turn:/accepted: = Son Harf, letter: = Kelime Yolu.
+ * G3 adoption: existing callers keep their purchased effect while fresh success event keys also
+ * feed the new LocalVfx layer. accepted: identifies a confirmed Son Harf submission; letter:
+ * identifies a Kelime Yolu step. The older turn: key remains visual-only to avoid duplicate VFX.
  */
 @Composable
 internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier) {
@@ -105,7 +105,7 @@ internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier
         routedToLocalVfx = true
         val center = Offset(hostSize.width / 2f, hostSize.height / 2f)
         when {
-            eventKey.startsWith("turn:") || eventKey.startsWith("accepted:") -> {
+            eventKey.startsWith("accepted:") -> {
                 vfx.play(
                     VfxEvent.WordAccepted(
                         score = 0,
@@ -207,7 +207,9 @@ internal fun PurchasedBoardActionVfxOverlay(
     val resolvedEvents = events.filter { it.kind == PurchasedBoardVfxKind.RESOLVED }
     val resolvedSignature = resolvedEvents.joinToString("|") { it.eventKey }
 
-    LaunchedEffect(resolvedSignature, transform, cellSizePx) {
+    // Only a new resolved-event signature may start G3 VFX. Pan/zoom changes update the legacy
+    // overlay coordinates but must never replay the one-shot LocalVfx event.
+    LaunchedEffect(resolvedSignature) {
         if (resolvedEvents.isEmpty()) return@LaunchedEffect
 
         val groups = resolvedEvents.groupBy { event ->
