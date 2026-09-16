@@ -1432,7 +1432,14 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
             Spacer(Modifier.height(10.dp))
             Text(notice, color = PremierUi.OceanDeep, fontSize = 11.sp, textAlign = TextAlign.Center)
         }
-        Spacer(Modifier.height(24.dp))
+        // G4.2b: haftalık lig hareketi çipi. Snapshot lazy açılır;
+        // maçtan sonra ratingdeki bu-haftaki delta ▲/▼ ile görünür.
+        Spacer(Modifier.height(10.dp))
+        com.sonharf.game.ui.premium.WeeklyLeagueChip(
+            language = language,
+            refreshTick = room.hostScore + room.guestScore,
+        )
+        Spacer(Modifier.height(14.dp))
         // G4.2: 10-second rematch window. When the countdown reaches 0 the
         // button locks so we don't nag an opponent who's already left the
         // result screen. onRematch itself is unchanged.

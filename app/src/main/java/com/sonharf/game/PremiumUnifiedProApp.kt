@@ -33,7 +33,12 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var destination by remember { mutableStateOf(PremiumDestination.HOME) }
     var isPro by remember { mutableStateOf(false) }
     val homeRequest = SonHarfUiState.homeRequest
-    val defaultGameLanguage = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
+    val context = androidx.compose.ui.platform.LocalContext.current
+    // G5.4: default is the persisted "game language" pref, not the UI
+    // language. Kullanıcı UI TR kalırken maçı EN oynayabilir.
+    val defaultGameLanguage = SharedDictionaryService.canonicalLanguage(
+        SonHarfPreferences.gameLanguage(context),
+    )
     var siegeLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var lastLetterLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var letterPathLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
@@ -159,9 +164,21 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         siegeLanguage = siegeLanguage,
                         lastLetterLanguage = lastLetterLanguage,
                         letterPathLanguage = letterPathLanguage,
-                        onSiegeLanguage = { siegeLanguage = it },
-                        onLastLetterLanguage = { lastLetterLanguage = it },
-                        onLetterPathLanguage = { letterPathLanguage = it },
+                        // G5.4: persist the last picked language per game
+                        // so the choice survives app restarts (spec:
+                        // "Son seçim cihazda hatırlanır").
+                        onSiegeLanguage = {
+                            siegeLanguage = it
+                            SonHarfPreferences.setGameLanguage(context, it)
+                        },
+                        onLastLetterLanguage = {
+                            lastLetterLanguage = it
+                            SonHarfPreferences.setGameLanguage(context, it)
+                        },
+                        onLetterPathLanguage = {
+                            letterPathLanguage = it
+                            SonHarfPreferences.setGameLanguage(context, it)
+                        },
                         onSiege = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
