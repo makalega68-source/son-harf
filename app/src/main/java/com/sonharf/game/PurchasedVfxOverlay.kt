@@ -84,9 +84,8 @@ private val PurchasedWordSuccessGreen = Color(0xFF4B765D)
  * The one-shot ring makes successful word feedback clearly readable without turning it into a
  * full-screen celebration or a persistent idle effect.
  *
- * G3 adoption: existing callers keep their purchased effect while fresh success event keys also
- * feed the new LocalVfx layer. accepted: identifies a confirmed Son Harf submission; letter:
- * identifies a Kelime Yolu step. The older turn: key remains visual-only to avoid duplicate VFX.
+ * G3 adoption: existing callers keep their purchased effect. Son Harf authoritative events are
+ * emitted by PremierVfxBridge; the letter: event key continues to bridge Kelime Yolu progress.
  */
 @Composable
 internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier) {
@@ -104,25 +103,14 @@ internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier
         if (routedToLocalVfx || hostSize.width <= 0 || hostSize.height <= 0) return@LaunchedEffect
         routedToLocalVfx = true
         val center = Offset(hostSize.width / 2f, hostSize.height / 2f)
-        when {
-            eventKey.startsWith("accepted:") -> {
-                vfx.play(
-                    VfxEvent.WordAccepted(
-                        score = 0,
-                        anchor = center,
-                        tint = SonHarfTheme.SonHarfOrange,
-                    ),
-                )
-            }
-            eventKey.startsWith("letter:") -> {
-                val step = eventKey.substringAfterLast(':').toIntOrNull() ?: 0
-                if (step >= 4) {
-                    vfx.play(VfxEvent.UnlockLevel(center))
-                    vfx.play(VfxEvent.Reward(center))
-                    vfx.play(VfxEvent.PathComplete(center))
-                } else {
-                    vfx.play(VfxEvent.PathStep(center))
-                }
+        if (eventKey.startsWith("letter:")) {
+            val step = eventKey.substringAfterLast(':').toIntOrNull() ?: 0
+            if (step >= 4) {
+                vfx.play(VfxEvent.UnlockLevel(center))
+                vfx.play(VfxEvent.Reward(center))
+                vfx.play(VfxEvent.PathComplete(center))
+            } else {
+                vfx.play(VfxEvent.PathStep(center))
             }
         }
     }
