@@ -1,6 +1,5 @@
 package com.sonharf.game
 
-import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -64,9 +63,7 @@ fun StableV1App() {
     LaunchedEffect(languageChosen) {
         if (!languageChosen) return@LaunchedEffect
         // Privacy consent may open its own Android window; never let it cover first-run language controls.
-        (context as? Activity)?.let { activity ->
-            runCatching { AdPrivacyManager.requestConsent(activity) }
-        }
+        (context as? MainActivity)?.refreshAdPrivacyAfterLanguageChoice()
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
         authChecked = true
     }
