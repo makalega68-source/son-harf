@@ -187,9 +187,7 @@ class MainActivity : ComponentActivity() {
                 colorScheme = appColors,
                 typography = SonHarfTypography,
             ) {
-                com.sonharf.game.ui.vfx.VfxLayerHost {
-                    AppStartupGate(clearUnrememberedSession = clearUnrememberedSession)
-                }
+                AppStartupGate(clearUnrememberedSession = clearUnrememberedSession)
             }
         }
 
