@@ -59,6 +59,28 @@ fun EconomyShopScreen(
         }
         Box(Modifier.weight(1f)) {
             if (tab == 1) SeasonCenterContent()
+            else if (tab == 0) {
+                // G5.7 adopsiyon: Öne Çıkan sekmesinin en üstünde büyük
+                // altın-çerçeveli Pro kartı. Dokununca PRO sekmesine
+                // yönlendirir (satın alma akışı orada zaten var).
+                Column(Modifier.fillMaxSize()) {
+                    com.sonharf.game.ui.premium.PremiumProShowcaseCard(
+                        features = listOf(
+                            sh("Reklamsız oyun deneyimi", "Ad-free experience"),
+                            sh("Altın çerçeve + Pro rozet", "Gold frame + Pro badge"),
+                            sh("Özel mağaza indirimleri", "Exclusive store discounts"),
+                            sh("Aylık bonus elmaslar", "Monthly bonus diamonds"),
+                        ),
+                        priceLabel = sh("Aylık", "Monthly"),
+                        onBuy = { tab = 4 },
+                        modifier = Modifier.padding(12.dp),
+                        language = SonHarfUiState.language,
+                    )
+                    Box(Modifier.weight(1f)) {
+                        EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection)
+                    }
+                }
+            }
             else EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection)
         }
     }
