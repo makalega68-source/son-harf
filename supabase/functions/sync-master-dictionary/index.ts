@@ -41,7 +41,7 @@ function normalizeTurkish(raw: string): { word: string; source: string } | null 
   const source = raw.normalize("NFC").trim();
   if (!source || source !== source.toLocaleLowerCase("tr-TR")) return null;
   if (source.length < 2 || source.length > 30) return null;
-  if (!/^[abcçdefgğhıijklmnoöprsştuüvyz]+$/u.test(source)) return null;
+  if (!/^[abcçdefgğhıijklmnoöprsştuüvyzâîû]+$/u.test(source)) return null;
   return { word: source, source };
 }
 
