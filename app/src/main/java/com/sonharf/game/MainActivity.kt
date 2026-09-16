@@ -37,7 +37,7 @@ internal val SonHarfPink = Color(0xFFFF5F57)
 // Body/label uses Inter-equivalent (system sans, regular/medium/semibold).
 // Titles use Montserrat-equivalent (system sans, extrabold/black). When TTFs
 // are dropped into res/font/, swap FontFamily.SansSerif for a FontFamily
-// composed of R.font.montserrat_* / R.font.inter_* — nothing else needs to
+// composed of R.font.montserrat_* / R.font/inter_* — nothing else needs to
 // change because every screen resolves through MaterialTheme.typography.
 private val SonHarfTypography = Typography(
     // Body / label: 15sp text, 12sp caption.
@@ -143,7 +143,6 @@ class MainActivity : ComponentActivity() {
         bestEffortStartup("ui preferences") { SonHarfPreferences.syncUi(this) }
         bestEffortStartup("cosmetics") { SonHarfCosmetics.restore(this) }
         bestEffortStartup("remote experience cache") { RemoteExperience.loadCached(this) }
-        bestEffortStartup("ad privacy") { AdPrivacyManager.requestConsent(this) }
 
         val authDeepLink = intent.data?.let { it.scheme == "sonharf" && it.host == "auth" } == true
         val rememberLogin = runCatching { SonHarfPreferences.rememberLogin(this) }.getOrDefault(false)
