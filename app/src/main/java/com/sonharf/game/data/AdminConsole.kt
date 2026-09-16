@@ -46,7 +46,6 @@ data class AdminTopStoreItemDto(
     @SerialName("acquisition_count") val acquisitionCount: Long = 0,
 )
 
-
 @Serializable
 data class AdminMonthlyRevenueDto(
     val month: String,
@@ -108,6 +107,18 @@ data class AdminPlayerSearchDto(
     @SerialName("is_owner_account") val isOwnerAccount: Boolean = false,
 )
 
+@Serializable
+data class AdminSeasonalThemeDto(
+    val id: Long,
+    @SerialName("name_tr") val nameTr: String,
+    @SerialName("name_en") val nameEn: String,
+    val enabled: Boolean = false,
+    @SerialName("starts_at") val startsAt: String? = null,
+    @SerialName("ends_at") val endsAt: String? = null,
+    val multiplier: Int = 2,
+    @SerialName("word_count") val wordCount: Long = 0,
+)
+
 suspend fun OnlineGameBackend.adminSearchPlayers(query: String): List<AdminPlayerSearchDto> =
     SupabaseProvider.client.postgrest.rpc(
         "admin_search_players_v1",
@@ -141,6 +152,30 @@ suspend fun OnlineGameBackend.adminSetGameControl(key: String, enabled: Boolean)
         buildJsonObject {
             put("p_key", key)
             put("p_value", enabled)
+        },
+    )
+}
+
+suspend fun OnlineGameBackend.getAdminSeasonalThemes(): List<AdminSeasonalThemeDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_ui_list_seasonal_themes_v1").decodeList()
+
+suspend fun OnlineGameBackend.adminSetSeasonalThemeActive(themeId: Long, enabled: Boolean) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_ui_set_seasonal_theme_active_v1",
+        buildJsonObject {
+            put("p_theme_id", themeId)
+            put("p_enabled", enabled)
+        },
+    )
+}
+
+suspend fun OnlineGameBackend.adminAddSeasonalWord(themeId: Long, language: String, word: String) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_ui_add_seasonal_word_v1",
+        buildJsonObject {
+            put("p_theme_id", themeId)
+            put("p_language", language.lowercase().take(2))
+            put("p_word", word.trim().take(64))
         },
     )
 }
@@ -220,7 +255,6 @@ suspend fun OnlineGameBackend.adminGrantTestProduct(productId: String) {
         buildJsonObject { put("p_product_id", productId) },
     )
 }
-
 
 suspend fun OnlineGameBackend.getAdminMonthlyRevenue(): List<AdminMonthlyRevenueDto> =
     SupabaseProvider.client.postgrest.rpc("admin_monthly_revenue_v1").decodeList()
