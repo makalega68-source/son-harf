@@ -1353,6 +1353,15 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
         room.isBot -> room.winnerId == meId && !room.winnerIsBot
         else -> room.winnerId == meId
     }
+    // G3.6: fire the match-end VFX event exactly once per room resolution.
+    // The controller drops the event silently when the app hasn't opted the
+    // screen in yet, so this is safe on every result render.
+    val vfx = com.sonharf.game.ui.vfx.LocalVfx.current
+    androidx.compose.runtime.LaunchedEffect(room.id, room.winnerId, room.winnerIsBot) {
+        val anchor = androidx.compose.ui.geometry.Offset.Zero
+        vfx.play(if (won) com.sonharf.game.ui.vfx.VfxEvent.Victory(anchor)
+                 else com.sonharf.game.ui.vfx.VfxEvent.Defeat(anchor))
+    }
     Column(
         Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,

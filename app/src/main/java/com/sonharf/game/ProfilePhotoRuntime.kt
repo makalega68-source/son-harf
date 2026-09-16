@@ -231,11 +231,10 @@ internal fun ProfilePhotoAvatarWithGender(
         bytes = if (visible && !avatarPath.isNullOrBlank()) ProfilePhotoRuntime.load(avatarPath) else null
     }
     val bitmap = remember(bytes) { bytes?.let { runCatching { BitmapFactory.decodeByteArray(it, 0, it.size) }.getOrNull() } }
+    // G5.1: no extra ring around the profile photo. Only the photo remains;
+    // Pro members get their gold frame in FramedProfilePhotoAvatar.
     Box(Modifier.size(size + 5.dp), contentAlignment = Alignment.Center) {
-        Box(
-            Modifier.size(size).clip(CircleShape).background(Brush.sweepGradient(listOf(Color.White, accent, Color(0xFF57C7F3), Color.White))).padding(3.dp),
-            contentAlignment = Alignment.Center,
-        ) {
+        Box(Modifier.size(size).clip(CircleShape), contentAlignment = Alignment.Center) {
             if (bitmap != null) {
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
             } else {
@@ -272,16 +271,9 @@ internal fun ProfilePhotoAvatarRectWithGender(
         Modifier.size(width, height + 4.dp),
         contentAlignment = Alignment.Center,
     ) {
+        // G5.1: no extra ring behind the rectangular avatar either.
         Box(
-            Modifier
-                .size(diameter)
-                .clip(CircleShape)
-                .background(
-                    Brush.sweepGradient(
-                        listOf(Color.White, accent.copy(alpha = .86f), Color(0xFF57C7F3), Color.White)
-                    )
-                )
-                .padding(3.dp),
+            Modifier.size(diameter).clip(CircleShape),
             contentAlignment = Alignment.Center,
         ) {
             if (bitmap != null) {

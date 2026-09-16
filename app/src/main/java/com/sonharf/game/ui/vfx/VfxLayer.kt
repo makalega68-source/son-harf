@@ -39,9 +39,16 @@ class VfxController {
     }
 }
 
-val LocalVfx = compositionLocalOf<VfxController> {
-    error("VfxController not provided. Wrap your app in VfxLayerHost first.")
-}
+/**
+ * Composition local for the VFX controller.
+ *
+ * Defaults to a stand-alone controller that no VfxLayer collects from, so
+ * calls to `play(...)` are safe (drop into the void) when a screen renders
+ * outside a VfxLayerHost — for example in previews or unit-test hosts.
+ * MainActivity wraps the real host below the theme, so live app code always
+ * lands on the collected controller.
+ */
+val LocalVfx = compositionLocalOf<VfxController> { VfxController() }
 
 /**
  * Host that provides a VfxController and stacks the VfxLayer above content.
