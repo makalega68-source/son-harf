@@ -807,6 +807,7 @@ private fun PremierArena(
     onQuickChat: () -> Unit,
     onSubmit: () -> Unit,
 ) {
+    val isPro = me?.isVip == true
     val amHost = meId == room.hostId
     val myScore = if (amHost) room.hostScore else room.guestScore
     val rivalScore = if (amHost) room.guestScore else room.hostScore
@@ -847,7 +848,7 @@ private fun PremierArena(
                 )
                 if (!veryCompact) {
                     Spacer(Modifier.height(primaryGap))
-                    PremierWordTrail(words, language)
+                    PremierWordTrail(words, language, isPro)
                 }
                 Spacer(Modifier.weight(1f).heightIn(min = 2.dp))
                 if (notice.isNotBlank()) {
@@ -1111,19 +1112,39 @@ private fun PremierTargetCard(language: String, required: String, gameMode: Stri
 }
 
 @Composable
-private fun PremierWordTrail(words: List<GameWordDto>, language: String) {
+private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: Boolean = false) {
     if (words.isEmpty()) {
         Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierUi.Muted, fontSize = 10.sp)
         return
     }
-    LazyRow(
-        Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
-        contentPadding = PaddingValues(horizontal = 8.dp),
-    ) {
-        items(words.takeLast(12).reversed(), key = { it.id }) { entry ->
-            Surface(shape = RoundedCornerShape(11.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Border)) {
-                Text(premierUpper(entry.normalizedWord.ifBlank { entry.word }, language), Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Black)
+    // Pro users see the full played-word history so they can avoid repeats;
+    // everyone else keeps the compact trailing preview.
+    val ordered = if (isPro) words.reversed() else words.takeLast(12).reversed()
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (isPro) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Rounded.WorkspacePremium, null, tint = PremierUi.Gold, modifier = Modifier.size(11.dp))
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    pt(language, "PRO • Tüm oynanan kelimeler (${words.size})", "PRO • All played words (${words.size})"),
+                    color = PremierUi.Gold,
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Black,
+                )
+            }
+        }
+        LazyRow(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
+            contentPadding = PaddingValues(horizontal = 8.dp),
+        ) {
+            items(ordered, key = { it.id }) { entry ->
+                Surface(shape = RoundedCornerShape(11.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Border)) {
+                    Text(premierUpper(entry.normalizedWord.ifBlank { entry.word }, language), Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                }
             }
         }
     }
@@ -1131,16 +1152,29 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String) {
 
 @Composable
 private fun PremierInputBar(language: String, input: String, required: String, myTurn: Boolean, busy: Boolean, modifier: Modifier = Modifier) {
+    val requiredLetterBadge = myTurn && input.isBlank() && required.isNotBlank() && required != "★"
     Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = PremierUi.Surface, border = BorderStroke(2.dp, if (myTurn) PremierUi.Ocean else PremierUi.Border), shadowElevation = if (myTurn) 5.dp else 0.dp) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.AutoAwesome, null, tint = if (myTurn) PremierUi.Ocean else PremierUi.Muted, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(9.dp))
+            if (requiredLetterBadge) {
+                Surface(shape = RoundedCornerShape(9.dp), color = PremierUi.Gold.copy(alpha = .18f), border = BorderStroke(1.5.dp, PremierUi.Gold)) {
+                    Text(
+                        required.uppercase(),
+                        Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
+                        color = PremierUi.Gold,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+                Spacer(Modifier.width(8.dp))
+            }
             Text(
                 when {
                     busy -> pt(language, "Kontrol ediliyor…", "Checking…")
                     input.isNotBlank() -> input
                     required == "★" -> pt(language, "Kelimeyi yaz…", "Type a word…")
-                    else -> pt(language, "$required ile başla…", "Start with $required…")
+                    else -> pt(language, "harfi ile başla…", "letter to begin…")
                 },
                 color = if (input.isBlank()) PremierUi.Muted else PremierUi.Ink,
                 fontSize = 18.sp,

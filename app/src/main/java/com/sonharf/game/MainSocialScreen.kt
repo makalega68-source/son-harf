@@ -34,6 +34,9 @@ internal fun MainSocialScreen(
 ) {
     val scope = rememberCoroutineScope()
     var tab by remember { mutableIntStateOf(0) }
+    var isPro by remember { mutableStateOf(false) }
+    var proChecked by remember { mutableStateOf(false) }
+    var vipDialog by remember { mutableStateOf(false) }
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var friendships by remember { mutableStateOf<List<FriendshipDto>>(emptyList()) }
     var requests by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
@@ -75,7 +78,13 @@ internal fun MainSocialScreen(
         loading = false
     }
 
-    LaunchedEffect(Unit) { reload() }
+    LaunchedEffect(Unit) {
+        isPro = runCatching {
+            backend.currentUserId()?.let { backend.getProfile(it).isVip } ?: false
+        }.getOrDefault(false)
+        proChecked = true
+        reload()
+    }
 
     val onlineCount = friends.count { it.second.presenceStatus == "online" }
     val incomingCount = requests.size + invites.size + siegeInvites.size
@@ -162,6 +171,9 @@ internal fun MainSocialScreen(
 
         when (tab) {
             0 -> {
+                if (proChecked && !isPro) {
+                    item { ProFriendListLock(onUpgrade = { vipDialog = true }) }
+                } else {
                 if (friends.isEmpty() && !loading) {
                     item {
                         MainSocialEmpty(
@@ -221,6 +233,7 @@ internal fun MainSocialScreen(
                             }
                         }
                     }
+                }
                 }
             }
 
@@ -546,6 +559,56 @@ internal fun MainSocialScreen(
             }
         }
         item { Spacer(Modifier.height(6.dp)) }
+    }
+
+    if (vipDialog) {
+        VipPurchaseDialog(
+            onVerified = {
+                isPro = true
+                vipDialog = false
+            },
+            onDismiss = { vipDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun ProFriendListLock(onUpgrade: () -> Unit) {
+    Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f))) {
+        Column(
+            Modifier.fillMaxWidth().padding(22.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Surface(shape = CircleShape, color = MainUi.Gold.copy(alpha = .18f)) {
+                Icon(Icons.Rounded.Lock, null, tint = MainUi.Gold, modifier = Modifier.padding(14.dp).size(32.dp))
+            }
+            Text(
+                sh("Arkadaş listesi Pro'ya özel", "Friend list is Pro-only"),
+                color = MainUi.Text,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                sh(
+                    "Pro üyelikle arkadaşlarını kaydet, davet et ve haftalık sıralamada rakip ol.",
+                    "Save friends, invite them and race in the weekly ranking with Pro.",
+                ),
+                color = MainUi.Muted,
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
+            )
+            Button(
+                onClick = onUpgrade,
+                modifier = Modifier.fillMaxWidth().height(46.dp),
+                shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold),
+            ) {
+                Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(18.dp), tint = Color.White)
+                Spacer(Modifier.width(8.dp))
+                Text(sh("PRO'YA GEÇ", "GO PRO"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            }
+        }
     }
 }
 
