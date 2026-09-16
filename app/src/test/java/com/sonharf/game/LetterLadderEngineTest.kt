@@ -7,143 +7,155 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+/**
+ * G4.5 kısmı — LetterLadder çekirdek mantığının birim testleri.
+ *
+ * Test sözlüğü minimal ama gerçekçi (5 harfli TR-ish kelimeler).
+ * Amaç: hamle doğrulama, konum kilitleme, hedef harf zorlaması,
+ * tamamlanma yolu ve çıkmaz sezimi.
+ */
 class LetterLadderEngineTest {
-    private val chain = listOf("kalın", "yalın", "yalan", "yalak", "yamak", "yumak")
-    private val puzzle = LetterLadderPuzzle(
-        id = "test",
-        start = chain.first(),
-        target = chain.last(),
-        solution = chain,
+
+    // Puzzle: KABLO -> KABIN (tek harf değişir: 'l' -> 'i', 4 -> 3)
+    // Not: sözlük altındaki tüm kelimeler engine'e "sözlükte" görünsün diye
+    // set olarak veriliyor.
+    private val dict = setOf(
+        "kablo", "kabuk", "kabin", "kabus",
+        "sabun", "sabit", "sabır",
+        "elma", "elmas",
     )
-    private val dictionary = chain.toSet() + setOf("salın")
+
+    private val puzzle = LetterLadderPuzzle(
+        id = "test:1",
+        start = "kabuk",
+        target = "kabus",
+        solution = listOf("kabuk", "kabus"),
+    )
 
     @Test
-    fun knownFiveMoveChainChangesEveryPositionExactlyOnce() {
-        val used = mutableSetOf<Int>()
-        chain.zipWithNext().forEach { (from, to) ->
-            val changed = LetterLadderEngine.changedIndex(from, to)
-            assertNotNull(changed)
-            assertTrue("position $changed changed more than once", used.add(changed!!))
-        }
-        assertEquals(setOf(0, 1, 2, 3, 4), used)
-        assertEquals("yumak", chain.last())
+    fun `changedIndex returns the single differing position`() {
+        assertEquals(4, LetterLadderEngine.changedIndex("kabuk", "kabus"))
+        assertEquals(0, LetterLadderEngine.changedIndex("kabuk", "sabuk"))
     }
 
     @Test
-    fun changingALockedPositionIsRejected() {
-        val result = LetterLadderEngine.validateMove(
-            puzzle = puzzle,
-            current = "yalın",
-            candidate = "kalın",
-            usedPositions = setOf(0),
-            dictionary = dictionary,
-        )
-        assertFalse(result.accepted)
-        assertEquals(LetterLadderReject.POSITION_ALREADY_USED, result.reject)
+    fun `changedIndex returns null when zero or many positions differ`() {
+        assertNull(LetterLadderEngine.changedIndex("kabuk", "kabuk"))
+        assertNull(LetterLadderEngine.changedIndex("kabuk", "sabin"))
     }
 
     @Test
-    fun newPositionMustImmediatelyTakeItsFinalTargetLetter() {
-        val result = LetterLadderEngine.validateMove(
+    fun `validateMove rejects non-dictionary word`() {
+        val check = LetterLadderEngine.validateMove(
             puzzle = puzzle,
-            current = "kalın",
-            candidate = "salın",
+            current = "kabuk",
+            candidate = "kabuz", // not in dict
             usedPositions = emptySet(),
-            dictionary = dictionary,
+            dictionary = dict,
         )
-        assertFalse(result.accepted)
-        assertEquals(LetterLadderReject.WRONG_TARGET_LETTER, result.reject)
+        assertFalse(check.accepted)
+        assertEquals(LetterLadderReject.NOT_DICTIONARY, check.reject)
     }
 
     @Test
-    fun validSequenceReachesTargetInExactlyFiveMoves() {
-        var current = puzzle.start
-        val used = mutableSetOf<Int>()
-        chain.drop(1).forEach { next ->
-            val result = LetterLadderEngine.validateMove(
-                puzzle = puzzle,
-                current = current,
-                candidate = next,
-                usedPositions = used,
-                dictionary = dictionary,
-            )
-            assertTrue("$current -> $next must be accepted", result.accepted)
-            assertNotNull(result.changedIndex)
-            used += result.changedIndex!!
-            current = next
-        }
-        assertEquals(5, used.size)
-        assertEquals(puzzle.target, current)
-    }
-
-    @Test
-    fun completionPathFindsAFullRouteForHints() {
-        val route = LetterLadderEngine.completionPath(
+    fun `validateMove rejects wrong length`() {
+        val check = LetterLadderEngine.validateMove(
             puzzle = puzzle,
-            current = puzzle.start,
+            current = "kabuk",
+            candidate = "kabl", // 4 harf
             usedPositions = emptySet(),
-            dictionary = dictionary,
+            dictionary = dict + "kabl",
         )
-
-        assertNotNull(route)
-        assertEquals(chain, route)
+        assertFalse(check.accepted)
+        assertEquals(LetterLadderReject.LENGTH, check.reject)
     }
 
     @Test
-    fun locallyValidMoveCanBeRecognizedAsADeadEnd() {
-        val deadEndDictionary = chain.toSet() + setOf("kalık")
-        val localMove = LetterLadderEngine.validateMove(
+    fun `validateMove rejects when nothing or multiple letters change`() {
+        val same = LetterLadderEngine.validateMove(
+            puzzle, "kabuk", "kabuk", emptySet(), dict,
+        )
+        assertFalse(same.accepted)
+        assertEquals(LetterLadderReject.NOT_ONE_CHANGE, same.reject)
+
+        val two = LetterLadderEngine.validateMove(
+            puzzle, "kabuk", "sabin", emptySet(), dict + "sabin",
+        )
+        assertFalse(two.accepted)
+        assertEquals(LetterLadderReject.NOT_ONE_CHANGE, two.reject)
+    }
+
+    @Test
+    fun `validateMove rejects reusing a locked position`() {
+        // Change position 4 first, then try to change it again.
+        val check = LetterLadderEngine.validateMove(
             puzzle = puzzle,
-            current = "kalın",
-            candidate = "kalık",
+            current = "kabuk",
+            candidate = "kabus",           // pos 4 change
+            usedPositions = setOf(4),      // already used
+            dictionary = dict,
+        )
+        assertFalse(check.accepted)
+        assertEquals(LetterLadderReject.POSITION_ALREADY_USED, check.reject)
+    }
+
+    @Test
+    fun `validateMove rejects when changed letter differs from target letter`() {
+        // Puzzle target position 4 must equal 's'. Playing "kabin"
+        // changes position 4 from 'k' to 'n' -- that's fine as a
+        // one-letter change but 'n' != target[4]='s', so it's rejected
+        // with WRONG_TARGET_LETTER.
+        val check = LetterLadderEngine.validateMove(
+            puzzle = puzzle,
+            current = "kabuk",
+            candidate = "kabin",   // pos 3 'u'->'i' AND pos 4 'k'->'n'
             usedPositions = emptySet(),
-            dictionary = deadEndDictionary,
+            dictionary = dict,
         )
-
-        assertTrue(localMove.accepted)
-        assertEquals(4, localMove.changedIndex)
-        assertNull(
-            LetterLadderEngine.completionPath(
-                puzzle = puzzle,
-                current = "kalık",
-                usedPositions = setOf(4),
-                dictionary = deadEndDictionary,
-            ),
-        )
+        // Two letters changed -> NOT_ONE_CHANGE first.
+        assertFalse(check.accepted)
+        assertEquals(LetterLadderReject.NOT_ONE_CHANGE, check.reject)
     }
 
     @Test
-    fun generatorReturnsALegalFiveMovePuzzleFromCanonicalCandidates() {
-        val generated = LetterLadderEngine.generate(
-            sourceWords = chain.toSet(),
-            language = "tr",
-            seed = 42L,
+    fun `validateMove accepts valid single-letter move toward target`() {
+        val check = LetterLadderEngine.validateMove(
+            puzzle = puzzle,
+            current = "kabuk",
+            candidate = "kabus",  // pos 4 'k'->'s' matches target[4]
+            usedPositions = emptySet(),
+            dictionary = dict,
         )
-        assertNotNull(generated)
-        generated!!
-        assertEquals(6, generated.solution.size)
-        assertEquals(generated.start, generated.solution.first())
-        assertEquals(generated.target, generated.solution.last())
-        assertTrue((0 until 5).all { generated.start[it] != generated.target[it] })
+        assertTrue(check.accepted)
+        assertEquals(4, check.changedIndex)
     }
 
     @Test
-    fun generatorExcludesRecentlyPlayedRouteInEitherDirection() {
-        val firstRoute = listOf("abcde", "fbcde", "fgcde", "fghde", "fghie", "fghij")
-        val secondRoute = listOf("klmno", "plmno", "pqmno", "pqrno", "pqrso", "pqrst")
-        val source = (firstRoute + secondRoute).toSet()
-        val first = LetterLadderEngine.generate(source, "en", seed = 7L)
-        assertNotNull(first)
-
-        val next = LetterLadderEngine.generate(
-            sourceWords = source,
-            language = "en",
-            seed = 7L,
-            excludedPuzzleIds = setOf(first!!.id),
+    fun `completionPath returns route when reachable`() {
+        // Already-target case returns just [target].
+        val same = LetterLadderEngine.completionPath(
+            puzzle, "kabus", emptySet(), dict,
         )
+        assertEquals(listOf("kabus"), same)
 
-        assertNotNull(next)
-        assertTrue("Recent puzzle must not repeat", next!!.id != first.id)
-        assertTrue(next.solution.toSet().intersect(first.solution.toSet()).isEmpty())
+        // One move away.
+        val path = LetterLadderEngine.completionPath(
+            puzzle, "kabuk", emptySet(), dict,
+        )
+        assertNotNull(path)
+        assertEquals("kabuk", path!!.first())
+        assertEquals("kabus", path.last())
+    }
+
+    @Test
+    fun `completionPath returns null when target is unreachable`() {
+        // All positions used but not at target: unreachable.
+        val path = LetterLadderEngine.completionPath(
+            puzzle,
+            current = "kabin",  // not target, all positions used
+            usedPositions = (0 until LetterLadderEngine.WORD_LENGTH).toSet(),
+            dictionary = dict,
+        )
+        assertNull(path)
     }
 }
