@@ -18,21 +18,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sonharf.game.ui.premium.rememberReducedMotion
 
 /**
  * Profile avatar renderer kept source-compatible with older call sites.
  *
  * G5.1:
- * - Pro members: 4-5dp gold sweep-gradient ring + outer glow + tiny crown
- *   at the top. A short highlight sweeps across every ~4s (skipped when
- *   the system "remove animations" preference is on). At sizes <40dp only
- *   the plain gold halo is drawn (no crown, no sweep).
+ * - Pro members: 4-5dp gold sweep-gradient ring + outer glow. A short
+ *   highlight sweeps across every ~4s (skipped when the system "remove
+ *   animations" preference is on). At sizes <40dp only the plain gold
+ *   halo is drawn (no sweep).
  * - Everyone else: no ring at all. The bare profile photo is shown so
  *   non-Pro accounts do not carry a cosmetic frame.
  *
@@ -153,20 +150,6 @@ internal fun FramedProfilePhotoAvatar(
                         ),
                     ),
             )
-        }
-        if (!small) {
-            // Tiny crown sits on top of the ring.
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .size(width = 22.dp, height = 12.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                androidx.compose.material3.Text(
-                    text = "👑", // 👑
-                    style = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Black),
-                )
-            }
         }
     }
 }

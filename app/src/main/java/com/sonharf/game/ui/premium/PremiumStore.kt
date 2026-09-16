@@ -1,6 +1,5 @@
 package com.sonharf.game.ui.premium
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -9,12 +8,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -23,13 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sonharf.game.R
 import com.sonharf.game.SonHarfTheme
 
 /**
@@ -97,7 +91,7 @@ fun PremiumStoreTabs(
 private fun StoreTab.label(language: String): String = when (this) {
     StoreTab.FEATURED -> if (language == "en") "FEATURED" else "ÖNE ÇIKAN"
     StoreTab.DIAMONDS -> if (language == "en") "DIAMONDS" else "ELMAS"
-    StoreTab.PRO -> "PRO"
+    StoreTab.PRO -> if (language == "en") "PRO MEMBERSHIP" else "PRO ÜYELİK"
     StoreTab.OTHER -> if (language == "en") "MORE" else "DİĞER"
 }
 
@@ -134,32 +128,24 @@ fun PremiumProShowcaseCard(
             .padding(18.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_pro_badge),
-                contentDescription = null,
-                modifier = Modifier.size(width = 60.dp, height = 30.dp),
+        Column {
+            Text(
+                if (language == "en") "PRO MEMBERSHIP" else "PRO ÜYELİK",
+                style = TextStyle(
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.5.sp,
+                ),
+                color = SonHarfTheme.GoldBright,
             )
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text(
-                    if (language == "en") "SON HARF PRO" else "SON HARF PRO",
-                    style = TextStyle(
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 0.5.sp,
-                    ),
-                    color = SonHarfTheme.GoldBright,
-                )
-                Text(
-                    if (language == "en")
-                        "Reklamsız + altın çerçeve + ayrıcalıklar"
-                    else
-                        "Reklamsız + altın çerçeve + ayrıcalıklar",
-                    style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium),
-                    color = SonHarfTheme.PremiumTextSecondary,
-                )
-            }
+            Text(
+                if (language == "en")
+                    "Ad-free + gold frame + benefits"
+                else
+                    "Reklamsız + altın çerçeve + ayrıcalıklar",
+                style = TextStyle(fontSize = 11.sp, fontWeight = FontWeight.Medium),
+                color = SonHarfTheme.PremiumTextSecondary,
+            )
         }
         features.forEach { feature ->
             Row(verticalAlignment = Alignment.Top) {

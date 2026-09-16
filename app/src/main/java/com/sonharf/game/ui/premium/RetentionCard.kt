@@ -54,16 +54,14 @@ fun RetentionCard(
     var streak by remember { mutableStateOf<DailyStreakDto?>(null) }
     var collection by remember { mutableStateOf<WordCollectionDto?>(null) }
     var theme by remember { mutableStateOf<SeasonalThemeDto?>(null) }
-    var errored by remember { mutableStateOf(false) }
+    var loaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(refreshTick) {
-        errored = false
-        streak = runCatching { backend.getDailyStreak() }.getOrElse {
-            errored = true
-            null
-        }
+        loaded = false
+        streak = runCatching { backend.getDailyStreak() }.getOrNull()
         collection = runCatching { backend.getWordCollection() }.getOrNull()
         theme = runCatching { backend.getActiveSeasonalTheme() }.getOrNull()
+        loaded = true
     }
 
     GamePanel(
@@ -73,17 +71,16 @@ fun RetentionCard(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             when {
-                errored && streak == null -> {
+                !loaded -> {
                     Text(
-                        if (language == "en") "Could not load retention stats."
-                        else "İstatistikler yüklenemedi.",
+                        if (language == "en") "Loading…" else "Yükleniyor…",
                         style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),
                         color = SonHarfTheme.PremiumTextSecondary,
                     )
                 }
                 streak == null -> {
                     Text(
-                        if (language == "en") "Loading…" else "Yükleniyor…",
+                        if (language == "en") "No stats yet." else "Henüz istatistik verisi yok.",
                         style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),
                         color = SonHarfTheme.PremiumTextSecondary,
                     )

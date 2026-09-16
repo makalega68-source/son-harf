@@ -52,15 +52,14 @@ fun DailyQuestsCard(
 ) {
     val backend = remember { OnlineGameBackend() }
     var quests by remember { mutableStateOf<List<DailyQuestDto>?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var loaded by remember { mutableStateOf(false) }
 
     LaunchedEffect(refreshTick) {
-        error = null
+        loaded = false
         quests = runCatching {
             backend.getOrIssueDailyQuests()
-        }.onFailure {
-            error = it.message ?: "unknown_error"
-        }.getOrNull()
+        }.getOrDefault(emptyList())
+        loaded = true
     }
 
     GamePanel(
@@ -70,21 +69,14 @@ fun DailyQuestsCard(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             when {
-                quests == null && error == null -> {
+                !loaded -> {
                     Text(
                         if (language == "en") "Loading…" else "Yükleniyor…",
                         style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),
                         color = SonHarfTheme.PremiumTextSecondary,
                     )
                 }
-                error != null -> {
-                    Text(
-                        if (language == "en") "Could not load daily quests." else "Günlük görevler yüklenemedi.",
-                        style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),
-                        color = SonHarfTheme.PremiumTextSecondary,
-                    )
-                }
-                quests?.isEmpty() == true -> {
+                quests.isNullOrEmpty() -> {
                     Text(
                         if (language == "en") "No quests today." else "Bugün görev yok.",
                         style = TextStyle(fontSize = 13.sp, fontWeight = FontWeight.Medium),

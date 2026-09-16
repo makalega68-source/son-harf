@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.lerp
@@ -68,15 +67,11 @@ internal fun WordSiegeScoreCard(
     isBot: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    // G5.2: player whose turn it is gets a soft glow ring + 5% grow so
-    // the active card visually pops without shifting layout above it.
-    val scaleModifier = if (active) {
-        modifier.graphicsLayer(scaleX = 1.05f, scaleY = 1.05f)
-    } else {
-        modifier
-    }
+    // Keep each profile card inside its own measured slot. The previous
+    // active-card scale expanded outside the slot, causing overlap and
+    // pushing the left card beyond the screen edge on compact devices.
     Surface(
-        modifier = scaleModifier,
+        modifier = modifier.padding(horizontal = 3.dp),
         color = lerp(WordSiegeGameUi.Surface, accent, if (active) .10f else .04f),
         shape = RoundedCornerShape(9.dp),
         border = BorderStroke(if (active) 2.dp else 1.dp, accent.copy(alpha = if (active) .75f else .18f)),
@@ -126,6 +121,7 @@ private fun WordSiegeScoreLine(label: String, value: Int) {
     }
 }
 
+@Suppress("UNUSED_PARAMETER")
 @Composable
 internal fun WordSiegeCompactAction(
     label: String,
@@ -133,19 +129,7 @@ internal fun WordSiegeCompactAction(
     enabled: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-) {
-    TextButton(
-        onClick = onClick, enabled = enabled, modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(2.dp),
-        colors = ButtonDefaults.textButtonColors(contentColor = WordSiegeGameUi.Muted),
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Icon(icon, null, Modifier.size(17.dp))
-            Text(label, fontSize = 11.sp, lineHeight = 14.sp,
-                fontWeight = FontWeight.Medium, maxLines = 1)
-        }
-    }
-}
+) = Unit
 
 @Composable
 internal fun WordSiegeOwnershipLegend() {
