@@ -89,7 +89,7 @@ fun StableV1App() {
         return
     }
 
-    VisualRefreshProApp(onSignedOut = { authenticated = false })
+    RefreshedUnifiedProApp(onSignedOut = { authenticated = false })
 }
 
 /**
