@@ -3,8 +3,10 @@ package com.sonharf.game
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -29,6 +31,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -857,6 +860,12 @@ private fun PremierArena(
             }
             // Keep the live input outside the flexible arena body. This guarantees visibility on
             // short screens after the global top banner consumes vertical space.
+            PremierFuseBar(
+                secondsLeft = turnSeconds,
+                totalSeconds = PREMIER_TURN_SECONDS,
+                active = myTurn,
+                modifier = Modifier.padding(horizontal = 16.dp).padding(top = 2.dp, bottom = 1.dp),
+            )
             PremierInputBar(
                 language,
                 input,
@@ -1145,6 +1154,64 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
                 Surface(shape = RoundedCornerShape(11.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Border)) {
                     Text(premierUpper(entry.normalizedWord.ifBlank { entry.word }, language), Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Black)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PremierFuseBar(
+    secondsLeft: Int,
+    totalSeconds: Int,
+    active: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    // Burning-fuse countdown: the filled length shrinks with the remaining turn time and
+    // reddens toward the end for adrenaline. Only burns on the local player's turn; otherwise
+    // it rests full and muted so it never reads as a stuck timer.
+    val rawFraction = if (totalSeconds <= 0) 0f else (secondsLeft.toFloat() / totalSeconds.toFloat()).coerceIn(0f, 1f)
+    val target = if (active) rawFraction else 1f
+    val fraction by animateFloatAsState(
+        targetValue = target,
+        animationSpec = tween(durationMillis = 260, easing = LinearEasing),
+        label = "fuseFraction",
+    )
+    val burn = (1f - fraction).coerceIn(0f, 1f)
+    val tail = lerp(PremierUi.Sky, PremierUi.Gold, burn)
+    val tip = lerp(PremierUi.Ocean, PremierUi.Red, burn)
+    val danger = active && secondsLeft in 1..5
+
+    val sparkTransition = rememberInfiniteTransition(label = "fuseSpark")
+    val sparkGlow by sparkTransition.animateFloat(
+        initialValue = if (danger) 0.45f else 0.7f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(if (danger) 360 else 620), RepeatMode.Reverse),
+        label = "fuseGlow",
+    )
+
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(8.dp)
+            .clip(RoundedCornerShape(99.dp))
+            .background(if (active) PremierUi.RedSoft else PremierUi.Border.copy(alpha = .3f)),
+    ) {
+        Box(
+            Modifier
+                .fillMaxHeight()
+                .fillMaxWidth(fraction.coerceIn(0f, 1f))
+                .clip(RoundedCornerShape(99.dp))
+                .background(Brush.horizontalGradient(listOf(tail, tip))),
+            contentAlignment = Alignment.CenterEnd,
+        ) {
+            if (active && fraction > 0.015f) {
+                Box(
+                    Modifier
+                        .padding(end = 1.dp)
+                        .size(if (danger) 11.dp else 9.dp)
+                        .clip(CircleShape)
+                        .background(tip.copy(alpha = sparkGlow)),
+                )
             }
         }
     }
