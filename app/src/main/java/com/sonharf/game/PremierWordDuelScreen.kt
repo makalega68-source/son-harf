@@ -3,10 +3,8 @@ package com.sonharf.game
 import android.os.SystemClock
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
@@ -33,7 +31,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -206,7 +203,7 @@ fun PremierWordDuelScreen() {
 
     LaunchedEffect(moveFeedback) {
         if (moveFeedback != null) {
-            delay(2200)
+            delay(2600)
             moveFeedback = null
         }
     }
@@ -833,7 +830,9 @@ private fun PremierArena(
         val keyHeight = if (veryCompact) 38.dp else if (compact) 41.dp else if (tall) 50.dp else 46.dp
         val primaryGap = if (veryCompact) 3.dp else if (compact) 5.dp else 9.dp
 
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        // The host Scaffold already applies the status-bar inset, so no extra top padding here
+        // (a second statusBarsPadding was doubling the empty space above the header).
+        Column(Modifier.fillMaxSize()) {
             PremierArenaHeader(language, room, me, opponent, rivalName, myScore, rivalScore, myRounds, rivalRounds, myStreak, rivalStreak, turnSeconds, unreadChat, onForfeit, onQuickChat)
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(primaryGap))
@@ -857,12 +856,6 @@ private fun PremierArena(
             }
             // Keep the live input outside the flexible arena body. This guarantees visibility on
             // short screens after the global top banner consumes vertical space.
-            PremierFuseBar(
-                secondsLeft = turnSeconds,
-                totalSeconds = PREMIER_TURN_SECONDS,
-                active = myTurn,
-                modifier = Modifier.padding(horizontal = 16.dp).padding(top = 2.dp, bottom = 1.dp),
-            )
             PremierInputBar(
                 language,
                 input,
@@ -1286,82 +1279,11 @@ private fun PremierHowToDialog(language: String, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun PremierFuseBar(
-    secondsLeft: Int,
-    totalSeconds: Int,
-    active: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    // Burning-fuse countdown: the filled length shrinks with the remaining turn time and
-    // reddens toward the end for adrenaline. Only burns on the local player's turn; otherwise
-    // it rests full and muted so it never reads as a stuck timer.
-    val rawFraction = if (totalSeconds <= 0) 0f else (secondsLeft.toFloat() / totalSeconds.toFloat()).coerceIn(0f, 1f)
-    val target = if (active) rawFraction else 1f
-    val fraction by animateFloatAsState(
-        targetValue = target,
-        animationSpec = tween(durationMillis = 260, easing = LinearEasing),
-        label = "fuseFraction",
-    )
-    val burn = (1f - fraction).coerceIn(0f, 1f)
-    val tail = lerp(PremierUi.Sky, PremierUi.Gold, burn)
-    val tip = lerp(PremierUi.Ocean, PremierUi.Red, burn)
-    val danger = active && secondsLeft in 1..5
-
-    val sparkTransition = rememberInfiniteTransition(label = "fuseSpark")
-    val sparkGlow by sparkTransition.animateFloat(
-        initialValue = if (danger) 0.45f else 0.7f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(if (danger) 360 else 620), RepeatMode.Reverse),
-        label = "fuseGlow",
-    )
-
-    Box(
-        modifier
-            .fillMaxWidth()
-            .height(8.dp)
-            .clip(RoundedCornerShape(99.dp))
-            .background(if (active) PremierUi.RedSoft else PremierUi.Border.copy(alpha = .3f)),
-    ) {
-        Box(
-            Modifier
-                .fillMaxHeight()
-                .fillMaxWidth(fraction.coerceIn(0f, 1f))
-                .clip(RoundedCornerShape(99.dp))
-                .background(Brush.horizontalGradient(listOf(tail, tip))),
-            contentAlignment = Alignment.CenterEnd,
-        ) {
-            if (active && fraction > 0.015f) {
-                Box(
-                    Modifier
-                        .padding(end = 1.dp)
-                        .size(if (danger) 11.dp else 9.dp)
-                        .clip(CircleShape)
-                        .background(tip.copy(alpha = sparkGlow)),
-                )
-            }
-        }
-    }
-}
-
-@Composable
 private fun PremierInputBar(language: String, input: String, required: String, myTurn: Boolean, busy: Boolean, modifier: Modifier = Modifier) {
-    val requiredLetterBadge = myTurn && input.isBlank() && required.isNotBlank() && required != "★"
     Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = PremierUi.Surface, border = BorderStroke(2.dp, if (myTurn) PremierUi.Ocean else PremierUi.Border), shadowElevation = if (myTurn) 5.dp else 0.dp) {
         Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.AutoAwesome, null, tint = if (myTurn) PremierUi.Ocean else PremierUi.Muted, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(9.dp))
-            if (requiredLetterBadge) {
-                Surface(shape = RoundedCornerShape(9.dp), color = PremierUi.Gold.copy(alpha = .18f), border = BorderStroke(1.5.dp, PremierUi.Gold)) {
-                    Text(
-                        required.uppercase(),
-                        Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
-                        color = PremierUi.Gold,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                }
-                Spacer(Modifier.width(8.dp))
-            }
             Text(
                 when {
                     busy -> pt(language, "Kontrol ediliyor…", "Checking…")
