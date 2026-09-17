@@ -33,30 +33,11 @@ jobs:
         with:
           validate-wrappers: false
 
-      - name: Repair temporary patch-script typo and apply package
+      - name: Apply admin help privacy package
         shell: bash
         run: |
           set -euo pipefail
-          python - <<'PY'
-          from pathlib import Path
-          p = Path('scripts/.tmp_apply_admin_help_package.py')
-          s = p.read_text(encoding='utf-8')
-          bad = "candidates = [(text.rfind('Surface(', max(0, idx-1200), idx), 'Surface('), (text.rfind('Box(', max(0, idx-1200), idx), 'Box(')]"
-          good = "candidates = [(text.rfind('Surface(', max(0, idx-1200), idx), 'Surface('), (text.rfind('Box(', max(0, idx-1200), idx), 'Box(')]"
-          # The committed staging script has one bracket typo; replace the full source line deterministically.
-          lines = s.splitlines()
-          fixed = []
-          hit = 0
-          for line in lines:
-              if line.strip().startswith("candidates = [(text.rfind('Surface('"):
-                  fixed.append("    candidates = [(text.rfind('Surface(', max(0, idx-1200), idx), 'Surface('), (text.rfind('Box(', max(0, idx-1200), idx), 'Box(')]")
-                  hit += 1
-              else:
-                  fixed.append(line)
-          if hit != 1:
-              raise SystemExit(f'expected one candidates line, got {hit}')
-          p.write_text('\n'.join(fixed) + '\n', encoding='utf-8')
-          PY
+          python scripts/.tmp_fix_patch_v2.py
           python -m py_compile scripts/.tmp_apply_admin_help_package.py
           python scripts/.tmp_apply_admin_help_package.py
 
@@ -84,13 +65,16 @@ jobs:
           sha256sum SonHarf-Final-Test.apk | tee SonHarf-Final-Test.sha256
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
           "$APKSIGNER" verify --verbose --print-certs SonHarf-Final-Test.apk
-          strings SonHarf-Final-Test.apk | grep -Eqi 'service[_-]?role|SUPABASE_SERVICE|admin_secret|github_token' && { echo 'Forbidden secret marker found in APK'; exit 1; } || true
+          if strings SonHarf-Final-Test.apk | grep -Eqi 'service[_-]?role|SUPABASE_SERVICE|admin_secret|github_token'; then
+            echo 'Forbidden secret marker found in APK'
+            exit 1
+          fi
 
       - name: Remove temporary staging machinery and commit tested tree
         shell: bash
         run: |
           set -euo pipefail
-          rm -f scripts/.tmp_apply_admin_help_package.py .github/workflows/tmp-admin-help-package.yml
+          rm -f scripts/.tmp_apply_admin_help_package.py scripts/.tmp_fix_patch_v2.py .github/workflows/tmp-admin-help-package.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
