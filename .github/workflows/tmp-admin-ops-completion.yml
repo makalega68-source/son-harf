@@ -1,0 +1,95 @@
+name: Temporary Admin Operations Completion
+
+on:
+  push:
+    branches: [ work/admin-help-privatechat-ci-20260917 ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: tmp-admin-ops-completion-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  patch-test-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: work/admin-help-privatechat-ci-20260917
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+
+      - name: Apply completion patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile scripts/.tmp_complete_admin_package.py
+          python scripts/.tmp_complete_admin_package.py
+
+      - name: Static security and contract checks
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -RniE 'service[_-]?role|SUPABASE_SERVICE|admin_secret|github_token' app/src/main/java app/build.gradle.kts || (echo 'Forbidden secret marker found in Android sources' && exit 1)
+          grep -q 'admin_set_game_control_v1' app/src/main/java/com/sonharf/game/data/AdminConsole.kt
+          grep -q 'admin_get_announcement_v2' app/src/main/java/com/sonharf/game/data/AdminConsole.kt
+          grep -q 'son_harf_bot_fallback_enabled' supabase/migrations/20260917140000_admin_operations_completion.sql
+          grep -q 'word_siege_enabled' supabase/migrations/20260917140000_admin_operations_completion.sql
+          grep -q 'admin_grant_test_item_v1' supabase/migrations/20260917140000_admin_operations_completion.sql
+          grep -q 'GIT_COMMIT_SHA' app/build.gradle.kts
+          grep -q 'PrivateChatSecureEffect(enabled = selected != null)' app/src/main/java/com/sonharf/game/SocialExperience.kt
+          ! grep -q 'UnreadChatIcon(' app/src/main/java/com/sonharf/game/PremiumHomeV3.kt
+
+      - name: Unit tests and debug build
+        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Prepare and scan APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          cp app/build/outputs/apk/debug/app-debug.apk KelimeKusatmasi-SonHarf-AdminHelp-Final.apk
+          sha256sum KelimeKusatmasi-SonHarf-AdminHelp-Final.apk | tee KelimeKusatmasi-SonHarf-AdminHelp-Final.sha256
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose --print-certs KelimeKusatmasi-SonHarf-AdminHelp-Final.apk
+          if strings KelimeKusatmasi-SonHarf-AdminHelp-Final.apk | grep -Eqi 'service[_-]?role|SUPABASE_SERVICE|admin_secret|github_token'; then
+            echo 'Forbidden secret marker found in APK'
+            exit 1
+          fi
+
+      - name: Remove temporary machinery and commit tested tree
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f scripts/.tmp_complete_admin_package.py .github/workflows/tmp-admin-ops-completion.yml
+          find scripts -type d -name __pycache__ -prune -exec rm -rf {} + || true
+          rm -f SonHarf-Final-Test.sha256
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git status --short
+          git commit -m 'feat: complete admin operations and runtime controls'
+          git push origin HEAD:work/admin-help-privatechat-ci-20260917
+
+      - name: Upload final tested APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kelime-kusatmasi-sonharf-admin-help-final-apk
+          path: |
+            KelimeKusatmasi-SonHarf-AdminHelp-Final.apk
+            KelimeKusatmasi-SonHarf-AdminHelp-Final.sha256
+          if-no-files-found: error
+          retention-days: 7
