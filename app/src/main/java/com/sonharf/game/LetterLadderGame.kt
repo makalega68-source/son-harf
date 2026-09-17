@@ -482,7 +482,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
                         androidx.compose.foundation.Image(
                             painter = androidx.compose.ui.res.painterResource(R.drawable.harf_yolu_logo),
-                            contentDescription = sh("Harf Yolu logosu", "Letter Path logo"),
+                            contentDescription = sh("Kelime Yolu logosu", "Word Path logo"),
                             modifier = Modifier.width(116.dp).height(54.dp),
                             contentScale = androidx.compose.ui.layout.ContentScale.Fit,
                         )
@@ -776,14 +776,14 @@ internal fun MonsterLetterLadderQuickCard(modifier: Modifier, onClick: () -> Uni
         ) {
             androidx.compose.foundation.Image(
                 painter = androidx.compose.ui.res.painterResource(R.drawable.harf_yolu_logo),
-                contentDescription = sh("Harf Yolu logosu", "Letter Path logo"),
+                contentDescription = sh("Kelime Yolu logosu", "Word Path logo"),
                 modifier = Modifier.size(106.dp),
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
             )
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(sh("3. OYUN", "GAME 3"), color = LetterLadderUi.Accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Text(sh("HARF YOLU", "LETTER PATH"), color = LetterLadderUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                Text(sh("KELİME YOLU", "WORD PATH"), color = LetterLadderUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(4.dp))
                 Text(sh("5 hamlede hedef kelimeye ulaş", "Reach the target in 5 moves"), color = LetterLadderUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text(sh("Değişen kutu kilitlenir", "Changed positions lock"), color = LetterLadderUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Bold)
