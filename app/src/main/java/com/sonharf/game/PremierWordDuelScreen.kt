@@ -947,33 +947,21 @@ private fun PremierArenaHeader(
 
     Surface(shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp), color = PremierUi.Surface, shadowElevation = 8.dp, border = BorderStroke(1.dp, PremierUi.Border)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Minimalist icon-only top bar: surrender (left) · wordmark · chat (right).
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    Surface(modifier = Modifier.clickable(onClick = onForfeit), shape = RoundedCornerShape(12.dp), color = PremierUi.RedSoft) {
-                        Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Flag, null, tint = PremierUi.Red, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(pt(language, "PES ET", "SURRENDER"), color = PremierUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Surface(modifier = Modifier.size(38.dp).clickable(onClick = onForfeit), shape = RoundedCornerShape(13.dp), color = PremierUi.RedSoft, border = BorderStroke(1.dp, PremierUi.Red.copy(alpha = .3f))) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(Icons.Rounded.Flag, pt(language, "Pes et", "Surrender"), tint = PremierUi.Red, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
-                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Surface(shape = RoundedCornerShape(13.dp), color = PremierUi.Ice) {
-                        Text("$myScore  —  $rivalScore", Modifier.padding(horizontal = 13.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                    }
-                }
+                Text(pt(language, "SON HARF", "LAST LETTER"), color = PremierUi.OceanDeep, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                     Box {
-                        Surface(
-                            modifier = Modifier.clickable(onClick = onQuickChat),
-                            shape = RoundedCornerShape(12.dp),
-                            color = PremierUi.Ice,
-                            border = BorderStroke(1.dp, PremierUi.Border),
-                        ) {
-                            Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.ChatBubbleOutline, pt(language, "Sohbet", "Chat"), tint = PremierUi.Ocean, modifier = Modifier.size(15.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text(pt(language, "SOHBET", "CHAT"), color = PremierUi.OceanDeep, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        Surface(modifier = Modifier.size(38.dp).clickable(onClick = onQuickChat), shape = RoundedCornerShape(13.dp), color = PremierUi.Ice, border = BorderStroke(1.dp, PremierUi.Border)) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(Icons.Rounded.ChatBubbleOutline, pt(language, "Sohbet", "Chat"), tint = PremierUi.Ocean, modifier = Modifier.size(18.dp))
                             }
                         }
                         if (unreadChat) {
@@ -982,6 +970,24 @@ private fun PremierArenaHeader(
                     }
                 }
             }
+            // Facing player cards with the score and turn timer centered between them.
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor)
+                Column(modifier = Modifier.padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Surface(shape = RoundedCornerShape(12.dp), color = PremierUi.Ice) {
+                        Text("$myScore  —  $rivalScore", Modifier.padding(horizontal = 11.dp, vertical = 4.dp), color = PremierUi.OceanDeep, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    Box(Modifier.size(54.dp).background(Brush.radialGradient(listOf(timerStart, if (danger) PremierUi.Red else PremierUi.Ocean, timerEnd)), CircleShape), contentAlignment = Alignment.Center) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(seconds.toString().padStart(2, '0'), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                            Text("SEC", color = Color.White.copy(alpha = .75f), fontSize = 6.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
+                }
+                PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, PremierUi.OceanDeep, room.isBot, Modifier.weight(1f))
+            }
+            // Thin territory-lead progress bar.
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -995,18 +1001,6 @@ private fun PremierArenaHeader(
                         .fillMaxWidth(myFraction.coerceIn(0.04f, 0.96f))
                         .background(Brush.horizontalGradient(listOf(PremierUi.Sky, PremierUi.Ocean)))
                 )
-            }
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor)
-                Surface(shape = CircleShape, color = Color.Transparent) {
-                    Box(Modifier.size(60.dp).background(Brush.radialGradient(listOf(timerStart, if (danger) PremierUi.Red else PremierUi.Ocean, timerEnd)), CircleShape), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(seconds.toString().padStart(2, '0'), color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)
-                            Text("SEC", color = Color.White.copy(alpha = .75f), fontSize = 6.sp, fontWeight = FontWeight.Black)
-                        }
-                    }
-                }
-                PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, PremierUi.OceanDeep, room.isBot, Modifier.weight(1f))
             }
         }
     }

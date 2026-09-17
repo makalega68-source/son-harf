@@ -26,7 +26,7 @@ class PremierDuelUxRegressionTest {
         assertFalse(screen.contains("SyntheticBotPortrait("))
 
         // Chat remains typed/realtime and now has an unread red indicator.
-        assertTrue(screen.contains("Text(pt(language, \"SOHBET\", \"CHAT\")"))
+        assertTrue(screen.contains("Icons.Rounded.ChatBubbleOutline, pt(language, \"Sohbet\", \"Chat\")"))
         assertFalse(screen.contains("enabled = !room.isBot"))
         assertTrue(screen.contains("var hasUnreadChat by remember { mutableStateOf(false) }"))
         assertTrue(screen.contains("if (latest != null && latest.id != previousId && latest.senderId != backend.currentUserId())"))
