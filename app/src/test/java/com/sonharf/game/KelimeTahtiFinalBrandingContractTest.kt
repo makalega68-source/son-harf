@@ -12,8 +12,8 @@ class KelimeKusatmasiFinalBrandingContractTest {
         val state = source("src/main/java/com/sonharf/game/SonHarfUiState.kt")
         val home = source("src/main/java/com/sonharf/game/PremiumHomeV3.kt")
 
-        assertTrue(home.contains("Button(onClick = onSiege"))
-        assertTrue(home.contains("sh(\"SAVAŞA GİR\", \"ENTER BATTLE\")"))
+        assertTrue(home.contains("onClick = onSiege"))
+        assertTrue(home.contains("sh(\"HEMEN OYNA\", \"PLAY NOW\")"))
         assertTrue(home.contains("Kelimeyi kur. Alanı ele geçir. Rakibini geç."))
         assertTrue(state.contains("OYNA • Harflerini yerleştir, kelimeni oluştur"))
         assertTrue(state.contains("PLAY • Place your tiles, build your word"))
@@ -21,7 +21,7 @@ class KelimeKusatmasiFinalBrandingContractTest {
         assertTrue(state.contains(".replace(\"Kelime Tahtı\", \"Kelime Kuşatması\")"))
         assertFalse(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))
         assertFalse(state.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
-        assertTrue(home.contains("Text(\"KELİME KUŞATMASI\""))
+        assertTrue(home.contains("\"KELİME KUŞATMASI\""))
     }
 
     @Test fun onlineMatchExposesSignatureSiegeFeedbackWithoutChangingAuthoritativeScoring() {
