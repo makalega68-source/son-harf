@@ -42,8 +42,10 @@ jobs:
           test "$(git rev-parse HEAD)" = "566e9a41c5f2c2e72488ba70d90ab53c04b0bf7c"
           grep -q 'ClassicPremiumApp()' app/src/main/java/com/sonharf/game/GamePortalApp.kt
           grep -q 'ClassicScreen.ADMIN -> AdminConsoleScreen' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
-          grep -q 'YÖNETİCİ PANELİ' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
           grep -q 'TargetNeonGameScreen' app/src/main/java/com/sonharf/game/ClassicPremiumApp.kt
+          grep -q 'backend.getAdminDashboard(); true' app/src/main/java/com/sonharf/game/PremiumMasterHome.kt
+          grep -q 'Icons.Rounded.AdminPanelSettings' app/src/main/java/com/sonharf/game/PremiumMasterHome.kt
+          grep -q 'onClick = if (isAdmin) onAdmin else onProfile' app/src/main/java/com/sonharf/game/PremiumMasterHome.kt
 
       - name: Unit tests and debug APK
         run: gradle --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
