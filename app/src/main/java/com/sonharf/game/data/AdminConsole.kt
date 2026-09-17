@@ -55,8 +55,11 @@ data class AdminMonthlyRevenueDto(
 
 @Serializable
 data class AdminAnnouncementDto(
-    val message: String = "",
+    @SerialName("message_tr") val messageTr: String = "",
+    @SerialName("message_en") val messageEn: String = "",
     val enabled: Boolean = false,
+    val maintenance: Boolean = false,
+    @SerialName("updated_at") val updatedAt: String? = null,
 )
 
 @Serializable
@@ -148,10 +151,10 @@ suspend fun OnlineGameBackend.getAdminGameControls(): List<AdminGameControlDto> 
 
 suspend fun OnlineGameBackend.adminSetGameControl(key: String, enabled: Boolean) {
     SupabaseProvider.client.postgrest.rpc(
-        "admin_set_config",
+        "admin_set_game_control_v1",
         buildJsonObject {
             put("p_key", key)
-            put("p_value", enabled)
+            put("p_enabled", enabled)
         },
     )
 }
@@ -260,12 +263,22 @@ suspend fun OnlineGameBackend.getAdminMonthlyRevenue(): List<AdminMonthlyRevenue
     SupabaseProvider.client.postgrest.rpc("admin_monthly_revenue_v1").decodeList()
 
 suspend fun OnlineGameBackend.getAdminAnnouncement(): AdminAnnouncementDto =
-    SupabaseProvider.client.postgrest.rpc("admin_get_announcement_v1").decodeSingle()
+    SupabaseProvider.client.postgrest.rpc("admin_get_announcement_v2").decodeSingle()
 
-suspend fun OnlineGameBackend.adminSetAnnouncement(message: String, enabled: Boolean) {
+suspend fun OnlineGameBackend.adminSetAnnouncement(
+    messageTr: String,
+    messageEn: String,
+    enabled: Boolean,
+    maintenance: Boolean,
+) {
     SupabaseProvider.client.postgrest.rpc(
-        "admin_set_announcement_v1",
-        buildJsonObject { put("p_message", message.take(500)); put("p_enabled", enabled) },
+        "admin_set_announcement_v2",
+        buildJsonObject {
+            put("p_message_tr", messageTr.take(500))
+            put("p_message_en", messageEn.take(500))
+            put("p_enabled", enabled)
+            put("p_maintenance", maintenance)
+        },
     )
 }
 
@@ -369,3 +382,54 @@ suspend fun OnlineGameBackend.getAdminAuditV2(): List<AdminAuditEntryDto> =
 
 suspend fun OnlineGameBackend.getAdminRecentErrors(): List<AdminSystemEventDto> =
     SupabaseProvider.client.postgrest.rpc("admin_recent_errors_v1").decodeList()
+
+
+@Serializable
+data class AdminShopItemDto(
+    @SerialName("item_id") val itemId: String,
+    val kind: String,
+    @SerialName("name_tr") val nameTr: String,
+    @SerialName("name_en") val nameEn: String,
+    @SerialName("diamond_price") val diamondPrice: Int = 0,
+    @SerialName("vip_only") val vipOnly: Boolean = false,
+    val active: Boolean = true,
+    val rarity: String = "STANDARD",
+    @SerialName("updated_hint") val updatedHint: String = "",
+)
+
+@Serializable
+data class AdminTestInventoryDto(
+    @SerialName("item_id") val itemId: String,
+    val kind: String,
+    @SerialName("name_tr") val nameTr: String,
+    val quantity: Int = 1,
+    @SerialName("is_equipped") val isEquipped: Boolean = false,
+    @SerialName("acquired_at") val acquiredAt: String? = null,
+)
+
+suspend fun OnlineGameBackend.getAdminShopItems(): List<AdminShopItemDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_shop_items_v1").decodeList()
+
+suspend fun OnlineGameBackend.adminSetShopItem(itemId: String, active: Boolean, diamondPrice: Int) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_set_shop_item_v1",
+        buildJsonObject {
+            put("p_item_id", itemId)
+            put("p_active", active)
+            put("p_diamond_price", diamondPrice)
+        },
+    )
+}
+
+suspend fun OnlineGameBackend.getAdminTestInventory(userId: String): List<AdminTestInventoryDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_test_inventory_v1",
+        buildJsonObject { put("p_user_id", userId) },
+    ).decodeList()
+
+suspend fun OnlineGameBackend.adminGrantTestItem(userId: String, itemId: String) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_grant_test_item_v1",
+        buildJsonObject { put("p_user_id", userId); put("p_item_id", itemId) },
+    )
+}

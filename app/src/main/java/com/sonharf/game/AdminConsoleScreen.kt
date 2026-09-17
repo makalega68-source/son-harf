@@ -62,6 +62,7 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
     var capacity by remember { mutableStateOf<List<AdminCapacityDto>>(emptyList()) }
     var gameControls by remember { mutableStateOf<List<AdminGameControlDto>>(emptyList()) }
     var storeCatalog by remember { mutableStateOf<List<AdminStoreCatalogDto>>(emptyList()) }
+    var shopCatalog by remember { mutableStateOf<List<AdminShopItemDto>>(emptyList()) }
     var auditEntries by remember { mutableStateOf<List<AdminAuditEntryDto>>(emptyList()) }
     var recentErrors by remember { mutableStateOf<List<AdminSystemEventDto>>(emptyList()) }
     var selectedSection by remember { mutableStateOf(AdminSection.OVERVIEW) }
@@ -70,8 +71,13 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
     var playerResults by remember { mutableStateOf<List<AdminPlayerOpsDto>>(emptyList()) }
     var monthlyRevenue by remember { mutableStateOf<List<AdminMonthlyRevenueDto>>(emptyList()) }
     var announcement by remember { mutableStateOf(AdminAnnouncementDto()) }
-    var announcementText by remember { mutableStateOf("") }
+    var announcementTr by remember { mutableStateOf("") }
+    var announcementEn by remember { mutableStateOf("") }
     var announcementEnabled by remember { mutableStateOf(false) }
+    var announcementMaintenance by remember { mutableStateOf(false) }
+    var selectedTestAccount by remember { mutableStateOf<AdminOwnerAccountDto?>(null) }
+    var testInventory by remember { mutableStateOf<List<AdminTestInventoryDto>>(emptyList()) }
+    var testItemId by remember { mutableStateOf("") }
     var loading by remember { mutableStateOf(true) }
     var busy by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
@@ -93,12 +99,15 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
             capacity = backend.getAdminCapacity()
             gameControls = backend.getAdminGameControls()
             storeCatalog = backend.getAdminStoreCatalog()
+            shopCatalog = backend.getAdminShopItems()
             auditEntries = backend.getAdminAuditV2()
             recentErrors = backend.getAdminRecentErrors()
             monthlyRevenue = backend.getAdminMonthlyRevenue()
             announcement = backend.getAdminAnnouncement()
-            announcementText = announcement.message
+            announcementTr = announcement.messageTr
+            announcementEn = announcement.messageEn
             announcementEnabled = announcement.enabled
+            announcementMaintenance = announcement.maintenance
         }.onFailure {
             dashboard = null
             error = "Bu panel yalnızca yetkili yönetici hesabında açılabilir."
@@ -430,21 +439,44 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                     if (gameControls.isEmpty()) {
                         item { AdminEmpty("Oyun kontrol bilgileri alınamadı.") }
                     } else {
-                        items(gameControls, key = { it.configKey }) { control ->
-                            AdminGameControlRow(
-                                control = control,
-                                enabled = !busy,
-                                onChange = { value ->
-                                    scope.launch {
-                                        busy = true
-                                        runCatching { backend.adminSetGameControl(control.configKey, value) }
-                                            .onSuccess { notice = "${control.title} ayarı güncellendi." }
-                                            .onFailure { error = it.message ?: "Ayar değiştirilemedi." }
-                                        reload()
-                                        busy = false
-                                    }
-                                },
-                            )
+                        item { AdminSectionTitle("KELİME KUŞATMASI", Icons.Rounded.GridOn) }
+                        items(gameControls.filter { it.configKey.startsWith("word_siege_") }, key = { it.configKey }) { control ->
+                            AdminGameControlRow(control, !busy) { value ->
+                                scope.launch {
+                                    busy = true
+                                    runCatching { backend.adminSetGameControl(control.configKey, value) }
+                                        .onSuccess { notice = "${control.title} ayarı güncellendi." }
+                                        .onFailure { error = it.message ?: "Ayar değiştirilemedi." }
+                                    reload(); busy = false
+                                }
+                            }
+                        }
+                        item {
+                            Text("Kelime Kuşatması bot fallback motoru henüz bulunmadığı için sahte bir bot anahtarı gösterilmez.", color = AdminMuted, fontSize = 10.sp)
+                        }
+                        item { AdminSectionTitle("SON HARF", Icons.Rounded.Spellcheck) }
+                        items(gameControls.filter { it.configKey.startsWith("son_harf_") }, key = { it.configKey }) { control ->
+                            AdminGameControlRow(control, !busy) { value ->
+                                scope.launch {
+                                    busy = true
+                                    runCatching { backend.adminSetGameControl(control.configKey, value) }
+                                        .onSuccess { notice = "${control.title} ayarı güncellendi." }
+                                        .onFailure { error = it.message ?: "Ayar değiştirilemedi." }
+                                    reload(); busy = false
+                                }
+                            }
+                        }
+                        item { AdminSectionTitle("SİSTEM", Icons.Rounded.Tune) }
+                        items(gameControls.filterNot { it.configKey.startsWith("word_siege_") || it.configKey.startsWith("son_harf_") }, key = { it.configKey }) { control ->
+                            AdminGameControlRow(control, !busy) { value ->
+                                scope.launch {
+                                    busy = true
+                                    runCatching { backend.adminSetGameControl(control.configKey, value) }
+                                        .onSuccess { notice = "${control.title} ayarı güncellendi." }
+                                        .onFailure { error = it.message ?: "Ayar değiştirilemedi." }
+                                    reload(); busy = false
+                                }
+                            }
                         }
                     }
                     item {
@@ -466,45 +498,41 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                                 fontSize = 11.sp,
                             )
                             OutlinedTextField(
-                                announcementText,
-                                { announcementText = it.take(500) },
+                                announcementTr,
+                                { announcementTr = it.take(500) },
                                 modifier = Modifier.fillMaxWidth(),
-                                label = { Text("Duyuru metni") },
+                                label = { Text("Türkçe duyuru") },
                                 minLines = 3,
                                 maxLines = 6,
                             )
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                            ) {
-                                Text("Duyuruyu yayınla", color = AdminText, fontWeight = FontWeight.Bold)
-                                Switch(
-                                    checked = announcementEnabled,
-                                    onCheckedChange = { announcementEnabled = it },
-                                    enabled = !busy,
-                                )
-                            }
+                            OutlinedTextField(
+                                announcementEn,
+                                { announcementEn = it.take(500) },
+                                modifier = Modifier.fillMaxWidth(),
+                                label = { Text("English announcement") },
+                                minLines = 3,
+                                maxLines = 6,
+                            )
+                            AdminToggleRow("Yayında", "Duyuruyu oyunculara göster.", announcementEnabled, !busy) { announcementEnabled = it }
+                            AdminToggleRow("Bakım duyurusu", "Bakım mesajı olarak işaretle; bakım modu ayrı güvenli anahtardan yönetilir.", announcementMaintenance, !busy) { announcementMaintenance = it }
+                            Text("Son güncelleme: ${announcement.updatedAt ?: "Bilgi yok"}", color = AdminMuted, fontSize = 9.sp)
                             Button(
                                 onClick = {
                                     scope.launch {
                                         busy = true
                                         runCatching {
-                                            backend.adminSetAnnouncement(announcementText.trim(), announcementEnabled)
+                                            backend.adminSetAnnouncement(announcementTr.trim(), announcementEn.trim(), announcementEnabled, announcementMaintenance)
                                         }.onSuccess {
-                                            notice = "Duyuru güncellendi."
+                                            notice = "Türkçe/İngilizce duyuru güncellendi."
                                         }.onFailure {
                                             error = it.message ?: "Duyuru güncellenemedi."
                                         }
-                                        reload()
-                                        busy = false
+                                        reload(); busy = false
                                     }
                                 },
                                 enabled = !busy,
                                 modifier = Modifier.fillMaxWidth(),
-                            ) {
-                                Text("DUYURUYU KAYDET")
-                            }
+                            ) { Text("DUYURUYU KAYDET") }
                         }
                     }
                 }
@@ -535,6 +563,24 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                             },
                         )
                     }
+                    item { AdminSectionTitle("OYUN İÇİ KOZMETİK KATALOG", Icons.Rounded.Palette) }
+                    if (shopCatalog.isEmpty()) item { AdminEmpty("Kozmetik mağaza kataloğu bilgisi alınamadı.") }
+                    else items(shopCatalog, key = { it.itemId }) { item ->
+                        AdminShopItemRow(
+                            item = item,
+                            enabled = !busy,
+                            onSave = { active, price ->
+                                scope.launch {
+                                    busy = true
+                                    runCatching { backend.adminSetShopItem(item.itemId, active, price) }
+                                        .onSuccess { notice = "${item.nameTr} mağaza bilgisi güncellendi." }
+                                        .onFailure { error = it.message ?: "Mağaza ürünü güncellenemedi." }
+                                    reload(); busy = false
+                                }
+                            },
+                        )
+                    }
+
                     if (storeItems.isNotEmpty()) {
                         item { AdminSectionTitle("EDİNİM ÖZETİ", Icons.Rounded.Inventory2) }
                         items(storeItems, key = { it.itemId }) { item ->
@@ -568,6 +614,46 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                         )
                     }
                     if (ownerAccounts.size < 3) item { AdminEmpty("Şu anda backend'de ${ownerAccounts.size} gerçek test/özel hesap tanımlı. Eksik hesaplar için sahte UUID oluşturulmadı.") }
+                    item {
+                        AdminWideCard {
+                            Text("Envanter / test kozmetiği", color = AdminText, fontWeight = FontWeight.Black)
+                            Text("Yalnız yukarıdaki gerçek ve aktif özel/test hesapları için çalışır. Rating ve lig puanına dokunmaz.", color = AdminMuted, fontSize = 10.sp)
+                            ownerAccounts.take(3).forEach { account ->
+                                OutlinedButton(onClick = {
+                                    selectedTestAccount = account
+                                    scope.launch {
+                                        testInventory = runCatching { backend.getAdminTestInventory(account.userId) }.getOrDefault(emptyList())
+                                    }
+                                }, enabled = !busy, modifier = Modifier.fillMaxWidth()) {
+                                    Text("${account.displayName} ENVANTERİ")
+                                }
+                            }
+                            if (selectedTestAccount != null) {
+                                Text("Seçili: ${selectedTestAccount?.displayName}", color = AdminBlue, fontWeight = FontWeight.Bold)
+                                if (testInventory.isEmpty()) Text("Envanter boş veya bilgi alınamadı.", color = AdminMuted, fontSize = 10.sp)
+                                testInventory.take(20).forEach { inv ->
+                                    Text("• ${inv.nameTr} • ${inv.kind} • x${inv.quantity}${if (inv.isEquipped) " • takılı" else ""}", color = AdminMuted, fontSize = 10.sp)
+                                }
+                                OutlinedTextField(testItemId, { testItemId = it.trim().take(80) }, modifier = Modifier.fillMaxWidth(), label = { Text("Aktif kozmetik item_id") }, singleLine = true)
+                                Button(onClick = {
+                                    val account = selectedTestAccount ?: return@Button
+                                    val itemId = testItemId.trim()
+                                    if (itemId.isBlank()) { notice = "Geçerli item_id gir."; return@Button }
+                                    scope.launch {
+                                        busy = true
+                                        runCatching { backend.adminGrantTestItem(account.userId, itemId) }
+                                            .onSuccess {
+                                                notice = "$itemId test kozmetiği ${account.displayName} hesabına verildi."
+                                                testInventory = backend.getAdminTestInventory(account.userId)
+                                                testItemId = ""
+                                            }
+                                            .onFailure { error = it.message ?: "Test ürünü verilemedi." }
+                                        busy = false
+                                    }
+                                }, enabled = !busy, modifier = Modifier.fillMaxWidth()) { Text("TEST KOZMETİĞİ VER") }
+                            }
+                        }
+                    }
                 }
 
                 AdminSection.SYSTEM -> {
@@ -582,15 +668,20 @@ fun AdminConsoleScreen(onBack: () -> Unit) {
                             AdminInlineValue("versionName", BuildConfig.VERSION_NAME)
                             AdminInlineValue("versionCode", BuildConfig.VERSION_CODE.toString())
                             AdminInlineValue("Build type", BuildConfig.BUILD_TYPE)
-                            Text("Git commit SHA/tarihi bu APK'nin BuildConfig'ine güvenli biçimde enjekte edilmediği için tahmin gösterilmez.", color = AdminMuted, fontSize = 10.sp)
+                            AdminInlineValue("Git branch", BuildConfig.GIT_BRANCH)
+                            AdminInlineValue("Git SHA", BuildConfig.GIT_COMMIT_SHA.take(12))
+                            AdminInlineValue("CI build", if (BuildConfig.CI_BUILD == "true") "GitHub Actions" else "Yerel / bilinmiyor")
+                            Text("Commit tarihi/mesajı bu APK'de güvenilir metadata olarak bulunmuyorsa tahmin gösterilmez.", color = AdminMuted, fontSize = 10.sp)
                         }
                     }
                     item { AdminSectionTitle("GITHUB", Icons.Rounded.Code) }
                     item {
                         AdminWideCard {
                             Text("GitHub token APK içine gömülmedi.", color = AdminText, fontWeight = FontWeight.Bold)
-                            Text("Private repository branch/commit/Actions kota verisi için güvenli backend entegrasyonu gerekiyor. Bu bilgi mevcut backend üzerinden alınamadığında tahmin üretilmez.", color = AdminMuted, fontSize = 10.sp)
-                            Text("Durum: Ek GitHub yetkisi / güvenli backend gerekiyor.", color = AdminBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            AdminInlineValue("Aktif build branch", BuildConfig.GIT_BRANCH)
+                            AdminInlineValue("Build commit", BuildConfig.GIT_COMMIT_SHA.take(12))
+                            Text("Repository boyutu, LFS, Actions artifact/cache ve Packages kotaları bu istemciye güvenli ve yetkili bir GitHub backend entegrasyonu olmadan gösterilmez.", color = AdminMuted, fontSize = 10.sp)
+                            Text("Eksik GitHub kota bilgileri için tahmin üretilmiyor.", color = AdminBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     item { AdminSectionTitle("SON HATALAR", Icons.Rounded.ErrorOutline) }
@@ -899,7 +990,8 @@ private fun AdminGameControlRow(
     enabled: Boolean,
     onChange: (Boolean) -> Unit,
 ) {
-    val isMaintenance = control.configKey == "maintenance_mode"
+    var pending by remember(control.configKey) { mutableStateOf<Boolean?>(null) }
+    val isCritical = control.configKey == "maintenance_mode" || control.configKey.endsWith("_enabled")
     AdminWideCard {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -908,16 +1000,25 @@ private fun AdminGameControlRow(
             }
             Switch(
                 checked = control.enabled,
-                onCheckedChange = onChange,
+                onCheckedChange = { pending = it },
                 enabled = enabled,
-                colors = if (isMaintenance) {
+                colors = if (control.configKey == "maintenance_mode") {
                     SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = AdminRed)
                 } else SwitchDefaults.colors()
             )
         }
-        if (isMaintenance && control.enabled) {
+        if (control.configKey == "maintenance_mode" && control.enabled) {
             Text("BAKIM MODU AÇIK", color = AdminRed, fontWeight = FontWeight.Black, fontSize = 11.sp)
         }
+    }
+    pending?.let { value ->
+        AlertDialog(
+            onDismissRequest = { pending = null },
+            title = { Text("Ayar değişikliğini onayla") },
+            text = { Text("${control.title}: ${if (value) "AÇIK" else "KAPALI"}. ${if (isCritical) "Bu kritik operasyon değişikliği server-side audit log'a yazılır." else "İşlem audit log'a yazılır."}") },
+            confirmButton = { Button(onClick = { pending = null; onChange(value) }) { Text("ONAYLA") } },
+            dismissButton = { TextButton(onClick = { pending = null }) { Text("VAZGEÇ") } },
+        )
     }
 }
 
@@ -1091,6 +1192,40 @@ private fun AdminStoreCatalogRow(
             text = { Text("${product.productId} ${if (value) "yayına alınacak" else "yayından kaldırılacak"}. İşlem audit log'a yazılır.") },
             confirmButton = { Button(onClick = { pendingEnabled = null; onEnabled(value) }) { Text("ONAYLA") } },
             dismissButton = { TextButton(onClick = { pendingEnabled = null }) { Text("VAZGEÇ") } },
+        )
+    }
+}
+
+@Composable
+private fun AdminShopItemRow(
+    item: AdminShopItemDto,
+    enabled: Boolean,
+    onSave: (Boolean, Int) -> Unit,
+) {
+    var active by remember(item.itemId, item.active) { mutableStateOf(item.active) }
+    var priceText by remember(item.itemId, item.diamondPrice) { mutableStateOf(item.diamondPrice.toString()) }
+    var confirm by remember(item.itemId) { mutableStateOf(false) }
+    AdminWideCard {
+        Text(item.nameTr, color = AdminText, fontWeight = FontWeight.Black)
+        Text("${item.nameEn} • ${item.kind} • ${item.rarity}${if (item.vipOnly) " • VIP" else ""}", color = AdminMuted, fontSize = 9.sp)
+        AdminToggleRow("Yayında", "Kozmetik ürün mağazada görünür.", active, enabled) { active = it }
+        OutlinedTextField(
+            value = priceText,
+            onValueChange = { priceText = it.filter(Char::isDigit).take(7) },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text("Elmas fiyatı") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        )
+        Button(onClick = { confirm = true }, enabled = enabled && priceText.toIntOrNull() != null, modifier = Modifier.fillMaxWidth()) { Text("DEĞİŞİKLİĞİ KAYDET") }
+    }
+    if (confirm) {
+        AlertDialog(
+            onDismissRequest = { confirm = false },
+            title = { Text("Mağaza değişikliğini onayla") },
+            text = { Text("${item.nameTr}: ${priceText.toIntOrNull() ?: item.diamondPrice} elmas • ${if (active) "yayında" else "pasif"}. Rating/lig ve oyun gücü etkilenmez.") },
+            confirmButton = { Button(onClick = { confirm = false; onSave(active, priceText.toIntOrNull() ?: item.diamondPrice) }) { Text("ONAYLA") } },
+            dismissButton = { TextButton(onClick = { confirm = false }) { Text("VAZGEÇ") } },
         )
     }
 }
