@@ -47,9 +47,14 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val home = File("src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
 
         assertTrue(home.contains("FramedProfilePhotoAvatar("))
-        assertTrue(home.contains("Son Coin"))
-        assertTrue(home.contains("PRO ÜYE"))
+        assertTrue(home.contains("profile?.diamonds"))
+        assertTrue(home.contains("} Coin"))
+        assertTrue(home.contains("\"PRO\""))
+        assertTrue(home.contains("profile?.isVip == true"))
+        assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
+        assertTrue(home.contains("\"${'$'}{it.rating} RP\""))
         assertTrue(home.contains("Icons.Rounded.Notifications"))
+        assertTrue(home.contains("onClick = onSocial"))
         assertTrue(home.contains("Bildirimler ve davetler"))
     }
 

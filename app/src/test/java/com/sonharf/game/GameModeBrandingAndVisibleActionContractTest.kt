@@ -13,8 +13,9 @@ class GameModeBrandingAndVisibleActionContractTest {
         val brand = projectFile("app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeDrawable = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")
 
-        assertTrue(home.contains("Text(\"KELİME KUŞATMASI\""))
-        assertTrue(home.contains("Button(onClick = onSiege"))
+        assertTrue(home.contains("\"KELİME KUŞATMASI\""))
+        assertTrue(home.contains("onClick = onSiege"))
+        assertTrue(home.contains("sh(\"HEMEN OYNA\", \"PLAY NOW\")"))
         assertTrue(home.contains("onClick = onPlay"))
         assertTrue(brand.contains("R.drawable.kelime_kusatma_logo_hd"))
         assertTrue(siegeDrawable.isFile)
