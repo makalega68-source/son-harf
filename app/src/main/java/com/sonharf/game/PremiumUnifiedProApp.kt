@@ -198,7 +198,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onPlay = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onSiege = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
                     )
-                    PremiumDestination.SETTINGS -> MainSettingsScreen(
+                    PremiumDestination.SETTINGS -> AdminAwareSettingsScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE },
                         { destination = PremiumDestination.ACCOUNT },
