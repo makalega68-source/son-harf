@@ -37,11 +37,11 @@ class WordSiegeMoveResolutionFeedbackTest {
         assertTrue(feedback.contains("WordSiegeFinalRules.cubeTransfer(move.capturedCells)"))
         assertTrue(feedback.contains("ownershipChanges.sorted().forEach"))
         assertTrue(feedback.contains("presentedBoard = staged.toList()"))
-        assertTrue(feedback.contains("KUŞATMA +$territoryPoints"))
+        assertTrue(feedback.contains("KUŞATMA +\$territoryPoints"))
         assertTrue(match.contains("WordSiegeMoveResolutionOverlay("))
         assertTrue(match.contains("presentedBoard.getOrElse(index)"))
         assertTrue(match.contains("wordSiegeTerritoryGainPoints(move)"))
-        assertFalse(match.contains("Bölge +${move.areaScore}"))
+        assertFalse(match.contains("Bölge +\${move.areaScore}"))
 
         val lowered = feedback.lowercase()
         assertFalse(lowered.contains("onlinegamebackend"))
