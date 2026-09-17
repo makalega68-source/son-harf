@@ -961,13 +961,6 @@ private fun PremierArenaHeader(
         Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    Surface(modifier = Modifier.clickable(onClick = onForfeit), shape = RoundedCornerShape(12.dp), color = PremierUi.RedSoft) {
-                        Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Flag, null, tint = PremierUi.Red, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(pt(language, "PES ET", "SURRENDER"), color = PremierUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                        }
-                    }
                 }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     Surface(shape = RoundedCornerShape(13.dp), color = PremierUi.Ice) {
@@ -976,18 +969,6 @@ private fun PremierArenaHeader(
                 }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                     Box {
-                        Surface(
-                            modifier = Modifier.clickable(onClick = onQuickChat),
-                            shape = RoundedCornerShape(12.dp),
-                            color = PremierUi.Ice,
-                            border = BorderStroke(1.dp, PremierUi.Border),
-                        ) {
-                            Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.ChatBubbleOutline, pt(language, "Sohbet", "Chat"), tint = PremierUi.Ocean, modifier = Modifier.size(15.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text(pt(language, "SOHBET", "CHAT"), color = PremierUi.OceanDeep, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                            }
-                        }
                         if (unreadChat) {
                             Box(Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-3).dp).size(10.dp).clip(CircleShape).background(PremierUi.Red))
                         }

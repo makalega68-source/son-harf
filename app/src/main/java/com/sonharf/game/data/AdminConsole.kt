@@ -55,8 +55,11 @@ data class AdminMonthlyRevenueDto(
 
 @Serializable
 data class AdminAnnouncementDto(
-    val message: String = "",
+    @SerialName("message_tr") val messageTr: String = "",
+    @SerialName("message_en") val messageEn: String = "",
     val enabled: Boolean = false,
+    val maintenance: Boolean = false,
+    @SerialName("updated_at") val updatedAt: String? = null,
 )
 
 @Serializable
@@ -148,10 +151,10 @@ suspend fun OnlineGameBackend.getAdminGameControls(): List<AdminGameControlDto> 
 
 suspend fun OnlineGameBackend.adminSetGameControl(key: String, enabled: Boolean) {
     SupabaseProvider.client.postgrest.rpc(
-        "admin_set_config",
+        "admin_set_game_control_v1",
         buildJsonObject {
             put("p_key", key)
-            put("p_value", enabled)
+            put("p_enabled", enabled)
         },
     )
 }
@@ -260,11 +263,173 @@ suspend fun OnlineGameBackend.getAdminMonthlyRevenue(): List<AdminMonthlyRevenue
     SupabaseProvider.client.postgrest.rpc("admin_monthly_revenue_v1").decodeList()
 
 suspend fun OnlineGameBackend.getAdminAnnouncement(): AdminAnnouncementDto =
-    SupabaseProvider.client.postgrest.rpc("admin_get_announcement_v1").decodeSingle()
+    SupabaseProvider.client.postgrest.rpc("admin_get_announcement_v2").decodeSingle()
 
-suspend fun OnlineGameBackend.adminSetAnnouncement(message: String, enabled: Boolean) {
+suspend fun OnlineGameBackend.adminSetAnnouncement(
+    messageTr: String,
+    messageEn: String,
+    enabled: Boolean,
+    maintenance: Boolean,
+) {
     SupabaseProvider.client.postgrest.rpc(
-        "admin_set_announcement_v1",
-        buildJsonObject { put("p_message", message.take(500)); put("p_enabled", enabled) },
+        "admin_set_announcement_v2",
+        buildJsonObject {
+            put("p_message_tr", messageTr.take(500))
+            put("p_message_en", messageEn.take(500))
+            put("p_enabled", enabled)
+            put("p_maintenance", maintenance)
+        },
+    )
+}
+
+
+@Serializable
+data class AdminAccessDto(
+    val authorized: Boolean = false,
+    @SerialName("admin_role") val adminRole: String = "",
+    @SerialName("lifetime_vip") val lifetimeVip: Boolean = false,
+    @SerialName("unlimited_diamonds") val unlimitedDiamonds: Boolean = false,
+    @SerialName("unlimited_son_coin") val unlimitedSonCoin: Boolean = false,
+)
+
+@Serializable
+data class AdminPlayerOpsDto(
+    @SerialName("user_id") val userId: String,
+    val email: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("is_vip") val isVip: Boolean = false,
+    val diamonds: Int = 0,
+    val rating: Int = 0,
+    @SerialName("last_seen_at") val lastSeenAt: String? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("blocked_until") val blockedUntil: String? = null,
+    @SerialName("is_owner_account") val isOwnerAccount: Boolean = false,
+)
+
+@Serializable
+data class AdminStoreCatalogDto(
+    @SerialName("product_id") val productId: String,
+    @SerialName("gross_price_minor") val grossPriceMinor: Long = 0,
+    val currency: String = "TRY",
+    val enabled: Boolean = true,
+    @SerialName("badge_tr") val badgeTr: String? = null,
+    @SerialName("badge_en") val badgeEn: String? = null,
+    @SerialName("sort_order") val sortOrder: Int = 100,
+    @SerialName("updated_at") val updatedAt: String? = null,
+)
+
+@Serializable
+data class AdminAuditEntryDto(
+    val id: Long,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("admin_email") val adminEmail: String = "",
+    val action: String,
+    @SerialName("target_type") val targetType: String = "",
+    @SerialName("target_id") val targetId: String? = null,
+    @SerialName("before_data") val beforeData: String? = null,
+    @SerialName("after_data") val afterData: String? = null,
+    val outcome: String = "success",
+    @SerialName("error_text") val errorText: String? = null,
+)
+
+@Serializable
+data class AdminSystemEventDto(
+    val id: Long,
+    val severity: String,
+    val source: String,
+    @SerialName("event_type") val eventType: String,
+    val details: String = "{}",
+    @SerialName("created_at") val createdAt: String,
+)
+
+suspend fun OnlineGameBackend.isCurrentUserAdmin(): Boolean =
+    runCatching {
+        SupabaseProvider.client.postgrest.rpc("admin_access_v1").decodeSingle<AdminAccessDto>().authorized
+    }.getOrDefault(false)
+
+suspend fun OnlineGameBackend.adminSearchPlayersV2(query: String): List<AdminPlayerOpsDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_search_players_v2",
+        buildJsonObject { put("p_query", query.trim()) },
+    ).decodeList()
+
+suspend fun OnlineGameBackend.adminAdjustPlayerDiamonds(userId: String, delta: Int) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_adjust_player_diamonds_v1",
+        buildJsonObject { put("p_user_id", userId); put("p_delta", delta) },
+    )
+}
+
+suspend fun OnlineGameBackend.adminSetPlayerBlocked(userId: String, blocked: Boolean) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_set_player_blocked_v1",
+        buildJsonObject { put("p_user_id", userId); put("p_blocked", blocked) },
+    )
+}
+
+suspend fun OnlineGameBackend.getAdminStoreCatalog(): List<AdminStoreCatalogDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_store_catalog_v1").decodeList()
+
+suspend fun OnlineGameBackend.adminSetStoreEnabled(productId: String, enabled: Boolean) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_set_store_enabled_v1",
+        buildJsonObject { put("p_product_id", productId); put("p_enabled", enabled) },
+    )
+}
+
+suspend fun OnlineGameBackend.getAdminAuditV2(): List<AdminAuditEntryDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_audit_v2").decodeList()
+
+suspend fun OnlineGameBackend.getAdminRecentErrors(): List<AdminSystemEventDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_recent_errors_v1").decodeList()
+
+
+@Serializable
+data class AdminShopItemDto(
+    @SerialName("item_id") val itemId: String,
+    val kind: String,
+    @SerialName("name_tr") val nameTr: String,
+    @SerialName("name_en") val nameEn: String,
+    @SerialName("diamond_price") val diamondPrice: Int = 0,
+    @SerialName("vip_only") val vipOnly: Boolean = false,
+    val active: Boolean = true,
+    val rarity: String = "STANDARD",
+    @SerialName("updated_hint") val updatedHint: String = "",
+)
+
+@Serializable
+data class AdminTestInventoryDto(
+    @SerialName("item_id") val itemId: String,
+    val kind: String,
+    @SerialName("name_tr") val nameTr: String,
+    val quantity: Int = 1,
+    @SerialName("is_equipped") val isEquipped: Boolean = false,
+    @SerialName("acquired_at") val acquiredAt: String? = null,
+)
+
+suspend fun OnlineGameBackend.getAdminShopItems(): List<AdminShopItemDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_shop_items_v1").decodeList()
+
+suspend fun OnlineGameBackend.adminSetShopItem(itemId: String, active: Boolean, diamondPrice: Int) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_set_shop_item_v1",
+        buildJsonObject {
+            put("p_item_id", itemId)
+            put("p_active", active)
+            put("p_diamond_price", diamondPrice)
+        },
+    )
+}
+
+suspend fun OnlineGameBackend.getAdminTestInventory(userId: String): List<AdminTestInventoryDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_test_inventory_v1",
+        buildJsonObject { put("p_user_id", userId) },
+    ).decodeList()
+
+suspend fun OnlineGameBackend.adminGrantTestItem(userId: String, itemId: String) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_grant_test_item_v1",
+        buildJsonObject { put("p_user_id", userId); put("p_item_id", itemId) },
     )
 }

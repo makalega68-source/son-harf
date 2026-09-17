@@ -25,15 +25,11 @@ class PremierDuelUxRegressionTest {
         assertFalse(screen.contains("MageCatCompanion("))
         assertFalse(screen.contains("SyntheticBotPortrait("))
 
-        // Chat remains typed/realtime and now has an unread red indicator.
-        assertTrue(screen.contains("Text(pt(language, \"SOHBET\", \"CHAT\")"))
-        assertFalse(screen.contains("enabled = !room.isBot"))
-        assertTrue(screen.contains("var hasUnreadChat by remember { mutableStateOf(false) }"))
-        assertTrue(screen.contains("if (latest != null && latest.id != previousId && latest.senderId != backend.currentUserId())"))
-        assertTrue(screen.contains("hasUnreadChat = !showQuickChat"))
-        assertTrue(screen.contains("unreadChat = hasUnreadChat"))
-        assertTrue(screen.contains("Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-3).dp).size(10.dp).clip(CircleShape).background(PremierUi.Red)"))
-        assertTrue(screen.contains("hasUnreadChat = false"))
+        // User-requested arena cleanup removes secondary surrender/chat actions.
+        // Core realtime gameplay and server-authoritative word submission remain intact.
+        assertFalse(screen.contains("Text(pt(language, \"SOHBET\", \"CHAT\")"))
+        assertFalse(screen.contains("Modifier.clickable(onClick = onQuickChat)"))
+        assertFalse(screen.contains("Modifier.clickable(onClick = onForfeit)"))
 
         assertTrue(screen.contains("Alignment.CenterStart"))
         assertTrue(screen.contains("Alignment.CenterEnd"))
