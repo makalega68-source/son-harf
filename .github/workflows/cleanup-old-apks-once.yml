@@ -1,0 +1,74 @@
+name: Cleanup old APKs once
+
+on:
+  push:
+    branches:
+      - claude/son-harf-game-screen-design-bhju07
+    paths:
+      - '.github/workflows/cleanup-old-apks-once.yml'
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    env:
+      SOURCE_RUN_ID: '35283386232'
+      SOURCE_ARTIFACT: 'son-harf-debug-apk'
+      SOURCE_SHA: 'd3815451f187f6fb305ac0b7a8770d07f3aa80fc'
+      EXPECTED_SHA256: '19d36265eed16861852bfcb115cdeeeb674863a565f5ed8e23908b42f110564b'
+      CANONICAL_TAG: 'canonical-test-apk'
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Download canonical APK artifact
+        run: |
+          set -euo pipefail
+          mkdir -p canonical
+          gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$SOURCE_ARTIFACT" --dir canonical
+          APK_PATH="$(find canonical -type f -name '*.apk' -print -quit)"
+          test -n "$APK_PATH"
+          cp "$APK_PATH" canonical/SonHarf-Final-Test.apk
+
+      - name: Verify exact canonical APK
+        run: |
+          set -euo pipefail
+          echo "$EXPECTED_SHA256  canonical/SonHarf-Final-Test.apk" | sha256sum -c -
+
+      - name: Remove old APK releases
+        run: |
+          set -euo pipefail
+          gh release delete test-apk --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
+          gh release delete final-test --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
+          gh release delete "$CANONICAL_TAG" --repo "$GITHUB_REPOSITORY" --cleanup-tag --yes || true
+
+      - name: Publish only canonical APK release
+        run: |
+          set -euo pipefail
+          gh release create "$CANONICAL_TAG" canonical/SonHarf-Final-Test.apk \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$SOURCE_SHA" \
+            --title 'Son Harf – Canonical Test APK' \
+            --notes "Tek kanonik test APK. Kaynak commit: $SOURCE_SHA. SHA-256: $EXPECTED_SHA256" \
+            --prerelease
+          DIGEST="$(gh api "/repos/$GITHUB_REPOSITORY/releases/tags/$CANONICAL_TAG" --jq '.assets[] | select(.name == "SonHarf-Final-Test.apk") | .digest')"
+          test "$DIGEST" = "sha256:$EXPECTED_SHA256"
+
+      - name: Delete APK and AAB Actions artifacts
+        run: |
+          set -euo pipefail
+          gh api --paginate "/repos/$GITHUB_REPOSITORY/actions/artifacts?per_page=100" \
+            --jq '.artifacts[] | select((.name | ascii_downcase | contains("apk")) or (.name | ascii_downcase | contains("aab"))) | .id' \
+            | while read -r artifact_id; do
+                [ -n "$artifact_id" ] || continue
+                gh api --method DELETE "/repos/$GITHUB_REPOSITORY/actions/artifacts/$artifact_id"
+              done
+
+      - name: Verify only canonical APK release remains
+        run: |
+          set -euo pipefail
+          COUNT="$(gh api "/repos/$GITHUB_REPOSITORY/releases?per_page=100" --jq '[.[] | .assets[]? | select(.name | endswith(".apk"))] | length')"
+          test "$COUNT" = '1'
+          ACTUAL="$(gh api "/repos/$GITHUB_REPOSITORY/releases/tags/$CANONICAL_TAG" --jq '.assets[] | select(.name == "SonHarf-Final-Test.apk") | .digest')"
+          test "$ACTUAL" = "sha256:$EXPECTED_SHA256"
