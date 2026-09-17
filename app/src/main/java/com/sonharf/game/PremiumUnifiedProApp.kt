@@ -19,12 +19,13 @@ import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.SupabaseProvider
+import com.sonharf.game.data.isCurrentUserAdmin
 import kotlinx.coroutines.delay
 
 private enum class PremiumDestination {
     HOME, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
     LAST_LETTER, SIEGE, LETTER_PATH,
-    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP
+    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP, ADMIN
 }
 
 @Composable
@@ -32,6 +33,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     var destination by remember { mutableStateOf(PremiumDestination.HOME) }
     var isPro by remember { mutableStateOf(false) }
+    var isAdmin by remember { mutableStateOf(false) }
     val homeRequest = SonHarfUiState.homeRequest
     val context = androidx.compose.ui.platform.LocalContext.current
     // G5.4: default is the persisted "game language" pref, not the UI
@@ -60,6 +62,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         backend.currentUserId()?.let { id ->
             runCatching { backend.getEquippedCosmetics() }.getOrNull()?.let(SonHarfCosmetics::apply)
             isPro = runCatching { backend.getProfile(id).isVip }.getOrDefault(false)
+            isAdmin = backend.isCurrentUserAdmin()
         }
     }
     LaunchedEffect(homeRequest) {
@@ -86,7 +89,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
             PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION -> PremiumDestination.PROFILE
-            PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.HOME
+            PremiumDestination.SOCIAL, PremiumDestination.SHOP, PremiumDestination.ADMIN -> PremiumDestination.HOME
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
             PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
@@ -159,6 +162,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onSocial = { destination = PremiumDestination.SOCIAL },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
+                        isAdmin = isAdmin,
+                        onAdmin = { destination = PremiumDestination.ADMIN },
                     )
                     PremiumDestination.GAMES -> PremiumGameCenter(
                         siegeLanguage = siegeLanguage,
@@ -203,12 +208,17 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onMembershipChanged = { isPro = it },
                         onCollection = { destination = PremiumDestination.COLLECTION },
                     )
-                    PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()
-                    PremiumDestination.SIEGE -> WordSiegeExperienceScreen {
-                        leaveGame()
+                    PremiumDestination.LAST_LETTER -> Box(Modifier.fillMaxSize()) {
+                        OnlineGameScreenV6()
+                        GameHelpButton(GameHelpType.LAST_LETTER, Modifier.align(Alignment.TopEnd).padding(8.dp))
                     }
-                    PremiumDestination.LETTER_PATH -> LetterLadderGameScreen {
-                        leaveGame()
+                    PremiumDestination.SIEGE -> Box(Modifier.fillMaxSize()) {
+                        WordSiegeExperienceScreen { leaveGame() }
+                        GameHelpButton(GameHelpType.SIEGE, Modifier.align(Alignment.TopEnd).padding(8.dp))
+                    }
+                    PremiumDestination.LETTER_PATH -> Box(Modifier.fillMaxSize()) {
+                        LetterLadderGameScreen { leaveGame() }
+                        GameHelpButton(GameHelpType.LETTER_PATH, Modifier.align(Alignment.TopEnd).padding(8.dp))
                     }
                     PremiumDestination.SOCIAL -> MainSocialScreen(
                         backend = backend,
@@ -227,6 +237,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.PROFILE_DETAILS -> CompleteProfileScreen(0) {
                         destination = PremiumDestination.PROFILE
                     }
+                    PremiumDestination.ADMIN -> AdminConsoleScreen { destination = PremiumDestination.HOME }
                 }
             }
         }
@@ -242,6 +253,8 @@ private fun PremiumHomeScreen(
     onSocial: () -> Unit,
     onLastLetter: () -> Unit,
     onLetterPath: () -> Unit,
+    isAdmin: Boolean,
+    onAdmin: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
 
@@ -258,7 +271,7 @@ private fun PremiumHomeScreen(
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             item(key = "home_hero") {
-                PremiumHomeCommandDeck(profile, onProfile, onPrimary, onSocial)
+                PremiumHomeCommandDeck(profile, onProfile, onPrimary, onSocial, isAdmin, onAdmin)
             }
             item(key = "home_secondary_modes") {
                 PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)

@@ -176,6 +176,10 @@ private fun FriendsHubDialog(onClose: () -> Unit) {
     var messageBusy by remember { mutableStateOf(false) }
     val me = backend.currentUserId()
 
+    // Only the actual one-to-one friend conversation is protected. The friends list,
+    // match chat and all normal game screens remain screenshot-enabled.
+    PrivateChatSecureEffect(enabled = selected != null)
+
     suspend fun reloadFriends() {
         loading = true
         runCatching { backend.getAcceptedFriendProfiles() }
