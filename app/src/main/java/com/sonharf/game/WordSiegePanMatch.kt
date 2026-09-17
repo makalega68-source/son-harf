@@ -106,6 +106,9 @@ internal fun WordSiegePanMatch(
     val displayedCurrentPlayerId = game.currentPlayerId
     var fallbackPracticeActive by remember(game.id) { mutableStateOf(false) }
     var shuffleSeed by remember(game.id) { mutableIntStateOf(0) }
+    var showMatchIntro by remember(game.id) {
+        mutableStateOf(game.status == "playing" && game.moveCount == 0)
+    }
     val visualMyTurn = game.status == "playing" && displayedCurrentPlayerId == me
     val rackOrder = remember(rack, shuffleSeed) {
         if (shuffleSeed == 0) rack.indices.toList() else wordSiegeShuffledRackIndices(rack.length, shuffleSeed)
@@ -125,10 +128,27 @@ internal fun WordSiegePanMatch(
         }
     }
 
+    LaunchedEffect(game.id, game.status, game.moveCount) {
+        if (game.status == "playing" && game.moveCount == 0 && !showMatchIntro) {
+            showMatchIntro = true
+        }
+    }
+
     if (fallbackPracticeActive && game.status == "waiting") {
         WordSiegePracticeScreen(
             onExit = { fallbackPracticeActive = false },
             matchmakingFallback = true,
+        )
+        return
+    }
+
+    if (showMatchIntro && game.status == "playing") {
+        WordSiegeMatchIntro(
+            gameId = game.id,
+            mine = mine,
+            opponent = opponent,
+            startsWithMe = game.currentPlayerId == me,
+            onComplete = { showMatchIntro = false },
         )
         return
     }
