@@ -34,6 +34,8 @@ internal fun PremiumHomeCommandDeck(
     onProfile: () -> Unit,
     onSiege: () -> Unit,
     onSocial: () -> Unit,
+    isAdmin: Boolean,
+    onAdmin: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Column {
@@ -42,12 +44,16 @@ internal fun PremiumHomeCommandDeck(
                 // G4.6 adopsiyon: okunmamış sohbet ikonu. onSocial'a
                 // yönlendirir (sohbet ekranı henüz ayrı değil; sosyal
                 // ekranı içinde yer alacak).
-                com.sonharf.game.ui.premium.UnreadChatIcon(
-                    unreadCount = 0,   // TODO: sosyal ekranından beslenecek
-                    onClick = onSocial,
-                    tint = SonHarfTheme.Primary,
-                )
-                IconButton(onClick = onSocial, modifier = Modifier.size(48.dp)) {
+                if (isAdmin) {
+                IconButton(onClick = onAdmin, modifier = Modifier.size(48.dp)) {
+                    Icon(
+                        Icons.Rounded.AdminPanelSettings,
+                        sh("Yönetici paneli", "Admin panel"),
+                        tint = SonHarfTheme.Primary,
+                    )
+                }
+            }
+            IconButton(onClick = onSocial, modifier = Modifier.size(48.dp)) {
                     Icon(Icons.Rounded.Notifications, sh("Bildirimler ve davetler", "Notifications and invites"), tint = SonHarfTheme.Primary)
                 }
             }

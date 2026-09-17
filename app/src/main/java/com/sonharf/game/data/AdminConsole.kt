@@ -268,3 +268,104 @@ suspend fun OnlineGameBackend.adminSetAnnouncement(message: String, enabled: Boo
         buildJsonObject { put("p_message", message.take(500)); put("p_enabled", enabled) },
     )
 }
+
+
+@Serializable
+data class AdminAccessDto(
+    val authorized: Boolean = false,
+    @SerialName("admin_role") val adminRole: String = "",
+    @SerialName("lifetime_vip") val lifetimeVip: Boolean = false,
+    @SerialName("unlimited_diamonds") val unlimitedDiamonds: Boolean = false,
+    @SerialName("unlimited_son_coin") val unlimitedSonCoin: Boolean = false,
+)
+
+@Serializable
+data class AdminPlayerOpsDto(
+    @SerialName("user_id") val userId: String,
+    val email: String,
+    @SerialName("display_name") val displayName: String,
+    @SerialName("is_vip") val isVip: Boolean = false,
+    val diamonds: Int = 0,
+    val rating: Int = 0,
+    @SerialName("last_seen_at") val lastSeenAt: String? = null,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("blocked_until") val blockedUntil: String? = null,
+    @SerialName("is_owner_account") val isOwnerAccount: Boolean = false,
+)
+
+@Serializable
+data class AdminStoreCatalogDto(
+    @SerialName("product_id") val productId: String,
+    @SerialName("gross_price_minor") val grossPriceMinor: Long = 0,
+    val currency: String = "TRY",
+    val enabled: Boolean = true,
+    @SerialName("badge_tr") val badgeTr: String? = null,
+    @SerialName("badge_en") val badgeEn: String? = null,
+    @SerialName("sort_order") val sortOrder: Int = 100,
+    @SerialName("updated_at") val updatedAt: String? = null,
+)
+
+@Serializable
+data class AdminAuditEntryDto(
+    val id: Long,
+    @SerialName("created_at") val createdAt: String,
+    @SerialName("admin_email") val adminEmail: String = "",
+    val action: String,
+    @SerialName("target_type") val targetType: String = "",
+    @SerialName("target_id") val targetId: String? = null,
+    @SerialName("before_data") val beforeData: String? = null,
+    @SerialName("after_data") val afterData: String? = null,
+    val outcome: String = "success",
+    @SerialName("error_text") val errorText: String? = null,
+)
+
+@Serializable
+data class AdminSystemEventDto(
+    val id: Long,
+    val severity: String,
+    val source: String,
+    @SerialName("event_type") val eventType: String,
+    val details: String = "{}",
+    @SerialName("created_at") val createdAt: String,
+)
+
+suspend fun OnlineGameBackend.isCurrentUserAdmin(): Boolean =
+    runCatching {
+        SupabaseProvider.client.postgrest.rpc("admin_access_v1").decodeSingle<AdminAccessDto>().authorized
+    }.getOrDefault(false)
+
+suspend fun OnlineGameBackend.adminSearchPlayersV2(query: String): List<AdminPlayerOpsDto> =
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_search_players_v2",
+        buildJsonObject { put("p_query", query.trim()) },
+    ).decodeList()
+
+suspend fun OnlineGameBackend.adminAdjustPlayerDiamonds(userId: String, delta: Int) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_adjust_player_diamonds_v1",
+        buildJsonObject { put("p_user_id", userId); put("p_delta", delta) },
+    )
+}
+
+suspend fun OnlineGameBackend.adminSetPlayerBlocked(userId: String, blocked: Boolean) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_set_player_blocked_v1",
+        buildJsonObject { put("p_user_id", userId); put("p_blocked", blocked) },
+    )
+}
+
+suspend fun OnlineGameBackend.getAdminStoreCatalog(): List<AdminStoreCatalogDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_store_catalog_v1").decodeList()
+
+suspend fun OnlineGameBackend.adminSetStoreEnabled(productId: String, enabled: Boolean) {
+    SupabaseProvider.client.postgrest.rpc(
+        "admin_set_store_enabled_v1",
+        buildJsonObject { put("p_product_id", productId); put("p_enabled", enabled) },
+    )
+}
+
+suspend fun OnlineGameBackend.getAdminAuditV2(): List<AdminAuditEntryDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_audit_v2").decodeList()
+
+suspend fun OnlineGameBackend.getAdminRecentErrors(): List<AdminSystemEventDto> =
+    SupabaseProvider.client.postgrest.rpc("admin_recent_errors_v1").decodeList()
