@@ -126,7 +126,18 @@ jobs:
             || gh release create test-apk --title "Son Harf Test APK" \
                  --notes "Debug APK for manual testing. Rebuilt on each manual workflow run." \
                  --prerelease --target "$GITHUB_SHA"
-          gh release upload test-apk SonHarf-Final-Test.apk --clobber
+          # GitHub's asset API is occasionally flaky (transient 500 / slow upload);
+          # retry with a per-attempt timeout so a hiccup does not fail the run.
+          for attempt in 1 2 3 4 5; do
+            if timeout 300 gh release upload test-apk SonHarf-Final-Test.apk --clobber; then
+              echo "release asset uploaded on attempt $attempt"
+              exit 0
+            fi
+            echo "upload attempt $attempt failed (transient); retrying in 10s"
+            sleep 10
+          done
+          echo "release upload still failing after retries" >&2
+          exit 1
 
       - name: Build signed release APK and AAB
         if: success() && github.event_name == 'push' && github.ref == 'refs/heads/main' && env.HAS_RELEASE_CONFIG == 'true'
