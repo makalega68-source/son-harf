@@ -66,12 +66,17 @@ class PremierDuelUxRegressionTest {
         assertTrue(turnClock.contains("\"get_premier_turn_clock_v1\""))
         assertTrue(turnClock.contains("put(\"p_room_id\", roomId)"))
 
-        // The old instruction is removed; the latest played word is the central context line.
+        // The old instruction is removed; the redesigned word card carries the latest played word.
         assertTrue(screen.contains("val latestPlayedWord"))
-        assertTrue(screen.contains("latestPlayedWord.ifBlank"))
         assertFalse(screen.contains("“\$required” ile başlayan bir kelime yaz"))
         assertFalse(screen.contains("Enter a word starting with “\$required”"))
-        assertTrue(screen.contains("fontSize = if (veryCompact) 14.sp else 16.sp"))
+        // Redesigned arena word card: latest word as letter tiles + SON HARF pill + how-to help.
+        assertTrue(screen.contains("private fun PremierWordCard("))
+        assertTrue(screen.contains("latestWord = latestPlayedWord"))
+        assertTrue(screen.contains("if (latestWord.isBlank())"))
+        assertTrue(screen.contains("pt(language, \"SON HARF\", \"LAST LETTER\")"))
+        assertTrue(screen.contains("onHowTo = { showHowTo = true }"))
+        assertTrue(screen.contains("private fun PremierHowToDialog("))
 
         // History chips center as a group instead of hugging the left edge.
         assertTrue(screen.contains("Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally)"))
@@ -81,12 +86,11 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("eventKey = \"turn:"))
         assertTrue(screen.contains("eventKey = \"accepted:"))
 
-        // Target card and central letter remain compact on real devices.
-        assertTrue(screen.contains("if (veryCompact) 78.dp"))
-        assertTrue(screen.contains("if (compact) 88.dp"))
-        assertTrue(screen.contains("if (tall) 118.dp"))
-        assertTrue(screen.contains("else 104.dp"))
-        assertTrue(screen.contains("if (required.length > 1) .32f else .42f"))
+        // The redesigned word card and Pro history drawer stay responsive on real devices.
+        assertTrue(screen.contains("private fun PremierHistoryDrawer("))
+        assertTrue(screen.contains("pt(language, \"PRO ÖZELLİĞİ\", \"PRO FEATURE\")"))
+        assertTrue(screen.contains("val tileW = if (compact) 26.dp else 30.dp"))
+        assertTrue(screen.contains("compact = veryCompact"))
         assertFalse(screen.contains("if (tall) 164.dp"))
 
         // Send consumes the visible attempt immediately, then the authoritative server result arrives.
