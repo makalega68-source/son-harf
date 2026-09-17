@@ -121,7 +121,6 @@ private fun WordSiegeScoreLine(label: String, value: Int) {
     }
 }
 
-@Suppress("UNUSED_PARAMETER")
 @Composable
 internal fun WordSiegeCompactAction(
     label: String,
@@ -129,7 +128,30 @@ internal fun WordSiegeCompactAction(
     enabled: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
-) = Unit
+) {
+    TextButton(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(48.dp),
+        shape = RoundedCornerShape(8.dp),
+        contentPadding = PaddingValues(2.dp),
+        colors = ButtonDefaults.textButtonColors(contentColor = WordSiegeGameUi.Muted),
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Icon(icon, contentDescription = label, modifier = Modifier.size(17.dp))
+            Text(
+                label,
+                fontSize = 11.sp,
+                lineHeight = 14.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+            )
+        }
+    }
+}
 
 @Composable
 internal fun WordSiegeOwnershipLegend() {
