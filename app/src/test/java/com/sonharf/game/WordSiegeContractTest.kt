@@ -35,10 +35,10 @@ class WordSiegeContractTest {
         assertTrue(siege.contains("BOT"))
 
         // Legacy UnifiedProApp remains untouched; the active StableV1App -> PremiumUnifiedProApp flow owns the current brand.
-        assertTrue(home.contains("PremiumPlayButton(onClick = onSiege)"))
+        assertTrue(home.contains("HomePrimaryModeCard(onClick = onSiege)"))
         assertTrue(home.contains("sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(home.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
-        assertTrue(home.contains("SAVAŞA GİR"))
+        assertTrue(home.contains("KUŞATMAYA GİR"))
         assertFalse(home.contains("KELİME FETHİ"))
         assertFalse(projectFile("app/src/main/java/com/sonharf/game").resolve("WordConquestGame.kt").exists())
     }
