@@ -29,7 +29,9 @@ jobs:
           gh run download "$SOURCE_RUN_ID" --repo "$GITHUB_REPOSITORY" --name "$SOURCE_ARTIFACT" --dir canonical
           APK_PATH="$(find canonical -type f -name '*.apk' -print -quit)"
           test -n "$APK_PATH"
-          cp "$APK_PATH" canonical/SonHarf-Final-Test.apk
+          if [ "$APK_PATH" != "canonical/SonHarf-Final-Test.apk" ]; then
+            cp "$APK_PATH" canonical/SonHarf-Final-Test.apk
+          fi
 
       - name: Verify exact canonical APK
         run: |
