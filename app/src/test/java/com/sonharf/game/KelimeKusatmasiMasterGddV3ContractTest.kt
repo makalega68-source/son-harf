@@ -7,20 +7,19 @@ import org.junit.Test
 
 class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
-    fun canonicalPaletteMatchesMasterGdd() {
+    fun canonicalPaletteMatchesDynamicGameDirection() {
         val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF8A9A86", // Sage Green
-            "0xFFF9F8F6", // Off-White
-            "0xFF7A9AEE", // Soft Blue
-            "0xFF40E0D0", // Turquoise
-            "0xFFF2EFE9", // Light Beige
-            "0xFFB5A2FF", // Lavender
-            "0xFF5C6F84", // Slate Blue
-            "0xFFA3E4D7", // Pale Mint
-            "0xFFE07A5F", // Controlled Warm Accent
-        ).forEach { token -> assertTrue("Missing GDD palette token $token", theme.contains(token)) }
+            "0xFF2F6BFF", // Royal Blue
+            "0xFF20C9C3", // Turquoise
+            "0xFFFF6B6B", // Coral
+            "0xFFFF9F43", // Warm Orange
+            "0xFFF4C95D", // Gold
+            "0xFF22324D", // Navy
+            "0xFFF8F7F2", // Off-White
+            "0xFF8B5CF6", // Dynamic Purple
+        ).forEach { token -> assertTrue("Missing dynamic palette token $token", theme.contains(token)) }
     }
 
     @Test
