@@ -15,7 +15,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -811,6 +813,7 @@ private fun PremierArena(
     onSubmit: () -> Unit,
 ) {
     val isPro = me?.isVip == true
+    var showHowTo by remember { mutableStateOf(false) }
     val amHost = meId == room.hostId
     val myScore = if (amHost) room.hostScore else room.guestScore
     val rivalScore = if (amHost) room.guestScore else room.hostScore
@@ -827,7 +830,6 @@ private fun PremierArena(
         val veryCompact = maxHeight < 610.dp
         val compact = maxHeight < 700.dp
         val tall = maxHeight > 820.dp
-        val targetSize = if (veryCompact) 78.dp else if (compact) 88.dp else if (tall) 118.dp else 104.dp
         val keyHeight = if (veryCompact) 38.dp else if (compact) 41.dp else if (tall) 50.dp else 46.dp
         val primaryGap = if (veryCompact) 3.dp else if (compact) 5.dp else 9.dp
 
@@ -837,21 +839,16 @@ private fun PremierArena(
                 Spacer(Modifier.height(primaryGap))
                 PremierTurnBadge(language, myTurn, room.status)
                 Spacer(Modifier.height(primaryGap))
-                PremierTargetCard(language, required, room.gameMode, room.roundNo, targetSize)
-                Spacer(Modifier.height(primaryGap))
-                Text(
-                    latestPlayedWord.ifBlank { pt(language, "İLK KELİME SERBEST", "FREE OPENING WORD") },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
-                    color = PremierUi.OceanDeep,
-                    fontSize = if (veryCompact) 14.sp else 16.sp,
-                    fontWeight = FontWeight.Black,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                PremierWordCard(
+                    language = language,
+                    latestWord = latestPlayedWord,
+                    required = required,
+                    compact = veryCompact,
+                    onHowTo = { showHowTo = true },
                 )
                 if (!veryCompact) {
                     Spacer(Modifier.height(primaryGap))
-                    PremierWordTrail(words, language, isPro)
+                    PremierHistoryDrawer(words, language, isPro)
                 }
                 Spacer(Modifier.weight(1f).heightIn(min = 2.dp))
                 if (notice.isNotBlank()) {
@@ -919,6 +916,8 @@ private fun PremierArena(
                 }
             }
         }
+
+        if (showHowTo) PremierHowToDialog(language) { showHowTo = false }
     }
 }
 
@@ -1095,46 +1094,116 @@ private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String) 
 }
 
 @Composable
-private fun PremierTargetCard(language: String, required: String, gameMode: String, round: Int, size: Dp) {
-    val transition = rememberInfiniteTransition(label = "letter")
-    val glow by transition.animateFloat(.25f, .55f, infiniteRepeatable(tween(1050), RepeatMode.Reverse), label = "glow")
-    val targetBadge = when {
-        required == "★" -> "—"
-        gameMode == "expert" -> "x${round.coerceIn(1, 3)}"
-        required.length == 1 -> "${com.sonharf.game.data.DictionaryEngine.getLetterPoint(required.first(), language)}P"
-        else -> "x${round.coerceIn(1, 3)}"
-    }
-    Box(
-        Modifier.size(size).shadow(16.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp))
-            .background(Brush.radialGradient(listOf(PremierUi.Sky, PremierUi.Ocean, PremierUi.OceanDeep))),
-        contentAlignment = Alignment.Center,
+private fun PremierWordCard(
+    language: String,
+    latestWord: String,
+    required: String,
+    compact: Boolean,
+    onHowTo: () -> Unit,
+) {
+    // The heart of the arena: the last played word as letter tiles (last letter
+    // highlighted) plus a prominent SON HARF pill, with the "?" how-to help living
+    // in the game area, matching the approved match-screen concept.
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = PremierUi.Surface,
+        border = BorderStroke(1.dp, PremierUi.Border),
+        shadowElevation = 3.dp,
     ) {
-        Box(Modifier.matchParentSize().background(Color.White.copy(alpha = glow * .13f)))
-        Surface(modifier = Modifier.align(Alignment.TopEnd).padding(7.dp), shape = RoundedCornerShape(99.dp), color = Color.White.copy(alpha = .20f)) {
-            Text(targetBadge, Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(required, color = Color.White, fontSize = (size.value * if (required.length > 1) .32f else .42f).sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
-            Text(if (required == "★") pt(language, "SERBEST", "FREE") else pt(language, "HEDEF", "TARGET"), color = Color.White.copy(alpha = .78f), fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
+        Box(Modifier.fillMaxWidth()) {
+            Surface(
+                modifier = Modifier.align(Alignment.TopEnd).padding(10.dp).size(30.dp).clickable(onClick = onHowTo),
+                shape = CircleShape,
+                color = PremierUi.Ice,
+                border = BorderStroke(1.dp, PremierUi.Border),
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("?", color = PremierUi.Ocean, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                }
+            }
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = if (compact) 12.dp else 18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    pt(language, "SON YAZILAN KELİME", "LAST WORD"),
+                    color = PremierUi.Green,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.2.sp,
+                )
+                Spacer(Modifier.height(if (compact) 8.dp else 12.dp))
+                if (latestWord.isBlank()) {
+                    Text(
+                        pt(language, "İLK KELİME SERBEST", "FREE OPENING WORD"),
+                        color = PremierUi.Muted,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                } else {
+                    val tileW = if (compact) 26.dp else 30.dp
+                    val tileH = if (compact) 34.dp else 38.dp
+                    val letters = latestWord.toCharArray().toList()
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        Row(
+                            Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            letters.forEachIndexed { index, ch ->
+                                val isLast = index == letters.lastIndex
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isLast) PremierUi.GreenSoft else PremierUi.Ice,
+                                    border = BorderStroke(if (isLast) 2.dp else 1.dp, if (isLast) PremierUi.Green else PremierUi.Border),
+                                ) {
+                                    Box(Modifier.size(width = tileW, height = tileH), contentAlignment = Alignment.Center) {
+                                        Text(ch.toString(), color = PremierUi.OceanDeep, fontSize = if (compact) 18.sp else 20.sp, fontWeight = FontWeight.Black)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
+                Surface(shape = RoundedCornerShape(16.dp), color = PremierUi.Ice, border = BorderStroke(1.dp, PremierUi.Border)) {
+                    Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            if (required == "★") pt(language, "SERBEST", "FREE") else pt(language, "SON HARF", "LAST LETTER"),
+                            color = PremierUi.Muted,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp,
+                        )
+                        Spacer(Modifier.width(10.dp))
+                        Icon(Icons.Rounded.ArrowForward, null, tint = PremierUi.Green, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Surface(shape = RoundedCornerShape(14.dp), color = PremierUi.Ocean) {
+                            Box(Modifier.size(if (compact) 44.dp else 52.dp), contentAlignment = Alignment.Center) {
+                                Text(
+                                    if (required == "★") "★" else required,
+                                    color = Color.White,
+                                    fontSize = if (compact) 26.sp else 30.sp,
+                                    fontWeight = FontWeight.Black,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: Boolean = false) {
-    if (words.isEmpty()) {
-        Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierUi.Muted, fontSize = 10.sp)
-        return
-    }
-    // Pro users see the full played-word history so they can avoid repeats;
-    // everyone else keeps the compact trailing preview.
-    val ordered = if (isPro) words.reversed() else words.takeLast(12).reversed()
-    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        if (isPro) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+private fun PremierHistoryDrawer(words: List<GameWordDto>, language: String, isPro: Boolean) {
+    if (isPro) {
+        if (words.isEmpty()) {
+            Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierUi.Muted, fontSize = 10.sp)
+            return
+        }
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.WorkspacePremium, null, tint = PremierUi.Gold, modifier = Modifier.size(11.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(
@@ -1144,19 +1213,82 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
                     fontWeight = FontWeight.Black,
                 )
             }
+            LazyRow(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
+                contentPadding = PaddingValues(horizontal = 8.dp),
+            ) {
+                items(words.reversed(), key = { it.id }) { entry ->
+                    Surface(shape = RoundedCornerShape(11.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Border)) {
+                        Text(premierUpper(entry.normalizedWord.ifBlank { entry.word }, language), Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
         }
-        LazyRow(
-            Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
-            contentPadding = PaddingValues(horizontal = 8.dp),
+    } else {
+        // Standard users see a locked Pro handle instead of the played-word history.
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            color = PremierUi.Surface,
+            border = BorderStroke(1.dp, PremierUi.Border),
         ) {
-            items(ordered, key = { it.id }) { entry ->
-                Surface(shape = RoundedCornerShape(11.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Border)) {
-                    Text(premierUpper(entry.normalizedWord.ifBlank { entry.word }, language), Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Black)
+            Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Lock, null, tint = PremierUi.Muted, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    pt(language, "Tüm geçmiş kelimeler", "All played words"),
+                    color = PremierUi.Muted,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f),
+                )
+                Surface(shape = RoundedCornerShape(99.dp), color = PremierUi.GoldSoft, border = BorderStroke(1.dp, PremierUi.Gold.copy(alpha = .5f))) {
+                    Text(
+                        pt(language, "PRO ÖZELLİĞİ", "PRO FEATURE"),
+                        Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        color = PremierUi.Gold,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Black,
+                    )
                 }
             }
         }
     }
+}
+
+@Composable
+private fun PremierHowToDialog(language: String, onDismiss: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            Button(
+                onClick = onDismiss,
+                colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean),
+                shape = RoundedCornerShape(12.dp),
+            ) { Text(pt(language, "ANLADIM", "GOT IT"), fontWeight = FontWeight.Black) }
+        },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = PremierUi.Ocean) {
+                    Box(Modifier.size(30.dp), contentAlignment = Alignment.Center) {
+                        Text("?", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+                Spacer(Modifier.width(9.dp))
+                Text(pt(language, "Nasıl Oynanır?", "How to play?"), color = PremierUi.Ink, fontWeight = FontWeight.Black)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(pt(language, "1) Rakibin kelimesinin SON HARFİ ile başlayan geçerli bir kelime yaz.", "1) Type a valid word starting with the LAST LETTER of the rival's word."), color = PremierUi.Ink, fontSize = 13.sp)
+                Text(pt(language, "2) Süren dolmadan GÖNDER — hızlı ol!", "2) SEND before your time runs out — be quick!"), color = PremierUi.Ink, fontSize = 13.sp)
+                Text(pt(language, "3) Aynı kelime iki kez kullanılamaz.", "3) A word cannot be used twice."), color = PremierUi.Ink, fontSize = 13.sp)
+                Text(pt(language, "4) Geçerli her kelime puan kazandırır; sıra değişir.", "4) Every valid word scores points; turns alternate."), color = PremierUi.Ink, fontSize = 13.sp)
+            }
+        },
+        containerColor = PremierUi.Surface,
+    )
 }
 
 @Composable
