@@ -28,7 +28,7 @@ class SonHarfMicroMotionContractTest {
         assertTrue(motion.contains("graphicsLayer"))
 
         // Premium home keeps restrained press deltas on its primary interactive surfaces.
-        assertTrue(home.contains("sonHarfPressScale(pressedScale = 0.985f)"))
+        assertTrue(home.contains("sonHarfPressScale(pressedScale = .985f)"))
 
         // Core product structure remains intact after Kelime Kuşatması becomes the primary game.
         assertTrue(home.contains("HomeGameModes("))
