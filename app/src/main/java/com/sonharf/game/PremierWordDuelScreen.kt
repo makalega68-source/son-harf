@@ -1262,10 +1262,10 @@ private fun PremierKeyboard(language: String, value: String, enabled: Boolean, k
         listOf("A","S","D","F","G","H","J","K","L"),
         listOf("Z","X","C","V","B","N","M"),
     ) else listOf(
-        // Turkish F-keyboard layout. The English version keeps QWERTY above.
-        listOf("F","G","Ğ","I","O","D","R","N","H","P","Q","W"),
-        listOf("U","İ","E","A","Ü","T","K","M","L","Y","Ş","X"),
-        listOf("J","Ö","V","C","Ç","Z","S","B"),
+        // Turkish Q-keyboard layout (the common Turkish layout). English uses QWERTY above.
+        listOf("Q","W","E","R","T","Y","U","I","O","P","Ğ","Ü"),
+        listOf("A","S","D","F","G","H","J","K","L","Ş","İ"),
+        listOf("Z","X","C","V","B","N","M","Ö","Ç"),
     )
     Surface(color = palette.background, shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp), border = BorderStroke(1.dp, palette.border), shadowElevation = 10.dp) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
