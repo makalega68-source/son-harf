@@ -40,6 +40,7 @@ jobs:
           python scripts/.tmp_fix_patch_v2.py
           python -m py_compile scripts/.tmp_apply_admin_help_package.py
           python scripts/.tmp_apply_admin_help_package.py
+          python scripts/.tmp_post_patch_contracts.py
 
       - name: Static security checks
         shell: bash
@@ -74,7 +75,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          rm -f scripts/.tmp_apply_admin_help_package.py scripts/.tmp_fix_patch_v2.py .github/workflows/tmp-admin-help-package.yml
+          rm -f scripts/.tmp_apply_admin_help_package.py scripts/.tmp_fix_patch_v2.py scripts/.tmp_post_patch_contracts.py .github/workflows/tmp-admin-help-package.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add -A
