@@ -109,6 +109,8 @@ internal fun WordSiegePanMatch(
     var showMatchIntro by remember(game.id) {
         mutableStateOf(game.status == "playing" && game.moveCount == 0)
     }
+    var observedResolutionMoveId by remember(game.id) { mutableStateOf(lastMove?.id) }
+    var activeResolutionMove by remember(game.id) { mutableStateOf<WordSiegeMoveDto?>(null) }
     val visualMyTurn = game.status == "playing" && displayedCurrentPlayerId == me
     val rackOrder = remember(rack, shuffleSeed) {
         if (shuffleSeed == 0) rack.indices.toList() else wordSiegeShuffledRackIndices(rack.length, shuffleSeed)
@@ -131,6 +133,14 @@ internal fun WordSiegePanMatch(
     LaunchedEffect(game.id, game.status, game.moveCount) {
         if (game.status == "playing" && game.moveCount == 0 && !showMatchIntro) {
             showMatchIntro = true
+        }
+    }
+
+    LaunchedEffect(lastMove?.id) {
+        val move = lastMove ?: return@LaunchedEffect
+        if (move.id != observedResolutionMoveId) {
+            observedResolutionMoveId = move.id
+            activeResolutionMove = move
         }
     }
 
@@ -336,6 +346,15 @@ internal fun WordSiegePanMatch(
         notice?.let { PanSiegeNotice(it) }
         lastMove?.let { PanSiegeLastMoveInfo(it) }
     }
+        activeResolutionMove?.let { move ->
+            WordSiegeMoveResolutionOverlay(
+                move = move,
+                isMine = move.playerId == me,
+                onComplete = {
+                    if (activeResolutionMove?.id == move.id) activeResolutionMove = null
+                },
+            )
+        }
     }
 }
 
@@ -353,6 +372,7 @@ private fun PanSiegeBoard(
     onChat: () -> Unit,
 ) {
     val density = LocalDensity.current
+    val presentedBoard = rememberWordSiegePresentedBoard(gameId, board)
     val tilePx = with(density) { PanSiegeCellSize.toPx() }
     val boardPx = tilePx * WordSiegeBoardSpec.Size
     var viewport by remember(gameId) { mutableStateOf(IntSize.Zero) }
@@ -514,7 +534,7 @@ private fun PanSiegeBoard(
                             val pendingRackIndex = placements[index]
                             val pending = pendingRackIndex != null
                             PanSiegeBoardCell(
-                                cell = board.getOrElse(index) { WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index)) },
+                                cell = presentedBoard.getOrElse(index) { WordSiegeCellDto(bonus = WordSiegeBoardSpec.bonusAt(index)) },
                                 pendingLetter = pendingRackIndex?.let(rack::getOrNull),
                                 pending = pending,
                                 myOwner = myOwner,
@@ -566,6 +586,8 @@ private fun PanSiegeBoard(
 
 @Composable
 private fun PanSiegeLastMoveInfo(move: WordSiegeMoveDto) {
+    val territoryPoints = wordSiegeTerritoryGainPoints(move)
+    val totalPoints = wordSiegeMoveGainTotal(move)
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
@@ -574,8 +596,8 @@ private fun PanSiegeLastMoveInfo(move: WordSiegeMoveDto) {
     ) {
         Text(
             sh(
-                "Kelime +${move.wordScore}  •  Bölge +${move.areaScore}  •  Toplam +${move.totalScore}",
-                "Word +${move.wordScore}  •  Territory +${move.areaScore}  •  Total +${move.totalScore}",
+                "Kelime +${move.wordScore}  •  Bölge +$territoryPoints  •  Toplam +$totalPoints",
+                "Word +${move.wordScore}  •  Territory +$territoryPoints  •  Total +$totalPoints",
             ),
             Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
             color = WordSiegeGameUi.Text,
