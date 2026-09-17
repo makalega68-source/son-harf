@@ -8,7 +8,7 @@ import org.junit.Test
 
 class CalmLayeredThemeContractTest {
     @Test
-    fun premiumBotanicalThemeDefinesIndependentSemanticLayers() {
+    fun dynamicGameThemeDefinesIndependentSemanticLayers() {
         val theme = source("SonHarfTheme.kt")
 
         listOf(
@@ -32,17 +32,15 @@ class CalmLayeredThemeContractTest {
             "val PremiumGold: Color get()",
         ).forEach { token -> assertTrue("Missing theme layer: $token", theme.contains(token)) }
 
-        // Master GDD v3 identity: sage + off-white + soft blue/turquoise + beige/lavender/slate/mint/warm accent.
-        assertTrue(theme.contains("Color(0xFF8A9A86)"))
-        assertTrue(theme.contains("Color(0xFFF9F8F6)"))
-        assertTrue(theme.contains("Color(0xFF7A9AEE)"))
-        assertTrue(theme.contains("Color(0xFF40E0D0)"))
-        assertTrue(theme.contains("Color(0xFFF2EFE9)"))
-        assertTrue(theme.contains("Color(0xFFB5A2FF)"))
-        assertTrue(theme.contains("Color(0xFF5C6F84)"))
-        assertTrue(theme.contains("Color(0xFFA3E4D7)"))
-        assertTrue(theme.contains("Color(0xFFE07A5F)"))
-        assertTrue(theme.contains("Color(0xFFD7B35C)"))
+        // Dynamic game identity: royal blue + turquoise + coral/orange + gold + navy, with controlled light neutrals.
+        assertTrue(theme.contains("Color(0xFF2F6BFF)"))
+        assertTrue(theme.contains("Color(0xFF20C9C3)"))
+        assertTrue(theme.contains("Color(0xFFFF6B6B)"))
+        assertTrue(theme.contains("Color(0xFFFF9F43)"))
+        assertTrue(theme.contains("Color(0xFFF4C95D)"))
+        assertTrue(theme.contains("Color(0xFF22324D)"))
+        assertTrue(theme.contains("Color(0xFFF8F7F2)"))
+        assertTrue(theme.contains("Color(0xFF8B5CF6)"))
     }
 
     @Test
