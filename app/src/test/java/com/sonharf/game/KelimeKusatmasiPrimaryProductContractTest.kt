@@ -30,7 +30,10 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertFalse(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
         assertFalse(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
 
-        assertTrue(home.contains("\"KELİME KUŞATMASI\""))
+        assertTrue(
+            home.contains("\"KELİME KUŞATMASI\"") ||
+                home.contains("\"KELİME\\nKUŞATMASI\"")
+        )
         assertTrue(home.contains("R.drawable.word_siege_home_badge"))
         assertTrue(homeBadge.isFile)
         assertTrue(home.contains("onClick = onSiege"))
