@@ -60,11 +60,16 @@ jobs:
           grep -q 'PremiumCanvaDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
           grep -q 'PremiumCanvaDestination.LETTER_PATH -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
           grep -q 'HARF YOLU' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
-          grep -q 'val IsDark: Boolean get() = false' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'internal object BlackThemePalette' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'BLACK_THEME_ID = "theme_black"' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
           grep -q 'Color(0xFF2563EB)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           grep -q 'Color(0xFF12B8A6)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           grep -q 'Color(0xFF7C3AED)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           grep -q 'Color(0xFFF97316)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q '@drawable/kelime_kusatmasi_app_icon' app/src/main/AndroidManifest.xml
+          test -s app/src/main/res/drawable-nodpi/kelime_kusatmasi_app_icon.webp
+          test -f supabase/migrations/20260918213000_black_theme_store_v1.sql
           ! grep -q 'MonsterLime' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           ! grep -q 'MonsterPink' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
