@@ -522,6 +522,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                             contentDescription = sh("Harf Yolu logosu", "Letter Path logo"),
                             modifier = Modifier.width(116.dp).height(54.dp),
                             contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                            colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(LetterLadderUi.AccentStrong),
                         )
                         Text(
                             sh("5 hamle • Her kutu yalnızca 1 kez değişir", "5 moves • Each position changes only once"),
