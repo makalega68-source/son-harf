@@ -159,7 +159,7 @@ internal fun PremiumHomeCommandDeck(
                     }
                     Spacer(Modifier.width(12.dp))
                     Image(
-                        painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
+                        painter = painterResource(R.drawable.word_siege_home_badge),
                         contentDescription = sh("Kelime Kuşatması", "Kelime Kuşatması"),
                         modifier = Modifier.size(width = 158.dp, height = 104.dp),
                         contentScale = ContentScale.Fit,
