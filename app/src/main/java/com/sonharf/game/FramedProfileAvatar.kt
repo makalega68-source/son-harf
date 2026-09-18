@@ -11,12 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/**
- * Profile avatar renderer kept source-compatible with older call sites.
- * Legacy frame artwork is retired; the only trim we still draw is a thin ring
- * that marks Pro members in gold. Everyone else gets a soft grey ring so the
- * avatar still looks framed without introducing paid cosmetics.
- */
+/** Thin premium avatar trim; cosmetic only. */
 private val ProGoldFrame = Color(0xFFD4AF37)
 private val StandardGreyFrame = Color(0xFFBDBDBD)
 
@@ -35,7 +30,7 @@ internal fun FramedProfilePhotoAvatar(
     @Suppress("UNUSED_VARIABLE")
     val legacyFrameId = frameId
     val ringColor = if (isPro) ProGoldFrame else StandardGreyFrame
-    val ringWidth = if (isPro) 3.dp else 2.dp
+    val ringWidth = if (isPro) 1.5.dp else 1.dp
     Box(
         modifier = Modifier.border(BorderStroke(ringWidth, ringColor), CircleShape),
         contentAlignment = Alignment.Center,
