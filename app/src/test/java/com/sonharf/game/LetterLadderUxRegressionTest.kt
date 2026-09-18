@@ -10,7 +10,6 @@ class LetterLadderUxRegressionTest {
     @Test
     fun harfYoluStaysFixedAlignedAndUsesReliableHinting() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-
         assertFalse(source.contains("verticalScroll("))
         assertFalse(source.contains("rememberScrollState"))
         assertFalse(source.contains("number: Int"))
@@ -25,7 +24,6 @@ class LetterLadderUxRegressionTest {
     @Test
     fun harfYoluHintIsSingleUseAndRevealsOnlyThePosition() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-
         assertFalse(source.contains("next.uppercase(locale)"))
         assertFalse(source.contains("val from = current[changed]"))
         assertFalse(source.contains("val to = next[changed]"))
@@ -40,7 +38,6 @@ class LetterLadderUxRegressionTest {
     @Test
     fun harfYoluShowsOnlyFourIntermediateCubeRows() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-
         assertTrue(source.contains("for (move in 1 until LetterLadderEngine.MOVE_COUNT)"))
         assertFalse(source.contains("for (move in 1..LetterLadderEngine.MOVE_COUNT)"))
         assertTrue(source.contains("path.size == LetterLadderEngine.MOVE_COUNT + 1"))
@@ -50,7 +47,6 @@ class LetterLadderUxRegressionTest {
     fun harfYoluShowsLiveKeyboardInputInTheNextPlayableRow() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
         val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
-
         assertTrue(source.contains("activeInput = input.uppercase(locale).takeIf { isActiveEntry }"))
         assertTrue(source.contains("activeInput?.padEnd(LetterLadderEngine.WORD_LENGTH, ' ')"))
         assertTrue(keyboard.contains("onValueChange((value + key).take(maxLength))"))
@@ -59,7 +55,6 @@ class LetterLadderUxRegressionTest {
     @Test
     fun harfYoluRemovesResetAndShowsNewGameOnlyAfterCompletion() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-
         assertFalse(source.contains("SIFIRLA"))
         assertFalse(source.contains("RESET"))
         assertFalse(source.contains("fun resetCurrent()"))
@@ -73,7 +68,6 @@ class LetterLadderUxRegressionTest {
     fun harfYoluUsesItsOwnDynamicApprovedFiveColorBackdrop() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
         val backdrop = projectFile("app/src/main/java/com/sonharf/game/HarfYoluBackdrop.kt").readText()
-
         assertTrue(source.contains("HarfYoluBackdrop(Modifier.fillMaxSize())"))
         assertFalse(source.contains("FirstRunLanguageBackdrop(Modifier.fillMaxSize())"))
         assertTrue(backdrop.contains("rememberInfiniteTransition"))
@@ -85,16 +79,16 @@ class LetterLadderUxRegressionTest {
     }
 
     @Test
-    fun harfYoluUsesIsolatedFiveColorKeyboardAndQuietDedicatedFeedback() {
+    fun harfYoluKeyboardUsesSharedPremiumThemeAndQuietDedicatedFeedback() {
         val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
         val sound = projectFile("app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt").readText()
-
         assertTrue(keyboard.contains("Harf Yolu'na özel kompakt klavye"))
         assertTrue(keyboard.contains("HarfYoluKeyboardUi"))
         assertFalse(keyboard.contains("SonHarfCosmetics.keyboardPalette"))
-        assertTrue(keyboard.contains("0xFF278DC3"))
-        assertTrue(keyboard.contains("0xFF22BFC4"))
-        assertTrue(keyboard.contains("0xFFF2ECFF"))
+        assertTrue(keyboard.contains("SonHarfTheme.PrimarySoft"))
+        assertTrue(keyboard.contains("SonHarfTheme.Primary"))
+        assertTrue(keyboard.contains("SonHarfTheme.Turquoise"))
+        assertTrue(keyboard.contains("SonHarfTheme.Purple.copy(alpha = .09f)"))
         assertTrue(keyboard.contains("keySound()"))
         assertTrue(keyboard.contains("actionSound()"))
         assertTrue(keyboard.contains("33.dp"))
