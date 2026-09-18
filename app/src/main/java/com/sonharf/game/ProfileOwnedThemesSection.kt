@@ -4,21 +4,19 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.CheckCircle
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.EquippedCosmeticsDto
@@ -37,12 +35,27 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 private const val ProfileThemeTimeoutMs = 10_000L
-private const val DarkArenaThemeId = "theme_dark_arena"
+private const val BlackThemeId = "theme_black"
+private val retiredThemeIds = setOf("theme_dark_arena", "theme_monster_blue", "theme_aurora")
 
-/**
- * Owned Style collection. Store rotation may stop new sales, but supported purchased visuals remain
- * available to their owner. Network failures never publish a partial result over the cached look.
- */
+private data class CollectionCategory(
+    val titleTr: String,
+    val titleEn: String,
+    val subtitleTr: String,
+    val subtitleEn: String,
+    val icon: ImageVector,
+    val accent: Color,
+    val kinds: Set<String>,
+)
+
+private val collectionCategories = listOf(
+    CollectionCategory("Temalar", "Themes", "Uygulamanın genel görünümü", "Overall application appearance", Icons.Rounded.Palette, Color(0xFF7C3AED), setOf("game_theme")),
+    CollectionCategory("Profil Çerçeveleri", "Profile Frames", "Avatar çevreni kişiselleştir", "Customize your avatar frame", Icons.Rounded.AccountCircle, Color(0xFF2563EB), setOf("profile_frame")),
+    CollectionCategory("Tuş Stilleri", "Keyboard Styles", "Kelime klavyesinin görünümü", "Appearance of the word keyboard", Icons.Rounded.Keyboard, Color(0xFF12B8A6), setOf("keyboard_theme")),
+    CollectionCategory("İsim & Prestij", "Name & Prestige", "İsim rengi ve görsel prestij öğeleri", "Name color and visual prestige items", Icons.Rounded.AutoAwesome, Color(0xFFF97316), setOf("name_style", "victory_effect", "emoji_pack")),
+)
+
+/** Simple, vertical, category-first collection manager. */
 @Composable
 internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
     val context = LocalContext.current
@@ -51,7 +64,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
     var equipped by remember { mutableStateOf<EquippedCosmeticsDto?>(null) }
     var collection by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
-    var busy by remember { mutableStateOf(false) }
+    var busyId by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     suspend fun reloadCollection() {
@@ -64,227 +77,313 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
                     val nextOwned = backend.getInventory()
                     val nextCollection = backend.getOwnedShopItems(nextOwned)
                     val nextEquipped = equippedRequest.await()
-
-                    // Publish one complete snapshot only. A failed request must not erase cached UI.
                     owned = nextOwned
-                    collection = nextCollection
+                    collection = nextCollection.filterNot { it.id in retiredThemeIds }
                     equipped = nextEquipped
                     SonHarfCosmetics.applyAndPersist(context, nextEquipped)
                 }
             }
         } catch (error: Exception) {
             if (error is CancellationException && error !is TimeoutCancellationException) throw error
-            notice = sh(
-                "Koleksiyon yenilenemedi. Mevcut görünümün korundu; tekrar deneyebilirsin.",
-                "Could not refresh your collection. Your current style is unchanged; you can retry.",
-            )
+            notice = sh("Koleksiyon yenilenemedi. Mevcut görünümün korundu.", "Could not refresh collection. Your current appearance is unchanged.")
         } finally {
             loading = false
         }
     }
 
-    fun equipStyle(itemId: String?) {
-        if (busy || loading) return
-        busy = true
+    fun equip(itemId: String?) {
+        if (loading || busyId != null) return
+        busyId = itemId ?: "default"
         notice = null
         scope.launch {
             try {
-                val nextEquipped = withTimeout(ProfileThemeTimeoutMs) {
-                    if (itemId == null) backend.equipDefaultGameTheme()
-                    else backend.equipShopItem(itemId)
+                val next = withTimeout(ProfileThemeTimeoutMs) {
+                    if (itemId == null) backend.equipDefaultGameTheme() else backend.equipShopItem(itemId)
                     backend.getEquippedCosmetics()
                 }
-                equipped = nextEquipped
-                SonHarfCosmetics.applyAndPersist(context, nextEquipped)
-                notice = sh("Görünüm uygulandı.", "Style applied.")
+                equipped = next
+                SonHarfCosmetics.applyAndPersist(context, next)
+                notice = sh("Görünüm uygulandı.", "Appearance applied.")
             } catch (error: Exception) {
                 if (error is CancellationException && error !is TimeoutCancellationException) throw error
-                notice = sh(
-                    "İşlem doğrulanamadı. Görünümünü yenileyip kontrol et.",
-                    "Could not confirm the change. Refresh to check your equipped style.",
-                )
+                notice = sh("Değişiklik doğrulanamadı. Tekrar deneyebilirsin.", "Could not verify the change. Please try again.")
             } finally {
-                busy = false
+                busyId = null
             }
         }
     }
 
     LaunchedEffect(backend) { reloadCollection() }
 
-    // SonHarfCosmetics is persisted locally, so a transient network failure does not visually reset it.
-    val darkActive = SonHarfCosmetics.gameThemeId == DarkArenaThemeId
-    val showDarkArena = darkActive || DarkArenaThemeId in owned
+    val blackOwned = BlackThemeId in owned
+    val blackActive = SonHarfCosmetics.blackThemeActive
+    val visibleCollection = collection.filter(::collectionItemSupported)
 
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.Palette, null, tint = MainUi.Blue, modifier = Modifier.size(19.dp))
-            Spacer(Modifier.width(7.dp))
-            Text(sh("KOLEKSİYONUM", "MY COLLECTION"), color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.weight(1f))
-            if (loading || busy) CircularProgressIndicator(Modifier.size(17.dp), strokeWidth = 2.dp, color = MainUi.Blue)
+            Icon(Icons.Rounded.GridView, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(sh("KOLEKSİYON", "COLLECTION"), color = SonHarfTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                Text(sh("Kategori seçmeden, aşağı doğru kolayca yönet.", "Manage everything in a simple vertical flow."), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
+            }
+            if (loading || busyId != null) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = SonHarfTheme.Primary)
         }
 
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ProfileThemeCard(
-                title = sh("Ana Yeşil Beyaz", "Main Green & White"),
-                subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
-                active = !darkActive,
-                enabled = !busy && !loading,
-                dark = false,
-                modifier = Modifier.weight(1f),
-                onClick = { equipStyle(null) },
-            )
-            if (showDarkArena) {
-                ProfileThemeCard(
-                    title = sh("Gece Arenası", "Night Arena"),
-                    subtitle = sh("Koleksiyonunda", "In your collection"),
-                    active = darkActive,
-                    enabled = !busy && !loading,
-                    dark = true,
+        ActiveStyleSummary(
+            theme = if (blackActive) "Black Theme" else sh("Premium", "Premium"),
+            frame = equipped?.profileFrameId?.let(::friendlyCollectionName) ?: sh("Standart", "Standard"),
+            keyboard = equipped?.keyboardThemeId?.let(::friendlyCollectionName) ?: sh("Standart", "Standard"),
+        )
+
+        CollectionCategoryBlock(
+            title = sh("Temalar", "Themes"),
+            subtitle = sh("Genel uygulama görünümü", "Overall application appearance"),
+            icon = Icons.Rounded.Palette,
+            accent = SonHarfTheme.Purple,
+        ) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                DefaultPremiumThemeTile(
+                    active = !blackActive,
+                    enabled = !loading && busyId == null,
                     modifier = Modifier.weight(1f),
-                    onClick = { equipStyle(DarkArenaThemeId) },
+                    onClick = { equip(null) },
+                )
+                if (blackOwned) {
+                    val blackItem = visibleCollection.firstOrNull { it.id == BlackThemeId }
+                    if (blackItem != null) {
+                        CollectionProductTile(
+                            item = blackItem,
+                            active = blackActive,
+                            enabled = !loading && busyId == null,
+                            modifier = Modifier.weight(1f),
+                            onClick = { equip(BlackThemeId) },
+                        )
+                    } else {
+                        BlackOwnedFallbackTile(
+                            active = blackActive,
+                            enabled = !loading && busyId == null,
+                            modifier = Modifier.weight(1f),
+                            onClick = { equip(BlackThemeId) },
+                        )
+                    }
+                } else {
+                    LockedBlackThemeTile(Modifier.weight(1f))
+                }
+            }
+        }
+
+        collectionCategories.drop(1).forEach { category ->
+            val items = visibleCollection.filter { it.kind in category.kinds }
+            if (items.isNotEmpty()) {
+                CollectionCategoryBlock(
+                    title = sh(category.titleTr, category.titleEn),
+                    subtitle = sh(category.subtitleTr, category.subtitleEn),
+                    icon = category.icon,
+                    accent = category.accent,
+                ) {
+                    items.chunked(2).forEach { rowItems ->
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            rowItems.forEach { item ->
+                                CollectionProductTile(
+                                    item = item,
+                                    active = equipped.isEquipped(item),
+                                    enabled = !loading && busyId == null,
+                                    modifier = Modifier.weight(1f),
+                                    onClick = { equip(item.id) },
+                                )
+                            }
+                            if (rowItems.size == 1) Spacer(Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!loading && visibleCollection.none { it.kind != "game_theme" }) {
+            Surface(shape = MainUiShape.Control, color = SonHarfTheme.SurfaceSecondary) {
+                Text(
+                    sh("Diğer ürünlerin satın alındığında kategoriler altında burada görünecek.", "Other purchased products will appear here under their categories."),
+                    Modifier.fillMaxWidth().padding(14.dp),
+                    color = SonHarfTheme.TextSecondary,
+                    fontSize = 11.sp,
                 )
             }
         }
 
-        notice?.let {
-            Text(it, color = MainUi.Muted, fontSize = 13.sp)
-            TextButton(
-                onClick = { scope.launch { reloadCollection() } },
-                enabled = !busy && !loading,
-            ) {
-                Text(sh("YENİLE", "REFRESH"))
-            }
-        }
-
-        // Historical ownership stays safely on the server, but products with no live game
-        // integration must not occupy the player's visible profile collection.
-        val styles = collection.filter { it.id != DarkArenaThemeId && it.isSupportedOwnedStyle() }
-        Text(
-            sh("STYLE KOLEKSİYONUM", "MY STYLE COLLECTION"),
-            color = MainUi.Text,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Black,
-        )
-        Text(
-            sh(
-                "Satın aldıkların burada kalır; vitrin değişse de sahipliğin korunur.",
-                "Your purchases stay here; ownership is preserved when the storefront changes.",
-            ),
-            color = MainUi.Muted,
-            fontSize = 13.sp,
-        )
-        if (!loading && notice == null && styles.isEmpty()) {
-            Text(
-                sh("Yeni Style ürünlerini mağazada keşfet.", "Discover new Style items in the store."),
-                color = MainUi.Muted,
-                fontSize = 13.sp,
-            )
-        }
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(styles, key = { it.id }) { item ->
-                OwnedStyleCard(
-                    item = item,
-                    active = equipped.isEquipped(item),
-                    enabled = !loading && !busy,
-                    onEquip = { equipStyle(item.id) },
-                )
+        notice?.let { message ->
+            Surface(shape = MainUiShape.Control, color = SonHarfTheme.PrimarySoft) {
+                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(message, Modifier.weight(1f), color = SonHarfTheme.TextPrimary, fontSize = 11.sp)
+                    TextButton(onClick = { scope.launch { reloadCollection() } }, enabled = busyId == null) {
+                        Text(sh("YENİLE", "REFRESH"), color = SonHarfTheme.Primary, fontWeight = FontWeight.Black)
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-private fun ProfileThemeCard(
+private fun ActiveStyleSummary(theme: String, frame: String, keyboard: String) {
+    Surface(
+        shape = MainUiShape.Card,
+        color = SonHarfTheme.SurfaceSecondary,
+        border = BorderStroke(1.dp, SonHarfTheme.Border),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(sh("AKTİF GÖRÜNÜM", "ACTIVE LOOK"), color = SonHarfTheme.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                SummaryChip(Icons.Rounded.Palette, theme, SonHarfTheme.Purple, Modifier.weight(1f))
+                SummaryChip(Icons.Rounded.AccountCircle, frame, SonHarfTheme.Primary, Modifier.weight(1f))
+                SummaryChip(Icons.Rounded.Keyboard, keyboard, SonHarfTheme.Turquoise, Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun SummaryChip(icon: ImageVector, text: String, accent: Color, modifier: Modifier) {
+    Surface(modifier, shape = RoundedCornerShape(12.dp), color = SonHarfTheme.Surface) {
+        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.height(4.dp))
+            Text(text, color = SonHarfTheme.TextPrimary, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+@Composable
+private fun CollectionCategoryBlock(
     title: String,
     subtitle: String,
-    active: Boolean,
-    enabled: Boolean,
-    dark: Boolean,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit,
+    icon: ImageVector,
+    accent: Color,
+    content: @Composable ColumnScope.() -> Unit,
 ) {
-    val border = if (active) MainUi.Green else MainUi.Border
     Surface(
-        modifier = modifier.clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = MainUi.Surface,
-        border = BorderStroke(if (active) 2.dp else 1.dp, border),
+        shape = MainUiShape.Card,
+        color = SonHarfTheme.Surface,
+        border = BorderStroke(1.dp, SonHarfTheme.Border),
+        shadowElevation = 2.dp,
     ) {
-        Column(Modifier.padding(9.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            Box(
-                Modifier.fillMaxWidth().height(68.dp).background(
-                    brush = if (dark) {
-                        Brush.linearGradient(listOf(Color(0xFF070A12), Color(0xFF1A2331), Color(0xFF5A431A)))
-                    } else {
-                        Brush.linearGradient(listOf(Color(0xFFFFFEF8), Color(0xFFE4F0E8), Color(0xFF2F6B52)))
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                ),
-            ) {
-                if (active) {
-                    Icon(
-                        Icons.Rounded.CheckCircle,
-                        null,
-                        tint = if (dark) Color(0xFFF0B84D) else Color(0xFF2F6B52),
-                        modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(20.dp),
-                    )
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = .10f)) {
+                    Icon(icon, null, tint = accent, modifier = Modifier.padding(9.dp).size(20.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    Text(title, color = SonHarfTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    Text(subtitle, color = SonHarfTheme.TextSecondary, fontSize = 9.sp)
                 }
             }
-            Text(title, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            Text(subtitle, color = MainUi.Muted, fontSize = 12.sp)
+            content()
         }
     }
 }
 
 @Composable
-private fun OwnedStyleCard(
-    item: ShopItemDto,
-    active: Boolean,
-    enabled: Boolean,
-    onEquip: () -> Unit,
-) {
-    val supported = item.isSupportedOwnedStyle()
-    Card(
-        modifier = Modifier.width(248.dp),
-        colors = CardDefaults.cardColors(containerColor = MainUi.Surface),
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(if (active) 2.dp else 1.dp, if (active) MainUi.Green else MainUi.Border),
-    ) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.fillMaxWidth().height(76.dp), contentAlignment = Alignment.Center) {
-                if (item.kind == "profile_frame" && supported) {
-                    Icon(Icons.Rounded.Person, null, Modifier.size(36.dp), tint = MainUi.Blue)
-                    PurchasedProfileFrameOverlay(frameId = item.id, modifier = Modifier.size(76.dp))
-                } else {
-                    Icon(Icons.Rounded.Palette, null, Modifier.size(38.dp), tint = MainUi.Blue)
-                }
-            }
-            Text(sh(item.nameTr, item.nameEn), color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            Text(sh(item.descriptionTr, item.descriptionEn), color = MainUi.Muted, fontSize = 13.sp)
-            Text(
-                if (item.active) sh("Koleksiyonunda", "In your collection")
-                else sh("Arşiv ürünü • Koleksiyonunda", "Retired item • In your collection"),
-                color = MainUi.Blue,
-                fontSize = 12.sp,
-            )
-            if (!supported) {
-                Text(
-                    sh(
-                        "Bu sürümde kullanılamıyor. Sahipliğin korunuyor.",
-                        "Unavailable in this version. You still own this item.",
-                    ),
-                    color = MainUi.Muted,
-                    fontSize = 13.sp,
-                )
-            }
-            Button(
-                onClick = onEquip,
-                enabled = enabled && supported && !active,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            ) {
-                Text(if (active) sh("AKTİF", "EQUIPPED") else sh("KULLAN", "EQUIP"))
-            }
-        }
+private fun DefaultPremiumThemeTile(active: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    CollectionTileShell(active, enabled, modifier, onClick) {
+        Box(
+            Modifier.fillMaxWidth().aspectRatio(1.35f).background(
+                Brush.linearGradient(listOf(Color.White, Color(0xFFEAF1FF), Color(0xFF12B8A6), Color(0xFF7C3AED))),
+                RoundedCornerShape(13.dp),
+            ),
+        ) { if (active) ActiveCheck(Color(0xFF2563EB)) }
+        Text("Premium", color = SonHarfTheme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
+        Text(sh("Varsayılan", "Default"), color = SonHarfTheme.TextSecondary, fontSize = 9.sp)
     }
+}
+
+@Composable
+private fun BlackOwnedFallbackTile(active: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    CollectionTileShell(active, enabled, modifier, onClick) {
+        BlackThemeSwatch(active)
+        Text("Black Theme", color = SonHarfTheme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
+        Text(sh("Sahipsin", "Owned"), color = SonHarfTheme.Turquoise, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun LockedBlackThemeTile(modifier: Modifier) {
+    CollectionTileShell(active = false, enabled = false, modifier = modifier, onClick = {}) {
+        BlackThemeSwatch(false)
+        Text("Black Theme", color = SonHarfTheme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
+        Text(sh("Mağazada satılık", "Available in store"), color = SonHarfTheme.ActionOrange, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun BlackThemeSwatch(active: Boolean) {
+    Box(
+        Modifier.fillMaxWidth().aspectRatio(1.35f).background(
+            Brush.linearGradient(listOf(Color(0xFF090B10), Color(0xFF19202D), Color(0xFF3B82F6), Color(0xFF9B6CFF))),
+            RoundedCornerShape(13.dp),
+        ),
+    ) { if (active) ActiveCheck(Color(0xFF1FD1C2)) }
+}
+
+@Composable
+private fun CollectionProductTile(item: ShopItemDto, active: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    CollectionTileShell(active, enabled && !active, modifier, onClick) {
+        StoreProductPreview(item = item, modifier = Modifier.fillMaxWidth().aspectRatio(1.35f))
+        Text(sh(item.nameTr, item.nameEn), color = SonHarfTheme.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(
+            if (active) sh("AKTİF", "EQUIPPED") else sh("KULLAN", "EQUIP"),
+            color = if (active) SonHarfTheme.Turquoise else SonHarfTheme.Primary,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Black,
+        )
+    }
+}
+
+@Composable
+private fun CollectionTileShell(active: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    Surface(
+        modifier = modifier.clickable(enabled = enabled, onClick = onClick),
+        shape = RoundedCornerShape(17.dp),
+        color = SonHarfTheme.Surface,
+        border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) SonHarfTheme.Turquoise else SonHarfTheme.Border),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(9.dp), verticalArrangement = Arrangement.spacedBy(7.dp), content = content)
+    }
+}
+
+@Composable
+private fun BoxScope.ActiveCheck(accent: Color) {
+    Surface(modifier = Modifier.align(Alignment.TopEnd).padding(6.dp), shape = RoundedCornerShape(99.dp), color = accent) {
+        Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.padding(4.dp).size(13.dp))
+    }
+}
+
+private fun collectionItemSupported(item: ShopItemDto): Boolean = when (item.kind) {
+    "game_theme" -> item.id == BlackThemeId
+    "profile_frame" -> item.id in PurchasedFrameCatalog.ids
+    "keyboard_theme" -> item.id in setOf("keyboard_crystal", "keyboard_obsidian")
+    "name_style" -> item.id in setOf("name_cyan", "name_sapphire", "name_amethyst", "name_aurelia")
+    "victory_effect" -> item.id == "victory_crown"
+    "emoji_pack" -> true
+    else -> false
+}
+
+private fun EquippedCosmeticsDto?.isEquipped(item: ShopItemDto): Boolean = when (item.kind) {
+    "game_theme" -> this?.gameThemeId == item.id
+    "profile_frame" -> this?.profileFrameId == item.id
+    "keyboard_theme" -> this?.keyboardThemeId == item.id
+    "name_style" -> this?.nameStyleId == item.id
+    "victory_effect" -> this?.victoryEffectId == item.id
+    "emoji_pack" -> this?.emojiPackId == item.id
+    else -> false
+}
+
+private fun friendlyCollectionName(id: String): String = when (id) {
+    "keyboard_crystal" -> "Kristal"
+    "keyboard_obsidian" -> "Obsidyen"
+    "frame_round_ocean" -> "Okyanus"
+    "frame_round_botanic" -> "Botanik"
+    "frame_round_lilac" -> "Lila"
+    "frame_round_rose" -> "Gül"
+    else -> id.removePrefix("frame_").removePrefix("keyboard_").replace('_', ' ').take(16)
 }
