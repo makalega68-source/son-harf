@@ -96,28 +96,32 @@ Deno.serve(async (req: Request) => {
     acknowledgementState = playBody.acknowledgementState || null;
   }
 
-  const grantRpc = premiumProducts.has(productId)
-    ? "apply_verified_premium_purchase_v1"
-    : "apply_verified_play_purchase_v2";
-  const grantArgs = premiumProducts.has(productId)
-    ? {
-        p_user_id: userData.user.id,
-        p_product_id: productId,
-        p_purchase_token: purchaseToken,
-        p_order_id: orderId,
-        p_play_state: playState,
-        p_acknowledgement_state: acknowledgementState,
-      }
-    : {
-        p_user_id: userData.user.id,
-        p_product_id: productId,
-        p_purchase_token: purchaseToken,
-        p_order_id: orderId,
-        p_expires_at: expiresAt,
-        p_play_state: playState,
-        p_acknowledgement_state: acknowledgementState,
-      };
-  const { data: grantData, error: grantError } = await admin.rpc(grantRpc, grantArgs);
+  let grantData: unknown = null;
+  let grantError: { message?: string } | null = null;
+  if (premiumProducts.has(productId)) {
+    const result = await admin.rpc("apply_verified_premium_purchase_v1", {
+      p_user_id: userData.user.id,
+      p_product_id: productId,
+      p_purchase_token: purchaseToken,
+      p_order_id: orderId,
+      p_play_state: playState,
+      p_acknowledgement_state: acknowledgementState,
+    });
+    grantData = result.data;
+    grantError = result.error;
+  } else {
+    const result = await admin.rpc("apply_verified_play_purchase_v2", {
+      p_user_id: userData.user.id,
+      p_product_id: productId,
+      p_purchase_token: purchaseToken,
+      p_order_id: orderId,
+      p_expires_at: expiresAt,
+      p_play_state: playState,
+      p_acknowledgement_state: acknowledgementState,
+    });
+    grantData = result.data;
+    grantError = result.error;
+  }
   if (grantError) return response(500, { error: "entitlement_grant_failed" });
 
   let acknowledged = acknowledgementState?.includes("ACKNOWLEDGED") === true;
