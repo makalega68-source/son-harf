@@ -15,8 +15,8 @@ class AuthStartupFlowRegressionTest {
         assertTrue(stable.contains("CompactAuthGate"))
         assertTrue(auth.contains("var register by remember { mutableStateOf(false) }"))
         assertTrue(auth.contains("var showForm by remember { mutableStateOf(true) }"))
-        assertTrue(auth.contains("sh(\"GİRİŞ YAP\", \"SIGN IN\")"))
-        assertTrue(auth.contains("sh(\"ÜYE OL\", \"REGISTER\")"))
+        assertTrue(auth.contains("Text(\"GİRİŞ YAP\""))
+        assertTrue(auth.contains("Text(\"ÜYE OL\""))
         assertFalse(auth.contains("var showForm by remember { mutableStateOf(false) }"))
     }
 }
