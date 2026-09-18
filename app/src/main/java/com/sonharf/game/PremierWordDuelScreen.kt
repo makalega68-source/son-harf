@@ -50,6 +50,7 @@ import kotlinx.coroutines.launch
 private enum class PremierStage { Loading, Lobby, Searching, Vs, Playing, Finished }
 private data class PremierMoveFeedback(val accepted: Boolean, val message: String)
 private const val PREMIER_TURN_SECONDS = 15
+private const val PREMIER_WORDS_PER_PLAYER_PER_ROUND = 10
 
 /** Fixed high-legibility gameplay palette from the same calm Son Harf color family. */
 private object PremierUi {
@@ -74,13 +75,25 @@ private fun pt(language: String, tr: String, en: String): String = if (language 
 private fun premierLocale(language: String): Locale = if (language == "en") Locale.ENGLISH else Locale.forLanguageTag("tr-TR")
 private fun premierUpper(value: String, language: String): String = value.uppercase(premierLocale(language))
 
-internal fun premierRemainingTurnSecondsFromMillis(remainingMillis: Long): Int {
-    if (remainingMillis <= 0L) return 0
-    return ((remainingMillis + 999L) / 1000L).coerceIn(1L, PREMIER_TURN_SECONDS.toLong()).toInt()
+internal fun premierTurnSecondsForRound(roundNo: Int): Int = when (roundNo.coerceIn(1, 3)) {
+    1 -> 15
+    2 -> 13
+    else -> 11
 }
 
-internal fun premierRemainingTurnSeconds(deadline: Instant, now: Instant = Instant.now()): Int =
-    premierRemainingTurnSecondsFromMillis(Duration.between(now, deadline).toMillis())
+internal fun premierRemainingTurnSecondsFromMillis(
+    remainingMillis: Long,
+    maxSeconds: Int = PREMIER_TURN_SECONDS,
+): Int {
+    if (remainingMillis <= 0L) return 0
+    return ((remainingMillis + 999L) / 1000L).coerceIn(1L, maxSeconds.coerceAtLeast(1).toLong()).toInt()
+}
+
+internal fun premierRemainingTurnSeconds(
+    deadline: Instant,
+    now: Instant = Instant.now(),
+    maxSeconds: Int = PREMIER_TURN_SECONDS,
+): Int = premierRemainingTurnSecondsFromMillis(Duration.between(now, deadline).toMillis(), maxSeconds)
 
 @Composable
 fun PremierWordDuelScreen() {
@@ -215,9 +228,13 @@ fun PremierWordDuelScreen() {
     }
 
     LaunchedEffect(stage, room?.id) {
-        if (stage == PremierStage.Vs && room != null) {
+        val active = room
+        if (stage == PremierStage.Vs && active != null) {
             delay(3000)
-            if (room?.isPremierFinished() == true) stage = PremierStage.Finished else stage = PremierStage.Playing
+            val activated = runCatching { backend.activatePremierOpeningTurn(active.id) }.getOrNull()
+            if (activated != null) room = activated
+            val visibleRoom = activated ?: room
+            if (visibleRoom?.isPremierFinished() == true) stage = PremierStage.Finished else stage = PremierStage.Playing
         }
     }
 
@@ -252,16 +269,17 @@ fun PremierWordDuelScreen() {
         notice = pt(language, "Rakip hamlesi yeniden eşitleniyor…", "Resyncing rival move…")
     }
 
-    LaunchedEffect(room?.id, room?.turnDeadline, room?.currentPlayerId, room?.status, room?.botTurn) {
+    LaunchedEffect(room?.id, room?.turnDeadline, room?.currentPlayerId, room?.status, room?.botTurn, room?.roundNo) {
         val active = room ?: return@LaunchedEffect
+        val roundSeconds = premierTurnSecondsForRound(active.roundNo)
         if (active.status !in setOf("playing", "final", "sudden_death") || active.botTurn) {
-            turnSeconds = PREMIER_TURN_SECONDS
+            turnSeconds = roundSeconds
             return@LaunchedEffect
         }
 
         val deadline = active.turnDeadline?.let { runCatching { Instant.parse(it) }.getOrNull() }
         if (deadline == null) {
-            turnSeconds = PREMIER_TURN_SECONDS
+            turnSeconds = roundSeconds
             runCatching { backend.getRoom(active.id) }.getOrNull()?.let { synced ->
                 if (synced != active) room = synced
             }
@@ -269,8 +287,8 @@ fun PremierWordDuelScreen() {
         }
 
         // Anchor the visible countdown to the database clock rather than the phone wall clock.
-        // Phone clock drift must not shorten the authoritative 15-second turn.
-        turnSeconds = PREMIER_TURN_SECONDS
+        // Each round starts at its authoritative 15/13/11-second cap and never skips visible ticks.
+        turnSeconds = roundSeconds
         val requestStartedAt = SystemClock.elapsedRealtime()
         val serverClock = runCatching { fetchPremierTurnClock(active.id) }.getOrNull()
         val requestFinishedAt = SystemClock.elapsedRealtime()
@@ -285,7 +303,7 @@ fun PremierWordDuelScreen() {
 
         while (true) {
             val elapsedMs = SystemClock.elapsedRealtime() - countdownAnchor
-            val remaining = premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs)
+            val remaining = premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs, roundSeconds)
             if (remaining > 0) {
                 turnSeconds = remaining
                 delay(250)
@@ -626,7 +644,7 @@ private fun PremierLobby(
                     fontWeight = FontWeight.Black,
                 )
                 Text(
-                    pt(language, "Sunucu doğrulamalı ana sözlük • 3 round • canlı skor • rövanş", "Server-verified master dictionary • 3 rounds • live score • rematch"),
+                    pt(language, "Sunucu doğrulamalı ana sözlük • 3 round • kişi başı 10 kelime", "Server-verified master dictionary • 3 rounds • 10 words each"),
                     color = Color.White.copy(alpha = .78f),
                     fontSize = 12.sp,
                 )
@@ -635,7 +653,7 @@ private fun PremierLobby(
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PremierFeatureTile(Icons.Rounded.Verified, pt(language, "ANA SÖZLÜK", "MASTER DICTIONARY"), pt(language, "TR + EN", "TR + EN"), Modifier.weight(1f))
-            PremierFeatureTile(Icons.Rounded.Bolt, pt(language, "HIZLI", "FAST"), pt(language, "15 sn tur", "15 sec turn"), Modifier.weight(1f))
+            PremierFeatureTile(Icons.Rounded.Bolt, pt(language, "HIZLI", "FAST"), pt(language, "15→13→11 sn", "15→13→11 sec"), Modifier.weight(1f))
             PremierFeatureTile(Icons.Rounded.Groups, pt(language, "CANLI", "LIVE"), "1v1", Modifier.weight(1f))
         }
 
@@ -818,6 +836,8 @@ private fun PremierArena(
     val rivalRounds = if (amHost) room.guestRounds else room.hostRounds
     val myStreak = if (amHost) room.hostStreak else room.guestStreak
     val rivalStreak = if (amHost) room.guestStreak else room.hostStreak
+    val myRoundWords = if (amHost) room.hostRoundWords else room.guestRoundWords
+    val rivalRoundWords = if (amHost) room.guestRoundWords else room.hostRoundWords
     val myTurn = room.currentPlayerId == meId && !room.botTurn && room.status in setOf("playing", "final", "sudden_death")
     val rivalName = if (room.isBot) room.botName ?: pt(language, "KelimeBot", "WordBot") else opponent?.displayName ?: pt(language, "Rakip", "Rival")
     val required = premierRequiredToken(room, words)
@@ -833,7 +853,7 @@ private fun PremierArena(
         // The host Scaffold already applies the status-bar inset, so no extra top padding here
         // (a second statusBarsPadding was doubling the empty space above the header).
         Column(Modifier.fillMaxSize()) {
-            PremierArenaHeader(language, room, me, opponent, rivalName, myScore, rivalScore, myRounds, rivalRounds, myStreak, rivalStreak, turnSeconds, unreadChat, onForfeit, onQuickChat)
+            PremierArenaHeader(language, room, me, opponent, rivalName, myScore, rivalScore, myRounds, rivalRounds, myStreak, rivalStreak, myRoundWords, rivalRoundWords, turnSeconds, unreadChat, onForfeit, onQuickChat)
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(primaryGap))
                 PremierTurnBadge(language, myTurn, room.status)
@@ -927,6 +947,8 @@ private fun PremierArenaHeader(
     rivalRounds: Int,
     myStreak: Int,
     rivalStreak: Int,
+    myRoundWords: Int,
+    rivalRoundWords: Int,
     seconds: Int,
     unreadChat: Boolean,
     onForfeit: () -> Unit,
@@ -977,6 +999,14 @@ private fun PremierArenaHeader(
                             Text("SEC", color = Color.White.copy(alpha = .75f), fontSize = 6.sp, fontWeight = FontWeight.Black)
                         }
                     }
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        "${myRoundWords.coerceIn(0, PREMIER_WORDS_PER_PLAYER_PER_ROUND)}/10 · R${room.roundNo.coerceIn(1, 3)}/3 · ${rivalRoundWords.coerceIn(0, PREMIER_WORDS_PER_PLAYER_PER_ROUND)}/10",
+                        color = PremierUi.Muted,
+                        fontSize = 7.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                    )
                 }
                 PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, PremierUi.OceanDeep, room.isBot, Modifier.weight(1f))
             }
@@ -1285,13 +1315,8 @@ private fun PremierInputBar(language: String, input: String, required: String, m
             Icon(Icons.Rounded.AutoAwesome, null, tint = if (myTurn) PremierUi.Ocean else PremierUi.Muted, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(9.dp))
             Text(
-                when {
-                    busy -> pt(language, "Kontrol ediliyor…", "Checking…")
-                    input.isNotBlank() -> input
-                    required == "★" -> pt(language, "Kelimeyi yaz…", "Type a word…")
-                    else -> pt(language, "harfi ile başla…", "letter to begin…")
-                },
-                color = if (input.isBlank()) PremierUi.Muted else PremierUi.Ink,
+                input,
+                color = if (input.isBlank()) Color.Transparent else PremierUi.Ink,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.weight(1f),
