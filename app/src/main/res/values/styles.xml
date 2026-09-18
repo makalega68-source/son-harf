@@ -2,9 +2,9 @@
 <resources>
     <style name="Theme.SonHarf" parent="android:style/Theme.Material.Light.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:windowBackground">#F4F7F2</item>
-        <item name="android:statusBarColor">#F4F7F2</item>
-        <item name="android:navigationBarColor">#EEF3F0</item>
+        <item name="android:windowBackground">#F8FBFF</item>
+        <item name="android:statusBarColor">#F8FBFF</item>
+        <item name="android:navigationBarColor">#EDF6FF</item>
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:windowLightNavigationBar">true</item>
     </style>
