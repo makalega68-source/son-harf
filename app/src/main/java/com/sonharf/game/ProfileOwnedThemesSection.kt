@@ -35,8 +35,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 private const val ProfileThemeTimeoutMs = 10_000L
-private const val BlackThemeId = "theme_black"
-private val retiredThemeIds = setOf("theme_dark_arena", "theme_monster_blue", "theme_aurora")
+private const val BlackThemeId = "theme_dark_arena"
+private val retiredThemeIds = setOf("theme_black", "theme_monster_blue", "theme_aurora", "theme_neon", "theme_midnight")
 
 private data class CollectionCategory(
     val titleTr: String,
@@ -124,7 +124,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(sh("KOLEKSİYON", "COLLECTION"), color = SonHarfTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
-                Text(sh("Kategori seçmeden, aşağı doğru kolayca yönet.", "Manage everything in a simple vertical flow."), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
+                Text(sh("Yalnızca sahip olduğun ürünleri burada yönet.", "Manage only the items you own here."), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
             }
             if (loading || busyId != null) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = SonHarfTheme.Primary)
         }
@@ -137,18 +137,18 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
 
         CollectionCategoryBlock(
             title = sh("Temalar", "Themes"),
-            subtitle = sh("Genel uygulama görünümü", "Overall application appearance"),
+            subtitle = sh("Satın aldığın uygulama temaları", "Application themes you own"),
             icon = Icons.Rounded.Palette,
             accent = SonHarfTheme.Purple,
         ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                DefaultPremiumThemeTile(
-                    active = !blackActive,
-                    enabled = !loading && busyId == null,
-                    modifier = Modifier.weight(1f),
-                    onClick = { equip(null) },
-                )
-                if (blackOwned) {
+            if (blackOwned) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    DefaultPremiumThemeTile(
+                        active = !blackActive,
+                        enabled = !loading && busyId == null,
+                        modifier = Modifier.weight(1f),
+                        onClick = { equip(null) },
+                    )
                     val blackItem = visibleCollection.firstOrNull { it.id == BlackThemeId }
                     if (blackItem != null) {
                         CollectionProductTile(
@@ -166,9 +166,14 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
                             onClick = { equip(BlackThemeId) },
                         )
                     }
-                } else {
-                    LockedBlackThemeTile(Modifier.weight(1f))
                 }
+            } else {
+                DefaultPremiumThemeTile(
+                    active = true,
+                    enabled = !loading && busyId == null,
+                    modifier = Modifier.fillMaxWidth(),
+                    onClick = { equip(null) },
+                )
             }
         }
 
@@ -202,7 +207,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
         if (!loading && visibleCollection.none { it.kind != "game_theme" }) {
             Surface(shape = MainUiShape.Control, color = SonHarfTheme.SurfaceSecondary) {
                 Text(
-                    sh("Diğer ürünlerin satın alındığında kategoriler altında burada görünecek.", "Other purchased products will appear here under their categories."),
+                    sh("Mağazadan satın aldığın diğer ürünler burada kategorileri altında görünür.", "Other items you purchase from the shop will appear here under their categories."),
                     Modifier.fillMaxWidth().padding(14.dp),
                     color = SonHarfTheme.TextSecondary,
                     fontSize = 11.sp,
@@ -302,15 +307,6 @@ private fun BlackOwnedFallbackTile(active: Boolean, enabled: Boolean, modifier: 
         BlackThemeSwatch(active)
         Text("Black Theme", color = SonHarfTheme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
         Text(sh("Sahipsin", "Owned"), color = SonHarfTheme.Turquoise, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Composable
-private fun LockedBlackThemeTile(modifier: Modifier) {
-    CollectionTileShell(active = false, enabled = false, modifier = modifier, onClick = {}) {
-        BlackThemeSwatch(false)
-        Text("Black Theme", color = SonHarfTheme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
-        Text(sh("Mağazada satılık", "Available in store"), color = SonHarfTheme.ActionOrange, fontSize = 9.sp, fontWeight = FontWeight.Bold)
     }
 }
 
