@@ -11,18 +11,19 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF2563EB", // Primary blue
-            "0xFF12B8A6", // Turquoise
-            "0xFF7C3AED", // Premium purple
-            "0xFFF97316", // Reward orange
-            "0xFFF6F9FF", // Background
-            "0xFFFFFFFF", // White surface
-            "0xFF10213D", // Primary text
-            "0xFF64748B", // Muted text
-            "0xFFDCE6F3", // Border
+            "0xFF2563EB",
+            "0xFF12B8A6",
+            "0xFF7C3AED",
+            "0xFFF97316",
+            "0xFFF6F9FF",
+            "0xFFFFFFFF",
+            "0xFF10213D",
+            "0xFF64748B",
+            "0xFFDCE6F3",
         ).forEach { token -> assertTrue("Missing approved theme palette token $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive"))
+        assertTrue(theme.contains("internal object BlackThemePalette"))
         assertTrue(theme.contains("val ActionOrange: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
         assertTrue(theme.contains("val HeroMiddle: Color get()"))
@@ -52,7 +53,6 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
     fun homeSurfacesProfileCoinProAndNotificationEntry() {
         val home = File("src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
-
         assertTrue(home.contains("FramedProfilePhotoAvatar("))
         assertTrue(home.contains("profile?.diamonds"))
         assertTrue(home.contains("} Coin"))
@@ -70,7 +70,6 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val shell = File("src/main/java/com/sonharf/game/PremiumCanvaApp.kt").readText()
         val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
         val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
-
         assertFalse(shell.contains("CLUB"))
         assertFalse(shell.contains("KelimeKusatmasiClubScreen("))
         assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
@@ -85,7 +84,6 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     fun gameExitReturnsHomeAndPracticeMoveStatusKeepsFixedHeight() {
         val shell = File("src/main/java/com/sonharf/game/PremiumCanvaApp.kt").readText()
         val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
-
         assertTrue(shell.contains("fun leaveGame(target: PremiumCanvaDestination = PremiumCanvaDestination.HOME)"))
         assertTrue(shell.contains("PremiumCanvaDestination.LAST_LETTER,"))
         assertTrue(shell.contains("PremiumCanvaDestination.SIEGE,"))
@@ -99,7 +97,6 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
     fun clubChatHasServerAuthoritativeAntiSpamAndAbuseGuard() {
         val migration = File("../supabase/migrations/20260915061500_club_chat_server_guard_v2.sql").readText()
-
         assertTrue(migration.contains("create or replace function private.guard_club_message_insert_v2()"))
         assertTrue(migration.contains("security definer"))
         assertTrue(migration.contains("p.chat_suspended_until > clock_timestamp()"))
@@ -122,17 +119,8 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     fun economyKeepsVerifiedFramesAndZeroPayToWinPromise() {
         val economy = File("src/main/java/com/sonharf/game/data/EconomyStore.kt").readText()
         val shop = File("src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
-
-        listOf(
-            "frame_round_starter_blue",
-            "frame_round_starter_pink",
-            "frame_round_starter_neutral",
-            "frame_round_ocean",
-            "frame_round_botanic",
-            "frame_round_lilac",
-            "frame_round_rose",
-        ).forEach { id -> assertTrue("Missing profile frame $id", economy.contains("\"$id\"")) }
-
+        listOf("frame_round_starter_blue","frame_round_starter_pink","frame_round_starter_neutral","frame_round_ocean","frame_round_botanic","frame_round_lilac","frame_round_rose")
+            .forEach { id -> assertTrue("Missing profile frame $id", economy.contains("\"$id\"")) }
         assertTrue(economy.contains("vip_pro_frame_access"))
         assertTrue(shop.contains("ADİL OYUN SÖZÜ"))
         assertTrue(shop.contains("Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz."))
@@ -141,7 +129,6 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
     fun territoryScoringRemainsPermanentWordScorePlusTwoPerOwnedCube() {
         val rules = File("src/main/java/com/sonharf/game/WordSiegeFinalRules.kt").readText()
-
         assertTrue(rules.contains("const val CUBE_TRANSFER_POINTS: Int = 2"))
         assertTrue(rules.contains("wordScore + cubeTransfer(ownedCubes)"))
         assertTrue(rules.contains("Word points are permanent"))
@@ -152,13 +139,11 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     fun normalMatchVictoryDependsOnlyOnCurrentTerritoryControl() {
         val migration = File("../supabase/migrations/20260915060000_word_siege_territory_victory_v10.sql").readText()
         val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
-
         assertTrue(migration.contains("when r.player_one_area > r.player_two_area then r.player_one_id"))
         assertTrue(migration.contains("when r.player_two_area > r.player_one_area then r.player_two_id"))
         assertTrue(migration.contains("if p_forfeit_winner is not null then"))
         assertFalse(migration.contains("v_one_total > v_two_total"))
         assertFalse(migration.contains("v_two_total > v_one_total"))
-
         assertTrue(practice.contains("state.playerArea > state.botArea -> 1"))
         assertTrue(practice.contains("state.botArea > state.playerArea -> 2"))
         assertFalse(practice.contains("totalScore(state, 1) > totalScore(state, 2) -> 1"))
