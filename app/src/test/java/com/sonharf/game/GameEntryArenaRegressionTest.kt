@@ -39,9 +39,10 @@ class GameEntryArenaRegressionTest {
     fun entriesExposeActualGameIdentityAndRules() {
         val entries = File("src/main/java/com/sonharf/game/PremiumGameEntryScreens.kt").readText()
 
-        assertTrue(entries.contains("TAKTİK ALAN SAVAŞI"))
-        assertTrue(entries.contains("10 + 10"))
-        assertTrue(entries.contains("15→13→11"))
-        assertTrue(entries.contains("LetterPathPreview"))
+        assertTrue(entries.contains("PremiumSiegeEntryScreen"))
+        assertTrue(entries.contains("LastLetterRuleCard(\"10 + 10\""))
+        assertTrue(entries.contains("LastLetterRuleCard(\"15→13→11\""))
+        assertTrue(entries.contains("LetterPathPreview(language)"))
+        assertTrue(entries.contains("CAPTURE THE MAP WITH WORDS"))
     }
 }
