@@ -9,6 +9,8 @@ import com.sonharf.game.data.EquippedCosmeticsDto
 
 object SonHarfCosmetics {
     private const val PREFS = "son_harf_equipped_style_cache"
+    const val BLACK_THEME_ID = "theme_black"
+
     var profileFrameId by mutableStateOf<String?>(null)
     var nameStyleId by mutableStateOf<String?>(null)
     var gameThemeId by mutableStateOf<String?>(null)
@@ -19,8 +21,6 @@ object SonHarfCosmetics {
     fun apply(e: EquippedCosmeticsDto?) {
         profileFrameId = e?.profileFrameId?.takeIf { !it.isNullOrBlank() }
         nameStyleId = e?.nameStyleId
-        // Keep the server value for inventory/backward compatibility, but arena skins no longer
-        // replace the approved application-wide visual system.
         gameThemeId = e?.gameThemeId
         keyboardThemeId = e?.keyboardThemeId
         victoryEffectId = e?.victoryEffectId
@@ -45,6 +45,8 @@ object SonHarfCosmetics {
             .apply()
     }
 
+    val blackThemeActive: Boolean get() = gameThemeId == BLACK_THEME_ID
+
     val profileAccent: Color
         get() = when (profileFrameId) {
             PurchasedFrameCatalog.GOLDEN_AVATAR -> SonHarfTheme.ActionOrange
@@ -64,11 +66,7 @@ object SonHarfCosmetics {
             else -> SonHarfTheme.TextPrimary
         }
 
-    /**
-     * Product skins may affect only the embedded letter keyboard. The default keyboard is the
-     * approved premium blue / turquoise / purple / white system. Cosmetic keyboards remain
-     * presentation-only and never grant a gameplay benefit.
-     */
+    /** Cosmetic keyboards remain presentation-only and never grant a gameplay benefit. */
     val keyboardPalette: WordKeyboardPalette
         get() = keyboardPaletteFor(keyboardThemeId)
 
@@ -106,10 +104,7 @@ object SonHarfCosmetics {
         )
     }
 
-    /**
-     * Legacy arena-theme IDs remain readable so old accounts/inventory do not break, but they are
-     * intentionally presentation-inert. The approved premium visual system is authoritative.
-     */
+    // Retired IDs remain readable only for old account data. They no longer map to storefront themes.
     val darkArenaTheme: Boolean get() = false
     val monsterBlueTheme: Boolean get() = false
     val auroraTheme: Boolean get() = false
@@ -117,7 +112,6 @@ object SonHarfCosmetics {
     val crownVictory: Boolean get() = victoryEffectId == "victory_crown"
 }
 
-/** Shared by every embedded word keyboard so a purchased skin is real in every supported mode. */
 data class WordKeyboardPalette(
     val background: Color,
     val key: Color,
