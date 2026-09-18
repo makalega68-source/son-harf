@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -161,14 +160,7 @@ internal fun MainMetricCard(value: String, label: String, modifier: Modifier = M
         shadowElevation = 1.dp,
     ) {
         Column(Modifier.padding(12.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    Modifier
-                        .size(5.dp)
-                        .padding(0.dp),
-                )
-                Text(value, color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
-            }
+            Text(value, color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(3.dp))
             Text(label, color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
         }
