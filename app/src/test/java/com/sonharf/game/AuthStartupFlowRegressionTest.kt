@@ -1,0 +1,22 @@
+package com.sonharf.game
+
+import java.io.File
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class AuthStartupFlowRegressionTest {
+    @Test
+    fun languageSelectionFlowsDirectlyIntoLoginForm() {
+        val stable = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
+        val auth = File("src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
+
+        assertTrue(stable.contains("FirstRunLanguageScreen"))
+        assertTrue(stable.contains("CompactAuthGate"))
+        assertTrue(auth.contains("var register by remember { mutableStateOf(false) }"))
+        assertTrue(auth.contains("var showForm by remember { mutableStateOf(true) }"))
+        assertTrue(auth.contains("sh(\"GİRİŞ YAP\", \"SIGN IN\")"))
+        assertTrue(auth.contains("sh(\"ÜYE OL\", \"REGISTER\")"))
+        assertFalse(auth.contains("var showForm by remember { mutableStateOf(false) }"))
+    }
+}
