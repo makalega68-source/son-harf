@@ -22,12 +22,15 @@ palette_replacement = '''private object LetterLadderUi {
     val Turquoise = Color(0xFF22BFC4)
     val TurquoiseStrong = Color(0xFF10AEB5)
     val TurquoiseSoft = Color(0xFFDDF9FA)
+    val Orange = Color(0xFFFF9F43)
+    val OrangeSoft = Color(0xFFFFF0DE)
+    val Purple = Color(0xFF8B5CF6)
+    val PurpleSoft = Color(0xFFF2ECFF)
     val AccentText = Color.White
-    val Live = Turquoise
-    val Coral = Accent
-    val Orange = Accent
+    val Live = Purple
+    val Coral = Purple
     val Green = Turquoise
-    val Gold = Turquoise
+    val Gold = Orange
 }
 
 internal data class LetterLadderPuzzle'''
@@ -42,14 +45,30 @@ assert count == 1, "resetCurrent block not found"
 text = text.replace("FirstRunLanguageBackdrop(Modifier.fillMaxSize())", "HarfYoluBackdrop(Modifier.fillMaxSize())")
 text = text.replace(
     "İpucu kullanıldı: sarı işaretli harfi değiştir. Harfi kendin bul.",
-    "İpucu kullanıldı: turkuaz işaretli kutudaki harfi değiştir. Harfi kendin bul.",
+    "İpucu kullanıldı: turuncu işaretli kutudaki harfi değiştir. Harfi kendin bul.",
 )
 text = text.replace(
     "Hint used: change the yellow-marked letter. Find the letter yourself.",
-    "Hint used: change the turquoise-marked tile. Find the letter yourself.",
+    "Hint used: change the orange-marked tile. Find the letter yourself.",
 )
 text = text.replace("import androidx.compose.foundation.background\n", "")
 text = text.replace("import androidx.compose.material.icons.rounded.Refresh\n", "")
+
+# Start and target labels use different palette roles.
+text = text.replace(
+    'Text(sh("BAŞLANGIÇ", "START"), color = LetterLadderUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Black)',
+    'Text(sh("BAŞLANGIÇ", "START"), color = LetterLadderUi.AccentStrong, fontSize = 8.sp, fontWeight = FontWeight.Black)',
+)
+text = text.replace(
+    'Text(sh("HEDEF", "TARGET"), color = LetterLadderUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Black)',
+    'Text(sh("HEDEF", "TARGET"), color = LetterLadderUi.Purple, fontSize = 8.sp, fontWeight = FontWeight.Black)',
+)
+# The target row is eflatun; committed progress remains turquoise via Green alias.
+text = text.replace(
+    'accent = LetterLadderUi.Green,\n                            modifier = Modifier.fillMaxWidth().weight(1f),',
+    'accent = LetterLadderUi.Purple,\n                            modifier = Modifier.fillMaxWidth().weight(1f),',
+    1,
+)
 
 start_marker = '''                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     OutlinedButton(
@@ -83,7 +102,7 @@ actions = '''                if (!completed) {
                             modifier = Modifier.weight(1f).height(40.dp).sonHarfPressScale(pressedScale = 0.94f),
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                             shape = RoundedCornerShape(13.dp),
-                            border = BorderStroke(1.dp, LetterLadderUi.Border),
+                            border = BorderStroke(1.dp, LetterLadderUi.Accent.copy(alpha = .72f)),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = LetterLadderUi.AccentStrong,
                                 disabledContentColor = LetterLadderUi.Muted.copy(alpha = .34f),
@@ -108,8 +127,8 @@ actions = '''                if (!completed) {
                                     sh("Son hamleyi geri al ve farklı bir yol dene.", "Undo the last move and try a different route.")
                                 } else {
                                     sh(
-                                        "İpucu kullanıldı: turkuaz işaretli kutudaki harfi değiştir. Harfi kendin bul.",
-                                        "Hint used: change the turquoise-marked tile. Find the letter yourself.",
+                                        "İpucu kullanıldı: turuncu işaretli kutudaki harfi değiştir. Harfi kendin bul.",
+                                        "Hint used: change the orange-marked tile. Find the letter yourself.",
                                     )
                                 }
                                 SonHarfSoundFx.puzzleHint()
@@ -117,9 +136,9 @@ actions = '''                if (!completed) {
                             modifier = Modifier.weight(1f).height(40.dp).sonHarfPressScale(pressedScale = 0.94f),
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                             shape = RoundedCornerShape(13.dp),
-                            border = BorderStroke(1.dp, LetterLadderUi.Turquoise.copy(alpha = .72f)),
+                            border = BorderStroke(1.dp, LetterLadderUi.Orange.copy(alpha = .78f)),
                             colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = LetterLadderUi.TurquoiseStrong,
+                                contentColor = LetterLadderUi.Orange,
                                 disabledContentColor = LetterLadderUi.Muted.copy(alpha = .34f),
                             ),
                         ) {
@@ -139,7 +158,7 @@ actions = '''                if (!completed) {
                         modifier = Modifier.fillMaxWidth().height(46.dp).sonHarfPressScale(pressedScale = 0.94f),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = LetterLadderUi.AccentStrong,
+                            containerColor = LetterLadderUi.Purple,
                             contentColor = Color.White,
                         ),
                     ) {
@@ -151,16 +170,21 @@ actions = '''                if (!completed) {
 '''
 text = text[:start] + actions + text[end:]
 
-# Product contracts for this hotfix.
+# Product contracts for this refresh.
 assert "SIFIRLA" not in text
+assert "RESET" not in text
 assert "resetCurrent()" not in text
 assert "YENİ OYUN" in text
+assert "NEW GAME" in text
 assert "HarfYoluBackdrop(Modifier.fillMaxSize())" in text
 assert "FirstRunLanguageBackdrop(Modifier.fillMaxSize())" not in text
-assert "turkuaz işaretli kutudaki harfi değiştir" in text
+assert "turuncu işaretli kutudaki harfi değiştir" in text
 assert "sarı işaretli" not in text
 assert "activeInput = input.uppercase(locale).takeIf { isActiveEntry }" in text
 assert "İPUCU 1/1" in text
+assert "val Orange = Color(0xFFFF9F43)" in text
+assert "val Purple = Color(0xFF8B5CF6)" in text
+assert "accent = LetterLadderUi.Purple" in text
 
 path.write_text(text)
-print("Harf Yolu blue/turquoise dynamic UI patch applied")
+print("Harf Yolu five-color dynamic UI patch applied")
