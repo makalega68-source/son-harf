@@ -12,14 +12,15 @@ class ProfileThemeBackendContractTest {
         val migration = File("../supabase/migrations/20260918213000_black_theme_store_v1.sql").readText()
 
         assertFalse(economy.contains("theme_main_blue_white"))
-        assertFalse(economy.contains("theme_dark_arena\")"))
-        assertTrue(economy.contains("supportedGameThemeIds = setOf(\"theme_black\")"))
+        assertTrue(economy.contains("supportedGameThemeIds = setOf(\"theme_dark_arena\")"))
         assertTrue(profileThemes.contains("backend.equipDefaultGameTheme()"))
         assertTrue(profileThemes.contains("Black Theme"))
+        assertTrue(profileThemes.contains("BlackThemeId = \"theme_dark_arena\""))
         assertFalse(profileThemes.contains("Ana Yeşil Beyaz"))
         assertFalse(profileThemes.contains("Gece Arenası"))
         assertFalse(profileThemes.contains("purchaseShopItem"))
-        assertTrue(migration.contains("'theme_black'"))
+        assertTrue(migration.contains("'theme_dark_arena'"))
+        assertTrue(migration.contains("'Black Theme'"))
         assertTrue(migration.contains("600"))
         assertTrue(migration.contains("set active = false"))
     }
