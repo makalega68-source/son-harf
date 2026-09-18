@@ -3,7 +3,6 @@ package com.sonharf.game
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,8 +14,6 @@ import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.AssistChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
@@ -62,10 +59,10 @@ internal fun WordSiegePremiumPanel(
 
     LaunchedEffect(game.id, game.moveCount) {
         entitlements = runCatching { backend.getVipEntitlements() }.getOrDefault(VipEntitlementsDto())
-        if (entitlements.letterTableAccess) {
-            letterTable = runCatching { backend.getPremiumWordSiegeLetterTable(game.id) }.getOrDefault(emptyList())
+        letterTable = if (entitlements.letterTableAccess) {
+            runCatching { backend.getPremiumWordSiegeLetterTable(game.id) }.getOrDefault(emptyList())
         } else {
-            letterTable = emptyList()
+            emptyList()
         }
     }
 
@@ -160,14 +157,28 @@ internal fun WordSiegePremiumPanel(
                         color = WordSiegeGameUi.Muted,
                         fontSize = 10.sp,
                     )
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(5.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                        letterTable.forEach { item ->
-                            AssistChip(
-                                onClick = {},
-                                label = { Text("${item.letter} ${item.remaining}", fontWeight = FontWeight.Black, fontSize = 10.sp) },
-                                colors = AssistChipDefaults.assistChipColors(containerColor = WordSiegeGameUi.SurfaceSoft),
-                                border = AssistChipDefaults.assistChipBorder(enabled = true, borderColor = WordSiegeGameUi.Border),
-                            )
+                    letterTable.chunked(6).forEach { group ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        ) {
+                            group.forEach { item ->
+                                Surface(
+                                    modifier = Modifier.weight(1f),
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = WordSiegeGameUi.SurfaceSoft,
+                                    border = BorderStroke(1.dp, WordSiegeGameUi.Border),
+                                ) {
+                                    Text(
+                                        "${item.letter} ${item.remaining}",
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 6.dp),
+                                        color = WordSiegeGameUi.Text,
+                                        fontWeight = FontWeight.Black,
+                                        fontSize = 10.sp,
+                                    )
+                                }
+                            }
+                            repeat((6 - group.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
