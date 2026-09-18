@@ -61,6 +61,8 @@ data class GameRoomDto(
     @SerialName("turn_deadline") val turnDeadline: String? = null,
     @SerialName("round_no") val roundNo: Int = 1,
     @SerialName("round_word_count") val roundWordCount: Int = 0,
+    @SerialName("host_round_words") val hostRoundWords: Int = 0,
+    @SerialName("guest_round_words") val guestRoundWords: Int = 0,
     @SerialName("host_rounds") val hostRounds: Int = 0,
     @SerialName("guest_rounds") val guestRounds: Int = 0,
     @SerialName("rematch_of") val rematchOf: String? = null,
