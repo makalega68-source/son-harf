@@ -99,7 +99,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     val rememberedCredential = remember {
         if (SonHarfPreferences.rememberLogin(context)) RememberedCredentialVault.load(context) else null
     }
-    var register by remember { mutableStateOf(true) }
+    var register by remember { mutableStateOf(false) }
     var displayName by remember { mutableStateOf("") }
     var gender by remember { mutableStateOf("") }
     var email by remember {
@@ -115,7 +115,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var success by remember { mutableStateOf(false) }
-    var showForm by remember { mutableStateOf(false) }
+    var showForm by remember { mutableStateOf(true) }
     var pendingVerificationEmail by remember { mutableStateOf<String?>(null) }
     var otpCode by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
