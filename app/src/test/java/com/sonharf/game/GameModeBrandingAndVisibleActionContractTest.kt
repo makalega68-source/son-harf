@@ -14,7 +14,11 @@ class GameModeBrandingAndVisibleActionContractTest {
 
         assertTrue(home.contains("Text(\"KELİME KUŞATMASI\""))
         assertTrue(home.contains("Button(onClick = onSiege"))
-        assertTrue(home.contains("PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)"))
+        assertTrue(home.contains("internal fun PremiumOtherGames"))
+        assertTrue(home.contains("Icons.Rounded.GridView"))
+        assertTrue(home.contains("Icons.Rounded.Bolt"))
+        assertTrue(home.contains("Icons.Rounded.Route"))
+        assertTrue(shell.contains("PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)"))
         assertTrue(shell.contains("PremiumDestination.SIEGE_ENTRY"))
         assertTrue(shell.contains("PremiumDestination.LAST_LETTER_ENTRY"))
         assertTrue(shell.contains("PremiumDestination.LETTER_PATH_ENTRY"))
@@ -24,6 +28,9 @@ class GameModeBrandingAndVisibleActionContractTest {
         assertFalse(shell.contains("PremiumGameCenter("))
         assertFalse(entries.contains("painterResource"))
         assertFalse(entries.contains("R.drawable"))
+        assertFalse(home.contains("R.drawable.kelime_kusatma_logo_hd"))
+        assertFalse(home.contains("R.drawable.son_harf_app_icon_master"))
+        assertFalse(home.contains("R.drawable.harf_yolu_logo"))
     }
 
     @Test
