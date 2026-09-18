@@ -90,6 +90,29 @@ replace_once(
                             }
                         }''',
 )
+replace_once(
+    ladder,
+    '''            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(R.drawable.harf_yolu_logo),
+                contentDescription = sh("Harf Yolu logosu", "Letter Path logo"),
+                modifier = Modifier.size(106.dp),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            )''',
+    '''            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = LetterLadderUi.SurfaceSoft,
+                border = BorderStroke(1.dp, LetterLadderUi.Accent.copy(alpha = .22f)),
+            ) {
+                Column(
+                    Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(Icons.Rounded.Route, null, tint = LetterLadderUi.Accent, modifier = Modifier.size(36.dp))
+                    Spacer(Modifier.height(5.dp))
+                    Text("A → B", color = LetterLadderUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                }
+            }''',
+)
 
 siege = "app/src/main/java/com/sonharf/game/WordSiegeExperience.kt"
 replace_once(
