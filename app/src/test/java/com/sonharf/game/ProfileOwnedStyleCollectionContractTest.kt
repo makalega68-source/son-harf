@@ -14,7 +14,7 @@ class ProfileOwnedStyleCollectionContractTest {
         val databaseTest = projectFile("supabase/tests/permanent_style_ownership.sql").readText()
 
         assertTrue(profile.contains("backend.getOwnedShopItems(nextOwned)"))
-        assertTrue(profile.contains("BlackThemeId = \"theme_black\""))
+        assertTrue(profile.contains("BlackThemeId = \"theme_dark_arena\""))
         assertTrue(profile.contains("CollectionCategoryBlock"))
         assertTrue(profile.contains("\"Temalar\""))
         assertTrue(profile.contains("\"Profil Çerçeveleri\""))
@@ -22,7 +22,7 @@ class ProfileOwnedStyleCollectionContractTest {
         assertTrue(profile.contains("items.chunked(2)"))
         assertTrue(economy.contains("filter { it.id in owned }"))
         assertTrue(blackMigration.contains("on conflict do nothing"))
-        assertTrue(blackMigration.contains("game_theme_id = 'theme_black'"))
+        assertTrue(blackMigration.contains("game_theme_id = 'theme_dark_arena'"))
 
         assertTrue(migration.contains("create policy shop_items_owned_read"))
         assertTrue(migration.contains("revoke execute on function public.equip_shop_item(text) from public, anon"))
