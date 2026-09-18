@@ -44,17 +44,25 @@ jobs:
           echo "SOURCE_SHA=$(git rev-parse HEAD)"
           test ! -f app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
           test ! -f app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt
-          test -f app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
-          grep -q 'PremiumCanvaApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumHomePolish.kt
+          grep -q 'PremiumCanvaAppV2(' app/src/main/java/com/sonharf/game/StableV1App.kt
           grep -q 'SonHarfCosmetics.restore(context)' app/src/main/java/com/sonharf/game/StableV1App.kt
-          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
-          grep -q 'PremiumCanvaDestination.LAST_LETTER -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
-          grep -q 'PremiumCanvaDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
-          grep -q 'PremiumCanvaDestination.LETTER_PATH -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
-          grep -q 'HARF YOLU' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'PremiumV2Destination.LAST_LETTER -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'PremiumV2Destination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'PremiumV2Destination.LETTER_PATH -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'HARF YOLU' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'HAFTANIN EN İYİLERİ' app/src/main/java/com/sonharf/game/PremiumHomePolish.kt
+          grep -q 'PRO Üyelik' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'Koleksiyonum' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          ! grep -q 'Maskotlar' app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt
+          ! grep -q 'FAIR PLAY PROMISE' app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt
+          ! grep -q 'GOOGLE PLAY.D. YÖNET' app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt
           grep -q 'val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           grep -q 'internal object BlackThemePalette' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
-          grep -q 'BLACK_THEME_ID = "theme_black"' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
+          grep -q 'BLACK_THEME_ID = "theme_dark_arena"' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
           grep -q 'Color(0xFF2563EB)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           grep -q 'Color(0xFF12B8A6)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           grep -q 'Color(0xFF7C3AED)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
@@ -62,7 +70,7 @@ jobs:
           grep -q '@drawable/kelime_kusatmasi_app_icon' app/src/main/AndroidManifest.xml
           test -s app/src/main/res/drawable-nodpi/kelime_kusatmasi_app_icon.webp
           test -f supabase/migrations/20260918213000_black_theme_store_v1.sql
-          grep -q "'theme_black'" supabase/migrations/20260918213000_black_theme_store_v1.sql
+          grep -q "'theme_dark_arena'" supabase/migrations/20260918213000_black_theme_store_v1.sql
           ! grep -q 'MonsterLime' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           ! grep -q 'MonsterPink' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           ! grep -RqiE 'ProfHammy|Prof\. Hammy|prof_hammy' app/src/main/java app/src/main/res
