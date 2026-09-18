@@ -70,17 +70,18 @@ class LetterLadderUxRegressionTest {
     }
 
     @Test
-    fun harfYoluUsesItsOwnDynamicFiveColorBackdrop() {
+    fun harfYoluUsesItsOwnDynamicApprovedFiveColorBackdrop() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
         val backdrop = projectFile("app/src/main/java/com/sonharf/game/HarfYoluBackdrop.kt").readText()
 
         assertTrue(source.contains("HarfYoluBackdrop(Modifier.fillMaxSize())"))
         assertFalse(source.contains("FirstRunLanguageBackdrop(Modifier.fillMaxSize())"))
         assertTrue(backdrop.contains("rememberInfiniteTransition"))
-        assertTrue(backdrop.contains("0xFF278DC3"))
-        assertTrue(backdrop.contains("0xFF22BFC4"))
-        assertTrue(backdrop.contains("0xFFFF9F43"))
-        assertTrue(backdrop.contains("0xFF8B5CF6"))
+        assertTrue(backdrop.contains("0xFF2563EB"))
+        assertTrue(backdrop.contains("0xFF12B8A6"))
+        assertTrue(backdrop.contains("0xFFF97316"))
+        assertTrue(backdrop.contains("0xFF7C3AED"))
+        assertTrue(backdrop.contains("Color.White"))
     }
 
     @Test
