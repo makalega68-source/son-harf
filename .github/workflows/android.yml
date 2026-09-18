@@ -45,24 +45,28 @@ jobs:
           git diff --exit-code
           test -z "$(git status --porcelain --untracked-files=no)"
 
-      - name: Verify Unified Pro source contract
+      - name: Verify Premium Canva source contract
         shell: bash
         run: |
           set -euo pipefail
           test ! -f app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
           test ! -f app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt
-          grep -q 'UnifiedProApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'PremiumCanvaApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
           grep -q 'SonHarfCosmetics.restore(context)' app/src/main/java/com/sonharf/game/StableV1App.kt
-          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
           ! grep -RqiE 'ProfHammy|Prof\. Hammy|prof_hammy' app/src/main/java app/src/main/res
-          grep -q 'val Background: Color get() = SonHarfTheme.Background' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'lightColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'darkColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          ! grep -q 'MageCat' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.GAME -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.LETTER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.VIP -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'PremiumCanvaDestination.LAST_LETTER -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'PremiumCanvaDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'PremiumCanvaDestination.LETTER_PATH -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'HARF YOLU' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'val IsDark: Boolean get() = false' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'Color(0xFF2563EB)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'Color(0xFF12B8A6)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'Color(0xFF7C3AED)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'Color(0xFFF97316)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          ! grep -q 'MonsterLime' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          ! grep -q 'MonsterPink' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
@@ -86,7 +90,7 @@ jobs:
           set -euo pipefail
           gh release delete mobile-latest --cleanup-tag -y >/dev/null 2>&1 || true
           gh api --paginate "repos/${GITHUB_REPOSITORY}/actions/artifacts?per_page=100" \
-            --jq '.artifacts[] | select(.name == "son-harf-debug-apk" or .name == "SonHarf-Unified-Pro-APK" or (.name | startswith("son-harf-release-"))) | .id' \
+            --jq '.artifacts[] | select(.name == "son-harf-debug-apk" or .name == "SonHarf-Premium-Canva-APK" or (.name | startswith("son-harf-release-"))) | .id' \
             | while read -r artifact_id; do
                 test -n "$artifact_id" || continue
                 gh api --method DELETE "repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}"
@@ -158,5 +162,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view final-test >/dev/null 2>&1 || gh release create final-test --title "Son Harf Final Test" --notes "Son Harf Android final test build."
+          gh release view final-test >/dev/null 2>&1 || gh release create final-test --title "Son Harf Final Test" --notes "Kelime Kuşatması Android final test build."
           gh release upload final-test SonHarf-Final-Test.apk --clobber
