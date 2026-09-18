@@ -19,9 +19,13 @@ class LogoFreeGameSurfacesRegressionTest {
             assertFalse(source.contains("R.drawable.harf_yolu_logo"))
             assertFalse(source.contains("R.drawable.son_harf_app_icon_master"))
         }
+        assertFalse(entries.contains("painterResource("))
         assertTrue(entries.contains("PremiumSiegeEntryScreen"))
         assertTrue(entries.contains("PremiumLastLetterEntryScreen"))
         assertTrue(entries.contains("PremiumLetterPathEntryScreen"))
+        assertTrue(home.contains("Icons.Rounded.GridView"))
+        assertTrue(home.contains("Icons.Rounded.Bolt"))
+        assertTrue(home.contains("Icons.Rounded.Route"))
         assertTrue(siege.contains("KELİME KUŞATMASI"))
         assertTrue(ladder.contains("Icons.Rounded.Route"))
     }
