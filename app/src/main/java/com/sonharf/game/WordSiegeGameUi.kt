@@ -129,8 +129,8 @@ internal fun WordSiegeScoreCard(
                 )
             }
             HorizontalDivider(color = WordSiegeGameUi.Border.copy(alpha = .7f))
-            WordSiegeScoreLine(sh("Kelime", "Word"), wordPoints)
-            WordSiegeScoreLine(sh("Bölge", "Territory"), territoryPoints)
+            WordSiegeScoreLine(sh("Kelime Puanı", "Word Score"), wordPoints)
+            WordSiegeScoreLine(sh("Bölge Puanı", "Territory Score"), territoryPoints)
         }
     }
 }
@@ -184,7 +184,7 @@ internal fun WordSiegeOwnershipLegend() {
         ) {
             Text(sh("● Sen", "● You"), color = WordSiegeGameUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
             Text(sh("● Rakip", "● Rival"), color = WordSiegeGameUi.Red, fontSize = 10.sp, fontWeight = FontWeight.Black)
-            Text(sh("1 bölge = 2 puan", "1 cell = 2 points"), color = WordSiegeGameUi.Muted, fontSize = 9.sp)
+            Text(sh("1 küp = 2 puan", "1 cube = 2 points"), color = WordSiegeGameUi.Muted, fontSize = 9.sp)
         }
     }
 }
