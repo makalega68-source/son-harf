@@ -23,7 +23,7 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
 import kotlinx.coroutines.launch
 
-private const val PremiumStoreBlackThemeId = "theme_dark_arena"
+private const val PremiumStoreBlackThemeId = "theme_black"
 private val PremiumStoreKinds = setOf(
     "game_theme",
     "profile_frame",
@@ -82,7 +82,7 @@ internal fun PremiumStoreScreen(
             profile = b.getProfile(id)
             products = b.getShopItems()
                 .filter { it.kind in PremiumStoreKinds }
-                .filterNot { it.id in setOf("theme_black", "theme_monster_blue", "theme_aurora", "theme_neon", "theme_midnight") }
+                .filterNot { it.id in setOf("theme_dark_arena", "theme_monster_blue", "theme_aurora", "theme_neon", "theme_midnight") }
                 .sortedWith(compareBy<ShopItemDto> { premiumStoreKindOrder(it.kind) }.thenBy { it.sortOrder }.thenBy { it.id })
             owned = b.getInventory()
             equipped = b.getEquippedCosmetics()
