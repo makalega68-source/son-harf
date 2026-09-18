@@ -15,9 +15,31 @@ class LetterLadderUxRegressionTest {
         assertFalse(source.contains("rememberScrollState"))
         assertFalse(source.contains("number: Int"))
         assertTrue(source.contains("completionPath("))
+        assertTrue(source.contains("viableNextMoveCount("))
         assertTrue(source.contains("Bu hamle çıkmaza götürüyor"))
+        assertTrue(source.contains("güvenli hamle seçeneği"))
         assertTrue(source.contains("compact = true"))
         assertTrue(source.contains("keySound = { SonHarfSoundFx.puzzleKey() }"))
+    }
+
+    @Test
+    fun harfYoluHintDoesNotRevealTheNextAnswer() {
+        val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
+
+        assertFalse(source.contains("next.uppercase(locale)"))
+        assertFalse(source.contains("val from = current[changed]"))
+        assertFalse(source.contains("val to = next[changed]"))
+        assertTrue(source.contains("safeOptions"))
+        assertTrue(source.contains("remainingMoves"))
+    }
+
+    @Test
+    fun harfYoluShowsOnlyFourIntermediateCubeRows() {
+        val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
+
+        assertTrue(source.contains("for (move in 1 until LetterLadderEngine.MOVE_COUNT)"))
+        assertFalse(source.contains("for (move in 1..LetterLadderEngine.MOVE_COUNT)"))
+        assertTrue(source.contains("path.size == LetterLadderEngine.MOVE_COUNT + 1"))
     }
 
     @Test
