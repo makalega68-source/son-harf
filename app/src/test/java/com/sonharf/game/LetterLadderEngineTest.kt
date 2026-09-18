@@ -90,6 +90,19 @@ class LetterLadderEngineTest {
     }
 
     @Test
+    fun safeHintCountsChoicesWithoutExposingAWord() {
+        assertEquals(
+            1,
+            LetterLadderEngine.viableNextMoveCount(
+                puzzle = puzzle,
+                current = puzzle.start,
+                usedPositions = emptySet(),
+                dictionary = dictionary,
+            ),
+        )
+    }
+
+    @Test
     fun locallyValidMoveCanBeRecognizedAsADeadEnd() {
         val deadEndDictionary = chain.toSet() + setOf("kalık")
         val localMove = LetterLadderEngine.validateMove(
