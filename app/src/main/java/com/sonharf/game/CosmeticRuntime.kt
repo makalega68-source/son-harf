@@ -9,7 +9,7 @@ import com.sonharf.game.data.EquippedCosmeticsDto
 
 object SonHarfCosmetics {
     private const val PREFS = "son_harf_equipped_style_cache"
-    const val BLACK_THEME_ID = "theme_dark_arena"
+    const val BLACK_THEME_ID = "theme_black"
 
     var profileFrameId by mutableStateOf<String?>(null)
     var nameStyleId by mutableStateOf<String?>(null)
@@ -104,8 +104,8 @@ object SonHarfCosmetics {
         )
     }
 
-    /** Legacy identifier retained as the server/store key for Black Theme compatibility. */
-    val darkArenaTheme: Boolean get() = blackThemeActive
+    // Retired IDs remain readable in historical ownership rows only; they do not activate Black Theme.
+    val darkArenaTheme: Boolean get() = false
     val monsterBlueTheme: Boolean get() = false
     val auroraTheme: Boolean get() = false
 
