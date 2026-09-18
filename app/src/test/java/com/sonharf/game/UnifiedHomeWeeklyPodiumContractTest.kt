@@ -11,9 +11,11 @@ class UnifiedHomeWeeklyPodiumContractTest {
         val source = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
 
         // Kelime Kuşatması is the primary play entry; Son Harf remains a secondary quick mode.
-        assertTrue(source.contains("PremiumPlayButton(onClick = onSiege)"))
+        assertTrue(source.contains("HomeGameModes("))
         assertTrue(source.contains("KELİME KUŞATMASI"))
-        assertTrue(source.contains("SAVAŞA GİR"))
+        assertTrue(source.contains("KUŞATMAYA GİR"))
+        assertTrue(source.contains("title = sh(\"Son Harf\", \"Last Letter\")"))
+        assertTrue(source.contains("title = sh(\"Kelime Yolu\", \"Word Path\")"))
         assertFalse(source.contains("title = sh(\"PREMIER 1v1\", \"PREMIER 1v1\")"))
         assertFalse(source.contains("ARENANI SEÇ"))
         assertFalse(source.contains("20 saniyelik baskı"))
@@ -22,9 +24,11 @@ class UnifiedHomeWeeklyPodiumContractTest {
         assertFalse(source.contains("WeeklyPodiumCardV210("))
         assertFalse(source.contains("backend.getLeaderboardV2(language, \"week\", 3)"))
 
-        // The home lobby deliberately avoids duplicate mode-navigation cards.
+        // The home lobby deliberately exposes exactly one primary and two secondary mode entries.
         assertFalse(source.contains("DİĞER OYUNLAR"))
-        assertTrue(source.contains("DailyObjectiveCard(onClick = onTasks)"))
+        assertTrue(source.contains("HomeSeasonEventCard(onClick = onCompetition)"))
+        assertTrue(source.contains("GÜNLÜK ÖDÜL"))
+        assertTrue(source.contains("ZAFER SANDIĞI"))
         assertTrue(source.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
     }
 }

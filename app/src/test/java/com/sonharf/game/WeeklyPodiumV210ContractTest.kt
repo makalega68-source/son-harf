@@ -12,7 +12,8 @@ class WeeklyPodiumV210ContractTest {
 
         assertFalse(shell.contains("WeeklyPodiumCardV210("))
         assertFalse(shell.contains("getLeaderboardV2(language, \"week\", 3)"))
-        assertTrue(shell.contains("PremiumPlayButton(onClick = onSiege)"))
+        assertTrue(shell.contains("HomeGameModes("))
+        assertTrue(shell.contains("HomePrimaryModeCard(onClick = onSiege)"))
         assertFalse(shell.contains("DİĞER OYUNLAR"))
     }
 

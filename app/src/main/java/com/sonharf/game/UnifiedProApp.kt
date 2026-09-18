@@ -267,39 +267,404 @@ private fun UnifiedHomeScreen(
         }
 
         item {
-            PremiumPlayButton(onClick = onSiege)
+            HomeGameModes(
+                onSiege = onSiege,
+                onSonHarf = onPlay,
+                onKelimeYolu = onLetter,
+            )
         }
 
         item {
-            DailyObjectiveCard(onClick = onTasks)
+            HomeSeasonEventCard(onClick = onCompetition)
         }
 
         item {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .sonHarfPressScale(pressedScale = 0.985f)
-                    .clickable(onClick = onCompetition),
-                shape = RoundedCornerShape(20.dp),
-                color = UnifiedUi.Surface.copy(alpha = .96f),
-                border = BorderStroke(1.dp, UnifiedUi.Border),
-                shadowElevation = 2.dp,
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Row(Modifier.padding(15.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = CircleShape, color = UnifiedUi.Gold.copy(alpha = .16f)) {
-                        Icon(Icons.Rounded.Bolt, null, tint = Color(0xFF9A7131), modifier = Modifier.padding(10.dp).size(23.dp))
-                    }
-                    Spacer(Modifier.width(11.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(sh("REKABET MERKEZİ", "COMPETITION HUB"), color = UnifiedUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
-                        Text(sh("Turnuvalar • ezeli rakip • haftalık hedefler", "Tournaments • arch rival • weekly goals"), color = UnifiedUi.Muted, fontSize = 9.sp)
-                    }
-                    Icon(Icons.Rounded.ChevronRight, null, tint = UnifiedUi.Blue)
-                }
+                HomeRewardCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.CardGiftcard,
+                    title = sh("GÜNLÜK ÖDÜL", "DAILY REWARD"),
+                    subtitle = sh("Görevini tamamla, ödülünü büyüt.", "Complete your objective and grow your reward."),
+                    accent = SonHarfTheme.WarmOrange,
+                    onClick = onTasks,
+                )
+                HomeRewardCard(
+                    modifier = Modifier.weight(1f),
+                    icon = Icons.Rounded.Inventory2,
+                    title = sh("ZAFER SANDIĞI", "VICTORY CHEST"),
+                    subtitle = sh("Maçlarını oyna, sandığa yaklaş.", "Play matches and move closer to the chest."),
+                    accent = SonHarfTheme.PremiumGold,
+                    onClick = onLeague,
+                )
             }
         }
 
         item { Spacer(Modifier.height(6.dp)) }
+    }
+}
+
+@Composable
+private fun HomeGameModes(
+    onSiege: () -> Unit,
+    onSonHarf: () -> Unit,
+    onKelimeYolu: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        HomePrimaryModeCard(onClick = onSiege)
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            HomeSecondaryModeCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Rounded.Bolt,
+                eyebrow = sh("HIZLI MOD", "QUICK MODE"),
+                title = sh("Son Harf", "Last Letter"),
+                subtitle = sh("Hızlı • Rekabetçi", "Fast • Competitive"),
+                colors = listOf(
+                    Color(0xFF5A67F2),
+                    SonHarfTheme.Lavender,
+                    SonHarfTheme.Error.copy(alpha = .92f),
+                ),
+                onClick = onSonHarf,
+            )
+            HomeSecondaryModeCard(
+                modifier = Modifier.weight(1f),
+                icon = Icons.Rounded.Map,
+                eyebrow = sh("MACERA MODU", "ADVENTURE MODE"),
+                title = sh("Kelime Yolu", "Word Path"),
+                subtitle = sh("Bölümler • Keşif", "Stages • Discovery"),
+                colors = listOf(
+                    Color(0xFF4A55D9),
+                    Color(0xFF6E5AE8),
+                    SonHarfTheme.Turquoise,
+                ),
+                onClick = onKelimeYolu,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomePrimaryModeCard(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(26.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(190.dp)
+            .shadow(10.dp, shape)
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        Color(0xFF244EDB),
+                        SonHarfTheme.Primary,
+                        SonHarfTheme.Turquoise,
+                    ),
+                ),
+            )
+            .border(1.dp, Color.White.copy(alpha = .24f), shape)
+            .sonHarfPressScale(pressedScale = .985f)
+            .clickable(onClick = onClick)
+            .padding(19.dp),
+    ) {
+        Icon(
+            Icons.Rounded.Public,
+            null,
+            tint = Color.White.copy(alpha = .10f),
+            modifier = Modifier.align(Alignment.TopEnd).size(128.dp),
+        )
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Surface(
+                shape = RoundedCornerShape(99.dp),
+                color = Color.White.copy(alpha = .14f),
+                border = BorderStroke(1.dp, Color.White.copy(alpha = .20f)),
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        Icons.Rounded.Shield,
+                        null,
+                        tint = SonHarfTheme.PremiumGoldLight,
+                        modifier = Modifier.size(14.dp),
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        sh("ANA MOD • TAKTİK ALAN SAVAŞI", "MAIN MODE • TACTICAL TERRITORY"),
+                        color = Color.White,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(
+                    sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                    color = Color.White,
+                    fontSize = 25.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    sh(
+                        "Kelimeyi kur. Alanı ele geçir. Rakibini geç.",
+                        "Build words. Claim territory. Outplay your rival.",
+                    ),
+                    color = Color.White.copy(alpha = .86f),
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                )
+            }
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = SonHarfTheme.PremiumGoldLight,
+                    shadowElevation = 4.dp,
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text(
+                            sh("KUŞATMAYA GİR", "ENTER SIEGE"),
+                            color = SonHarfTheme.TextPrimary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Icon(
+                            Icons.Rounded.ChevronRight,
+                            null,
+                            tint = SonHarfTheme.TextPrimary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                }
+                Spacer(Modifier.width(11.dp))
+                Text(
+                    sh("Kelime + strateji + sosyal rekabet", "Words + strategy + social rivalry"),
+                    color = Color.White.copy(alpha = .74f),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeSecondaryModeCard(
+    modifier: Modifier,
+    icon: ImageVector,
+    eyebrow: String,
+    title: String,
+    subtitle: String,
+    colors: List<Color>,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(22.dp)
+    Box(
+        modifier = modifier
+            .height(148.dp)
+            .shadow(6.dp, shape)
+            .clip(shape)
+            .background(Brush.linearGradient(colors))
+            .border(1.dp, Color.White.copy(alpha = .26f), shape)
+            .sonHarfPressScale(pressedScale = .98f)
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+    ) {
+        Icon(
+            icon,
+            null,
+            tint = Color.White.copy(alpha = .12f),
+            modifier = Modifier.align(Alignment.TopEnd).size(72.dp),
+        )
+
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                eyebrow,
+                color = Color.White.copy(alpha = .74f),
+                fontSize = 7.5.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = .4.sp,
+            )
+            Column {
+                Text(
+                    title,
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    subtitle,
+                    color = Color.White.copy(alpha = .82f),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+            }
+            Surface(
+                shape = RoundedCornerShape(99.dp),
+                color = Color.White.copy(alpha = .92f),
+            ) {
+                Row(
+                    Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        sh("AÇ", "OPEN"),
+                        color = SonHarfTheme.TextPrimary,
+                        fontSize = 7.5.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Icon(
+                        Icons.Rounded.ChevronRight,
+                        null,
+                        tint = SonHarfTheme.Primary,
+                        modifier = Modifier.size(13.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeSeasonEventCard(onClick: () -> Unit) {
+    val shape = RoundedCornerShape(22.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(104.dp)
+            .shadow(4.dp, shape)
+            .clip(shape)
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        Color(0xFFFF785F),
+                        SonHarfTheme.WarmOrange,
+                        SonHarfTheme.PremiumGoldLight,
+                    ),
+                ),
+            )
+            .border(1.dp, Color.White.copy(alpha = .30f), shape)
+            .sonHarfPressScale(pressedScale = .985f)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 15.dp, vertical = 13.dp),
+    ) {
+        Icon(
+            Icons.Rounded.EmojiEvents,
+            null,
+            tint = Color.White.copy(alpha = .14f),
+            modifier = Modifier.align(Alignment.CenterEnd).size(92.dp),
+        )
+        Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    sh("SEZON ETKİNLİĞİ", "SEASON EVENT"),
+                    color = Color.White.copy(alpha = .78f),
+                    fontSize = 8.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = .5.sp,
+                )
+                Text(
+                    sh("REKABET ARENASI", "COMPETITION ARENA"),
+                    color = Color.White,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    sh("Turnuvalar, haftalık hedefler ve rakip rekabeti", "Tournaments, weekly goals and rival competition"),
+                    color = Color.White.copy(alpha = .86f),
+                    fontSize = 8.sp,
+                )
+            }
+            Surface(shape = CircleShape, color = Color.White.copy(alpha = .92f)) {
+                Icon(
+                    Icons.Rounded.ChevronRight,
+                    null,
+                    tint = Color(0xFFD25D49),
+                    modifier = Modifier.padding(9.dp).size(18.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeRewardCard(
+    modifier: Modifier,
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    accent: Color,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = modifier
+            .height(118.dp)
+            .sonHarfPressScale(pressedScale = .98f)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(20.dp),
+        color = UnifiedUi.Surface.copy(alpha = .97f),
+        border = BorderStroke(1.dp, accent.copy(alpha = .30f)),
+        shadowElevation = 2.dp,
+    ) {
+        Column(
+            Modifier.padding(13.dp),
+            verticalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = CircleShape,
+                    color = accent.copy(alpha = .16f),
+                ) {
+                    Icon(
+                        icon,
+                        null,
+                        tint = accent,
+                        modifier = Modifier.padding(8.dp).size(20.dp),
+                    )
+                }
+                Spacer(Modifier.weight(1f))
+                Icon(
+                    Icons.Rounded.ChevronRight,
+                    null,
+                    tint = accent,
+                    modifier = Modifier.size(18.dp),
+                )
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    title,
+                    color = UnifiedUi.Text,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    subtitle,
+                    color = UnifiedUi.Muted,
+                    fontSize = 7.5.sp,
+                    lineHeight = 9.5.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
     }
 }
 
@@ -341,7 +706,7 @@ private fun HomeBrandHeader(onTasks: () -> Unit, onVip: () -> Unit) {
             )
             Text(
                 sh("Kelimeyi kur, alanı kuşat, rakibini geç", "Build words, control territory, beat your rival"),
-                color = Color(0xFF4F7964),
+                color = UnifiedUi.Muted,
                 fontSize = 9.5.sp,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.padding(start = 9.dp, top = 1.dp),
@@ -355,7 +720,7 @@ private fun HomeBrandHeader(onTasks: () -> Unit, onVip: () -> Unit) {
             Spacer(Modifier.height(4.dp))
             Text(
                 sh("Kelime oyunu +\ntaktik alan savaşı", "Word game +\ntactical territory battle"),
-                color = Color(0xFF436C59),
+                color = UnifiedUi.Muted,
                 fontSize = 7.5.sp,
                 lineHeight = 8.5.sp,
                 textAlign = TextAlign.End,
@@ -807,12 +1172,12 @@ private fun UnifiedRoundAction(icon: ImageVector, onClick: () -> Unit) {
             .sonHarfPressScale(pressedScale = 0.94f)
             .clickable(onClick = onClick),
         shape = CircleShape,
-        color = Color(0xFFFBFCF7).copy(alpha = .94f),
-        border = BorderStroke(1.2.dp, Color(0xFFB9CCC0)),
+        color = UnifiedUi.Surface.copy(alpha = .96f),
+        border = BorderStroke(1.2.dp, UnifiedUi.Border),
         shadowElevation = 1.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(icon, null, tint = Color(0xFF244D3D), modifier = Modifier.size(21.dp))
+            Icon(icon, null, tint = UnifiedUi.Blue, modifier = Modifier.size(21.dp))
         }
     }
 }
@@ -827,9 +1192,9 @@ private fun UnifiedBottomBar(
     onProfile: () -> Unit,
 ) {
     NavigationBar(
-        containerColor = Color(0xFFF2F6F0).copy(alpha = .98f),
+        containerColor = UnifiedUi.Navigation.copy(alpha = .98f),
         tonalElevation = 0.dp,
-        modifier = Modifier.border(0.5.dp, Color(0xFFDDE6DF)),
+        modifier = Modifier.border(0.5.dp, UnifiedUi.Border),
     ) {
         listOf(
             Triple(UnifiedDestination.HOME, Icons.Rounded.Home, sh("ANA", "HOME")) to onHome,
@@ -846,11 +1211,11 @@ private fun UnifiedBottomBar(
                 icon = { Icon(item.second, null) },
                 label = { Text(item.third, fontSize = 8.sp, fontWeight = if (destination == item.first) FontWeight.Bold else FontWeight.Normal) },
                 colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFF3F745E),
-                    selectedTextColor = Color(0xFF3F745E),
-                    indicatorColor = Color(0xFFDDE9E1),
-                    unselectedIconColor = Color(0xFF6A8075),
-                    unselectedTextColor = Color(0xFF6A8075),
+                    selectedIconColor = UnifiedUi.Blue,
+                    selectedTextColor = UnifiedUi.Blue,
+                    indicatorColor = UnifiedUi.Blue.copy(alpha = .14f),
+                    unselectedIconColor = UnifiedUi.Muted,
+                    unselectedTextColor = UnifiedUi.Muted,
                 ),
             )
         }
