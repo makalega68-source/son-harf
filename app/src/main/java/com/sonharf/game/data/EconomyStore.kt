@@ -23,7 +23,7 @@ private val supportedProfileFrameIds = setOf(
     "frame_flower_pink_blossom",
 )
 
-private val supportedGameThemeIds = setOf("theme_black")
+private val supportedGameThemeIds = setOf("theme_dark_arena")
 
 @Serializable
 data class ShopItemDto(
