@@ -7,17 +7,23 @@ import org.junit.Test
 
 class UnifiedProRuntimeContractTest {
     @Test
-    fun startupRoutesOnlyToUnifiedProAndPrimaryKelimeKusatmasi() {
+    fun startupRoutesOnlyToPremiumCanvaShellAndPrimaryKelimeKusatmasi() {
         val startup = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
-        val unified = File("src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
+        val premium = File("src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt").readText()
         val integration = File("src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
-        assertTrue(startup.contains("UnifiedProApp("))
+
+        assertTrue(startup.contains("PremiumCanvaAppV2("))
+        assertFalse(startup.contains("UnifiedProApp("))
         assertFalse(startup.contains("LiveDuelRuntimeShell("))
         assertFalse(startup.contains("MonsterExperienceApp("))
-        assertTrue(unified.contains("KELİME KUŞATMASI"))
-        assertTrue(unified.contains("PremiumPlayButton(onClick = onSiege)"))
-        assertTrue(unified.contains("SAVAŞA GİR"))
-        assertFalse(unified.contains("MageCat"))
+        assertTrue(premium.contains("KELİME KUŞATMASI"))
+        assertTrue(premium.contains("PremiumV2Destination.SIEGE -> WordSiegeExperienceScreen"))
+        assertTrue(premium.contains("PremiumV2Destination.LAST_LETTER -> OnlineGameScreenV6()"))
+        assertTrue(premium.contains("PremiumV2Destination.LETTER_PATH -> LetterLadderGameScreen"))
+        assertTrue(premium.contains("HARF YOLU"))
+        assertTrue(premium.contains("PremiumStoreScreen("))
+        assertFalse(premium.contains("MageCat"))
+
         assertTrue(integration.contains("PremierWordDuelScreen()"))
         assertFalse(integration.contains("ReactiveMageCatOverlay()"))
         assertFalse(integration.contains("PremierBoosterOverlay()"))

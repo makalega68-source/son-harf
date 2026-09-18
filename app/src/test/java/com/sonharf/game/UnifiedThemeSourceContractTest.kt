@@ -8,41 +8,38 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeUnifiedShellFollowsEquippedThemeAndPremierKeepsCalmHighLegibilityArenaPalette() {
-        val unified = source("UnifiedProApp.kt")
-        val premier = source("PremierWordDuelScreen.kt")
+    fun activeShellUsesPremiumThemeWithOneOptionalBlackCosmetic() {
+        val premium = source("PremiumCanvaAppV2.kt")
         val startup = source("StableV1App.kt")
         val theme = source("SonHarfTheme.kt")
+        val cosmetics = source("CosmeticRuntime.kt")
+        val primitives = source("AppUiPrimitives.kt")
 
-        assertTrue(unified.contains("val Background: Color get() = SonHarfTheme.Background"))
-        assertTrue(unified.contains("val Surface: Color get() = SonHarfTheme.Surface"))
-        assertTrue(unified.contains("val Navigation: Color get() = SonHarfTheme.NavigationSurface"))
-        assertTrue(unified.contains("lightColorScheme("))
-        assertTrue(unified.contains("darkColorScheme("))
-        assertFalse(unified.contains("MageCatCompanion("))
-        assertFalse(unified.contains("MageCatDirector.onLobbyGreet()"))
-        assertFalse(unified.contains("com.sonharf.game.mascot"))
+        assertTrue(premium.contains("SonHarfTheme.Background"))
+        assertTrue(premium.contains("SonHarfTheme.NavigationSurface"))
+        assertTrue(startup.contains("PremiumCanvaAppV2"))
+        assertFalse(startup.contains("PremiumUnifiedProApp"))
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
-        assertTrue(theme.contains("val IsDark: Boolean get() = dark"))
-        assertTrue(theme.contains("val SecondaryAccent: Color get()"))
+
+        assertTrue(theme.contains("val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive"))
+        assertTrue(theme.contains("internal object BlackThemePalette"))
+        assertTrue(cosmetics.contains("BLACK_THEME_ID = \"theme_black\""))
+        assertTrue(theme.contains("Color(0xFF2563EB)"))
+        assertTrue(theme.contains("Color(0xFF12B8A6)"))
+        assertTrue(theme.contains("Color(0xFF7C3AED)"))
+        assertTrue(theme.contains("Color(0xFFF97316)"))
         assertTrue(theme.contains("val NavigationSurface: Color get()"))
         assertTrue(theme.contains("val GameSurface: Color get()"))
         assertTrue(theme.contains("val GameTile: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
+        assertFalse(theme.contains("MonsterLime"))
+        assertFalse(theme.contains("MonsterPink"))
 
-        // Premier remains a fixed high-legibility competitive surface, but now belongs to the
-        // same calm sage / cream / gray-blue visual family as the application shell.
-        assertTrue(premier.contains("val Background = Color(0xFFF1F5F2)"))
-        assertTrue(premier.contains("val Surface = Color(0xFFFFFDF7)"))
-        assertTrue(premier.contains("val Ocean = Color(0xFF4F725E)"))
-        assertTrue(premier.contains("val Sky = Color(0xFF4A6E83)"))
-        assertTrue(premier.contains("Brush.verticalGradient(listOf(PremierUi.Surface, PremierUi.Background))"))
-        assertFalse(premier.contains("val Ocean = Color(0xFF2563EB)"))
-        assertFalse(premier.contains("val Background = Color(0xFF020617)"))
-        assertFalse(premier.contains("val Surface = Color(0xFF0F172A)"))
-        assertFalse(premier.contains("MageCatCompanion("))
-        assertFalse(unified.contains("MonsterUi"))
-        assertFalse(unified.contains("MonsterExperienceApp"))
+        assertTrue(primitives.contains("PremiumCard"))
+        assertTrue(primitives.contains("PremiumPrimaryButton"))
+        assertTrue(primitives.contains("PremiumAccentPill"))
+        assertFalse(premium.contains("MageCatCompanion("))
+        assertFalse(premium.contains("MonsterExperienceApp"))
     }
 
     @Test
@@ -55,7 +52,6 @@ class UnifiedThemeSourceContractTest {
     }
 
     private fun source(name: String) = projectFile("app/src/main/java/com/sonharf/game/$name").readText()
-
     private fun projectFile(path: String): File {
         val file = listOf(File(path), File("../$path")).firstOrNull(File::exists)
         assertNotNull("Project path missing: $path", file)

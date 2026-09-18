@@ -2,84 +2,113 @@ package com.sonharf.game
 
 import androidx.compose.ui.graphics.Color
 
-/** Canonical light-mode palette from Kelime Kuşatması Master GDD v3.0. */
+/** Approved light premium palette. */
 internal object KelimeKusatmasiPalette {
-    val SageGreen = Color(0xFF8A9A86)
-    val OffWhite = Color(0xFFF9F8F6)
-    val SoftBlue = Color(0xFF7A9AEE)
-    val Turquoise = Color(0xFF40E0D0)
-    val LightBeige = Color(0xFFF2EFE9)
-    val Lavender = Color(0xFFB5A2FF)
-    val SlateBlue = Color(0xFF5C6F84)
-    val PaleMint = Color(0xFFA3E4D7)
-    val WarmAccent = Color(0xFFE07A5F)
+    val Blue = Color(0xFF2563EB)
+    val BlueDeep = Color(0xFF1748C7)
+    val BlueSoft = Color(0xFFEAF1FF)
+    val Turquoise = Color(0xFF12B8A6)
+    val TurquoiseDeep = Color(0xFF0E8F83)
+    val TurquoiseSoft = Color(0xFFE6FAF7)
+    val Purple = Color(0xFF7C3AED)
+    val PurpleDeep = Color(0xFF5B21B6)
+    val PurpleSoft = Color(0xFFF1EAFE)
+    val Orange = Color(0xFFF97316)
+    val OrangeDeep = Color(0xFFD95D0B)
+    val OrangeSoft = Color(0xFFFFF0E6)
+    val White = Color(0xFFFFFFFF)
+    val Background = Color(0xFFF6F9FF)
+    val SurfaceSoft = Color(0xFFF0F5FD)
+    val Ink = Color(0xFF10213D)
+    val Muted = Color(0xFF64748B)
+    val Border = Color(0xFFDCE6F3)
+
+    val RoyalBlue: Color get() = Blue
+    val DeepBlue: Color get() = BlueDeep
+    val Sky: Color get() = BlueSoft
+    val OffWhite: Color get() = Background
+    val Slate: Color get() = Muted
+    val PaleMint: Color get() = TurquoiseSoft
+    val SoftIndigo: Color get() = Purple
+    val SageGreen: Color get() = Turquoise
+    val SoftBlue: Color get() = Blue
+    val LightBeige: Color get() = OrangeSoft
+    val Lavender: Color get() = Purple
+    val SlateBlue: Color get() = Muted
+    val WarmAccent: Color get() = Orange
 }
 
-/**
- * Kelime Kuşatması application-wide visual system.
- *
- * The GDD palette is applied to the light/default experience while the established dark arena
- * remains available as an optional cosmetic treatment. Semantic CTA colors retain sufficient
- * contrast instead of forcing every GDD ambient token into an action role.
- *
- * Cosmetic themes never change gameplay state, scoring or economy.
- */
+/** Premium Black Theme. Cosmetic only; gameplay and scoring are unchanged. */
+internal object BlackThemePalette {
+    val Background = Color(0xFF090B10)
+    val Surface = Color(0xFF121722)
+    val SurfaceSecondary = Color(0xFF19202D)
+    val SurfaceElevated = Color(0xFF1F2836)
+    val Navigation = Color(0xFF0D1118)
+    val Modal = Color(0xFF161C27)
+    val GameSurface = Color(0xFF101722)
+    val GameTile = Color(0xFF1A2230)
+    val GameTileBorder = Color(0xFF344154)
+    val Primary = Color(0xFF3B82F6)
+    val PrimarySoft = Color(0xFF182A46)
+    val Turquoise = Color(0xFF1FD1C2)
+    val Purple = Color(0xFF9B6CFF)
+    val Orange = Color(0xFFFF8A34)
+    val Text = Color(0xFFF8FAFC)
+    val Muted = Color(0xFF9CAABC)
+    val Border = Color(0xFF2B3647)
+    val SuccessSoft = Color(0xFF12332F)
+    val Disabled = Color(0xFF202735)
+    val DisabledText = Color(0xFF6F7B8D)
+}
+
+/** Single source of truth for every application surface and game mode. */
 internal object SonHarfTheme {
-    private val dark: Boolean get() = SonHarfCosmetics.darkArenaTheme
+    val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive
 
-    val IsDark: Boolean get() = dark
+    val Background: Color get() = if (IsDark) BlackThemePalette.Background else KelimeKusatmasiPalette.Background
+    val Surface: Color get() = if (IsDark) BlackThemePalette.Surface else KelimeKusatmasiPalette.White
+    val SurfaceSecondary: Color get() = if (IsDark) BlackThemePalette.SurfaceSecondary else KelimeKusatmasiPalette.SurfaceSoft
+    val SurfaceElevated: Color get() = if (IsDark) BlackThemePalette.SurfaceElevated else Color(0xFFFFFFFF)
+    val NavigationSurface: Color get() = if (IsDark) BlackThemePalette.Navigation else Color(0xFFFBFDFF)
+    val ModalSurface: Color get() = if (IsDark) BlackThemePalette.Modal else Color(0xFFFFFFFF)
 
-    // Foundation layers.
-    val Background: Color get() = if (dark) Color(0xFF101914) else KelimeKusatmasiPalette.OffWhite
-    val Surface: Color get() = if (dark) Color(0xFF18241E) else KelimeKusatmasiPalette.OffWhite
-    val SurfaceSecondary: Color get() = if (dark) Color(0xFF213129) else KelimeKusatmasiPalette.LightBeige
-    val SurfaceElevated: Color get() = if (dark) Color(0xFF293A32) else Color(0xFFF6F3EE)
-    val NavigationSurface: Color get() = if (dark) Color(0xFF1A2821) else KelimeKusatmasiPalette.LightBeige
-    val ModalSurface: Color get() = if (dark) Color(0xFF202E27) else KelimeKusatmasiPalette.OffWhite
+    val GameSurface: Color get() = if (IsDark) BlackThemePalette.GameSurface else Color(0xFFF2F6FC)
+    val GameTile: Color get() = if (IsDark) BlackThemePalette.GameTile else Color(0xFFFFFFFF)
+    val GameTileBorder: Color get() = if (IsDark) BlackThemePalette.GameTileBorder else Color(0xFFCBD9EA)
 
-    // Gameplay layers: pale mint map field and neutral light-beige letter surfaces.
-    val GameSurface: Color get() = if (dark) Color(0xFF1A2B27) else KelimeKusatmasiPalette.PaleMint
-    val GameTile: Color get() = if (dark) Color(0xFF4A4336) else KelimeKusatmasiPalette.LightBeige
-    val GameTileBorder: Color get() = if (dark) Color(0xFF817150) else KelimeKusatmasiPalette.SageGreen
+    val Primary: Color get() = if (IsDark) BlackThemePalette.Primary else KelimeKusatmasiPalette.Blue
+    val PrimarySoft: Color get() = if (IsDark) BlackThemePalette.PrimarySoft else KelimeKusatmasiPalette.BlueSoft
+    val SoftBlue: Color get() = if (IsDark) Color(0xFF6EA3FF) else Color(0xFF5B8DEF)
+    val Turquoise: Color get() = if (IsDark) BlackThemePalette.Turquoise else KelimeKusatmasiPalette.Turquoise
+    val ActionOrange: Color get() = if (IsDark) BlackThemePalette.Orange else KelimeKusatmasiPalette.Orange
+    val Lavender: Color get() = if (IsDark) BlackThemePalette.Purple else KelimeKusatmasiPalette.Purple
+    val Sand: Color get() = if (IsDark) Color(0xFF352417) else KelimeKusatmasiPalette.OrangeSoft
 
-    // Brand/accent family. Primary remains a contrast-safe action shade; SageGreen is the
-    // canonical ambient brand tone and is exposed through PrimarySoft/territory surfaces.
-    val Primary: Color get() = if (dark) Color(0xFF557B67) else Color(0xFF526652)
-    val PrimarySoft: Color get() = if (dark) Color(0xFF293D32) else KelimeKusatmasiPalette.SageGreen
-    val SoftBlue: Color get() = if (dark) Color(0xFF55798A) else KelimeKusatmasiPalette.SoftBlue
-    val Turquoise: Color get() = if (dark) Color(0xFF4C817C) else KelimeKusatmasiPalette.Turquoise
-    val Lavender: Color get() = if (dark) Color(0xFF7C7196) else KelimeKusatmasiPalette.Lavender
-    val Sand: Color get() = if (dark) Color(0xFFD3BE91) else KelimeKusatmasiPalette.LightBeige
+    val TextPrimary: Color get() = if (IsDark) BlackThemePalette.Text else KelimeKusatmasiPalette.Ink
+    val TextSecondary: Color get() = if (IsDark) BlackThemePalette.Muted else KelimeKusatmasiPalette.Muted
+    val Border: Color get() = if (IsDark) BlackThemePalette.Border else KelimeKusatmasiPalette.Border
 
-    // Text and dividers.
-    val TextPrimary: Color get() = if (dark) Color(0xFFF3F6F2) else Color(0xFF263D36)
-    val TextSecondary: Color get() = if (dark) Color(0xFFB8C8BF) else KelimeKusatmasiPalette.SlateBlue
-    val Border: Color get() = if (dark) Color(0xFF3C5448) else Color(0xFFD9D8D3)
-
-    // Semantic states from the GDD family.
-    val Success: Color get() = if (dark) Color(0xFF5C876C) else Color(0xFF4F8177)
-    val SuccessSoft: Color get() = if (dark) Color(0xFF294038) else KelimeKusatmasiPalette.PaleMint
-    val Error: Color get() = if (dark) Color(0xFFB95C66) else KelimeKusatmasiPalette.WarmAccent
-    val Warning: Color get() = if (dark) Color(0xFFC19853) else Color(0xFF9B733B)
-    val DisabledBackground: Color get() = if (dark) Color(0xFF2B3932) else Color(0xFFE7E5E0)
-    val DisabledContent: Color get() = if (dark) Color(0xFF83948B) else KelimeKusatmasiPalette.SlateBlue.copy(alpha = .72f)
+    val Success: Color get() = Turquoise
+    val SuccessSoft: Color get() = if (IsDark) BlackThemePalette.SuccessSoft else KelimeKusatmasiPalette.TurquoiseSoft
+    val Error: Color get() = if (IsDark) Color(0xFFFF6670) else Color(0xFFE5484D)
+    val Warning: Color get() = ActionOrange
+    val DisabledBackground: Color get() = if (IsDark) BlackThemePalette.Disabled else Color(0xFFE8EEF7)
+    val DisabledContent: Color get() = if (IsDark) BlackThemePalette.DisabledText else Color(0xFF9AA8BA)
 
     val OnPrimary: Color get() = Color.White
-    val OnSecondary: Color get() = Color(0xFF17332D)
-    val OnTertiary: Color get() = Color(0xFF17332D)
+    val OnSecondary: Color get() = Color.White
+    val OnTertiary: Color get() = Color.White
 
-    // Home/profile hero gradient uses the brand family without reverting to neon colors.
-    val HeroStart: Color get() = if (dark) Color(0xFF20362C) else Color(0xFF667A63)
-    val HeroMiddle: Color get() = if (dark) Color(0xFF274044) else Color(0xFF617BA0)
-    val HeroEnd: Color get() = if (dark) Color(0xFF342F48) else Color(0xFF8175A6)
+    val HeroStart: Color get() = if (IsDark) Color(0xFF0E1A2D) else Color(0xFF2563EB)
+    val HeroMiddle: Color get() = if (IsDark) Color(0xFF123C42) else Color(0xFF12B8A6)
+    val HeroEnd: Color get() = if (IsDark) Color(0xFF2B1748) else Color(0xFF7C3AED)
 
-    // Premium leaderboard / CTA accents.
-    val Forest: Color get() = if (dark) Color(0xFF173329) else Color(0xFF245A49)
-    val ForestDeep: Color get() = if (dark) Color(0xFF10261F) else Color(0xFF16483B)
-    val PremiumGold: Color get() = Color(0xFFD7B35C)
-    val PremiumGoldLight: Color get() = Color(0xFFF2D98A)
+    val Forest: Color get() = Turquoise
+    val ForestDeep: Color get() = if (IsDark) Color(0xFF081B22) else Color(0xFF123A56)
+    val PremiumGold: Color get() = if (IsDark) Color(0xFFFFC55A) else Color(0xFFF2B84B)
+    val PremiumGoldLight: Color get() = if (IsDark) Color(0xFF4A3617) else Color(0xFFFFE4A8)
 
-    // Compatibility aliases. Legacy screens keep compiling while resolving to the same system.
     val PrimaryBlue: Color get() = Primary
     val PrimaryBlueSoft: Color get() = PrimarySoft
     val SecondaryAccent: Color get() = Turquoise

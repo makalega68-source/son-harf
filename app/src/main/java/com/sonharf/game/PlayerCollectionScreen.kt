@@ -1,17 +1,7 @@
 package com.sonharf.game
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -20,22 +10,33 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 
-/** The profile is the only place where owned cosmetics and themes are equipped. */
+/** Compact category-first collection screen. */
 @Composable
 internal fun PlayerCollectionScreen(backend: OnlineGameBackend, onBack: () -> Unit) {
-    Column(Modifier.fillMaxSize().background(SonHarfTheme.Background)) {
-        androidx.compose.foundation.layout.Row(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
-            IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = SonHarfTheme.TextPrimary) }
-            Column(Modifier.padding(start = 6.dp)) {
-                Text(sh("KOLEKSİYONUM", "MY COLLECTION"), color = SonHarfTheme.TextPrimary, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                Text(sh("Alınan ürünleri burada kullan ve değiştir.", "Equip and change owned items here."), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
-            }
-        }
-        LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp)) {
+    Box(Modifier.fillMaxSize()) {
+        SonHarfLeafBackdrop(Modifier.matchParentSize())
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             item {
-                ProfileOwnedThemesSection(backend)
-                Spacer(Modifier.height(24.dp))
+                MainScreenHeader(
+                    title = sh("Koleksiyonum", "My Collection"),
+                    subtitle = sh("Ürünlerini kategorilere göre seç ve kullan", "Choose and equip items by category"),
+                    onBack = onBack,
+                )
             }
+            item {
+                Text(
+                    sh("Tüm ürünler aşağıda sade kutular halinde sıralanır.", "All products are arranged below in simple tiles."),
+                    color = SonHarfTheme.TextSecondary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+            item { ProfileOwnedThemesSection(backend) }
+            item { Spacer(Modifier.height(24.dp)) }
         }
     }
 }

@@ -33,24 +33,30 @@ jobs:
         run: python -m pip install --disable-pip-version-check pillow==11.3.0
       - name: Verify repository drawables and exact catalog mapping
         run: python scripts/verify_frame_provenance.py
-      - name: Verify Unified Pro committed runtime
+      - name: Verify Premium Canva committed runtime
         shell: bash
         run: |
           set -euo pipefail
           echo "SOURCE_SHA=$(git rev-parse HEAD)"
           test ! -f app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
           test ! -f app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt
-          grep -q 'UnifiedProApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumHomePolish.kt
+          grep -q 'PremiumCanvaAppV2(' app/src/main/java/com/sonharf/game/StableV1App.kt
           grep -q 'SonHarfCosmetics.restore(context)' app/src/main/java/com/sonharf/game/StableV1App.kt
-          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
           ! grep -RqiE 'ProfHammy|Prof\. Hammy|prof_hammy' app/src/main/java app/src/main/res
-          grep -q 'val Background: Color get() = SonHarfTheme.Background' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'lightColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'darkColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          ! grep -q 'MageCat' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.GAME -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.LETTER -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'PremiumV2Destination.LAST_LETTER -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'PremiumV2Destination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'PremiumV2Destination.LETTER_PATH -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'HARF YOLU' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'HAFTANIN EN İYİLERİ' app/src/main/java/com/sonharf/game/PremiumHomePolish.kt
+          ! grep -q 'Maskotlar' app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt
+          grep -q 'val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'BLACK_THEME_ID = "theme_dark_arena"' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
+          grep -q '@drawable/kelime_kusatmasi_app_icon' app/src/main/AndroidManifest.xml
+          ! grep -q 'MonsterLime' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
@@ -59,6 +65,8 @@ jobs:
           test ! -d app/src/main/java/com/sonharf/game/mascot
           test ! -f app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
           test -f supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
+          test -f supabase/migrations/20260918213000_black_theme_store_v1.sql
+          grep -q "'theme_dark_arena'" supabase/migrations/20260918213000_black_theme_store_v1.sql
       - name: Test and build debug APK
         run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
       - name: Verify compiled APK pixels against immutable purchased-source manifest
@@ -66,6 +74,6 @@ jobs:
       - name: Upload provenance-verified APK
         uses: actions/upload-artifact@v4
         with:
-          name: SonHarf-Provenance-Verified-APK
+          name: SonHarf-Premium-Canva-Provenance-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

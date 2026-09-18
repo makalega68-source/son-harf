@@ -8,9 +8,8 @@ import org.junit.Test
 
 class CalmLayeredThemeContractTest {
     @Test
-    fun premiumBotanicalThemeDefinesIndependentSemanticLayers() {
+    fun premiumSystemDefinesLightAndBlackSemanticLayers() {
         val theme = source("SonHarfTheme.kt")
-
         listOf(
             "val Background: Color get()",
             "val Surface: Color get()",
@@ -22,49 +21,35 @@ class CalmLayeredThemeContractTest {
             "val GameTile: Color get()",
             "val GameTileBorder: Color get()",
             "val Primary: Color get()",
-            "val SoftBlue: Color get()",
             "val Turquoise: Color get()",
-            "val Lavender: Color get()",
-            "val Sand: Color get()",
+            "val ActionOrange: Color get()",
             "val HeroStart: Color get()",
-            "val HeroMiddle: Color get()",
-            "val HeroEnd: Color get()",
-            "val PremiumGold: Color get()",
+            "val TextPrimary: Color get()",
+            "val TextSecondary: Color get()",
         ).forEach { token -> assertTrue("Missing theme layer: $token", theme.contains(token)) }
 
-        // Master GDD v3 identity: sage + off-white + soft blue/turquoise + beige/lavender/slate/mint/warm accent.
-        assertTrue(theme.contains("Color(0xFF8A9A86)"))
-        assertTrue(theme.contains("Color(0xFFF9F8F6)"))
-        assertTrue(theme.contains("Color(0xFF7A9AEE)"))
-        assertTrue(theme.contains("Color(0xFF40E0D0)"))
-        assertTrue(theme.contains("Color(0xFFF2EFE9)"))
-        assertTrue(theme.contains("Color(0xFFB5A2FF)"))
-        assertTrue(theme.contains("Color(0xFF5C6F84)"))
-        assertTrue(theme.contains("Color(0xFFA3E4D7)"))
-        assertTrue(theme.contains("Color(0xFFE07A5F)"))
-        assertTrue(theme.contains("Color(0xFFD7B35C)"))
+        assertTrue(theme.contains("Color(0xFF2563EB)"))
+        assertTrue(theme.contains("Color(0xFF12B8A6)"))
+        assertTrue(theme.contains("Color(0xFF7C3AED)"))
+        assertTrue(theme.contains("Color(0xFFF97316)"))
+        assertTrue(theme.contains("internal object BlackThemePalette"))
+        assertTrue(theme.contains("Color(0xFF090B10)"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive"))
+        assertFalse(theme.contains("Color(0xFFEFFF19)"))
     }
 
     @Test
-    fun sharedShellUsesBotanicalThemeAndAllowsBackdropToRemainVisible() {
+    fun launchChromeRemainsPremiumAndAvoidsLegacyMonsterFlash() {
         val primitives = source("AppUiPrimitives.kt")
         val styles = projectFile("app/src/main/res/values/styles.xml").readText()
-
-        assertTrue(primitives.contains("internal val PortalBg: Color get() = if (SonHarfTheme.IsDark)"))
-        assertTrue(primitives.contains("SonHarfTheme.Background.copy(alpha = .94f)"))
         assertTrue(primitives.contains("internal val PortalCard: Color get() = SonHarfTheme.Surface"))
-        assertTrue(primitives.contains("internal val PortalBlue: Color get() = SonHarfTheme.SoftBlue"))
-        assertFalse(primitives.contains("internal val PortalBlue = Color(0xFF1769E0)"))
-        assertFalse(primitives.contains("internal val PortalGold = Color(0xFFF3A81A)"))
-
-        // Native startup background stays in the same calm family while Compose takes over.
-        assertTrue(styles.contains("<item name=\"android:windowBackground\">#F4F7F2</item>"))
-        assertTrue(styles.contains("<item name=\"android:statusBarColor\">#F4F7F2</item>"))
-        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#EEF3F0</item>"))
+        assertTrue(primitives.contains("internal val PortalBlue: Color get() = SonHarfTheme.Primary"))
+        assertTrue(primitives.contains("PremiumPrimaryButton"))
+        assertTrue(styles.contains("<item name=\"android:windowBackground\">#F6F9FF</item>"))
+        assertFalse(styles.contains("#0D0F12"))
     }
 
     private fun source(name: String) = projectFile("app/src/main/java/com/sonharf/game/$name").readText()
-
     private fun projectFile(path: String): File {
         val file = listOf(File(path), File("../$path")).firstOrNull(File::exists)
         assertNotNull("Project path missing: $path", file)

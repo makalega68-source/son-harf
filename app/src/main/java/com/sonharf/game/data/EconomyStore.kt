@@ -23,7 +23,7 @@ private val supportedProfileFrameIds = setOf(
     "frame_flower_pink_blossom",
 )
 
-private val supportedGameThemeIds = setOf("theme_dark_arena")
+private val supportedGameThemeIds = setOf("theme_black")
 
 @Serializable
 data class ShopItemDto(
@@ -92,10 +92,7 @@ suspend fun OnlineGameBackend.getInventory(): Set<String> {
         .decodeList<InventoryDto>().map { it.itemId }.toSet()
 }
 
-/**
- * Ownership outlives storefront rotation. The live RLS policy exposes retired shop metadata only
- * to the account that owns the item; the client still intersects rows with its own inventory.
- */
+/** Ownership outlives storefront rotation. */
 suspend fun OnlineGameBackend.getOwnedShopItems(owned: Set<String>): List<ShopItemDto> {
     if (owned.isEmpty()) return emptyList()
     return SupabaseProvider.client.from("shop_items").select().decodeList<ShopItemDto>()
@@ -118,7 +115,7 @@ suspend fun OnlineGameBackend.equipShopItem(itemId: String) {
     SupabaseProvider.client.postgrest.rpc("equip_shop_item", buildJsonObject { put("p_item_id", itemId) })
 }
 
-/** Restores the built-in blue/white visual system without creating a fake purchasable item. */
+/** Restores the built-in premium blue/white visual system. */
 suspend fun OnlineGameBackend.equipDefaultGameTheme() {
     SupabaseProvider.client.postgrest.rpc("equip_default_game_theme")
 }

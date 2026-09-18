@@ -8,15 +8,13 @@ import org.junit.Test
 class SiegeDictionaryThemeRegressionTest {
     private fun appSource(name: String): String = File("src/main/java/com/sonharf/game/$name").readText()
     private fun dataSource(name: String): String = File("src/main/java/com/sonharf/game/data/$name").readText()
-    private fun repoFile(path: String): File = sequenceOf(File(path), File("../$path"))
-        .firstOrNull { it.exists() }
+    private fun repoFile(path: String): File = sequenceOf(File(path), File("../$path")).firstOrNull { it.exists() }
         ?: error("Missing repository file: $path")
 
     @Test fun phonePracticeLayoutPrioritizesTheFifteenByFifteenBoard() {
         val screen = appSource("WordSiegePracticeScreen.kt")
         val guidance = appSource("WordSiegePracticeGuidance.kt")
         val board = appSource("WordSiegeBoardSpec.kt")
-
         assertTrue(board.contains("const val Size = 15"))
         assertTrue(screen.contains("maxHeight < 700.dp || maxWidth < 600.dp"))
         assertTrue(screen.contains("height(if (compact) 46.dp else 52.dp)"))
@@ -27,7 +25,6 @@ class SiegeDictionaryThemeRegressionTest {
     @Test fun persistedDictionaryIsRefreshedAndUnicodeNormalizationMatchesServer() {
         val screen = appSource("WordSiegePracticeScreen.kt")
         val dictionary = dataSource("SharedDictionaryService.kt")
-
         assertTrue(screen.contains("SharedDictionaryService.preloadCanonical(context, state.language)"))
         assertTrue(screen.contains("dictionaryReady = restored"))
         assertTrue(dictionary.contains("Normalizer.Form.NFC"))
@@ -38,19 +35,19 @@ class SiegeDictionaryThemeRegressionTest {
         assertTrue(migration.contains("char_length(d.normalized_word) between 2 and 15"))
     }
 
-    @Test fun profileAlwaysOffersBuiltInBlueWhiteThemeWithoutStorePurchase() {
+    @Test fun profileAlwaysOffersBuiltInPremiumThemeWithoutStorePurchase() {
         val profile = appSource("MainPlayerProfileScreen.kt")
-        val shell = appSource("PremiumUnifiedProApp.kt")
-        val settings = appSource("MainSettingsVipScreen.kt")
         val themes = appSource("ProfileOwnedThemesSection.kt")
         val economy = dataSource("EconomyStore.kt")
 
         assertTrue(profile.contains("Koleksiyonum") || profile.contains("Collection"))
-        assertTrue(themes.contains("ProfileOwnedThemesSection") || themes.contains("equipDefaultGameTheme"))
-        assertTrue(themes.contains("Ana Yeşil Beyaz"))
-        assertTrue(themes.contains("Varsayılan görünüm • Ücretsiz"))
+        assertTrue(themes.contains("ProfileOwnedThemesSection"))
+        assertTrue(themes.contains("Text(\"Premium\""))
+        assertTrue(themes.contains("sh(\"Varsayılan\", \"Default\")"))
         assertTrue(themes.contains("backend.equipDefaultGameTheme()"))
         assertTrue(economy.contains("equip_default_game_theme"))
         assertFalse(themes.contains("purchaseShopItem"))
+        assertFalse(themes.contains("Ana Yeşil Beyaz"))
+        assertFalse(themes.contains("Gece Arenası"))
     }
 }

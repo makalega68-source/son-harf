@@ -9,6 +9,9 @@ import com.sonharf.game.data.EquippedCosmeticsDto
 
 object SonHarfCosmetics {
     private const val PREFS = "son_harf_equipped_style_cache"
+    // Retired compatibility contract was BLACK_THEME_ID = "theme_dark_arena"; never reactivate it.
+    const val BLACK_THEME_ID = "theme_black"
+
     var profileFrameId by mutableStateOf<String?>(null)
     var nameStyleId by mutableStateOf<String?>(null)
     var gameThemeId by mutableStateOf<String?>(null)
@@ -28,7 +31,7 @@ object SonHarfCosmetics {
     fun restore(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         profileFrameId = prefs.getString("profile_frame_id", null)?.takeIf { !it.isNullOrBlank() }
-        gameThemeId = prefs.getString("game_theme_id", null)?.takeIf { it == "theme_dark_arena" }
+        gameThemeId = prefs.getString("game_theme_id", null)
         nameStyleId = prefs.getString("name_style_id", null)
         keyboardThemeId = prefs.getString("keyboard_theme_id", null)
     }
@@ -43,14 +46,16 @@ object SonHarfCosmetics {
             .apply()
     }
 
+    val blackThemeActive: Boolean get() = gameThemeId == BLACK_THEME_ID
+
     val profileAccent: Color
         get() = when (profileFrameId) {
-            PurchasedFrameCatalog.GOLDEN_AVATAR -> SonHarfGold
-            PurchasedFrameCatalog.OCEAN -> SonHarfCyan
-            PurchasedFrameCatalog.LILAC -> SonHarfPurple
+            PurchasedFrameCatalog.GOLDEN_AVATAR -> SonHarfTheme.ActionOrange
+            PurchasedFrameCatalog.OCEAN -> SonHarfTheme.Turquoise
+            PurchasedFrameCatalog.LILAC -> SonHarfTheme.Purple
             PurchasedFrameCatalog.BOTANIC -> Color(0xFF2FAE68)
             PurchasedFrameCatalog.ROSE -> Color(0xFFD84C4C)
-            else -> SonHarfMuted
+            else -> SonHarfTheme.Primary
         }
 
     val playerNameColor: Color
@@ -59,44 +64,55 @@ object SonHarfCosmetics {
             "name_sapphire" -> Color(0xFF2E6FB7)
             "name_amethyst" -> Color(0xFF7D5CA8)
             "name_aurelia" -> Color(0xFF9C742D)
-            else -> SonHarfText
+            else -> SonHarfTheme.TextPrimary
         }
 
-    /**
-     * Product skins affect only letter-input presentation. The legacy neon skin deliberately
-     * resolves to the default look after its retirement; it never grants a gameplay benefit.
-     */
+    /** Cosmetic keyboards remain presentation-only and never grant a gameplay benefit. */
     val keyboardPalette: WordKeyboardPalette
         get() = keyboardPaletteFor(keyboardThemeId)
 
     /** Single palette source for the live keyboard and its store preview. */
     fun keyboardPaletteFor(themeId: String?): WordKeyboardPalette = when (themeId) {
-            "keyboard_crystal" -> WordKeyboardPalette(
-                background = Color(0xFFE8F1F5), key = Color(0xFFF8FCFF), keyAlt = Color(0xFFD6E5ED),
-                text = Color(0xFF26353E), action = Color(0xFF537FA1), actionText = Color.White,
-                border = Color(0xFF9ABBCB), secondaryBorder = Color(0xFFA9BFCA),
-            )
-            "keyboard_obsidian" -> WordKeyboardPalette(
-                background = Color(0xFF151719), key = Color(0xFF24272A), keyAlt = Color(0xFF343535),
-                text = Color(0xFFF7F1E3), action = Color(0xFFB9914D), actionText = Color(0xFF21180A),
-                border = Color(0xFF6A6254), secondaryBorder = Color(0xFFB9914D),
-            )
-            else -> WordKeyboardPalette(
-                background = Color(0xFFF0F5F1), key = Color(0xFFFFFEF8), keyAlt = Color(0xFFDDE9E1),
-                text = Color(0xFF213C31), action = Color(0xFF4F7964), actionText = Color.White,
-                border = Color(0xFFC4D5CA), secondaryBorder = Color(0xFF6D9080),
-            )
-        }
-    /** The only sellable match theme. It changes presentation only, never match rules. */
-    val darkArenaTheme: Boolean get() = gameThemeId == "theme_dark_arena"
-    // Kept for compatibility with an already-equipped legacy item. It is no longer sold.
-    val monsterBlueTheme: Boolean get() = gameThemeId == "theme_monster_blue"
-    // Retained only so older arena code compiles; Aurora is retired from sale.
-    val auroraTheme: Boolean get() = gameThemeId == "theme_aurora"
+        "keyboard_crystal" -> WordKeyboardPalette(
+            background = Color(0xFFE8F1F5),
+            key = Color(0xFFF8FCFF),
+            keyAlt = Color(0xFFD6E5ED),
+            text = Color(0xFF26353E),
+            action = SonHarfTheme.Primary,
+            actionText = Color.White,
+            border = Color(0xFF9ABBCB),
+            secondaryBorder = SonHarfTheme.Turquoise,
+        )
+        "keyboard_obsidian" -> WordKeyboardPalette(
+            background = Color(0xFF151719),
+            key = Color(0xFF24272A),
+            keyAlt = Color(0xFF343535),
+            text = Color(0xFFF7F1E3),
+            action = SonHarfTheme.Purple,
+            actionText = Color.White,
+            border = Color(0xFF6A6254),
+            secondaryBorder = SonHarfTheme.ActionOrange,
+        )
+        else -> WordKeyboardPalette(
+            background = SonHarfTheme.PrimarySoft,
+            key = SonHarfTheme.Surface,
+            keyAlt = SonHarfTheme.Purple.copy(alpha = .09f),
+            text = SonHarfTheme.TextPrimary,
+            action = SonHarfTheme.Primary,
+            actionText = Color.White,
+            border = SonHarfTheme.Border,
+            secondaryBorder = SonHarfTheme.Turquoise,
+        )
+    }
+
+    // Retired IDs remain readable in historical ownership rows only; they do not activate Black Theme.
+    val darkArenaTheme: Boolean get() = false
+    val monsterBlueTheme: Boolean get() = false
+    val auroraTheme: Boolean get() = false
+
     val crownVictory: Boolean get() = victoryEffectId == "victory_crown"
 }
 
-/** Shared by every embedded word keyboard so a purchased skin is real in every supported mode. */
 data class WordKeyboardPalette(
     val background: Color,
     val key: Color,

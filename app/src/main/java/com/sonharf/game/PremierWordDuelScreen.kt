@@ -49,23 +49,23 @@ private enum class PremierStage { Loading, Lobby, Searching, Vs, Playing, Finish
 private data class PremierMoveFeedback(val accepted: Boolean, val message: String)
 private const val PREMIER_TURN_SECONDS = 15
 
-/** Fixed high-legibility gameplay palette from the same calm Son Harf color family. */
+/** Live Son Harf uses the same approved premium design system as the full product. */
 private object PremierUi {
-    val Background = Color(0xFFF1F5F2)
-    val Surface = Color(0xFFFFFDF7)
-    val Ink = Color(0xFF26382F)
-    val Muted = Color(0xFF65766D)
-    val Ocean = Color(0xFF4F725E)
-    val OceanDeep = Color(0xFF3F614E)
-    val Sky = Color(0xFF4A6E83)
-    val Ice = Color(0xFFEAF2EE)
-    val Border = Color(0xFFCCD8D1)
-    val Green = Color(0xFF4B765D)
-    val GreenSoft = Color(0xFFDDE9E1)
-    val Red = Color(0xFFA84F59)
-    val RedSoft = Color(0xFFF4E4E5)
-    val Gold = Color(0xFF8A6538)
-    val GoldSoft = Color(0xFFF1E7D3)
+    val Background: Color get() = SonHarfTheme.Background
+    val Surface: Color get() = SonHarfTheme.Surface
+    val Ink: Color get() = SonHarfTheme.TextPrimary
+    val Muted: Color get() = SonHarfTheme.TextSecondary
+    val Ocean: Color get() = SonHarfTheme.Primary
+    val OceanDeep: Color get() = KelimeKusatmasiPalette.BlueDeep
+    val Sky: Color get() = SonHarfTheme.Turquoise
+    val Ice: Color get() = SonHarfTheme.PrimarySoft
+    val Border: Color get() = SonHarfTheme.Border
+    val Green: Color get() = SonHarfTheme.Turquoise
+    val GreenSoft: Color get() = SonHarfTheme.SuccessSoft
+    val Red: Color get() = SonHarfTheme.Error
+    val RedSoft = Color(0xFFFFECEE)
+    val Gold: Color get() = SonHarfTheme.ActionOrange
+    val GoldSoft: Color get() = SonHarfTheme.Sand
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr
@@ -855,8 +855,6 @@ private fun PremierArena(
                     Text(notice, color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 4.dp))
                 }
             }
-            // Keep the live input outside the flexible arena body. This guarantees visibility on
-            // short screens after the global top banner consumes vertical space.
             PremierInputBar(
                 language,
                 input,
@@ -1117,8 +1115,6 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
         Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierUi.Muted, fontSize = 10.sp)
         return
     }
-    // Pro users see the full played-word history so they can avoid repeats;
-    // everyone else keeps the compact trailing preview.
     val ordered = if (isPro) words.reversed() else words.takeLast(12).reversed()
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (isPro) {

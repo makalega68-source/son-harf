@@ -1,11 +1,9 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -13,9 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -39,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
 
-/** Unified Pro startup shell: language -> auth -> premium product. */
+/** Premium startup shell: language -> auth -> approved Canva product shell. */
 @Composable
 fun StableV1App() {
     val context = LocalContext.current
@@ -67,7 +63,8 @@ fun StableV1App() {
     }
 
     if (!authChecked) {
-        Box(Modifier.fillMaxSize().background(MainUi.Background), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            PremiumScreenBackground(Modifier.matchParentSize())
             CircularProgressIndicator(color = MainUi.Blue)
         }
         return
@@ -78,13 +75,10 @@ fun StableV1App() {
         return
     }
 
-    PremiumUnifiedProApp(onSignedOut = { authenticated = false })
+    PremiumCanvaAppV2(onSignedOut = { authenticated = false })
 }
 
-/**
- * Keeps the existing authentication flow intact while making the oversized entry controls
- * slightly more compact on phones. The language selector is intentionally unaffected.
- */
+/** Keeps the existing authentication flow intact while preserving phone-scale ergonomics. */
 @Composable
 private fun CompactAuthGate(onAuthenticated: () -> Unit) {
     val density = LocalDensity.current
@@ -92,7 +86,7 @@ private fun CompactAuthGate(onAuthenticated: () -> Unit) {
         LocalDensity provides Density(
             density = density.density * 0.94f,
             fontScale = density.fontScale,
-        )
+        ),
     ) {
         RequiredAuthGate(onAuthenticated)
     }
@@ -103,70 +97,88 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
     var selected by remember { mutableStateOf<String?>(null) }
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
-        Column(
-            modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 24.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            SonHarfOfficialLogo(modifier = Modifier.fillMaxWidth(.88f).height(168.dp))
-            Spacer(Modifier.height(14.dp))
-            Text(
-                text = "Dilini seç / Choose your language",
-                color = MainUi.Muted,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(24.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FilterChip(
-                    selected = selected == "tr",
-                    onClick = { selected = "tr" },
-                    label = { Text("TÜRKÇE", fontWeight = FontWeight.Black) },
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MainUi.BlueSoft,
-                        selectedLabelColor = MainUi.Blue,
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = selected == "tr",
-                        borderColor = MainUi.Border,
-                        selectedBorderColor = MainUi.Blue,
-                    ),
-                )
-                FilterChip(
-                    selected = selected == "en",
-                    onClick = { selected = "en" },
-                    label = { Text("ENGLISH", fontWeight = FontWeight.Black) },
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MainUi.BlueSoft,
-                        selectedLabelColor = MainUi.Blue,
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = selected == "en",
-                        borderColor = MainUi.Border,
-                        selectedBorderColor = MainUi.Blue,
-                    ),
-                )
-            }
-            Spacer(Modifier.height(22.dp))
-            Button(
-                enabled = selected != null,
-                onClick = { selected?.let(onContinue) },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(15.dp),
-                contentPadding = PaddingValues(horizontal = 18.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MainUi.Blue,
-                    contentColor = MainUi.Surface,
-                    disabledContainerColor = MainUi.Border,
-                    disabledContentColor = MainUi.Muted,
-                ),
+        Box(Modifier.fillMaxSize()) {
+            PremiumScreenBackground(Modifier.matchParentSize())
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .statusBarsPadding()
+                    .padding(horizontal = 22.dp, vertical = 28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                Text(if (selected == "en") "CONTINUE" else "DEVAM ET", fontWeight = FontWeight.Black)
+                Column(
+                    modifier = Modifier.fillMaxWidth().widthIn(max = 520.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    PremiumAccentPill(text = "KELİME KUŞATMASI", color = MainUi.Purple)
+                    Spacer(Modifier.height(18.dp))
+                    SonHarfOfficialLogo(modifier = Modifier.fillMaxWidth(.86f).height(150.dp))
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "Dilini seç / Choose your language",
+                        color = MainUi.Text,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = "Kelime oyunları, taktik alan savaşı ve sosyal rekabet tek yerde.",
+                        color = MainUi.Muted,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(24.dp))
+                    PremiumCard(modifier = Modifier.fillMaxWidth(), accent = MainUi.Blue) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            FilterChip(
+                                selected = selected == "tr",
+                                onClick = { selected = "tr" },
+                                label = { Text("TÜRKÇE", fontWeight = FontWeight.Black) },
+                                modifier = Modifier.weight(1f).height(52.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MainUi.SurfaceSoft,
+                                    labelColor = MainUi.Text,
+                                    selectedContainerColor = MainUi.BlueSoft,
+                                    selectedLabelColor = MainUi.Blue,
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = selected == "tr",
+                                    borderColor = MainUi.Border,
+                                    selectedBorderColor = MainUi.Blue,
+                                ),
+                            )
+                            FilterChip(
+                                selected = selected == "en",
+                                onClick = { selected = "en" },
+                                label = { Text("ENGLISH", fontWeight = FontWeight.Black) },
+                                modifier = Modifier.weight(1f).height(52.dp),
+                                colors = FilterChipDefaults.filterChipColors(
+                                    containerColor = MainUi.SurfaceSoft,
+                                    labelColor = MainUi.Text,
+                                    selectedContainerColor = MainUi.Purple.copy(alpha = .10f),
+                                    selectedLabelColor = MainUi.Purple,
+                                ),
+                                border = FilterChipDefaults.filterChipBorder(
+                                    enabled = true,
+                                    selected = selected == "en",
+                                    borderColor = MainUi.Border,
+                                    selectedBorderColor = MainUi.Purple,
+                                ),
+                            )
+                        }
+                        Spacer(Modifier.height(18.dp))
+                        PremiumPrimaryButton(
+                            text = if (selected == "en") "CONTINUE" else "DEVAM ET",
+                            onClick = { selected?.let(onContinue) },
+                            enabled = selected != null,
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                    }
+                }
             }
         }
     }

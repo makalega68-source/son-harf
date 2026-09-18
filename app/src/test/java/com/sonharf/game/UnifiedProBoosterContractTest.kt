@@ -14,10 +14,9 @@ class UnifiedProBoosterContractTest {
         val integration = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
         val premier = projectFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
         val vip = projectFile("app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt").readText()
-        val shop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
+        val store = projectFile("app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt").readText()
         val entitlements = projectFile("app/src/main/java/com/sonharf/game/data/VipEntitlements.kt").readText()
 
-        // Compatibility API remains available in source for old clients/non-ranked future reuse.
         assertTrue(backend.contains("get_premier_booster_status_v1"))
         assertTrue(backend.contains("use_premier_hint_v1"))
         assertTrue(backend.contains("use_premier_swap_v1"))
@@ -26,7 +25,6 @@ class UnifiedProBoosterContractTest {
         assertTrue(overlay.contains("usePremierSwap"))
         assertTrue(overlay.contains("usePremierMultiplier"))
 
-        // Ranked runtime must mount neither paid gameplay power nor mascot overlays.
         assertTrue(integration.contains("PremierWordDuelScreen()"))
         assertFalse(integration.contains("ReactiveMageCatOverlay()"))
         assertFalse(integration.contains("PremierBoosterOverlay()"))
@@ -35,15 +33,15 @@ class UnifiedProBoosterContractTest {
 
         assertFalse(vip.contains("2x Skor"))
         assertFalse(vip.contains("claimVipDailyHelpers"))
-        assertTrue(vip.contains("ADİL REKABET"))
+        assertFalse(vip.contains("ADİL REKABET"))
+        assertFalse(vip.contains("GOOGLE PLAY'DE YÖNET"))
         assertTrue(entitlements.contains("rankedLiveAssist: Boolean = false"))
 
-        // Store messaging must describe only fair PRO value, never a paid ranked advantage.
-        assertTrue(shop.contains("Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz."))
-        assertTrue(shop.contains("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez."))
-        assertFalse(shop.contains("günlük İpucu, Harf Değiştirici ve 2x Skor"))
-        assertFalse(shop.contains("daily Hint, Letter Swap and 2x Score"))
-        assertFalse(shop.contains("helper boosters with PRO"))
+        assertFalse(store.contains("Maskotlar"))
+        assertFalse(store.contains("FAIR PLAY PROMISE"))
+        assertFalse(store.contains("günlük İpucu, Harf Değiştirici ve 2x Skor"))
+        assertFalse(store.contains("daily Hint, Letter Swap and 2x Score"))
+        assertFalse(store.contains("helper boosters with PRO"))
     }
 
     @Test
@@ -51,11 +49,8 @@ class UnifiedProBoosterContractTest {
         val legacy = projectFile("supabase/migrations/20260908155955_unified_pro_boosters_and_turn20.sql").readText()
         val fairPlay = projectFile("supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql").readText()
 
-        // Preserve the independent 20-second server turn work from the legacy migration.
         assertTrue(legacy.contains("interval '20 seconds'"))
         assertTrue(legacy.contains("on delete restrict", ignoreCase = true))
-
-        // But competitive power is explicitly inert in the later authoritative migration.
         assertTrue(fairPlay.contains("select p_default"))
         assertTrue(fairPlay.contains("select false"))
         assertTrue(fairPlay.contains("competitive_booster_disabled"))
@@ -69,10 +64,12 @@ class UnifiedProBoosterContractTest {
     @Test
     fun retiredClassicRuntimeCannotReenterStartupPath() {
         val startup = projectFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
-        val unified = projectFile("app/src/main/java/com/sonharf/game/UnifiedProApp.kt").readText()
+        val premium = projectFile("app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt").readText()
 
-        assertTrue(startup.contains("UnifiedProApp("))
-        assertTrue(unified.contains("UnifiedDestination.VIP -> UnifiedProVipScreen"))
+        assertTrue(startup.contains("PremiumCanvaAppV2("))
+        assertTrue(premium.contains("PremiumV2Destination.SHOP -> PremiumStoreScreen"))
+        assertTrue(premium.contains("PremiumV2Destination.LAST_LETTER -> OnlineGameScreenV6()"))
+        assertFalse(startup.contains("UnifiedProApp("))
         assertFalse(projectFileOrNull("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt")?.exists() == true)
         assertFalse(projectFileOrNull("app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt")?.exists() == true)
     }

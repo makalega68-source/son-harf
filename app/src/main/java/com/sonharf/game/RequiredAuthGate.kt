@@ -49,35 +49,29 @@ private data class AuthIdentityProfile(
     @SerialName("identity_locked") val identityLocked: Boolean = false,
 )
 
-/**
- * Pre-authentication palette.
- *
- * Authentication is intentionally kept on a fixed calm light palette because no
- * authenticated profile theme is authoritative yet. Each visual layer has its
- * own semantic token so the login flow cannot drift back to the legacy blue/lilac UI.
- */
+/** Authentication uses the same premium design system as the rest of the product. */
 private object AuthUi {
-    val Background = Color(0xFFF4F7F2)
-    val BackgroundTop = Color(0xFFF8FAF7)
-    val Surface = Color(0xFFFFFDF7)
-    val SurfaceSoft = Color(0xFFEAF2EE)
-    val SurfaceRaised = Color(0xFFEFF4F6)
-    val Modal = Color(0xFFFAF7F0)
-    val Primary = Color(0xFF4F725E)
-    val PrimarySoft = Color(0xFFDDE9E1)
-    val SoftBlue = Color(0xFF4A6E83)
-    val Turquoise = Color(0xFF477B78)
-    val Lavender = Color(0xFF7B6B95)
-    val Sand = Color(0xFFD7C49F)
-    val Text = Color(0xFF26382F)
-    val Muted = Color(0xFF65766D)
-    val Border = Color(0xFFCCD8D1)
-    val BorderSoft = Color(0xFFDDE5E0)
-    val Success = Color(0xFF4B765D)
-    val SuccessSoft = Color(0xFFE4F0E8)
-    val Warning = Color(0xFF8A6538)
-    val WarningSoft = Color(0xFFF5EEE1)
-    val Error = Color(0xFFA84F59)
+    val Background: Color get() = SonHarfTheme.Background
+    val BackgroundTop = Color(0xFFFBFDFF)
+    val Surface: Color get() = SonHarfTheme.Surface
+    val SurfaceSoft: Color get() = SonHarfTheme.SurfaceSecondary
+    val SurfaceRaised: Color get() = SonHarfTheme.SurfaceElevated
+    val Modal: Color get() = SonHarfTheme.ModalSurface
+    val Primary: Color get() = SonHarfTheme.Primary
+    val PrimarySoft: Color get() = SonHarfTheme.PrimarySoft
+    val SoftBlue: Color get() = SonHarfTheme.SoftBlue
+    val Turquoise: Color get() = SonHarfTheme.Turquoise
+    val Lavender: Color get() = SonHarfTheme.Purple
+    val Sand: Color get() = SonHarfTheme.Sand
+    val Text: Color get() = SonHarfTheme.TextPrimary
+    val Muted: Color get() = SonHarfTheme.TextSecondary
+    val Border: Color get() = SonHarfTheme.Border
+    val BorderSoft = Color(0xFFE8EEF7)
+    val Success: Color get() = SonHarfTheme.Success
+    val SuccessSoft: Color get() = SonHarfTheme.SuccessSoft
+    val Warning: Color get() = SonHarfTheme.Warning
+    val WarningSoft: Color get() = SonHarfTheme.Sand
+    val Error: Color get() = SonHarfTheme.Error
 }
 
 private suspend fun currentIdentityProfile(): AuthIdentityProfile? {
@@ -227,7 +221,6 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 .imePadding(),
         ) {
             SonHarfLeafBackdrop(Modifier.matchParentSize())
-            // Generated directly in Compose so no stale bitmap can survive an app update.
             Box(
                 Modifier.matchParentSize().background(
                     Brush.verticalGradient(
@@ -531,10 +524,6 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                             busy = true; notice = ""; success = false
                                             if (register) {
                                                 val targetEmail = email.trim()
-
-                                                // First try the credentials. This prevents Supabase's
-                                                // repeated-signup privacy response from being mistaken
-                                                // for a newly sent verification email.
                                                 val existingLogin = runCatching {
                                                     SupabaseProvider.client.auth.signOut()
                                                     SupabaseProvider.client.auth.signInWith(Email) {

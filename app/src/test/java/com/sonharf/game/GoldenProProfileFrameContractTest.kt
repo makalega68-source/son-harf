@@ -29,13 +29,19 @@ class GoldenProProfileFrameContractTest {
     }
 
     @Test
+    fun proAvatarRingIsIntentionallyThin() {
+        val frame = read("src/main/java/com/sonharf/game/FramedProfileAvatar.kt")
+        assertTrue(frame.contains("val ringWidth = if (isPro) 1.5.dp else 1.dp"))
+    }
+
+    @Test
     fun profileCollectionCanRenderAndEquipOwnedFrames() {
         val collection = read("src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt")
         assertTrue(collection.contains("backend.getInventory()"))
         assertTrue(collection.contains("backend.getOwnedShopItems(nextOwned)"))
-        assertTrue(collection.contains("PurchasedProfileFrameOverlay(frameId = item.id"))
-        assertTrue(collection.contains("onEquip = { equipStyle(item.id) }"))
+        assertTrue(collection.contains("StoreProductPreview(item = item"))
         assertTrue(collection.contains("backend.equipShopItem(itemId)"))
+        assertTrue(collection.contains("items.chunked(2)"))
     }
 
     @Test
