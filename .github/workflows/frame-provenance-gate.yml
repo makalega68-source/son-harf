@@ -49,7 +49,9 @@ jobs:
           grep -q 'PremiumCanvaDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
           grep -q 'PremiumCanvaDestination.LETTER_PATH -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
           grep -q 'HARF YOLU' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
-          grep -q 'val IsDark: Boolean get() = false' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'BLACK_THEME_ID = "theme_black"' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
+          grep -q '@drawable/kelime_kusatmasi_app_icon' app/src/main/AndroidManifest.xml
           ! grep -q 'MonsterLime' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
@@ -59,6 +61,7 @@ jobs:
           test ! -d app/src/main/java/com/sonharf/game/mascot
           test ! -f app/src/main/res/drawable-nodpi/mage_cat_runtime.webp
           test -f supabase/migrations/20260909113000_restore_premier_fair_play_v1.sql
+          test -f supabase/migrations/20260918213000_black_theme_store_v1.sql
       - name: Test and build debug APK
         run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
       - name: Verify compiled APK pixels against immutable purchased-source manifest
