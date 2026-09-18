@@ -17,12 +17,14 @@ class StoreVisualIntegrityContractTest {
         assertTrue(styleStore.contains("StoreProductPreview("))
         assertTrue(preview.contains("PurchasedProfileFrameOverlay("))
         assertTrue(preview.contains("SonHarfCosmetics.keyboardPaletteFor(itemId)"))
-        assertTrue(preview.contains("RealDarkArenaThemePreview"))
+        assertTrue(preview.contains("BlackThemePreview(expanded)"))
+        assertTrue(preview.contains("BLACK THEME"))
 
         assertFalse(economy.contains("Text(\"A\""))
         assertFalse(economy.contains("👑  ⚡  😎  🔥"))
         assertFalse(styleStore.contains("TEMSİLİ GÖRSEL"))
-        assertFalse(styleStore.contains("DarkArenaPreview"))
+        assertFalse(preview.contains("RealDarkArenaThemePreview"))
+        assertFalse(preview.contains("DarkArenaPreview"))
     }
 
     @Test
@@ -38,7 +40,6 @@ class StoreVisualIntegrityContractTest {
     @Test
     fun playProductsNeverPretendAnUnavailablePriceIsARealPurchaseButton() {
         val play = projectFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
-
         assertTrue(play.contains("style_icon_coin"))
         assertTrue(play.contains("product != null"))
         assertTrue(play.contains("PLAY'DE YOK"))
