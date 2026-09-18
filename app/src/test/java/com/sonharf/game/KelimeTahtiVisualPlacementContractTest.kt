@@ -7,7 +7,7 @@ import org.junit.Test
 
 class KelimeKusatmasiVisualPlacementContractTest {
     @Test
-    fun requestedBrandSurfacesUseRasterFreeCompatibilityDrawables() {
+    fun compatibilityBrandAssetsRemainRasterFree() {
         val source = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val authAlias = File("src/main/res/drawable/son_harf_gold_teal_logo.xml")
         val gameEntryAlias = File("src/main/res/drawable/kelime_kusatma_logo_hd.xml")
@@ -37,11 +37,15 @@ class KelimeKusatmasiVisualPlacementContractTest {
     }
 
     @Test
-    fun wordSiegeHubResourceResolvesToVectorAlias() {
+    fun wordSiegeEntryAndLobbyUseNoLogoArtwork() {
         val screen = File("src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
-        assertTrue(screen.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
+        val entries = File("src/main/java/com/sonharf/game/PremiumGameEntryScreens.kt").readText()
+
+        assertFalse(screen.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
+        assertTrue(screen.contains("TAKTİK ALAN SAVAŞI"))
+        assertTrue(screen.contains("Icons.Rounded.GridView"))
+        assertFalse(entries.contains("painterResource"))
+        assertFalse(entries.contains("R.drawable"))
         assertTrue(File("src/main/res/drawable/kelime_kusatma_logo_hd.xml").isFile)
-        assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.png").exists())
-        assertFalse(File("src/main/res/drawable/kelime_kusatma_logo_hd.webp").exists())
     }
 }
