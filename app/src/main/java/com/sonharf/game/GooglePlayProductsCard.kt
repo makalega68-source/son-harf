@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.*
@@ -21,11 +22,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
 import com.sonharf.game.billing.BillingManager
 import com.sonharf.game.billing.PlayPurchaseVerification
 import com.sonharf.game.billing.ProductCatalog
+import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.VipEntitlementsDto
+import com.sonharf.game.data.getVipEntitlements
 import kotlinx.coroutines.launch
 
 @Composable
@@ -33,9 +39,20 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
+    val backend = remember { OnlineGameBackend() }
     var products by remember { mutableStateOf<Map<String, ProductDetails>>(emptyMap()) }
     var busy by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("") }
+    var entitlements by remember { mutableStateOf(VipEntitlementsDto()) }
+    var showSeriesGame by remember { mutableStateOf(false) }
+
+    fun refreshEntitlements() {
+        scope.launch {
+            entitlements = runCatching { backend.getVipEntitlements() }.getOrDefault(entitlements)
+        }
+    }
+
+    LaunchedEffect(Unit) { refreshEntitlements() }
 
     val manager = remember {
         BillingManager(
@@ -51,7 +68,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                         runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
                             .onSuccess {
                                 notice = when (productId) {
-                                    ProductCatalog.SERIES_GAME -> sh("Seri Oyun kalıcı olarak açıldı.", "Fast Game unlocked permanently.")
+                                    ProductCatalog.SERIES_GAME -> sh("Seri Oyun kalıcı olarak açıldı.", "Series Game unlocked permanently.")
                                     ProductCatalog.LETTER_TABLE -> sh("Harf Tablosu kalıcı olarak açıldı.", "Letter Table unlocked permanently.")
                                     ProductCatalog.SCORE_CALCULATOR -> sh("Puan Hesaplayıcı kalıcı olarak açıldı.", "Score Calculator unlocked permanently.")
                                     ProductCatalog.PRO_LIFETIME -> sh("PRO kalıcı olarak açıldı. 100 Son Coin hesabına eklendi.", "PRO unlocked permanently. 100 Son Coins were added.")
@@ -61,6 +78,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                                     ProductCatalog.COINS_8000 -> sh("8000 Son Coin hesabına eklendi.", "8000 Son Coins added to your account.")
                                     else -> sh("Satın alma doğrulandı.", "Purchase verified.")
                                 }
+                                entitlements = runCatching { backend.getVipEntitlements() }.getOrDefault(entitlements)
                                 onPurchased()
                             }
                             .onFailure { error ->
@@ -110,12 +128,14 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
             )
 
             PremiumProductRow(
-                title = sh("Seri Oyun", "Fast Game"),
-                subtitle = sh("Hızlı oyun erişimi", "Fast-game access"),
+                title = sh("Seri Oyun", "Series Game"),
+                subtitle = sh("3/5/10 dk tur • otomatik pas • 3 kaçırma = mağlubiyet", "3/5/10 min turns • auto-pass • 3 misses = defeat"),
                 icon = Icons.Rounded.Timer,
                 product = products[ProductCatalog.SERIES_GAME],
                 fallbackPrice = ProductCatalog.SERIES_GAME_FALLBACK_PRICE_TRY,
                 busy = busy != null,
+                owned = entitlements.seriesGameAccess,
+                onOpen = { showSeriesGame = true },
             ) { buy(ProductCatalog.SERIES_GAME) }
             PremiumProductRow(
                 title = sh("Harf Tablosu", "Letter Table"),
@@ -124,6 +144,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 product = products[ProductCatalog.LETTER_TABLE],
                 fallbackPrice = ProductCatalog.LETTER_TABLE_FALLBACK_PRICE_TRY,
                 busy = busy != null,
+                owned = entitlements.letterTableAccess,
             ) { buy(ProductCatalog.LETTER_TABLE) }
             PremiumProductRow(
                 title = sh("Puan Hesaplayıcı", "Score Calculator"),
@@ -132,6 +153,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 product = products[ProductCatalog.SCORE_CALCULATOR],
                 fallbackPrice = ProductCatalog.SCORE_CALCULATOR_FALLBACK_PRICE_TRY,
                 busy = busy != null,
+                owned = entitlements.scoreCalculatorAccess,
             ) { buy(ProductCatalog.SCORE_CALCULATOR) }
             PremiumProductRow(
                 title = "PRO",
@@ -140,6 +162,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 product = products[ProductCatalog.PRO_LIFETIME],
                 fallbackPrice = ProductCatalog.PRO_LIFETIME_FALLBACK_PRICE_TRY,
                 busy = busy != null,
+                owned = entitlements.isPro,
             ) { buy(ProductCatalog.PRO_LIFETIME) }
 
             HorizontalDivider(color = SonHarfTheme.Border)
@@ -158,6 +181,17 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
             if (notice.isNotBlank()) Text(notice, color = SonHarfMuted, fontSize = 9.sp)
         }
     }
+
+    if (showSeriesGame) {
+        Dialog(
+            onDismissRequest = { showSeriesGame = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            Surface(Modifier.fillMaxSize(), color = SonHarfTheme.Background) {
+                WordSiegeSeriesScreen(onExit = { showSeriesGame = false })
+            }
+        }
+    }
 }
 
 @Composable
@@ -168,6 +202,8 @@ private fun PremiumProductRow(
     product: ProductDetails?,
     fallbackPrice: String,
     busy: Boolean,
+    owned: Boolean = false,
+    onOpen: (() -> Unit)? = null,
     onBuy: () -> Unit,
 ) {
     Surface(color = SonHarfTheme.SurfaceSecondary, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, SonHarfTheme.Border)) {
@@ -178,16 +214,37 @@ private fun PremiumProductRow(
             Column(Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.Black, color = SonHarfText, fontSize = 14.sp)
                 Text(subtitle, color = SonHarfMuted, fontSize = 9.sp)
-                if (product == null) Text(sh("Google Play fiyatı bağlanınca satış açılır", "Sale opens when the Google Play price is linked"), color = SonHarfMuted, fontSize = 8.sp)
+                when {
+                    owned -> Text(sh("SATIN ALINDI", "OWNED"), color = SonHarfTheme.Success, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    product == null -> Text(sh("Google Play fiyatı bağlanınca satış açılır", "Sale opens when the Google Play price is linked"), color = SonHarfMuted, fontSize = 8.sp)
+                }
             }
-            Button(
-                onClick = onBuy,
-                enabled = !busy && product?.oneTimePurchaseOfferDetails != null,
-                colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary, disabledContainerColor = SonHarfTheme.DisabledBackground, disabledContentColor = SonHarfTheme.DisabledContent),
-                shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
-            ) {
-                Text(if (product != null) product.oneTimePurchaseOfferDetails?.formattedPrice ?: fallbackPrice else fallbackPrice, fontWeight = FontWeight.Black, fontSize = 10.sp)
+            if (owned && onOpen != null) {
+                Button(
+                    onClick = onOpen,
+                    enabled = !busy,
+                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                ) {
+                    Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(3.dp))
+                    Text(sh("AÇ", "OPEN"), fontWeight = FontWeight.Black, fontSize = 10.sp)
+                }
+            } else if (owned) {
+                Surface(shape = RoundedCornerShape(12.dp), color = SonHarfTheme.Success.copy(alpha = .12f)) {
+                    Text("✓", Modifier.padding(horizontal = 13.dp, vertical = 7.dp), color = SonHarfTheme.Success, fontWeight = FontWeight.Black)
+                }
+            } else {
+                Button(
+                    onClick = onBuy,
+                    enabled = !busy && product?.oneTimePurchaseOfferDetails != null,
+                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary, disabledContainerColor = SonHarfTheme.DisabledBackground, disabledContentColor = SonHarfTheme.DisabledContent),
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                ) {
+                    Text(if (product != null) product.oneTimePurchaseOfferDetails?.formattedPrice ?: fallbackPrice else fallbackPrice, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                }
             }
         }
     }
