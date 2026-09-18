@@ -43,8 +43,9 @@ class PremiumStoreProContractTest {
     fun `server verified premium grant is idempotent and pro bonus is one time`() {
         val migration = repoFile("supabase/migrations/20260919013000_premium_permanent_products_v1.sql").readText()
         assertTrue(migration.contains("apply_verified_premium_purchase_v1"))
-        assertTrue(migration.contains("on conflict (purchase_token) do nothing", ignoreCase = true))
-        assertTrue(migration.contains("purchase_token_already_used"))
+        assertTrue(migration.contains("on conflict(purchase_token) do nothing", ignoreCase = true))
+        assertTrue(migration.contains("purchase_token_user_mismatch"))
+        assertTrue(migration.contains("purchase_token_product_mismatch"))
         assertTrue(migration.contains("series_game"))
         assertTrue(migration.contains("letter_table"))
         assertTrue(migration.contains("score_calculator"))
