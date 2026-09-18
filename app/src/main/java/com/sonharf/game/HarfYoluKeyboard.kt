@@ -20,19 +20,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Harf Yolu'na özel sabit mavi-turkuaz-beyaz-eflatun klavye paleti. */
+/** Harf Yolu'na özel kompakt klavye; uygulamanın onaylı premium paletini kullanır. */
 private object HarfYoluKeyboardUi {
-    val Background = Color(0xFFEAF8FC)
-    val Key = Color.White
-    val KeyAlt = Color(0xFFF2ECFF)
-    val Text = Color(0xFF123A4A)
-    val Border = Color(0xFF8FCFE0)
-    val AltBorder = Color(0xFFB9A0F8)
-    val Action = Color(0xFF278DC3)
-    val ActionPressed = Color(0xFF22BFC4)
+    val Background: Color get() = SonHarfTheme.PrimarySoft
+    val Key: Color get() = SonHarfTheme.Surface
+    val KeyAlt: Color get() = SonHarfTheme.Purple.copy(alpha = .09f)
+    val Text: Color get() = SonHarfTheme.TextPrimary
+    val Border: Color get() = SonHarfTheme.Border
+    val AltBorder: Color get() = SonHarfTheme.Purple.copy(alpha = .30f)
+    val Action: Color get() = SonHarfTheme.Primary
+    val ActionPressed: Color get() = SonHarfTheme.Turquoise
     val ActionText = Color.White
-    val Disabled = Color(0xFFF4FAFC)
-    val DisabledText = Color(0xFF8FA9B2)
+    val Disabled: Color get() = SonHarfTheme.DisabledBackground
+    val DisabledText: Color get() = SonHarfTheme.DisabledContent
 }
 
 /**
