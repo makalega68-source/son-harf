@@ -103,6 +103,19 @@ class LetterLadderEngineTest {
     }
 
     @Test
+    fun safeHintReturnsOnlyThePositionThatCanContinue() {
+        assertEquals(
+            listOf(0),
+            LetterLadderEngine.viableNextMoveIndices(
+                puzzle = puzzle,
+                current = puzzle.start,
+                usedPositions = emptySet(),
+                dictionary = dictionary,
+            ),
+        )
+    }
+
+    @Test
     fun locallyValidMoveCanBeRecognizedAsADeadEnd() {
         val deadEndDictionary = chain.toSet() + setOf("kalık")
         val localMove = LetterLadderEngine.validateMove(

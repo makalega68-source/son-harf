@@ -15,22 +15,25 @@ class LetterLadderUxRegressionTest {
         assertFalse(source.contains("rememberScrollState"))
         assertFalse(source.contains("number: Int"))
         assertTrue(source.contains("completionPath("))
-        assertTrue(source.contains("viableNextMoveCount("))
+        assertTrue(source.contains("viableNextMoveIndices("))
         assertTrue(source.contains("Bu hamle çıkmaza götürüyor"))
-        assertTrue(source.contains("güvenli hamle seçeneği"))
+        assertTrue(source.contains("sarı işaretli harfi değiştir"))
         assertTrue(source.contains("compact = true"))
         assertTrue(source.contains("keySound = { SonHarfSoundFx.puzzleKey() }"))
     }
 
     @Test
-    fun harfYoluHintDoesNotRevealTheNextAnswer() {
+    fun harfYoluHintIsSingleUseAndRevealsOnlyThePosition() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
 
         assertFalse(source.contains("next.uppercase(locale)"))
         assertFalse(source.contains("val from = current[changed]"))
         assertFalse(source.contains("val to = next[changed]"))
-        assertTrue(source.contains("safeOptions"))
-        assertTrue(source.contains("remainingMoves"))
+        assertTrue(source.contains("var hintUsed by remember { mutableStateOf(false) }"))
+        assertTrue(source.contains("enabled = !completed && !hintUsed"))
+        assertTrue(source.contains("hintedIndex = hintIndex"))
+        assertTrue(source.contains("İPUCU 1/1"))
+        assertTrue(source.contains("sarı işaretli harfi değiştir"))
     }
 
     @Test
@@ -43,12 +46,21 @@ class LetterLadderUxRegressionTest {
     }
 
     @Test
-    fun harfYoluDoesNotMirrorLiveInputIntoTheActiveRow() {
+    fun harfYoluShowsLiveKeyboardInputInTheNextPlayableRow() {
+        val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
+        val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
+
+        assertTrue(source.contains("activeInput = input.uppercase(locale).takeIf { isActiveEntry }"))
+        assertTrue(source.contains("activeInput?.padEnd(LetterLadderEngine.WORD_LENGTH, ' ')"))
+        assertTrue(keyboard.contains("onValueChange((value + key).take(maxLength))"))
+    }
+
+    @Test
+    fun harfYoluUsesTheSharedDecorativeBackdrop() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
 
-        assertFalse(source.contains("activeInput = input.uppercase(locale)"))
-        assertFalse(source.contains("activeInput.padEnd"))
-        assertTrue(source.contains("val display = word ?: \"     \""))
+        assertTrue(source.contains("FirstRunLanguageBackdrop(Modifier.fillMaxSize())"))
+        assertFalse(source.contains("Modifier.fillMaxSize().background(LetterLadderUi.Background)"))
     }
 
     @Test
