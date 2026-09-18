@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
 
-/** Premium startup shell: language -> auth -> product. */
+/** Premium startup shell: language -> auth -> approved Canva product shell. */
 @Composable
 fun StableV1App() {
     val context = LocalContext.current
@@ -75,7 +75,7 @@ fun StableV1App() {
         return
     }
 
-    PremiumUnifiedProApp(onSignedOut = { authenticated = false })
+    PremiumCanvaApp(onSignedOut = { authenticated = false })
 }
 
 /** Keeps the existing authentication flow intact while preserving phone-scale ergonomics. */
@@ -111,10 +111,7 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                     modifier = Modifier.fillMaxWidth().widthIn(max = 520.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    PremiumAccentPill(
-                        text = "KELİME KUŞATMASI",
-                        color = MainUi.Purple,
-                    )
+                    PremiumAccentPill(text = "KELİME KUŞATMASI", color = MainUi.Purple)
                     Spacer(Modifier.height(18.dp))
                     SonHarfOfficialLogo(modifier = Modifier.fillMaxWidth(.86f).height(150.dp))
                     Spacer(Modifier.height(12.dp))
