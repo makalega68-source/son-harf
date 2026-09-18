@@ -31,7 +31,7 @@ class SonHarfThreeRoundContractTest {
     fun dtoBackendAndMigrationShareTheSameAuthoritativeRules() {
         val dto = File("src/main/java/com/sonharf/game/data/OnlineGameBackend.kt").readText()
         val backend = File("src/main/java/com/sonharf/game/data/PremierDuelBackend.kt").readText()
-        val migration = File("../../supabase/migrations/20260918000500_sonharf_three_round_quota_clock_v1.sql").readText()
+        val migration = File("../supabase/migrations/20260918000500_sonharf_three_round_quota_clock_v1.sql").readText()
 
         assertTrue(dto.contains("@SerialName(\"host_round_words\") val hostRoundWords: Int = 0"))
         assertTrue(dto.contains("@SerialName(\"guest_round_words\") val guestRoundWords: Int = 0"))
@@ -49,7 +49,7 @@ class SonHarfThreeRoundContractTest {
 
     @Test
     fun adaptiveNormalBotNeverCallsExpertOnlyTurnFunction() {
-        val migration = File("../../supabase/migrations/20260918000500_sonharf_three_round_quota_clock_v1.sql").readText()
+        val migration = File("../supabase/migrations/20260918000500_sonharf_three_round_quota_clock_v1.sql").readText()
         val dispatcherStart = migration.indexOf("create or replace function public.bot_take_turn(p_room_id uuid)")
         val dispatcherEnd = migration.indexOf("create or replace function public.switch_turn_after_failure", dispatcherStart)
         val dispatcher = migration.substring(dispatcherStart, dispatcherEnd)
