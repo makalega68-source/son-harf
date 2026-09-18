@@ -103,70 +103,73 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
     var selected by remember { mutableStateOf<String?>(null) }
 
     Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
-        Column(
-            modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 24.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            SonHarfOfficialLogo(modifier = Modifier.fillMaxWidth(.88f).height(168.dp))
-            Spacer(Modifier.height(14.dp))
-            Text(
-                text = "Dilini seç / Choose your language",
-                color = MainUi.Muted,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(24.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                FilterChip(
-                    selected = selected == "tr",
-                    onClick = { selected = "tr" },
-                    label = { Text("TÜRKÇE", fontWeight = FontWeight.Black) },
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MainUi.BlueSoft,
-                        selectedLabelColor = MainUi.Blue,
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = selected == "tr",
-                        borderColor = MainUi.Border,
-                        selectedBorderColor = MainUi.Blue,
-                    ),
-                )
-                FilterChip(
-                    selected = selected == "en",
-                    onClick = { selected = "en" },
-                    label = { Text("ENGLISH", fontWeight = FontWeight.Black) },
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = MainUi.BlueSoft,
-                        selectedLabelColor = MainUi.Blue,
-                    ),
-                    border = FilterChipDefaults.filterChipBorder(
-                        enabled = true,
-                        selected = selected == "en",
-                        borderColor = MainUi.Border,
-                        selectedBorderColor = MainUi.Blue,
-                    ),
-                )
-            }
-            Spacer(Modifier.height(22.dp))
-            Button(
-                enabled = selected != null,
-                onClick = { selected?.let(onContinue) },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(15.dp),
-                contentPadding = PaddingValues(horizontal = 18.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MainUi.Blue,
-                    contentColor = MainUi.Surface,
-                    disabledContainerColor = MainUi.Border,
-                    disabledContentColor = MainUi.Muted,
-                ),
+        Box(Modifier.fillMaxSize()) {
+            FirstRunLanguageBackdrop(Modifier.fillMaxSize())
+            Column(
+                modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 24.dp, vertical = 24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
             ) {
-                Text(if (selected == "en") "CONTINUE" else "DEVAM ET", fontWeight = FontWeight.Black)
+                SonHarfOfficialLogo(modifier = Modifier.fillMaxWidth(.88f).height(168.dp))
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    text = "Dilini seç / Choose your language",
+                    color = MainUi.Muted,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(24.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FilterChip(
+                        selected = selected == "tr",
+                        onClick = { selected = "tr" },
+                        label = { Text("TÜRKÇE", fontWeight = FontWeight.Black) },
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MainUi.BlueSoft,
+                            selectedLabelColor = MainUi.Blue,
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = selected == "tr",
+                            borderColor = MainUi.Border,
+                            selectedBorderColor = MainUi.Blue,
+                        ),
+                    )
+                    FilterChip(
+                        selected = selected == "en",
+                        onClick = { selected = "en" },
+                        label = { Text("ENGLISH", fontWeight = FontWeight.Black) },
+                        modifier = Modifier.weight(1f).height(52.dp),
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MainUi.BlueSoft,
+                            selectedLabelColor = MainUi.Blue,
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(
+                            enabled = true,
+                            selected = selected == "en",
+                            borderColor = MainUi.Border,
+                            selectedBorderColor = MainUi.Blue,
+                        ),
+                    )
+                }
+                Spacer(Modifier.height(22.dp))
+                Button(
+                    enabled = selected != null,
+                    onClick = { selected?.let(onContinue) },
+                    modifier = Modifier.fillMaxWidth().height(52.dp),
+                    shape = RoundedCornerShape(15.dp),
+                    contentPadding = PaddingValues(horizontal = 18.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MainUi.Blue,
+                        contentColor = MainUi.Surface,
+                        disabledContainerColor = MainUi.Border,
+                        disabledContentColor = MainUi.Muted,
+                    ),
+                ) {
+                    Text(if (selected == "en") "CONTINUE" else "DEVAM ET", fontWeight = FontWeight.Black)
+                }
             }
         }
     }
