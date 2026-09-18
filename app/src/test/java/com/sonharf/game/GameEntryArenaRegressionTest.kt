@@ -5,6 +5,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
+// Locks the product rule that every game has exactly one playable entry surface.
 class GameEntryArenaRegressionTest {
     @Test
     fun everyGameRoutesDirectlyToItsOnlyPlayableEntrySurface() {
