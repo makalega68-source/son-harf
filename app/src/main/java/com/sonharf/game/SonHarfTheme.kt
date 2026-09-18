@@ -3,107 +3,109 @@ package com.sonharf.game
 import androidx.compose.ui.graphics.Color
 
 /**
- * Monster UI kit'ten türetilen ana görsel sistem.
+ * Kelime Kuşatması premium visual system.
  *
- * Satın alınan Figma kaynağının gerçek karakteri korunur: antrasit/siyah yüzeyler,
- * neon limon ana aksiyon rengi, kırmızı-pembe enerji vurguları ve yüksek kontrastlı
- * beyaz tipografi. Eski semantik isimler derleme uyumluluğu için alias olarak kalır.
+ * The product now uses one light, high-energy design language everywhere: blue is the primary
+ * action/brand color, turquoise communicates progress and success, purple communicates league /
+ * prestige / PRO, orange communicates rewards and critical moments, and white keeps the product
+ * breathable. Gameplay, navigation, scoring and backend behavior remain unchanged.
  */
 internal object KelimeKusatmasiPalette {
-    val MonsterBlack = Color(0xFF0D0F12)
-    val MonsterSurface = Color(0xFF15171C)
-    val MonsterSurface2 = Color(0xFF1B1E24)
-    val MonsterSurface3 = Color(0xFF22252D)
-    val MonsterLime = Color(0xFFEFFF19)
-    val MonsterRed = Color(0xFFFF3B30)
-    val MonsterPink = Color(0xFFFF245C)
-    val MonsterOrange = Color(0xFFFF5A36)
-    val MonsterText = Color(0xFFF7F8FA)
-    val MonsterMuted = Color(0xFF9AA0AA)
-    val MonsterBorder = Color(0xFF2B2F37)
+    val Blue = Color(0xFF2563EB)
+    val BlueDeep = Color(0xFF1748C7)
+    val BlueSoft = Color(0xFFEAF1FF)
 
-    // Compatibility aliases for screens that still reference the previous palette names.
-    val RoyalBlue: Color get() = MonsterLime
-    val DeepBlue: Color get() = MonsterBlack
-    val Turquoise: Color get() = MonsterLime
-    val Orange: Color get() = MonsterRed
-    val Sky: Color get() = MonsterSurface2
-    val OffWhite: Color get() = MonsterBlack
-    val Slate: Color get() = MonsterMuted
-    val PaleMint: Color get() = MonsterSurface2
-    val SoftIndigo: Color get() = MonsterPink
-    val SageGreen: Color get() = MonsterLime
-    val SoftBlue: Color get() = MonsterPink
-    val LightBeige: Color get() = MonsterSurface2
-    val Lavender: Color get() = MonsterPink
-    val SlateBlue: Color get() = MonsterMuted
-    val WarmAccent: Color get() = MonsterRed
+    val Turquoise = Color(0xFF12B8A6)
+    val TurquoiseDeep = Color(0xFF0E8F83)
+    val TurquoiseSoft = Color(0xFFE6FAF7)
+
+    val Purple = Color(0xFF7C3AED)
+    val PurpleDeep = Color(0xFF5B21B6)
+    val PurpleSoft = Color(0xFFF1EAFE)
+
+    val Orange = Color(0xFFF97316)
+    val OrangeDeep = Color(0xFFD95D0B)
+    val OrangeSoft = Color(0xFFFFF0E6)
+
+    val White = Color(0xFFFFFFFF)
+    val Background = Color(0xFFF6F9FF)
+    val SurfaceSoft = Color(0xFFF0F5FD)
+    val Ink = Color(0xFF10213D)
+    val Muted = Color(0xFF64748B)
+    val Border = Color(0xFFDCE6F3)
+
+    // Compatibility aliases retained so older screens inherit the new system without breakage.
+    val RoyalBlue: Color get() = Blue
+    val DeepBlue: Color get() = BlueDeep
+    val Sky: Color get() = BlueSoft
+    val OffWhite: Color get() = Background
+    val Slate: Color get() = Muted
+    val PaleMint: Color get() = TurquoiseSoft
+    val SoftIndigo: Color get() = Purple
+    val SageGreen: Color get() = Turquoise
+    val SoftBlue: Color get() = Blue
+    val LightBeige: Color get() = OrangeSoft
+    val Lavender: Color get() = Purple
+    val SlateBlue: Color get() = Muted
+    val WarmAccent: Color get() = Orange
 }
 
-/**
- * Application-wide Monster visual system.
- *
- * The purchased kit is a Figma design source. It is translated into the existing Compose
- * architecture without replacing gameplay, navigation, backend, scoring or authorization.
- */
+/** Single source of truth for every app surface and game mode. */
 internal object SonHarfTheme {
-    private val alternateDark: Boolean get() = SonHarfCosmetics.darkArenaTheme
-
-    // Monster itself is a dark-first UI. Keeping this true makes every Material shell use the
-    // correct dark color scheme even when the optional arena cosmetic is not equipped.
-    val IsDark: Boolean get() = true
+    // The approved Canva direction is light-first and intentionally consistent across the app.
+    val IsDark: Boolean get() = false
 
     // Foundation layers.
-    val Background: Color get() = if (alternateDark) Color(0xFF090A0C) else KelimeKusatmasiPalette.MonsterBlack
-    val Surface: Color get() = if (alternateDark) Color(0xFF111318) else KelimeKusatmasiPalette.MonsterSurface
-    val SurfaceSecondary: Color get() = if (alternateDark) Color(0xFF171A20) else KelimeKusatmasiPalette.MonsterSurface2
-    val SurfaceElevated: Color get() = if (alternateDark) Color(0xFF1D2027) else KelimeKusatmasiPalette.MonsterSurface3
-    val NavigationSurface: Color get() = if (alternateDark) Color(0xFF0B0D10) else Color(0xFF111318)
-    val ModalSurface: Color get() = if (alternateDark) Color(0xFF12151A) else Color(0xFF181A20)
+    val Background: Color get() = KelimeKusatmasiPalette.Background
+    val Surface: Color get() = KelimeKusatmasiPalette.White
+    val SurfaceSecondary: Color get() = KelimeKusatmasiPalette.SurfaceSoft
+    val SurfaceElevated: Color get() = Color(0xFFFFFFFF)
+    val NavigationSurface: Color get() = Color(0xFFFBFDFF)
+    val ModalSurface: Color get() = Color(0xFFFFFFFF)
 
-    // Gameplay layers: dark map field, bright readable letter tiles.
-    val GameSurface: Color get() = if (alternateDark) Color(0xFF101217) else Color(0xFF12151A)
-    val GameTile: Color get() = Color(0xFFF3F4F2)
-    val GameTileBorder: Color get() = if (alternateDark) Color(0xFF444951) else Color(0xFF3A3F48)
+    // Gameplay layers: tactical-map surface first, letter content second.
+    val GameSurface: Color get() = Color(0xFFF2F6FC)
+    val GameTile: Color get() = Color(0xFFFFFFFF)
+    val GameTileBorder: Color get() = Color(0xFFCBD9EA)
 
-    // Monster brand/accent family.
-    val Primary: Color get() = if (alternateDark) Color(0xFFE7FF00) else KelimeKusatmasiPalette.MonsterLime
-    val PrimarySoft: Color get() = if (alternateDark) Color(0xFF252B0D) else Color(0xFF292F10)
-    val SoftBlue: Color get() = if (alternateDark) Color(0xFFFF4772) else KelimeKusatmasiPalette.MonsterPink
-    val Turquoise: Color get() = if (alternateDark) Color(0xFFD9F900) else Color(0xFFDFFF00)
-    val ActionOrange: Color get() = if (alternateDark) Color(0xFFFF4D37) else KelimeKusatmasiPalette.MonsterRed
-    val Lavender: Color get() = if (alternateDark) Color(0xFFFF3A6D) else KelimeKusatmasiPalette.MonsterPink
-    val Sand: Color get() = if (alternateDark) Color(0xFFFF7356) else KelimeKusatmasiPalette.MonsterOrange
+    // Approved Canva accent family.
+    val Primary: Color get() = KelimeKusatmasiPalette.Blue
+    val PrimarySoft: Color get() = KelimeKusatmasiPalette.BlueSoft
+    val SoftBlue: Color get() = Color(0xFF5B8DEF)
+    val Turquoise: Color get() = KelimeKusatmasiPalette.Turquoise
+    val ActionOrange: Color get() = KelimeKusatmasiPalette.Orange
+    val Lavender: Color get() = KelimeKusatmasiPalette.Purple
+    val Sand: Color get() = KelimeKusatmasiPalette.OrangeSoft
 
     // Text and dividers.
-    val TextPrimary: Color get() = KelimeKusatmasiPalette.MonsterText
-    val TextSecondary: Color get() = if (alternateDark) Color(0xFFA5AAB3) else KelimeKusatmasiPalette.MonsterMuted
-    val Border: Color get() = if (alternateDark) Color(0xFF262A31) else KelimeKusatmasiPalette.MonsterBorder
+    val TextPrimary: Color get() = KelimeKusatmasiPalette.Ink
+    val TextSecondary: Color get() = KelimeKusatmasiPalette.Muted
+    val Border: Color get() = KelimeKusatmasiPalette.Border
 
     // Semantic states.
-    val Success: Color get() = Color(0xFFC8F000)
-    val SuccessSoft: Color get() = Color(0xFF242A0E)
-    val Error: Color get() = Color(0xFFFF4B55)
-    val Warning: Color get() = Color(0xFFFF8A3D)
-    val DisabledBackground: Color get() = Color(0xFF262930)
-    val DisabledContent: Color get() = Color(0xFF6F7580)
+    val Success: Color get() = KelimeKusatmasiPalette.Turquoise
+    val SuccessSoft: Color get() = KelimeKusatmasiPalette.TurquoiseSoft
+    val Error: Color get() = Color(0xFFE5484D)
+    val Warning: Color get() = KelimeKusatmasiPalette.Orange
+    val DisabledBackground: Color get() = Color(0xFFE8EEF7)
+    val DisabledContent: Color get() = Color(0xFF9AA8BA)
 
-    val OnPrimary: Color get() = Color(0xFF0B0C0E)
-    val OnSecondary: Color get() = Color(0xFF0B0C0E)
-    val OnTertiary: Color get() = Color(0xFF0B0C0E)
+    val OnPrimary: Color get() = Color.White
+    val OnSecondary: Color get() = Color.White
+    val OnTertiary: Color get() = Color.White
 
-    // Signature Monster red -> pink hero gradient.
-    val HeroStart: Color get() = Color(0xFFFF4A22)
-    val HeroMiddle: Color get() = Color(0xFFFF3435)
-    val HeroEnd: Color get() = Color(0xFFFF245C)
+    // Premium hero: vivid but controlled blue -> turquoise -> purple.
+    val HeroStart: Color get() = Color(0xFF2563EB)
+    val HeroMiddle: Color get() = Color(0xFF12B8A6)
+    val HeroEnd: Color get() = Color(0xFF7C3AED)
 
-    // Compatibility naming used by existing hero/game cards.
-    val Forest: Color get() = Color(0xFFFF3B30)
-    val ForestDeep: Color get() = Color(0xFF13151A)
+    // Compatibility names used by existing game cards and territory views.
+    val Forest: Color get() = KelimeKusatmasiPalette.Turquoise
+    val ForestDeep: Color get() = Color(0xFF123A56)
 
-    // Premium prestige remains gold; standard actions use Monster lime.
-    val PremiumGold: Color get() = Color(0xFFD9AD45)
-    val PremiumGoldLight: Color get() = Color(0xFFF4D77F)
+    // Prestige is purple in the approved system; gold remains available for trophy details only.
+    val PremiumGold: Color get() = Color(0xFFF2B84B)
+    val PremiumGoldLight: Color get() = Color(0xFFFFE4A8)
 
     val PrimaryBlue: Color get() = Primary
     val PrimaryBlueSoft: Color get() = PrimarySoft
