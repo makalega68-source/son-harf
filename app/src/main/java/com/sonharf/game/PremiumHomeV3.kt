@@ -90,12 +90,18 @@ internal fun PremiumHomeCommandDeck(
                             lineHeight = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-.5).sp)
                     }
                     Spacer(Modifier.width(12.dp))
-                    Image(
-                        painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
-                        contentDescription = sh("Kelime Kuşatması", "Kelime Kuşatması"),
-                        modifier = Modifier.size(width = 158.dp, height = 104.dp),
-                        contentScale = ContentScale.Fit,
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = Color.White.copy(alpha = .12f),
+                        border = BorderStroke(1.dp, Color.White.copy(alpha = .18f)),
+                    ) {
+                        Icon(
+                            Icons.Rounded.GridView,
+                            contentDescription = null,
+                            tint = SonHarfTheme.PremiumGoldLight,
+                            modifier = Modifier.padding(18.dp).size(42.dp),
+                        )
+                    }
                 }
                 Text(sh("Kelimeyi kur. Alanı ele geçir. Rakibini geç.",
                     "Build your word. Claim territory. Outplay your rival."),
@@ -224,7 +230,7 @@ internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Uni
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(sh("DİĞER OYUNLAR", "MORE GAMES"), color = SonHarfTheme.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
         PremiumHomeModeCard(
-            logo = R.drawable.son_harf_app_icon_master,
+            icon = Icons.Rounded.Bolt,
             title = sh("SON HARF", "LAST LETTER"),
             subtitle = sh("Hızlı kelime düellosu", "A quick word duel"),
             accent = Color(0xFF7A9AEE),
@@ -232,7 +238,7 @@ internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Uni
             onPlay = onLastLetter,
         )
         PremiumHomeModeCard(
-            logo = R.drawable.harf_yolu_logo,
+            icon = Icons.Rounded.Route,
             title = sh("HARF YOLU", "LETTER PATH"),
             subtitle = sh("Kelime rotanı tamamla", "Complete your word path"),
             accent = Color(0xFFB5A2FF),
@@ -244,7 +250,7 @@ internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Uni
 
 @Composable
 private fun PremiumHomeModeCard(
-    logo: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     title: String,
     subtitle: String,
     accent: Color,
@@ -263,11 +269,11 @@ private fun PremiumHomeModeCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Surface(shape = CircleShape, color = Color.White.copy(alpha = .18f)) {
-                    Image(
-                        painter = painterResource(logo),
+                    Icon(
+                        icon,
                         contentDescription = null,
-                        modifier = Modifier.padding(8.dp).size(48.dp),
-                        contentScale = ContentScale.Fit,
+                        tint = Color.White,
+                        modifier = Modifier.padding(12.dp).size(40.dp),
                     )
                 }
                 Spacer(Modifier.width(14.dp))

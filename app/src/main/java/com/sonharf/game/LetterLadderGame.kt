@@ -24,6 +24,7 @@ import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.Lightbulb
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Route
 import androidx.compose.material.icons.rounded.TrackChanges
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -480,12 +481,26 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                     }
                     Spacer(Modifier.width(2.dp))
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                        androidx.compose.foundation.Image(
-                            painter = androidx.compose.ui.res.painterResource(R.drawable.harf_yolu_logo),
-                            contentDescription = sh("Harf Yolu logosu", "Letter Path logo"),
-                            modifier = Modifier.width(116.dp).height(54.dp),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                        )
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = LetterLadderUi.SurfaceSoft,
+                            border = BorderStroke(1.dp, LetterLadderUi.Accent.copy(alpha = .20f)),
+                        ) {
+                            Row(
+                                Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Icon(Icons.Rounded.Route, null, tint = LetterLadderUi.Accent, modifier = Modifier.size(23.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    sh("HARF YOLU", "LETTER PATH"),
+                                    color = LetterLadderUi.Text,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = .5.sp,
+                                )
+                            }
+                        }
                         Text(
                             sh("5 hamle • Her kutu yalnızca 1 kez değişir", "5 moves • Each position changes only once"),
                             color = LetterLadderUi.Muted,
@@ -774,12 +789,20 @@ internal fun MonsterLetterLadderQuickCard(modifier: Modifier, onClick: () -> Uni
             Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            androidx.compose.foundation.Image(
-                painter = androidx.compose.ui.res.painterResource(R.drawable.harf_yolu_logo),
-                contentDescription = sh("Harf Yolu logosu", "Letter Path logo"),
-                modifier = Modifier.size(106.dp),
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-            )
+            Surface(
+                shape = RoundedCornerShape(18.dp),
+                color = LetterLadderUi.SurfaceSoft,
+                border = BorderStroke(1.dp, LetterLadderUi.Accent.copy(alpha = .22f)),
+            ) {
+                Column(
+                    Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Icon(Icons.Rounded.Route, null, tint = LetterLadderUi.Accent, modifier = Modifier.size(36.dp))
+                    Spacer(Modifier.height(5.dp))
+                    Text("A → B", color = LetterLadderUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                }
+            }
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
                 Text(sh("3. OYUN", "GAME 3"), color = LetterLadderUi.Accent, fontSize = 9.sp, fontWeight = FontWeight.Black)

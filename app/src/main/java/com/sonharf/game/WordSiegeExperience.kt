@@ -418,7 +418,7 @@ private fun WordSiegeGamesList(
                     Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME TAHTI", "KELİME TAHTI"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh("Süre yok • 1v1 • En fazla 10 devam eden oyun", "No timer • 1v1 • Up to 10 ongoing games"),
                         color = MainUi.Muted,
