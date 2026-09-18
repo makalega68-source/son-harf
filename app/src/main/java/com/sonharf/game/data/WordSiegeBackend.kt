@@ -4,9 +4,9 @@ import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.put
 
 @Serializable
@@ -26,6 +26,7 @@ data class WordSiegeGameDto(
     val language: String = "tr",
     @SerialName("current_player_id") val currentPlayerId: String? = null,
     @SerialName("winner_id") val winnerId: String? = null,
+    @SerialName("loser_id") val loserId: String? = null,
     val board: List<WordSiegeCellDto> = emptyList(),
     val bag: String = "",
     @SerialName("player_one_rack") val playerOneRack: String = "",
@@ -42,6 +43,13 @@ data class WordSiegeGameDto(
     @SerialName("last_action_player_id") val lastActionPlayerId: String? = null,
     @SerialName("last_move_at") val lastMoveAt: String? = null,
     @SerialName("finish_reason") val finishReason: String? = null,
+    @SerialName("game_mode") val gameMode: String = "classic",
+    @SerialName("turn_duration_hours") val turnDurationHours: Int = 12,
+    @SerialName("turn_duration_minutes") val turnDurationMinutes: Int? = null,
+    @SerialName("turn_started_at") val turnStartedAt: String? = null,
+    @SerialName("turn_deadline") val turnDeadline: String? = null,
+    @SerialName("player_one_missed_turns") val playerOneMissedTurns: Int = 0,
+    @SerialName("player_two_missed_turns") val playerTwoMissedTurns: Int = 0,
     @SerialName("created_at") val createdAt: String = "",
     @SerialName("updated_at") val updatedAt: String = "",
     @SerialName("finished_at") val finishedAt: String? = null,
@@ -53,6 +61,20 @@ data class WordSiegeInviteDto(
     @SerialName("sender_id") val senderId: String,
     @SerialName("receiver_id") val receiverId: String,
     val language: String = "tr",
+    val status: String = "pending",
+    @SerialName("game_id") val gameId: String? = null,
+    @SerialName("expires_at") val expiresAt: String = "",
+    @SerialName("created_at") val createdAt: String = "",
+    @SerialName("responded_at") val respondedAt: String? = null,
+)
+
+@Serializable
+data class WordSiegeSeriesInviteDto(
+    val id: String,
+    @SerialName("sender_id") val senderId: String,
+    @SerialName("receiver_id") val receiverId: String,
+    val language: String = "tr",
+    @SerialName("turn_duration_minutes") val turnDurationMinutes: Int = 5,
     val status: String = "pending",
     @SerialName("game_id") val gameId: String? = null,
     @SerialName("expires_at") val expiresAt: String = "",
@@ -107,21 +129,54 @@ private data class WordSiegeMessageWrite(
 
 suspend fun OnlineGameBackend.getWordSiegeGames(): List<WordSiegeGameDto> =
     SupabaseProvider.client.from("word_siege_games")
-        .select()
+        .select { filter { eq("game_mode", "classic") } }
         .decodeList<WordSiegeGameDto>()
         .filterNot { it.status == "cancelled" }
         .sortedByDescending { it.updatedAt.ifBlank { it.createdAt } }
+
+suspend fun OnlineGameBackend.getWordSiegeSeriesGames(): List<WordSiegeGameDto> =
+    SupabaseProvider.client.from("word_siege_games")
+        .select { filter { eq("game_mode", "series") } }
+        .decodeList<WordSiegeGameDto>()
+        .filterNot { it.status == "cancelled" }
+        .sortedWith(
+            compareBy<WordSiegeGameDto> { game ->
+                when {
+                    game.status == "playing" && game.currentPlayerId == currentUserId() -> 0
+                    game.status == "playing" -> 1
+                    game.status == "waiting" -> 2
+                    else -> 3
+                }
+            }.thenBy { it.turnDeadline ?: "9999" }.thenByDescending { it.updatedAt.ifBlank { it.createdAt } },
+        )
 
 suspend fun OnlineGameBackend.getWordSiegeGame(gameId: String): WordSiegeGameDto =
     SupabaseProvider.client.from("word_siege_games")
         .select { filter { eq("id", gameId) } }
         .decodeSingle()
 
+suspend fun OnlineGameBackend.refreshWordSiegeGame(gameId: String): WordSiegeGameDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "refresh_word_siege_game_v2",
+        buildJsonObject { put("p_game_id", gameId) },
+    ).decodeSingle()
+
 suspend fun OnlineGameBackend.findOrCreateWordSiegeGame(language: String): WordSiegeGameDto =
     SupabaseProvider.client.postgrest.rpc(
         "find_or_create_word_siege_game_v1",
         buildJsonObject { put("p_language", if (language.lowercase() == "en") "en" else "tr") },
     ).decodeSingle()
+
+suspend fun OnlineGameBackend.findOrCreateWordSiegeSeriesGame(
+    language: String,
+    turnDurationMinutes: Int = 5,
+): WordSiegeGameDto = SupabaseProvider.client.postgrest.rpc(
+    "find_or_create_word_siege_series_game_v1",
+    buildJsonObject {
+        put("p_language", if (language.lowercase() == "en") "en" else "tr")
+        put("p_turn_duration_minutes", turnDurationMinutes)
+    },
+).decodeSingle()
 
 suspend fun OnlineGameBackend.getIncomingWordSiegeInvites(): List<WordSiegeInviteDto> {
     val me = requireNotNull(currentUserId())
@@ -136,6 +191,19 @@ suspend fun OnlineGameBackend.getIncomingWordSiegeInvites(): List<WordSiegeInvit
         .sortedByDescending { it.createdAt }
 }
 
+suspend fun OnlineGameBackend.getIncomingWordSiegeSeriesInvites(): List<WordSiegeSeriesInviteDto> {
+    val me = requireNotNull(currentUserId())
+    return SupabaseProvider.client.from("word_siege_series_invites")
+        .select {
+            filter {
+                eq("receiver_id", me)
+                eq("status", "pending")
+            }
+        }
+        .decodeList<WordSiegeSeriesInviteDto>()
+        .sortedByDescending { it.createdAt }
+}
+
 suspend fun OnlineGameBackend.inviteFriendToWordSiege(
     friendId: String,
     language: String,
@@ -147,12 +215,39 @@ suspend fun OnlineGameBackend.inviteFriendToWordSiege(
     },
 ).decodeSingle()
 
+suspend fun OnlineGameBackend.inviteFriendToWordSiegeSeries(
+    friendId: String,
+    language: String,
+    turnDurationMinutes: Int = 5,
+): WordSiegeSeriesInviteDto = SupabaseProvider.client.postgrest.rpc(
+    "invite_friend_to_word_siege_series_v1",
+    buildJsonObject {
+        put("p_friend_id", friendId)
+        put("p_language", if (language.lowercase() == "en") "en" else "tr")
+        put("p_turn_duration_minutes", turnDurationMinutes)
+    },
+).decodeSingle()
+
 suspend fun OnlineGameBackend.respondWordSiegeInvite(
     inviteId: String,
     accept: Boolean,
 ): WordSiegeGameDto? {
     val response = SupabaseProvider.client.postgrest.rpc(
         "respond_word_siege_invite_v1",
+        buildJsonObject {
+            put("p_invite_id", inviteId)
+            put("p_accept", accept)
+        },
+    )
+    return if (accept) response.decodeSingle<WordSiegeGameDto>() else null
+}
+
+suspend fun OnlineGameBackend.respondWordSiegeSeriesInvite(
+    inviteId: String,
+    accept: Boolean,
+): WordSiegeGameDto? {
+    val response = SupabaseProvider.client.postgrest.rpc(
+        "respond_word_siege_series_invite_v1",
         buildJsonObject {
             put("p_invite_id", inviteId)
             put("p_accept", accept)
