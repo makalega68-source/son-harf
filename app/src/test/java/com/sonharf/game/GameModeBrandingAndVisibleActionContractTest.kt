@@ -27,14 +27,15 @@ class GameModeBrandingAndVisibleActionContractTest {
     }
 
     @Test
-    fun letterPathUsesTypographicGameIdentityAndTriggersVisibleSuccessVfxOnlyOnAcceptedMoves() {
+    fun letterPathKeepsGameplaySuccessVfxIndependentFromItsEntryScreen() {
         val ladder = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-        assertFalse(ladder.contains("R.drawable.harf_yolu_logo"))
-        assertTrue(ladder.contains("HARF YOLU"))
+        val entries = projectFile("app/src/main/java/com/sonharf/game/PremiumGameEntryScreens.kt").readText()
         assertTrue(ladder.contains("successVfxNonce += 1"))
         assertTrue(ladder.contains("PurchasedVictoryVfx("))
         assertTrue(ladder.contains("eventKey = \"letter:${'$'}{puzzle?.id}:${'$'}successVfxNonce\""))
         assertFalse(ladder.contains("rememberInfiniteTransition"))
+        assertTrue(entries.contains("PremiumLetterPathEntryScreen"))
+        assertFalse(entries.contains("R.drawable.harf_yolu_logo"))
     }
 
     @Test
