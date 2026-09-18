@@ -7,34 +7,30 @@ import org.junit.Test
 
 class GameModeBrandingAndVisibleActionContractTest {
     @Test
-    fun homeMakesKelimeKusatmasiPrimaryAndKeepsSecondaryModesBranded() {
+    fun homeMakesKelimeKusatmasiPrimaryAndRoutesEachModeToItsOwnEntry() {
         val home = projectFile("app/src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
-        val games = projectFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
-        val brand = projectFile("app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
-        val siegeDrawable = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")
+        val shell = projectFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        val entries = projectFile("app/src/main/java/com/sonharf/game/PremiumGameEntryScreens.kt").readText()
 
         assertTrue(home.contains("Text(\"KELİME KUŞATMASI\""))
         assertTrue(home.contains("Button(onClick = onSiege"))
-        assertTrue(home.contains("onClick = onPlay"))
-        assertTrue(brand.contains("R.drawable.kelime_kusatma_logo_hd"))
-        assertTrue(siegeDrawable.isFile)
-        assertTrue(siegeDrawable.readText().contains("<vector"))
-        assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.png")?.exists() == true)
-        assertFalse(projectFileOrNull("app/src/main/res/drawable/kelime_kusatma_logo_hd.webp")?.exists() == true)
-        assertTrue(games.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
-        assertTrue(games.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
-        assertTrue(games.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
-        assertTrue(games.contains("PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)"))
-        assertTrue(games.contains("onClick = onSiege"))
-        assertTrue(games.contains("onClick = onLastLetter"))
-        assertTrue(games.contains("onClick = onLetterPath"))
+        assertTrue(home.contains("PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)"))
+        assertTrue(shell.contains("PremiumDestination.SIEGE_ENTRY"))
+        assertTrue(shell.contains("PremiumDestination.LAST_LETTER_ENTRY"))
+        assertTrue(shell.contains("PremiumDestination.LETTER_PATH_ENTRY"))
+        assertTrue(entries.contains("PremiumSiegeEntryScreen"))
+        assertTrue(entries.contains("PremiumLastLetterEntryScreen"))
+        assertTrue(entries.contains("PremiumLetterPathEntryScreen"))
+        assertFalse(shell.contains("PremiumGameCenter("))
+        assertFalse(entries.contains("painterResource"))
+        assertFalse(entries.contains("R.drawable"))
     }
 
     @Test
-    fun letterPathUsesItsLogoAndTriggersVisibleSuccessVfxOnlyOnAcceptedMoves() {
+    fun letterPathUsesTypographicGameIdentityAndTriggersVisibleSuccessVfxOnlyOnAcceptedMoves() {
         val ladder = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-        assertTrue(ladder.contains("R.drawable.harf_yolu_logo"))
-        assertTrue(projectFile("app/src/main/res/drawable-nodpi/harf_yolu_logo.webp").isFile)
+        assertFalse(ladder.contains("R.drawable.harf_yolu_logo"))
+        assertTrue(ladder.contains("HARF YOLU"))
         assertTrue(ladder.contains("successVfxNonce += 1"))
         assertTrue(ladder.contains("PurchasedVictoryVfx("))
         assertTrue(ladder.contains("eventKey = \"letter:${'$'}{puzzle?.id}:${'$'}successVfxNonce\""))
@@ -64,7 +60,4 @@ class GameModeBrandingAndVisibleActionContractTest {
     private fun projectFile(path: String): File =
         listOf(File(path), File("../$path")).firstOrNull(File::exists)
             ?: error("Project path missing: $path")
-
-    private fun projectFileOrNull(path: String): File? =
-        listOf(File(path), File("../$path")).firstOrNull(File::exists)
 }
