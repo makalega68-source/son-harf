@@ -115,7 +115,6 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var success by remember { mutableStateOf(false) }
-    var showForm by remember { mutableStateOf(true) }
     var pendingVerificationEmail by remember { mutableStateOf<String?>(null) }
     var otpCode by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
@@ -285,73 +284,12 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                         RoundedCornerShape(42.dp),
                     )
             )
-            if (!showForm) {
-                Column(
-                    Modifier.fillMaxSize().padding(horizontal = 24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Spacer(Modifier.weight(.42f))
-                    Image(
-                        painter = painterResource(R.drawable.son_harf_gold_teal_logo),
-                        contentDescription = "Son Harf",
-                        modifier = Modifier.fillMaxWidth(.94f).heightIn(max = 255.dp),
-                        contentScale = ContentScale.Fit,
-                    )
-                    Text(
-                        sh("Kelimeyi Sürdür, Rakibini Geç", "Continue the Word, Beat Your Rival"),
-                        color = AuthUi.Primary,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(58.dp))
-                    Button(
-                        onClick = { register = false; notice = ""; showForm = true },
-                        modifier = Modifier.fillMaxWidth(.90f).height(70.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = AuthUi.Primary,
-                            contentColor = Color.White,
-                        ),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 3.dp),
-                    ) {
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Text(sh("Giriş Yap", "Sign In"), fontWeight = FontWeight.Bold, fontSize = 23.sp)
-                            Icon(Icons.Rounded.ChevronRight, null, Modifier.align(Alignment.CenterEnd).size(32.dp))
-                        }
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedButton(
-                        onClick = { register = true; notice = ""; showForm = true },
-                        modifier = Modifier.fillMaxWidth(.90f).height(68.dp),
-                        shape = RoundedCornerShape(24.dp),
-                        border = BorderStroke(1.dp, AuthUi.Border),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            containerColor = AuthUi.Surface.copy(alpha = .94f),
-                            contentColor = AuthUi.SoftBlue,
-                        ),
-                    ) {
-                        Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                            Text(sh("Kayıt Ol", "Register"), fontWeight = FontWeight.Bold, fontSize = 23.sp)
-                            Icon(Icons.Rounded.ChevronRight, null, Modifier.align(Alignment.CenterEnd).size(32.dp))
-                        }
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Spacer(Modifier.height(28.dp))
-                }
-            } else {
-                Column(
+            Column(
                     Modifier.fillMaxSize().verticalScroll(scrollState).padding(horizontal = 18.dp, vertical = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Spacer(Modifier.height(24.dp))
-                    TextButton(
-                        onClick = { showForm = false; notice = ""; success = false },
-                        modifier = Modifier.align(Alignment.Start),
-                    ) {
-                        Text("‹ " + sh("Giriş ekranına dön", "Back to login"), color = AuthUi.Primary, fontWeight = FontWeight.Bold)
-                    }
                     if (pendingVerificationEmail != null) {
                         EmailVerificationCard(
                             email = pendingVerificationEmail.orEmpty(),
@@ -652,7 +590,6 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     }
                     Spacer(Modifier.height(24.dp))
                 }
-            }
         }
     }
 }
