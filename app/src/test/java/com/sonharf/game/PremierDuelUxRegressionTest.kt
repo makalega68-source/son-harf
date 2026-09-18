@@ -6,7 +6,6 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-// Locks the real-device fixes requested for the rebuilt Premier 1v1 arena.
 class PremierDuelUxRegressionTest {
     @Test fun premierArenaKeepsProfilesVisibleAndServerAuthoritativeRecovery() {
         val screen = File("src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
@@ -14,7 +13,6 @@ class PremierDuelUxRegressionTest {
         val onlineBackend = File("src/main/java/com/sonharf/game/data/OnlineGameBackend.kt").readText()
         val turnClock = File("src/main/java/com/sonharf/game/data/PremierTurnClock.kt").readText()
 
-        // Human profile photos use the rectangular runtime so purchased rectangular frames align.
         assertTrue(screen.contains("ProfilePhotoAvatarRectWithGender("))
         assertTrue(screen.contains("width = 70.dp"))
         assertTrue(screen.contains("height = 54.dp"))
@@ -25,7 +23,6 @@ class PremierDuelUxRegressionTest {
         assertFalse(screen.contains("MageCatCompanion("))
         assertFalse(screen.contains("SyntheticBotPortrait("))
 
-        // Chat remains typed/realtime and now has an unread red indicator.
         assertTrue(screen.contains("Icons.Rounded.ChatBubbleOutline, pt(language, \"Sohbet\", \"Chat\")"))
         assertFalse(screen.contains("enabled = !room.isBot"))
         assertTrue(screen.contains("var hasUnreadChat by remember { mutableStateOf(false) }"))
@@ -49,14 +46,12 @@ class PremierDuelUxRegressionTest {
         assertTrue(backend.contains("botTakeTurn(roomId)"))
         assertFalse(backend.contains("submit_word_v4"))
 
-        // Returning to a live bot room must refresh the server deadline instead of charging offline time.
         assertTrue(screen.contains("found?.isBot == true && found.isPremierLive()"))
         assertTrue(screen.contains("backend.resumePremierBotMatch(found.id)"))
         assertTrue(onlineBackend.contains("suspend fun resumePremierBotMatch(roomId: String): GameRoomDto"))
         assertTrue(onlineBackend.contains("\"resume_premier_bot_match_v1\""))
         assertTrue(onlineBackend.contains("put(\"p_room_id\", roomId)"))
 
-        // The 15-second visible timer stays server-clock anchored and monotonic on-device.
         assertTrue(screen.contains("private const val PREMIER_TURN_SECONDS = 15"))
         assertTrue(screen.contains("fetchPremierTurnClock(active.id)"))
         assertTrue(screen.contains("SystemClock.elapsedRealtime()"))
@@ -68,11 +63,9 @@ class PremierDuelUxRegressionTest {
         assertTrue(turnClock.contains("\"get_premier_turn_clock_v1\""))
         assertTrue(turnClock.contains("put(\"p_room_id\", roomId)"))
 
-        // The old instruction is removed; the redesigned word card carries the latest played word.
         assertTrue(screen.contains("val latestPlayedWord"))
         assertFalse(screen.contains("“\$required” ile başlayan bir kelime yaz"))
         assertFalse(screen.contains("Enter a word starting with “\$required”"))
-        // Redesigned arena word card: latest word as letter tiles + SON HARF pill + how-to help.
         assertTrue(screen.contains("private fun PremierWordCard("))
         assertTrue(screen.contains("latestWord = latestPlayedWord"))
         assertTrue(screen.contains("if (latestWord.isBlank())"))
@@ -80,22 +73,21 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("onHowTo = { showHowTo = true }"))
         assertTrue(screen.contains("private fun PremierHowToDialog("))
 
-        // History chips center as a group instead of hugging the left edge.
-        assertTrue(screen.contains("Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally)"))
+        assertTrue(screen.contains("contentPadding = PaddingValues(horizontal = 10.dp)"))
 
-        // Purchased action VFX is used cosmetically on turn arrival and accepted moves.
         assertTrue(screen.contains("PurchasedVictoryVfx("))
         assertTrue(screen.contains("eventKey = \"turn:"))
         assertTrue(screen.contains("eventKey = \"accepted:"))
 
-        // The redesigned word card and Pro history drawer stay responsive on real devices.
-        assertTrue(screen.contains("private fun PremierHistoryDrawer("))
-        assertTrue(screen.contains("pt(language, \"PRO ÖZELLİĞİ\", \"PRO FEATURE\")"))
+        assertTrue(screen.contains("private fun PremierHistoryDrawer(words: List<GameWordDto>, language: String)"))
+        assertTrue(screen.contains("OYNANAN KELİMELER"))
+        assertTrue(screen.contains("PLAYED WORDS"))
+        assertFalse(screen.contains("PRO ÖZELLİĞİ"))
+        assertFalse(screen.contains("PremierHistoryDrawer(words, language, isPro)"))
         assertTrue(screen.contains("val tileW = if (compact) 26.dp else 30.dp"))
         assertTrue(screen.contains("compact = veryCompact"))
         assertFalse(screen.contains("if (tall) 164.dp"))
 
-        // Send consumes the visible attempt immediately, then the authoritative server result arrives.
         val candidateIndex = screen.indexOf("val candidate = input")
         val clearIndex = screen.indexOf("input = \"\"", candidateIndex)
         val submitIndex = screen.indexOf("backend.submitPremierWord(active.id, candidate)", candidateIndex)
@@ -107,10 +99,8 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("pt(language, \"YANLIŞ\", \"WRONG\")"))
         assertTrue(screen.contains("PremierMoveFeedback("))
 
-        // The input bar no longer carries the redundant server badge.
         assertFalse(screen.contains("PremierStatPill(pt(language, \"SUNUCU\", \"SERVER\")"))
 
-        // Chat is a typed transcript for human and bot matches; canned quick-message UI is gone.
         assertTrue(screen.contains("private fun PremierChatSheet("))
         assertTrue(screen.contains("messages = if (room?.isBot == true) botChat else chat"))
         assertTrue(screen.contains("OutlinedTextField("))
