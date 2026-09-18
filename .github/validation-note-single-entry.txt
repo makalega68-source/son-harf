@@ -1,1 +1,0 @@
-Validation marker for the single-screen game entry simplification. Remove after CI verification.
