@@ -25,13 +25,13 @@ internal val SonHarfBg: Color get() = SonHarfTheme.Background
 internal val SonHarfSurface: Color get() = SonHarfTheme.Surface
 internal val SonHarfSurface2: Color get() = SonHarfTheme.SurfaceSecondary
 internal val SonHarfPurple: Color get() = SonHarfTheme.Purple
-internal val SonHarfCyan: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFFFD36A) else Color(0xFF1687F8)
+internal val SonHarfCyan: Color get() = SonHarfTheme.Turquoise
 internal val SonHarfBlue: Color get() = SonHarfTheme.PrimaryBlue
-internal val SonHarfGold = Color(0xFFF6C453)
-internal val SonHarfGreen = Color(0xFF35C878)
+internal val SonHarfGold: Color get() = SonHarfTheme.PremiumGold
+internal val SonHarfGreen: Color get() = SonHarfTheme.Success
 internal val SonHarfText: Color get() = SonHarfTheme.TextPrimary
 internal val SonHarfMuted: Color get() = SonHarfTheme.TextSecondary
-internal val SonHarfPink = Color(0xFFFF5F57)
+internal val SonHarfPink: Color get() = SonHarfTheme.Error
 
 private val SonHarfTypography = Typography(
     bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 25.sp),
@@ -96,9 +96,6 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Nothing optional is allowed to prevent the first frame from being rendered. Audio,
-        // cached cosmetics/experience data and privacy SDKs are useful, but a device-specific
-        // initialization failure must degrade that feature instead of crashing the whole app.
         bestEffortStartup("sound effects") { SonHarfSoundFx.init(this) }
         bestEffortStartup("sound preferences") { SonHarfPreferences.syncSound(this) }
         bestEffortStartup("ui preferences") { SonHarfPreferences.syncUi(this) }
@@ -111,39 +108,23 @@ class MainActivity : ComponentActivity() {
         val clearUnrememberedSession = SupabaseProvider.configured && !rememberLogin && !authDeepLink
 
         setContent {
-            val appColors = if (SonHarfCosmetics.darkArenaTheme) {
-                darkColorScheme(
-                    primary = SonHarfBlue,
-                    secondary = SonHarfCyan,
-                    tertiary = SonHarfGreen,
-                    background = SonHarfBg,
-                    surface = SonHarfSurface,
-                    surfaceVariant = SonHarfSurface2,
-                    onPrimary = Color(0xFF201600),
-                    onSecondary = Color(0xFF201600),
-                    onTertiary = Color(0xFF07140D),
-                    onBackground = SonHarfText,
-                    onSurface = SonHarfText,
-                    onSurfaceVariant = SonHarfText,
-                    error = SonHarfPink,
-                )
-            } else {
-                lightColorScheme(
-                    primary = SonHarfBlue,
-                    secondary = SonHarfCyan,
-                    tertiary = SonHarfGreen,
-                    background = SonHarfBg,
-                    surface = SonHarfSurface,
-                    surfaceVariant = SonHarfSurface2,
-                    onPrimary = Color.White,
-                    onSecondary = Color.White,
-                    onTertiary = Color.White,
-                    onBackground = SonHarfText,
-                    onSurface = SonHarfText,
-                    onSurfaceVariant = SonHarfText,
-                    error = SonHarfPink,
-                )
-            }
+            // Brand theme is authoritative. Equipped cosmetics may style profile/game details but
+            // can no longer replace the global application palette.
+            val appColors = lightColorScheme(
+                primary = SonHarfBlue,
+                secondary = SonHarfCyan,
+                tertiary = SonHarfPurple,
+                background = SonHarfBg,
+                surface = SonHarfSurface,
+                surfaceVariant = SonHarfSurface2,
+                onPrimary = Color.White,
+                onSecondary = Color.White,
+                onTertiary = Color.White,
+                onBackground = SonHarfText,
+                onSurface = SonHarfText,
+                onSurfaceVariant = SonHarfText,
+                error = SonHarfPink,
+            )
             MaterialTheme(
                 colorScheme = appColors,
                 typography = SonHarfTypography,
@@ -166,7 +147,6 @@ private fun AppStartupGate(clearUnrememberedSession: Boolean) {
                 runCatching { SupabaseProvider.client.auth.signOut() }
             }
         }
-        // Session cleanup is best-effort: a slow/offline backend must never block app launch.
         state = StartupState.Ready
     }
 
@@ -184,17 +164,30 @@ private sealed interface StartupState {
 @Composable
 private fun StartupLoading() {
     Surface(Modifier.fillMaxSize(), color = SonHarfBg) {
-        Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            SonHarfBrandLogo(modifier = Modifier.fillMaxWidth(.58f), size = null)
-            Spacer(Modifier.height(24.dp))
-            CircularProgressIndicator(color = SonHarfBlue, strokeWidth = 3.dp)
-            Spacer(Modifier.height(14.dp))
-            Text(sh("Kelime Tahtı hazırlanıyor…", "Preparing Kelime Tahtı…"), color = SonHarfText, fontWeight = FontWeight.Bold)
-            Text(sh("Oturum ve ayarlar güvenli biçimde yükleniyor.", "Loading session and settings safely."), color = SonHarfMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
+        Box(Modifier.fillMaxSize()) {
+            PremiumScreenBackground(Modifier.matchParentSize())
+            Column(
+                Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                SonHarfBrandLogo(modifier = Modifier.fillMaxWidth(.58f), size = null)
+                Spacer(Modifier.height(26.dp))
+                CircularProgressIndicator(color = SonHarfBlue, strokeWidth = 3.dp)
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    sh("Kelime Kuşatması hazırlanıyor…", "Preparing Kelime Kuşatması…"),
+                    color = SonHarfText,
+                    fontWeight = FontWeight.Black,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    sh("Oturum ve oyun verileri güvenli biçimde yükleniyor.", "Loading your session and game data securely."),
+                    color = SonHarfMuted,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
     }
 }
