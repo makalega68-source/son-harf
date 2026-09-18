@@ -1,13 +1,13 @@
 -- Black Theme v1
 -- Cosmetic only: no score, rating, economy or gameplay-power effect.
--- Reuses theme_dark_arena as the canonical server/store key for published-client compatibility.
+-- Black Theme is a separate product; legacy arena themes never grant it automatically.
 
 insert into public.shop_items(
   id, kind, name_tr, name_en, description_tr, description_en,
   diamond_price, vip_only, active, sort_order
 )
 values (
-  'theme_dark_arena',
+  'theme_black',
   'game_theme',
   'Black Theme',
   'Black Theme',
@@ -29,19 +29,13 @@ on conflict (id) do update set
   active = excluded.active,
   sort_order = excluded.sort_order;
 
--- Retire alternate/experimental themes from the active storefront.
+-- Old themes remain as historical ownership metadata only.
 update public.shop_items
 set active = false
-where id in ('theme_black', 'theme_monster_blue', 'theme_aurora', 'theme_neon', 'theme_midnight')
+where id in ('theme_dark_arena', 'theme_monster_blue', 'theme_aurora', 'theme_neon', 'theme_midnight')
   and kind = 'game_theme';
 
--- Preserve ownership from any earlier test build that used theme_black.
-insert into public.user_inventory(user_id, item_id)
-select user_id, 'theme_dark_arena'
-from public.user_inventory
-where item_id = 'theme_black'
-on conflict do nothing;
-
+-- Retired themes must not remain visually equipped. Ownership rows are preserved.
 update public.user_equipped_cosmetics
-set game_theme_id = 'theme_dark_arena'
-where game_theme_id = 'theme_black';
+set game_theme_id = null
+where game_theme_id in ('theme_dark_arena', 'theme_monster_blue', 'theme_aurora', 'theme_neon', 'theme_midnight');
