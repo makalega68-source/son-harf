@@ -15,11 +15,12 @@ class KelimeKusatmasiPrimaryProductContractTest {
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
         val logo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeVector = File("src/main/res/drawable/kelime_kusatma_logo_hd.xml")
+        val launcherIcon = File("src/main/res/drawable-nodpi/kelime_kusatmasi_app_icon.webp")
         val homeBadge = File("src/main/res/drawable-nodpi/word_siege_home_badge.webp")
 
         assertTrue(manifest.contains("android:label=\"@string/app_name\""))
-        // Resource/deep-link identifiers remain stable even though the visible product brand changes.
-        assertTrue(manifest.contains("@mipmap/ic_kelime_tahti"))
+        assertTrue(manifest.contains("@drawable/kelime_kusatmasi_app_icon"))
+        assertTrue(launcherIcon.isFile)
         assertTrue(strings.contains("<string name=\"app_name\">Kelime Kuşatması</string>"))
         assertTrue(logo.contains("R.drawable.kelime_kusatma_logo_hd"))
         assertTrue(siegeVector.isFile)
@@ -84,7 +85,6 @@ class KelimeKusatmasiPrimaryProductContractTest {
     @Test
     fun siegeBoardNoLongerUsesTheClassicCornerAndDiagonalBonusTopology() {
         val spec = File("src/main/java/com/sonharf/game/WordSiegeBoardSpec.kt").readText()
-
         assertTrue(spec.contains("SiegeMajorZones"))
         assertTrue(spec.contains("SiegeWatchZones"))
         assertTrue(spec.contains("SiegeFortZones"))
@@ -96,7 +96,6 @@ class KelimeKusatmasiPrimaryProductContractTest {
     @Test
     fun matchScreenKeepsWordAndTerritoryScoresSeparateWithoutOldMapControlChrome() {
         val match = File("src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
-
         assertTrue(match.contains("wordPoints = myWordPoints"))
         assertTrue(match.contains("territoryPoints = myTerritoryPoints"))
         assertFalse(match.contains("HARİTA KONTROLÜ"))
