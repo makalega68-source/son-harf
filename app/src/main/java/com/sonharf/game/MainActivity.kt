@@ -183,7 +183,7 @@ private sealed interface StartupState {
 
 @Composable
 private fun StartupLoading() {
-    Surface(Modifier.fillMaxSize(), color = SonHarfBg) {
+    AppBackground {
         Column(
             Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(28.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +29,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
@@ -39,7 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
 
-/** Unified Pro startup shell: language -> auth -> premium product. */
+/** Unified Pro startup shell: language -> auth -> refreshed premium product. */
 @Composable
 fun StableV1App() {
     val context = LocalContext.current
@@ -52,10 +53,12 @@ fun StableV1App() {
     var authenticated by remember { mutableStateOf(false) }
 
     if (!languageChosen) {
-        FirstRunLanguageScreen { language ->
-            FirstRunLanguagePreferences.complete(context, language)
-            SonHarfUiState.language = language
-            languageChosen = true
+        AppBackground {
+            FirstRunLanguageScreen { language ->
+                FirstRunLanguagePreferences.complete(context, language)
+                SonHarfUiState.language = language
+                languageChosen = true
+            }
         }
         return
     }
@@ -67,18 +70,26 @@ fun StableV1App() {
     }
 
     if (!authChecked) {
-        Box(Modifier.fillMaxSize().background(MainUi.Background), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = MainUi.Blue)
+        AppBackground {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = MainUi.Blue)
+            }
         }
         return
     }
 
     if (!authenticated) {
-        CompactAuthGate { authenticated = true }
+        AppBackground {
+            // The legacy auth flow keeps all of its proven validation/session logic.
+            // A slight layer transparency lets the single application background remain visible.
+            Box(Modifier.fillMaxSize().graphicsLayer(alpha = .94f)) {
+                CompactAuthGate { authenticated = true }
+            }
+        }
         return
     }
 
-    PremiumUnifiedProApp(onSignedOut = { authenticated = false })
+    RefreshedUnifiedProApp(onSignedOut = { authenticated = false })
 }
 
 /**
@@ -102,7 +113,7 @@ private fun CompactAuthGate(onAuthenticated: () -> Unit) {
 private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
     var selected by remember { mutableStateOf<String?>(null) }
 
-    Surface(Modifier.fillMaxSize(), color = MainUi.Background) {
+    Surface(Modifier.fillMaxSize(), color = Color.Transparent) {
         Column(
             modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 24.dp, vertical = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,

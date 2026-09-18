@@ -18,9 +18,8 @@ import androidx.compose.ui.unit.sp
 
 /** Shared app-shell palette, resolved from the single Son Harf botanical theme. */
 internal object MainUi {
-    // Light pages are deliberately a touch translucent so the shared botanical
-    // backdrop remains perceptible through screen-level backgrounds.
-    val Background: Color get() = if (SonHarfTheme.IsDark) SonHarfTheme.Background else SonHarfTheme.Background.copy(alpha = .94f)
+    // Page roots stay transparent so AppBackground is the single visual source of truth.
+    val Background: Color get() = Color.Transparent
     val Surface: Color get() = SonHarfTheme.Surface
     val SurfaceSoft: Color get() = SonHarfTheme.SurfaceSecondary
     val SurfaceRaised: Color get() = SonHarfTheme.SurfaceElevated
@@ -44,7 +43,7 @@ internal object MainUi {
 }
 
 // Independent/legacy mode tokens resolve to the same application-wide palette.
-internal val PortalBg: Color get() = if (SonHarfTheme.IsDark) SonHarfTheme.Background else SonHarfTheme.Background.copy(alpha = .94f)
+internal val PortalBg: Color get() = Color.Transparent
 internal val PortalCard: Color get() = SonHarfTheme.Surface
 internal val PortalText: Color get() = SonHarfTheme.TextPrimary
 internal val PortalMuted: Color get() = SonHarfTheme.TextSecondary
