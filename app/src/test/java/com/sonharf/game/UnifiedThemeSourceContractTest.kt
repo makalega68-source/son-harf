@@ -9,7 +9,7 @@ import org.junit.Test
 class UnifiedThemeSourceContractTest {
     @Test
     fun activeShellUsesPremiumCanvaThemeAndKeepsOneThemeSource() {
-        val premium = source("PremiumUnifiedProApp.kt")
+        val premium = source("PremiumCanvaApp.kt")
         val startup = source("StableV1App.kt")
         val theme = source("SonHarfTheme.kt")
         val primitives = source("AppUiPrimitives.kt")
@@ -17,7 +17,8 @@ class UnifiedThemeSourceContractTest {
         assertTrue(premium.contains("SonHarfTheme.Background"))
         assertTrue(premium.contains("SonHarfTheme.NavigationSurface"))
         assertTrue(premium.contains("lightColorScheme("))
-        assertTrue(startup.contains("PremiumUnifiedProApp"))
+        assertTrue(startup.contains("PremiumCanvaApp"))
+        assertFalse(startup.contains("PremiumUnifiedProApp"))
         assertTrue(startup.contains("PremiumScreenBackground"))
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
 
