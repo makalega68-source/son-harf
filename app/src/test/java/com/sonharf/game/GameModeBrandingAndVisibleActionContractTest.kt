@@ -7,42 +7,34 @@ import org.junit.Test
 
 class GameModeBrandingAndVisibleActionContractTest {
     @Test
-    fun homeMakesKelimeKusatmasiPrimaryAndRoutesEachModeToItsOwnEntry() {
+    fun homeRoutesEveryModeDirectlyAndKeepsLogoFreeIdentity() {
         val home = projectFile("app/src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
         val shell = projectFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
-        val entries = projectFile("app/src/main/java/com/sonharf/game/PremiumGameEntryScreens.kt").readText()
 
         assertTrue(home.contains("Text(\"KELİME KUŞATMASI\""))
         assertTrue(home.contains("Button(onClick = onSiege"))
-        assertTrue(home.contains("internal fun PremiumOtherGames"))
         assertTrue(home.contains("Icons.Rounded.GridView"))
         assertTrue(home.contains("Icons.Rounded.Bolt"))
         assertTrue(home.contains("Icons.Rounded.Route"))
-        assertTrue(shell.contains("PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)"))
-        assertTrue(shell.contains("PremiumDestination.SIEGE_ENTRY"))
-        assertTrue(shell.contains("PremiumDestination.LAST_LETTER_ENTRY"))
-        assertTrue(shell.contains("PremiumDestination.LETTER_PATH_ENTRY"))
-        assertTrue(entries.contains("PremiumSiegeEntryScreen"))
-        assertTrue(entries.contains("PremiumLastLetterEntryScreen"))
-        assertTrue(entries.contains("PremiumLetterPathEntryScreen"))
+        assertTrue(shell.contains("openGame(PremiumDestination.SIEGE)"))
+        assertTrue(shell.contains("openGame(PremiumDestination.LAST_LETTER)"))
+        assertTrue(shell.contains("openGame(PremiumDestination.LETTER_PATH)"))
+        assertFalse(shell.contains("_ENTRY"))
         assertFalse(shell.contains("PremiumGameCenter("))
-        assertFalse(entries.contains("painterResource"))
-        assertFalse(entries.contains("R.drawable"))
         assertFalse(home.contains("R.drawable.kelime_kusatma_logo_hd"))
         assertFalse(home.contains("R.drawable.son_harf_app_icon_master"))
         assertFalse(home.contains("R.drawable.harf_yolu_logo"))
     }
 
     @Test
-    fun letterPathKeepsGameplaySuccessVfxIndependentFromItsEntryScreen() {
+    fun letterPathKeepsGameplaySuccessVfxAndUsesItsActualGameScreenAsEntry() {
         val ladder = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-        val entries = projectFile("app/src/main/java/com/sonharf/game/PremiumGameEntryScreens.kt").readText()
         assertTrue(ladder.contains("successVfxNonce += 1"))
         assertTrue(ladder.contains("PurchasedVictoryVfx("))
         assertTrue(ladder.contains("eventKey = \"letter:${'$'}{puzzle?.id}:${'$'}successVfxNonce\""))
+        assertTrue(ladder.contains("SonHarfUiState.language = code"))
         assertFalse(ladder.contains("rememberInfiniteTransition"))
-        assertTrue(entries.contains("PremiumLetterPathEntryScreen"))
-        assertFalse(entries.contains("R.drawable.harf_yolu_logo"))
+        assertFalse(ladder.contains("R.drawable.harf_yolu_logo"))
     }
 
     @Test

@@ -502,21 +502,40 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                             }
                         }
                         Text(
-                            sh("5 hamle • Her kutu yalnızca 1 kez değişir", "5 moves • Each position changes only once"),
+                            sh("Bir harfi değiştir • hedefe ulaş", "Change one letter • reach the target"),
                             color = LetterLadderUi.Muted,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
                         )
                     }
-                    Surface(shape = RoundedCornerShape(99.dp), color = LetterLadderUi.Gold.copy(alpha = .16f)) {
-                        Text(
-                            "${usedPositions.size}/5",
-                            Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                            color = LetterLadderUi.Gold,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Black,
-                        )
+                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        listOf("tr" to "TR", "en" to "EN").forEach { (code, label) ->
+                            val selected = language == code
+                            Surface(
+                                onClick = { SonHarfUiState.language = code },
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (selected) LetterLadderUi.Accent else LetterLadderUi.SurfaceSoft,
+                                border = BorderStroke(1.dp, if (selected) LetterLadderUi.Accent else LetterLadderUi.Border),
+                            ) {
+                                Text(
+                                    label,
+                                    Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                    color = if (selected) Color.White else LetterLadderUi.Text,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black,
+                                )
+                            }
+                        }
+                        Surface(shape = RoundedCornerShape(99.dp), color = LetterLadderUi.Gold.copy(alpha = .16f)) {
+                            Text(
+                                "${usedPositions.size}/5",
+                                Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                color = LetterLadderUi.Gold,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
                     }
                 }
 

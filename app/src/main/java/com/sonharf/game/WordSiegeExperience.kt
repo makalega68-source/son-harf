@@ -179,6 +179,8 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
                 loading = loading,
                 busy = busy,
                 notice = notice,
+                language = SonHarfUiState.language,
+                onLanguageChange = { SonHarfUiState.language = it },
                 onBack = onExit,
                 onRefresh = { scope.launch { refreshGames(showProgress = true) } },
                 onPractice = { practiceActive = true },
@@ -400,6 +402,8 @@ private fun WordSiegeGamesList(
     loading: Boolean,
     busy: Boolean,
     notice: String?,
+    language: String,
+    onLanguageChange: (String) -> Unit,
     onBack: () -> Unit,
     onRefresh: () -> Unit,
     onPractice: () -> Unit,
@@ -420,7 +424,7 @@ private fun WordSiegeGamesList(
                 Column(Modifier.weight(1f)) {
                     Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
                     Text(
-                        sh("Süre yok • 1v1 • En fazla 10 devam eden oyun", "No timer • 1v1 • Up to 10 ongoing games"),
+                        sh("Kelime kur • alan ele geçir", "Build words • claim territory"),
                         color = MainUi.Muted,
                         fontSize = 10.sp,
                     )
@@ -443,8 +447,44 @@ private fun WordSiegeGamesList(
                     }
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(sh("TAKTİK ALAN SAVAŞI", "TACTICAL TERRITORY BATTLE"), color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Kelime kur • bölge ele geçir • haritayı yönet", "Build words • capture territory • control the map"), color = MainUi.Muted, fontSize = 9.sp)
+                        Text(sh("ALAN SAVAŞI", "TERRITORY BATTLE"), color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        Text(sh("Kelime kur. Bölgeyi al.", "Build a word. Take territory."), color = MainUi.Muted, fontSize = 9.sp)
+                    }
+                }
+            }
+        }
+
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(18.dp),
+                color = MainUi.Surface,
+                border = BorderStroke(1.dp, MainUi.Border),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth().padding(10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Icon(Icons.Rounded.Language, null, tint = MainUi.Blue, modifier = Modifier.size(21.dp))
+                    Text(sh("OYUN DİLİ", "GAME LANGUAGE"), color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.weight(1f))
+                    listOf("tr" to "TR", "en" to "EN").forEach { (code, label) ->
+                        val selected = language == code
+                        Surface(
+                            onClick = { onLanguageChange(code) },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (selected) MainUi.Blue else MainUi.SurfaceSoft,
+                            border = BorderStroke(1.dp, if (selected) MainUi.Blue else MainUi.Border),
+                        ) {
+                            Text(
+                                label,
+                                Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                color = if (selected) Color.White else MainUi.Text,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
                     }
                 }
             }
@@ -501,9 +541,9 @@ private fun WordSiegeGamesList(
                         }
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                            Text(sh("İlk kuşatmanı kur", "Build your first siege"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            Text(sh("İlk kuşatmanı başlat", "Start your first siege"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 13.sp)
                             Text(
-                                sh("Bonuslar sadece yeni harfte çalışır; rakibin karesini kelimene katarsan alan sana geçer.", "Bonuses work on new tiles; use a rival tile in your word to capture its territory."),
+                                sh("Kelime kur ve rakibin bölgesini ele geçir.", "Build words and capture rival territory."),
                                 color = MainUi.Muted,
                                 fontSize = 10.sp,
                             )

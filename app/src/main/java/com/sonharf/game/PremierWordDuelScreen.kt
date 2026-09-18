@@ -602,7 +602,7 @@ private fun PremierLobby(
             IconButton(onClick = onHome) { Icon(Icons.Rounded.ArrowBack, null, tint = PremierUi.Ink) }
             Column(Modifier.weight(1f)) {
                 Text("SON HARF", color = PremierUi.Ink, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Text(pt(language, "PREMIER 1v1 DÜELLO", "PREMIER 1v1 DUEL"), color = PremierUi.Ocean, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                Text(pt(language, "Son harften yeni kelime üret", "Build a new word from the last letter"), color = PremierUi.Ocean, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
             PremierLanguageSwitch(language, onLanguage)
         }
@@ -637,14 +637,14 @@ private fun PremierLobby(
                     }
                 }
                 Text(
-                    pt(language, "Kelimeyi sürdür, rakibini geç.", "Keep the word chain alive. Outplay your rival."),
+                    pt(language, "Son harften yeni kelime üret.", "Build a new word from the last letter."),
                     color = Color.White,
                     fontSize = 24.sp,
                     lineHeight = 29.sp,
                     fontWeight = FontWeight.Black,
                 )
                 Text(
-                    pt(language, "Sunucu doğrulamalı ana sözlük • 3 round • kişi başı 10 kelime", "Server-verified master dictionary • 3 rounds • 10 words each"),
+                    pt(language, "3 round • kişi başı 10 kelime", "3 rounds • 10 words each"),
                     color = Color.White.copy(alpha = .78f),
                     fontSize = 12.sp,
                 )
@@ -652,9 +652,9 @@ private fun PremierLobby(
         }
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            PremierFeatureTile(Icons.Rounded.Verified, pt(language, "ANA SÖZLÜK", "MASTER DICTIONARY"), pt(language, "TR + EN", "TR + EN"), Modifier.weight(1f))
-            PremierFeatureTile(Icons.Rounded.Bolt, pt(language, "HIZLI", "FAST"), pt(language, "15→13→11 sn", "15→13→11 sec"), Modifier.weight(1f))
-            PremierFeatureTile(Icons.Rounded.Groups, pt(language, "CANLI", "LIVE"), "1v1", Modifier.weight(1f))
+            PremierFeatureTile(Icons.Rounded.Looks3, pt(language, "3 ROUND", "3 ROUNDS"), pt(language, "TOPLAM", "TOTAL"), Modifier.weight(1f))
+            PremierFeatureTile(Icons.Rounded.Spellcheck, pt(language, "10 + 10", "10 + 10"), pt(language, "KELİME", "WORDS"), Modifier.weight(1f))
+            PremierFeatureTile(Icons.Rounded.Bolt, "15→13→11", pt(language, "SANİYE", "SECONDS"), Modifier.weight(1f))
         }
 
         Spacer(Modifier.weight(1f))
@@ -675,7 +675,7 @@ private fun PremierLobby(
             Spacer(Modifier.width(8.dp))
             Text(pt(language, "OYNA", "PLAY"), fontSize = 21.sp, fontWeight = FontWeight.Black, letterSpacing = .9.sp)
         }
-        Text(pt(language, "Rakip bulunamazsa seviye uyumlu bot devreye girer.", "If no rival is found, a level-appropriate bot takes over."), Modifier.fillMaxWidth(), color = PremierUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+        Text(pt(language, "Rakip yoksa uygun botla hemen başlarsın.", "If no rival is found, a suitable bot starts the match."), Modifier.fillMaxWidth(), color = PremierUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
     }
 }
 
