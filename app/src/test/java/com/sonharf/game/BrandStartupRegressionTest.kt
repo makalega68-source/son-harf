@@ -31,7 +31,7 @@ class BrandStartupRegressionTest {
         assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(authGate.contains("var register by remember { mutableStateOf(false) }"))
         assertFalse(authGate.contains("showForm"))
-        assertTrue(siegeHub.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
+        assertFalse(siegeHub.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(home.contains("R.drawable.son_harf_app_icon_master"))
         listOf(launcherVector, homeVector, authVector, gameVector).forEach {
             assertTrue("Missing raster-free drawable: ${it.path}", it.isFile)

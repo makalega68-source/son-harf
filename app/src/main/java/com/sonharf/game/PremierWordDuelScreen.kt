@@ -827,7 +827,6 @@ private fun PremierArena(
     onQuickChat: () -> Unit,
     onSubmit: () -> Unit,
 ) {
-    val isPro = me?.isVip == true
     var showHowTo by remember { mutableStateOf(false) }
     val amHost = meId == room.hostId
     val myScore = if (amHost) room.hostScore else room.guestScore
@@ -865,10 +864,8 @@ private fun PremierArena(
                     compact = veryCompact,
                     onHowTo = { showHowTo = true },
                 )
-                if (!veryCompact) {
-                    Spacer(Modifier.height(primaryGap))
-                    PremierHistoryDrawer(words, language, isPro)
-                }
+                Spacer(Modifier.height(primaryGap))
+                PremierHistoryDrawer(words, language)
                 Spacer(Modifier.weight(1f).heightIn(min = 2.dp))
                 if (notice.isNotBlank()) {
                     Text(notice, color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 4.dp))
@@ -1213,61 +1210,51 @@ private fun PremierWordCard(
 }
 
 @Composable
-private fun PremierHistoryDrawer(words: List<GameWordDto>, language: String, isPro: Boolean) {
-    if (isPro) {
-        if (words.isEmpty()) {
-            Text(pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."), color = PremierUi.Muted, fontSize = 10.sp)
-            return
-        }
-        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.WorkspacePremium, null, tint = PremierUi.Gold, modifier = Modifier.size(11.dp))
-                Spacer(Modifier.width(4.dp))
+private fun PremierHistoryDrawer(words: List<GameWordDto>, language: String) {
+    if (words.isEmpty()) {
+        Text(
+            pt(language, "İlk zinciri sen başlatabilirsin.", "You can start the first chain."),
+            color = PremierUi.Muted,
+            fontSize = 10.sp,
+        )
+        return
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(15.dp),
+        color = PremierUi.Surface,
+        border = BorderStroke(1.dp, PremierUi.Border),
+    ) {
+        Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.History, null, tint = PremierUi.Ocean, modifier = Modifier.size(13.dp))
+                Spacer(Modifier.width(5.dp))
                 Text(
-                    pt(language, "PRO • Tüm oynanan kelimeler (${words.size})", "PRO • All played words (${words.size})"),
-                    color = PremierUi.Gold,
-                    fontSize = 8.sp,
+                    pt(language, "OYNANAN KELİMELER (${words.size})", "PLAYED WORDS (${words.size})"),
+                    color = PremierUi.OceanDeep,
+                    fontSize = 9.sp,
                     fontWeight = FontWeight.Black,
                 )
             }
             LazyRow(
                 Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(7.dp, Alignment.CenterHorizontally),
-                contentPadding = PaddingValues(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(7.dp),
+                contentPadding = PaddingValues(horizontal = 10.dp),
             ) {
                 items(words.reversed(), key = { it.id }) { entry ->
-                    Surface(shape = RoundedCornerShape(11.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Border)) {
-                        Text(premierUpper(entry.normalizedWord.ifBlank { entry.word }, language), Modifier.padding(horizontal = 10.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Surface(
+                        shape = RoundedCornerShape(11.dp),
+                        color = PremierUi.Ice,
+                        border = BorderStroke(1.dp, PremierUi.Border),
+                    ) {
+                        Text(
+                            premierUpper(entry.normalizedWord.ifBlank { entry.word }, language),
+                            Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            color = PremierUi.OceanDeep,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black,
+                        )
                     }
-                }
-            }
-        }
-    } else {
-        // Standard users see a locked Pro handle instead of the played-word history.
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(14.dp),
-            color = PremierUi.Surface,
-            border = BorderStroke(1.dp, PremierUi.Border),
-        ) {
-            Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Lock, null, tint = PremierUi.Muted, modifier = Modifier.size(14.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    pt(language, "Tüm geçmiş kelimeler", "All played words"),
-                    color = PremierUi.Muted,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                )
-                Surface(shape = RoundedCornerShape(99.dp), color = PremierUi.GoldSoft, border = BorderStroke(1.dp, PremierUi.Gold.copy(alpha = .5f))) {
-                    Text(
-                        pt(language, "PRO ÖZELLİĞİ", "PRO FEATURE"),
-                        Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        color = PremierUi.Gold,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Black,
-                    )
                 }
             }
         }

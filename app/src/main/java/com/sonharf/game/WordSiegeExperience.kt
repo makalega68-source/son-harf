@@ -430,15 +430,23 @@ private fun WordSiegeGamesList(
                 }
             }
         }
-
         item {
-            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Image(
-                    painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
-                    contentDescription = sh("Kelime Tahtı logosu", "Kelime Tahtı logo"),
-                    modifier = Modifier.size(96.dp),
-                    contentScale = ContentScale.Fit,
-                )
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = SiegePurpleSoft,
+                border = BorderStroke(1.dp, SiegePurple.copy(alpha = .18f)),
+            ) {
+                Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Surface(shape = RoundedCornerShape(14.dp), color = SiegePurple.copy(alpha = .12f)) {
+                        Icon(Icons.Rounded.GridView, null, Modifier.padding(10.dp).size(24.dp), tint = SiegePurple)
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(sh("TAKTİK ALAN SAVAŞI", "TACTICAL TERRITORY BATTLE"), color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        Text(sh("Kelime kur • bölge ele geçir • haritayı yönet", "Build words • capture territory • control the map"), color = MainUi.Muted, fontSize = 9.sp)
+                    }
+                }
             }
         }
 
