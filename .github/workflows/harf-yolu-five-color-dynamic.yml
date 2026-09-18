@@ -1,0 +1,65 @@
+name: Harf Yolu Five Color Dynamic
+
+on:
+  push:
+    branches:
+      - codex/harf-yolu-five-color-dynamic-20260918
+    paths:
+      - .github/workflows/harf-yolu-five-color-dynamic.yml
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout working branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/harf-yolu-five-color-dynamic-20260918
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Apply Harf Yolu five color refresh
+        run: python3 .github/scripts/patch_harf_yolu_blue_turquoise.py
+
+      - name: Run Harf Yolu regression tests
+        run: ./gradlew testDebugUnitTest --tests com.sonharf.game.LetterLadderUxRegressionTest --tests com.sonharf.game.LetterLadderEngineTest
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
+
+      - name: Commit verified product changes and cleanup temporary automation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/LetterLadderGame.kt
+          git rm -f .github/scripts/patch_harf_yolu_blue_turquoise.py
+          git rm -f .github/workflows/harf-yolu-blue-turquoise-refresh.yml
+          git rm -f .github/workflows/harf-yolu-five-color-dynamic.yml
+          git commit -m "Harf Yolu arayuzunu bes renkli dinamik hale getir"
+          git push origin HEAD:codex/harf-yolu-five-color-dynamic-20260918
+
+      - name: Stage APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk Kelime-Kusatmasi-Harf-Yolu-Bes-Renk-Dinamik.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kelime-Kusatmasi-Harf-Yolu-Bes-Renk-Dinamik-APK
+          path: Kelime-Kusatmasi-Harf-Yolu-Bes-Renk-Dinamik.apk
+          if-no-files-found: error
