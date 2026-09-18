@@ -103,21 +103,24 @@ internal fun MainPlayerProfileScreen(
 
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(30.dp),
-            color = Color.Transparent,
-            border = BorderStroke(1.dp, profileAccent.copy(alpha = .30f)),
-            shadowElevation = 7.dp,
+            shape = RoundedCornerShape(28.dp),
+            color = SonHarfTheme.Surface,
+            shadowElevation = 4.dp,
         ) {
             Box(
-                Modifier.fillMaxWidth().background(
-                    Brush.horizontalGradient(
-                        listOf(
-                            if (isPro) SonHarfTheme.Purple.copy(alpha = .13f) else SonHarfTheme.PrimarySoft,
-                            SonHarfTheme.Surface,
-                            if (isPro) SonHarfTheme.Primary.copy(alpha = .08f) else SonHarfTheme.Turquoise.copy(alpha = .10f),
+                Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.linearGradient(
+                            listOf(
+                                SonHarfTheme.Surface,
+                                SonHarfTheme.PrimarySoft.copy(alpha = .72f),
+                                SonHarfTheme.Purple.copy(alpha = .07f),
+                                SonHarfTheme.Turquoise.copy(alpha = .06f),
+                            )
                         )
                     )
-                ).padding(20.dp)
+                    .padding(20.dp)
             ) {
                 if (isPro) {
                     Surface(
@@ -125,9 +128,8 @@ internal fun MainPlayerProfileScreen(
                         modifier = Modifier.align(Alignment.TopEnd),
                         shape = RoundedCornerShape(99.dp),
                         color = SonHarfTheme.Purple.copy(alpha = .11f),
-                        border = BorderStroke(1.dp, SonHarfTheme.Purple.copy(alpha = .25f)),
                     ) {
-                        Row(Modifier.padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.WorkspacePremium, null, Modifier.size(14.dp), tint = SonHarfTheme.Purple)
                             Spacer(Modifier.width(4.dp))
                             Text("PRO ÜYE", color = SonHarfTheme.Purple, fontSize = 8.sp, fontWeight = FontWeight.Black)
@@ -139,18 +141,18 @@ internal fun MainPlayerProfileScreen(
                         avatarPath = p?.avatarPath,
                         gender = p?.gender,
                         name = p?.displayName ?: sh("Oyuncu", "Player"),
-                        size = 94.dp,
+                        size = 96.dp,
                         frameId = SonHarfCosmetics.profileFrameId,
                         accent = profileAccent,
                         visible = p?.avatarVisibility != "hidden",
                         isPro = isPro,
                     )
-                    Spacer(Modifier.width(15.dp))
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Spacer(Modifier.width(16.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         Text(
                             p?.displayName ?: sh("Oyuncu", "Player"),
                             color = SonHarfTheme.TextPrimary,
-                            fontSize = 24.sp,
+                            fontSize = 25.sp,
                             fontWeight = FontWeight.Black,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -158,7 +160,7 @@ internal fun MainPlayerProfileScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(7.dp), verticalAlignment = Alignment.CenterVertically) {
                             ProfilePill(
                                 text = g?.nextTitle ?: sh("OYUNCU", "PLAYER"),
-                                accent = if (isPro) SonHarfTheme.Purple else SonHarfTheme.Primary,
+                                accent = SonHarfTheme.Purple,
                             )
                             if (isPro) ProfilePill(text = "PRO", accent = SonHarfTheme.ActionOrange)
                         }
@@ -166,9 +168,9 @@ internal fun MainPlayerProfileScreen(
                             onClick = onEdit,
                             contentPadding = PaddingValues(horizontal = 0.dp, vertical = 2.dp),
                         ) {
-                            Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp), tint = profileAccent)
+                            Icon(Icons.Rounded.Edit, null, Modifier.size(16.dp), tint = SonHarfTheme.Primary)
                             Spacer(Modifier.width(5.dp))
-                            Text(sh("Profili düzenle", "Edit profile"), color = profileAccent, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                            Text(sh("Profili düzenle", "Edit profile"), color = SonHarfTheme.Primary, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                         }
                     }
                 }
