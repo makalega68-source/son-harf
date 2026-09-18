@@ -55,7 +55,6 @@ private val collectionCategories = listOf(
     CollectionCategory("İsim & Prestij", "Name & Prestige", "İsim rengi ve görsel prestij öğeleri", "Name color and visual prestige items", Icons.Rounded.AutoAwesome, Color(0xFFF97316), setOf("name_style", "victory_effect", "emoji_pack")),
 )
 
-/** Simple, vertical, category-first collection manager. */
 @Composable
 internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
     val context = LocalContext.current
@@ -187,7 +186,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
                             rowItems.forEach { item ->
                                 CollectionProductTile(
                                     item = item,
-                                    active = equipped.isEquipped(item),
+                                    active = equipped.isCollectionEquipped(item),
                                     enabled = !loading && busyId == null,
                                     modifier = Modifier.weight(1f),
                                     onClick = { equip(item.id) },
@@ -368,7 +367,7 @@ private fun collectionItemSupported(item: ShopItemDto): Boolean = when (item.kin
     else -> false
 }
 
-private fun EquippedCosmeticsDto?.isEquipped(item: ShopItemDto): Boolean = when (item.kind) {
+private fun EquippedCosmeticsDto?.isCollectionEquipped(item: ShopItemDto): Boolean = when (item.kind) {
     "game_theme" -> this?.gameThemeId == item.id
     "profile_frame" -> this?.profileFrameId == item.id
     "keyboard_theme" -> this?.keyboardThemeId == item.id
