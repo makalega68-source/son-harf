@@ -21,7 +21,10 @@ class KelimeKusatmasiFinalBrandingContractTest {
         assertTrue(state.contains(".replace(\"Kelime Tahtı\", \"Kelime Kuşatması\")"))
         assertFalse(state.contains(".replace(\"KELİME KUŞATMASI\", \"KELİME TAHTI\")"))
         assertFalse(state.contains(".replace(\"WORD SIEGE\", \"WORD THRONE\")"))
-        assertTrue(home.contains("\"KELİME KUŞATMASI\""))
+        assertTrue(
+            home.contains("\"KELİME KUŞATMASI\"") ||
+                home.contains("\"KELİME\\nKUŞATMASI\"")
+        )
     }
 
     @Test fun onlineMatchExposesSignatureSiegeFeedbackWithoutChangingAuthoritativeScoring() {

@@ -3,22 +3,20 @@ package com.sonharf.game
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.rotate
-import kotlin.math.cos
-import kotlin.math.sin
 
 /**
- * Premium botanical background shared by Son Harf's light surfaces.
+ * Shared lightweight app backdrop.
  *
- * It deliberately uses vector drawing instead of a full-screen bitmap: the
- * soft leaves, mint wash and faint gold dust scale cleanly on every phone and
- * add effectively no decode/memory risk to startup.
+ * The historical function name is intentionally retained to avoid touching screen wiring. The
+ * artwork itself now follows the purchased compact sports-dashboard language: a clean center,
+ * cool blue depth, turquoise motion and restrained orange action markers. Everything is vector
+ * drawn, so the retheme adds no bitmap decode or startup-memory cost.
  */
 @Composable
 internal fun SonHarfLeafBackdrop(modifier: Modifier = Modifier) {
@@ -26,142 +24,101 @@ internal fun SonHarfLeafBackdrop(modifier: Modifier = Modifier) {
         drawRect(
             brush = Brush.verticalGradient(
                 colorStops = arrayOf(
-                    0.00f to Color(0xFFFFFEF9),
-                    0.38f to Color(0xFFFBFCF6),
-                    0.68f to Color(0xFFF1F7F0),
-                    1.00f to Color(0xFFDDEFE3),
+                    0.00f to Color(0xFFF9FCFF),
+                    0.45f to Color(0xFFF4F9FF),
+                    0.78f to Color(0xFFEDF7FF),
+                    1.00f to Color(0xFFE6F5F7),
                 ),
             ),
         )
 
-        // Diffuse mint atmosphere at the bottom, matching the reference without
-        // introducing a hard decorative edge behind cards.
-        val rearWave = Path().apply {
-            moveTo(0f, size.height * .63f)
+        // Broad dashboard bands stay at the edges so cards and text keep a quiet center field.
+        val rearBand = Path().apply {
+            moveTo(0f, size.height * .70f)
             cubicTo(
-                size.width * .18f, size.height * .55f,
-                size.width * .52f, size.height * .81f,
-                size.width, size.height * .66f,
+                size.width * .22f, size.height * .61f,
+                size.width * .58f, size.height * .86f,
+                size.width, size.height * .69f,
             )
             lineTo(size.width, size.height)
             lineTo(0f, size.height)
             close()
         }
         drawPath(
-            rearWave,
+            rearBand,
             brush = Brush.verticalGradient(
-                listOf(Color(0x185FAD8C), Color(0x4A8EC6A4)),
-                startY = size.height * .58f,
+                listOf(Color(0x101559D6), Color(0x2815C7C4)),
+                startY = size.height * .62f,
                 endY = size.height,
             ),
         )
 
-        val frontWave = Path().apply {
-            moveTo(0f, size.height * .78f)
+        val frontBand = Path().apply {
+            moveTo(0f, size.height * .84f)
             cubicTo(
-                size.width * .28f, size.height * .68f,
-                size.width * .58f, size.height * .91f,
-                size.width, size.height * .76f,
+                size.width * .30f, size.height * .72f,
+                size.width * .66f, size.height * .94f,
+                size.width, size.height * .80f,
             )
             lineTo(size.width, size.height)
             lineTo(0f, size.height)
             close()
         }
         drawPath(
-            frontWave,
+            frontBand,
             brush = Brush.verticalGradient(
-                listOf(Color(0x167AC5A7), Color(0x3D70B996)),
-                startY = size.height * .72f,
+                listOf(Color(0x1215C7C4), Color(0x211559D6)),
+                startY = size.height * .75f,
                 endY = size.height,
             ),
         )
 
-        data class Sprig(
-            val x: Float,
-            val y: Float,
-            val scale: Float,
-            val angle: Float,
-            val alpha: Float,
-            val leaves: Int,
-        )
-
-        listOf(
-            Sprig(-.025f, .10f, .95f, 24f, .14f, 4),
-            Sprig(.72f, -.015f, 1.00f, 22f, .12f, 4),
-            Sprig(.93f, .17f, .62f, -28f, .10f, 3),
-            Sprig(-.035f, .35f, .55f, -36f, .09f, 3),
-            Sprig(.89f, .43f, .52f, 28f, .08f, 3),
-            Sprig(-.025f, .69f, .86f, 30f, .15f, 4),
-            Sprig(.80f, .70f, .82f, -27f, .13f, 4),
-            Sprig(.31f, .86f, .46f, 20f, .07f, 3),
-        ).forEach { sprig -> drawSprig(sprig.x, sprig.y, sprig.scale, sprig.angle, sprig.alpha, sprig.leaves) }
-
-        // Very restrained warm dust gives premium depth around the lower half
-        // without becoming a visible particle effect.
-        val dust = listOf(
-            .12f to .58f, .21f to .74f, .47f to .66f, .65f to .82f,
-            .82f to .57f, .91f to .76f, .36f to .93f,
-        )
-        dust.forEachIndexed { index, pair ->
-            val radius = if (index % 2 == 0) 1.7f else 1.2f
-            drawCircle(
-                color = Color(0xFFD7B35C).copy(alpha = .11f),
-                radius = radius,
-                center = Offset(size.width * pair.first, size.height * pair.second),
-            )
-        }
-    }
-}
-
-private fun DrawScope.drawSprig(
-    x: Float,
-    y: Float,
-    scale: Float,
-    angle: Float,
-    alpha: Float,
-    leafCount: Int,
-) {
-    val base = Offset(size.width * x, size.height * y)
-    val stemLength = 122f * scale
-    val radians = Math.toRadians(angle.toDouble())
-    val direction = Offset(cos(radians).toFloat(), sin(radians).toFloat())
-    val end = base + direction * stemLength
-
-    drawLine(
-        color = Color(0xFF5C9478).copy(alpha = alpha * .72f),
-        start = base,
-        end = end,
-        strokeWidth = 1.6f * scale,
-    )
-
-    val leafW = 58f * scale
-    val leafH = 23f * scale
-    repeat(leafCount) { index ->
-        val t = (index + 1f) / (leafCount + .25f)
-        val center = base + direction * (stemLength * t)
-        val side = if (index % 2 == 0) 1f else -1f
-        val leafAngle = angle + side * (42f - index * 3f)
-        rotate(leafAngle, center) {
-            drawOval(
-                brush = Brush.linearGradient(
-                    listOf(
-                        Color(0xFF4A866B).copy(alpha = alpha),
-                        Color(0xFFB5D7BF).copy(alpha = alpha * .88f),
-                    ),
-                    start = center - Offset(leafW / 2f, 0f),
-                    end = center + Offset(leafW / 2f, 0f),
-                ),
-                topLeft = center - Offset(leafW / 2f, leafH / 2f),
-                size = Size(leafW, leafH),
-            )
+        // Faint live-score style guide lines create motion without competing with gameplay UI.
+        listOf(.18f, .52f, .86f).forEachIndexed { index, y ->
+            val start = Offset(-size.width * .04f, size.height * y)
+            val end = Offset(size.width * .33f, size.height * (y - .055f))
             drawLine(
-                color = Color.White.copy(alpha = alpha * .58f),
-                start = center - Offset(leafW * .30f, 0f),
-                end = center + Offset(leafW * .30f, 0f),
-                strokeWidth = .9f * scale,
+                color = if (index == 1) Color(0xFF15C7C4).copy(alpha = .075f)
+                else Color(0xFF1559D6).copy(alpha = .055f),
+                start = start,
+                end = end,
+                strokeWidth = 2.2f,
+            )
+        }
+
+        data class Marker(val x: Float, val y: Float, val side: Float, val color: Color, val alpha: Float)
+        val markers = listOf(
+            Marker(.035f, .11f, 10f, Color(0xFF1559D6), .18f),
+            Marker(.075f, .19f, 7f, Color(0xFF15C7C4), .18f),
+            Marker(.955f, .08f, 9f, Color(0xFFFF8A24), .17f),
+            Marker(.905f, .23f, 6f, Color(0xFF1559D6), .13f),
+            Marker(.025f, .48f, 7f, Color(0xFFFF8A24), .12f),
+            Marker(.965f, .54f, 8f, Color(0xFF15C7C4), .14f),
+            Marker(.070f, .76f, 6f, Color(0xFF1559D6), .12f),
+            Marker(.915f, .73f, 7f, Color(0xFFFF8A24), .11f),
+        )
+        markers.forEach { marker ->
+            val side = marker.side
+            drawRoundRect(
+                color = marker.color.copy(alpha = marker.alpha),
+                topLeft = Offset(size.width * marker.x - side / 2f, size.height * marker.y - side / 2f),
+                size = Size(side, side),
+                cornerRadius = CornerRadius(side * .28f, side * .28f),
+            )
+        }
+
+        // Small turquoise/orange status dots echo the purchased kit's data-rich sports cards.
+        listOf(
+            Triple(.13f, .31f, Color(0xFF15C7C4)),
+            Triple(.86f, .36f, Color(0xFFFF8A24)),
+            Triple(.18f, .91f, Color(0xFFFF8A24)),
+            Triple(.78f, .88f, Color(0xFF15C7C4)),
+        ).forEach { (x, y, color) ->
+            drawCircle(
+                color = color.copy(alpha = .11f),
+                radius = 2.1f,
+                center = Offset(size.width * x, size.height * y),
             )
         }
     }
 }
-
-private operator fun Offset.times(value: Float): Offset = Offset(x * value, y * value)

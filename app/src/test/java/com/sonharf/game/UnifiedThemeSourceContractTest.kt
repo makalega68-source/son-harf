@@ -8,7 +8,7 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeUnifiedShellFollowsEquippedThemeAndPremierKeepsCalmHighLegibilityArenaPalette() {
+    fun activeUnifiedShellUsesMonsterThemeAndPremierKeepsHighLegibilityArenaPalette() {
         val unified = source("UnifiedProApp.kt")
         val premier = source("PremierWordDuelScreen.kt")
         val startup = source("StableV1App.kt")
@@ -23,15 +23,17 @@ class UnifiedThemeSourceContractTest {
         assertFalse(unified.contains("MageCatDirector.onLobbyGreet()"))
         assertFalse(unified.contains("com.sonharf.game.mascot"))
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
-        assertTrue(theme.contains("val IsDark: Boolean get() = dark"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
         assertTrue(theme.contains("val SecondaryAccent: Color get()"))
         assertTrue(theme.contains("val NavigationSurface: Color get()"))
         assertTrue(theme.contains("val GameSurface: Color get()"))
         assertTrue(theme.contains("val GameTile: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
+        assertTrue(theme.contains("Color(0xFFEFFF19)"))
+        assertTrue(theme.contains("Color(0xFFFF245C)"))
 
-        // Premier remains a fixed high-legibility competitive surface, but now belongs to the
-        // same calm sage / cream / gray-blue visual family as the application shell.
+        // Premier remains a deliberately fixed high-legibility gameplay surface. The application
+        // shell and meta screens use Monster; competitive text entry retains its proven palette.
         assertTrue(premier.contains("val Background = Color(0xFFF1F5F2)"))
         assertTrue(premier.contains("val Surface = Color(0xFFFFFDF7)"))
         assertTrue(premier.contains("val Ocean = Color(0xFF4F725E)"))

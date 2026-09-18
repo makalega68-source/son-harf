@@ -114,7 +114,6 @@ internal fun WordSiegePanMatch(
         placementsCount = placements.size,
         turkish = !SonHarfUiState.isEnglish,
     )
-    val previewCapturedCells = placements.keys.count { index -> game.board.getOrNull(index)?.owner != myOwner }
 
     LaunchedEffect(game.id, game.status) {
         if (game.status == "waiting") {
@@ -246,20 +245,16 @@ internal fun WordSiegePanMatch(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (placements.isNotEmpty()) {
                     Text(readyFeedback.message, color = PanSiegeMineBorder, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        sh(
-                            "Puan hamle onayında hesaplanır",
-                            "Score is calculated when confirmed",
-                        ),
-                        color = WordSiegeGameUi.Muted,
-                        fontSize = 8.sp,
-                        modifier = Modifier.weight(1f),
-                        textAlign = TextAlign.End,
-                    )
                 } else Spacer(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f))
                 Text(sh("Torba ${game.bag.length}", "Bag ${game.bag.length}"), color = WordSiegeGameUi.Muted, fontSize = 8.sp)
             }
+
+            WordSiegePremiumPanel(
+                game = game,
+                placements = placements,
+                canAct = canAct,
+            )
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 rackOrder.forEach { rackIndex ->
