@@ -29,3 +29,5 @@ jobs:
           git add app/src/test/java/com/sonharf/game/LogoFreeGameSurfacesRegressionTest.kt
           git commit -m "Remove game logos from active premium surfaces"
           git push origin HEAD:claude/son-harf-game-screen-design-bhju07
+
+# retry: remaining Harf Yolu surface handled
