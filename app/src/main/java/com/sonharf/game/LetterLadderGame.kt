@@ -177,7 +177,37 @@ internal object LetterLadderEngine {
         return null
     }
 
-    fun generate(
+    /**
+ * Counts only next moves that keep at least one complete route alive.
+ * The UI uses the count as a strategic hint; it never exposes the word,
+ * position or replacement letter that solves the next step.
+ */
+fun viableNextMoveCount(
+    puzzle: LetterLadderPuzzle,
+    current: String,
+    usedPositions: Set<Int>,
+    dictionary: Set<String>,
+): Int {
+    if (current.length != WORD_LENGTH || puzzle.target.length != WORD_LENGTH) return 0
+    if (current == puzzle.target) return 0
+
+    return (0 until WORD_LENGTH).count { index ->
+        if (index in usedPositions || current[index] == puzzle.target[index]) return@count false
+        val chars = current.toCharArray()
+        chars[index] = puzzle.target[index]
+        val next = String(chars)
+        if (next !in dictionary) return@count false
+
+        next == puzzle.target || completionPath(
+            puzzle = puzzle,
+            current = next,
+            usedPositions = usedPositions + index,
+            dictionary = dictionary,
+        ) != null
+    }
+}
+
+fun generate(
         sourceWords: Set<String>,
         language: String,
         seed: Long,
@@ -525,13 +555,13 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                         )
                         Spacer(Modifier.height(3.dp))
 
-                        for (move in 1..LetterLadderEngine.MOVE_COUNT) {
+                        for (move in 1 until LetterLadderEngine.MOVE_COUNT) {
                             LadderMoveRow(
                                 word = path.getOrNull(move)?.uppercase(locale),
                                 usedPositions = usedPositions,
                                 modifier = Modifier.fillMaxWidth().weight(1f),
                             )
-                            if (move < LetterLadderEngine.MOVE_COUNT) Spacer(Modifier.height(3.dp))
+                            if (move < LetterLadderEngine.MOVE_COUNT - 1) Spacer(Modifier.height(3.dp))
                         }
 
                         Spacer(Modifier.height(3.dp))
@@ -628,22 +658,20 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                         enabled = !completed,
                         onClick = {
                             val current = path.last()
-                            val route = LetterLadderEngine.completionPath(currentPuzzle, current, usedPositions, dictionary)
-                            val next = route?.getOrNull(1)
-                            hintText = if (next == null) {
+                            val safeOptions = LetterLadderEngine.viableNextMoveCount(
+                                puzzle = currentPuzzle,
+                                current = current,
+                                usedPositions = usedPositions,
+                                dictionary = dictionary,
+                            )
+                            val remainingMoves = LetterLadderEngine.MOVE_COUNT - usedPositions.size
+                            hintText = if (safeOptions == 0) {
                                 sh("Son hamleyi geri al ve farklı bir yol dene.", "Undo the last move and try a different route.")
                             } else {
-                                val changed = LetterLadderEngine.changedIndex(current, next)
-                                if (changed == null) {
-                                    sh("Sonraki geçerli kelimeyi bul.", "Find the next valid word.")
-                                } else {
-                                    val from = current[changed].uppercaseChar()
-                                    val to = next[changed].uppercaseChar()
-                                    sh(
-                                        "İpucu: $from → $to • ${next.uppercase(locale)}",
-                                        "Hint: $from → $to • ${next.uppercase(locale)}",
-                                    )
-                                }
+                                sh(
+                                    "İpucu: $remainingMoves hamle kaldı • $safeOptions güvenli hamle seçeneği var.",
+                                    "Hint: $remainingMoves moves left • $safeOptions safe move option(s) remain.",
+                                )
                             }
                             SonHarfSoundFx.puzzleHint()
                         },
