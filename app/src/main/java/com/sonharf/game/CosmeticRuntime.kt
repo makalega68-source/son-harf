@@ -9,6 +9,7 @@ import com.sonharf.game.data.EquippedCosmeticsDto
 
 object SonHarfCosmetics {
     private const val PREFS = "son_harf_equipped_style_cache"
+    // Retired compatibility contract was BLACK_THEME_ID = "theme_dark_arena"; never reactivate it.
     const val BLACK_THEME_ID = "theme_black"
 
     var profileFrameId by mutableStateOf<String?>(null)
