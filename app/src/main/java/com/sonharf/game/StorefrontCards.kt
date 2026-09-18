@@ -9,7 +9,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -32,6 +31,7 @@ internal fun StoreDailyRewardCard(state: StorefrontDto?, busy: Boolean, onClaim:
         }
     }
 }
+
 @Composable
 internal fun StorePromoCard(title: String, subtitle: String, action: String, onClick: () -> Unit) {
     OutlinedCard(shape = RoundedCornerShape(18.dp), border = BorderStroke(1.dp, SonHarfTheme.Border)) {
@@ -44,6 +44,7 @@ internal fun StorePromoCard(title: String, subtitle: String, action: String, onC
         }
     }
 }
+
 @Composable
 internal fun StoreBundleCard(bundle: StoreBundleDto, ownedItems: Set<String>, busy: Boolean, onBuy: () -> Unit) {
     val complete = bundle.owned || bundle.items.all { it.id in ownedItems }
@@ -72,9 +73,9 @@ internal fun StoreBundleCard(bundle: StoreBundleDto, ownedItems: Set<String>, bu
         }
     }
 }
+
 @Composable
 internal fun StoreProBenefits() {
-    val uri = LocalUriHandler.current
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(8.dp)) {
         listOf(
             sh("Zorunlu reklamsız kullanım", "No mandatory ads"),
@@ -87,9 +88,6 @@ internal fun StoreProBenefits() {
                 Spacer(Modifier.width(10.dp))
                 Text(benefit, fontSize = 13.sp, lineHeight = 18.sp, color = SonHarfText)
             }
-        }
-        TextButton(onClick = { uri.openUri("https://play.google.com/store/account/subscriptions?package=${BuildConfig.APPLICATION_ID}") }) {
-            Text(sh("Aboneliği yönet", "Manage subscription"))
         }
     }
 }
