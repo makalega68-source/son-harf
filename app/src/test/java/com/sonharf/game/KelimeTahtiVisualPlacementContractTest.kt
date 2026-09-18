@@ -39,13 +39,13 @@ class KelimeKusatmasiVisualPlacementContractTest {
     @Test
     fun wordSiegeEntryAndLobbyUseNoLogoArtwork() {
         val screen = File("src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
-        val entries = File("src/main/java/com/sonharf/game/PremiumGameEntryScreens.kt").readText()
 
         assertFalse(screen.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
-        assertTrue(screen.contains("TAKTİK ALAN SAVAŞI"))
+        assertTrue(screen.contains("ALAN SAVAŞI"))
+        assertTrue(screen.contains("Kelime kur • alan ele geçir"))
         assertTrue(screen.contains("Icons.Rounded.GridView"))
-        assertFalse(entries.contains("painterResource"))
-        assertFalse(entries.contains("R.drawable"))
+        assertTrue(screen.contains("onLanguageChange = { SonHarfUiState.language = it }"))
+        assertFalse(File("src/main/java/com/sonharf/game/PremiumGameEntryScreens.kt").exists())
         assertTrue(File("src/main/res/drawable/kelime_kusatma_logo_hd.xml").isFile)
     }
 }

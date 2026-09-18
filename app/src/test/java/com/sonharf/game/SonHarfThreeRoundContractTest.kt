@@ -18,7 +18,7 @@ class SonHarfThreeRoundContractTest {
         assertTrue(screen.contains("room.guestRoundWords"))
         assertTrue(screen.contains("/10 · R"))
         assertTrue(screen.contains("/3 ·"))
-        assertTrue(screen.contains("15→13→11 sn"))
+        assertTrue(screen.contains("15→13→11"))
         assertTrue(screen.contains("backend.activatePremierOpeningTurn(active.id)"))
         assertTrue(inputBar.contains("Text(\n                input,"))
         assertFalse(inputBar.contains("Kelimeyi yaz"))

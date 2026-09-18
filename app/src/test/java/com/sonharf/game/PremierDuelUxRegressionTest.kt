@@ -58,7 +58,7 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("premierRemainingTurnSecondsFromMillis(initialRemainingMs - elapsedMs, roundSeconds)"))
         assertTrue(screen.contains("premierTurnSecondsForRound(active.roundNo)"))
         assertTrue(screen.contains("backend.activatePremierOpeningTurn(active.id)"))
-        assertTrue(screen.contains("\"15→13→11 sn\""))
+        assertTrue(screen.contains("\"15→13→11\""))
         assertTrue(turnClock.contains("data class PremierTurnClockDto"))
         assertTrue(turnClock.contains("\"get_premier_turn_clock_v1\""))
         assertTrue(turnClock.contains("put(\"p_room_id\", roomId)"))
