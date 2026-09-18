@@ -23,7 +23,7 @@ class UnifiedThemeSourceContractTest {
 
         assertTrue(theme.contains("val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive"))
         assertTrue(theme.contains("internal object BlackThemePalette"))
-        assertTrue(cosmetics.contains("BLACK_THEME_ID = \"theme_dark_arena\""))
+        assertTrue(cosmetics.contains("BLACK_THEME_ID = \"theme_black\""))
         assertTrue(theme.contains("Color(0xFF2563EB)"))
         assertTrue(theme.contains("Color(0xFF12B8A6)"))
         assertTrue(theme.contains("Color(0xFF7C3AED)"))
