@@ -175,7 +175,7 @@ for token in [
     "PremierHistoryDrawer(words, language)",
     "OYNANAN KELİMELER",
     "PLAYED WORDS",
-    "words.takeLast(20).reversed()",
+    "items(words.reversed(), key = { it.id })",
 ]:
     if token not in duel:
         raise SystemExit(f"Son Harf played-word visibility contract missing: {token}")
