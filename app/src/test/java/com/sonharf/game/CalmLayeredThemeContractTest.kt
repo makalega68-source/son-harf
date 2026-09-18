@@ -8,7 +8,7 @@ import org.junit.Test
 
 class CalmLayeredThemeContractTest {
     @Test
-    fun premiumBotanicalThemeDefinesIndependentSemanticLayers() {
+    fun purchasedCompetitiveThemeDefinesIndependentSemanticLayers() {
         val theme = source("SonHarfTheme.kt")
 
         listOf(
@@ -24,6 +24,7 @@ class CalmLayeredThemeContractTest {
             "val Primary: Color get()",
             "val SoftBlue: Color get()",
             "val Turquoise: Color get()",
+            "val ActionOrange: Color get()",
             "val Lavender: Color get()",
             "val Sand: Color get()",
             "val HeroStart: Color get()",
@@ -32,35 +33,42 @@ class CalmLayeredThemeContractTest {
             "val PremiumGold: Color get()",
         ).forEach { token -> assertTrue("Missing theme layer: $token", theme.contains(token)) }
 
-        // Master GDD v3 identity: sage + off-white + soft blue/turquoise + beige/lavender/slate/mint/warm accent.
-        assertTrue(theme.contains("Color(0xFF8A9A86)"))
-        assertTrue(theme.contains("Color(0xFFF9F8F6)"))
-        assertTrue(theme.contains("Color(0xFF7A9AEE)"))
-        assertTrue(theme.contains("Color(0xFF40E0D0)"))
-        assertTrue(theme.contains("Color(0xFFF2EFE9)"))
-        assertTrue(theme.contains("Color(0xFFB5A2FF)"))
-        assertTrue(theme.contains("Color(0xFF5C6F84)"))
-        assertTrue(theme.contains("Color(0xFFA3E4D7)"))
-        assertTrue(theme.contains("Color(0xFFE07A5F)"))
-        assertTrue(theme.contains("Color(0xFFD7B35C)"))
+        // Purchased sports-dashboard language adapted to the requested blue + turquoise + orange identity.
+        assertTrue(theme.contains("Color(0xFF1559D6)"))
+        assertTrue(theme.contains("Color(0xFF0A347A)"))
+        assertTrue(theme.contains("Color(0xFF15C7C4)"))
+        assertTrue(theme.contains("Color(0xFFFF8A24)"))
+        assertTrue(theme.contains("Color(0xFFEAF4FF)"))
+        assertTrue(theme.contains("Color(0xFFF8FBFF)"))
+        assertTrue(theme.contains("Color(0xFF53677D)"))
+        assertTrue(theme.contains("Color(0xFFDDF8F5)"))
+        assertTrue(theme.contains("Color(0xFF728BE8)"))
+        assertTrue(theme.contains("Color(0xFFD9AD45)"))
     }
 
     @Test
-    fun sharedShellUsesBotanicalThemeAndAllowsBackdropToRemainVisible() {
+    fun sharedShellUsesPurchasedThemeAndKeepsBackdropVisible() {
         val primitives = source("AppUiPrimitives.kt")
+        val backdrop = source("SonHarfLeafBackdrop.kt")
         val styles = projectFile("app/src/main/res/values/styles.xml").readText()
 
         assertTrue(primitives.contains("internal val PortalBg: Color get() = if (SonHarfTheme.IsDark)"))
-        assertTrue(primitives.contains("SonHarfTheme.Background.copy(alpha = .94f)"))
+        assertTrue(primitives.contains("SonHarfTheme.Background.copy(alpha = .95f)"))
         assertTrue(primitives.contains("internal val PortalCard: Color get() = SonHarfTheme.Surface"))
         assertTrue(primitives.contains("internal val PortalBlue: Color get() = SonHarfTheme.SoftBlue"))
+        assertTrue(primitives.contains("val Orange: Color get() = SonHarfTheme.ActionOrange"))
+        assertTrue(primitives.contains("internal object MainUiShape"))
         assertFalse(primitives.contains("internal val PortalBlue = Color(0xFF1769E0)"))
-        assertFalse(primitives.contains("internal val PortalGold = Color(0xFFF3A81A)"))
 
-        // Native startup background stays in the same calm family while Compose takes over.
-        assertTrue(styles.contains("<item name=\"android:windowBackground\">#F4F7F2</item>"))
-        assertTrue(styles.contains("<item name=\"android:statusBarColor\">#F4F7F2</item>"))
-        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#EEF3F0</item>"))
+        assertTrue(backdrop.contains("Color(0xFF1559D6)"))
+        assertTrue(backdrop.contains("Color(0xFF15C7C4)"))
+        assertTrue(backdrop.contains("Color(0xFFFF8A24)"))
+        assertFalse(backdrop.contains("drawSprig("))
+
+        // Native startup chrome now matches the default blue/sky shell while Compose takes over.
+        assertTrue(styles.contains("<item name=\"android:windowBackground\">#F8FBFF</item>"))
+        assertTrue(styles.contains("<item name=\"android:statusBarColor\">#F8FBFF</item>"))
+        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#EDF6FF</item>"))
     }
 
     private fun source(name: String) = projectFile("app/src/main/java/com/sonharf/game/$name").readText()
