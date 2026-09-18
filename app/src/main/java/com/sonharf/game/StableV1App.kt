@@ -75,7 +75,7 @@ fun StableV1App() {
         return
     }
 
-    PremiumCanvaApp(onSignedOut = { authenticated = false })
+    PremiumCanvaAppV2(onSignedOut = { authenticated = false })
 }
 
 /** Keeps the existing authentication flow intact while preserving phone-scale ergonomics. */
