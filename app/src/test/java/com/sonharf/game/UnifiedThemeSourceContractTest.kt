@@ -9,7 +9,7 @@ import org.junit.Test
 class UnifiedThemeSourceContractTest {
     @Test
     fun activeShellUsesPremiumThemeWithOneOptionalBlackCosmetic() {
-        val premium = source("PremiumCanvaApp.kt")
+        val premium = source("PremiumCanvaAppV2.kt")
         val startup = source("StableV1App.kt")
         val theme = source("SonHarfTheme.kt")
         val cosmetics = source("CosmeticRuntime.kt")
@@ -17,13 +17,13 @@ class UnifiedThemeSourceContractTest {
 
         assertTrue(premium.contains("SonHarfTheme.Background"))
         assertTrue(premium.contains("SonHarfTheme.NavigationSurface"))
-        assertTrue(startup.contains("PremiumCanvaApp"))
+        assertTrue(startup.contains("PremiumCanvaAppV2"))
         assertFalse(startup.contains("PremiumUnifiedProApp"))
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
 
         assertTrue(theme.contains("val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive"))
         assertTrue(theme.contains("internal object BlackThemePalette"))
-        assertTrue(cosmetics.contains("BLACK_THEME_ID = \"theme_black\""))
+        assertTrue(cosmetics.contains("BLACK_THEME_ID = \"theme_dark_arena\""))
         assertTrue(theme.contains("Color(0xFF2563EB)"))
         assertTrue(theme.contains("Color(0xFF12B8A6)"))
         assertTrue(theme.contains("Color(0xFF7C3AED)"))
