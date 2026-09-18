@@ -20,15 +20,19 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/** Harf Yolu'na özel sabit mavi-turkuaz-beyaz-eflatun klavye paleti. */
 private object HarfYoluKeyboardUi {
     val Background = Color(0xFFEAF8FC)
-    val Key = Color(0xFFFFFFFF)
-    val KeyAlt = Color(0xFFDDF5FA)
+    val Key = Color.White
+    val KeyAlt = Color(0xFFF2ECFF)
     val Text = Color(0xFF123A4A)
-    val Border = Color(0xFF9AD3E0)
-    val SecondaryBorder = Color(0xFF69C5D5)
-    val Action = Color(0xFF22BFC4)
+    val Border = Color(0xFF8FCFE0)
+    val AltBorder = Color(0xFFB9A0F8)
+    val Action = Color(0xFF278DC3)
+    val ActionPressed = Color(0xFF22BFC4)
     val ActionText = Color.White
+    val Disabled = Color(0xFFF4FAFC)
+    val DisabledText = Color(0xFF8FA9B2)
 }
 
 /**
@@ -166,19 +170,15 @@ private fun HarfYoluKeyButton(
                 else -> HarfYoluKeyboardUi.Key
             },
             contentColor = if (action) HarfYoluKeyboardUi.ActionText else HarfYoluKeyboardUi.Text,
-            disabledContainerColor = if (alt) {
-                HarfYoluKeyboardUi.KeyAlt.copy(alpha = .58f)
-            } else {
-                HarfYoluKeyboardUi.Key.copy(alpha = .62f)
-            },
-            disabledContentColor = HarfYoluKeyboardUi.Text.copy(alpha = .34f),
+            disabledContainerColor = HarfYoluKeyboardUi.Disabled,
+            disabledContentColor = HarfYoluKeyboardUi.DisabledText,
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp, pressedElevation = 0.dp),
         border = BorderStroke(
             1.dp,
             when {
-                action -> HarfYoluKeyboardUi.Action.copy(alpha = .88f)
-                alt -> HarfYoluKeyboardUi.SecondaryBorder.copy(alpha = .72f)
+                action -> HarfYoluKeyboardUi.ActionPressed
+                alt -> HarfYoluKeyboardUi.AltBorder
                 else -> HarfYoluKeyboardUi.Border
             },
         ),
