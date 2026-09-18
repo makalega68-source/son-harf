@@ -19,6 +19,19 @@ class PremierTurnClockTest {
         assertEquals(1, premierRemainingTurnSeconds(now.plusMillis(1), now))
     }
 
+
+    @Test
+    fun roundCapsAreExactlyFifteenThirteenEleven() {
+        assertEquals(15, premierTurnSecondsForRound(1))
+        assertEquals(13, premierTurnSecondsForRound(2))
+        assertEquals(11, premierTurnSecondsForRound(3))
+        assertEquals(11, premierTurnSecondsForRound(4))
+        assertEquals(13, premierRemainingTurnSecondsFromMillis(20_000, 13))
+        assertEquals(11, premierRemainingTurnSecondsFromMillis(20_000, 11))
+        assertEquals(13, premierRemainingTurnSeconds(now.plusMillis(20_000), now, 13))
+        assertEquals(11, premierRemainingTurnSeconds(now.plusMillis(20_000), now, 11))
+    }
+
     @Test
     fun expiredDeadlineReturnsZeroForAuthoritativeTimeoutPath() {
         assertEquals(0, premierRemainingTurnSeconds(now, now))
