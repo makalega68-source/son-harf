@@ -7,30 +7,24 @@ import org.junit.Test
 
 class BrandStartupRegressionTest {
     @Test
-    fun startupBrandUsesCurrentCompatibilityAssetsAndLauncherIcon() {
+    fun startupBrandUsesCurrentCompatibilityAssetsAndApprovedLauncherIcon() {
         val authGate = File("src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
         val officialLogo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeHub = File("src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
         val home = File("src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
         val manifest = File("src/main/AndroidManifest.xml").readText()
-        val adaptiveIcon = File("src/main/res/mipmap-anydpi-v26/ic_kelime_tahti.xml")
-        val adaptiveFallback = File("src/main/res/mipmap-anydpi/ic_kelime_tahti.xml")
-        val launcherForeground = File("src/main/res/drawable/kelime_kusatmasi_launcher_foreground.xml")
-        val launcherBadge = File("src/main/res/drawable-nodpi/word_siege_home_badge.webp")
+        val launcherIcon = File("src/main/res/drawable-nodpi/kelime_kusatmasi_app_icon.webp")
         val launcherVector = File("src/main/res/drawable/kelime_tahti_app_icon.xml")
         val homeVector = File("src/main/res/drawable/son_harf_app_icon_master.xml")
         val authVector = File("src/main/res/drawable/son_harf_gold_teal_logo.xml")
         val gameVector = File("src/main/res/drawable/kelime_kusatma_logo_hd.xml")
+        val launcherBadge = File("src/main/res/drawable-nodpi/word_siege_home_badge.webp")
 
         assertTrue(manifest.contains("android:label=\"@string/app_name\""))
-        assertTrue(manifest.contains("android:icon=\"@mipmap/ic_kelime_tahti\""))
-        assertTrue(manifest.contains("android:roundIcon=\"@mipmap/ic_kelime_tahti\""))
-        assertTrue(adaptiveIcon.isFile)
-        assertTrue(adaptiveFallback.isFile)
-        assertTrue(adaptiveIcon.readText().contains("@drawable/kelime_kusatmasi_launcher_foreground"))
-        assertTrue(adaptiveFallback.readText().contains("@drawable/kelime_kusatmasi_launcher_foreground"))
-        assertTrue(launcherForeground.isFile)
-        assertTrue(launcherForeground.readText().contains("@drawable/word_siege_home_badge"))
+        assertTrue(manifest.contains("android:icon=\"@drawable/kelime_kusatmasi_app_icon\""))
+        assertTrue(manifest.contains("android:roundIcon=\"@drawable/kelime_kusatmasi_app_icon\""))
+        assertTrue("Approved launcher icon must exist", launcherIcon.isFile)
+        assertTrue("Approved launcher icon must not be empty", launcherIcon.length() > 0L)
         assertTrue(launcherBadge.isFile)
 
         assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
