@@ -3,7 +3,6 @@ package com.sonharf.game.data
 import io.github.jan.supabase.postgrest.postgrest
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.buildJsonArray
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -47,10 +46,10 @@ suspend fun OnlineGameBackend.previewPremiumWordSiegeMove(
             },
         )
     },
-).decodeSingle()
+).decodeAs()
 
 suspend fun OnlineGameBackend.getPremiumWordSiegeLetterTable(gameId: String): List<WordSiegeLetterCountDto> =
     SupabaseProvider.client.postgrest.rpc(
         "get_word_siege_letter_table_v1",
         buildJsonObject { put("p_game_id", gameId) },
-    ).decodeList()
+    ).decodeAs()
