@@ -1,0 +1,190 @@
+name: Harf Yolu APK One Shot
+
+on:
+  push:
+    branches:
+      - codex/kelime-kusatmasi-premium-logo-20260918
+    paths:
+      - .github/workflows/harf-yolu-apk-one-shot.yml
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout working branch
+        uses: actions/checkout@v4
+        with:
+          ref: codex/kelime-kusatmasi-premium-logo-20260918
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Patch Harf Yolu without changing five-move game rules
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          path = Path('app/src/main/java/com/sonharf/game/LetterLadderGame.kt')
+          text = path.read_text()
+
+          anchor = '''    fun generate(
+          '''
+          helper = '''    /**
+           * Counts only next moves that keep at least one complete route alive.
+           * The UI uses the count as a strategic hint; it never exposes the word,
+           * position or replacement letter that solves the next step.
+           */
+          fun viableNextMoveCount(
+              puzzle: LetterLadderPuzzle,
+              current: String,
+              usedPositions: Set<Int>,
+              dictionary: Set<String>,
+          ): Int {
+              if (current.length != WORD_LENGTH || puzzle.target.length != WORD_LENGTH) return 0
+              if (current == puzzle.target) return 0
+
+              return (0 until WORD_LENGTH).count { index ->
+                  if (index in usedPositions || current[index] == puzzle.target[index]) return@count false
+                  val chars = current.toCharArray()
+                  chars[index] = puzzle.target[index]
+                  val next = String(chars)
+                  if (next !in dictionary) return@count false
+
+                  next == puzzle.target || completionPath(
+                      puzzle = puzzle,
+                      current = next,
+                      usedPositions = usedPositions + index,
+                      dictionary = dictionary,
+                  ) != null
+              }
+          }
+
+          fun generate(
+          '''
+          if 'fun viableNextMoveCount(' not in text:
+              if anchor not in text:
+                  raise SystemExit('generate anchor not found')
+              text = text.replace(anchor, helper, 1)
+
+          old_rows = '''                        for (move in 1..LetterLadderEngine.MOVE_COUNT) {
+                              LadderMoveRow(
+                                  word = path.getOrNull(move)?.uppercase(locale),
+                                  usedPositions = usedPositions,
+                                  modifier = Modifier.fillMaxWidth().weight(1f),
+                              )
+                              if (move < LetterLadderEngine.MOVE_COUNT) Spacer(Modifier.height(3.dp))
+                          }
+          '''
+          new_rows = '''                        // The target row itself represents the fifth/final destination.
+                          // Show only the four intermediate cube rows so an extra empty fifth row never appears.
+                          for (move in 1 until LetterLadderEngine.MOVE_COUNT) {
+                              LadderMoveRow(
+                                  word = path.getOrNull(move)?.uppercase(locale),
+                                  usedPositions = usedPositions,
+                                  modifier = Modifier.fillMaxWidth().weight(1f),
+                              )
+                              if (move < LetterLadderEngine.MOVE_COUNT - 1) Spacer(Modifier.height(3.dp))
+                          }
+          '''
+          if old_rows in text:
+              text = text.replace(old_rows, new_rows, 1)
+          elif 'for (move in 1 until LetterLadderEngine.MOVE_COUNT)' not in text:
+              raise SystemExit('ladder row block not found')
+
+          old_hint = '''                            val current = path.last()
+                              val route = LetterLadderEngine.completionPath(currentPuzzle, current, usedPositions, dictionary)
+                              val next = route?.getOrNull(1)
+                              hintText = if (next == null) {
+                                  sh("Son hamleyi geri al ve farklı bir yol dene.", "Undo the last move and try a different route.")
+                              } else {
+                                  val changed = LetterLadderEngine.changedIndex(current, next)
+                                  if (changed == null) {
+                                      sh("Sonraki geçerli kelimeyi bul.", "Find the next valid word.")
+                                  } else {
+                                      val from = current[changed].uppercaseChar()
+                                      val to = next[changed].uppercaseChar()
+                                      sh(
+                                          "İpucu: $from → $to • ${next.uppercase(locale)}",
+                                          "Hint: $from → $to • ${next.uppercase(locale)}",
+                                      )
+                                  }
+                              }
+          '''
+          new_hint = '''                            val current = path.last()
+                              val safeOptions = LetterLadderEngine.viableNextMoveCount(
+                                  puzzle = currentPuzzle,
+                                  current = current,
+                                  usedPositions = usedPositions,
+                                  dictionary = dictionary,
+                              )
+                              val remainingMoves = LetterLadderEngine.MOVE_COUNT - usedPositions.size
+                              hintText = if (safeOptions == 0) {
+                                  sh("Son hamleyi geri al ve farklı bir yol dene.", "Undo the last move and try a different route.")
+                              } else {
+                                  sh(
+                                      "İpucu: $remainingMoves hamle kaldı • $safeOptions güvenli hamle seçeneği var.",
+                                      "Hint: $remainingMoves moves left • $safeOptions safe move option(s) remain.",
+                                  )
+                              }
+          '''
+          if old_hint in text:
+              text = text.replace(old_hint, new_hint, 1)
+          elif 'val safeOptions = LetterLadderEngine.viableNextMoveCount(' not in text:
+              raise SystemExit('hint block not found')
+
+          path.write_text(text)
+          PY
+
+      - name: Verify Harf Yolu source contracts
+        shell: bash
+        run: |
+          grep -q 'for (move in 1 until LetterLadderEngine.MOVE_COUNT)' app/src/main/java/com/sonharf/game/LetterLadderGame.kt
+          ! grep -q 'next.uppercase(locale)' app/src/main/java/com/sonharf/game/LetterLadderGame.kt
+          grep -q 'viableNextMoveCount(' app/src/main/java/com/sonharf/game/LetterLadderGame.kt
+          grep -q 'güvenli hamle seçeneği' app/src/main/java/com/sonharf/game/LetterLadderGame.kt
+          grep -q '@drawable/kelime_kusatmasi_launcher_foreground' app/src/main/res/mipmap-anydpi/ic_kelime_tahti.xml
+          grep -q '@drawable/kelime_kusatmasi_launcher_foreground' app/src/main/res/mipmap-anydpi-v26/ic_kelime_tahti.xml
+          grep -q '@drawable/word_siege_home_badge' app/src/main/res/drawable/kelime_kusatmasi_launcher_foreground.xml
+
+      - name: Run Harf Yolu regression tests
+        run: ./gradlew :app:testDebugUnitTest --tests com.sonharf.game.LetterLadderEngineTest --tests com.sonharf.game.LetterLadderUxRegressionTest --stacktrace
+
+      - name: Build debug APK
+        run: ./gradlew :app:assembleDebug --stacktrace
+
+      - name: Commit verified product changes and remove one-shot workflow
+        shell: bash
+        run: |
+          rm -f .github/workflows/harf-yolu-apk-one-shot.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/sonharf/game/LetterLadderGame.kt .github/workflows/harf-yolu-apk-one-shot.yml
+          if ! git diff --cached --quiet; then
+            git commit -m 'Harf Yolu ipucu ve küp dizisini düzelt'
+            git push origin HEAD:codex/kelime-kusatmasi-premium-logo-20260918
+          fi
+
+      - name: Stage APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk Kelime-Kusatmasi-Harf-Yolu.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kelime-Kusatmasi-Harf-Yolu-APK
+          path: Kelime-Kusatmasi-Harf-Yolu.apk
+          if-no-files-found: error
