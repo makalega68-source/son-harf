@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.SonHarf" parent="android:style/Theme.Material.Light.NoActionBar">
+    <style name="Theme.SonHarf" parent="android:style/Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
-        <item name="android:windowBackground">#F8FBFF</item>
-        <item name="android:statusBarColor">#F8FBFF</item>
-        <item name="android:navigationBarColor">#EDF6FF</item>
-        <item name="android:windowLightStatusBar">true</item>
-        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowBackground">#0D0F12</item>
+        <item name="android:statusBarColor">#0D0F12</item>
+        <item name="android:navigationBarColor">#111318</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
     </style>
 </resources>
