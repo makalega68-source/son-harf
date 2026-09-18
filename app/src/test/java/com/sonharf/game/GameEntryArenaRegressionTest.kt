@@ -26,8 +26,8 @@ class GameEntryArenaRegressionTest {
     fun eachEntryOffersTurkishAndEnglishWithoutLogoArtwork() {
         val entries = File("src/main/java/com/sonharf/game/PremiumGameEntryScreens.kt").readText()
 
-        assertTrue(entries.contains("LanguageOption("tr""))
-        assertTrue(entries.contains("LanguageOption("en""))
+        assertTrue(entries.contains("LanguageOption(\"tr\""))
+        assertTrue(entries.contains("LanguageOption(\"en\""))
         assertTrue(entries.contains("TÜRKÇE DÜELLOYU BAŞLAT"))
         assertTrue(entries.contains("TÜRKÇE KUŞATMAYA GİR"))
         assertTrue(entries.contains("TÜRKÇE ROTAYI BAŞLAT"))
