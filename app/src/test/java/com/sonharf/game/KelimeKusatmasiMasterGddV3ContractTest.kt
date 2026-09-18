@@ -11,27 +11,32 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF8A9A86", // Sage Green
-            "0xFFF9F8F6", // Off-White
-            "0xFF7A9AEE", // Soft Blue
-            "0xFF40E0D0", // Turquoise
-            "0xFFF2EFE9", // Light Beige
-            "0xFFB5A2FF", // Lavender
-            "0xFF5C6F84", // Slate Blue
-            "0xFFA3E4D7", // Pale Mint
-            "0xFFE07A5F", // Controlled Warm Accent
+            "0xFF8A9A86",
+            "0xFFF9F8F6",
+            "0xFF7A9AEE",
+            "0xFF40E0D0",
+            "0xFFF2EFE9",
+            "0xFFB5A2FF",
+            "0xFF5C6F84",
+            "0xFFA3E4D7",
+            "0xFFE07A5F",
         ).forEach { token -> assertTrue("Missing GDD palette token $token", theme.contains(token)) }
     }
 
     @Test
     fun modeHierarchyAndLanguageScopeStayFocused() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        val entries = File("src/main/java/com/sonharf/game/PremiumGameEntryScreens.kt").readText()
         val firstRun = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
 
-        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
-        assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
-        assertTrue(shell.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
+        assertTrue(shell.contains("SIEGE_ENTRY, LAST_LETTER_ENTRY, LETTER_PATH_ENTRY"))
+        assertTrue(entries.contains("PremiumSiegeEntryScreen"))
+        assertTrue(entries.contains("PremiumLastLetterEntryScreen"))
+        assertTrue(entries.contains("PremiumLetterPathEntryScreen"))
+        assertTrue(entries.contains("LanguageOption(\"tr\""))
+        assertTrue(entries.contains("LanguageOption(\"en\""))
+        assertFalse(entries.contains("R.drawable"))
         assertTrue(firstRun.contains("selected == \"tr\""))
         assertTrue(firstRun.contains("selected == \"en\""))
         assertFalse(firstRun.contains("selected == \"es\""))
@@ -59,12 +64,9 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
         val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
 
-        // Retired: CLUB destination is intercepted and bounced to HOME, never renders CompetitionHubScreen anymore.
         assertFalse(shell.contains("PremiumDestination.CLUB -> CompetitionHubScreen("))
         assertTrue(shell.contains("PremiumDestination.CLUB -> {"))
         assertTrue(shell.contains("destination = PremiumDestination.HOME"))
-
-        // Club source stays for audit but nothing opens it.
         assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
         assertTrue(club.contains("b.getClubMessages(current.clubId)"))
         assertTrue(club.contains("b.sendClubMessage(current.clubId, outgoing)"))
@@ -74,13 +76,16 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     }
 
     @Test
-    fun gameExitReturnsHomeAndPracticeMoveStatusKeepsFixedHeight() {
+    fun gameExitReturnsToItsOwnEntryAndPracticeMoveStatusKeepsFixedHeight() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
 
         assertTrue(shell.contains("fun leaveGame(target: PremiumDestination = PremiumDestination.HOME)"))
-        assertTrue(shell.contains("PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH ->"))
-        assertTrue(shell.contains("PremiumDestination.HOME\n            }"))
+        assertTrue(shell.contains("PremiumDestination.LAST_LETTER_ENTRY"))
+        assertTrue(shell.contains("PremiumDestination.SIEGE_ENTRY"))
+        assertTrue(shell.contains("PremiumDestination.LETTER_PATH_ENTRY"))
+        assertTrue(shell.contains("leaveGame(PremiumDestination.SIEGE_ENTRY)"))
+        assertTrue(shell.contains("leaveGame(PremiumDestination.LETTER_PATH_ENTRY)"))
         assertTrue(practice.contains("Modifier.fillMaxWidth().height(16.dp)"))
         assertTrue(practice.contains("readyFeedback.message"))
         assertTrue(practice.contains("lineHeight = 12.sp"))
@@ -148,7 +153,6 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(migration.contains("if p_forfeit_winner is not null then"))
         assertFalse(migration.contains("v_one_total > v_two_total"))
         assertFalse(migration.contains("v_two_total > v_one_total"))
-
         assertTrue(practice.contains("state.playerArea > state.botArea -> 1"))
         assertTrue(practice.contains("state.botArea > state.playerArea -> 2"))
         assertFalse(practice.contains("totalScore(state, 1) > totalScore(state, 2) -> 1"))
