@@ -26,9 +26,8 @@ import com.sonharf.game.data.*
 
 internal data class HomePodiumEntry(val row: LeaderboardV2Row, val profile: ProfileDto?)
 
-private val MonsterHeroShape = RoundedCornerShape(22.dp)
-private val MonsterCardShape = RoundedCornerShape(18.dp)
-private val MonsterControlShape = RoundedCornerShape(12.dp)
+private val PremiumHeroShape = RoundedCornerShape(22.dp)
+private val PremiumCardShape = RoundedCornerShape(18.dp)
 
 @Composable
 internal fun PremiumHomeCommandDeck(
@@ -56,10 +55,10 @@ internal fun PremiumHomeCommandDeck(
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Surface(
             onClick = onProfile,
-            shape = MonsterCardShape,
+            shape = PremiumCardShape,
             color = SonHarfTheme.Surface,
             border = BorderStroke(1.dp, SonHarfTheme.Border),
-            shadowElevation = 0.dp,
+            shadowElevation = 2.dp,
         ) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
@@ -71,7 +70,7 @@ internal fun PremiumHomeCommandDeck(
                     name = profile?.displayName ?: sh("Oyuncu", "Player"),
                     size = 56.dp,
                     frameId = SonHarfCosmetics.profileFrameId,
-                    accent = if (profile?.isVip == true) SonHarfTheme.PremiumGoldLight else SonHarfTheme.Primary,
+                    accent = if (profile?.isVip == true) SonHarfTheme.Purple else SonHarfTheme.Primary,
                     visible = profile?.avatarVisibility != "hidden",
                     isPro = profile?.isVip == true,
                 )
@@ -89,11 +88,11 @@ internal fun PremiumHomeCommandDeck(
                         )
                         if (profile?.isVip == true) {
                             Spacer(Modifier.width(7.dp))
-                            Surface(shape = RoundedCornerShape(7.dp), color = SonHarfTheme.Primary) {
+                            Surface(shape = RoundedCornerShape(7.dp), color = SonHarfTheme.Purple) {
                                 Text(
                                     "PRO",
                                     Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                                    color = SonHarfTheme.OnPrimary,
+                                    color = Color.White,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Black,
                                 )
@@ -112,14 +111,14 @@ internal fun PremiumHomeCommandDeck(
                     HomeStatChip(
                         icon = Icons.Rounded.MilitaryTech,
                         text = profile?.let { "${it.rating} RP" } ?: "— RP",
-                        background = SonHarfTheme.ActionOrange.copy(alpha = .18f),
-                        accent = SonHarfTheme.ActionOrange,
+                        background = SonHarfTheme.Purple.copy(alpha = .10f),
+                        accent = SonHarfTheme.Purple,
                     )
                     HomeStatChip(
                         icon = Icons.Rounded.Toll,
                         text = "${profile?.diamonds?.toString() ?: "—"} Coin",
-                        background = SonHarfTheme.PrimarySoft,
-                        accent = SonHarfTheme.Primary,
+                        background = SonHarfTheme.ActionOrange.copy(alpha = .12f),
+                        accent = SonHarfTheme.ActionOrange,
                     )
                 }
                 Spacer(Modifier.width(5.dp))
@@ -140,10 +139,10 @@ internal fun PremiumHomeCommandDeck(
         }
 
         Surface(
-            shape = MonsterHeroShape,
+            shape = PremiumHeroShape,
             color = Color.Transparent,
-            border = BorderStroke(1.dp, Color.White.copy(alpha = .08f)),
-            shadowElevation = 0.dp,
+            border = BorderStroke(1.dp, Color.White.copy(alpha = .16f)),
+            shadowElevation = 5.dp,
         ) {
             Box(
                 Modifier
@@ -152,7 +151,7 @@ internal fun PremiumHomeCommandDeck(
                         Brush.linearGradient(
                             listOf(SonHarfTheme.HeroStart, SonHarfTheme.HeroMiddle, SonHarfTheme.HeroEnd),
                         ),
-                        MonsterHeroShape,
+                        PremiumHeroShape,
                     ),
             ) {
                 Column(
@@ -160,12 +159,12 @@ internal fun PremiumHomeCommandDeck(
                     verticalArrangement = Arrangement.spacedBy(13.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = RoundedCornerShape(99.dp), color = Color.Black.copy(alpha = .22f)) {
+                        Surface(shape = RoundedCornerShape(99.dp), color = Color.White.copy(alpha = .16f)) {
                             Row(
                                 Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Box(Modifier.size(7.dp).background(SonHarfTheme.Primary, CircleShape))
+                                Box(Modifier.size(7.dp).background(Color.White, CircleShape))
                                 Spacer(Modifier.width(6.dp))
                                 Text(
                                     sh("ANA ARENA", "MAIN ARENA"),
@@ -177,7 +176,7 @@ internal fun PremiumHomeCommandDeck(
                             }
                         }
                         Spacer(Modifier.weight(1f))
-                        Icon(Icons.Rounded.Favorite, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(18.dp))
+                        Icon(Icons.Rounded.AutoAwesome, null, tint = Color.White, modifier = Modifier.size(18.dp))
                     }
 
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -200,8 +199,8 @@ internal fun PremiumHomeCommandDeck(
                         Spacer(Modifier.width(10.dp))
                         Surface(
                             shape = RoundedCornerShape(18.dp),
-                            color = Color.Black.copy(alpha = .20f),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = .10f)),
+                            color = Color.White.copy(alpha = .13f),
+                            border = BorderStroke(1.dp, Color.White.copy(alpha = .20f)),
                         ) {
                             Image(
                                 painter = painterResource(R.drawable.word_siege_home_badge),
@@ -227,11 +226,11 @@ internal fun PremiumHomeCommandDeck(
                         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = SonHarfTheme.Primary,
-                            contentColor = SonHarfTheme.OnPrimary,
+                            containerColor = Color.White,
+                            contentColor = SonHarfTheme.Primary,
                         ),
                         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 1.dp),
                     ) {
                         Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(24.dp))
                         Spacer(Modifier.width(8.dp))
@@ -289,20 +288,20 @@ private fun PremiumDailyTasksStrip(
     val percent = (progress * 100).toInt()
 
     Surface(
-        shape = MonsterCardShape,
+        shape = PremiumCardShape,
         color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
-        shadowElevation = 0.dp,
+        shadowElevation = 2.dp,
     ) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(shape = CircleShape, color = SonHarfTheme.PrimarySoft) {
+            Surface(shape = CircleShape, color = SonHarfTheme.Turquoise.copy(alpha = .11f)) {
                 Icon(
                     Icons.Rounded.CheckCircle,
                     null,
-                    tint = SonHarfTheme.Primary,
+                    tint = SonHarfTheme.Turquoise,
                     modifier = Modifier.padding(9.dp).size(21.dp),
                 )
             }
@@ -317,7 +316,7 @@ private fun PremiumDailyTasksStrip(
                     )
                     Text(
                         if (loading) "…" else "$percent%",
-                        color = SonHarfTheme.Primary,
+                        color = SonHarfTheme.Turquoise,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                     )
@@ -325,7 +324,7 @@ private fun PremiumDailyTasksStrip(
                 LinearProgressIndicator(
                     progress = { progress },
                     modifier = Modifier.fillMaxWidth().height(5.dp),
-                    color = SonHarfTheme.Primary,
+                    color = SonHarfTheme.Turquoise,
                     trackColor = SonHarfTheme.SurfaceElevated,
                 )
                 Text(
@@ -364,13 +363,13 @@ internal fun PremiumWeeklyPodium(
 ) {
     Surface(
         onClick = onOpenLeague,
-        shape = MonsterCardShape,
+        shape = PremiumCardShape,
         color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.EmojiEvents, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(20.dp))
+                Icon(Icons.Rounded.EmojiEvents, null, tint = SonHarfTheme.Purple, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(7.dp))
                 Text(
                     sh("HAFTANIN ZİRVESİ", "WEEKLY ELITE"),
@@ -396,17 +395,17 @@ internal fun PremiumWeeklyPodium(
                                 contentDescription = sh("${index + 1}. sıra, ${item.row.displayName}, ${item.row.rating} RP", "Rank ${index + 1}, ${item.row.displayName}, ${item.row.rating} RP")
                             },
                             shape = RoundedCornerShape(13.dp),
-                            color = if (index == 0) SonHarfTheme.ActionOrange.copy(alpha = .16f) else SonHarfTheme.SurfaceElevated,
+                            color = if (index == 0) SonHarfTheme.Purple.copy(alpha = .10f) else SonHarfTheme.SurfaceElevated,
                         ) {
                             Column(Modifier.padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("${index + 1}.", color = if (index == 0) SonHarfTheme.Primary else SonHarfTheme.TextSecondary, fontWeight = FontWeight.Black)
+                                Text("${index + 1}.", color = if (index == 0) SonHarfTheme.Purple else SonHarfTheme.TextSecondary, fontWeight = FontWeight.Black)
                                 Spacer(Modifier.height(4.dp))
                                 ProfilePhotoAvatarWithGender(
                                     avatarPath = if (item.profile?.avatarVisibility == "hidden") null else item.profile?.avatarPath,
                                     gender = item.profile?.gender,
                                     name = item.row.displayName,
                                     size = 38.dp,
-                                    accent = if (index == 0) SonHarfTheme.Primary else SonHarfTheme.ActionOrange,
+                                    accent = if (index == 0) SonHarfTheme.Purple else SonHarfTheme.ActionOrange,
                                     visible = item.profile?.avatarVisibility != "hidden",
                                 )
                                 Spacer(Modifier.height(4.dp))
@@ -426,13 +425,13 @@ internal fun PremiumLeagueProgress(profile: ProfileDto?, onLeague: () -> Unit) {
     val progress = profile?.let { ratingLeagueProgress(it.rating) }
     Surface(
         onClick = onLeague,
-        shape = MonsterCardShape,
+        shape = PremiumCardShape,
         color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
     ) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.EmojiEvents, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(26.dp))
+                Icon(Icons.Rounded.EmojiEvents, null, tint = SonHarfTheme.Purple, modifier = Modifier.size(26.dp))
                 Spacer(Modifier.width(11.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -443,13 +442,13 @@ internal fun PremiumLeagueProgress(profile: ProfileDto?, onLeague: () -> Unit) {
                     )
                     Text(profile?.let { "${it.rating} RP" } ?: "— RP", color = SonHarfTheme.TextSecondary, fontSize = 12.sp)
                 }
-                Icon(Icons.Rounded.ChevronRight, sh("Lige Git", "Go to League"), tint = SonHarfTheme.Primary)
+                Icon(Icons.Rounded.ChevronRight, sh("Lige Git", "Go to League"), tint = SonHarfTheme.Purple)
             }
             if (progress != null) {
                 LinearProgressIndicator(
                     progress = { progress.progress },
                     modifier = Modifier.fillMaxWidth().height(5.dp),
-                    color = SonHarfTheme.Primary,
+                    color = SonHarfTheme.Purple,
                     trackColor = SonHarfTheme.SurfaceElevated,
                 )
             }
@@ -479,9 +478,9 @@ internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Uni
             PremiumHomeModeCard(
                 modifier = Modifier.weight(1f),
                 logo = R.drawable.harf_yolu_logo,
-                title = sh("KELİME YOLU", "WORD PATH"),
+                title = sh("HARF YOLU", "LETTER PATH"),
                 subtitle = sh("Kelime rotanı tamamla", "Complete your word path"),
-                accent = SonHarfTheme.Lavender,
+                accent = SonHarfTheme.Purple,
                 onPlay = onLetterPath,
             )
         }
@@ -500,9 +499,10 @@ private fun PremiumHomeModeCard(
     Surface(
         onClick = onPlay,
         modifier = modifier.height(156.dp),
-        shape = MonsterCardShape,
+        shape = PremiumCardShape,
         color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
+        shadowElevation = 2.dp,
     ) {
         Column(
             Modifier.fillMaxSize().padding(13.dp),
@@ -524,7 +524,7 @@ private fun PremiumHomeModeCard(
                 Text(title, color = SonHarfTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(subtitle, color = SonHarfTheme.TextSecondary, fontSize = 9.sp, lineHeight = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 Spacer(Modifier.height(4.dp))
-                Surface(shape = RoundedCornerShape(99.dp), color = accent.copy(alpha = .16f)) {
+                Surface(shape = RoundedCornerShape(99.dp), color = accent.copy(alpha = .12f)) {
                     Row(
                         Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
@@ -563,13 +563,14 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
 
     Surface(
         onClick = onClick,
-        shape = MonsterCardShape,
+        shape = PremiumCardShape,
         color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
+        shadowElevation = 2.dp,
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.EmojiEvents, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(21.dp))
+                Icon(Icons.Rounded.EmojiEvents, null, tint = SonHarfTheme.Purple, modifier = Modifier.size(21.dp))
                 Spacer(Modifier.width(7.dp))
                 Text(
                     sh("HAFTANIN İLK 3 OYUNCUSU", "WEEKLY TOP 3"),
@@ -594,10 +595,10 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
                         Surface(
                             modifier = Modifier.weight(1f).then(if (first) Modifier.padding(bottom = 6.dp) else Modifier),
                             shape = RoundedCornerShape(13.dp),
-                            color = if (first) SonHarfTheme.ActionOrange.copy(alpha = .18f) else SonHarfTheme.SurfaceElevated,
+                            color = if (first) SonHarfTheme.Purple.copy(alpha = .10f) else SonHarfTheme.SurfaceElevated,
                         ) {
                             Column(Modifier.padding(horizontal = 6.dp, vertical = if (first) 11.dp else 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("$place.", color = if (first) SonHarfTheme.Primary else SonHarfTheme.TextSecondary, fontSize = if (first) 13.sp else 10.sp, fontWeight = FontWeight.Black)
+                                Text("$place.", color = if (first) SonHarfTheme.Purple else SonHarfTheme.TextSecondary, fontSize = if (first) 13.sp else 10.sp, fontWeight = FontWeight.Black)
                                 Spacer(Modifier.height(4.dp))
                                 if (player != null) {
                                     ProfilePhotoAvatarWithGender(
@@ -605,7 +606,7 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
                                         gender = null,
                                         name = player.username,
                                         size = if (first) 50.dp else 42.dp,
-                                        accent = if (first) SonHarfTheme.Primary else SonHarfTheme.ActionOrange,
+                                        accent = if (first) SonHarfTheme.Purple else SonHarfTheme.ActionOrange,
                                         visible = true,
                                     )
                                 } else {
@@ -613,7 +614,7 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
                                 }
                                 Spacer(Modifier.height(5.dp))
                                 Text(player?.username?.ifBlank { sh("Oyuncu", "Player") } ?: "—", color = SonHarfTheme.TextPrimary, fontSize = if (first) 10.sp else 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(player?.let { "${it.rp} RP" } ?: "— RP", color = if (first) SonHarfTheme.Primary else SonHarfTheme.TextSecondary, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                Text(player?.let { "${it.rp} RP" } ?: "— RP", color = if (first) SonHarfTheme.Purple else SonHarfTheme.TextSecondary, fontSize = 8.sp, fontWeight = FontWeight.Black)
                             }
                         }
                     }
@@ -626,20 +627,20 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
 @Composable
 internal fun PremiumHomeExtras(profile: ProfileDto?, onShop: () -> Unit, onSocial: () -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-        Surface(onClick = onShop, shape = MonsterCardShape, color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
+        Surface(onClick = onShop, shape = PremiumCardShape, color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border), shadowElevation = 2.dp) {
             Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.CardGiftcard, null, tint = SonHarfTheme.Primary)
+                Icon(Icons.Rounded.CardGiftcard, null, tint = SonHarfTheme.ActionOrange)
                 Spacer(Modifier.width(11.dp))
                 Column(Modifier.weight(1f)) {
                     Text(sh("Günlük ücretsiz hediye", "Daily free gift"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SonHarfTheme.TextPrimary)
                     Text(sh("Bugünkü ödülünü mağazada kontrol et.", "Check today's reward in the shop."), fontSize = 11.sp, color = SonHarfTheme.TextSecondary)
                 }
-                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.Primary)
+                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.ActionOrange)
             }
         }
-        Surface(onClick = onShop, shape = MonsterCardShape, color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
+        Surface(onClick = onShop, shape = PremiumCardShape, color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border), shadowElevation = 2.dp) {
             Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.WorkspacePremium, null, tint = SonHarfTheme.ActionOrange)
+                Icon(Icons.Rounded.WorkspacePremium, null, tint = SonHarfTheme.Purple)
                 Spacer(Modifier.width(11.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -650,13 +651,13 @@ internal fun PremiumHomeExtras(profile: ProfileDto?, onShop: () -> Unit, onSocia
                     )
                     Text(sh("Reklamsız kullanım · Kozmetik · Konfor", "Ad-free · Cosmetics · Comfort"), color = SonHarfTheme.TextSecondary, fontSize = 11.sp)
                 }
-                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.Primary)
+                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.Purple)
             }
         }
         TextButton(onClick = onSocial, modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp)) {
-            Icon(Icons.Rounded.Groups, null, modifier = Modifier.size(19.dp), tint = SonHarfTheme.Primary)
+            Icon(Icons.Rounded.Groups, null, modifier = Modifier.size(19.dp), tint = SonHarfTheme.Turquoise)
             Spacer(Modifier.width(7.dp))
-            Text(sh("Arkadaşların ve rakiplerin", "Friends and rivals"), color = SonHarfTheme.Primary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(sh("Arkadaşların ve rakiplerin", "Friends and rivals"), color = SonHarfTheme.Turquoise, fontSize = 13.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
