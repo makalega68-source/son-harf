@@ -14,7 +14,7 @@ class UnifiedProBoosterContractTest {
         val integration = projectFile("app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
         val premier = projectFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
         val vip = projectFile("app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt").readText()
-        val shop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
+        val store = projectFile("app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt").readText()
         val entitlements = projectFile("app/src/main/java/com/sonharf/game/data/VipEntitlements.kt").readText()
 
         assertTrue(backend.contains("get_premier_booster_status_v1"))
@@ -33,14 +33,15 @@ class UnifiedProBoosterContractTest {
 
         assertFalse(vip.contains("2x Skor"))
         assertFalse(vip.contains("claimVipDailyHelpers"))
-        assertTrue(vip.contains("ADİL REKABET"))
+        assertFalse(vip.contains("ADİL REKABET"))
+        assertFalse(vip.contains("GOOGLE PLAY'DE YÖNET"))
         assertTrue(entitlements.contains("rankedLiveAssist: Boolean = false"))
 
-        assertTrue(shop.contains("Mağaza ürünleri maç gücü, skor veya rating avantajı sağlamaz."))
-        assertTrue(shop.contains("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez."))
-        assertFalse(shop.contains("günlük İpucu, Harf Değiştirici ve 2x Skor"))
-        assertFalse(shop.contains("daily Hint, Letter Swap and 2x Score"))
-        assertFalse(shop.contains("helper boosters with PRO"))
+        assertFalse(store.contains("Maskotlar"))
+        assertFalse(store.contains("FAIR PLAY PROMISE"))
+        assertFalse(store.contains("günlük İpucu, Harf Değiştirici ve 2x Skor"))
+        assertFalse(store.contains("daily Hint, Letter Swap and 2x Score"))
+        assertFalse(store.contains("helper boosters with PRO"))
     }
 
     @Test
@@ -63,11 +64,11 @@ class UnifiedProBoosterContractTest {
     @Test
     fun retiredClassicRuntimeCannotReenterStartupPath() {
         val startup = projectFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
-        val premium = projectFile("app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt").readText()
+        val premium = projectFile("app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt").readText()
 
-        assertTrue(startup.contains("PremiumCanvaApp("))
-        assertTrue(premium.contains("PremiumCanvaDestination.SHOP -> EconomyShopScreen"))
-        assertTrue(premium.contains("PremiumCanvaDestination.LAST_LETTER -> OnlineGameScreenV6()"))
+        assertTrue(startup.contains("PremiumCanvaAppV2("))
+        assertTrue(premium.contains("PremiumV2Destination.SHOP -> PremiumStoreScreen"))
+        assertTrue(premium.contains("PremiumV2Destination.LAST_LETTER -> OnlineGameScreenV6()"))
         assertFalse(startup.contains("UnifiedProApp("))
         assertFalse(projectFileOrNull("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt")?.exists() == true)
         assertFalse(projectFileOrNull("app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt")?.exists() == true)
