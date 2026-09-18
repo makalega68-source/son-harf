@@ -16,56 +16,40 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-/** Harf Yolu'na özel mavi-turkuaz-beyaz-turuncu-eflatun hareketli arka plan. */
+/** Harf Yolu uses the same premium blue / turquoise / purple / orange / white brand system. */
 @Composable
 internal fun HarfYoluBackdrop(modifier: Modifier = Modifier) {
     val transition = rememberInfiniteTransition(label = "harfYoluBackdrop")
     val phase by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6400, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
+        animationSpec = infiniteRepeatable(tween(6400, easing = LinearEasing), RepeatMode.Reverse),
         label = "harfYoluBackdropPhase",
     )
     val pulse by transition.animateFloat(
-        initialValue = .72f,
+        initialValue = .76f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2600, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
+        animationSpec = infiniteRepeatable(tween(2800, easing = LinearEasing), RepeatMode.Reverse),
         label = "harfYoluBackdropPulse",
     )
 
     Canvas(modifier = modifier) {
-        val blue = Color(0xFF278DC3)
-        val turquoise = Color(0xFF22BFC4)
-        val orange = Color(0xFFFF9F43)
-        val purple = Color(0xFF8B5CF6)
-        val paleBlue = Color(0xFFEAF8FC)
+        val blue = Color(0xFF2563EB)
+        val turquoise = Color(0xFF12B8A6)
+        val orange = Color(0xFFF97316)
+        val purple = Color(0xFF7C3AED)
 
         drawRect(
             brush = Brush.verticalGradient(
-                colors = listOf(
-                    Color.White,
-                    Color(0xFFF7FCFE),
-                    paleBlue.copy(alpha = .80f),
-                    Color(0xFFFDF9FF),
-                    Color.White,
-                ),
+                listOf(Color.White, Color(0xFFF8FBFF), Color(0xFFF2F7FF), Color(0xFFF8F5FF), Color.White),
             ),
         )
-
-        val driftX = size.width * (.020f * phase)
-        val driftY = size.height * (.016f * phase)
 
         fun glow(color: Color, x: Float, y: Float, radius: Float, alpha: Float) {
             val center = Offset(size.width * x, size.height * y)
             drawCircle(
                 brush = Brush.radialGradient(
-                    colors = listOf(color.copy(alpha = alpha * pulse), Color.Transparent),
+                    listOf(color.copy(alpha = alpha * pulse), Color.Transparent),
                     center = center,
                     radius = size.minDimension * radius,
                 ),
@@ -74,47 +58,31 @@ internal fun HarfYoluBackdrop(modifier: Modifier = Modifier) {
             )
         }
 
-        glow(blue, .93f + .015f * phase, .14f + .010f * phase, .58f, .17f)
-        glow(turquoise, .05f - .012f * phase, .74f - .010f * phase, .64f, .18f)
-        glow(orange, .04f + .010f * phase, .34f, .34f, .10f)
-        glow(purple, .96f - .010f * phase, .80f, .40f, .12f)
-        glow(Color.White, .50f, .47f, .54f, .95f)
+        glow(blue, .94f, .13f, .56f, .13f)
+        glow(turquoise, .05f, .75f, .62f, .14f)
+        glow(orange, .04f, .34f, .33f, .07f)
+        glow(purple, .96f, .80f, .40f, .09f)
 
         data class Tile(val x: Float, val y: Float, val scale: Float, val color: Color)
         val tiles = listOf(
-            Tile(.03f, .11f, .060f, blue),
-            Tile(.13f, .055f, .035f, purple),
-            Tile(.94f, .09f, .056f, turquoise),
-            Tile(.985f, .25f, .035f, orange),
-            Tile(.02f, .34f, .030f, orange),
-            Tile(.97f, .46f, .034f, purple),
-            Tile(.035f, .67f, .052f, turquoise),
-            Tile(.96f, .72f, .046f, blue),
-            Tile(.10f, .89f, .034f, purple),
-            Tile(.88f, .93f, .040f, orange),
-            Tile(.02f, .93f, .026f, turquoise),
-            Tile(.98f, .60f, .024f, orange),
+            Tile(.03f, .11f, .060f, blue), Tile(.13f, .055f, .035f, purple),
+            Tile(.94f, .09f, .056f, turquoise), Tile(.985f, .25f, .035f, orange),
+            Tile(.02f, .34f, .030f, orange), Tile(.97f, .46f, .034f, purple),
+            Tile(.035f, .67f, .052f, turquoise), Tile(.96f, .72f, .046f, blue),
+            Tile(.10f, .89f, .034f, purple), Tile(.88f, .93f, .040f, orange),
         )
-
         tiles.forEachIndexed { index, tile ->
             val side = size.minDimension * tile.scale
             val motion = if (index % 2 == 0) phase else 1f - phase
             val center = Offset(
-                x = size.width * tile.x + (motion - .5f) * side * .34f + if (index % 3 == 0) driftX * .15f else 0f,
-                y = size.height * tile.y + (motion - .5f) * side * .46f + if (index % 3 == 1) driftY * .18f else 0f,
+                size.width * tile.x + (motion - .5f) * side * .30f,
+                size.height * tile.y + (motion - .5f) * side * .38f,
             )
             drawRoundRect(
-                color = tile.color.copy(alpha = (if (index < 4) .16f else .11f) * pulse),
+                color = tile.color.copy(alpha = (if (index < 4) .15f else .10f) * pulse),
                 topLeft = Offset(center.x - side / 2f, center.y - side / 2f),
                 size = Size(side, side),
-                cornerRadius = CornerRadius(side * .25f, side * .25f),
-            )
-            val inset = side * .20f
-            drawRoundRect(
-                color = Color.White.copy(alpha = .52f),
-                topLeft = Offset(center.x - side / 2f + inset, center.y - side / 2f + inset),
-                size = Size(side - inset * 2f, side - inset * 2f),
-                cornerRadius = CornerRadius(side * .14f, side * .14f),
+                cornerRadius = CornerRadius(side * .28f, side * .28f),
             )
         }
     }
