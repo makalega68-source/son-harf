@@ -29,7 +29,8 @@ class BrandStartupRegressionTest {
         assertTrue(adaptiveFallback.readText().contains("@drawable/kelime_tahti_app_icon"))
 
         assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
-        assertTrue(authGate.contains("painterResource(R.drawable.son_harf_gold_teal_logo)"))
+        assertTrue(authGate.contains("var register by remember { mutableStateOf(false) }"))
+        assertFalse(authGate.contains("showForm"))
         assertTrue(siegeHub.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(home.contains("R.drawable.son_harf_app_icon_master"))
         listOf(launcherVector, homeVector, authVector, gameVector).forEach {
