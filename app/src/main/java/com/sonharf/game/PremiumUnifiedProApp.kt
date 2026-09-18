@@ -15,13 +15,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
-import com.sonharf.game.data.SharedDictionaryService
 import com.sonharf.game.data.SupabaseProvider
 import kotlinx.coroutines.delay
 
 private enum class PremiumDestination {
     HOME, CLUB, COMPETE, PROFILE, COLLECTION,
-    SIEGE_ENTRY, LAST_LETTER_ENTRY, LETTER_PATH_ENTRY,
     LAST_LETTER, SIEGE, LETTER_PATH,
     SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP
 }
@@ -32,15 +30,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     var destination by remember { mutableStateOf(PremiumDestination.HOME) }
     var isPro by remember { mutableStateOf(false) }
     val homeRequest = SonHarfUiState.homeRequest
-    val defaultGameLanguage = SharedDictionaryService.canonicalLanguage(SonHarfUiState.language)
-    var siegeLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
-    var lastLetterLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
-    var letterPathLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var uiLanguageBeforeGame by rememberSaveable { mutableStateOf<String?>(null) }
 
-    fun openGame(target: PremiumDestination, language: String) {
+    fun openGame(target: PremiumDestination) {
         if (uiLanguageBeforeGame == null) uiLanguageBeforeGame = SonHarfUiState.language
-        SonHarfUiState.language = SharedDictionaryService.canonicalLanguage(language)
         destination = target
     }
 
@@ -80,23 +73,12 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
             PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION -> PremiumDestination.PROFILE
-            PremiumDestination.SOCIAL, PremiumDestination.SHOP,
-            PremiumDestination.SIEGE_ENTRY, PremiumDestination.LAST_LETTER_ENTRY, PremiumDestination.LETTER_PATH_ENTRY -> PremiumDestination.HOME
+            PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.HOME
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
-            PremiumDestination.LAST_LETTER -> {
+            PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
                 uiLanguageBeforeGame = null
-                PremiumDestination.LAST_LETTER_ENTRY
-            }
-            PremiumDestination.SIEGE -> {
-                uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
-                uiLanguageBeforeGame = null
-                PremiumDestination.SIEGE_ENTRY
-            }
-            PremiumDestination.LETTER_PATH -> {
-                uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
-                uiLanguageBeforeGame = null
-                PremiumDestination.LETTER_PATH_ENTRY
+                PremiumDestination.HOME
             }
             else -> PremiumDestination.HOME
         }
@@ -109,9 +91,6 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         PremiumDestination.PROFILE,
     )
     val immersive = destination in setOf(
-        PremiumDestination.SIEGE_ENTRY,
-        PremiumDestination.LAST_LETTER_ENTRY,
-        PremiumDestination.LETTER_PATH_ENTRY,
         PremiumDestination.LAST_LETTER,
         PremiumDestination.SIEGE,
         PremiumDestination.LETTER_PATH,
@@ -165,30 +144,12 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
                         backend = backend,
-                        onPrimary = { destination = PremiumDestination.SIEGE_ENTRY },
+                        onPrimary = { openGame(PremiumDestination.SIEGE) },
                         onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
                         onSocial = { destination = PremiumDestination.SOCIAL },
-                        onLastLetter = { destination = PremiumDestination.LAST_LETTER_ENTRY },
-                        onLetterPath = { destination = PremiumDestination.LETTER_PATH_ENTRY },
-                    )
-                    PremiumDestination.SIEGE_ENTRY -> PremiumSiegeEntryScreen(
-                        language = siegeLanguage,
-                        onLanguageChange = { siegeLanguage = it },
-                        onPlay = { openGame(PremiumDestination.SIEGE, siegeLanguage) },
-                        onBack = { destination = PremiumDestination.HOME },
-                    )
-                    PremiumDestination.LAST_LETTER_ENTRY -> PremiumLastLetterEntryScreen(
-                        language = lastLetterLanguage,
-                        onLanguageChange = { lastLetterLanguage = it },
-                        onPlay = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
-                        onBack = { destination = PremiumDestination.HOME },
-                    )
-                    PremiumDestination.LETTER_PATH_ENTRY -> PremiumLetterPathEntryScreen(
-                        language = letterPathLanguage,
-                        onLanguageChange = { letterPathLanguage = it },
-                        onPlay = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
-                        onBack = { destination = PremiumDestination.HOME },
+                        onLastLetter = { openGame(PremiumDestination.LAST_LETTER) },
+                        onLetterPath = { openGame(PremiumDestination.LETTER_PATH) },
                     )
                     PremiumDestination.COMPETE -> CompetitionHubScreen(
                         onBack = { destination = PremiumDestination.HOME },
@@ -212,15 +173,15 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     )
                     PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()
                     PremiumDestination.SIEGE -> WordSiegeExperienceScreen {
-                        leaveGame(PremiumDestination.SIEGE_ENTRY)
+                        leaveGame()
                     }
                     PremiumDestination.LETTER_PATH -> LetterLadderGameScreen {
-                        leaveGame(PremiumDestination.LETTER_PATH_ENTRY)
+                        leaveGame()
                     }
                     PremiumDestination.SOCIAL -> MainSocialScreen(
                         backend = backend,
-                        onPlay = { destination = PremiumDestination.LAST_LETTER_ENTRY },
-                        onSiege = { destination = PremiumDestination.SIEGE_ENTRY },
+                        onPlay = { openGame(PremiumDestination.LAST_LETTER) },
+                        onSiege = { openGame(PremiumDestination.SIEGE) },
                     )
                     PremiumDestination.SETTINGS -> AdminAwareSettingsScreen(
                         backend,
