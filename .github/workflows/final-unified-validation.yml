@@ -37,21 +37,29 @@ jobs:
         with:
           validate-wrappers: false
 
-      - name: Unified Pro source policy checks
+      - name: Premium Canva runtime policy checks
         shell: bash
         run: |
           set -euo pipefail
           echo "SOURCE_SHA=$(git rev-parse HEAD)"
           test ! -f app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt
           test ! -f app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt
-          grep -q 'UnifiedProApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'PremiumCanvaApp(' app/src/main/java/com/sonharf/game/StableV1App.kt
           grep -q 'SonHarfCosmetics.restore(context)' app/src/main/java/com/sonharf/game/StableV1App.kt
-          grep -q 'val Background: Color get() = SonHarfTheme.Background' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'val Surface: Color get() = SonHarfTheme.Surface' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'lightColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'darkColorScheme(' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          ! grep -q 'MageCat' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
-          grep -q 'UnifiedDestination.VIP -> UnifiedProVipScreen' app/src/main/java/com/sonharf/game/UnifiedProApp.kt
+          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'PremiumCanvaDestination.LAST_LETTER -> OnlineGameScreenV6()' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'PremiumCanvaDestination.SIEGE -> WordSiegeExperienceScreen' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'PremiumCanvaDestination.LETTER_PATH -> LetterLadderGameScreen' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'HARF YOLU' app/src/main/java/com/sonharf/game/PremiumCanvaApp.kt
+          grep -q 'val IsDark: Boolean get() = false' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'Color(0xFF2563EB)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'Color(0xFF12B8A6)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'Color(0xFF7C3AED)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          grep -q 'Color(0xFFF97316)' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          ! grep -q 'MonsterLime' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          ! grep -q 'MonsterPink' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          ! grep -RqiE 'ProfHammy|Prof\. Hammy|prof_hammy' app/src/main/java app/src/main/res
           grep -q 'PremierWordDuelScreen()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'ReactiveMageCatOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
           ! grep -q 'PremierBoosterOverlay()' app/src/main/java/com/sonharf/game/OnlineGameScreenV6.kt
@@ -82,11 +90,11 @@ jobs:
           APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
           "$APKSIGNER" verify --verbose "$APK"
           sha256sum "$APK"
-          echo ">> [PASS] Unified Pro debug APK built and verified"
+          echo ">> [PASS] Premium Canva debug APK built and verified"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: SonHarf-Unified-Pro-APK
+          name: SonHarf-Premium-Canva-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
