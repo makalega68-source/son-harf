@@ -7,35 +7,36 @@ import org.junit.Test
 
 class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
-    fun canonicalPaletteMatchesCurrentPurchasedThemeDirection() {
+    fun canonicalPaletteMatchesApprovedPremiumCanvaDirection() {
         val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF0D0F12", // Monster black
-            "0xFF15171C", // Monster surface
-            "0xFF1B1E24", // Secondary surface
-            "0xFFEFFF19", // Neon lime CTA
-            "0xFFFF3B30", // Red accent
-            "0xFFFF245C", // Pink accent
-            "0xFFF7F8FA", // Primary text
-            "0xFF9AA0AA", // Muted text
-            "0xFF2B2F37", // Border
-        ).forEach { token -> assertTrue("Missing current theme palette token $token", theme.contains(token)) }
+            "0xFF2563EB", // Primary blue
+            "0xFF12B8A6", // Turquoise
+            "0xFF7C3AED", // Premium purple
+            "0xFFF97316", // Reward orange
+            "0xFFF6F9FF", // Background
+            "0xFFFFFFFF", // White surface
+            "0xFF10213D", // Primary text
+            "0xFF64748B", // Muted text
+            "0xFFDCE6F3", // Border
+        ).forEach { token -> assertTrue("Missing approved theme palette token $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
         assertTrue(theme.contains("val ActionOrange: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
         assertTrue(theme.contains("val HeroMiddle: Color get()"))
         assertTrue(theme.contains("val HeroEnd: Color get()"))
+        assertFalse(theme.contains("MonsterLime"))
     }
 
     @Test
     fun modeHierarchyAndLanguageScopeStayFocused() {
-        val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        val shell = File("src/main/java/com/sonharf/game/PremiumCanvaApp.kt").readText()
         val firstRun = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
 
-        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
+        assertTrue(shell.contains("title = \"KELİME KUŞATMASI\""))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(shell.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
         assertTrue(firstRun.contains("selected == \"tr\""))
@@ -65,17 +66,13 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     }
 
     @Test
-    fun clubSurfaceStaysAuthoredButNeverReachesUsers() {
-        val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+    fun legacyClubDestinationDoesNotReenterTheNewRuntimeShell() {
+        val shell = File("src/main/java/com/sonharf/game/PremiumCanvaApp.kt").readText()
         val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
         val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
 
-        // Retired: CLUB destination is intercepted and bounced to HOME, never renders CompetitionHubScreen anymore.
-        assertFalse(shell.contains("PremiumDestination.CLUB -> CompetitionHubScreen("))
-        assertTrue(shell.contains("PremiumDestination.CLUB -> {"))
-        assertTrue(shell.contains("destination = PremiumDestination.HOME"))
-
-        // Club source stays for audit but nothing opens it.
+        assertFalse(shell.contains("CLUB"))
+        assertFalse(shell.contains("KelimeKusatmasiClubScreen("))
         assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
         assertTrue(club.contains("b.getClubMessages(current.clubId)"))
         assertTrue(club.contains("b.sendClubMessage(current.clubId, outgoing)"))
@@ -86,12 +83,14 @@ class KelimeKusatmasiMasterGddV3ContractTest {
 
     @Test
     fun gameExitReturnsHomeAndPracticeMoveStatusKeepsFixedHeight() {
-        val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        val shell = File("src/main/java/com/sonharf/game/PremiumCanvaApp.kt").readText()
         val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
 
-        assertTrue(shell.contains("fun leaveGame(target: PremiumDestination = PremiumDestination.HOME)"))
-        assertTrue(shell.contains("PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH ->"))
-        assertTrue(shell.contains("PremiumDestination.HOME\n            }"))
+        assertTrue(shell.contains("fun leaveGame(target: PremiumCanvaDestination = PremiumCanvaDestination.HOME)"))
+        assertTrue(shell.contains("PremiumCanvaDestination.LAST_LETTER,"))
+        assertTrue(shell.contains("PremiumCanvaDestination.SIEGE,"))
+        assertTrue(shell.contains("PremiumCanvaDestination.LETTER_PATH ->"))
+        assertTrue(shell.contains("PremiumCanvaDestination.HOME"))
         assertTrue(practice.contains("Modifier.fillMaxWidth().height(16.dp)"))
         assertTrue(practice.contains("readyFeedback.message"))
         assertTrue(practice.contains("lineHeight = 12.sp"))
