@@ -35,8 +35,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 private const val ProfileThemeTimeoutMs = 10_000L
-private const val BlackThemeId = "theme_dark_arena"
-private val retiredThemeIds = setOf("theme_black", "theme_monster_blue", "theme_aurora", "theme_neon", "theme_midnight")
+private const val BlackThemeId = "theme_black"
+private val retiredThemeIds = setOf("theme_dark_arena", "theme_monster_blue", "theme_aurora", "theme_neon", "theme_midnight")
 
 private data class CollectionCategory(
     val titleTr: String,
@@ -49,7 +49,7 @@ private data class CollectionCategory(
 )
 
 private val collectionCategories = listOf(
-    CollectionCategory("Temalar", "Themes", "Uygulamanın genel görünümü", "Overall application appearance", Icons.Rounded.Palette, Color(0xFF7C3AED), setOf("game_theme")),
+    CollectionCategory("Temalar", "Themes", "Satın aldığın uygulama temaları", "Application themes you own", Icons.Rounded.Palette, Color(0xFF7C3AED), setOf("game_theme")),
     CollectionCategory("Profil Çerçeveleri", "Profile Frames", "Avatar çevreni kişiselleştir", "Customize your avatar frame", Icons.Rounded.AccountCircle, Color(0xFF2563EB), setOf("profile_frame")),
     CollectionCategory("Tuş Stilleri", "Keyboard Styles", "Kelime klavyesinin görünümü", "Appearance of the word keyboard", Icons.Rounded.Keyboard, Color(0xFF12B8A6), setOf("keyboard_theme")),
     CollectionCategory("İsim & Prestij", "Name & Prestige", "İsim rengi ve görsel prestij öğeleri", "Name color and visual prestige items", Icons.Rounded.AutoAwesome, Color(0xFFF97316), setOf("name_style", "victory_effect", "emoji_pack")),
@@ -118,10 +118,12 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
     val blackActive = SonHarfCosmetics.blackThemeActive
     val visibleCollection = collection.filter(::collectionItemSupported)
 
-    Column(verticalArrangement = Arrangement.spacedBy(18.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.GridView, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(20.dp))
-            Spacer(Modifier.width(8.dp))
+            Surface(shape = RoundedCornerShape(12.dp), color = SonHarfTheme.PrimarySoft) {
+                Icon(Icons.Rounded.GridView, null, tint = SonHarfTheme.Primary, modifier = Modifier.padding(8.dp).size(19.dp))
+            }
+            Spacer(Modifier.width(9.dp))
             Column(Modifier.weight(1f)) {
                 Text(sh("KOLEKSİYON", "COLLECTION"), color = SonHarfTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
                 Text(sh("Yalnızca sahip olduğun ürünleri burada yönet.", "Manage only the items you own here."), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
@@ -137,7 +139,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
 
         CollectionCategoryBlock(
             title = sh("Temalar", "Themes"),
-            subtitle = sh("Satın aldığın uygulama temaları", "Application themes you own"),
+            subtitle = sh("Satın aldığın temalar burada görünür", "Purchased themes appear here"),
             icon = Icons.Rounded.Palette,
             accent = SonHarfTheme.Purple,
         ) {
@@ -230,11 +232,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
 
 @Composable
 private fun ActiveStyleSummary(theme: String, frame: String, keyboard: String) {
-    Surface(
-        shape = MainUiShape.Card,
-        color = SonHarfTheme.SurfaceSecondary,
-        border = BorderStroke(1.dp, SonHarfTheme.Border),
-    ) {
+    Surface(shape = MainUiShape.Card, color = SonHarfTheme.SurfaceSecondary, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
         Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(sh("AKTİF GÖRÜNÜM", "ACTIVE LOOK"), color = SonHarfTheme.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Black)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
@@ -258,19 +256,8 @@ private fun SummaryChip(icon: ImageVector, text: String, accent: Color, modifier
 }
 
 @Composable
-private fun CollectionCategoryBlock(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    accent: Color,
-    content: @Composable ColumnScope.() -> Unit,
-) {
-    Surface(
-        shape = MainUiShape.Card,
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(1.dp, SonHarfTheme.Border),
-        shadowElevation = 2.dp,
-    ) {
+private fun CollectionCategoryBlock(title: String, subtitle: String, icon: ImageVector, accent: Color, content: @Composable ColumnScope.() -> Unit) {
+    Surface(shape = MainUiShape.Card, color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border), shadowElevation = 2.dp) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = .10f)) {
@@ -325,12 +312,7 @@ private fun CollectionProductTile(item: ShopItemDto, active: Boolean, enabled: B
     CollectionTileShell(active, enabled && !active, modifier, onClick) {
         StoreProductPreview(item = item, modifier = Modifier.fillMaxWidth().aspectRatio(1.35f))
         Text(sh(item.nameTr, item.nameEn), color = SonHarfTheme.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(
-            if (active) sh("AKTİF", "EQUIPPED") else sh("KULLAN", "EQUIP"),
-            color = if (active) SonHarfTheme.Turquoise else SonHarfTheme.Primary,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Black,
-        )
+        Text(if (active) sh("AKTİF", "EQUIPPED") else sh("KULLAN", "EQUIP"), color = if (active) SonHarfTheme.Turquoise else SonHarfTheme.Primary, fontSize = 9.sp, fontWeight = FontWeight.Black)
     }
 }
 
