@@ -7,7 +7,7 @@ import org.junit.Test
 
 class BrandStartupRegressionTest {
     @Test
-    fun startupBrandUsesRasterFreeCompatibilityAssetsAndAdaptiveLauncherIcon() {
+    fun startupBrandUsesCurrentCompatibilityAssetsAndLauncherIcon() {
         val authGate = File("src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
         val officialLogo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeHub = File("src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
@@ -15,6 +15,8 @@ class BrandStartupRegressionTest {
         val manifest = File("src/main/AndroidManifest.xml").readText()
         val adaptiveIcon = File("src/main/res/mipmap-anydpi-v26/ic_kelime_tahti.xml")
         val adaptiveFallback = File("src/main/res/mipmap-anydpi/ic_kelime_tahti.xml")
+        val launcherForeground = File("src/main/res/drawable/kelime_kusatmasi_launcher_foreground.xml")
+        val launcherBadge = File("src/main/res/drawable-nodpi/word_siege_home_badge.webp")
         val launcherVector = File("src/main/res/drawable/kelime_tahti_app_icon.xml")
         val homeVector = File("src/main/res/drawable/son_harf_app_icon_master.xml")
         val authVector = File("src/main/res/drawable/son_harf_gold_teal_logo.xml")
@@ -25,15 +27,18 @@ class BrandStartupRegressionTest {
         assertTrue(manifest.contains("android:roundIcon=\"@mipmap/ic_kelime_tahti\""))
         assertTrue(adaptiveIcon.isFile)
         assertTrue(adaptiveFallback.isFile)
-        assertTrue(adaptiveIcon.readText().contains("@drawable/kelime_tahti_app_icon"))
-        assertTrue(adaptiveFallback.readText().contains("@drawable/kelime_tahti_app_icon"))
+        assertTrue(adaptiveIcon.readText().contains("@drawable/kelime_kusatmasi_launcher_foreground"))
+        assertTrue(adaptiveFallback.readText().contains("@drawable/kelime_kusatmasi_launcher_foreground"))
+        assertTrue(launcherForeground.isFile)
+        assertTrue(launcherForeground.readText().contains("@drawable/word_siege_home_badge"))
+        assertTrue(launcherBadge.isFile)
 
         assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(authGate.contains("painterResource(R.drawable.son_harf_gold_teal_logo)"))
         assertTrue(siegeHub.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(home.contains("R.drawable.son_harf_app_icon_master"))
         listOf(launcherVector, homeVector, authVector, gameVector).forEach {
-            assertTrue("Missing raster-free drawable: ${it.path}", it.isFile)
+            assertTrue("Missing compatibility vector drawable: ${it.path}", it.isFile)
             assertTrue(it.readText().contains("<vector"))
         }
 

@@ -15,6 +15,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
         val logo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeVector = File("src/main/res/drawable/kelime_kusatma_logo_hd.xml")
+        val homeBadge = File("src/main/res/drawable-nodpi/word_siege_home_badge.webp")
 
         assertTrue(manifest.contains("android:label=\"@string/app_name\""))
         // Resource/deep-link identifiers remain stable even though the visible product brand changes.
@@ -30,7 +31,8 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertFalse(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
 
         assertTrue(home.contains("\"KELİME KUŞATMASI\""))
-        assertTrue(home.contains("R.drawable.kelime_kusatma_logo_hd"))
+        assertTrue(home.contains("R.drawable.word_siege_home_badge"))
+        assertTrue(homeBadge.isFile)
         assertTrue(home.contains("onClick = onSiege"))
         assertTrue(home.contains("sh(\"HEMEN OYNA\", \"PLAY NOW\")"))
         assertTrue(home.contains("sh(\"GÜNLÜK GÖREVLER\", \"DAILY TASKS\")"))

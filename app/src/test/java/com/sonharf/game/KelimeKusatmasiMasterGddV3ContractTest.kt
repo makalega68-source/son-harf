@@ -7,20 +7,25 @@ import org.junit.Test
 
 class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
-    fun canonicalPaletteMatchesMasterGdd() {
+    fun canonicalPaletteMatchesCurrentPurchasedThemeDirection() {
         val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF8A9A86", // Sage Green
-            "0xFFF9F8F6", // Off-White
-            "0xFF7A9AEE", // Soft Blue
-            "0xFF40E0D0", // Turquoise
-            "0xFFF2EFE9", // Light Beige
-            "0xFFB5A2FF", // Lavender
-            "0xFF5C6F84", // Slate Blue
-            "0xFFA3E4D7", // Pale Mint
-            "0xFFE07A5F", // Controlled Warm Accent
-        ).forEach { token -> assertTrue("Missing GDD palette token $token", theme.contains(token)) }
+            "0xFF1559D6", // Royal blue
+            "0xFF0A347A", // Deep blue
+            "0xFF15C7C4", // Turquoise
+            "0xFFFF8A24", // Action orange
+            "0xFFEAF4FF", // Sky surface
+            "0xFFF8FBFF", // Off-white
+            "0xFF53677D", // Slate text
+            "0xFFDDF8F5", // Pale mint game field
+            "0xFF728BE8", // Soft indigo
+        ).forEach { token -> assertTrue("Missing current theme palette token $token", theme.contains(token)) }
+
+        assertTrue(theme.contains("val ActionOrange: Color get()"))
+        assertTrue(theme.contains("val HeroStart: Color get()"))
+        assertTrue(theme.contains("val HeroMiddle: Color get()"))
+        assertTrue(theme.contains("val HeroEnd: Color get()"))
     }
 
     @Test
