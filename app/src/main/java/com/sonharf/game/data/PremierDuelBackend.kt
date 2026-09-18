@@ -1,6 +1,9 @@
 package com.sonharf.game.data
 
 import io.github.jan.supabase.postgrest.from
+import io.github.jan.supabase.postgrest.postgrest
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 
 /** Small Premier-specific queries layered on the existing authoritative room APIs. */
 suspend fun OnlineGameBackend.findPremierActiveRoom(): GameRoomDto? {
@@ -41,6 +44,16 @@ suspend fun OnlineGameBackend.getPremierOpponent(room: GameRoomDto): ProfileDto?
     val opponentId = if (room.hostId == me) room.guestId else room.hostId
     return opponentId?.let { runCatching { getProfile(it) }.getOrNull() }
 }
+
+/**
+ * Starts the first visible turn only after the VS cinematic has completed. The RPC is
+ * idempotent and server-authorized, so two clients cannot keep extending the opening turn.
+ */
+suspend fun OnlineGameBackend.activatePremierOpeningTurn(roomId: String): GameRoomDto =
+    SupabaseProvider.client.postgrest.rpc(
+        "activate_premier_opening_turn_v1",
+        buildJsonObject { put("p_room_id", roomId) },
+    ).decodeSingle()
 
 /**
  * Submit through the deployed v3 RPC, then collapse the transient bot_turn state before returning
