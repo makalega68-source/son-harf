@@ -16,11 +16,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Shared app-shell palette, resolved from the single Son Harf botanical theme. */
+/** Shared app-shell palette, resolved from the single Kelime Kuşatması theme source. */
 internal object MainUi {
-    // Light pages are deliberately a touch translucent so the shared botanical
-    // backdrop remains perceptible through screen-level backgrounds.
-    val Background: Color get() = if (SonHarfTheme.IsDark) SonHarfTheme.Background else SonHarfTheme.Background.copy(alpha = .94f)
+    // Default pages stay slightly translucent so the purchased-kit-inspired vector backdrop can
+    // provide depth without becoming a full-screen image layer.
+    val Background: Color get() = if (SonHarfTheme.IsDark) SonHarfTheme.Background else SonHarfTheme.Background.copy(alpha = .95f)
     val Surface: Color get() = SonHarfTheme.Surface
     val SurfaceSoft: Color get() = SonHarfTheme.SurfaceSecondary
     val SurfaceRaised: Color get() = SonHarfTheme.SurfaceElevated
@@ -36,6 +36,7 @@ internal object MainUi {
     val BlueSoft: Color get() = SonHarfTheme.PrimarySoft
     val GrayBlue: Color get() = SonHarfTheme.SoftBlue
     val Cyan: Color get() = SonHarfTheme.Turquoise
+    val Orange: Color get() = SonHarfTheme.ActionOrange
     val Border: Color get() = SonHarfTheme.Border
     val Green: Color get() = SonHarfTheme.Success
     val Gold: Color get() = SonHarfTheme.PremiumGold
@@ -43,8 +44,16 @@ internal object MainUi {
     val Purple: Color get() = SonHarfTheme.Lavender
 }
 
+/** Compact radii mirror the purchased sports-dashboard kit while remaining touch-friendly. */
+internal object MainUiShape {
+    val Control = RoundedCornerShape(12.dp)
+    val Card = RoundedCornerShape(18.dp)
+    val Hero = RoundedCornerShape(24.dp)
+    val Pill = RoundedCornerShape(99.dp)
+}
+
 // Independent/legacy mode tokens resolve to the same application-wide palette.
-internal val PortalBg: Color get() = if (SonHarfTheme.IsDark) SonHarfTheme.Background else SonHarfTheme.Background.copy(alpha = .94f)
+internal val PortalBg: Color get() = if (SonHarfTheme.IsDark) SonHarfTheme.Background else SonHarfTheme.Background.copy(alpha = .95f)
 internal val PortalCard: Color get() = SonHarfTheme.Surface
 internal val PortalText: Color get() = SonHarfTheme.TextPrimary
 internal val PortalMuted: Color get() = SonHarfTheme.TextSecondary
@@ -75,13 +84,19 @@ internal fun MainSectionTitle(title: String, action: String, onAction: () -> Uni
             letterSpacing = .35.sp,
             modifier = Modifier.weight(1f),
         )
-        Text(
-            text = action,
-            color = MainUi.Blue,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Black,
-            modifier = Modifier.clickable(onClick = onAction).padding(vertical = 4.dp),
-        )
+        Surface(
+            onClick = onAction,
+            color = MainUi.Orange.copy(alpha = .11f),
+            shape = MainUiShape.Pill,
+        ) {
+            Text(
+                text = action,
+                color = MainUi.Orange,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Black,
+                modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+            )
+        }
     }
 }
 
@@ -98,14 +113,15 @@ internal fun MainScreenHeader(
         if (onBack != null) {
             Surface(
                 onClick = onBack,
-                shape = RoundedCornerShape(12.dp),
+                shape = MainUiShape.Control,
                 color = MainUi.Surface,
                 border = BorderStroke(1.dp, MainUi.Border),
+                shadowElevation = 1.dp,
             ) {
                 Icon(
                     Icons.Rounded.ArrowBack,
                     contentDescription = sh("Geri", "Back"),
-                    tint = MainUi.Text,
+                    tint = MainUi.Blue,
                     modifier = Modifier.padding(14.dp).size(20.dp),
                 )
             }
@@ -119,14 +135,15 @@ internal fun MainScreenHeader(
         if (actionIcon != null && onAction != null) {
             Surface(
                 onClick = onAction,
-                shape = RoundedCornerShape(12.dp),
-                color = MainUi.Surface,
+                shape = MainUiShape.Control,
+                color = MainUi.SurfaceSoft,
                 border = BorderStroke(1.dp, MainUi.Border),
+                shadowElevation = 1.dp,
             ) {
                 Icon(
                     actionIcon,
                     contentDescription = actionDescription,
-                    tint = MainUi.Text,
+                    tint = MainUi.Blue,
                     modifier = Modifier.padding(14.dp).size(20.dp),
                 )
             }
@@ -138,12 +155,20 @@ internal fun MainScreenHeader(
 internal fun MainMetricCard(value: String, label: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = MainUiShape.Card,
         color = MainUi.Surface,
         border = BorderStroke(1.dp, MainUi.Border),
+        shadowElevation = 1.dp,
     ) {
         Column(Modifier.padding(12.dp)) {
-            Text(value, color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    Modifier
+                        .size(5.dp)
+                        .padding(0.dp),
+                )
+                Text(value, color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
+            }
             Spacer(Modifier.height(3.dp))
             Text(label, color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
         }
