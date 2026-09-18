@@ -1302,6 +1302,8 @@ private fun PremierHowToDialog(language: String, onDismiss: () -> Unit) {
                 Text(pt(language, "2) Süren dolmadan GÖNDER — hızlı ol!", "2) SEND before your time runs out — be quick!"), color = PremierUi.Ink, fontSize = 13.sp)
                 Text(pt(language, "3) Aynı kelime iki kez kullanılamaz.", "3) A word cannot be used twice."), color = PremierUi.Ink, fontSize = 13.sp)
                 Text(pt(language, "4) Geçerli her kelime puan kazandırır; sıra değişir.", "4) Every valid word scores points; turns alternate."), color = PremierUi.Ink, fontSize = 13.sp)
+                Text(pt(language, "5) Maç 3 round sürer; her roundda iki oyuncu da 10 geçerli kelime tamamlar.", "5) The match has 3 rounds; both players complete 10 valid words per round."), color = PremierUi.Ink, fontSize = 13.sp)
+                Text(pt(language, "6) Tur süresi roundlara göre 15, 13 ve 11 saniyedir.", "6) Turn time is 15, 13 and 11 seconds by round."), color = PremierUi.Ink, fontSize = 13.sp)
             }
         },
         containerColor = PremierUi.Surface,
