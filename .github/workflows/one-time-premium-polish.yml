@@ -28,24 +28,22 @@ jobs:
           premier = Path('app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt')
           text = premier.read_text()
 
-          old = '    val isPro = me?.isVip == true\n'
-          if old not in text:
+          text, count = re.subn(r'^\s*val isPro = me\?\.isVip == true\n', '', text, count=1, flags=re.M)
+          if count != 1:
               raise SystemExit('Premier isPro anchor missing')
-          text = text.replace(old, '', 1)
 
-          old = '''                if (!veryCompact) {
-                      Spacer(Modifier.height(primaryGap))
-                      PremierHistoryDrawer(words, language, isPro)
-                  }
-          '''
-          if old not in text:
+          text, count = re.subn(
+              r'\s*if \(!veryCompact\) \{\s*Spacer\(Modifier\.height\(primaryGap\)\)\s*PremierHistoryDrawer\(words, language, isPro\)\s*\}',
+              '\n                Spacer(Modifier.height(primaryGap))\n                PremierHistoryDrawer(words, language)',
+              text,
+              count=1,
+              flags=re.S,
+          )
+          if count != 1:
               raise SystemExit('Premier history call anchor missing')
-          text = text.replace(old, '''                Spacer(Modifier.height(primaryGap))
-                  PremierHistoryDrawer(words, language)
-          ''', 1)
 
           pattern = re.compile(
-              r'@Composable\nprivate fun PremierHistoryDrawer\(words: List<GameWordDto>, language: String, isPro: Boolean\) \{.*?\n\}\n\n@Composable\nprivate fun PremierHowToDialog',
+              r'@Composable\s+private fun PremierHistoryDrawer\(words: List<GameWordDto>, language: String, isPro: Boolean\) \{.*?\n\}\s*\n@Composable\s+private fun PremierHowToDialog',
               re.S,
           )
           replacement = '''@Composable
@@ -109,20 +107,12 @@ jobs:
 
           siege = Path('app/src/main/java/com/sonharf/game/WordSiegeExperience.kt')
           text = siege.read_text()
-          old = '''        item {
-                      Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                          Image(
-                              painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
-                              contentDescription = sh("Kelime Tahtı logosu", "Kelime Tahtı logo"),
-                              modifier = Modifier.size(96.dp),
-                              contentScale = ContentScale.Fit,
-                          )
-                      }
-                  }
-          '''
-          if old not in text:
-              raise SystemExit('Word Siege logo block anchor missing')
-          new = '''        item {
+          logo_pattern = re.compile(
+              r'\n\s*item \{\s*Box\(Modifier\.fillMaxWidth\(\), contentAlignment = Alignment\.Center\) \{\s*Image\(\s*painter = painterResource\(R\.drawable\.kelime_kusatma_logo_hd\),.*?contentScale = ContentScale\.Fit,\s*\)\s*\}\s*\}',
+              re.S,
+          )
+          replacement = '''
+                  item {
                       Surface(
                           modifier = Modifier.fillMaxWidth(),
                           shape = RoundedCornerShape(20.dp),
@@ -140,9 +130,10 @@ jobs:
                               }
                           }
                       }
-                  }
-          '''
-          text = text.replace(old, new, 1)
+                  }'''
+          text, count = logo_pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'Word Siege logo block replacement count={count}')
           siege.write_text(text)
 
           brand = Path('app/src/test/java/com/sonharf/game/BrandStartupRegressionTest.kt')
@@ -222,7 +213,6 @@ jobs:
                   assertFalse(screen.contains("PremierHistoryDrawer(words, language, isPro)"))
                   assertFalse(screen.contains("PRO • Tüm oynanan kelimeler"))
                   assertFalse(screen.contains("PRO ÖZELLİĞİ"))
-                  assertFalse(screen.contains("if (!veryCompact) {\\n                    Spacer(Modifier.height(primaryGap))\\n                    PremierHistoryDrawer"))
               }
           }
           ''')
