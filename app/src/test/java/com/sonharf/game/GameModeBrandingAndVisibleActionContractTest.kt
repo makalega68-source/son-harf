@@ -13,10 +13,7 @@ class GameModeBrandingAndVisibleActionContractTest {
         val brand = projectFile("app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeDrawable = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")
 
-        assertTrue(
-            home.contains("\"KELİME KUŞATMASI\"") ||
-                home.contains("\"KELİME\\nKUŞATMASI\"")
-        )
+        assertTrue(home.contains("\"KELİME KUŞATMASI\"") || home.contains("\"KELİME\\nKUŞATMASI\""))
         assertTrue(home.contains("onClick = onSiege"))
         assertTrue(home.contains("sh(\"HEMEN OYNA\", \"PLAY NOW\")"))
         assertTrue(home.contains("onClick = onPlay"))
@@ -32,6 +29,19 @@ class GameModeBrandingAndVisibleActionContractTest {
         assertTrue(games.contains("onClick = onSiege"))
         assertTrue(games.contains("onClick = onLastLetter"))
         assertTrue(games.contains("onClick = onLetterPath"))
+    }
+
+    @Test
+    fun allPathImplementationsUseOnePublicName() {
+        val ladder = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
+        val semantic = projectFile("app/src/main/java/com/sonharf/game/SemanticPathGame.kt").readText()
+        val games = projectFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+
+        assertTrue(ladder.contains("HARF YOLU"))
+        assertTrue(semantic.contains("HARF YOLU"))
+        assertTrue(semantic.contains("LETTER PATH"))
+        assertTrue(games.contains("HARF YOLU"))
+        assertFalse(semantic.contains("Text(\"KELİME YOLU\""))
     }
 
     @Test
