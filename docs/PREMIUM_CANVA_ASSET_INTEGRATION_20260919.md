@@ -12,6 +12,14 @@
 
 The Android runtime uses lightweight text-free vector equivalents aligned to the approved Canva visual language so density scaling stays sharp, transparent artwork remains clean and APK weight stays low.
 
+### Google Play subscriptions
+
+- `vip_monthly` → `drawable/premium_vip_monthly.xml`
+- `vip_yearly` → `drawable/premium_vip_yearly.xml`
+- `season_pass_monthly` → `drawable/premium_season_pass.xml`
+
+Monthly PRO, yearly PRO and Season Pass use distinct visual silhouettes. Plan names, periods, prices, availability and subscription state remain authoritative runtime text from Compose/Google Play and are never baked into the decorative artwork.
+
 ### Permanent Google Play products
 
 - `series_game` → `drawable/premium_series_game.xml`
@@ -56,8 +64,8 @@ Profile-frame products continue to render their actual packaged frame assets thr
 
 ## Production rules
 
-- Decorative product assets must keep transparent outer backgrounds and contain no baked product names, prices, `PRO`, `SATIN ALINDI`, lock/open states, quantities or descriptions.
+- Decorative product assets must keep transparent outer backgrounds and contain no baked product names, prices, `PRO`, `SATIN ALINDI`, lock/open states, quantities, billing periods or descriptions.
 - Runtime wording remains real Compose UI text and must not overlap image-baked wording.
 - Do not introduce unverified external icon packs or duplicate purchased assets.
 - Keep the existing verified `frame_round_golden_avatar` as the PRO profile frame; no new purchased frame package is required.
-- Product CTAs remain server/billing authoritative. Artwork changes must not modify purchase, entitlement, score, matchmaking or competitive gameplay logic.
+- Product CTAs remain server/billing authoritative. Artwork changes must not modify purchase, subscription, entitlement, score, matchmaking or competitive gameplay logic.
