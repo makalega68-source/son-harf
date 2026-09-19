@@ -9,22 +9,29 @@ import org.junit.Test
 class VipDialogPolishContractTest {
 
     @Test
-    fun vipDialogKeepsBillingFlowAndExplicitlyPromisesFairPlay() {
+    fun vipDialogKeepsVerifiedLifetimeBillingAndNoPayToWinBenefits() {
         val source = projectFile("app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt").readText()
 
         assertTrue(source.contains("BillingManager("))
         assertTrue(source.contains("PlayPurchaseVerification.verify"))
-        assertTrue(source.contains("manager.launchProduct(activity, product)"))
-        assertTrue(source.contains("ProductCatalog.VIP_YEARLY"))
-        assertTrue(source.contains("ProductCatalog.VIP_MONTHLY"))
+        assertTrue(source.contains("manager.launchProduct(activity, details)"))
+        assertTrue(source.contains("ProductCatalog.PRO_LIFETIME"))
+        assertTrue(source.contains("queryOneTimeProducts"))
+        assertTrue(source.contains("oneTimePurchaseOfferDetails"))
+        assertFalse(source.contains("ProductCatalog.VIP_YEARLY"))
+        assertFalse(source.contains("ProductCatalog.VIP_MONTHLY"))
+        assertFalse(source.contains("querySubscriptions("))
         assertFalse(source.contains("rememberInfiniteTransition"))
 
-        assertTrue(source.contains("ADİL REKABET"))
-        assertTrue(source.contains("FAIR PLAY"))
-        assertTrue(source.contains("gives no score, target-letter, or word advantage"))
+        assertTrue(source.contains("Puan Hesaplayıcı"))
+        assertTrue(source.contains("Harf Tablosu"))
+        assertTrue(source.contains("Seri Oyun"))
+        assertTrue(source.contains("50 AKTİF OYUN"))
+        assertTrue(source.contains("100 SON COIN"))
         assertFalse(source.contains("2x SKOR"))
         assertFalse(source.contains("2x SCORE"))
-        assertFalse(source.contains("server validated and consumed atomically"))
+        assertFalse(source.contains("gizli rakip harf"))
+        assertFalse(source.contains("hidden opponent letters"))
     }
 
     private fun projectFile(path: String): File {
