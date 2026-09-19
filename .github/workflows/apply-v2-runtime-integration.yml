@@ -34,7 +34,23 @@ jobs:
           grep -q 'getSeriesFriends' app/src/main/java/com/sonharf/game/WordSiegeSeriesScreen.kt
           grep -q 'blackThemeOwned && gameThemeId == BLACK_THEME_ID' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
       - name: Compile and unit test
-        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+        shell: bash
+        run: |
+          set +e
+          ./gradlew --no-daemon testDebugUnitTest assembleDebug 2>&1 | tee runtime-build.log
+          status=${PIPESTATUS[0]}
+          echo "$status" > runtime-build-status.txt
+          exit "$status"
+      - name: Upload diagnostic build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2-runtime-build-diagnostics
+          path: |
+            runtime-build.log
+            runtime-build-status.txt
+          if-no-files-found: warn
+          retention-days: 1
       - name: Commit only tested source changes
         shell: bash
         run: |
