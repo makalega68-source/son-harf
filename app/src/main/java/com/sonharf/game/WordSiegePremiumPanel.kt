@@ -1,6 +1,7 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,6 +23,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -30,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.billing.ProductCatalog
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.VipEntitlementsDto
 import com.sonharf.game.data.WordSiegeGameDto
@@ -56,8 +59,10 @@ internal fun WordSiegePremiumPanel(
     var previewError by remember(game.id) { mutableStateOf(false) }
     var letterTable by remember(game.id) { mutableStateOf<List<WordSiegeLetterCountDto>>(emptyList()) }
     var showLetterTable by remember(game.id) { mutableStateOf(false) }
+    var purchaseProductId by remember(game.id) { mutableStateOf<String?>(null) }
+    var entitlementRefreshKey by remember(game.id) { mutableIntStateOf(0) }
 
-    LaunchedEffect(game.id, game.moveCount) {
+    LaunchedEffect(game.id, game.moveCount, entitlementRefreshKey) {
         entitlements = runCatching { backend.getVipEntitlements() }.getOrDefault(VipEntitlementsDto())
         letterTable = if (entitlements.letterTableAccess) {
             runCatching { backend.getPremiumWordSiegeLetterTable(game.id) }.getOrDefault(emptyList())
@@ -95,7 +100,11 @@ internal fun WordSiegePremiumPanel(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Surface(
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .clickable(enabled = !entitlements.scoreCalculatorAccess) {
+                    purchaseProductId = ProductCatalog.SCORE_CALCULATOR
+                },
             shape = RoundedCornerShape(10.dp),
             color = WordSiegeGameUi.SurfaceSoft,
             border = BorderStroke(1.dp, WordSiegeGameUi.Border),
@@ -112,7 +121,7 @@ internal fun WordSiegePremiumPanel(
                 Spacer(Modifier.width(5.dp))
                 Text(
                     when {
-                        !entitlements.scoreCalculatorAccess -> sh("Puan Hesaplayıcı • Kilitli", "Score Calculator • Locked")
+                        !entitlements.scoreCalculatorAccess -> sh("Puan Hesaplayıcı • Satın al", "Score Calculator • Buy")
                         placements.isEmpty() -> sh("Puan Hesaplayıcı • Harf yerleştir", "Score Calculator • Place tiles")
                         preview != null -> sh(
                             "Kelime +${preview!!.wordScore} • Bölge +${preview!!.areaScore} • Toplam +${preview!!.totalScore}",
@@ -130,8 +139,13 @@ internal fun WordSiegePremiumPanel(
         }
 
         OutlinedButton(
-            onClick = { if (entitlements.letterTableAccess) showLetterTable = true },
-            enabled = entitlements.letterTableAccess,
+            onClick = {
+                if (entitlements.letterTableAccess) {
+                    showLetterTable = true
+                } else {
+                    purchaseProductId = ProductCatalog.LETTER_TABLE
+                }
+            },
             shape = RoundedCornerShape(10.dp),
             border = BorderStroke(1.dp, WordSiegeGameUi.Border),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
@@ -141,8 +155,23 @@ internal fun WordSiegePremiumPanel(
                 contentDescription = null,
                 modifier = Modifier.padding(end = 4.dp),
             )
-            Text(sh("HARF", "LETTERS"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+            Text(
+                if (entitlements.letterTableAccess) sh("HARF", "LETTERS") else sh("HARF • SATIN AL", "LETTERS • BUY"),
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Black,
+            )
         }
+    }
+
+    purchaseProductId?.let { productId ->
+        PremiumProductPurchaseDialog(
+            productId = productId,
+            onVerified = {
+                purchaseProductId = null
+                entitlementRefreshKey += 1
+            },
+            onDismiss = { purchaseProductId = null },
+        )
     }
 
     if (showLetterTable) {
