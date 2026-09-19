@@ -28,7 +28,7 @@ object SonHarfCosmetics {
     fun restore(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         profileFrameId = prefs.getString("profile_frame_id", null)?.takeIf { !it.isNullOrBlank() }
-        gameThemeId = prefs.getString("game_theme_id", null)?.takeIf { it == "theme_dark_arena" }
+        gameThemeId = prefs.getString("game_theme_id", null)?.takeIf { it in setOf("theme_black", "theme_dark_arena") }
         nameStyleId = prefs.getString("name_style_id", null)
         keyboardThemeId = prefs.getString("keyboard_theme_id", null)
     }
@@ -62,33 +62,46 @@ object SonHarfCosmetics {
             else -> SonHarfText
         }
 
-    /**
-     * Product skins affect only letter-input presentation. The legacy neon skin deliberately
-     * resolves to the default look after its retirement; it never grants a gameplay benefit.
-     */
+    /** Product skins affect only letter-input presentation and never gameplay. */
     val keyboardPalette: WordKeyboardPalette
         get() = keyboardPaletteFor(keyboardThemeId)
 
-    /** Single palette source for the live keyboard and its store preview. */
+    /** Single palette source for the live keyboard and its store preview/art direction. */
     fun keyboardPaletteFor(themeId: String?): WordKeyboardPalette = when (themeId) {
-            "keyboard_crystal" -> WordKeyboardPalette(
-                background = Color(0xFFE8F1F5), key = Color(0xFFF8FCFF), keyAlt = Color(0xFFD6E5ED),
-                text = Color(0xFF26353E), action = Color(0xFF537FA1), actionText = Color.White,
-                border = Color(0xFF9ABBCB), secondaryBorder = Color(0xFFA9BFCA),
-            )
-            "keyboard_obsidian" -> WordKeyboardPalette(
-                background = Color(0xFF151719), key = Color(0xFF24272A), keyAlt = Color(0xFF343535),
-                text = Color(0xFFF7F1E3), action = Color(0xFFB9914D), actionText = Color(0xFF21180A),
-                border = Color(0xFF6A6254), secondaryBorder = Color(0xFFB9914D),
-            )
-            else -> WordKeyboardPalette(
-                background = Color(0xFFF0F5F1), key = Color(0xFFFFFEF8), keyAlt = Color(0xFFDDE9E1),
-                text = Color(0xFF213C31), action = Color(0xFF4F7964), actionText = Color.White,
-                border = Color(0xFFC4D5CA), secondaryBorder = Color(0xFF6D9080),
-            )
-        }
-    /** The only sellable match theme. It changes presentation only, never match rules. */
-    val darkArenaTheme: Boolean get() = gameThemeId == "theme_dark_arena"
+        "keyboard_crystal" -> WordKeyboardPalette(
+            background = Color(0xFFE8F1F5), key = Color(0xFFF8FCFF), keyAlt = Color(0xFFD6E5ED),
+            text = Color(0xFF26353E), action = Color(0xFF537FA1), actionText = Color.White,
+            border = Color(0xFF9ABBCB), secondaryBorder = Color(0xFFA9BFCA),
+        )
+        "keyboard_obsidian" -> WordKeyboardPalette(
+            background = Color(0xFF151719), key = Color(0xFF24272A), keyAlt = Color(0xFF343535),
+            text = Color(0xFFF7F1E3), action = Color(0xFFB9914D), actionText = Color(0xFF21180A),
+            border = Color(0xFF6A6254), secondaryBorder = Color(0xFFB9914D),
+        )
+        "keyboard_midnight" -> WordKeyboardPalette(
+            background = Color(0xFF0E1625), key = Color(0xFF1B2740), keyAlt = Color(0xFF263551),
+            text = Color(0xFFEDF3FF), action = Color(0xFF5C7CFA), actionText = Color.White,
+            border = Color(0xFF31466B), secondaryBorder = Color(0xFF13D8D0),
+        )
+        "keyboard_black_gold" -> WordKeyboardPalette(
+            background = Color(0xFF090A0D), key = Color(0xFF17191D), keyAlt = Color(0xFF252119),
+            text = Color(0xFFFFF0CF), action = Color(0xFFE0B45C), actionText = Color(0xFF21170A),
+            border = Color(0xFF6E592E), secondaryBorder = Color(0xFFE0B45C),
+        )
+        "keyboard_premium_white" -> WordKeyboardPalette(
+            background = Color(0xFFF3F6FA), key = Color.White, keyAlt = Color(0xFFE8EEF5),
+            text = Color(0xFF263238), action = Color(0xFF2A72E5), actionText = Color.White,
+            border = Color(0xFFCFD9E6), secondaryBorder = Color(0xFF14B8B1),
+        )
+        else -> WordKeyboardPalette(
+            background = Color(0xFFF0F5F1), key = Color(0xFFFFFEF8), keyAlt = Color(0xFFDDE9E1),
+            text = Color(0xFF213C31), action = Color(0xFF4F7964), actionText = Color.White,
+            border = Color(0xFFC4D5CA), secondaryBorder = Color(0xFF6D9080),
+        )
+    }
+
+    /** Black Theme is the live catalog id; dark_arena remains an ownership/cache compatibility alias. */
+    val darkArenaTheme: Boolean get() = gameThemeId in setOf("theme_black", "theme_dark_arena")
     // Kept for compatibility with an already-equipped legacy item. It is no longer sold.
     val monsterBlueTheme: Boolean get() = gameThemeId == "theme_monster_blue"
     // Retained only so older arena code compiles; Aurora is retired from sale.
