@@ -18,11 +18,15 @@ object SonHarfCosmetics {
     var keyboardThemeId by mutableStateOf<String?>(null)
     var victoryEffectId by mutableStateOf<String?>(null)
     var emojiPackId by mutableStateOf<String?>(null)
+    var blackThemeOwned by mutableStateOf(false)
+        private set
 
-    fun apply(e: EquippedCosmeticsDto?) {
+    fun apply(e: EquippedCosmeticsDto?, ownedItems: Set<String> = emptySet()) {
+        blackThemeOwned = BLACK_THEME_ID in ownedItems
         profileFrameId = e?.profileFrameId?.takeIf { !it.isNullOrBlank() }
         nameStyleId = e?.nameStyleId
-        gameThemeId = e?.gameThemeId
+        // A cached/equipped ID alone never grants Black Theme. Ownership is server-authoritative.
+        gameThemeId = e?.gameThemeId?.takeIf { it != BLACK_THEME_ID || blackThemeOwned }
         keyboardThemeId = e?.keyboardThemeId
         victoryEffectId = e?.victoryEffectId
         emojiPackId = e?.emojiPackId
@@ -31,13 +35,15 @@ object SonHarfCosmetics {
     fun restore(context: Context) {
         val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         profileFrameId = prefs.getString("profile_frame_id", null)?.takeIf { !it.isNullOrBlank() }
-        gameThemeId = prefs.getString("game_theme_id", null)
+        // Never restore theme_black from SharedPreferences; server ownership + equipped state are required.
+        gameThemeId = prefs.getString("game_theme_id", null)?.takeIf { it != BLACK_THEME_ID }
+        blackThemeOwned = false
         nameStyleId = prefs.getString("name_style_id", null)
         keyboardThemeId = prefs.getString("keyboard_theme_id", null)
     }
 
-    fun applyAndPersist(context: Context, e: EquippedCosmeticsDto?) {
-        apply(e)
+    fun applyAndPersist(context: Context, e: EquippedCosmeticsDto?, ownedItems: Set<String> = emptySet()) {
+        apply(e, ownedItems)
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
             .putString("profile_frame_id", profileFrameId)
             .putString("game_theme_id", gameThemeId)
@@ -46,7 +52,7 @@ object SonHarfCosmetics {
             .apply()
     }
 
-    val blackThemeActive: Boolean get() = gameThemeId == BLACK_THEME_ID
+    val blackThemeActive: Boolean get() = blackThemeOwned && gameThemeId == BLACK_THEME_ID
 
     val profileAccent: Color
         get() = when (profileFrameId) {
