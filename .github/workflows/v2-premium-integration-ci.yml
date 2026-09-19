@@ -1,0 +1,68 @@
+name: V2 Premium Integration CI
+
+on:
+  pull_request:
+    branches:
+      - ci/v2-premium-integration-base-20260919
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+      - name: Verify canonical V2 visual runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumHomePolish.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt
+          grep -q 'PremiumCanvaAppV2(' app/src/main/java/com/sonharf/game/StableV1App.kt
+          grep -q 'HAFTANIN EN İYİLERİ' app/src/main/java/com/sonharf/game/PremiumHomePolish.kt
+          grep -q 'val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          ! grep -q 'MonsterLime' app/src/main/java/com/sonharf/game/SonHarfTheme.kt
+          test -s app/src/main/res/drawable-nodpi/kelime_kusatmasi_app_icon.webp
+      - name: Verify premium product source
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'SERIES_GAME = "series_game"' app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt
+          grep -q 'LETTER_TABLE = "letter_table"' app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt
+          grep -q 'SCORE_CALCULATOR = "score_calculator"' app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt
+          grep -q 'PRO_LIFETIME = "pro_lifetime"' app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt
+          test -f app/src/main/java/com/sonharf/game/WordSiegeSeriesScreen.kt
+          test -f app/src/main/java/com/sonharf/game/WordSiegePremiumPanel.kt
+          test -f supabase/migrations/20260919013000_premium_permanent_products_v1.sql
+          test -f supabase/migrations/20260919121000_pro_friend_list_rls_perf_and_series_picker_v2.sql
+      - name: Unit tests and debug APK
+        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+      - name: Verify APK integrity
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk KelimeKusatmasi-V2-Premium-Integration.apk
+          sha256sum KelimeKusatmasi-V2-Premium-Integration.apk | tee KelimeKusatmasi-V2-Premium-Integration.sha256
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose --print-certs KelimeKusatmasi-V2-Premium-Integration.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kelime-kusatmasi-v2-premium-integration
+          path: |
+            KelimeKusatmasi-V2-Premium-Integration.apk
+            KelimeKusatmasi-V2-Premium-Integration.sha256
+          retention-days: 7
