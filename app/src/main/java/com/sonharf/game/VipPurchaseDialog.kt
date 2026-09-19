@@ -4,14 +4,14 @@ import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -40,33 +40,41 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
-    var yearly by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
     var connected by remember { mutableStateOf(false) }
-    var products by remember { mutableStateOf<Map<String, ProductDetails>>(emptyMap()) }
+    var product by remember { mutableStateOf<ProductDetails?>(null) }
 
     val manager = remember {
         BillingManager(
             context = context,
             onPurchase = { purchase ->
                 val productId = purchase.products.firstOrNull()
-                if (productId.isNullOrBlank()) {
-                    notice = sh("Google Play ürün bilgisi alınamadı.", "Google Play product information is missing.")
+                if (productId != ProductCatalog.PRO_LIFETIME) {
+                    notice = sh("Google Play PRO ürün bilgisi doğrulanamadı.", "Google Play PRO product information could not be verified.")
                     busy = false
                 } else {
                     scope.launch {
                         busy = true
-                        runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
+                        runCatching { PlayPurchaseVerification.verify(ProductCatalog.PRO_LIFETIME, purchase.purchaseToken) }
                             .onSuccess {
-                                notice = sh("PRO üyeliğin sunucuda doğrulandı.", "Your PRO membership was verified on the server.")
+                                notice = sh(
+                                    "PRO kalıcı olarak açıldı. İlk doğrulamada 100 Son Coin hesabına eklenir.",
+                                    "PRO is permanently unlocked. 100 Son Coins are granted on the first verified purchase.",
+                                )
                                 onVerified()
                             }
                             .onFailure { error ->
                                 notice = if ("google_play_not_configured" in error.message.orEmpty()) {
-                                    sh("Ödeme doğrulama servisi henüz yayın anahtarıyla yapılandırılmadı.", "Purchase verification is not configured for release yet.")
+                                    sh(
+                                        "Google Play sunucu doğrulaması production hesabıyla henüz etkin değil.",
+                                        "Google Play server verification is not enabled with the production account yet.",
+                                    )
                                 } else {
-                                    sh("Ödeme alındı ancak sunucu doğrulaması tamamlanamadı. Tekrar denemek ikinci kez ücretlendirmez.", "Payment was received but server verification is pending. Retrying will not charge twice.")
+                                    sh(
+                                        "Ödeme alındı ancak sunucu doğrulaması tamamlanamadı. Aynı token ikinci kez hak veya Coin vermez.",
+                                        "Payment was received but server verification is pending. The same token cannot grant entitlement or Coins twice.",
+                                    )
                                 }
                             }
                         busy = false
@@ -80,15 +88,17 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
     DisposableEffect(manager) {
         manager.connect {
             connected = true
-            manager.querySubscriptions(listOf(ProductCatalog.VIP_MONTHLY, ProductCatalog.VIP_YEARLY)) { products = it }
+            manager.queryOneTimeProducts(listOf(ProductCatalog.PRO_LIFETIME)) { details ->
+                product = details[ProductCatalog.PRO_LIFETIME]
+                // Silent account recovery only: there is intentionally no visible Restore Purchases button.
+                manager.restorePurchases(setOf(ProductCatalog.PRO_LIFETIME))
+            }
         }
         onDispose { manager.close() }
     }
 
-    val selectedId = if (yearly) ProductCatalog.VIP_YEARLY else ProductCatalog.VIP_MONTHLY
-    val selectedProduct = products[selectedId]
-    val monthlyPrice = subscriptionPrice(products[ProductCatalog.VIP_MONTHLY]) ?: sh("Play fiyatı", "Play price")
-    val yearlyPrice = subscriptionPrice(products[ProductCatalog.VIP_YEARLY]) ?: sh("Play fiyatı", "Play price")
+    val playPrice = product?.oneTimePurchaseOfferDetails?.formattedPrice
+        ?: ProductCatalog.PRO_LIFETIME_FALLBACK_PRICE_TRY
 
     Dialog(
         onDismissRequest = { if (!busy) onDismiss() },
@@ -101,34 +111,41 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
             border = BorderStroke(1.dp, ProBorder),
             shadowElevation = 16.dp,
         ) {
-            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(sh("Kelime Tahtı PRO", "Kelime Tahtı PRO"), color = ProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Adil premium üyelik", "Fair-play premium membership"), color = ProBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Kelime Kuşatması PRO", color = ProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                        Text(sh("Tek ödeme • Kalıcı kullanım", "One payment • Permanent access"), color = ProBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                     TextButton(onClick = onDismiss, enabled = !busy) { Text("✕", color = ProText, fontSize = 18.sp) }
                 }
 
-                ProBenefit(Icons.Rounded.Block, sh("REKLAMSIZ", "AD-FREE"), sh("Menü ve mağazada reklamsız deneyim", "Ad-free menus and shop"))
-                ProBenefit(Icons.Rounded.Palette, sh("PRO STYLE", "PRO STYLE"), sh("Özel görünüm ve profil ayrıcalıkları", "Exclusive appearance and profile benefits"))
-                ProBenefit(Icons.Rounded.MeetingRoom, sh("ÖZEL ODALAR", "PRIVATE ROOMS"), sh("Arkadaşlarınla özel oyun alanları", "Private play spaces with friends"))
-                ProBenefit(Icons.Rounded.Insights, sh("GELİŞMİŞ İSTATİSTİK", "ADVANCED STATS"), sh("Detaylı maç analizi ve performans", "Detailed match analysis and performance"))
-                ProBenefit(Icons.Rounded.Groups, sh("SOSYAL AYRICALIKLAR", "SOCIAL BENEFITS"), sh("Kaydedilmiş arkadaş listesi ve PRO profil değeri", "Saved friend list and PRO profile value"))
+                ProBenefit(Icons.Rounded.Block, sh("REKLAMSIZ", "AD-FREE"), sh("Uygulamadaki reklam alanları kaldırılır", "Ad placements are removed from the app"))
+                ProBenefit(Icons.Rounded.Calculate, sh("PUAN HESAPLAYICI", "SCORE CALCULATOR"), sh("Kuşatma hamlesini onaylamadan önce gerçek motorla önizle", "Preview Siege scoring with the real engine before confirming"))
+                ProBenefit(Icons.Rounded.GridView, sh("HARF TABLOSU", "LETTER TABLE"), sh("Rakip elini açmadan matematiksel kalan harfleri gör", "See mathematically remaining letters without exposing the opponent rack"))
+                ProBenefit(Icons.Rounded.Timer, sh("SERİ OYUN", "SERIES GAME"), sh("3 / 5 / 10 dakikalık ayrı hızlı oyun sistemi", "Separate 3 / 5 / 10 minute fast-game system"))
+                ProBenefit(Icons.Rounded.Groups, sh("ARKADAŞ LİSTESİ", "FRIENDS LIST"), sh("Arkadaş yönetimi ve arkadaş üzerinden oyun daveti", "Friend management and friend-based game invites"))
+                ProBenefit(Icons.Rounded.History, sh("SON HARF TAM GEÇMİŞ", "FULL SON HARF HISTORY"), sh("Maçta oynanan tüm kelimeleri görüntüle", "View every word played in the match"))
+                ProBenefit(Icons.Rounded.SportsEsports, sh("50 AKTİF OYUN", "50 ACTIVE GAMES"), sh("Aynı anda en fazla 50 aktif oyun", "Up to 50 active games at once"))
+                ProBenefit(Icons.Rounded.WorkspacePremium, sh("PRO PROFİL", "PRO PROFILE"), sh("Özel profil çerçevesi ve PRO rozeti", "Exclusive profile frame and PRO badge"))
+                ProBenefit(Icons.Rounded.Stars, "100 SON COIN", sh("İlk başarılı PRO grant'inde tek sefer", "Granted once on the first successful PRO grant"))
 
-                Surface(shape = RoundedCornerShape(14.dp), color = ProGreen.copy(alpha = .10f), border = BorderStroke(1.dp, ProGreen.copy(alpha = .35f))) {
-                    Text(
-                        sh(
-                            "ADİL REKABET: PRO, dereceli Premier maçlarda skor, hedef harf veya kelime avantajı vermez.",
-                            "FAIR PLAY: PRO gives no score, target-letter, or word advantage in ranked Premier matches.",
-                        ),
-                        Modifier.fillMaxWidth().padding(11.dp), color = ProGreen, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
-                    )
-                }
-
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    ProPlan(sh("AYLIK", "MONTHLY"), monthlyPrice, !yearly, Modifier.weight(1f)) { yearly = false }
-                    ProPlan(sh("YILLIK", "YEARLY"), yearlyPrice, yearly, Modifier.weight(1f)) { yearly = true }
+                Surface(
+                    shape = RoundedCornerShape(18.dp),
+                    color = ProSurface,
+                    border = BorderStroke(2.dp, ProBlue.copy(alpha = .55f)),
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column {
+                            Text("PRO LIFETIME", color = ProBlue, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                            Text(sh("Kalıcı erişim", "Permanent access"), color = ProMuted, fontSize = 9.sp)
+                        }
+                        Text(playPrice, color = ProText, fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    }
                 }
 
                 Button(
@@ -137,32 +154,63 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                             notice = sh("Google Play ödeme ekranı açılamadı.", "Google Play billing could not be opened.")
                             return@Button
                         }
-                        val product = selectedProduct
-                        if (product == null) {
-                            notice = if (connected) sh("Seçilen PRO ürünü bu hesap için kullanılamıyor.", "The selected PRO product is unavailable for this account.")
-                            else sh("Google Play bağlantısı hazırlanıyor.", "Connecting to Google Play.")
+                        val details = product
+                        if (details == null) {
+                            notice = if (connected) {
+                                sh("PRO ürünü Google Play'de bu hesap için henüz satışa açık değil.", "The PRO product is not yet available for this account on Google Play.")
+                            } else {
+                                sh("Google Play bağlantısı hazırlanıyor.", "Connecting to Google Play.")
+                            }
                             return@Button
                         }
                         busy = true
-                        val result = manager.launchProduct(activity, product)
+                        val result = manager.launchProduct(activity, details)
                         if (result.responseCode != BillingClient.BillingResponseCode.OK) {
                             busy = false
-                            notice = sh("Google Play ödeme ekranı açılamadı (${result.responseCode}).", "Google Play billing could not open (${result.responseCode}).")
+                            notice = sh(
+                                "Google Play ödeme ekranı açılamadı (${result.responseCode}).",
+                                "Google Play billing could not open (${result.responseCode}).",
+                            )
                         }
                     },
-                    enabled = !busy && selectedProduct != null,
+                    enabled = !busy && product?.oneTimePurchaseOfferDetails != null,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = ProBlue),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = ProBlue,
+                        disabledContainerColor = SonHarfTheme.DisabledBackground,
+                        disabledContentColor = SonHarfTheme.DisabledContent,
+                    ),
                 ) {
-                    Text(if (busy) sh("DOĞRULANIYOR…", "VERIFYING…") else sh("PRO'YA GEÇ", "GET PRO"), fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    Text(
+                        if (busy) sh("DOĞRULANIYOR…", "VERIFYING…") else sh("PRO'YU SATIN AL", "BUY PRO"),
+                        fontWeight = FontWeight.Black,
+                        fontSize = 15.sp,
+                    )
                 }
 
-                TextButton(enabled = !busy, onClick = { manager.restorePurchases(setOf(ProductCatalog.VIP_MONTHLY, ProductCatalog.VIP_YEARLY)) }) {
-                    Text(sh("Satın almaları geri yükle", "Restore purchases"))
+                if (product == null) {
+                    Text(
+                        sh(
+                            "Satın alma yalnızca Google Play gerçek ürün bilgisini döndürdüğünde açılır.",
+                            "Purchase is enabled only when Google Play returns real product details.",
+                        ),
+                        Modifier.fillMaxWidth(),
+                        color = ProMuted,
+                        fontSize = 8.sp,
+                        textAlign = TextAlign.Center,
+                    )
                 }
-                if (notice.isNotBlank()) Text(notice, Modifier.fillMaxWidth(), color = ProMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
-                Text(sh("Google Play ile güvenli ödeme • İstediğin zaman iptal", "Secure Google Play billing • Cancel anytime"), Modifier.fillMaxWidth(), color = ProMuted, fontSize = 8.sp, textAlign = TextAlign.Center)
+                if (notice.isNotBlank()) {
+                    Text(notice, Modifier.fillMaxWidth(), color = ProMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
+                }
+                Text(
+                    sh("Google Play ile güvenli tek ödeme", "Secure one-time Google Play purchase"),
+                    Modifier.fillMaxWidth(),
+                    color = ProMuted,
+                    fontSize = 8.sp,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }
@@ -182,22 +230,3 @@ private fun ProBenefit(icon: ImageVector, title: String, subtitle: String) {
         Text("✓", color = ProGreen, fontWeight = FontWeight.Black)
     }
 }
-
-@Composable
-private fun ProPlan(title: String, price: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Surface(
-        modifier = modifier,
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = if (selected) ProBlue.copy(alpha = .16f) else ProSurface,
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) ProBlue else ProBorder),
-    ) {
-        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(title, color = if (selected) ProBlue else ProText, fontSize = 12.sp, fontWeight = FontWeight.Black)
-            Text(price, color = ProMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
-        }
-    }
-}
-
-private fun subscriptionPrice(details: ProductDetails?): String? =
-    details?.subscriptionOfferDetails?.firstOrNull()?.pricingPhases?.pricingPhaseList?.lastOrNull()?.formattedPrice
