@@ -32,6 +32,15 @@ jobs:
         run: python3 automation/validate_profile_frame_geometry.py
       - name: Build and test debug
         run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
+      - name: Stage installable APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk profile-frames-v2-debug.apk
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: profile-frames-v2-debug-apk
+          path: profile-frames-v2-debug.apk
+          if-no-files-found: error
+          retention-days: 7
       - name: Commit verified patch
         run: |
           set -euo pipefail
