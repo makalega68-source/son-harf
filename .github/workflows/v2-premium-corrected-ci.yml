@@ -8,7 +8,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
         with:
@@ -19,7 +19,8 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: gradle
-      - name: V2 runtime contract
+
+      - name: V2 visual runtime contract
         shell: bash
         run: |
           set -euo pipefail
@@ -28,32 +29,48 @@ jobs:
           grep -q 'lightColorScheme' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
           grep -q 'PremiumWeeklyBestPolished' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
           grep -q 'PremiumV2BottomBar' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
-          grep -q 'KELİME KUŞATMASI' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
-          grep -q 'SON HARF' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
-          grep -q 'HARF YOLU' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
-          grep -q 'SERİ OYUN' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
-      - name: Canva and product source contracts
+          for label in 'KELİME KUŞATMASI' 'SON HARF' 'HARF YOLU' 'SERİ OYUN'; do grep -q "$label" app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt; done
+          grep -q 'SonHarfTopAdBanner(isPremium = isPro)' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'premium?.isPro == true' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+
+      - name: Canva provenance and runtime asset contract
         shell: bash
         run: |
           set -euo pipefail
+          grep -q 'DAHVlfbi7x4' docs/CANVA_PREMIUM_ASSETS_V2.json
           for a in premium_series_game_canva.webp premium_letter_table_canva.webp premium_score_calculator_canva.webp premium_pro_canva.webp; do
             p="app/src/main/res/drawable-nodpi/$a"
             test -s "$p"
             bytes=$(stat -c%s "$p")
-            test "$bytes" -gt 1000
+            test "$bytes" -gt 10000
             test "$bytes" -lt 2000000
+          done
+          for old in premium_series_game.xml premium_letter_table.xml premium_score_calculator.xml premium_pro.xml; do
+            test ! -e "app/src/main/res/drawable/$old"
           done
           grep -q 'R.drawable.premium_series_game_canva' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
           grep -q 'R.drawable.premium_letter_table_canva' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
           grep -q 'R.drawable.premium_score_calculator_canva' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
           grep -q 'R.drawable.premium_pro_canva' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
           ! grep -R --line-number -E 'R\.drawable\.premium_(series_game|letter_table|score_calculator|pro)([^_a-zA-Z]|$)' app/src/main/java || (echo 'placeholder premium vector reference found' >&2; exit 1)
+          sha256sum app/src/main/res/drawable-nodpi/premium_*_canva.webp | tee CANVA_ASSET_SHA256.txt
+
+      - name: Premium product and ownership contracts
+        shell: bash
+        run: |
+          set -euo pipefail
           for sku in series_game letter_table score_calculator pro_lifetime; do grep -q "$sku" app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt; done
           grep -q 'seriesGameDirectOwned' app/src/main/java/com/sonharf/game/data/VipEntitlements.kt
+          grep -q 'letterTableDirectOwned' app/src/main/java/com/sonharf/game/data/VipEntitlements.kt
+          grep -q 'scoreCalculatorDirectOwned' app/src/main/java/com/sonharf/game/data/VipEntitlements.kt
           grep -q 'PRO İLE AÇIK' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
           grep -q 'SATIN ALINDI' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
           grep -q 'oneTimePurchaseOfferDetails' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
-      - name: Premium security contracts
+          grep -q 'productId = ProductCatalog.SERIES_GAME' app/src/main/java/com/sonharf/game/WordSiegeSeriesScreen.kt
+          grep -q 'showPremiumProducts = true' app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt
+          ! grep -R -n -E 'ADİL REKABET|FAIR PLAY:|Manage subscription|Aboneliği yönet|Restore Purchases' app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt
+
+      - name: Premium backend and security source contracts
         shell: bash
         run: |
           set -euo pipefail
@@ -68,23 +85,66 @@ jobs:
           grep -q 'applyAndPersist(context, nextEquipped, nextOwned)' app/src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt
           grep -q 'applyAndPersist(context, next, owned)' app/src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt
           grep -q 'backend.getVipEntitlements().isPro' app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt
+          grep -q 'series_auto_pass' supabase/migrations/20260919043000_word_siege_series_game_v1.sql
+          grep -q 'series_three_missed_turns' supabase/migrations/20260919043000_word_siege_series_game_v1.sql
+          grep -q "game_mode='series'" supabase/migrations/20260919043000_word_siege_series_game_v1.sql
+          grep -q "has_permanent_entitlement_v1(p_user_id,'pro_lifetime')" supabase/migrations/20260919141500_v2_premium_corrected_entitlements_v2.sql
+          grep -q "active_game_limit', case when pro then 50 else 10 end" supabase/migrations/20260919141500_v2_premium_corrected_entitlements_v2.sql
+
       - name: Unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
-      - name: Assemble installable debug APK
-        run: ./gradlew --no-daemon assembleDebug
-      - name: APK integrity
+
+      - name: Summarize unit tests
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          files = sorted(Path('app/build/test-results/testDebugUnitTest').glob('TEST-*.xml'))
+          if not files:
+              raise SystemExit('No unit-test XML reports found')
+          tests = failures = errors = skipped = 0
+          for f in files:
+              root = ET.parse(f).getroot()
+              tests += int(root.attrib.get('tests', 0))
+              failures += int(root.attrib.get('failures', 0))
+              errors += int(root.attrib.get('errors', 0))
+              skipped += int(root.attrib.get('skipped', 0))
+          summary = f'tests={tests}\nfailures={failures}\nerrors={errors}\nskipped={skipped}\n'
+          Path('UNIT_TEST_SUMMARY.txt').write_text(summary)
+          print(summary, end='')
+          if failures or errors:
+              raise SystemExit('Unit tests are not clean')
+          PY
+
+      - name: Assemble named installable APK
+        run: |
+          ./gradlew --no-daemon assembleDebug
+          apk=$(find app/build/outputs/apk/debug -name '*.apk' -type f | head -1)
+          test -s "$apk"
+          cp "$apk" KelimeKusatmasi-V2-Premium-Corrected-Final.apk
+
+      - name: APK integrity, package and signature
         shell: bash
         run: |
           set -euo pipefail
-          apk=$(find app/build/outputs/apk/debug -name '*.apk' -type f | head -1)
+          apk=KelimeKusatmasi-V2-Premium-Corrected-Final.apk
           test -s "$apk"
           unzip -t "$apk" >/dev/null
+          build_tools=$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -1)
+          "$build_tools/aapt" dump badging "$apk" | tee APK_BADGING.txt
+          grep -q "package: name='com.sonharf.game'" APK_BADGING.txt
+          "$build_tools/apksigner" verify --verbose --print-certs "$apk" | tee APK_SIGNING.txt
           sha256sum "$apk" | tee APK_SHA256.txt
+
       - uses: actions/upload-artifact@v4
         with:
-          name: kelime-kusatmasi-v2-premium-corrected-debug
+          name: KelimeKusatmasi-V2-Premium-Corrected-Final
           path: |
-            app/build/outputs/apk/debug/*.apk
+            KelimeKusatmasi-V2-Premium-Corrected-Final.apk
             APK_SHA256.txt
+            APK_BADGING.txt
+            APK_SIGNING.txt
+            UNIT_TEST_SUMMARY.txt
+            CANVA_ASSET_SHA256.txt
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 14
