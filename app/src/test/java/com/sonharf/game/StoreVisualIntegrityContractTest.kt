@@ -63,8 +63,10 @@ class StoreVisualIntegrityContractTest {
         ).forEach { artwork -> assertTrue("Missing coin artwork mapping $artwork", play.contains(artwork)) }
         assertFalse(play.contains("R.drawable.style_icon_coin"))
         assertTrue(play.contains("@DrawableRes imageRes: Int"))
-        assertTrue(play.contains("product != null"))
+        assertTrue(play.contains("val offer = product?.oneTimePurchaseOfferDetails"))
+        assertTrue(play.contains("enabled = !busy && offer != null"))
         assertTrue(play.contains("PLAY'DE YOK"))
+        assertFalse(play.contains("fallbackPrice"))
         assertFalse(play.contains("?: \"PLAY\""))
     }
 
