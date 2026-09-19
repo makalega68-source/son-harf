@@ -187,9 +187,10 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onCollection = { destination = PremiumDestination.COLLECTION },
                     )
                     PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()
-                    PremiumDestination.SIEGE -> WordSiegeExperienceScreen {
-                        leaveGame()
-                    }
+                    PremiumDestination.SIEGE -> WordSiegeEntryScreen(
+                        onExit = { leaveGame() },
+                        onOpenStore = { leaveGame(PremiumDestination.SHOP) },
+                    )
                     PremiumDestination.LETTER_PATH -> LetterLadderGameScreen {
                         leaveGame()
                     }
