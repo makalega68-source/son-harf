@@ -30,6 +30,8 @@ jobs:
           t = Path('app/src/test/java/com/sonharf/game/V2PremiumFinalAcceptanceContractTest.kt')
           s = t.read_text()
           s = s.replace('import kotlin.test.Test\nimport kotlin.test.assertFalse\nimport kotlin.test.assertTrue\n', 'import org.junit.Assert.assertFalse\nimport org.junit.Assert.assertTrue\nimport org.junit.Test\n')
+          s = s.replace('assertTrue(it in s, "Missing PRO benefit: $it")', 'assertTrue("Missing PRO benefit: $it", it in s)')
+          s = s.replace('assertTrue(it in sql, "Missing Series backend contract marker: $it")', 'assertTrue("Missing Series backend contract marker: $it", it in sql)')
           t.write_text(s)
           p = Path('app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt')
           s = p.read_text().replace('exposing a legacy subscription-style Restore Purchases action in the UI.', 'exposing a legacy restore action in the UI.')
