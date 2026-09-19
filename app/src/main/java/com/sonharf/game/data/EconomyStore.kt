@@ -7,12 +7,14 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
-private val supportedProfileFrameIds = setOf(
-    // Profile Frames V2 - active paid frames.
+private val playOnlyProfileFrameIds = setOf(
     "profile_frame_pink_blossom",
     "profile_frame_blue_royal",
     "profile_frame_amethyst",
     "profile_frame_emerald",
+)
+
+private val supportedProfileFrameIds = playOnlyProfileFrameIds + setOf(
     // Historical ownership remains readable for account recovery; old renderer stays retired.
     "frame_round_starter_blue",
     "frame_round_starter_pink",
@@ -84,7 +86,8 @@ suspend fun OnlineGameBackend.getShopItems(): List<ShopItemDto> =
     SupabaseProvider.client.from("shop_items").select().decodeList<ShopItemDto>()
         .filter { item ->
             item.active && when (item.kind) {
-                "profile_frame" -> item.id in supportedProfileFrameIds
+                // Profile Frames V2 are Google Play-only and render in their dedicated billing row.
+                "profile_frame" -> item.id in supportedProfileFrameIds && item.id !in playOnlyProfileFrameIds
                 "game_theme" -> item.id in supportedGameThemeIds
                 else -> true
             }
