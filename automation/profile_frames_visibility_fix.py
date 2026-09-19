@@ -17,21 +17,16 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
     return text.replace(old, new, 1)
 
 
-def replace_if_present(text: str, old: str, new: str, label: str) -> str:
-    if old in text:
-        return replace_once(text, old, new, label)
-    return text
-
-
 # 1) Remove gender symbols from every shared avatar renderer while preserving gender data itself.
 photo = PHOTO.read_text(encoding="utf-8")
-photo = re.sub(
-    r"\nprivate data class GenderVisual\(.*?\n@Composable\nprivate fun SyntheticProfilePortrait",
-    "\n@Composable\nprivate fun SyntheticProfilePortrait",
-    photo,
-    count=1,
-    flags=re.S,
-)
+if "private data class GenderVisual" in photo:
+    photo = re.sub(
+        r"\nprivate data class GenderVisual\(.*?\n@Composable\nprivate fun SyntheticProfilePortrait",
+        "\n@Composable\nprivate fun SyntheticProfilePortrait",
+        photo,
+        count=1,
+        flags=re.S,
+    )
 photo = photo.replace("    val visual = genderVisual(gender)\n", "")
 photo = photo.replace(
     "                    (visual?.color ?: Color(0xFF57C7F3)).copy(alpha = .28f),\n",
@@ -53,17 +48,27 @@ photo = photo.replace(
 """,
     "",
 )
+photo = photo.replace(
+    """        if (showGenderBadge) {
+            Box(Modifier.align(Alignment.BottomEnd)) {
+                FramelessGenderSymbol(gender, diameter)
+            }
+        }
+""",
+    "",
+)
 PHOTO.write_text(photo, encoding="utf-8")
 
-# 2) V2 decorative frames must also never add a gender badge.
+# 2) V2 decorative frames must never add a gender badge.
 frames = FRAMES.read_text(encoding="utf-8")
-frames = re.sub(
-    r"\nprivate data class ProfileFrameGenderVisual\(.*?\n@Composable\ninternal fun ProfileFrameAvatarBytesV2",
-    "\n@Composable\ninternal fun ProfileFrameAvatarBytesV2",
-    frames,
-    count=1,
-    flags=re.S,
-)
+if "private data class ProfileFrameGenderVisual" in frames:
+    frames = re.sub(
+        r"\nprivate data class ProfileFrameGenderVisual\(.*?\n@Composable\ninternal fun ProfileFrameAvatarBytesV2",
+        "\n@Composable\ninternal fun ProfileFrameAvatarBytesV2",
+        frames,
+        count=1,
+        flags=re.S,
+    )
 frames = frames.replace(
     """        if (showGenderBadge) {
             Box(modifier = Modifier.align(Alignment.BottomEnd)) {
@@ -75,9 +80,15 @@ frames = frames.replace(
 )
 
 # Make the ordinary-player frame visibly white even on very light profile backgrounds.
-# The original transparent artwork remains on top; this support ring supplies a clean white rim.
-marker = "        val photoSize = outerSize * visual.photoRatio\n"
-white_ring = """        val photoSize = outerSize * visual.photoRatio
+# The transparent artwork stays on top; a crisp white support ring is layered underneath the photo.
+if "val standardFrame = equippedPaidFrameId == null && !isPro" not in frames:
+    frames = replace_once(
+        frames,
+        """    Box(modifier = Modifier.size(outerSize), contentAlignment = Alignment.Center) {
+        val photoSize = outerSize * visual.photoRatio
+        if (bitmap != null) {""",
+        """    Box(modifier = Modifier.size(outerSize), contentAlignment = Alignment.Center) {
+        val photoSize = outerSize * visual.photoRatio
         val standardFrame = equippedPaidFrameId == null && !isPro
         if (standardFrame) {
             Surface(
@@ -88,15 +99,38 @@ white_ring = """        val photoSize = outerSize * visual.photoRatio
                 shadowElevation = 2.dp,
             ) {}
         }
-"""
-# Bytes renderer has this line inside the Box; Path renderer has it before the Box. Apply to both.
-if "val standardFrame = equippedPaidFrameId == null && !isPro" not in frames:
-    if frames.count(marker) != 2:
-        raise SystemExit(f"ProfileFramesV2 photoSize markers: expected 2, found {frames.count(marker)}")
-    frames = frames.replace(marker, white_ring)
+        if (bitmap != null) {""",
+        "bytes standard white support ring",
+    )
+    frames = replace_once(
+        frames,
+        """    val photoSize = outerSize * visual.photoRatio
+
+    // Render the photo directly beneath the decorative PNG. Do not call the legacy avatar
+    // renderer here: it adds its own gradient ring/padding and creates a visible double-frame.
+    Box(modifier = Modifier.size(outerSize), contentAlignment = Alignment.Center) {
+        if (bitmap != null) {""",
+        """    val photoSize = outerSize * visual.photoRatio
+    val standardFrame = equippedPaidFrameId == null && !isPro
+
+    // Render the photo directly beneath the decorative PNG. Do not call the legacy avatar
+    // renderer here: it adds its own gradient ring/padding and creates a visible double-frame.
+    Box(modifier = Modifier.size(outerSize), contentAlignment = Alignment.Center) {
+        if (standardFrame) {
+            Surface(
+                modifier = Modifier.size(photoSize + 12.dp),
+                shape = CircleShape,
+                color = Color.White,
+                border = BorderStroke(2.dp, Color(0xFFD7DDE5)),
+                shadowElevation = 2.dp,
+            ) {}
+        }
+        if (bitmap != null) {""",
+        "path standard white support ring",
+    )
 FRAMES.write_text(frames, encoding="utf-8")
 
-# 3) Active profile screen must validate equipped paid frame against server-owned inventory.
+# 3) Active profile screen validates equipped paid frame against server-owned inventory.
 profile = PROFILE.read_text(encoding="utf-8")
 if "val inventoryTask = async" not in profile:
     profile = replace_once(
@@ -113,7 +147,7 @@ if "val inventoryTask = async" not in profile:
     )
 PROFILE.write_text(profile, encoding="utf-8")
 
-# 4) Paid frames must be visible from Featured as well as Styles, even before Play ProductDetails load.
+# 4) Paid frames are visible from Featured as well as Styles, before Play ProductDetails load.
 store = STORE.read_text(encoding="utf-8")
 store = store.replace("                if (tab == 2) {\n", "                if (tab == 0 || tab == 2) {\n", 1)
 STORE.write_text(store, encoding="utf-8")
@@ -126,8 +160,8 @@ frames = frames.replace(
 )
 FRAMES.write_text(frames, encoding="utf-8")
 
-# 5) Shared Kelime Kuşatması score cards use the frame renderer. This immediately covers
-# practice and every other game surface that uses WordSiegeScoreCard.
+# 5) Shared Kelime Kuşatması score cards use the frame renderer. This covers practice and every
+# other game surface that uses WordSiegeScoreCard.
 siege = SIEGE_UI.read_text(encoding="utf-8")
 if "frameId: String? = null" not in siege:
     siege = replace_once(
@@ -169,8 +203,8 @@ if "frameId: String? = null" not in siege:
     )
 SIEGE_UI.write_text(siege, encoding="utf-8")
 
-# 6) Practice screen resolves the local player's verified frame + PRO entitlement and passes them
-# into the shared game score card. Bots receive the ordinary white frame and no gender icon.
+# 6) Practice resolves the local player's verified frame + PRO entitlement. Bots use the ordinary
+# white frame. No score card renders a gender symbol.
 practice = PRACTICE.read_text(encoding="utf-8")
 for import_line in [
     "import com.sonharf.game.data.getEquippedCosmetics\n",
