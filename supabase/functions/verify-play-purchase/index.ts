@@ -10,6 +10,7 @@ const oneTimeProducts = new Set([
   "coins_500", "coins_1500", "coins_3500", "coins_8000",
   "starter_style_pack", "premium_style_pack", "season_pack", "vip_welcome_pack", "theme_neon",
   "profile_frame_ocean", "profile_frame_botanic", "profile_frame_lilac", "profile_frame_rose",
+  "profile_frame_pink_blossom", "profile_frame_blue_royal", "profile_frame_amethyst", "profile_frame_emerald",
 ]);
 const consumableProducts = new Set(["coins_500", "coins_1500", "coins_3500", "coins_8000"]);
 const entitledSubscriptionStates = new Set([
