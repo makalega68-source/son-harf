@@ -374,14 +374,14 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             busy = busy,
             onInput = { chatInput = it.take(300) },
             onDismiss = { showChat = false },
-            onSend = {
-                if (chatInput.isBlank() || busy) return@WordSiegeChatDialog
-                val outgoing = chatInput
+            onSend = { outgoing ->
+                val text = outgoing.trim().take(300)
+                if (text.isBlank() || busy) return@WordSiegeChatDialog
                 busy = true
                 scope.launch {
-                    runCatching { backend.sendWordSiegeMessage(gameId, outgoing) }
+                    runCatching { backend.sendWordSiegeMessage(gameId, text) }
                         .onSuccess {
-                            chatInput = ""
+                            if (chatInput.trim() == text) chatInput = ""
                             messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
                         }
                         .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
@@ -1028,23 +1028,32 @@ private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
     val won = game.winnerId == me
     val draw = game.winnerId == null
     val accent = when { draw -> MainUi.Gold; won -> MainUi.Green; else -> MainUi.Red }
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        color = accent.copy(alpha = .08f),
-        border = BorderStroke(1.dp, accent.copy(alpha = .45f)),
-    ) {
-        Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
-                color = accent,
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Black,
-            )
-            Text(
-                sh("Sonuç = kelime puanı + sahip olunan alan", "Result = word score + owned territory"),
-                color = MainUi.Muted,
-                fontSize = 10.sp,
+    Box(Modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color = accent.copy(alpha = .08f),
+            border = BorderStroke(1.dp, accent.copy(alpha = .45f)),
+        ) {
+            Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
+                    color = accent,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    sh("Sonuç = kelime puanı + sahip olunan alan", "Result = word score + owned territory"),
+                    color = MainUi.Muted,
+                    fontSize = 10.sp,
+                )
+            }
+        }
+        if (won && SonHarfCosmetics.crownVictory) {
+            CrownVictoryCelebration(
+                eventKey = "siege:${game.id}",
+                modifier = Modifier.matchParentSize(),
+                compact = true,
             )
         }
     }
@@ -1088,7 +1097,7 @@ private fun WordSiegeChatDialog(
     busy: Boolean,
     onInput: (String) -> Unit,
     onDismiss: () -> Unit,
-    onSend: () -> Unit,
+    onSend: (String) -> Unit,
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -1117,6 +1126,12 @@ private fun WordSiegeChatDialog(
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+                if (SonHarfCosmetics.emojiPackId == "emoji_vip") {
+                    Text(sh("VIP TEPKİLER", "VIP REACTIONS"), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Spacer(Modifier.height(5.dp))
+                    VipEmojiReactionRow(enabled = !busy, onSend = onSend)
+                    Spacer(Modifier.height(8.dp))
+                }
                 OutlinedTextField(
                     value = input,
                     onValueChange = onInput,
@@ -1125,7 +1140,13 @@ private fun WordSiegeChatDialog(
                     enabled = !busy,
                     placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) },
                     trailingIcon = {
-                        IconButton(onClick = onSend, enabled = input.isNotBlank() && !busy) {
+                        IconButton(
+                            onClick = {
+                                val text = input.trim()
+                                if (text.isNotEmpty()) onSend(text)
+                            },
+                            enabled = input.isNotBlank() && !busy,
+                        ) {
                             Icon(Icons.Rounded.Send, sh("Gönder", "Send"), tint = MainUi.Blue)
                         }
                     },

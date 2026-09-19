@@ -104,9 +104,10 @@ internal fun MonsterStyleStoreScreen() {
     LaunchedEffect(backend) { reload() }
 
     val tabs = listOf(
-        StoreTab(sh("VİTRİN", "FEATURED"), setOf("game_theme", "profile_frame", "name_style", "keyboard_theme"), Icons.Rounded.AutoAwesome),
+        StoreTab(sh("VİTRİN", "FEATURED"), setOf("game_theme", "profile_frame", "name_style", "keyboard_theme", "victory_effect", "emoji_pack"), Icons.Rounded.AutoAwesome),
         StoreTab(sh("ÇERÇEVELER", "FRAMES"), setOf("profile_frame"), Icons.Rounded.AccountCircle),
         StoreTab(sh("TEMALAR", "THEMES"), setOf("game_theme", "keyboard_theme"), Icons.Rounded.Palette),
+        StoreTab(sh("EFEKTLER", "EFFECTS"), setOf("victory_effect", "emoji_pack"), Icons.Rounded.AutoAwesome),
         StoreTab(sh("PROFİL", "PROFILE"), setOf("name_style"), Icons.Rounded.Title),
     )
     val visible = catalog.filter { it.kind in tabs[tab].kinds }
@@ -169,7 +170,8 @@ internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) 
         "keyboard_black_gold",
         "keyboard_premium_white",
     )
-    // Effects and emoji remain hidden until their in-match behavior is connected, not merely their store art.
+    "victory_effect" -> id == "victory_crown"
+    "emoji_pack" -> id == "emoji_vip"
     else -> false
 }
 
