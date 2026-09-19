@@ -83,14 +83,13 @@ class PremiumStoreProContractTest {
     fun `series mode is separated from classic matchmaking and enforces missed turn defeat`() {
         val series = repoFile("supabase/migrations/20260919043000_word_siege_series_game_v1.sql").readText()
         assertTrue(series.contains("find_or_create_word_siege_series_game_v1"))
-        assertTrue(series.contains("game_mode = 'series'"))
-        assertTrue(series.contains("game_mode = 'classic'"))
-        assertTrue(series.contains("turn_duration_minutes"))
-        assertTrue(series.contains("player_one_missed_turns"))
-        assertTrue(series.contains("player_two_missed_turns"))
-        assertTrue(series.contains("3"))
-        assertTrue(series.contains("5"))
-        assertTrue(series.contains("10"))
+        assertTrue(series.contains("where g.status='waiting' and g.game_mode='classic'"))
+        assertTrue(series.contains("where g.status='waiting' and g.game_mode='series'"))
+        assertTrue(series.contains("v_minutes not in (3,5,10)"))
+        assertTrue(series.contains("v_missed>=3"))
+        assertTrue(series.contains("series_auto_pass"))
+        assertTrue(series.contains("series_three_missed_turns"))
+        assertTrue(series.contains("word_siege_series_reset_actor_v1"))
     }
 
     @Test
