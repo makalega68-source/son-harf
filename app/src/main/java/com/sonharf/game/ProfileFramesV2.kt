@@ -75,13 +75,15 @@ internal object ProfileFrameV2Catalog {
 
     data class Visual(@DrawableRes val drawable: Int, val photoRatio: Float)
 
+    // Photo diameters are alpha-geometry validated against the 512x512 transparent artwork.
+    // Ornate frames intentionally overlap only the outer rim, never the readable avatar area.
     private val defaultVisual = Visual(R.drawable.profile_frame_default_gray, 301f / 512f)
-    private val proVisual = Visual(R.drawable.profile_frame_pro_gold, 312f / 512f)
+    private val proVisual = Visual(R.drawable.profile_frame_pro_gold, 308f / 512f)
     private val paidVisuals = mapOf(
-        PINK_BLOSSOM to Visual(R.drawable.profile_frame_shop_pink_blossom, 316f / 512f),
-        BLUE_ROYAL to Visual(R.drawable.profile_frame_shop_blue_royal, 333f / 512f),
-        AMETHYST to Visual(R.drawable.profile_frame_shop_amethyst, 316f / 512f),
-        EMERALD to Visual(R.drawable.profile_frame_shop_emerald, 324f / 512f),
+        PINK_BLOSSOM to Visual(R.drawable.profile_frame_shop_pink_blossom, 287f / 512f),
+        BLUE_ROYAL to Visual(R.drawable.profile_frame_shop_blue_royal, 321f / 512f),
+        AMETHYST to Visual(R.drawable.profile_frame_shop_amethyst, 293f / 512f),
+        EMERALD to Visual(R.drawable.profile_frame_shop_emerald, 293f / 512f),
     )
 
     fun ownedPaidFrame(equippedId: String?, ownedIds: Set<String>): String? =
