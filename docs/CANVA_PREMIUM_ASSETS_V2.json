@@ -1,0 +1,43 @@
+{
+  "source_canva_design_id": "DAHVlfbi7x4",
+  "source_workflow_run": 35437356775,
+  "source_artifact_id": 10582406935,
+  "source_sheet_size": [
+    400,
+    500
+  ],
+  "assets": {
+    "premium_series_game_canva.webp": {
+      "bytes": 220448,
+      "sha256": "1289c40948915dd495f66c4ca1904317e93f81a1adfef64aa801eca3bbcddaa7",
+      "size": [
+        768,
+        768
+      ]
+    },
+    "premium_letter_table_canva.webp": {
+      "bytes": 220472,
+      "sha256": "388138c479f281a0f263c439e7cabe73b53fabd225d47afcfc5774c9d469b00c",
+      "size": [
+        768,
+        768
+      ]
+    },
+    "premium_score_calculator_canva.webp": {
+      "bytes": 218320,
+      "sha256": "f29769a4bf7da9f7c0ec3da3c4092a957193b19153983dca7af80afecd1a5786",
+      "size": [
+        768,
+        768
+      ]
+    },
+    "premium_pro_canva.webp": {
+      "bytes": 224202,
+      "sha256": "23e16f8d34f88abd2d17e74b173ace044288b8c41f9e743e812df9525dae2ad2",
+      "size": [
+        768,
+        768
+      ]
+    }
+  }
+}
