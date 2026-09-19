@@ -7,12 +7,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class SeriesGameReachabilityContractTest {
-    @Test fun purchasedSeriesGameHasARealRuntimeScreen() {
+    @Test fun purchasedSeriesGameHasARealRuntimeScreenAndSiegeEntry() {
         val series = projectFile("app/src/main/java/com/sonharf/game/WordSiegeSeriesScreen.kt").readText()
+        val entry = projectFile("app/src/main/java/com/sonharf/game/WordSiegeEntryScreen.kt").readText()
+        val shell = projectFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val store = projectFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
 
         assertTrue(series.contains("internal fun WordSiegeSeriesScreen"))
         assertTrue(series.contains("findOrCreateWordSiegeSeriesGame"))
+        assertTrue(entry.contains("SERİ / HIZLI OYUN"))
+        assertTrue(entry.contains("mode = WordSiegeEntryMode.SERIES"))
+        assertTrue(entry.contains("onOpenStore"))
+        assertTrue(shell.contains("PremiumDestination.SIEGE -> WordSiegeEntryScreen"))
         assertTrue(store.contains("showSeriesGame"))
         assertTrue(store.contains("WordSiegeSeriesScreen"))
         assertTrue(store.contains("owned = entitlements.seriesGameAccess"))
