@@ -1,14 +1,12 @@
 package com.sonharf.game
 
 import android.app.Activity
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Calculate
@@ -64,18 +62,19 @@ internal fun PremiumProductPurchaseDialog(
         BillingManager(
             context = context,
             onPurchase = { purchase ->
-                if (!purchase.products.contains(productId)) return@BillingManager
-                scope.launch {
-                    busy = true
-                    runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
-                        .onSuccess { onVerified() }
-                        .onFailure {
-                            notice = sh(
-                                "Ödeme alındı ancak sunucu doğrulaması tamamlanamadı. Yeniden doğrulama ikinci kez ücretlendirmez.",
-                                "Payment was received but server verification is pending. Re-verification will not charge twice.",
-                            )
-                        }
-                    busy = false
+                if (purchase.products.contains(productId)) {
+                    scope.launch {
+                        busy = true
+                        runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
+                            .onSuccess { onVerified() }
+                            .onFailure {
+                                notice = sh(
+                                    "Ödeme alındı ancak sunucu doğrulaması tamamlanamadı. Yeniden doğrulama ikinci kez ücretlendirmez.",
+                                    "Payment was received but server verification is pending. Re-verification will not charge twice.",
+                                )
+                            }
+                        busy = false
+                    }
                 }
             },
             onMessage = { message ->
