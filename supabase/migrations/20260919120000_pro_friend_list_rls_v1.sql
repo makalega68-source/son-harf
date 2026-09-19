@@ -102,24 +102,17 @@ $$;
 revoke all on function public.enforce_pro_friend_game_invite_sender_v1() from public, anon, authenticated;
 grant execute on function public.enforce_pro_friend_game_invite_sender_v1() to service_role;
 
-do $$
-begin
-  if to_regclass('public.game_invites') is not null then
-    drop trigger if exists game_invites_pro_sender_guard_v1 on public.game_invites;
-    create trigger game_invites_pro_sender_guard_v1
-      before insert on public.game_invites
-      for each row execute function public.enforce_pro_friend_game_invite_sender_v1();
-  end if;
-  if to_regclass('public.word_arena_invites') is not null then
-    drop trigger if exists word_arena_invites_pro_sender_guard_v1 on public.word_arena_invites;
-    create trigger word_arena_invites_pro_sender_guard_v1
-      before insert on public.word_arena_invites
-      for each row execute function public.enforce_pro_friend_game_invite_sender_v1();
-  end if;
-  if to_regclass('public.word_siege_invites') is not null then
-    drop trigger if exists word_siege_invites_pro_sender_guard_v1 on public.word_siege_invites;
-    create trigger word_siege_invites_pro_sender_guard_v1
-      before insert on public.word_siege_invites
-      for each row execute function public.enforce_pro_friend_game_invite_sender_v1();
-  end if;
-end $$;
+drop trigger if exists game_invites_pro_sender_guard_v1 on public.game_invites;
+create trigger game_invites_pro_sender_guard_v1
+before insert on public.game_invites
+for each row execute function public.enforce_pro_friend_game_invite_sender_v1();
+
+drop trigger if exists word_arena_invites_pro_sender_guard_v1 on public.word_arena_invites;
+create trigger word_arena_invites_pro_sender_guard_v1
+before insert on public.word_arena_invites
+for each row execute function public.enforce_pro_friend_game_invite_sender_v1();
+
+drop trigger if exists word_siege_invites_pro_sender_guard_v1 on public.word_siege_invites;
+create trigger word_siege_invites_pro_sender_guard_v1
+before insert on public.word_siege_invites
+for each row execute function public.enforce_pro_friend_game_invite_sender_v1();
