@@ -31,7 +31,11 @@ import com.sonharf.game.data.getVipEntitlements
 import kotlinx.coroutines.launch
 
 @Composable
-fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
+fun GooglePlayProductsCard(
+    onPurchased: () -> Unit = {},
+    showPremiumProducts: Boolean = true,
+    showCoinPacks: Boolean = true,
+) {
     val context = LocalContext.current
     val activity = context as? Activity
     val scope = rememberCoroutineScope()
@@ -67,7 +71,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                                     ProductCatalog.SERIES_GAME -> sh("Seri Oyun kalıcı olarak açıldı.", "Series Game unlocked permanently.")
                                     ProductCatalog.LETTER_TABLE -> sh("Harf Tablosu kalıcı olarak açıldı.", "Letter Table unlocked permanently.")
                                     ProductCatalog.SCORE_CALCULATOR -> sh("Puan Hesaplayıcı kalıcı olarak açıldı.", "Score Calculator unlocked permanently.")
-                                    ProductCatalog.PRO_LIFETIME -> sh("PRO kalıcı olarak açıldı. 100 Son Coin hesabına eklendi.", "PRO unlocked permanently. 100 Son Coins were added.")
+                                    ProductCatalog.PRO_LIFETIME -> sh("PRO kalıcı olarak açıldı. İlk grant'te 100 Son Coin verilir.", "PRO unlocked permanently. 100 Son Coins are granted on the first grant.")
                                     ProductCatalog.COINS_500 -> sh("500 Son Coin hesabına eklendi.", "500 Son Coins added to your account.")
                                     ProductCatalog.COINS_1500 -> sh("1500 Son Coin hesabına eklendi.", "1500 Son Coins added to your account.")
                                     ProductCatalog.COINS_3500 -> sh("3500 Son Coin hesabına eklendi.", "3500 Son Coins added to your account.")
@@ -92,7 +96,11 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
     }
 
     DisposableEffect(manager) {
-        manager.connect { manager.queryOneTimeProducts(ProductCatalog.oneTimeProducts) { products = it } }
+        manager.connect {
+            manager.queryOneTimeProducts(ProductCatalog.oneTimeProducts) { products = it }
+            // Recovery is silent; no Restore Purchases control is shown in the UI.
+            manager.restorePurchases(ProductCatalog.permanentPremiumProducts.toSet())
+        }
         onDispose { manager.close() }
     }
 
@@ -116,63 +124,67 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .28f)),
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(sh("PREMİUM ÖZELLİKLER", "PREMIUM FEATURES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
-            Text(
-                sh("Tek ödeme ile kalıcı kullanım. PRO; tüm premium özellikleri, reklamsız kullanımı, arkadaş listesini, Son Harf kelime geçmişini, 50 aktif oyun limitini, PRO çerçevesini ve 100 Son Coin'i açar.", "One payment, permanent access. PRO unlocks all premium features, ad-free play, friends list, Son Harf word history, a 50 active-game limit, the PRO frame and 100 Son Coins."),
-                color = SonHarfMuted,
-                fontSize = 9.sp,
-            )
+            if (showPremiumProducts) {
+                Text(sh("PREMİUM ÖZELLİKLER", "PREMIUM FEATURES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                Text(
+                    sh("Tek ödeme ile kalıcı kullanım. PRO; tüm premium özellikleri, reklamsız kullanımı, arkadaş listesini, Son Harf kelime geçmişini, 50 aktif oyun limitini, PRO çerçevesini ve 100 Son Coin'i açar.", "One payment, permanent access. PRO unlocks all premium features, ad-free play, friends list, Son Harf word history, a 50 active-game limit, the PRO frame and 100 Son Coins."),
+                    color = SonHarfMuted,
+                    fontSize = 9.sp,
+                )
 
-            PremiumProductRow(
-                title = sh("Seri Oyun", "Series Game"),
-                subtitle = sh("3/5/10 dk tur • otomatik pas • 3 kaçırma = mağlubiyet", "3/5/10 min turns • auto-pass • 3 misses = defeat"),
-                imageRes = R.drawable.premium_series_game,
-                product = products[ProductCatalog.SERIES_GAME],
-                fallbackPrice = ProductCatalog.SERIES_GAME_FALLBACK_PRICE_TRY,
-                busy = busy != null,
-                owned = entitlements.seriesGameAccess,
-                onOpen = { showSeriesGame = true },
-            ) { buy(ProductCatalog.SERIES_GAME) }
-            PremiumProductRow(
-                title = sh("Harf Tablosu", "Letter Table"),
-                subtitle = sh("Kalan harfleri gör", "See remaining letters"),
-                imageRes = R.drawable.premium_letter_table,
-                product = products[ProductCatalog.LETTER_TABLE],
-                fallbackPrice = ProductCatalog.LETTER_TABLE_FALLBACK_PRICE_TRY,
-                busy = busy != null,
-                owned = entitlements.letterTableAccess,
-            ) { buy(ProductCatalog.LETTER_TABLE) }
-            PremiumProductRow(
-                title = sh("Puan Hesaplayıcı", "Score Calculator"),
-                subtitle = sh("Hamle puanını önceden gör", "Preview move score"),
-                imageRes = R.drawable.premium_score_calculator,
-                product = products[ProductCatalog.SCORE_CALCULATOR],
-                fallbackPrice = ProductCatalog.SCORE_CALCULATOR_FALLBACK_PRICE_TRY,
-                busy = busy != null,
-                owned = entitlements.scoreCalculatorAccess,
-            ) { buy(ProductCatalog.SCORE_CALCULATOR) }
-            PremiumProductRow(
-                title = "PRO",
-                subtitle = sh("Tüm premium özellikler", "All premium features"),
-                imageRes = R.drawable.premium_pro,
-                product = products[ProductCatalog.PRO_LIFETIME],
-                fallbackPrice = ProductCatalog.PRO_LIFETIME_FALLBACK_PRICE_TRY,
-                busy = busy != null,
-                owned = entitlements.isPro,
-            ) { buy(ProductCatalog.PRO_LIFETIME) }
+                PremiumProductRow(
+                    title = sh("Seri Oyun", "Series Game"),
+                    subtitle = sh("3/5/10 dk tur • otomatik pas • 3 kaçırma = mağlubiyet", "3/5/10 min turns • auto-pass • 3 misses = defeat"),
+                    imageRes = R.drawable.premium_series_game,
+                    product = products[ProductCatalog.SERIES_GAME],
+                    fallbackPrice = ProductCatalog.SERIES_GAME_FALLBACK_PRICE_TRY,
+                    busy = busy != null,
+                    owned = entitlements.seriesGameAccess,
+                    onOpen = { showSeriesGame = true },
+                ) { buy(ProductCatalog.SERIES_GAME) }
+                PremiumProductRow(
+                    title = sh("Harf Tablosu", "Letter Table"),
+                    subtitle = sh("Kalan harfleri rakip elini açmadan gör", "See remaining letters without exposing the opponent rack"),
+                    imageRes = R.drawable.premium_letter_table,
+                    product = products[ProductCatalog.LETTER_TABLE],
+                    fallbackPrice = ProductCatalog.LETTER_TABLE_FALLBACK_PRICE_TRY,
+                    busy = busy != null,
+                    owned = entitlements.letterTableAccess,
+                ) { buy(ProductCatalog.LETTER_TABLE) }
+                PremiumProductRow(
+                    title = sh("Puan Hesaplayıcı", "Score Calculator"),
+                    subtitle = sh("Hamle puanını gerçek motorla önceden gör", "Preview move score with the real engine"),
+                    imageRes = R.drawable.premium_score_calculator,
+                    product = products[ProductCatalog.SCORE_CALCULATOR],
+                    fallbackPrice = ProductCatalog.SCORE_CALCULATOR_FALLBACK_PRICE_TRY,
+                    busy = busy != null,
+                    owned = entitlements.scoreCalculatorAccess,
+                ) { buy(ProductCatalog.SCORE_CALCULATOR) }
+                PremiumProductRow(
+                    title = "PRO",
+                    subtitle = sh("Tüm premium özellikler • kalıcı erişim", "All premium features • lifetime access"),
+                    imageRes = R.drawable.premium_pro,
+                    product = products[ProductCatalog.PRO_LIFETIME],
+                    fallbackPrice = ProductCatalog.PRO_LIFETIME_FALLBACK_PRICE_TRY,
+                    busy = busy != null,
+                    owned = entitlements.isPro,
+                ) { buy(ProductCatalog.PRO_LIFETIME) }
+            }
 
-            HorizontalDivider(color = SonHarfTheme.Border)
-            Text("SON COIN", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
-            Text(
-                sh("Coin yalnızca kozmetik ve mağaza ürünlerinde kullanılır; maç gücü satılmaz.", "Coins are only for cosmetics and store items; match power is never sold."),
-                color = SonHarfMuted,
-                fontSize = 9.sp,
-            )
+            if (showPremiumProducts && showCoinPacks) HorizontalDivider(color = SonHarfTheme.Border)
 
-            CoinProductRow(500, sh("Mini paket", "Mini pack"), products[ProductCatalog.COINS_500], busy != null) { buy(ProductCatalog.COINS_500) }
-            CoinProductRow(1500, sh("Standart paket", "Standard pack"), products[ProductCatalog.COINS_1500], busy != null) { buy(ProductCatalog.COINS_1500) }
-            CoinProductRow(3500, sh("Popüler paket", "Popular pack"), products[ProductCatalog.COINS_3500], busy != null) { buy(ProductCatalog.COINS_3500) }
-            CoinProductRow(8000, sh("Mega paket", "Mega pack"), products[ProductCatalog.COINS_8000], busy != null) { buy(ProductCatalog.COINS_8000) }
+            if (showCoinPacks) {
+                Text("SON COIN", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                Text(
+                    sh("Coin yalnızca kozmetik ve mağaza ürünlerinde kullanılır; maç gücü satılmaz.", "Coins are only for cosmetics and store items; match power is never sold."),
+                    color = SonHarfMuted,
+                    fontSize = 9.sp,
+                )
+                CoinProductRow(500, sh("Mini paket", "Mini pack"), products[ProductCatalog.COINS_500], busy != null) { buy(ProductCatalog.COINS_500) }
+                CoinProductRow(1500, sh("Standart paket", "Standard pack"), products[ProductCatalog.COINS_1500], busy != null) { buy(ProductCatalog.COINS_1500) }
+                CoinProductRow(3500, sh("Popüler paket", "Popular pack"), products[ProductCatalog.COINS_3500], busy != null) { buy(ProductCatalog.COINS_3500) }
+                CoinProductRow(8000, sh("Mega paket", "Mega pack"), products[ProductCatalog.COINS_8000], busy != null) { buy(ProductCatalog.COINS_8000) }
+            }
 
             if (notice.isNotBlank()) Text(notice, color = SonHarfMuted, fontSize = 9.sp)
         }
@@ -205,12 +217,7 @@ private fun PremiumProductRow(
     Surface(color = SonHarfTheme.SurfaceSecondary, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, SonHarfTheme.Border)) {
         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Surface(shape = RoundedCornerShape(14.dp), color = SonHarfTheme.Primary.copy(alpha = .06f)) {
-                Image(
-                    painter = painterResource(imageRes),
-                    contentDescription = null,
-                    modifier = Modifier.padding(5.dp).size(48.dp),
-                    contentScale = ContentScale.Fit,
-                )
+                Image(painter = painterResource(imageRes), contentDescription = null, modifier = Modifier.padding(5.dp).size(48.dp), contentScale = ContentScale.Fit)
             }
             Column(Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.Black, color = SonHarfText, fontSize = 14.sp)
