@@ -28,6 +28,8 @@ jobs:
           validate-wrappers: false
       - name: Apply focused Profile Frames V2 patch
         run: python3 automation/profile_frames_v2_patch.py
+      - name: Validate profile frame visual geometry
+        run: python3 automation/validate_profile_frame_geometry.py
       - name: Build and test debug
         run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
       - name: Commit verified patch
