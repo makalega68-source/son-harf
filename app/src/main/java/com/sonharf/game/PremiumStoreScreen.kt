@@ -185,7 +185,7 @@ internal fun PremiumStoreScreen(
                     item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfTheme.Turquoise, trackColor = SonHarfTheme.SurfaceSecondary) }
                 }
 
-                if (tab == 2) {
+                if (tab == 0 || tab == 2) {
                     item {
                         ProfileFramesV2StoreRow(
                             backend = backend,

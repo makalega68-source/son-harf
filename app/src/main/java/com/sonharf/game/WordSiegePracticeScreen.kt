@@ -25,6 +25,9 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SharedDictionaryService
+import com.sonharf.game.data.getVipEntitlements
+import com.sonharf.game.data.getInventory
+import com.sonharf.game.data.getEquippedCosmetics
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -69,6 +72,8 @@ private fun WordSiegePracticeContent(
     val backend = remember { runCatching { OnlineGameBackend() }.getOrNull() }
     val me = remember(backend) { backend?.currentUserId() }
     var playerProfile by remember { mutableStateOf<ProfileDto?>(null) }
+    var playerIsPro by remember { mutableStateOf(false) }
+    var playerFrameId by remember { mutableStateOf<String?>(null) }
     var botProfile by remember { mutableStateOf(WordSiegePracticeBots.random()) }
     var state by remember { mutableStateOf(WordSiegePracticeEngine.newGame()) }
     val context = LocalContext.current.applicationContext
@@ -131,6 +136,11 @@ private fun WordSiegePracticeContent(
     LaunchedEffect(me, backend) {
         val b = backend ?: return@LaunchedEffect
         if (me != null) playerProfile = runCatching { b.getProfile(me) }.getOrNull()
+        val owned = runCatching { b.getInventory() }.getOrDefault(emptySet())
+        val equipped = runCatching { b.getEquippedCosmetics() }.getOrNull()
+        SonHarfCosmetics.apply(equipped, owned)
+        playerFrameId = ProfileFrameV2Catalog.ownedPaidFrame(equipped?.profileFrameId, owned)
+        playerIsPro = runCatching { b.getVipEntitlements().isPro }.getOrDefault(false)
     }
 
     LaunchedEffect(state.language, dictionaryRetryKey) {
@@ -370,6 +380,8 @@ private fun WordSiegePracticeContent(
                         gender = playerProfile?.gender,
                         avatarVisible = playerProfile?.avatarVisibility != "hidden",
                         isBot = false,
+                        frameId = playerFrameId,
+                        isPro = playerIsPro,
                         modifier = Modifier.weight(1f),
                     )
                     WordSiegePracticeScoreCard(
@@ -745,6 +757,8 @@ private fun WordSiegePracticeScoreCard(
     gender: String?,
     avatarVisible: Boolean,
     isBot: Boolean,
+    frameId: String? = null,
+    isPro: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     WordSiegeScoreCard(
@@ -752,6 +766,6 @@ private fun WordSiegePracticeScoreCard(
         territoryPoints = territoryPoints, area = area, accent = accent,
         active = active, leading = leading, avatarPath = avatarPath,
         gender = gender, avatarVisible = avatarVisible, isBot = isBot,
-        modifier = modifier,
+        frameId = frameId, isPro = isPro, modifier = modifier,
     )
 }

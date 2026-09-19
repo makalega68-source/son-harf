@@ -104,40 +104,14 @@ internal object ProfilePhotoRuntime {
     }
 }
 
-private data class GenderVisual(val symbol: String, val color: Color)
-
-private fun genderVisual(gender: String?): GenderVisual? = when (gender?.trim()?.lowercase()) {
-    "kadın", "kadin", "female", "woman" -> GenderVisual("♀", Color(0xFFFF4F9A))
-    "erkek", "male", "man" -> GenderVisual("♂", Color(0xFF238BFF))
-    else -> null
-}
-
-@Composable
-private fun FramelessGenderSymbol(gender: String?, size: Dp) {
-    val visual = genderVisual(gender) ?: return
-    Text(
-        text = visual.symbol,
-        color = visual.color,
-        fontWeight = FontWeight.Black,
-        fontSize = (size.value * .31f).coerceAtLeast(13f).sp,
-        style = TextStyle(
-            shadow = Shadow(
-                color = visual.color.copy(alpha = .28f),
-                blurRadius = (size.value * .12f).coerceAtLeast(3f),
-            )
-        ),
-    )
-}
-
 @Composable
 private fun SyntheticProfilePortrait(name: String, gender: String?, modifier: Modifier, accent: Color) {
-    val visual = genderVisual(gender)
     Box(
         modifier.background(
             Brush.linearGradient(
                 listOf(
                     accent.copy(alpha = .18f),
-                    (visual?.color ?: Color(0xFF57C7F3)).copy(alpha = .28f),
+                    Color(0xFF57C7F3).copy(alpha = .28f),
                     Color.White,
                 )
             )
@@ -210,9 +184,6 @@ internal fun ProfilePhotoAvatar(
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
             }
         }
-        Box(Modifier.align(Alignment.BottomEnd)) {
-            FramelessGenderSymbol(gender, size)
-        }
     }
 }
 
@@ -240,11 +211,6 @@ internal fun ProfilePhotoAvatarWithGender(
                 Image(bitmap.asImageBitmap(), null, Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
             } else {
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
-            }
-        }
-        if (showGenderBadge) {
-            Box(Modifier.align(Alignment.BottomEnd)) {
-                FramelessGenderSymbol(gender, size)
             }
         }
     }
@@ -293,11 +259,6 @@ internal fun ProfilePhotoAvatarRectWithGender(
                 )
             } else {
                 SyntheticProfilePortrait(name, gender, Modifier.fillMaxSize().clip(CircleShape), accent)
-            }
-        }
-        if (showGenderBadge) {
-            Box(Modifier.align(Alignment.BottomEnd)) {
-                FramelessGenderSymbol(gender, diameter)
             }
         }
     }

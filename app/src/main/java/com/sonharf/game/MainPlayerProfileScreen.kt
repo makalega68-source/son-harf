@@ -54,6 +54,7 @@ internal fun MainPlayerProfileScreen(
         val growthTask = async { runCatching { backend.getGrowthDashboard() }.getOrNull() }
         val friendsTask = async { runCatching { backend.getFriends() }.getOrDefault(emptyList()) }
         val cosmeticsTask = async { runCatching { backend.getEquippedCosmetics() }.getOrNull() }
+        val inventoryTask = async { runCatching { backend.getInventory() }.getOrDefault(emptySet()) }
 
         profile = profileTask.await()
         entitlements = entitlementTask.await()
@@ -62,7 +63,7 @@ internal fun MainPlayerProfileScreen(
             friendCount = friends.size
             onlineFriendCount = friends.count { (_, friend) -> friend.presenceStatus == "online" }
         }
-        SonHarfCosmetics.apply(cosmeticsTask.await())
+        SonHarfCosmetics.apply(cosmeticsTask.await(), inventoryTask.await())
         loading = false
     }
 

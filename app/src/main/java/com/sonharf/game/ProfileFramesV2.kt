@@ -93,36 +93,6 @@ internal object ProfileFrameV2Catalog {
         paidVisuals[equippedPaidFrameId] ?: if (isPro) proVisual else defaultVisual
 }
 
-private data class ProfileFrameGenderVisual(val symbol: String, val color: Color)
-
-private fun profileFrameGenderVisual(gender: String?): ProfileFrameGenderVisual? = when (gender?.trim()?.lowercase()) {
-    "kadın", "kadin", "female", "woman" -> ProfileFrameGenderVisual("♀", Color(0xFFFF4F9A))
-    "erkek", "male", "man" -> ProfileFrameGenderVisual("♂", Color(0xFF238BFF))
-    else -> null
-}
-
-@Composable
-private fun ProfileFrameGenderBadge(gender: String?, outerSize: Dp) {
-    val visual = profileFrameGenderVisual(gender) ?: return
-    val badgeSize = outerSize * .24f
-    Surface(
-        modifier = Modifier.size(badgeSize),
-        shape = CircleShape,
-        color = Color.White.copy(alpha = .96f),
-        border = BorderStroke(1.dp, visual.color.copy(alpha = .28f)),
-        shadowElevation = 1.dp,
-    ) {
-        Box(contentAlignment = Alignment.Center) {
-            Text(
-                text = visual.symbol,
-                color = visual.color,
-                fontSize = (outerSize.value * .16f).coerceAtLeast(8f).sp,
-                fontWeight = FontWeight.Black,
-            )
-        }
-    }
-}
-
 @Composable
 internal fun ProfileFrameAvatarBytesV2(
     avatarBytes: ByteArray?,
@@ -139,6 +109,16 @@ internal fun ProfileFrameAvatarBytesV2(
     }
     Box(modifier = Modifier.size(outerSize), contentAlignment = Alignment.Center) {
         val photoSize = outerSize * visual.photoRatio
+        val standardFrame = equippedPaidFrameId == null && !isPro
+        if (standardFrame) {
+            Surface(
+                modifier = Modifier.size(photoSize + 12.dp),
+                shape = CircleShape,
+                color = Color.White,
+                border = BorderStroke(2.dp, Color(0xFFD7DDE5)),
+                shadowElevation = 2.dp,
+            ) {}
+        }
         if (bitmap != null) {
             Image(
                 bitmap = bitmap,
@@ -190,10 +170,20 @@ internal fun ProfileFrameAvatarPathV2(
         bytes?.let { raw -> runCatching { BitmapFactory.decodeByteArray(raw, 0, raw.size)?.asImageBitmap() }.getOrNull() }
     }
     val photoSize = outerSize * visual.photoRatio
+    val standardFrame = equippedPaidFrameId == null && !isPro
 
     // Render the photo directly beneath the decorative PNG. Do not call the legacy avatar
     // renderer here: it adds its own gradient ring/padding and creates a visible double-frame.
     Box(modifier = Modifier.size(outerSize), contentAlignment = Alignment.Center) {
+        if (standardFrame) {
+            Surface(
+                modifier = Modifier.size(photoSize + 12.dp),
+                shape = CircleShape,
+                color = Color.White,
+                border = BorderStroke(2.dp, Color(0xFFD7DDE5)),
+                shadowElevation = 2.dp,
+            ) {}
+        }
         if (bitmap != null) {
             Image(
                 bitmap = bitmap,
@@ -223,11 +213,6 @@ internal fun ProfileFrameAvatarPathV2(
             modifier = Modifier.size(outerSize),
             contentScale = ContentScale.Fit,
         )
-        if (showGenderBadge) {
-            Box(modifier = Modifier.align(Alignment.BottomEnd)) {
-                ProfileFrameGenderBadge(gender = gender, outerSize = outerSize)
-            }
-        }
     }
 }
 
@@ -340,7 +325,7 @@ internal fun ProfileFramesV2StoreRow(
             fontWeight = FontWeight.Black,
         )
         Text(
-            sh("Tek ödeme • kalıcı • yalnızca kozmetik", "One-time purchase • permanent • cosmetic only"),
+            sh("Her biri 150 TL • tek ödeme • kalıcı • yalnızca kozmetik", "150 TL each • one-time purchase • permanent • cosmetic only"),
             color = SonHarfMuted,
             fontSize = 9.sp,
         )

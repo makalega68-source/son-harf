@@ -78,6 +78,8 @@ internal fun WordSiegeScoreCard(
     gender: String?,
     avatarVisible: Boolean,
     isBot: Boolean,
+    frameId: String? = null,
+    isPro: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -89,13 +91,16 @@ internal fun WordSiegeScoreCard(
     ) {
         Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ProfilePhotoAvatarWithGender(
+                FramedProfilePhotoAvatar(
                     avatarPath = avatarPath,
                     gender = gender,
                     name = name,
-                    size = 34.dp,
+                    size = 42.dp,
                     accent = accent,
+                    frameId = frameId,
                     visible = avatarVisible,
+                    showGenderBadge = false,
+                    isPro = isPro,
                 )
                 Spacer(Modifier.width(7.dp))
                 Column(Modifier.weight(1f)) {
