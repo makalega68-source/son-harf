@@ -1,7 +1,9 @@
 package com.sonharf.game
 
 import android.app.Activity
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -12,7 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -127,8 +131,20 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                 }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                    ProPlan(sh("AYLIK", "MONTHLY"), monthlyPrice, !yearly, Modifier.weight(1f)) { yearly = false }
-                    ProPlan(sh("YILLIK", "YEARLY"), yearlyPrice, yearly, Modifier.weight(1f)) { yearly = true }
+                    ProPlan(
+                        title = sh("AYLIK", "MONTHLY"),
+                        price = monthlyPrice,
+                        imageRes = R.drawable.premium_vip_monthly,
+                        selected = !yearly,
+                        modifier = Modifier.weight(1f),
+                    ) { yearly = false }
+                    ProPlan(
+                        title = sh("YILLIK", "YEARLY"),
+                        price = yearlyPrice,
+                        imageRes = R.drawable.premium_vip_yearly,
+                        selected = yearly,
+                        modifier = Modifier.weight(1f),
+                    ) { yearly = true }
                 }
 
                 Button(
@@ -184,7 +200,14 @@ private fun ProBenefit(icon: ImageVector, title: String, subtitle: String) {
 }
 
 @Composable
-private fun ProPlan(title: String, price: String, selected: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun ProPlan(
+    title: String,
+    price: String,
+    @DrawableRes imageRes: Int,
+    selected: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
     Surface(
         modifier = modifier,
         onClick = onClick,
@@ -192,7 +215,13 @@ private fun ProPlan(title: String, price: String, selected: Boolean, modifier: M
         color = if (selected) ProBlue.copy(alpha = .16f) else ProSurface,
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) ProBlue else ProBorder),
     ) {
-        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Image(
+                painter = painterResource(imageRes),
+                contentDescription = null,
+                modifier = Modifier.size(58.dp),
+                contentScale = ContentScale.Fit,
+            )
             Text(title, color = if (selected) ProBlue else ProText, fontSize = 12.sp, fontWeight = FontWeight.Black)
             Text(price, color = ProMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
         }
