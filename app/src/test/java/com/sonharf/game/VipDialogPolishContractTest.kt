@@ -9,14 +9,23 @@ import org.junit.Test
 class VipDialogPolishContractTest {
 
     @Test
-    fun vipDialogKeepsBillingFlowAndExplicitlyPromisesFairPlay() {
+    fun vipDialogUsesLifetimeProductAndKeepsFairPlayPromise() {
         val source = projectFile("app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt").readText()
 
         assertTrue(source.contains("BillingManager("))
         assertTrue(source.contains("PlayPurchaseVerification.verify"))
-        assertTrue(source.contains("manager.launchProduct(activity, product)"))
-        assertTrue(source.contains("ProductCatalog.VIP_YEARLY"))
-        assertTrue(source.contains("ProductCatalog.VIP_MONTHLY"))
+        assertTrue(source.contains("manager.launchProduct(activity, selected)"))
+        assertTrue(source.contains("ProductCatalog.PRO_LIFETIME"))
+        assertTrue(source.contains("queryOneTimeProducts"))
+        assertTrue(source.contains("oneTimePurchaseOfferDetails"))
+        assertTrue(source.contains("Tek ödeme • kalıcı erişim"))
+        assertTrue(source.contains("No subscription • no recurring charge"))
+
+        assertFalse(source.contains("ProductCatalog.VIP_YEARLY"))
+        assertFalse(source.contains("ProductCatalog.VIP_MONTHLY"))
+        assertFalse(source.contains("querySubscriptions"))
+        assertFalse(source.contains("Satın almaları geri yükle"))
+        assertFalse(source.contains("Restore purchases"))
         assertFalse(source.contains("rememberInfiniteTransition"))
 
         assertTrue(source.contains("ADİL REKABET"))
