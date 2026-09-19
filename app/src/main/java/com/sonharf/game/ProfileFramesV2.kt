@@ -177,7 +177,6 @@ private data class ProfileFrameStoreSpec(
     val titleEn: String,
     val subtitleTr: String,
     val subtitleEn: String,
-    @DrawableRes val drawable: Int,
     val accent: Color,
 )
 
@@ -188,7 +187,6 @@ private val profileFrameStoreSpecs = listOf(
         "Pink Blossom Premium",
         "Çiçek detaylı premium profil çerçevesi",
         "Premium floral profile frame",
-        R.drawable.profile_frame_shop_pink_blossom,
         Color(0xFFE96FA5),
     ),
     ProfileFrameStoreSpec(
@@ -197,7 +195,6 @@ private val profileFrameStoreSpecs = listOf(
         "Blue Royal Premium",
         "Mavi desenli premium profil çerçevesi",
         "Premium blue patterned profile frame",
-        R.drawable.profile_frame_shop_blue_royal,
         Color(0xFF3979D8),
     ),
     ProfileFrameStoreSpec(
@@ -206,7 +203,6 @@ private val profileFrameStoreSpecs = listOf(
         "Amethyst Fantasy",
         "Mor fantastik premium profil çerçevesi",
         "Premium amethyst fantasy profile frame",
-        R.drawable.profile_frame_shop_amethyst,
         Color(0xFF8A5BD6),
     ),
     ProfileFrameStoreSpec(
@@ -215,7 +211,6 @@ private val profileFrameStoreSpecs = listOf(
         "Emerald Fantasy",
         "Zümrüt fantastik premium profil çerçevesi",
         "Premium emerald fantasy profile frame",
-        R.drawable.profile_frame_shop_emerald,
         Color(0xFF2D9D78),
     ),
 )
@@ -298,6 +293,7 @@ internal fun ProfileFramesV2StoreRow(
                 val active = equipped?.profileFrameId == spec.productId && mine
                 val product = products[spec.productId]
                 val realPrice = product?.oneTimePurchaseOfferDetails?.formattedPrice
+                val previewVisual = remember(spec.productId) { ProfileFrameV2Catalog.visual(spec.productId, false) }
                 Surface(
                     modifier = Modifier.width(170.dp),
                     shape = RoundedCornerShape(18.dp),
@@ -309,8 +305,22 @@ internal fun ProfileFramesV2StoreRow(
                             modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(14.dp)).background(spec.accent.copy(alpha = .08f)),
                             contentAlignment = Alignment.Center,
                         ) {
+                            Surface(
+                                modifier = Modifier.size(104.dp * previewVisual.photoRatio),
+                                shape = CircleShape,
+                                color = spec.accent.copy(alpha = .14f),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        "A",
+                                        color = spec.accent,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Black,
+                                    )
+                                }
+                            }
                             Image(
-                                painter = painterResource(spec.drawable),
+                                painter = painterResource(previewVisual.drawable),
                                 contentDescription = null,
                                 modifier = Modifier.size(104.dp),
                                 contentScale = ContentScale.Fit,
