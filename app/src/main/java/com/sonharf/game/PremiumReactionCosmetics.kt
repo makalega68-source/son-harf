@@ -60,6 +60,7 @@ internal fun VipEmojiReactionRow(
 internal fun CrownVictoryCelebration(
     eventKey: String,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     val progress = remember(eventKey) { Animatable(0f) }
     LaunchedEffect(eventKey) {
@@ -72,22 +73,27 @@ internal fun CrownVictoryCelebration(
         p < .72f -> 1f
         else -> ((1f - p) / .28f).coerceIn(0f, 1f)
     }
+    val crownBase = if (compact) 44f else 86f
+    val crownTravel = if (compact) 10f else 22f
+    val crownTop = if (compact) 4.dp else 22.dp
+    val sparkTop = if (compact) 44.dp else 96.dp
+    val sparkSize = if (compact) 14.sp else 24.sp
 
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         Image(
             painter = painterResource(R.drawable.store_art_victory_crown),
             contentDescription = null,
             modifier = Modifier
-                .padding(top = 22.dp)
-                .size((86f + 22f * p).dp)
+                .padding(top = crownTop)
+                .size((crownBase + crownTravel * p).dp)
                 .rotate(-4f + 8f * p)
                 .alpha(envelope.coerceIn(0f, 1f)),
         )
         Text(
             text = "✦  ✦  ✦",
             color = Color(0xFFE0B45C),
-            fontSize = 24.sp,
-            modifier = Modifier.padding(top = 96.dp).alpha(envelope * .92f),
+            fontSize = sparkSize,
+            modifier = Modifier.padding(top = sparkTop).alpha(envelope * .92f),
         )
     }
 }
