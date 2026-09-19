@@ -40,6 +40,7 @@ internal fun MainPlayerProfileScreen(
     onSocial: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var entitlements by remember { mutableStateOf<VipEntitlementsDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
     var friendCount by remember { mutableIntStateOf(0) }
     var onlineFriendCount by remember { mutableIntStateOf(0) }
@@ -49,11 +50,13 @@ internal fun MainPlayerProfileScreen(
         loading = true
         val id = backend.currentUserId()
         val profileTask = async { id?.let { runCatching { backend.getProfile(it) }.getOrNull() } }
+        val entitlementTask = async { runCatching { backend.getVipEntitlements() }.getOrNull() }
         val growthTask = async { runCatching { backend.getGrowthDashboard() }.getOrNull() }
         val friendsTask = async { runCatching { backend.getFriends() }.getOrDefault(emptyList()) }
         val cosmeticsTask = async { runCatching { backend.getEquippedCosmetics() }.getOrNull() }
 
         profile = profileTask.await()
+        entitlements = entitlementTask.await()
         growth = growthTask.await()
         friendsTask.await().let { friends ->
             friendCount = friends.size
@@ -78,7 +81,7 @@ internal fun MainPlayerProfileScreen(
     val levelProgress = g?.levelProgress ?: 0
     val levelTarget = g?.levelTarget?.coerceAtLeast(1) ?: 500
     val xpProgress = (levelProgress.toFloat() / levelTarget).coerceIn(0f, 1f)
-    val isPro = p?.isVip == true
+    val isPro = entitlements?.isPro == true
     val profileAccent = if (isPro) SonHarfTheme.Purple else SonHarfTheme.Primary
 
     Column(
