@@ -1,0 +1,66 @@
+name: Canva V2 Contact Sheet
+
+on:
+  push:
+    branches:
+      - integration/v2-premium-corrected-final-20260919
+    paths:
+      - 'tools/canva_contact_urls_20260919.txt'
+      - '.github/workflows/canva-contact-sheet-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contact-sheet:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Pillow
+        run: python -m pip install --disable-pip-version-check pillow
+      - name: Download Canva previews
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p canva-previews
+          while IFS='|' read -r n url; do
+            printf -v out 'canva-previews/page-%02d.png' "$n"
+            curl --fail --location --retry 2 --connect-timeout 20 --max-time 90 "$url" -o "$out"
+            test -s "$out"
+          done < tools/canva_contact_urls_20260919.txt
+          test "$(find canva-previews -name 'page-*.png' | wc -l)" -eq 33
+      - name: Build numbered contact sheet
+        run: |
+          python - <<'PY'
+          from PIL import Image, ImageOps, ImageDraw
+          from pathlib import Path
+          files=sorted(Path('canva-previews').glob('page-*.png'))
+          thumb=220
+          label=28
+          cols=6
+          rows=(len(files)+cols-1)//cols
+          sheet=Image.new('RGB',(cols*thumb,rows*(thumb+label)),'white')
+          for i,p in enumerate(files,1):
+              im=Image.open(p).convert('RGB')
+              im=ImageOps.contain(im,(thumb,thumb))
+              x=((i-1)%cols)*thumb+(thumb-im.width)//2
+              y=((i-1)//cols)*(thumb+label)+(thumb-im.height)//2
+              sheet.paste(im,(x,y))
+              d=ImageDraw.Draw(sheet)
+              d.rectangle([((i-1)%cols)*thumb,y+im.height-28,((i-1)%cols+1)*thumb,y+im.height],fill='white')
+              d.text((((i-1)%cols)*thumb+8,y+im.height-24),f'PAGE {i:02d}',fill='black')
+          sheet.save('canva-contact-sheet.png',optimize=True)
+          PY
+      - name: Upload contact sheet
+        uses: actions/upload-artifact@v4
+        with:
+          name: canva-v2-contact-sheet
+          path: |
+            canva-contact-sheet.png
+            canva-previews/
+          if-no-files-found: error
+          retention-days: 1
