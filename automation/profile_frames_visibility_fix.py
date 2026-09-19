@@ -278,11 +278,17 @@ if "var playerIsPro by remember" not in practice:
     )
 PRACTICE.write_text(practice, encoding="utf-8")
 
-# 7) Release guards: no displayed gender symbol remains, and active surfaces are wired to V2.
-all_runtime = "\n".join(p.read_text(encoding="utf-8") for p in ROOT.rglob("*.kt"))
-for symbol in ("♀", "♂"):
-    if symbol in all_runtime:
-        raise SystemExit(f"Visible gender symbol still present in Kotlin runtime: {symbol}")
+# 7) Release guards: print exact source locations for any lingering displayed gender symbols.
+gender_hits = []
+for path in ROOT.rglob("*.kt"):
+    for line_no, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+        if "♀" in line or "♂" in line:
+            gender_hits.append(f"{path}:{line_no}:{line.strip()}")
+if gender_hits:
+    print("Remaining gender symbol locations:")
+    for hit in gender_hits:
+        print(f"  {hit}")
+    raise SystemExit("Visible gender symbols still remain in Kotlin runtime")
 
 checks = {
     PHOTO: ["internal fun ProfilePhotoAvatarWithGender", "internal fun ProfilePhotoAvatarRectWithGender"],
