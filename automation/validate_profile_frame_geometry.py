@@ -18,6 +18,12 @@ FRAMES = [
 ]
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+MAX_DIRTY_RATE = 0.015
+MAX_STRONG_RATE = 0.003
+MAX_EDGE_RATE = 0.01
+MIN_VISIBLE_RATE = 0.03
+PHOTO_EDGE_SAFETY_PX = 3.0
+MIN_DIAGNOSTIC_DIAMETER = 240
 
 
 def paeth(a: int, b: int, c: int) -> int:
@@ -114,36 +120,59 @@ def pct(value: float) -> str:
     return f"{value * 100:.2f}%"
 
 
-def validate_frame(file_name: str, photo_diameter: int) -> None:
+def photo_rates(alpha: list[list[int]], photo_diameter: int) -> tuple[float, float]:
+    radius = photo_diameter / 2.0
+    photo_pixels = dirty = strong = 0
+    for y in range(512):
+        for x in range(512):
+            if math.hypot(x - 255.5, y - 255.5) <= radius - PHOTO_EDGE_SAFETY_PX:
+                a = alpha[y][x]
+                photo_pixels += 1
+                if a > 24:
+                    dirty += 1
+                if a > 96:
+                    strong += 1
+    if photo_pixels == 0:
+        return 1.0, 1.0
+    return dirty / photo_pixels, strong / photo_pixels
+
+
+def largest_safe_diameter(alpha: list[list[int]], configured: int) -> tuple[int, float, float] | None:
+    for diameter in range(configured, MIN_DIAGNOSTIC_DIAMETER - 1, -1):
+        dirty_rate, strong_rate = photo_rates(alpha, diameter)
+        if dirty_rate <= MAX_DIRTY_RATE and strong_rate <= MAX_STRONG_RATE:
+            return diameter, dirty_rate, strong_rate
+    return None
+
+
+def validate_frame(file_name: str, photo_diameter: int) -> list[str]:
+    errors: list[str] = []
     path = DRAWABLE / file_name
     if not path.is_file():
-        raise AssertionError(f"{file_name}: missing file")
+        return [f"{file_name}: missing file"]
 
-    width, height, alpha = read_rgba_png(path)
+    try:
+        width, height, alpha = read_rgba_png(path)
+    except Exception as exc:
+        return [str(exc)]
+
     if (width, height) != (512, 512):
-        raise AssertionError(f"{file_name}: expected 512x512, got {width}x{height}")
+        errors.append(f"{file_name}: expected 512x512, got {width}x{height}")
+        return errors
 
     for x, y in ((0, 0), (511, 0), (0, 511), (511, 511)):
         if alpha[y][x] > 8:
-            raise AssertionError(f"{file_name}: corner {x},{y} is not transparent (alpha={alpha[y][x]})")
+            errors.append(f"{file_name}: corner {x},{y} is not transparent (alpha={alpha[y][x]})")
     if alpha[256][256] > 8:
-        raise AssertionError(f"{file_name}: center is not transparent (alpha={alpha[256][256]})")
+        errors.append(f"{file_name}: center is not transparent (alpha={alpha[256][256]})")
 
-    radius = photo_diameter / 2.0
-    photo_pixels = dirty = strong = 0
+    dirty_rate, strong_rate = photo_rates(alpha, photo_diameter)
     visible_total = visible = 0
     edge_total = edge_visible = 0
 
     for y in range(512):
         for x in range(512):
             a = alpha[y][x]
-            d = math.hypot(x - 255.5, y - 255.5)
-            if d <= radius - 3.0:
-                photo_pixels += 1
-                if a > 24:
-                    dirty += 1
-                if a > 96:
-                    strong += 1
             if x % 2 == 0 and y % 2 == 0:
                 visible_total += 1
                 if a > 64:
@@ -153,29 +182,41 @@ def validate_frame(file_name: str, photo_diameter: int) -> None:
                 if a > 24:
                     edge_visible += 1
 
-    dirty_rate = dirty / photo_pixels
-    strong_rate = strong / photo_pixels
     edge_rate = edge_visible / edge_total
     visible_rate = visible / visible_total
 
+    safe = largest_safe_diameter(alpha, photo_diameter)
+    recommendation = ""
+    if safe is not None and safe[0] < photo_diameter:
+        recommendation = f" recommended<={safe[0]}px (dirty={pct(safe[1])}, strong={pct(safe[2])})"
+
     print(
         f"{file_name}: photo={photo_diameter}px dirty={pct(dirty_rate)} strong={pct(strong_rate)} "
-        f"edge={pct(edge_rate)} visible={pct(visible_rate)}"
+        f"edge={pct(edge_rate)} visible={pct(visible_rate)}{recommendation}"
     )
 
-    if dirty_rate > 0.015:
-        raise AssertionError(f"{file_name}: frame overlays too much of avatar area ({pct(dirty_rate)})")
-    if strong_rate > 0.003:
-        raise AssertionError(f"{file_name}: opaque artwork intrudes into avatar area ({pct(strong_rate)})")
-    if edge_rate > 0.01:
-        raise AssertionError(f"{file_name}: artwork reaches canvas edge and may look clipped ({pct(edge_rate)})")
-    if visible_rate < 0.03:
-        raise AssertionError(f"{file_name}: not enough visible frame artwork ({pct(visible_rate)})")
+    if dirty_rate > MAX_DIRTY_RATE:
+        errors.append(f"{file_name}: frame overlays too much of avatar area ({pct(dirty_rate)}){recommendation}")
+    if strong_rate > MAX_STRONG_RATE:
+        errors.append(f"{file_name}: opaque artwork intrudes into avatar area ({pct(strong_rate)}){recommendation}")
+    if edge_rate > MAX_EDGE_RATE:
+        errors.append(f"{file_name}: artwork reaches canvas edge and may look clipped ({pct(edge_rate)})")
+    if visible_rate < MIN_VISIBLE_RATE:
+        errors.append(f"{file_name}: not enough visible frame artwork ({pct(visible_rate)})")
+    return errors
 
 
 def main() -> None:
+    errors: list[str] = []
     for file_name, diameter in FRAMES:
-        validate_frame(file_name, diameter)
+        errors.extend(validate_frame(file_name, diameter))
+
+    if errors:
+        print("\nProfile frame visual geometry validation found issues:")
+        for error in errors:
+            print(f"- {error}")
+        raise SystemExit(1)
+
     print("Profile frame visual geometry validation passed")
 
 
