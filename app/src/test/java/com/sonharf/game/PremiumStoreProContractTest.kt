@@ -7,6 +7,17 @@ import org.junit.Test
 
 class PremiumStoreProContractTest {
     @Test
+    fun `canonical V2 visual runtime remains active`() {
+        val stable = repoFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
+        val theme = repoFile("app/src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
+        val home = repoFile("app/src/main/java/com/sonharf/game/PremiumHomePolish.kt").readText()
+        assertTrue(stable.contains("PremiumCanvaAppV2("))
+        assertTrue(theme.contains("blackThemeActive"))
+        assertFalse(theme.contains("MonsterLime"))
+        assertTrue(home.contains("HAFTANIN EN İYİLERİ"))
+    }
+
+    @Test
     fun `permanent premium catalog uses exact production skus`() {
         val catalog = repoFile("app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt").readText()
         listOf("series_game", "letter_table", "score_calculator", "pro_lifetime").forEach {
@@ -15,13 +26,18 @@ class PremiumStoreProContractTest {
         assertTrue(catalog.contains("129 TL"))
         assertTrue(catalog.contains("65 TL"))
         assertTrue(catalog.contains("479 TL"))
+        assertTrue(catalog.contains("permanentPremiumProducts"))
     }
 
     @Test
-    fun `premium store has no restore purchases ui and uses text free runtime artwork`() {
+    fun `premium store has no visible restore purchases control and uses text free runtime artwork`() {
         val store = repoFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
-        assertFalse(store.contains("Satın Almaları Geri Yükle", ignoreCase = true))
-        assertFalse(store.contains("Restore Purchases", ignoreCase = true))
+        val dialog = repoFile("app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt").readText()
+        assertFalse(store.contains("Text(sh(\"Satın Almaları Geri Yükle"))
+        assertFalse(store.contains("Text(\"Restore Purchases"))
+        assertFalse(dialog.contains("Text(sh(\"Satın almaları geri yükle"))
+        assertTrue(store.contains("restorePurchases(ProductCatalog.permanentPremiumProducts.toSet())"))
+        assertTrue(dialog.contains("restorePurchases(setOf(ProductCatalog.PRO_LIFETIME))"))
         assertTrue(store.contains("R.drawable.premium_series_game"))
         assertTrue(store.contains("R.drawable.premium_letter_table"))
         assertTrue(store.contains("R.drawable.premium_score_calculator"))
@@ -37,6 +53,34 @@ class PremiumStoreProContractTest {
             assertTrue(vector.contains("<vector"))
             assertFalse("Decorative premium asset must not bake text", vector.contains("<text"))
         }
+    }
+
+    @Test
+    fun `V2 PRO purchase is lifetime one time product`() {
+        val dialog = repoFile("app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt").readText()
+        assertTrue(dialog.contains("ProductCatalog.PRO_LIFETIME"))
+        assertTrue(dialog.contains("queryOneTimeProducts"))
+        assertTrue(dialog.contains("oneTimePurchaseOfferDetails"))
+        assertFalse(dialog.contains("querySubscriptions("))
+        assertFalse(dialog.contains("VIP_MONTHLY"))
+        assertFalse(dialog.contains("VIP_YEARLY"))
+        assertTrue(dialog.contains("Tek ödeme"))
+        assertTrue(dialog.contains("Kalıcı"))
+    }
+
+    @Test
+    fun `V2 PRO store surfaces all permanent products and Series open action`() {
+        val pro = repoFile("app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt").readText()
+        val products = repoFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
+        assertTrue(pro.contains("GooglePlayProductsCard("))
+        assertTrue(pro.contains("showCoinPacks = false"))
+        assertTrue(pro.contains("Puan Hesaplayıcı"))
+        assertTrue(pro.contains("Harf Tablosu"))
+        assertTrue(pro.contains("Seri Oyun"))
+        assertTrue(pro.contains("50 aktif oyun"))
+        assertTrue(pro.contains("100 Son Coin"))
+        assertTrue(products.contains("WordSiegeSeriesScreen"))
+        assertTrue(products.contains("showSeriesGame = true"))
     }
 
     @Test
@@ -72,6 +116,8 @@ class PremiumStoreProContractTest {
         val backend = repoFile("app/src/main/java/com/sonharf/game/data/PremiumWordSiegeBackend.kt").readText()
         assertTrue(backend.contains("preview_word_siege_move_pro_v1"))
         assertTrue(backend.contains("get_word_siege_letter_table_v1"))
+        val match = repoFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
+        assertTrue(match.contains("WordSiegePremiumPanel("))
     }
 
     @Test
