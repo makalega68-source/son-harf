@@ -16,20 +16,32 @@ class StoreCatalogPolicyTest {
         assertTrue(item("keyboard_obsidian", "keyboard_theme").isRuntimeReadyStyle())
         assertFalse(item("keyboard_neon", "keyboard_theme").isRuntimeReadyStyle())
         assertTrue(item("frame_round_ocean", "profile_frame").isRuntimeReadyStyle())
-        assertFalse(item("victory_crown", "victory_effect").isRuntimeReadyStyle())
-        assertFalse(item("emoji_vip", "emoji_pack").isRuntimeReadyStyle())
+        assertTrue(item("victory_crown", "victory_effect").isRuntimeReadyStyle())
+        assertTrue(item("emoji_vip", "emoji_pack").isRuntimeReadyStyle())
         assertFalse(item("unknown", "profile_frame").isRuntimeReadyStyle())
+        assertFalse(item("victory_unknown", "victory_effect").isRuntimeReadyStyle())
+        assertFalse(item("emoji_unknown", "emoji_pack").isRuntimeReadyStyle())
     }
 
     @Test fun inactiveAndMismatchedProductsCannotBeOffered() {
         assertFalse(item("theme_dark_arena", "game_theme").copy(active = false).isRuntimeReadyStyle())
         assertFalse(item("theme_dark_arena", "name_style").isRuntimeReadyStyle())
+        assertFalse(item("victory_crown", "victory_effect").copy(active = false).isRuntimeReadyStyle())
+        assertFalse(item("emoji_vip", "emoji_pack").copy(active = false).isRuntimeReadyStyle())
     }
 
     @Test fun equippedStateUsesTheCorrectSlot() {
-        val selected = EquippedCosmeticsDto(userId = "test", gameThemeId = "theme_dark_arena", profileFrameId = "frame_round_ocean")
+        val selected = EquippedCosmeticsDto(
+            userId = "test",
+            gameThemeId = "theme_dark_arena",
+            profileFrameId = "frame_round_ocean",
+            victoryEffectId = "victory_crown",
+            emojiPackId = "emoji_vip",
+        )
         assertTrue(selected.isEquipped(item("theme_dark_arena", "game_theme")))
         assertTrue(selected.isEquipped(item("frame_round_ocean", "profile_frame")))
+        assertTrue(selected.isEquipped(item("victory_crown", "victory_effect")))
+        assertTrue(selected.isEquipped(item("emoji_vip", "emoji_pack")))
         assertFalse(selected.isEquipped(item("frame_round_botanic", "profile_frame")))
         assertFalse((null as EquippedCosmeticsDto?).isEquipped(item("theme_dark_arena", "game_theme")))
     }
@@ -40,6 +52,8 @@ class StoreCatalogPolicyTest {
             item("theme_dark_arena", "game_theme"),
             item("name_sapphire", "name_style"),
             item("keyboard_crystal", "keyboard_theme"),
+            item("victory_crown", "victory_effect"),
+            item("emoji_vip", "emoji_pack"),
         ).forEach { product ->
             val retired = product.copy(active = false)
             assertFalse(retired.isRuntimeReadyStyle())
@@ -54,6 +68,9 @@ class StoreCatalogPolicyTest {
     @Test fun ownershipNeverEnablesUnsupportedOrMismatchedRuntimeAssets() {
         assertFalse(item("unknown", "profile_frame").isSupportedOwnedStyle())
         assertFalse(item("frame_round_ocean", "game_theme").isSupportedOwnedStyle())
-        assertFalse(item("victory_crown", "victory_effect").isSupportedOwnedStyle())
+        assertTrue(item("victory_crown", "victory_effect").isSupportedOwnedStyle())
+        assertTrue(item("emoji_vip", "emoji_pack").isSupportedOwnedStyle())
+        assertFalse(item("victory_unknown", "victory_effect").isSupportedOwnedStyle())
+        assertFalse(item("emoji_unknown", "emoji_pack").isSupportedOwnedStyle())
     }
 }
