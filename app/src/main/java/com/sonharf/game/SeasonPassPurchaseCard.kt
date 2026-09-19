@@ -2,11 +2,13 @@ package com.sonharf.game
 
 import android.app.Activity
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -20,8 +22,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -90,9 +95,22 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
             Modifier.fillMaxWidth().padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(9.dp),
         ) {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.premium_season_pass),
+                    contentDescription = null,
+                    modifier = Modifier.size(74.dp),
+                    contentScale = ContentScale.Fit,
+                )
                 Column(Modifier.weight(1f)) {
-                    Text(sh("SEZON BİLETİ", "SEASON PASS"), color = SonHarfPurple, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(sh("SEZON BİLETİ", "SEASON PASS"), color = SonHarfPurple, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        Text(sh("AYLIK", "MONTHLY"), color = SonHarfMuted, fontSize = 11.sp)
+                    }
                     Text(
                         sh(
                             "Premium ödül yolu • özel Style • sezon unvanları • Son Coin",
@@ -102,7 +120,6 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
                         fontSize = 9.sp,
                     )
                 }
-                Text(sh("AYLIK", "MONTHLY"), color = SonHarfMuted, fontSize = 11.sp)
             }
 
             Text(
