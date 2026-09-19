@@ -77,12 +77,17 @@ class V2PremiumFinalAcceptanceContractTest {
     }
 
     @Test fun proProfileFrameIsServerAuthoritativeAndCosmetic() {
-        val s = source("app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt")
-        assertTrue("backend.getVipEntitlements().isPro" in s)
-        assertTrue("if (proActive)" in s)
-        assertTrue("BorderStroke(4.dp, SonHarfGold)" in s)
-        assertTrue("Text(\n                                \"PRO\"" in s)
-        assertTrue("ProfileAvatarV2(avatarBytes" in s)
+        val profile = source("app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt")
+        val frames = source("app/src/main/java/com/sonharf/game/ProfileFramesV2.kt")
+        assertTrue("backend.getVipEntitlements().isPro" in profile)
+        assertTrue("backend?.getInventory()" in profile)
+        assertTrue("backend?.getEquippedCosmetics()" in profile)
+        assertTrue("ProfileFrameV2Catalog.ownedPaidFrame" in profile)
+        assertTrue("ProfileFrameAvatarBytesV2(" in profile)
+        assertTrue("isPro = proActive" in profile)
+        assertTrue("Text(\n                                \"PRO\"" in profile)
+        assertTrue("R.drawable.profile_frame_default_gray" in frames)
+        assertTrue("R.drawable.profile_frame_pro_gold" in frames)
     }
 
     @Test fun seriesBackendSourceIsSeparateAndServerTimed() {
