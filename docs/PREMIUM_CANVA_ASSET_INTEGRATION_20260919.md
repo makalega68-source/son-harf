@@ -41,7 +41,9 @@ Profile-frame products continue to render their actual packaged frame assets thr
 - `theme_black` is the live Black Theme catalog id. `theme_dark_arena` remains accepted only as a compatibility alias for older ownership/cache data.
 - Crystal, Obsidian, Midnight, Black Gold and Premium White keyboards each have their own runtime palette and store artwork.
 - Name styles keep their real runtime text colors and now use matching text-free signature artwork in the store.
-- Crown Victory and VIP Emoji artwork is prepared and mapped, but those catalog items remain hidden from purchase until their in-match behavior is connected. A decorative store image alone must never make an unfinished cosmetic purchasable.
+- `victory_crown` is runtime-backed in Kelime Kuşatması: when the local player wins and the effect is equipped, a short one-shot crown celebration is rendered on the finished-match card.
+- `emoji_vip` is runtime-backed in Kelime Kuşatması chat: when equipped, a VIP quick-reaction row is shown and each reaction uses the existing normal chat transport. A quick reaction does not overwrite a partially typed message.
+- Both premium effects are cosmetic-only. They do not alter score, territory, matchmaking, turn order, validation or any competitive rule.
 
 ## Production rules
 
