@@ -27,10 +27,7 @@ jobs:
         with:
           validate-wrappers: false
       - name: Apply focused Profile Frames V2 patch
-        run: |
-          set -euo pipefail
-          git apply --check automation/profile-frames-v2.patch
-          git apply automation/profile-frames-v2.patch
+        run: python3 automation/profile_frames_v2_patch.py
       - name: Build and test debug
         run: ./gradlew testDebugUnitTest assembleDebug --stacktrace
       - name: Commit verified patch
