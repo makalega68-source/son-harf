@@ -100,7 +100,7 @@ private fun EconomyCatalogScreen(
         }
         runCatching {
             profile = b.getProfile(id)
-            items = b.getShopItems().filter { it.isRuntimeReadyStyle() || it.kind == "profile_frame" }
+            items = b.getShopItems().filter { it.isRuntimeReadyStyle() }
             owned = b.getInventory()
             equipped = b.getEquippedCosmetics()
             SonHarfCosmetics.apply(equipped)
