@@ -79,6 +79,10 @@ class PremiumStoreProContractTest {
         assertTrue(history.contains("can_view_sonharf_word_history_v1"))
         assertTrue(history.contains("latest_game_word_id_v1"))
         assertTrue(history.contains("game_words_participant_history_v1"))
+
+        val screen = repoFile("app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt").readText()
+        assertTrue(screen.contains("PRO • Tüm oynanan kelimeler"))
+        assertTrue(screen.contains("val ordered = if (isPro) words.reversed()"))
     }
 
     @Test
@@ -110,6 +114,10 @@ class PremiumStoreProContractTest {
         assertTrue(v2.contains("public.has_series_game_access_v1("))
         assertTrue(v2.contains("status = 'accepted'"))
         assertTrue(v2.contains("(select auth.uid())"))
+
+        val profile = repoFile("app/src/main/java/com/sonharf/game/MainPlayerProfileScreen.kt").readText()
+        assertTrue(profile.contains("if (loadedProfile?.isVip == true)"))
+        assertTrue(profile.contains("PRO ile arkadaş listesi ve yönetimi"))
     }
 
     @Test
