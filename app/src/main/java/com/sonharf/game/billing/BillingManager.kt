@@ -85,12 +85,21 @@ class BillingManager(
     }
 
     fun launchProduct(activity: Activity, productDetails: ProductDetails): BillingResult {
+        if (!hasPurchasableOffer(productDetails)) {
+            onMessage("Bu ürün için Google Play teklifi kullanılamıyor.")
+            return BillingResult.newBuilder()
+                .setResponseCode(BillingClient.BillingResponseCode.ITEM_UNAVAILABLE)
+                .setDebugMessage("No eligible Google Play offer")
+                .build()
+        }
+
         val detailsBuilder = BillingFlowParams.ProductDetailsParams.newBuilder()
             .setProductDetails(productDetails)
 
         productDetails.subscriptionOfferDetails
             ?.firstOrNull()
             ?.offerToken
+            ?.takeIf { it.isNotBlank() }
             ?.let(detailsBuilder::setOfferToken)
 
         return client.launchBillingFlow(
@@ -134,4 +143,12 @@ class BillingManager(
     }
 
     fun close() = client.endConnection()
+
+    companion object {
+        fun hasPurchasableOffer(productDetails: ProductDetails?): Boolean {
+            if (productDetails == null) return false
+            if (productDetails.oneTimePurchaseOfferDetails != null) return true
+            return productDetails.subscriptionOfferDetails?.any { it.offerToken.isNotBlank() } == true
+        }
+    }
 }

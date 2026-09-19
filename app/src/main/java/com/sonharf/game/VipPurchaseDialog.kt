@@ -91,8 +91,9 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
 
     val selectedId = if (yearly) ProductCatalog.VIP_YEARLY else ProductCatalog.VIP_MONTHLY
     val selectedProduct = products[selectedId]
-    val monthlyPrice = subscriptionPrice(products[ProductCatalog.VIP_MONTHLY]) ?: sh("Play fiyatı", "Play price")
-    val yearlyPrice = subscriptionPrice(products[ProductCatalog.VIP_YEARLY]) ?: sh("Play fiyatı", "Play price")
+    val selectedPurchasable = BillingManager.hasPurchasableOffer(selectedProduct)
+    val monthlyPrice = subscriptionPrice(products[ProductCatalog.VIP_MONTHLY]) ?: sh("PLAY'DE YOK", "NOT ON PLAY")
+    val yearlyPrice = subscriptionPrice(products[ProductCatalog.VIP_YEARLY]) ?: sh("PLAY'DE YOK", "NOT ON PLAY")
 
     Dialog(
         onDismissRequest = { if (!busy) onDismiss() },
@@ -154,8 +155,8 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                             return@Button
                         }
                         val product = selectedProduct
-                        if (product == null) {
-                            notice = if (connected) sh("Seçilen PRO ürünü bu hesap için kullanılamıyor.", "The selected PRO product is unavailable for this account.")
+                        if (product == null || !BillingManager.hasPurchasableOffer(product)) {
+                            notice = if (connected) sh("Seçilen PRO teklifi bu hesap için kullanılamıyor.", "The selected PRO offer is unavailable for this account.")
                             else sh("Google Play bağlantısı hazırlanıyor.", "Connecting to Google Play.")
                             return@Button
                         }
@@ -166,7 +167,7 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                             notice = sh("Google Play ödeme ekranı açılamadı (${result.responseCode}).", "Google Play billing could not open (${result.responseCode}).")
                         }
                     },
-                    enabled = !busy && selectedProduct != null,
+                    enabled = !busy && selectedPurchasable,
                     modifier = Modifier.fillMaxWidth().height(56.dp),
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ProBlue),

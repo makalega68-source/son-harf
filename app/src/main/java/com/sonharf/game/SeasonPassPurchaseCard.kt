@@ -135,24 +135,24 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
             Button(
                 onClick = {
                     val details = product
-                    if (activity == null || details == null) {
-                        notice = sh("Sezon Bileti Google Play'de henüz kullanılabilir değil.", "Season Pass is not available on Google Play yet.")
+                    if (activity == null || !BillingManager.hasPurchasableOffer(details)) {
+                        notice = sh("Sezon Bileti Google Play'de henüz satın alınabilir değil.", "Season Pass is not yet purchasable on Google Play.")
                         return@Button
                     }
                     busy = true
-                    val result = manager.launchProduct(activity, details)
+                    val result = manager.launchProduct(activity, requireNotNull(details))
                     if (result.responseCode != BillingClient.BillingResponseCode.OK) {
                         busy = false
                         notice = sh("Google Play ödeme ekranı açılamadı.", "Google Play billing could not open.")
                     }
                 },
-                enabled = !busy && product != null,
+                enabled = !busy && BillingManager.hasPurchasableOffer(product),
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
                 shape = RoundedCornerShape(14.dp),
             ) {
                 Text(
-                    if (busy) "…" else seasonPassPrice(product) ?: sh("PLAY'DE GÖR", "VIEW ON PLAY"),
+                    if (busy) "…" else seasonPassPrice(product) ?: sh("PLAY'DE YOK", "NOT ON PLAY"),
                     fontWeight = FontWeight.Black,
                 )
             }

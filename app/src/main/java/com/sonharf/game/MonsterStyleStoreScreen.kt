@@ -103,16 +103,26 @@ internal fun MonsterStyleStoreScreen() {
 
     LaunchedEffect(backend) { reload() }
 
-    val tabs = listOf(
-        StoreTab(sh("VİTRİN", "FEATURED"), setOf("game_theme", "profile_frame", "name_style", "keyboard_theme", "victory_effect", "emoji_pack"), Icons.Rounded.AutoAwesome),
-        StoreTab(sh("ÇERÇEVELER", "FRAMES"), setOf("profile_frame"), Icons.Rounded.AccountCircle),
-        StoreTab(sh("TEMALAR", "THEMES"), setOf("game_theme", "keyboard_theme"), Icons.Rounded.Palette),
-        StoreTab(sh("EFEKTLER", "EFFECTS"), setOf("victory_effect", "emoji_pack"), Icons.Rounded.AutoAwesome),
-        StoreTab(sh("PROFİL", "PROFILE"), setOf("name_style"), Icons.Rounded.Title),
-    )
-    val visible = catalog.filter { it.kind in tabs[tab].kinds }
-    val featured = catalog.firstOrNull { it.kind == "profile_frame" }
-        ?: catalog.firstOrNull { it.kind == "game_theme" }
+    val tabs = buildList {
+        add(StoreTab(sh("VİTRİN", "FEATURED"), setOf("game_theme", "name_style", "keyboard_theme", "victory_effect", "emoji_pack"), Icons.Rounded.AutoAwesome))
+        if (catalog.any { it.kind == "game_theme" || it.kind == "keyboard_theme" }) {
+            add(StoreTab(sh("TEMALAR", "THEMES"), setOf("game_theme", "keyboard_theme"), Icons.Rounded.Palette))
+        }
+        if (catalog.any { it.kind == "victory_effect" || it.kind == "emoji_pack" }) {
+            add(StoreTab(sh("EFEKTLER", "EFFECTS"), setOf("victory_effect", "emoji_pack"), Icons.Rounded.AutoAwesome))
+        }
+        if (catalog.any { it.kind == "name_style" }) {
+            add(StoreTab(sh("PROFİL", "PROFILE"), setOf("name_style"), Icons.Rounded.Title))
+        }
+    }
+    LaunchedEffect(tabs.size) {
+        if (tab !in tabs.indices) tab = 0
+    }
+    val activeTab = tabs.getOrElse(tab) { tabs.first() }
+    val visible = catalog.filter { it.kind in activeTab.kinds }
+    val featured = catalog.firstOrNull { it.kind == "game_theme" }
+        ?: catalog.firstOrNull { it.kind == "keyboard_theme" }
+        ?: catalog.firstOrNull { it.kind == "name_style" }
         ?: catalog.firstOrNull()
 
     Surface(Modifier.fillMaxSize(), color = StoreBg) {
@@ -142,7 +152,7 @@ internal fun MonsterStyleStoreScreen() {
                 }
                 item { StoreSectionHeader(sh("GERÇEK ÜRÜNLER", "REAL PRODUCTS"), sh("Önizleme ve oyundaki görünüm aynı kaynaktan gelir.", "Preview and in-game appearance use the same source.")) }
             } else {
-                item { StoreSectionHeader(tabs[tab].title, sh("Kalıcı kozmetik koleksiyonu", "Permanent cosmetic collection")) }
+                item { StoreSectionHeader(activeTab.title, sh("Kalıcı kozmetik koleksiyonu", "Permanent cosmetic collection")) }
             }
             if (visible.isEmpty() && !loading) item { EmptyCatalogCard() }
             items(visible.filter { tab != 0 || it.id != featured?.id }, key = { it.id }) { item ->
@@ -161,7 +171,7 @@ internal fun MonsterStyleStoreScreen() {
 
 internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) {
     "game_theme" -> id in setOf("theme_black", "theme_dark_arena")
-    "profile_frame" -> id in PurchasedFrameCatalog.ids
+    "profile_frame" -> false
     "name_style" -> id in setOf("name_cyan", "name_sapphire", "name_amethyst", "name_aurelia")
     "keyboard_theme" -> id in setOf(
         "keyboard_crystal",
