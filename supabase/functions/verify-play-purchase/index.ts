@@ -8,8 +8,11 @@ const premiumProducts = new Set(["series_game", "letter_table", "score_calculato
 const oneTimeProducts = new Set([
   "series_game", "letter_table", "score_calculator", "pro_lifetime",
   "coins_500", "coins_1500", "coins_3500", "coins_8000",
+  // Historical IDs remain recognizable so the server can return an explicit
+  // product_disabled response instead of silently treating an old receipt as unknown.
   "starter_style_pack", "premium_style_pack", "season_pack", "vip_welcome_pack", "theme_neon",
   "profile_frame_ocean", "profile_frame_botanic", "profile_frame_lilac", "profile_frame_rose",
+  "profile_frame_pink_blossom", "profile_frame_blue_royal", "profile_frame_amethyst", "profile_frame_emerald",
 ]);
 const consumableProducts = new Set(["coins_500", "coins_1500", "coins_3500", "coins_8000"]);
 const entitledSubscriptionStates = new Set([
@@ -54,7 +57,11 @@ Deno.serve(async (req: Request) => {
     .eq("product_id", productId)
     .limit(1);
   if (catalogError) return response(503, { error: "store_catalog_unavailable" });
-  if (catalogRows?.length && catalogRows[0]?.enabled !== true) return response(409, { error: "product_disabled" });
+  // Catalog is authoritative: accepted product IDs are not purchasable unless an
+  // explicit enabled row exists. This prevents accidental sale by code-only allowlists.
+  if (catalogRows?.length !== 1 || catalogRows[0]?.enabled !== true) {
+    return response(409, { error: "product_disabled" });
+  }
 
   let credentials: Record<string, unknown>;
   try { credentials = JSON.parse(serviceAccountJson); } catch { return response(500, { error: "invalid_google_service_account_json" }); }
