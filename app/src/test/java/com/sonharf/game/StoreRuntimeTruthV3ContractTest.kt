@@ -9,8 +9,10 @@ class StoreRuntimeTruthV3ContractTest {
     @Test
     fun retiredProfileFramesCannotReenterStyleStore() {
         val styleStore = projectFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
+        val ownedPolicy = projectFile("app/src/main/java/com/sonharf/game/OwnedStylePolicy.kt").readText()
 
         assertTrue(styleStore.contains("\"profile_frame\" -> false"))
+        assertTrue(ownedPolicy.contains("\"profile_frame\" -> false"))
         assertFalse(styleStore.contains("StoreTab(sh(\"ÇERÇEVELER\", \"FRAMES\")"))
         assertTrue(styleStore.contains("catalog.any { it.kind == \"game_theme\" || it.kind == \"keyboard_theme\" }"))
         assertTrue(styleStore.contains("catalog.any { it.kind == \"victory_effect\" || it.kind == \"emoji_pack\" }"))
