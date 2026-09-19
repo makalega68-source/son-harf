@@ -1,1 +1,1 @@
-2026-09-19T-profile-frames-v2-visual-geometry-diagnostic-6
+2026-09-19T-profile-frames-v2-visual-geometry-verified-7
