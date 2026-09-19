@@ -52,12 +52,7 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
     ) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    onClick = onBack,
-                    shape = CircleShape,
-                    color = SonHarfTheme.Surface,
-                    border = BorderStroke(1.dp, SonHarfTheme.Border),
-                ) {
+                Surface(onClick = onBack, shape = CircleShape, color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
                     Icon(Icons.Rounded.ArrowBack, null, tint = SonHarfTheme.TextPrimary, modifier = Modifier.padding(10.dp).size(20.dp))
                 }
                 Spacer(Modifier.width(12.dp))
@@ -70,51 +65,23 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
         }
 
         if (loading) item {
-            LinearProgressIndicator(
-                Modifier.fillMaxWidth(),
-                color = SonHarfTheme.Turquoise,
-                trackColor = SonHarfTheme.SurfaceSecondary,
-            )
+            LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfTheme.Turquoise, trackColor = SonHarfTheme.SurfaceSecondary)
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                color = Color.Transparent,
-                shadowElevation = 6.dp,
-            ) {
+            Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(28.dp), color = Color.Transparent, shadowElevation = 6.dp) {
                 Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(SonHarfTheme.Primary, SonHarfTheme.Purple, SonHarfTheme.Turquoise)
-                            ),
-                            RoundedCornerShape(28.dp),
-                        )
-                        .padding(horizontal = 20.dp, vertical = 22.dp)
+                    Modifier.fillMaxWidth().background(
+                        Brush.linearGradient(listOf(SonHarfTheme.Primary, SonHarfTheme.Purple, SonHarfTheme.Turquoise)),
+                        RoundedCornerShape(28.dp),
+                    ).padding(horizontal = 20.dp, vertical = 22.dp)
                 ) {
-                    Column(
-                        Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
+                    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Surface(shape = CircleShape, color = Color.White.copy(alpha = .16f)) {
                             Icon(Icons.Rounded.WorkspacePremium, null, tint = Color.White, modifier = Modifier.padding(14.dp).size(32.dp))
                         }
-                        Text(
-                            if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("PRO'YA GEÇ", "GO PRO"),
-                            color = Color.White,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black,
-                        )
-                        Text(
-                            profile?.displayName ?: sh("Oyuncu", "Player"),
-                            color = Color.White.copy(alpha = .92f),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
+                        Text(if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("PRO'YA GEÇ", "GO PRO"), color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                        Text(profile?.displayName ?: sh("Oyuncu", "Player"), color = Color.White.copy(alpha = .92f), fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         Text(
                             if (active) sh(
                                 "Premium araçlar, sosyal kolaylıklar, prestij ve reklamsız kullanım aktif.",
@@ -123,10 +90,7 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                                 "Bilgi, kolaylık ve prestij odaklı kalıcı paket. Maç gücü satmaz.",
                                 "A lifetime package focused on information, convenience and prestige. It never sells match power.",
                             ),
-                            color = Color.White.copy(alpha = .84f),
-                            fontSize = 10.sp,
-                            lineHeight = 14.sp,
-                            textAlign = TextAlign.Center,
+                            color = Color.White.copy(alpha = .84f), fontSize = 10.sp, lineHeight = 14.sp, textAlign = TextAlign.Center,
                         )
                     }
                 }
@@ -135,38 +99,14 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
 
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                ProAccessCard(
-                    icon = Icons.Rounded.Calculate,
-                    label = sh("PUAN", "SCORE"),
-                    enabled = e?.scoreCalculatorAccess == true,
-                    accent = SonHarfTheme.Primary,
-                    modifier = Modifier.weight(1f),
-                )
-                ProAccessCard(
-                    icon = Icons.Rounded.GridView,
-                    label = sh("HARFLER", "LETTERS"),
-                    enabled = e?.letterTableAccess == true,
-                    accent = SonHarfTheme.Turquoise,
-                    modifier = Modifier.weight(1f),
-                )
-                ProAccessCard(
-                    icon = Icons.Rounded.Timer,
-                    label = sh("SERİ OYUN", "SERIES"),
-                    enabled = e?.seriesGameAccess == true,
-                    accent = SonHarfTheme.Purple,
-                    modifier = Modifier.weight(1f),
-                )
+                ProAccessCard(Icons.Rounded.Calculate, sh("PUAN", "SCORE"), e?.scoreCalculatorAccess == true, SonHarfTheme.Primary, Modifier.weight(1f))
+                ProAccessCard(Icons.Rounded.GridView, sh("HARFLER", "LETTERS"), e?.letterTableAccess == true, SonHarfTheme.Turquoise, Modifier.weight(1f))
+                ProAccessCard(Icons.Rounded.Timer, sh("SERİ OYUN", "SERIES"), e?.seriesGameAccess == true, SonHarfTheme.Purple, Modifier.weight(1f))
             }
         }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = SonHarfTheme.Surface,
-                border = BorderStroke(1.dp, SonHarfTheme.Border),
-                shadowElevation = 2.dp,
-            ) {
+            Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(22.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border), shadowElevation = 2.dp) {
                 Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
                     Text(sh("PRO AYRICALIKLARI", "PRO BENEFITS"), color = SonHarfTheme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
                     ProBenefitRow(Icons.Rounded.Block, sh("Reklamsız kullanım", "Ad-free use"), SonHarfTheme.Primary)
@@ -182,12 +122,24 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
             }
         }
 
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Text(sh("PREMİUM ÜRÜNLER", "PREMIUM PRODUCTS"), color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                Text(sh("Tek tek satın alabilir veya PRO ile tamamını açabilirsin.", "Buy them individually or unlock all of them with PRO."), color = SonHarfTheme.TextSecondary, fontSize = 9.sp)
+            }
+        }
+        item {
+            GooglePlayProductsCard(
+                onPurchased = { scope.launch { reload() } },
+                showPremiumProducts = true,
+                showCoinPacks = false,
+            )
+        }
+
         if (!active) {
             item {
                 Button(
-                    onClick = { showPurchase = true },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(17.dp),
+                    onClick = { showPurchase = true }, modifier = Modifier.fillMaxWidth().height(56.dp), shape = RoundedCornerShape(17.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Purple, contentColor = Color.White),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
                 ) {
@@ -198,16 +150,8 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
             }
         } else {
             item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(17.dp),
-                    color = SonHarfTheme.Turquoise.copy(alpha = .10f),
-                ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(14.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
+                Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(17.dp), color = SonHarfTheme.Turquoise.copy(alpha = .10f)) {
+                    Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.CheckCircle, null, tint = SonHarfTheme.Turquoise, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(7.dp))
                         Text(sh("KALICI PRO AKTİF", "LIFETIME PRO ACTIVE"), color = SonHarfTheme.Turquoise, fontWeight = FontWeight.Black, fontSize = 11.sp)
@@ -223,7 +167,6 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                 }
             }
         }
-
         item { Spacer(Modifier.height(8.dp)) }
     }
 
@@ -240,35 +183,12 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
 }
 
 @Composable
-private fun ProAccessCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    label: String,
-    enabled: Boolean,
-    accent: Color,
-    modifier: Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(1.dp, accent.copy(alpha = .24f)),
-        shadowElevation = 2.dp,
-    ) {
-        Column(
-            Modifier.padding(horizontal = 7.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
-        ) {
-            Surface(shape = CircleShape, color = accent.copy(alpha = .10f)) {
-                Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(19.dp))
-            }
+private fun ProAccessCard(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, enabled: Boolean, accent: Color, modifier: Modifier) {
+    Surface(modifier = modifier, shape = RoundedCornerShape(18.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, accent.copy(alpha = .24f)), shadowElevation = 2.dp) {
+        Column(Modifier.padding(horizontal = 7.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            Surface(shape = CircleShape, color = accent.copy(alpha = .10f)) { Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(19.dp)) }
             Text(label, color = SonHarfTheme.TextPrimary, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
-            Text(
-                if (enabled) sh("AKTİF", "ACTIVE") else sh("PRO", "PRO"),
-                color = if (enabled) SonHarfTheme.Turquoise else SonHarfTheme.TextSecondary,
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Black,
-            )
+            Text(if (enabled) sh("AKTİF", "ACTIVE") else sh("PRO", "PRO"), color = if (enabled) SonHarfTheme.Turquoise else SonHarfTheme.TextSecondary, fontSize = 8.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -276,9 +196,7 @@ private fun ProAccessCard(
 @Composable
 private fun ProBenefitRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, accent: Color) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(11.dp), color = accent.copy(alpha = .10f)) {
-            Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(18.dp))
-        }
+        Surface(shape = RoundedCornerShape(11.dp), color = accent.copy(alpha = .10f)) { Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(18.dp)) }
         Spacer(Modifier.width(10.dp))
         Text(text, Modifier.weight(1f), color = SonHarfTheme.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
         Icon(Icons.Rounded.Check, null, tint = SonHarfTheme.Turquoise, modifier = Modifier.size(17.dp))
