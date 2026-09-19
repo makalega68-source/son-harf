@@ -56,7 +56,8 @@ class PremiumStoreProContractTest {
         assertTrue(migration.contains("active_game_limit"))
         assertTrue(migration.contains("50"))
         assertTrue(migration.contains("10"))
-        assertTrue(migration.contains("ad_free"))
+        assertTrue(migration.contains("rewarded_ad_bypass"))
+        assertTrue(migration.contains("update public.profiles set is_vip=true"))
     }
 
     @Test
