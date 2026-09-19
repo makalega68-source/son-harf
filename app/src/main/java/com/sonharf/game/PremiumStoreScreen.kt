@@ -184,6 +184,15 @@ internal fun PremiumStoreScreen(
                     item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfTheme.Turquoise, trackColor = SonHarfTheme.SurfaceSecondary) }
                 }
 
+                if (tab == 2) {
+                    item {
+                        ProfileFramesV2StoreRow(
+                            backend = backend,
+                            onChanged = { scope.launch { reload() } },
+                        )
+                    }
+                }
+
                 if (tab == 0) {
                     item {
                         StoreDailyRewardCard(storefront, busyId != null || loading) {

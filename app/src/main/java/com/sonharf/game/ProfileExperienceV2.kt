@@ -36,6 +36,8 @@ import com.sonharf.game.data.getAchievements
 import com.sonharf.game.data.claimCompetitiveSeasonReward
 import com.sonharf.game.data.getCompetitiveSeason
 import com.sonharf.game.data.getCompetitiveSeasonHistory
+import com.sonharf.game.data.getEquippedCosmetics
+import com.sonharf.game.data.getInventory
 import com.sonharf.game.data.getPersonalRecords
 import com.sonharf.game.data.getVipEntitlements
 import io.github.jan.supabase.auth.auth
@@ -139,6 +141,8 @@ fun ProfileExperienceV2Screen() {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var profile by remember { mutableStateOf<ProfileV2Dto?>(null) }
     var proActive by remember { mutableStateOf(false) }
+    var ownedFrameIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var equippedPaidFrameId by remember { mutableStateOf<String?>(null) }
     var season by remember { mutableStateOf<CompetitiveSeasonDto?>(null) }
     var seasonHistory by remember { mutableStateOf<List<CompetitiveSeasonHistoryDto>>(emptyList()) }
     var achievements by remember { mutableStateOf<List<AchievementProgressDto>>(emptyList()) }
@@ -155,6 +159,11 @@ fun ProfileExperienceV2Screen() {
         loading = true
         profile = runCatching { loadProfileV2() }.getOrNull()
         proActive = runCatching { backend?.let { backend.getVipEntitlements().isPro } ?: false }.getOrDefault(false)
+        val frameOwned = runCatching { backend?.getInventory().orEmpty() }.getOrDefault(emptySet())
+        val frameEquipped = runCatching { backend?.getEquippedCosmetics() }.getOrNull()
+        ownedFrameIds = frameOwned
+        equippedPaidFrameId = ProfileFrameV2Catalog.ownedPaidFrame(frameEquipped?.profileFrameId, frameOwned)
+        SonHarfCosmetics.apply(frameEquipped, frameOwned)
         avatarBytes = profile?.avatarPath?.let { runCatching { ProfilePhotoStorageV2.download(it) }.getOrNull() }
         season = runCatching { backend?.getCompetitiveSeason() }.getOrNull()
         seasonHistory = runCatching { backend?.getCompetitiveSeasonHistory(12).orEmpty() }.getOrDefault(emptyList())
@@ -170,6 +179,8 @@ fun ProfileExperienceV2Screen() {
     val losses = p?.losses ?: 0
     val totalMatches = p?.totalMatches?.takeIf { it > 0 } ?: wins + losses
     val winRate = if (totalMatches == 0) 0 else wins * 100 / totalMatches
+    val verifiedFrameOwnershipCount = ownedFrameIds.count { it in ProfileFrameV2Catalog.paidIds }
+    @Suppress("UNUSED_VARIABLE") val frameOwnershipAudit = verifiedFrameOwnershipCount
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -179,18 +190,14 @@ fun ProfileExperienceV2Screen() {
         item {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(contentAlignment = Alignment.BottomEnd) {
+                    ProfileFrameAvatarBytesV2(
+                        avatarBytes = avatarBytes,
+                        name = p?.displayName ?: "O",
+                        outerSize = 120.dp,
+                        equippedPaidFrameId = equippedPaidFrameId,
+                        isPro = proActive,
+                    )
                     if (proActive) {
-                        Surface(
-                            modifier = Modifier.size(120.dp),
-                            shape = CircleShape,
-                            color = Color.Transparent,
-                            border = BorderStroke(4.dp, SonHarfGold),
-                            shadowElevation = 5.dp,
-                        ) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 106)
-                            }
-                        }
                         Surface(
                             modifier = Modifier.align(Alignment.TopEnd),
                             shape = RoundedCornerShape(50),
@@ -205,8 +212,6 @@ fun ProfileExperienceV2Screen() {
                                 fontWeight = FontWeight.Black,
                             )
                         }
-                    } else {
-                        ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 112)
                     }
                     Surface(
                         modifier = Modifier.size(42.dp).clickable { photoEditor = true },
