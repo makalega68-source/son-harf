@@ -113,6 +113,16 @@ class PremiumStoreProContractTest {
     }
 
     @Test
+    fun `pro reward center never loads or exposes rewarded ads`() {
+        val rewards = repoFile("app/src/main/java/com/sonharf/game/RewardCenterScreen.kt").readText()
+        assertTrue(rewards.contains("val isPro = profile?.isVip == true"))
+        assertTrue(rewards.contains("profile?.isVip == false && AdPrivacyManager.adsAllowed"))
+        assertTrue(rewards.contains("if (!isPro)"))
+        assertTrue(rewards.contains("PRO hesabında reklam gösterilmez"))
+        assertTrue(rewards.contains("adController.clear()"))
+    }
+
+    @Test
     fun `play verifier keeps permanent premium non consumable and server authoritative`() {
         val verify = repoFile("supabase/functions/verify-play-purchase/index.ts").readText()
         assertTrue(verify.contains("series_game"))
