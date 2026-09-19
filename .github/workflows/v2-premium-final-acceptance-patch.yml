@@ -1,0 +1,53 @@
+name: V2 Premium Final Acceptance Patch
+on:
+  push:
+    branches: [integration/v2-premium-corrected-final-20260919]
+    paths:
+      - 'tools/patch_v2_premium_final_acceptance.py'
+      - '.github/workflows/v2-premium-final-acceptance-patch.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/v2-premium-corrected-final-20260919
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Apply deterministic final acceptance patch
+        run: python tools/patch_v2_premium_final_acceptance.py
+      - name: Final premium source guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -R -n -E 'ADİL REKABET|FAIR PLAY:|Manage subscription|Aboneliği yönet' app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt
+          grep -q 'productId = ProductCatalog.SERIES_GAME' app/src/main/java/com/sonharf/game/WordSiegeSeriesScreen.kt
+          grep -q 'showPremiumProducts = true' app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt
+          grep -q 'showPremiumProducts = false' app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt
+          grep -q '100 Son Coin' app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt
+      - name: Unit tests and debug APK
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+      - name: Commit only tested final acceptance changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add \
+            app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt \
+            app/src/main/java/com/sonharf/game/PremiumProductPurchaseDialog.kt \
+            app/src/main/java/com/sonharf/game/WordSiegeSeriesScreen.kt \
+            app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt \
+            app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt \
+            app/src/test/java/com/sonharf/game/V2PremiumFinalAcceptanceContractTest.kt
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'fix(v2): close final premium acceptance gaps'
+          git push origin HEAD:integration/v2-premium-corrected-final-20260919
