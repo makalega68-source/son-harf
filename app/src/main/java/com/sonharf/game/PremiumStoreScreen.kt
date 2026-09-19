@@ -83,6 +83,7 @@ internal fun PremiumStoreScreen(
             profile = b.getProfile(id)
             entitlements = runCatching { b.getVipEntitlements() }.getOrNull()
             products = b.getShopItems()
+                .filterNot { it.id in ProfileFrameV2Catalog.paidIds }
                 .filter { it.kind in PremiumStoreKinds }
                 .filterNot { it.id in setOf("theme_dark_arena", "theme_monster_blue", "theme_aurora", "theme_neon", "theme_midnight") }
                 .sortedWith(compareBy<ShopItemDto> { premiumStoreKindOrder(it.kind) }.thenBy { it.sortOrder }.thenBy { it.id })
