@@ -8,6 +8,12 @@ import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
 
 private val supportedProfileFrameIds = setOf(
+    // Profile Frames V2 - active paid frames.
+    "profile_frame_pink_blossom",
+    "profile_frame_blue_royal",
+    "profile_frame_amethyst",
+    "profile_frame_emerald",
+    // Historical ownership remains readable for account recovery; old renderer stays retired.
     "frame_round_starter_blue",
     "frame_round_starter_pink",
     "frame_round_starter_neutral",
