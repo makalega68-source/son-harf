@@ -443,12 +443,12 @@ private fun ProShopCard(active: Boolean, onClick: () -> Unit) {
                     }
                     Column {
                         Text("PRO", color = MainUi.Blue, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Reklamsız + kozmetik + analiz", "Ad-free + cosmetics + analysis"), color = SonHarfMuted, fontSize = 9.sp)
+                        Text(sh("Reklamsız + profil + analiz", "Ad-free + profile + analysis"), color = SonHarfMuted, fontSize = 9.sp)
                     }
                 }
                 Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) SonHarfTheme.Success else MainUi.Blue, fontWeight = FontWeight.Black)
             }
-            Text(sh("Özel oda • özel kozmetik • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar", "Private rooms • exclusive cosmetics • advanced stats • ad-free experience • social benefits"), color = SonHarfText, fontSize = 10.sp)
+            Text(sh("Özel oda • PRO profil rozeti • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar", "Private rooms • PRO profile badge • advanced stats • ad-free experience • social benefits"), color = SonHarfText, fontSize = 10.sp)
             Text(sh("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez.", "PRO provides no score, word-hint, or rating advantage in ranked matches."), color = SonHarfTheme.Success, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         }
     }
