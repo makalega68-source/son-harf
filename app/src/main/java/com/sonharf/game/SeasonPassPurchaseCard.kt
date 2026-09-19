@@ -113,8 +113,8 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
                     }
                     Text(
                         sh(
-                            "Premium ödül yolu • özel Style • sezon unvanları • Son Coin",
-                            "Premium reward track • exclusive Style • season titles • Son Coins",
+                            "Premium ödül yolu • daha fazla Son Coin • ilerleme ödülleri",
+                            "Premium reward track • more Son Coins • progression rewards",
                         ),
                         color = SonHarfMuted,
                         fontSize = 9.sp,
@@ -124,8 +124,8 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
 
             Text(
                 sh(
-                    "Sezon Bileti yalnızca koleksiyon, görünüm ve ilerleme ödülleri verir; rating, süre, joker gücü veya maç avantajı vermez.",
-                    "Season Pass only grants collection, appearance and progression rewards; it never grants rating, time, joker power or match advantages.",
+                    "Sezon Bileti yalnızca ilerleme ve ekonomi ödülleri verir; rating, süre, joker gücü veya maç avantajı vermez.",
+                    "Season Pass only grants progression and economy rewards; it never grants rating, time, joker power or match advantages.",
                 ),
                 color = SonHarfGreen,
                 fontSize = 9.sp,
