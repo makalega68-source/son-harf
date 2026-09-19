@@ -28,6 +28,8 @@ jobs:
           validate-wrappers: false
       - name: Apply focused Profile Frames V2 patch
         run: python3 automation/profile_frames_v2_patch.py
+      - name: Remove remaining Profile V2 gender symbol
+        run: python3 automation/remove_profile_v2_gender_symbol.py
       - name: Apply visibility and gender-symbol fix
         run: python3 automation/profile_frames_visibility_fix.py
       - name: Validate profile frame visual geometry
