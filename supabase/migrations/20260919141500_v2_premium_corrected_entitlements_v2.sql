@@ -24,9 +24,25 @@ begin
   select coalesce(is_vip,false) into profile_vip from public.profiles where id=u;
 
   pro := public.has_permanent_entitlement_v1(u,'pro_lifetime');
-  series_direct := public.has_permanent_entitlement_v1(u,'series_game');
-  letter_direct := public.has_permanent_entitlement_v1(u,'letter_table');
-  score_direct := public.has_permanent_entitlement_v1(u,'score_calculator');
+
+  -- "Direct owned" is intentionally strict: only an active Google Play grant
+  -- for the exact SKU qualifies. PRO-derived effective access is reported
+  -- separately below and legacy/test VIP never becomes direct ownership.
+  select exists(
+    select 1 from public.store_entitlements
+    where user_id=u and entitlement_key='series_game' and source_type='play'
+      and status='active' and (expires_at is null or expires_at>now())
+  ) into series_direct;
+  select exists(
+    select 1 from public.store_entitlements
+    where user_id=u and entitlement_key='letter_table' and source_type='play'
+      and status='active' and (expires_at is null or expires_at>now())
+  ) into letter_direct;
+  select exists(
+    select 1 from public.store_entitlements
+    where user_id=u and entitlement_key='score_calculator' and source_type='play'
+      and status='active' and (expires_at is null or expires_at>now())
+  ) into score_direct;
 
   insert into public.vip_joker_wallet(user_id) values(u) on conflict(user_id) do nothing;
   select * into w from public.vip_joker_wallet where user_id=u;
