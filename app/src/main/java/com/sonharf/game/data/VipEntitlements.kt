@@ -7,6 +7,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class VipEntitlementsDto(
     @SerialName("is_vip") val isVip: Boolean = false,
+    @SerialName("is_pro") val isPro: Boolean = isVip,
     @SerialName("daily_jokers_claimed") val dailyJokersClaimed: Boolean = false,
     @SerialName("freezer_count") val freezerCount: Int = 0,
     @SerialName("swap_count") val swapCount: Int = 0,
@@ -16,12 +17,16 @@ data class VipEntitlementsDto(
     @SerialName("xp_multiplier") val xpMultiplier: Int = 1,
     @SerialName("diamond_multiplier") val coinMultiplier: Int = 1,
     @SerialName("rewarded_ad_bypass") val rewardedAdBypass: Boolean = false,
-    @SerialName("used_words_access") val usedWordsAccess: Boolean = true,
+    @SerialName("used_words_access") val usedWordsAccess: Boolean = false,
     @SerialName("direct_messages_access") val directMessagesAccess: Boolean = true,
     @SerialName("ranked_live_assist") val rankedLiveAssist: Boolean = false,
     @SerialName("post_match_analysis") val postMatchAnalysis: Boolean = false,
     @SerialName("saved_friend_list") val savedFriendList: Boolean = false,
     @SerialName("private_rooms") val privateRooms: Boolean = false,
+    @SerialName("score_calculator_access") val scoreCalculatorAccess: Boolean = false,
+    @SerialName("letter_table_access") val letterTableAccess: Boolean = false,
+    @SerialName("series_game_access") val seriesGameAccess: Boolean = false,
+    @SerialName("active_game_limit") val activeGameLimit: Int = 10,
 )
 
 @Serializable

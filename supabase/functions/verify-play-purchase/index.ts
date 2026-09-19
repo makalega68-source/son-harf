@@ -4,7 +4,9 @@ import { GoogleAuth } from "npm:google-auth-library@9";
 
 const jsonHeaders = { "Content-Type": "application/json", "Cache-Control": "no-store" };
 const subscriptionProducts = new Set(["vip_monthly", "vip_yearly", "season_pass", "season_pass_monthly"]);
+const premiumProducts = new Set(["series_game", "letter_table", "score_calculator", "pro_lifetime"]);
 const oneTimeProducts = new Set([
+  "series_game", "letter_table", "score_calculator", "pro_lifetime",
   "coins_500", "coins_1500", "coins_3500", "coins_8000",
   "starter_style_pack", "premium_style_pack", "season_pack", "vip_welcome_pack", "theme_neon",
   "profile_frame_ocean", "profile_frame_botanic", "profile_frame_lilac", "profile_frame_rose",
@@ -94,15 +96,32 @@ Deno.serve(async (req: Request) => {
     acknowledgementState = playBody.acknowledgementState || null;
   }
 
-  const { data: grantData, error: grantError } = await admin.rpc("apply_verified_play_purchase_v2", {
-    p_user_id: userData.user.id,
-    p_product_id: productId,
-    p_purchase_token: purchaseToken,
-    p_order_id: orderId,
-    p_expires_at: expiresAt,
-    p_play_state: playState,
-    p_acknowledgement_state: acknowledgementState,
-  });
+  let grantData: unknown = null;
+  let grantError: { message?: string } | null = null;
+  if (premiumProducts.has(productId)) {
+    const result = await admin.rpc("apply_verified_premium_purchase_v1", {
+      p_user_id: userData.user.id,
+      p_product_id: productId,
+      p_purchase_token: purchaseToken,
+      p_order_id: orderId,
+      p_play_state: playState,
+      p_acknowledgement_state: acknowledgementState,
+    });
+    grantData = result.data;
+    grantError = result.error;
+  } else {
+    const result = await admin.rpc("apply_verified_play_purchase_v2", {
+      p_user_id: userData.user.id,
+      p_product_id: productId,
+      p_purchase_token: purchaseToken,
+      p_order_id: orderId,
+      p_expires_at: expiresAt,
+      p_play_state: playState,
+      p_acknowledgement_state: acknowledgementState,
+    });
+    grantData = result.data;
+    grantError = result.error;
+  }
   if (grantError) return response(500, { error: "entitlement_grant_failed" });
 
   let acknowledged = acknowledgementState?.includes("ACKNOWLEDGED") === true;
