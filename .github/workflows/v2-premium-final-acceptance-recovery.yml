@@ -35,6 +35,7 @@ jobs:
           s = s.replace('assertTrue(it in s, "Missing PRO benefit: $it")', 'assertTrue("Missing PRO benefit: $it", it in s)')
           s = s.replace('assertTrue(it in sql, "Missing Series backend contract marker: $it")', 'assertTrue("Missing Series backend contract marker: $it", it in sql)')
           s = s.replace('assertTrue("if (isPremium)" in banner)', 'assertTrue("canReserveBanner" in banner)\n        assertTrue("if (!slotVisible) return" in banner)')
+          s = s.replace('assertTrue("backend.getVipEntitlements().isPro" in shell)\n        assertTrue("isPremium = isPro" in shell)', 'assertTrue("backend.getVipEntitlements()" in shell)\n        assertTrue("premium?.isPro == true" in shell)\n        assertTrue("SonHarfTopAdBanner(isPremium = isPro)" in shell)')
           s = s.replace('listOf("180", "300", "600", "game_mode = \'series\'", "turn_deadline", "series_three_timeouts", "TIMEOUT_AUTO_PASS", "word_siege_series_reset_actor_v1")', 'listOf("(3,5,10)", "game_mode=\'series\'", "turn_deadline", "series_three_missed_turns", "series_auto_pass", "word_siege_series_reset_actor_v1")')
           s = s.replace('assertTrue("coalesce(g.game_mode, \'classic\') = \'classic\'" in sql || "game_mode is null or game_mode = \'classic\'" in sql)', 'assertTrue("g.game_mode=\'classic\'" in sql)')
           t.write_text(s)
