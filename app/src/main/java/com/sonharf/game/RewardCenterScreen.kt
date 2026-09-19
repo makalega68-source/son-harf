@@ -40,7 +40,9 @@ fun RewardCenterScreen() {
     var items by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var adReady by remember { mutableStateOf(false) }
-    val adsAllowed = AdPrivacyManager.adsAllowed
+    val isPro = profile?.isVip == true
+    // Do not even request a rewarded ad until account entitlement is known and non-PRO.
+    val adsAllowed = profile?.isVip == false && AdPrivacyManager.adsAllowed
     var busy by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
 
@@ -77,6 +79,11 @@ fun RewardCenterScreen() {
     }
 
     fun showRewarded(rewardType: String, trialItemId: String? = null) {
+        if (isPro) {
+            // PRO is deliberately ad-free. Do not fabricate a reward or bypass SSV/economy authority.
+            notice = sh("PRO hesabında reklam gösterilmez.", "Ads are disabled on PRO accounts.")
+            return
+        }
         val a = activity
         val b = backend
         if (a == null || busy != null) return
@@ -90,47 +97,54 @@ fun RewardCenterScreen() {
         }
         busy = rewardType
         scope.launch {
-        val intentId = runCatching { b.prepareStoreReward(rewardType, trialItemId) }.getOrElse {
-            notice = sh("Ödüllü reklam şu anda kullanılamıyor.", "Rewarded ads are currently unavailable.")
-            busy = null
-            return@launch
-        }
-        adController.show(
-            a,
-            verificationUserId = b.currentUserId(),
-            verificationData = intentId,
-            onEarned = { responseId ->
-                scope.launch {
-                    runCatching { b.awaitVerifiedStoreReward(rewardType, responseId, trialItemId) }
-                        .onSuccess { claim ->
-                            notice = when (rewardType) {
-                                "diamonds" -> sh(
-                                    "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 10)} Son Coin hesabına eklendi.",
-                                    "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 10)} Son Coin added.",
-                                )
-                                else -> sh("Style denemen başladı.", "Your Style trial has started.")
-                            }
-                            reload()
-                        }
-                        .onFailure { e ->
-                            notice = when {
-                                "daily_limit_reached" in e.message.orEmpty() -> sh("Bugünkü kota tamamlandı.", "Today's quota is complete.")
-                                "ad_verification_pending" in e.message.orEmpty() -> sh("Ödül doğrulandığında hesabına eklenecek.", "Your reward will be added after verification.")
-                                "trial_item_unavailable" in e.message.orEmpty() -> sh("Bu deneme ürünü artık kullanılamıyor.", "This trial item is no longer available.")
-                                else -> sh("Ödül işlenemedi.", "Reward could not be processed.")
-                            }
-                        }
-                    busy = null
-                    adReady = adController.ready
-                }
-            },
-            onUnavailable = {
-                notice = sh("Reklam şu an hazır değil. Daha sonra tekrar dene.", "The ad is not ready. Try again later.")
+            val intentId = runCatching { b.prepareStoreReward(rewardType, trialItemId) }.getOrElse {
+                notice = sh("Ödüllü reklam şu anda kullanılamıyor.", "Rewarded ads are currently unavailable.")
                 busy = null
-                adReady = false
-            },
-            onClosed = { busy = null; adController.load { adReady = adController.ready } },
-        )
+                return@launch
+            }
+            adController.show(
+                a,
+                verificationUserId = b.currentUserId(),
+                verificationData = intentId,
+                onEarned = { responseId ->
+                    scope.launch {
+                        runCatching { b.awaitVerifiedStoreReward(rewardType, responseId, trialItemId) }
+                            .onSuccess { claim ->
+                                notice = when (rewardType) {
+                                    "diamonds" -> sh(
+                                        "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 10)} Son Coin hesabına eklendi.",
+                                        "+${claim.diamondsAwarded.takeIf { it > 0 } ?: (status?.coinPerAd ?: 10)} Son Coin added.",
+                                    )
+                                    else -> sh("Style denemen başladı.", "Your Style trial has started.")
+                                }
+                                reload()
+                            }
+                            .onFailure { e ->
+                                notice = when {
+                                    "daily_limit_reached" in e.message.orEmpty() -> sh("Bugünkü kota tamamlandı.", "Today's quota is complete.")
+                                    "ad_verification_pending" in e.message.orEmpty() -> sh("Ödül doğrulandığında hesabına eklenecek.", "Your reward will be added after verification.")
+                                    "trial_item_unavailable" in e.message.orEmpty() -> sh("Bu deneme ürünü artık kullanılamıyor.", "This trial item is no longer available.")
+                                    else -> sh("Ödül işlenemedi.", "Reward could not be processed.")
+                                }
+                            }
+                        busy = null
+                        adReady = adController.ready
+                    }
+                },
+                onUnavailable = {
+                    notice = sh("Reklam şu an hazır değil. Daha sonra tekrar dene.", "The ad is not ready. Try again later.")
+                    busy = null
+                    adReady = false
+                },
+                onClosed = {
+                    busy = null
+                    if (adsAllowed) adController.load { adReady = adController.ready }
+                    else {
+                        adController.clear()
+                        adReady = false
+                    }
+                },
+            )
         }
     }
 
@@ -154,42 +168,51 @@ fun RewardCenterScreen() {
         item {
             Text(sh("KELİME TAHTI ÖDÜLLERİ", "KELIME TAHTI REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
             Text(
-                sh(
-                    "Ödüllü reklamlar isteğe bağlıdır. Maçlarda ve oyun alanında reklam yoktur.",
-                    "Rewarded ads are optional. Matches and gameplay remain ad-free.",
-                ),
+                if (isPro) {
+                    sh(
+                        "PRO hesabında reklam gösterilmez. Kumbara ve sunucu kontrollü ilerleme sistemleri normal şekilde devam eder.",
+                        "Ads are disabled on PRO. Piggy Bank and server-controlled progression continue normally.",
+                    )
+                } else {
+                    sh(
+                        "Ödüllü reklamlar isteğe bağlıdır. Maçlarda ve oyun alanında reklam yoktur.",
+                        "Rewarded ads are optional. Matches and gameplay remain ad-free.",
+                    )
+                },
                 color = SonHarfMuted,
                 fontSize = 10.sp,
             )
         }
 
-        item {
-            RewardAdCard(
-                icon = "◈",
-                title = "SON COIN",
-                description = sh(
-                    "Her tamamlanan reklam +${s?.coinPerAd ?: 10} Son Coin verir. Günlük kota sunucu tarafından tutulur.",
-                    "Each completed ad gives +${s?.coinPerAd ?: 10} Son Coin. The daily quota is enforced by the server.",
-                ),
-                progress = "${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 3}",
-                button = sh("REKLAM İZLE", "WATCH AD"),
-                enabled = adReady && (s?.coinAdsUsed ?: 0) < (s?.coinAdsLimit ?: 3) && busy == null,
-                onClick = { showRewarded("diamonds") },
-            )
-        }
+        if (!isPro) {
+            item {
+                RewardAdCard(
+                    icon = "◈",
+                    title = "SON COIN",
+                    description = sh(
+                        "Her tamamlanan reklam +${s?.coinPerAd ?: 10} Son Coin verir. Günlük kota sunucu tarafından tutulur.",
+                        "Each completed ad gives +${s?.coinPerAd ?: 10} Son Coin. The daily quota is enforced by the server.",
+                    ),
+                    progress = "${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 3}",
+                    button = sh("REKLAM İZLE", "WATCH AD"),
+                    enabled = adReady && (s?.coinAdsUsed ?: 0) < (s?.coinAdsLimit ?: 3) && busy == null,
+                    onClick = { showRewarded("diamonds") },
+                )
+            }
 
-        item {
-            RewardAdCard(
-                icon = "✨",
-                title = sh("STYLE DENEME", "STYLE TRIAL"),
-                description = listOfNotNull(trialCandidateName, trialDescription).joinToString(" • ").ifBlank {
-                    sh("Sunucu kataloğundaki uygun bir Style ürününü dene.", "Try an eligible Style item from the server catalog.")
-                },
-                progress = "${s?.trialAdsUsed ?: 0}/${s?.trialAdsLimit ?: 1}",
-                button = sh("DENEMEYİ BAŞLAT", "START TRIAL"),
-                enabled = adReady && trialCandidate != null && (s?.trialAdsUsed ?: 0) < (s?.trialAdsLimit ?: 1) && busy == null,
-                onClick = { showRewarded("trial", trialCandidate?.id) },
-            )
+            item {
+                RewardAdCard(
+                    icon = "✨",
+                    title = sh("STYLE DENEME", "STYLE TRIAL"),
+                    description = listOfNotNull(trialCandidateName, trialDescription).joinToString(" • ").ifBlank {
+                        sh("Sunucu kataloğundaki uygun bir Style ürününü dene.", "Try an eligible Style item from the server catalog.")
+                    },
+                    progress = "${s?.trialAdsUsed ?: 0}/${s?.trialAdsLimit ?: 1}",
+                    button = sh("DENEMEYİ BAŞLAT", "START TRIAL"),
+                    enabled = adReady && trialCandidate != null && (s?.trialAdsUsed ?: 0) < (s?.trialAdsLimit ?: 1) && busy == null,
+                    onClick = { showRewarded("trial", trialCandidate?.id) },
+                )
+            }
         }
 
         if (s?.trialItemId != null) item {

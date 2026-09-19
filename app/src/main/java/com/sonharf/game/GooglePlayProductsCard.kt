@@ -1,21 +1,17 @@
 package com.sonharf.game
 
 import android.app.Activity
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Calculate
-import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Timer
-import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -130,7 +126,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
             PremiumProductRow(
                 title = sh("Seri Oyun", "Series Game"),
                 subtitle = sh("3/5/10 dk tur • otomatik pas • 3 kaçırma = mağlubiyet", "3/5/10 min turns • auto-pass • 3 misses = defeat"),
-                icon = Icons.Rounded.Timer,
+                imageRes = R.drawable.premium_series_game,
                 product = products[ProductCatalog.SERIES_GAME],
                 fallbackPrice = ProductCatalog.SERIES_GAME_FALLBACK_PRICE_TRY,
                 busy = busy != null,
@@ -140,7 +136,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
             PremiumProductRow(
                 title = sh("Harf Tablosu", "Letter Table"),
                 subtitle = sh("Kalan harfleri gör", "See remaining letters"),
-                icon = Icons.Rounded.GridView,
+                imageRes = R.drawable.premium_letter_table,
                 product = products[ProductCatalog.LETTER_TABLE],
                 fallbackPrice = ProductCatalog.LETTER_TABLE_FALLBACK_PRICE_TRY,
                 busy = busy != null,
@@ -149,7 +145,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
             PremiumProductRow(
                 title = sh("Puan Hesaplayıcı", "Score Calculator"),
                 subtitle = sh("Hamle puanını önceden gör", "Preview move score"),
-                icon = Icons.Rounded.Calculate,
+                imageRes = R.drawable.premium_score_calculator,
                 product = products[ProductCatalog.SCORE_CALCULATOR],
                 fallbackPrice = ProductCatalog.SCORE_CALCULATOR_FALLBACK_PRICE_TRY,
                 busy = busy != null,
@@ -158,7 +154,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
             PremiumProductRow(
                 title = "PRO",
                 subtitle = sh("Tüm premium özellikler", "All premium features"),
-                icon = Icons.Rounded.WorkspacePremium,
+                imageRes = R.drawable.premium_pro,
                 product = products[ProductCatalog.PRO_LIFETIME],
                 fallbackPrice = ProductCatalog.PRO_LIFETIME_FALLBACK_PRICE_TRY,
                 busy = busy != null,
@@ -198,7 +194,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
 private fun PremiumProductRow(
     title: String,
     subtitle: String,
-    icon: ImageVector,
+    @DrawableRes imageRes: Int,
     product: ProductDetails?,
     fallbackPrice: String,
     busy: Boolean,
@@ -208,8 +204,13 @@ private fun PremiumProductRow(
 ) {
     Surface(color = SonHarfTheme.SurfaceSecondary, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, SonHarfTheme.Border)) {
         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Surface(shape = RoundedCornerShape(14.dp), color = SonHarfTheme.Primary.copy(alpha = .10f)) {
-                Icon(icon, null, tint = SonHarfTheme.Primary, modifier = Modifier.padding(12.dp).size(24.dp))
+            Surface(shape = RoundedCornerShape(14.dp), color = SonHarfTheme.Primary.copy(alpha = .06f)) {
+                Image(
+                    painter = painterResource(imageRes),
+                    contentDescription = null,
+                    modifier = Modifier.padding(5.dp).size(48.dp),
+                    contentScale = ContentScale.Fit,
+                )
             }
             Column(Modifier.weight(1f)) {
                 Text(title, fontWeight = FontWeight.Black, color = SonHarfText, fontSize = 14.sp)
