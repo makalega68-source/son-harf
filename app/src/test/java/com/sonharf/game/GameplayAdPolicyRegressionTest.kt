@@ -19,6 +19,14 @@ class GameplayAdPolicyRegressionTest {
         assertFalse(rewarded.contains("onEarned(verificationData)"))
     }
 
+    @Test fun bannerWaitsForVerifiedPremiumStateBeforeBecomingAdEligible() {
+        val banner = projectFile("app/src/main/java/com/sonharf/game/NonGameBannerAd.kt").readText()
+        assertTrue(banner.contains("resolvedPremium"))
+        assertTrue(banner.contains("backend.getVipEntitlements().isPro"))
+        assertTrue(banner.contains("val premium = resolvedPremium ?: return"))
+        assertTrue(banner.contains("fail closed"))
+    }
+
     private fun projectFile(path: String): File {
         val file = listOf(File(path), File("../$path")).firstOrNull(File::exists)
         assertNotNull("Project path missing: $path", file)
