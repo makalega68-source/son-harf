@@ -24,8 +24,9 @@ class StoreRuntimeTruthV3ContractTest {
         val season = projectFile("app/src/main/java/com/sonharf/game/SeasonPassPurchaseCard.kt").readText()
 
         assertTrue(billing.contains("fun hasPurchasableOffer(productDetails: ProductDetails?)"))
+        assertTrue(billing.contains("if (!hasPurchasableOffer(productDetails))"))
         assertTrue(billing.contains("subscriptionOfferDetails?.any { it.offerToken.isNotBlank() } == true"))
-        assertTrue(billing.contains("No eligible subscription offer token"))
+        assertTrue(billing.contains("No eligible Google Play offer"))
         assertTrue(vip.contains("selectedPurchasable = BillingManager.hasPurchasableOffer(selectedProduct)"))
         assertTrue(vip.contains("enabled = !busy && selectedPurchasable"))
         assertTrue(season.contains("enabled = !busy && BillingManager.hasPurchasableOffer(product)"))
