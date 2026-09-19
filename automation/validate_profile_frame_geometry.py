@@ -7,14 +7,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DRAWABLE = ROOT / "app" / "src" / "main" / "res" / "drawable"
+PROFILE_FRAMES_SOURCE = ROOT / "app" / "src" / "main" / "java" / "com" / "sonharf" / "game" / "ProfileFramesV2.kt"
 
+# These photo diameters include a small safety margin below the largest measured clean opening.
 FRAMES = [
-    ("profile_frame_default_gray.png", 301),
-    ("profile_frame_pro_gold.png", 312),
-    ("profile_frame_shop_pink_blossom.png", 316),
-    ("profile_frame_shop_blue_royal.png", 333),
-    ("profile_frame_shop_amethyst.png", 316),
-    ("profile_frame_shop_emerald.png", 324),
+    ("profile_frame_default_gray.png", 301, "profile_frame_default_gray, 301f / 512f"),
+    ("profile_frame_pro_gold.png", 308, "profile_frame_pro_gold, 308f / 512f"),
+    ("profile_frame_shop_pink_blossom.png", 287, "profile_frame_shop_pink_blossom, 287f / 512f"),
+    ("profile_frame_shop_blue_royal.png", 321, "profile_frame_shop_blue_royal, 321f / 512f"),
+    ("profile_frame_shop_amethyst.png", 293, "profile_frame_shop_amethyst, 293f / 512f"),
+    ("profile_frame_shop_emerald.png", 293, "profile_frame_shop_emerald, 293f / 512f"),
 ]
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
@@ -208,7 +210,10 @@ def validate_frame(file_name: str, photo_diameter: int) -> list[str]:
 
 def main() -> None:
     errors: list[str] = []
-    for file_name, diameter in FRAMES:
+    source = PROFILE_FRAMES_SOURCE.read_text(encoding="utf-8")
+    for file_name, diameter, source_marker in FRAMES:
+        if source_marker not in source:
+            errors.append(f"{file_name}: runtime photo ratio is not locked to validated {diameter}px diameter")
         errors.extend(validate_frame(file_name, diameter))
 
     if errors:
