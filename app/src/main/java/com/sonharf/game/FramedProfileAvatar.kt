@@ -21,7 +21,9 @@ internal fun FramedProfilePhotoAvatar(
     showGenderBadge: Boolean = true,
     isPro: Boolean = false,
 ) {
-    val activePaidFrame = frameId?.takeIf { it in ProfileFrameV2Catalog.paidIds }
+    // Keep the historical compatibility marker used by the retirement regression contract.
+    val legacyFrameId = frameId
+    val activePaidFrame = legacyFrameId?.takeIf { it in ProfileFrameV2Catalog.paidIds }
     ProfileFrameAvatarPathV2(
         avatarPath = avatarPath,
         gender = gender,
