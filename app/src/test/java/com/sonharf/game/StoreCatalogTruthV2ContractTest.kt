@@ -98,6 +98,8 @@ class StoreCatalogTruthV2ContractTest {
             "profile_frame_emerald",
         ).forEach { id -> assertTrue("Missing explicit retired catalog row for $id", migration.contains("('$id', false")) }
 
+        assertTrue(migration.contains("store_catalog_enabled_product_guard_v2"))
+        assertTrue(migration.contains("enabled = false"))
         assertTrue(migration.contains("update public.store_bundles b"))
         assertTrue(migration.contains("set active = false"))
     }
