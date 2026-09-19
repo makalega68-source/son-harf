@@ -31,20 +31,15 @@ jobs:
           siege_path = Path('app/src/main/java/com/sonharf/game/WordSiegeExperience.kt')
           siege = siege_path.read_text()
 
-          old_send = '''            onSend = {
-              if (chatInput.isBlank() || busy) return@WordSiegeChatDialog
-              val outgoing = chatInput
-              busy = true
-              scope.launch {
-                  runCatching { backend.sendWordSiegeMessage(gameId, outgoing) }
-                      .onSuccess {
-                          chatInput = ""
-                          messages = runCatching { backend.getWordSiegeMessages(gameId) }.getOrDefault(messages)
-                      }
-                      .onFailure { notice = wordSiegeFriendlyError(it.message.orEmpty()) }
-                  busy = false
-              }
-          },'''
+          # Upgrade the existing chat callback so quick reactions can reuse the same authoritative
+          # message transport without disturbing a partially typed message.
+          show_chat = siege.index('if (showChat && currentGame != null)')
+          call_start = siege.index('        WordSiegeChatDialog(\n', show_chat)
+          call_end_marker = '\n        )\n    }\n}'
+          call_end = siege.index(call_end_marker, call_start) + len(call_end_marker)
+          call = siege[call_start:call_end]
+          send_start = call.index('            onSend = {')
+          send_end = call.rfind('            },') + len('            },')
           new_send = '''            onSend = { outgoing ->
               val text = outgoing.trim().take(300)
               if (text.isBlank() || busy) return@WordSiegeChatDialog
@@ -59,64 +54,65 @@ jobs:
                   busy = false
               }
           },'''
-          siege = replace_once(siege, old_send, new_send, 'word siege chat sender')
+          call = call[:send_start] + new_send + call[send_end:]
+          siege = siege[:call_start] + call + siege[call_end:]
 
+          # Crown Victory: cosmetic-only one-shot overlay when the local player actually wins.
           start = siege.index('@Composable\nprivate fun WordSiegeFinishedCard(')
           end = siege.index('@Composable\ninternal fun WordSiegeNotice', start)
           finished = '''@Composable
-          private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
-              val won = game.winnerId == me
-              val draw = game.winnerId == null
-              val accent = when { draw -> MainUi.Gold; won -> MainUi.Green; else -> MainUi.Red }
-              Box(Modifier.fillMaxWidth()) {
-                  Surface(
-                      modifier = Modifier.fillMaxWidth(),
-                      shape = RoundedCornerShape(18.dp),
-                      color = accent.copy(alpha = .08f),
-                      border = BorderStroke(1.dp, accent.copy(alpha = .45f)),
-                  ) {
-                      Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                          Text(
-                              when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
-                              color = accent,
-                              fontSize = 17.sp,
-                              fontWeight = FontWeight.Black,
-                          )
-                          Text(
-                              sh("Sonuç = kelime puanı + sahip olunan alan", "Result = word score + owned territory"),
-                              color = MainUi.Muted,
-                              fontSize = 10.sp,
-                          )
-                      }
-                  }
-                  if (won && SonHarfCosmetics.crownVictory) {
-                      CrownVictoryCelebration(
-                          eventKey = "siege:${game.id}",
-                          modifier = Modifier.matchParentSize(),
-                          compact = true,
-                      )
-                  }
-              }
-          }
+private fun WordSiegeFinishedCard(game: WordSiegeGameDto, me: String?) {
+    val won = game.winnerId == me
+    val draw = game.winnerId == null
+    val accent = when { draw -> MainUi.Gold; won -> MainUi.Green; else -> MainUi.Red }
+    Box(Modifier.fillMaxWidth()) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(18.dp),
+            color = accent.copy(alpha = .08f),
+            border = BorderStroke(1.dp, accent.copy(alpha = .45f)),
+        ) {
+            Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    when { draw -> sh("BERABERE", "DRAW"); won -> sh("KUŞATMA SENİN!", "SIEGE WON!"); else -> sh("OYUN BİTTİ", "GAME OVER") },
+                    color = accent,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    sh("Sonuç = kelime puanı + sahip olunan alan", "Result = word score + owned territory"),
+                    color = MainUi.Muted,
+                    fontSize = 10.sp,
+                )
+            }
+        }
+        if (won && SonHarfCosmetics.crownVictory) {
+            CrownVictoryCelebration(
+                eventKey = "siege:${game.id}",
+                modifier = Modifier.matchParentSize(),
+                compact = true,
+            )
+        }
+    }
+}
 
-          '''
+'''
           siege = siege[:start] + finished + siege[end:]
 
+          # VIP Emoji: add reaction chips only when the equipped pack is active.
           chat_start = siege.index('@Composable\nprivate fun WordSiegeChatDialog(')
           chat_end = siege.index('private fun WordSiegeGameDto.ownerFor', chat_start)
           chat = siege[chat_start:chat_end]
           chat = replace_once(chat, '    onSend: () -> Unit,', '    onSend: (String) -> Unit,', 'chat callback type')
-          old_field = '''                Spacer(Modifier.height(8.dp))
-              OutlinedTextField('''
-          new_field = '''                Spacer(Modifier.height(8.dp))
-              if (SonHarfCosmetics.emojiPackId == "emoji_vip") {
+          field_pos = chat.index('                OutlinedTextField(')
+          insertion = '''                if (SonHarfCosmetics.emojiPackId == "emoji_vip") {
                   Text(sh("VIP TEPKİLER", "VIP REACTIONS"), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
                   Spacer(Modifier.height(5.dp))
                   VipEmojiReactionRow(enabled = !busy, onSend = onSend)
                   Spacer(Modifier.height(8.dp))
               }
-              OutlinedTextField('''
-          chat = replace_once(chat, old_field, new_field, 'VIP reaction row')
+'''
+          chat = chat[:field_pos] + insertion + chat[field_pos:]
           old_click = 'IconButton(onClick = onSend, enabled = input.isNotBlank() && !busy) {'
           new_click = '''IconButton(
                           onClick = {
@@ -143,7 +139,7 @@ jobs:
               'StoreTab(sh("TEMALAR", "THEMES"), setOf("game_theme", "keyboard_theme"), Icons.Rounded.Palette),\n        StoreTab(sh("EFEKTLER", "EFFECTS"), setOf("victory_effect", "emoji_pack"), Icons.Rounded.AutoAwesome),\n        StoreTab(sh("PROFİL", "PROFILE"), setOf("name_style"), Icons.Rounded.Title),',
               'effects tab',
           )
-          ready_start = store.index('internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = when (kind) {')
+          ready_start = store.index('internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean')
           ready_end = store.index('internal fun EquippedCosmeticsDto?.isEquipped', ready_start)
           ready = '''internal fun ShopItemDto.isRuntimeReadyStyle(): Boolean = active && when (kind) {
               "game_theme" -> id in setOf("theme_black", "theme_dark_arena")
