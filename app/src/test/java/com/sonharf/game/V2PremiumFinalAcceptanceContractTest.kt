@@ -76,6 +76,15 @@ class V2PremiumFinalAcceptanceContractTest {
         assertTrue("SonHarfTopAdBanner(isPremium = isPro)" in shell)
     }
 
+    @Test fun proProfileFrameIsServerAuthoritativeAndCosmetic() {
+        val s = source("app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt")
+        assertTrue("backend.getVipEntitlements().isPro" in s)
+        assertTrue("if (proActive)" in s)
+        assertTrue("BorderStroke(4.dp, SonHarfGold)" in s)
+        assertTrue("Text(\n                                \"PRO\"" in s)
+        assertTrue("ProfileAvatarV2(avatarBytes" in s)
+    }
+
     @Test fun seriesBackendSourceIsSeparateAndServerTimed() {
         val sql = source("supabase/migrations/20260919043000_word_siege_series_game_v1.sql")
         listOf("(3,5,10)", "game_mode='series'", "turn_deadline", "series_three_missed_turns", "series_auto_pass", "word_siege_series_reset_actor_v1").forEach {

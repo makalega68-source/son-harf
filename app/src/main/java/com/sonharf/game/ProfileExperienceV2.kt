@@ -179,7 +179,35 @@ fun ProfileExperienceV2Screen() {
         item {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(contentAlignment = Alignment.BottomEnd) {
-                    ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 112)
+                    if (proActive) {
+                        Surface(
+                            modifier = Modifier.size(120.dp),
+                            shape = CircleShape,
+                            color = Color.Transparent,
+                            border = BorderStroke(4.dp, SonHarfGold),
+                            shadowElevation = 5.dp,
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 106)
+                            }
+                        }
+                        Surface(
+                            modifier = Modifier.align(Alignment.TopEnd),
+                            shape = RoundedCornerShape(50),
+                            color = SonHarfGold,
+                            shadowElevation = 3.dp,
+                        ) {
+                            Text(
+                                "PRO",
+                                Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
+                    } else {
+                        ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 112)
+                    }
                     Surface(
                         modifier = Modifier.size(42.dp).clickable { photoEditor = true },
                         shape = CircleShape,
