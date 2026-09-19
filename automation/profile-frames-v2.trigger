@@ -1,1 +1,1 @@
-2026-09-19T-profile-frames-v2-contract-hardening-3
+2026-09-19T-profile-frames-v2-visual-geometry-4
