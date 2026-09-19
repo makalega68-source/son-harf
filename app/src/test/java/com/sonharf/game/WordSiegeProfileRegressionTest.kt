@@ -1,13 +1,14 @@
 package com.sonharf.game
 
 import java.io.File
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WordSiegeProfileRegressionTest {
     @Test
-    fun practiceProfilesUseSharedRendererAndStableGenderCorrectBotPool() {
+    fun practiceProfilesUseFramedRendererAndStableGenderCorrectBotPoolWithoutGenderIcons() {
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         val scoreCard = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt").readText()
         val profileRuntime = projectFile("app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt").readText()
@@ -16,7 +17,7 @@ class WordSiegeProfileRegressionTest {
             assertTrue("Missing bot name: $it", practice.contains("PracticeBotProfile(\"$it\""))
         }
         listOf("İmran", "Esin", "Selin", "Elif", "Derya", "Zeynep", "Ceren").forEach {
-            assertTrue("Female bot mismatch: $it", practice.contains("PracticeBotProfile(\"$it\", \"kadın\")"))
+            assertTrue("Female bot data mismatch: $it", practice.contains("PracticeBotProfile(\"$it\", \"kadın\")"))
         }
 
         assertTrue(practice.contains("val backend = remember { runCatching { OnlineGameBackend() }.getOrNull() }"))
@@ -27,12 +28,18 @@ class WordSiegeProfileRegressionTest {
         assertTrue(practice.contains("var botProfile by remember { mutableStateOf(WordSiegePracticeBots.random()) }"))
         assertTrue(practice.contains("botProfile = WordSiegePracticeBots.random()"))
         assertTrue(practice.contains("WordSiegeScoreCard("))
-        assertTrue(scoreCard.contains("ProfilePhotoAvatarWithGender("))
+        assertTrue(practice.contains("ProfileFrameV2Catalog.ownedPaidFrame"))
+        assertTrue(practice.contains("playerIsPro"))
+        assertTrue(scoreCard.contains("FramedProfilePhotoAvatar("))
+        assertTrue(scoreCard.contains("frameId = frameId"))
+        assertTrue(scoreCard.contains("isPro = isPro"))
         assertTrue(scoreCard.contains("Text(\"BOT\""))
 
         assertTrue(profileRuntime.contains("SyntheticProfilePortrait"))
         assertTrue(profileRuntime.contains("Icons.Rounded.Face"))
-        assertTrue(profileRuntime.contains("FramelessGenderSymbol"))
+        assertFalse(profileRuntime.contains("FramelessGenderSymbol"))
+        assertFalse(profileRuntime.contains("♀"))
+        assertFalse(profileRuntime.contains("♂"))
     }
 
     private fun projectFile(path: String): File {
