@@ -3,10 +3,10 @@ on:
   push:
     branches: [integration/v2-premium-corrected-final-20260919]
     paths:
-      - 'tools/canva_product_icon_url_20260919.txt'
       - '.github/workflows/materialize-canva-premium-assets.yml'
   workflow_dispatch:
 permissions:
+  actions: read
   contents: write
 jobs:
   materialize:
@@ -20,27 +20,28 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check pillow
-      - name: Download real Canva artwork sheet
+      - name: Restore verified real Canva preview artifact
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          url="$(cat tools/canva_product_icon_url_20260919.txt)"
-          hi="${url/height:500/height:1200}"
-          hi="${hi/width:400/width:1200}"
-          if ! curl --fail --location --retry 2 --connect-timeout 15 --max-time 90 "$hi" -o /tmp/canva-premium-sheet.png; then
-            curl --fail --location --retry 2 --connect-timeout 15 --max-time 90 "$url" -o /tmp/canva-premium-sheet.png
-          fi
+          # Artifact 10582406935 was produced from Canva design DAHVlfbi7x4 by successful run 35437356775.
+          gh api repos/${{ github.repository }}/actions/artifacts/10582406935/zip > /tmp/canva-preview.zip
+          mkdir -p /tmp/canva-preview
+          unzip -q /tmp/canva-preview.zip -d /tmp/canva-preview
+          cp /tmp/canva-preview/product-icons.png /tmp/canva-premium-sheet.png
           file /tmp/canva-premium-sheet.png
           test -s /tmp/canva-premium-sheet.png
       - name: Crop four verified Canva product artworks
         run: |
           python - <<'PY'
-          from PIL import Image, ImageOps
+          from PIL import Image
           from pathlib import Path
           import hashlib, json
           src=Image.open('/tmp/canva-premium-sheet.png').convert('RGBA')
           w,h=src.size
-          # The verified Canva page is a 2x2 icon sheet: stopwatch, letter grid, score card, PRO laurels.
+          if w < 300 or h < 300: raise SystemExit(f'Canva source unexpectedly small: {w}x{h}')
           boxes={
             'premium_series_game_canva.webp': (0,0,w//2,h//2),
             'premium_letter_table_canva.webp': (w//2,0,w,h//2),
@@ -48,10 +49,9 @@ jobs:
             'premium_pro_canva.webp': (w//2,h//2,w,h),
           }
           out=Path('app/src/main/res/drawable-nodpi'); out.mkdir(parents=True,exist_ok=True)
-          manifest={'source_canva_design_id':'DAHVlfbi7x4','source_sheet_size':[w,h],'assets':{}}
+          manifest={'source_canva_design_id':'DAHVlfbi7x4','source_workflow_run':35437356775,'source_artifact_id':10582406935,'source_sheet_size':[w,h],'assets':{}}
           for name,box in boxes.items():
             im=src.crop(box)
-            # keep actual Canva pixels; square with transparent padding, then lossless WebP.
             side=max(im.size)
             canvas=Image.new('RGBA',(side,side),(0,0,0,0))
             canvas.alpha_composite(im,((side-im.width)//2,(side-im.height)//2))
@@ -62,7 +62,7 @@ jobs:
             b=p.read_bytes()
             manifest['assets'][name]={'bytes':len(b),'sha256':hashlib.sha256(b).hexdigest(),'size':list(canvas.size)}
             if len(b) < 1000 or len(b) > 2_000_000: raise SystemExit(f'bad asset size: {name} {len(b)}')
-          Path('docs/CANVA_PREMIUM_ASSETS_V2.json').parent.mkdir(parents=True,exist_ok=True)
+          Path('docs').mkdir(exist_ok=True)
           Path('docs/CANVA_PREMIUM_ASSETS_V2.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
           print(json.dumps(manifest,indent=2))
           PY
