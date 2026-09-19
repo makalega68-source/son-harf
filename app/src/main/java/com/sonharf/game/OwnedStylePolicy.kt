@@ -17,6 +17,7 @@ internal fun ShopItemDto.isSupportedOwnedStyle(): Boolean = when (kind) {
         "keyboard_black_gold",
         "keyboard_premium_white",
     )
-    // Victory effects and emoji packs remain excluded until their in-match runtime behavior is wired.
+    "victory_effect" -> id == "victory_crown"
+    "emoji_pack" -> id == "emoji_vip"
     else -> false
 }
