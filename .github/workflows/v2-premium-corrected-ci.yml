@@ -8,12 +8,13 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
           ref: integration/v2-premium-corrected-final-20260919
           fetch-depth: 0
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -27,9 +28,10 @@ jobs:
           grep -q 'lightColorScheme' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
           grep -q 'PremiumWeeklyBestPolished' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
           grep -q 'PremiumV2BottomBar' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
-          grep -q 'Kelime Kuşatması' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'KELİME KUŞATMASI' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
           grep -q 'SON HARF' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
           grep -q 'HARF YOLU' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          grep -q 'SERİ OYUN' app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
       - name: Canva and product source contracts
         shell: bash
         run: |
@@ -46,12 +48,11 @@ jobs:
           grep -q 'R.drawable.premium_score_calculator_canva' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
           grep -q 'R.drawable.premium_pro_canva' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
           ! grep -R --line-number -E 'R\.drawable\.premium_(series_game|letter_table|score_calculator|pro)([^_a-zA-Z]|$)' app/src/main/java || (echo 'placeholder premium vector reference found' >&2; exit 1)
-          grep -q 'series_game' app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt
-          grep -q 'letter_table' app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt
-          grep -q 'score_calculator' app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt
-          grep -q 'pro_lifetime' app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt
+          for sku in series_game letter_table score_calculator pro_lifetime; do grep -q "$sku" app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt; done
           grep -q 'seriesGameDirectOwned' app/src/main/java/com/sonharf/game/data/VipEntitlements.kt
           grep -q 'PRO İLE AÇIK' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
+          grep -q 'SATIN ALINDI' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
+          grep -q 'oneTimePurchaseOfferDetails' app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
       - name: Premium security contracts
         shell: bash
         run: |
@@ -59,9 +60,14 @@ jobs:
           grep -q 'get_premium_entitlements_v2' app/src/main/java/com/sonharf/game/data/VipEntitlements.kt
           grep -q 'preview_word_siege_move_pro_v1' app/src/main/java/com/sonharf/game/data/PremiumWordSiegeBackend.kt
           grep -q 'get_word_siege_letter_table_v1' app/src/main/java/com/sonharf/game/data/PremiumWordSiegeBackend.kt
+          grep -q 'getSeriesFriends' app/src/main/java/com/sonharf/game/WordSiegeSeriesScreen.kt
           grep -q 'theme_black' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
+          grep -q 'blackThemeOwned && gameThemeId == BLACK_THEME_ID' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
           ! grep -q 'theme_dark_arena.*BLACK_THEME_ID' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
           ! grep -q 'theme_black' app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt
+          grep -q 'applyAndPersist(context, nextEquipped, nextOwned)' app/src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt
+          grep -q 'applyAndPersist(context, next, owned)' app/src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt
+          grep -q 'backend.getVipEntitlements().isPro' app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt
       - name: Unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
       - name: Assemble installable debug APK
