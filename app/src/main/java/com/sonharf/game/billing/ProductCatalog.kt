@@ -10,6 +10,17 @@ object ProductCatalog {
     const val COINS_3500 = "coins_3500"
     const val COINS_8000 = "coins_8000"
 
+    // Kelime Kuşatması permanent premium products.
+    const val SERIES_GAME = "series_game"
+    const val LETTER_TABLE = "letter_table"
+    const val SCORE_CALCULATOR = "score_calculator"
+    const val PRO_LIFETIME = "pro_lifetime"
+
+    const val SERIES_GAME_FALLBACK_PRICE_TRY = "129 TL"
+    const val LETTER_TABLE_FALLBACK_PRICE_TRY = "65 TL"
+    const val SCORE_CALCULATOR_FALLBACK_PRICE_TRY = "129 TL"
+    const val PRO_LIFETIME_FALLBACK_PRICE_TRY = "479 TL"
+
     /** Legacy identifiers retained only so old receipts can be recognized safely. Frames are not sold or rendered. */
     @Deprecated("Profile frames were retired from the game")
     const val PROFILE_FRAME_OCEAN = "profile_frame_ocean"
@@ -41,8 +52,19 @@ object ProductCatalog {
         COINS_8000,
     )
 
+    val permanentPremiumProducts = setOf(
+        SERIES_GAME,
+        LETTER_TABLE,
+        SCORE_CALCULATOR,
+        PRO_LIFETIME,
+    )
+
     /** Only products with a complete, truthful runtime delivery path belong in the active shop query. */
     val oneTimeProducts = listOf(
+        SERIES_GAME,
+        LETTER_TABLE,
+        SCORE_CALCULATOR,
+        PRO_LIFETIME,
         COINS_500,
         COINS_1500,
         COINS_3500,
