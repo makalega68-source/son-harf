@@ -76,14 +76,21 @@ class StoreCanvaArtworkContractTest {
     }
 
     @Test
-    fun `unfinished effect products are not exposed by artwork alone`() {
+    fun `crown victory and vip emoji are exposed only with real runtime behavior`() {
         val store = repoFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
         val owned = repoFile("app/src/main/java/com/sonharf/game/OwnedStylePolicy.kt").readText()
+        val siege = repoFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
+        val effects = repoFile("app/src/main/java/com/sonharf/game/PremiumReactionCosmetics.kt").readText()
 
-        assertFalse(store.contains("\"victory_effect\" -> id == \"victory_crown\""))
-        assertFalse(store.contains("\"emoji_pack\" -> id == \"emoji_vip\""))
-        assertFalse(owned.contains("\"victory_effect\" -> id == \"victory_crown\""))
-        assertFalse(owned.contains("\"emoji_pack\" -> id == \"emoji_vip\""))
+        assertTrue(store.contains("\"victory_effect\" -> id == \"victory_crown\""))
+        assertTrue(store.contains("\"emoji_pack\" -> id == \"emoji_vip\""))
+        assertTrue(owned.contains("\"victory_effect\" -> id == \"victory_crown\""))
+        assertTrue(owned.contains("\"emoji_pack\" -> id == \"emoji_vip\""))
+        assertTrue(siege.contains("won && SonHarfCosmetics.crownVictory"))
+        assertTrue(siege.contains("CrownVictoryCelebration("))
+        assertTrue(siege.contains("SonHarfCosmetics.emojiPackId == \"emoji_vip\""))
+        assertTrue(siege.contains("VipEmojiReactionRow("))
+        assertTrue(effects.contains("R.drawable.store_art_victory_crown"))
     }
 
     private fun repoFile(path: String): File = sequenceOf(File(path), File("../$path"))
