@@ -41,6 +41,35 @@ jobs:
           path: profile-frames-v2-debug.apk
           if-no-files-found: error
           retention-days: 7
+      - name: Prepare side-by-side visual QA variant
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          gradle = Path("app/build.gradle.kts")
+          text = gradle.read_text(encoding="utf-8")
+          anchor = '    buildTypes {\n        getByName("release") {'
+          replacement = '    buildTypes {\n        getByName("debug") {\n            applicationIdSuffix = ".frametest"\n            versionNameSuffix = "-frame-test"\n        }\n        getByName("release") {'
+          if anchor not in text:
+              raise SystemExit("Could not inject side-by-side debug applicationIdSuffix")
+          gradle.write_text(text.replace(anchor, replacement, 1), encoding="utf-8")
+
+          values = Path("app/src/debug/res/values")
+          values.mkdir(parents=True, exist_ok=True)
+          (values / "profile_frame_test_name.xml").write_text(
+              '<?xml version="1.0" encoding="utf-8"?>\n<resources>\n    <string name="app_name">Kelime Kuşatması - Çerçeve Testi</string>\n</resources>\n',
+              encoding="utf-8",
+          )
+          PY
+          ./gradlew assembleDebug --stacktrace
+          cp app/build/outputs/apk/debug/app-debug.apk profile-frames-v2-side-by-side.apk
+      - name: Upload side-by-side visual QA APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: profile-frames-v2-side-by-side-apk
+          path: profile-frames-v2-side-by-side.apk
+          if-no-files-found: error
+          retention-days: 7
       - name: Commit verified patch
         run: |
           set -euo pipefail
