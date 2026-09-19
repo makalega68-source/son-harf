@@ -37,7 +37,7 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt
+          git add app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt app/src/main/java/com/sonharf/game/ProfileFramesV2.kt
           git diff --cached --quiet && exit 0
-          git commit -m "Integrate Profile Frames V2 into store and profile"
+          git commit -m "Harden Profile Frames V2 visual previews"
           git push origin HEAD:feature/profile-frames-store-20260919
