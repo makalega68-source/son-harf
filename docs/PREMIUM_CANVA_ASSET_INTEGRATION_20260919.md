@@ -19,6 +19,15 @@ The Android runtime uses lightweight text-free vector equivalents aligned to the
 - `score_calculator` → `drawable/premium_score_calculator.xml`
 - `pro_lifetime` → `drawable/premium_pro.xml`
 
+### Google Play Son Coin packages
+
+- `coins_500` → `drawable/premium_coin_500.xml`
+- `coins_1500` → `drawable/premium_coin_1500.xml`
+- `coins_3500` → `drawable/premium_coin_3500.xml`
+- `coins_8000` → `drawable/premium_coin_8000.xml`
+
+Each package has its own visual silhouette and premium density while remaining part of the same Canva-derived product family. Coin quantities are not baked into the decorative asset; amount, price and availability remain authoritative Compose/Google Play UI text.
+
 ### Son Coin cosmetics
 
 - `theme_black` / legacy `theme_dark_arena` → `drawable/store_art_theme_black.xml`
@@ -47,7 +56,7 @@ Profile-frame products continue to render their actual packaged frame assets thr
 
 ## Production rules
 
-- Decorative product assets must keep transparent outer backgrounds and contain no baked product names, prices, `PRO`, `SATIN ALINDI`, lock/open states or descriptions.
+- Decorative product assets must keep transparent outer backgrounds and contain no baked product names, prices, `PRO`, `SATIN ALINDI`, lock/open states, quantities or descriptions.
 - Runtime wording remains real Compose UI text and must not overlap image-baked wording.
 - Do not introduce unverified external icon packs or duplicate purchased assets.
 - Keep the existing verified `frame_round_golden_avatar` as the PRO profile frame; no new purchased frame package is required.
