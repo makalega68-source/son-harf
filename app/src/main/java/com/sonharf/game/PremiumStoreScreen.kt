@@ -113,8 +113,13 @@ internal fun PremiumStoreScreen(
             }
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(sh("Mağaza", "Shop"), color = SonHarfTheme.TextPrimary, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                Text(sh("Tarzını seç, koleksiyonunu oluştur", "Choose your style and build your collection"), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
+                Text(sh("Mağaza", "Shop"), color = SonHarfTheme.TextPrimary, fontSize = 25.sp, fontWeight = FontWeight.Black)
+                Text(
+                    sh("Tarzını seç, koleksiyonunu oluştur", "Choose your style and build your collection"),
+                    color = SonHarfTheme.TextSecondary,
+                    fontSize = 11.sp,
+                    lineHeight = 15.sp,
+                )
             }
             Surface(
                 onClick = { showCoins = true },
@@ -125,7 +130,7 @@ internal fun PremiumStoreScreen(
                 Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Toll, null, tint = SonHarfTheme.ActionOrange, modifier = Modifier.size(15.dp))
                     Spacer(Modifier.width(5.dp))
-                    Text("${profile?.diamonds ?: 0}", color = SonHarfTheme.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                    Text("${profile?.diamonds ?: 0}", color = SonHarfTheme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -158,7 +163,7 @@ internal fun PremiumStoreScreen(
                             Text(
                                 label,
                                 color = if (tab == index) SonHarfTheme.TextPrimary else SonHarfTheme.TextSecondary,
-                                fontSize = 11.sp,
+                                fontSize = 12.sp,
                                 fontWeight = if (tab == index) FontWeight.Black else FontWeight.Medium,
                             )
                         },
@@ -176,7 +181,7 @@ internal fun PremiumStoreScreen(
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(13.dp),
+                verticalArrangement = Arrangement.spacedBy(15.dp),
             ) {
                 if (loading) {
                     item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfTheme.Turquoise, trackColor = SonHarfTheme.SurfaceSecondary) }
@@ -225,8 +230,8 @@ internal fun PremiumStoreScreen(
                     }
                     item {
                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(sh("Seçili Görünümler", "Selected Styles"), Modifier.weight(1f), color = SonHarfTheme.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Black)
-                            TextButton(onClick = { tab = 2 }) { Text(sh("TÜMÜ", "ALL"), color = SonHarfTheme.Primary, fontSize = 10.sp, fontWeight = FontWeight.Black) }
+                            Text(sh("Seçili Görünümler", "Selected Styles"), Modifier.weight(1f), color = SonHarfTheme.TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                            TextButton(onClick = { tab = 2 }) { Text(sh("TÜMÜ", "ALL"), color = SonHarfTheme.Primary, fontSize = 11.sp, fontWeight = FontWeight.Black) }
                         }
                     }
                     val highlights = products.filter { it.id != PremiumStoreBlackThemeId }.take(4)
@@ -282,7 +287,7 @@ internal fun PremiumStoreScreen(
                 notice?.let { message ->
                     item {
                         Surface(shape = RoundedCornerShape(15.dp), color = SonHarfTheme.PrimarySoft) {
-                            Text(message, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfTheme.TextPrimary, fontSize = 10.sp, textAlign = TextAlign.Center)
+                            Text(message, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfTheme.TextPrimary, fontSize = 11.sp, textAlign = TextAlign.Center)
                         }
                     }
                 }
@@ -375,23 +380,24 @@ private fun PremiumStoreProHero(active: Boolean, onClick: () -> Unit) {
             Modifier.fillMaxWidth().background(
                 Brush.linearGradient(listOf(SonHarfTheme.Primary, SonHarfTheme.Purple, SonHarfTheme.Turquoise)),
                 RoundedCornerShape(22.dp),
-            ).padding(16.dp)
+            ).padding(17.dp)
         ) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Surface(shape = CircleShape, color = Color.White.copy(alpha = .16f)) {
                     Icon(Icons.Rounded.WorkspacePremium, null, tint = Color.White, modifier = Modifier.padding(11.dp).size(24.dp))
                 }
-                Spacer(Modifier.width(11.dp))
+                Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("PRO", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text("PRO", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
                     Text(
                         if (active) sh("Üyeliğin aktif · Ayrıcalıklarını gör", "Membership active · View your benefits")
                         else sh("Reklamsız kullanım · premium stil · analiz", "Ad-free · premium style · analysis"),
-                        color = Color.White.copy(alpha = .84f),
-                        fontSize = 9.sp,
+                        color = Color.White.copy(alpha = .86f),
+                        fontSize = 10.sp,
+                        lineHeight = 14.sp,
                     )
                 }
-                Text(if (active) sh("AÇ", "OPEN") else sh("KEŞFET", "EXPLORE"), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                Text(if (active) sh("AÇ", "OPEN") else sh("KEŞFET", "EXPLORE"), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.width(3.dp))
                 Icon(Icons.Rounded.ChevronRight, null, tint = Color.White, modifier = Modifier.size(20.dp))
             }
@@ -407,31 +413,38 @@ private fun PremiumStoreFeaturedTheme(item: ShopItemDto, owned: Boolean, busy: B
         border = BorderStroke(1.dp, Color(0xFF3B82F6).copy(alpha = .45f)),
         shadowElevation = 5.dp,
     ) {
-        Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        Column(Modifier.fillMaxWidth().padding(17.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(sh("ÖNE ÇIKAN TEMA", "FEATURED THEME"), color = Color(0xFF1FD1C2), fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
-                    Text("Black Theme", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(item.premiumStoreDescription(), color = Color.White.copy(alpha = .68f), fontSize = 9.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(sh("ÖNE ÇIKAN TEMA", "FEATURED THEME"), color = Color(0xFF1FD1C2), fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
+                    Text("Black Theme", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        item.premiumStoreDescription(),
+                        color = Color.White.copy(alpha = .72f),
+                        fontSize = 10.sp,
+                        lineHeight = 15.sp,
+                        maxLines = 3,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
-                Spacer(Modifier.width(12.dp))
-                StoreProductPreview(item, Modifier.size(width = 118.dp, height = 88.dp))
+                Spacer(Modifier.width(14.dp))
+                StoreProductPreview(item, Modifier.size(width = 136.dp, height = 102.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     if (owned) sh("KOLEKSİYONUNDA", "IN COLLECTION") else "${item.diamondPrice} Son Coin",
                     color = if (owned) Color(0xFF1FD1C2) else Color(0xFFF59E0B),
-                    fontSize = 11.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.Black,
                 )
                 Spacer(Modifier.weight(1f))
                 Button(
                     onClick = onAction,
                     enabled = !busy,
-                    shape = RoundedCornerShape(13.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = if (owned) Color(0xFF7C3AED) else Color(0xFF2563EB), contentColor = Color.White),
                 ) {
-                    Text(if (owned) sh("KOLEKSİYONA GİT", "OPEN COLLECTION") else sh("SATIN AL", "BUY"), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(if (owned) sh("KOLEKSİYONA GİT", "OPEN COLLECTION") else sh("SATIN AL", "BUY"), fontSize = 10.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -445,9 +458,9 @@ private fun PremiumStoreCategoryHeader(title: String, count: Int, icon: ImageVec
             Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(18.dp))
         }
         Spacer(Modifier.width(9.dp))
-        Text(title, Modifier.weight(1f), color = SonHarfTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
+        Text(title, Modifier.weight(1f), color = SonHarfTheme.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Black)
         Surface(shape = RoundedCornerShape(99.dp), color = accent.copy(alpha = .09f)) {
-            Text(count.toString(), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black)
+            Text(count.toString(), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -462,7 +475,7 @@ private fun PremiumStoreProductRow(
     onOwned: () -> Unit,
     onBuy: (ShopItemDto) -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         items.forEach { item ->
             PremiumStoreProductTile(
                 item = item,
@@ -488,15 +501,32 @@ private fun PremiumStoreProductTile(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(20.dp),
         color = SonHarfTheme.Surface,
         border = BorderStroke(if (equipped) 1.5.dp else 1.dp, if (equipped) SonHarfTheme.Turquoise else SonHarfTheme.Border),
         shadowElevation = 2.dp,
     ) {
-        Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            StoreProductPreview(item, Modifier.fillMaxWidth().height(92.dp))
-            Text(item.premiumStoreName(), color = SonHarfTheme.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(item.premiumStoreDescription(), color = SonHarfTheme.TextSecondary, fontSize = 8.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, minLines = 2)
+        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            StoreProductPreview(item, Modifier.fillMaxWidth().height(116.dp))
+            Text(
+                item.premiumStoreName(),
+                color = SonHarfTheme.TextPrimary,
+                fontSize = 13.sp,
+                lineHeight = 17.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 2,
+                minLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                item.premiumStoreDescription(),
+                color = SonHarfTheme.TextSecondary,
+                fontSize = 10.sp,
+                lineHeight = 14.sp,
+                maxLines = 3,
+                minLines = 3,
+                overflow = TextOverflow.Ellipsis,
+            )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     when {
@@ -509,20 +539,20 @@ private fun PremiumStoreProductTile(
                         owned -> SonHarfTheme.Success
                         else -> SonHarfTheme.ActionOrange
                     },
-                    fontSize = 8.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
                 )
                 Spacer(Modifier.weight(1f))
                 FilledIconButton(
                     onClick = onAction,
                     enabled = !busy && !equipped,
-                    modifier = Modifier.size(32.dp),
+                    modifier = Modifier.size(38.dp),
                     colors = IconButtonDefaults.filledIconButtonColors(
                         containerColor = if (owned) SonHarfTheme.Purple else SonHarfTheme.Primary,
                         contentColor = Color.White,
                     ),
                 ) {
-                    Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, modifier = Modifier.size(15.dp))
+                    Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, modifier = Modifier.size(17.dp))
                 }
             }
         }
@@ -536,7 +566,7 @@ private fun PremiumStoreOfflineCard(modifier: Modifier = Modifier) {
             sh("Mağaza verisi şu anda kullanılamıyor.", "Shop data is currently unavailable."),
             Modifier.fillMaxWidth().padding(18.dp),
             color = SonHarfTheme.TextSecondary,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             textAlign = TextAlign.Center,
         )
     }
