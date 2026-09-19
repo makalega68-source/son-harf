@@ -48,6 +48,15 @@ private val SonHarfTypography = Typography(
 enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        /**
+         * "Remember me" cleanup is a process-start policy, not an Activity-recreation policy.
+         * Keeping this in process memory prevents rotations/configuration changes from signing
+         * out an active non-remembered session while still re-applying the policy after process death.
+         */
+        private var startupSessionPolicyApplied = false
+    }
+
     private fun bestEffortStartup(name: String, block: () -> Unit) {
         runCatching(block).onFailure { Log.e("SonHarfStartup", "$name failed; continuing launch", it) }
     }
@@ -108,7 +117,9 @@ class MainActivity : ComponentActivity() {
 
         val authDeepLink = intent.data?.let { it.scheme == "sonharf" && it.host == "auth" } == true
         val rememberLogin = runCatching { SonHarfPreferences.rememberLogin(this) }.getOrDefault(false)
-        val clearUnrememberedSession = SupabaseProvider.configured && !rememberLogin && !authDeepLink
+        val applySessionPolicy = !startupSessionPolicyApplied
+        startupSessionPolicyApplied = true
+        val clearUnrememberedSession = SupabaseProvider.configured && applySessionPolicy && !rememberLogin && !authDeepLink
 
         setContent {
             val appColors = if (SonHarfCosmetics.darkArenaTheme) {
@@ -193,7 +204,7 @@ private fun StartupLoading() {
             Spacer(Modifier.height(24.dp))
             CircularProgressIndicator(color = SonHarfBlue, strokeWidth = 3.dp)
             Spacer(Modifier.height(14.dp))
-            Text(sh("Kelime Tahtı hazırlanıyor…", "Preparing Kelime Tahtı…"), color = SonHarfText, fontWeight = FontWeight.Bold)
+            Text(sh("Kelime Kuşatması hazırlanıyor…", "Preparing Word Siege…"), color = SonHarfText, fontWeight = FontWeight.Bold)
             Text(sh("Oturum ve ayarlar güvenli biçimde yükleniyor.", "Loading session and settings safely."), color = SonHarfMuted, fontSize = 12.sp, textAlign = TextAlign.Center)
         }
     }

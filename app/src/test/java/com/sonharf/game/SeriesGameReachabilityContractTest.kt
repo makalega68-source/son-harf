@@ -1,0 +1,27 @@
+package com.sonharf.game
+
+import java.io.File
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class SeriesGameReachabilityContractTest {
+    @Test fun purchasedSeriesGameHasARealRuntimeScreen() {
+        val series = projectFile("app/src/main/java/com/sonharf/game/WordSiegeSeriesScreen.kt").readText()
+        val store = projectFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
+
+        assertTrue(series.contains("internal fun WordSiegeSeriesScreen"))
+        assertTrue(series.contains("findOrCreateWordSiegeSeriesGame"))
+        assertTrue(store.contains("showSeriesGame"))
+        assertTrue(store.contains("WordSiegeSeriesScreen"))
+        assertTrue(store.contains("owned = entitlements.seriesGameAccess"))
+        assertFalse(store.contains("owned = false"))
+    }
+
+    private fun projectFile(path: String): File {
+        val file = listOf(File(path), File("../$path")).firstOrNull(File::exists)
+        assertNotNull("Project path missing: $path", file)
+        return requireNotNull(file)
+    }
+}

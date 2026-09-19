@@ -3,16 +3,19 @@ package com.sonharf.game
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.weight
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
@@ -22,6 +25,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,8 +45,10 @@ import com.sonharf.game.data.getVipEntitlements
 import com.sonharf.game.data.previewPremiumWordSiegeMove
 
 /**
- * Premium in-match tools. Both score preview and letter counts are server-authoritative and
+ * Premium in-match tools. Score preview and letter counts are server-authoritative and
  * entitlement-gated again on the RPC side, so UI state cannot unlock paid data by itself.
+ * Transport failures are kept distinct from a real "locked" entitlement to avoid making
+ * purchased features look unowned during a temporary backend problem.
  */
 @Composable
 internal fun WordSiegePremiumPanel(
@@ -51,25 +57,45 @@ internal fun WordSiegePremiumPanel(
     canAct: Boolean,
 ) {
     val backend = remember { OnlineGameBackend() }
-    var entitlements by remember(game.id) { mutableStateOf(VipEntitlementsDto()) }
+    var entitlements by remember(game.id) { mutableStateOf<VipEntitlementsDto?>(null) }
+    var entitlementError by remember(game.id) { mutableStateOf(false) }
+    var entitlementRetry by remember(game.id) { mutableIntStateOf(0) }
     var preview by remember(game.id) { mutableStateOf<WordSiegePremiumPreviewDto?>(null) }
     var previewError by remember(game.id) { mutableStateOf(false) }
     var letterTable by remember(game.id) { mutableStateOf<List<WordSiegeLetterCountDto>>(emptyList()) }
+    var letterTableError by remember(game.id) { mutableStateOf(false) }
     var showLetterTable by remember(game.id) { mutableStateOf(false) }
 
-    LaunchedEffect(game.id, game.moveCount) {
-        entitlements = runCatching { backend.getVipEntitlements() }.getOrDefault(VipEntitlementsDto())
-        letterTable = if (entitlements.letterTableAccess) {
-            runCatching { backend.getPremiumWordSiegeLetterTable(game.id) }.getOrDefault(emptyList())
-        } else {
-            emptyList()
-        }
+    LaunchedEffect(game.id, game.moveCount, entitlementRetry) {
+        entitlementError = false
+        runCatching { backend.getVipEntitlements() }
+            .onSuccess { next ->
+                entitlements = next
+                if (next.letterTableAccess) {
+                    letterTableError = false
+                    runCatching { backend.getPremiumWordSiegeLetterTable(game.id) }
+                        .onSuccess { letterTable = it }
+                        .onFailure {
+                            letterTable = emptyList()
+                            letterTableError = true
+                        }
+                } else {
+                    letterTable = emptyList()
+                    letterTableError = false
+                }
+            }
+            .onFailure {
+                // Preserve the last known entitlement instead of downgrading a paid user to "locked".
+                entitlementError = true
+            }
     }
 
-    LaunchedEffect(game.id, game.moveCount, placements, canAct, entitlements.scoreCalculatorAccess) {
+    val access = entitlements
+
+    LaunchedEffect(game.id, game.moveCount, placements, canAct, access?.scoreCalculatorAccess) {
         preview = null
         previewError = false
-        if (!canAct || placements.isEmpty() || !entitlements.scoreCalculatorAccess) return@LaunchedEffect
+        if (!canAct || placements.isEmpty() || access?.scoreCalculatorAccess != true) return@LaunchedEffect
         val orientation = runCatching { WordSiegeFinalRules.detectOrientation(game.board, placements.keys) }.getOrNull()
             ?: return@LaunchedEffect
         val request = placements.entries
@@ -84,10 +110,48 @@ internal fun WordSiegePremiumPanel(
         }.onSuccess {
             preview = it
         }.onFailure {
-            // Invalid/unfinished placements are normal while the player is still composing a move.
             previewError = true
         }
     }
+
+    if (access == null || entitlementError) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(10.dp),
+            color = WordSiegeGameUi.SurfaceSoft,
+            border = BorderStroke(1.dp, WordSiegeGameUi.Border),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(Icons.Rounded.Refresh, null, tint = WordSiegeGameUi.Blue)
+                Text(
+                    if (access == null && !entitlementError) {
+                        sh("Premium araçlar kontrol ediliyor…", "Checking premium tools…")
+                    } else {
+                        sh("Premium erişimi doğrulanamadı. Satın alımların kilitlenmedi; yeniden dene.", "Premium access could not be verified. Your purchases are not locked; retry.")
+                    },
+                    modifier = Modifier.weight(1f),
+                    color = WordSiegeGameUi.Text,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (entitlementError) {
+                    TextButton(
+                        onClick = { entitlementRetry++ },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text(sh("YENİLE", "RETRY"), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+        }
+        if (access == null) return
+    }
+
+    val resolvedAccess = access ?: return
 
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -101,47 +165,49 @@ internal fun WordSiegePremiumPanel(
             border = BorderStroke(1.dp, WordSiegeGameUi.Border),
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(
-                    if (entitlements.scoreCalculatorAccess) Icons.Rounded.Calculate else Icons.Rounded.Lock,
+                    if (resolvedAccess.scoreCalculatorAccess) Icons.Rounded.Calculate else Icons.Rounded.Lock,
                     contentDescription = null,
-                    tint = if (entitlements.scoreCalculatorAccess) WordSiegeGameUi.Blue else WordSiegeGameUi.Muted,
+                    tint = if (resolvedAccess.scoreCalculatorAccess) WordSiegeGameUi.Blue else WordSiegeGameUi.Muted,
                 )
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(6.dp))
                 Text(
                     when {
-                        !entitlements.scoreCalculatorAccess -> sh("Puan Hesaplayıcı • Kilitli", "Score Calculator • Locked")
+                        !resolvedAccess.scoreCalculatorAccess -> sh("Puan Hesaplayıcı • Kilitli", "Score Calculator • Locked")
                         placements.isEmpty() -> sh("Puan Hesaplayıcı • Harf yerleştir", "Score Calculator • Place tiles")
                         preview != null -> sh(
                             "Kelime +${preview!!.wordScore} • Bölge +${preview!!.areaScore} • Toplam +${preview!!.totalScore}",
                             "Word +${preview!!.wordScore} • Territory +${preview!!.areaScore} • Total +${preview!!.totalScore}",
                         )
-                        previewError -> sh("Hamleyi tamamla", "Complete the move")
+                        previewError -> sh("Önizleme alınamadı • hamleyi kontrol et", "Preview unavailable • check the move")
                         else -> sh("Hesaplanıyor…", "Calculating…")
                     },
                     color = WordSiegeGameUi.Text,
-                    fontSize = 8.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    maxLines = 1,
+                    maxLines = 2,
+                    lineHeight = 12.sp,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
 
         OutlinedButton(
-            onClick = { if (entitlements.letterTableAccess) showLetterTable = true },
-            enabled = entitlements.letterTableAccess,
+            onClick = { if (resolvedAccess.letterTableAccess) showLetterTable = true },
+            enabled = resolvedAccess.letterTableAccess,
             shape = RoundedCornerShape(10.dp),
             border = BorderStroke(1.dp, WordSiegeGameUi.Border),
-            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+            contentPadding = PaddingValues(horizontal = 9.dp, vertical = 6.dp),
         ) {
             Icon(
-                if (entitlements.letterTableAccess) Icons.Rounded.GridView else Icons.Rounded.Lock,
+                if (resolvedAccess.letterTableAccess) Icons.Rounded.GridView else Icons.Rounded.Lock,
                 contentDescription = null,
                 modifier = Modifier.padding(end = 4.dp),
             )
-            Text(sh("HARF", "LETTERS"), fontSize = 8.sp, fontWeight = FontWeight.Black)
+            Text(sh("HARFLER", "LETTERS"), fontSize = 9.sp, fontWeight = FontWeight.Black)
         }
     }
 
@@ -155,30 +221,41 @@ internal fun WordSiegePremiumPanel(
                     Text(
                         sh("Tahtadaki harfler ve kendi elin çıkarıldıktan sonra oyunda görünmeyen harf adetleri.", "Unseen letter counts after subtracting the board and your own rack."),
                         color = WordSiegeGameUi.Muted,
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                     )
-                    letterTable.chunked(6).forEach { group ->
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(5.dp),
-                        ) {
-                            group.forEach { item ->
-                                Surface(
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = WordSiegeGameUi.SurfaceSoft,
-                                    border = BorderStroke(1.dp, WordSiegeGameUi.Border),
-                                ) {
-                                    Text(
-                                        "${item.letter} ${item.remaining}",
-                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 6.dp),
-                                        color = WordSiegeGameUi.Text,
-                                        fontWeight = FontWeight.Black,
-                                        fontSize = 10.sp,
-                                    )
+                    if (letterTableError) {
+                        Text(
+                            sh("Harf tablosu şu anda alınamadı. Pencereyi kapatıp yeniden deneyebilirsin.", "Letter counts are temporarily unavailable. Close and retry."),
+                            color = WordSiegeGameUi.Text,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    } else if (letterTable.isEmpty()) {
+                        Text(sh("Harf bilgisi yükleniyor…", "Loading letter counts…"), color = WordSiegeGameUi.Muted, fontSize = 11.sp)
+                    } else {
+                        letterTable.chunked(6).forEach { group ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                            ) {
+                                group.forEach { item ->
+                                    Surface(
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = WordSiegeGameUi.SurfaceSoft,
+                                        border = BorderStroke(1.dp, WordSiegeGameUi.Border),
+                                    ) {
+                                        Text(
+                                            "${item.letter} ${item.remaining}",
+                                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 7.dp),
+                                            color = WordSiegeGameUi.Text,
+                                            fontWeight = FontWeight.Black,
+                                            fontSize = 11.sp,
+                                        )
+                                    }
                                 }
+                                repeat((6 - group.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
                             }
-                            repeat((6 - group.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
                         }
                     }
                 }
