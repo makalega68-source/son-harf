@@ -41,14 +41,27 @@ class StoreCatalogTruthV2ContractTest {
     }
 
     @Test
-    fun proStoreBrandMatchesMainProduct() {
+    fun proStoreBrandAndPromisesMatchActiveRuntime() {
         val dialog = projectFile("app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt").readText()
         val pro = projectFile("app/src/main/java/com/sonharf/game/UnifiedProVipScreen.kt").readText()
+        val card = projectFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
+        val benefits = projectFile("app/src/main/java/com/sonharf/game/StorefrontCards.kt").readText()
+        val frames = projectFile("app/src/main/java/com/sonharf/game/PurchasedStyleUi.kt").readText()
 
         assertTrue(dialog.contains("KELİME KUŞATMASI PRO"))
         assertTrue(pro.contains("KELİME KUŞATMASI PRO"))
         assertFalse(dialog.contains("Kelime Tahtı PRO"))
         assertFalse(pro.contains("SON HARF PRO"))
+
+        // Profile-frame sale/equip surface is explicitly retired, so PRO copy must not sell it.
+        assertTrue(frames.contains("PROFILE_FRAMES_RETIRED = true"))
+        assertFalse(card.contains("PRO çerçevesini"))
+        assertFalse(card.contains("the PRO frame"))
+        assertFalse(dialog.contains("PRO STYLE"))
+        assertFalse(dialog.contains("Exclusive appearance"))
+        assertFalse(pro.contains("PRO Style"))
+        assertFalse(pro.contains("cosmetic, social"))
+        assertTrue(benefits.contains("PRO rozeti ve profil ayrıcalıkları"))
     }
 
     @Test
