@@ -42,8 +42,9 @@ internal object SonHarfAdPolicy {
 }
 
 /**
- * Thin anchored adaptive banner shared by every app destination, including gameplay.
- * The banner slot can exist before consent/ad availability, but the Google AdView itself
+ * Thin anchored adaptive banner for non-gameplay destinations only.
+ * Gameplay screens must never reserve or render this surface. The banner slot can exist
+ * before consent/ad availability on eligible menu surfaces, but the Google AdView itself
  * is not constructed until policy allows an ad request. This keeps authentication-to-home
  * navigation independent from the ads SDK lifecycle.
  */
