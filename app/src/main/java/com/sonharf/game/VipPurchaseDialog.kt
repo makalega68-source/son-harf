@@ -91,7 +91,7 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                 product = it[ProductCatalog.PRO_LIFETIME]
             }
             // Recover a completed lifetime purchase after an interrupted verification without
-            // exposing a legacy subscription-style Restore Purchases action in the UI.
+            // exposing a legacy restore action in the UI.
             manager.restorePurchases(setOf(ProductCatalog.PRO_LIFETIME))
         }
         onDispose { manager.close() }
@@ -114,7 +114,7 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text("Kelime Tahtı PRO", color = ProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                        Text("Kelime Kuşatması PRO", color = ProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
                         Text(
                             sh("Tek ödeme • kalıcı erişim", "One payment • lifetime access"),
                             color = ProBlue,
@@ -130,24 +130,6 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
                 ProBenefit(Icons.Rounded.PlayArrow, sh("SERİ OYUN", "SERIES GAME"), sh("3/5/10 dakikalık hızlı oyun modu", "3/5/10-minute fast game mode"))
                 ProBenefit(Icons.Rounded.Groups, sh("SOSYAL AYRICALIKLAR", "SOCIAL BENEFITS"), sh("Kaydedilmiş arkadaş listesi ve PRO profil çerçevesi", "Saved friends list and PRO profile frame"))
                 ProBenefit(Icons.Rounded.History, sh("TAM GEÇMİŞ", "FULL HISTORY"), sh("Son Harf kelime geçmişine tam erişim", "Full Son Harf word-history access"))
-
-                Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = ProGreen.copy(alpha = .10f),
-                    border = BorderStroke(1.dp, ProGreen.copy(alpha = .35f)),
-                ) {
-                    Text(
-                        sh(
-                            "ADİL REKABET: PRO, dereceli maçlarda skor, hedef harf veya kelime avantajı vermez.",
-                            "FAIR PLAY: PRO gives no score, target-letter, or word advantage in ranked matches.",
-                        ),
-                        Modifier.fillMaxWidth().padding(11.dp),
-                        color = ProGreen,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.Center,
-                    )
-                }
 
                 Surface(
                     shape = RoundedCornerShape(16.dp),

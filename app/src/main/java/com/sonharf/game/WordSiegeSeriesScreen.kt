@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.billing.ProductCatalog
 import com.sonharf.game.data.*
 import java.time.Duration
 import java.time.Instant
@@ -59,6 +60,7 @@ internal fun WordSiegeSeriesScreen(onExit: () -> Unit) {
     var inviteFriend by remember { mutableStateOf(false) }
     var turnMinutes by remember { mutableIntStateOf(SERIES_DEFAULT_TURN_MINUTES) }
     var clockTick by remember { mutableLongStateOf(0L) }
+    var showSeriesPurchase by remember { mutableStateOf(false) }
 
     suspend fun loadProfiles(ids: Collection<String?>) {
         val missing = ids.filterNotNull().distinct().filterNot(profiles::containsKey)
@@ -151,7 +153,7 @@ internal fun WordSiegeSeriesScreen(onExit: () -> Unit) {
     Surface(Modifier.fillMaxSize(), color = SonHarfTheme.Background) {
         when {
             entitlement == null || loading && games.isEmpty() -> SeriesLoading()
-            entitlement?.seriesGameAccess != true -> SeriesLocked(onExit)
+            entitlement?.seriesGameAccess != true -> SeriesLocked(onExit = onExit, onPurchase = { showSeriesPurchase = true })
             selectedGameId == null -> SeriesLobby(
                 games = games,
                 friends = friends,
@@ -286,6 +288,20 @@ internal fun WordSiegeSeriesScreen(onExit: () -> Unit) {
                 }
             }
         }
+    }
+
+    if (showSeriesPurchase) {
+        PremiumProductPurchaseDialog(
+            productId = ProductCatalog.SERIES_GAME,
+            onVerified = {
+                showSeriesPurchase = false
+                scope.launch {
+                    entitlement = runCatching { backend.getVipEntitlements() }.getOrDefault(entitlement ?: VipEntitlementsDto())
+                    if (entitlement?.seriesGameAccess == true) refreshLobby(showProgress = true)
+                }
+            },
+            onDismiss = { showSeriesPurchase = false },
+        )
     }
 
     if (inviteFriend) {
@@ -633,7 +649,7 @@ private fun SeriesFriendInviteDialog(
 }
 
 @Composable
-private fun SeriesLocked(onExit: () -> Unit) {
+private fun SeriesLocked(onExit: () -> Unit, onPurchase: () -> Unit) {
     Column(
         Modifier.fillMaxSize().statusBarsPadding().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -644,7 +660,12 @@ private fun SeriesLocked(onExit: () -> Unit) {
         Text(sh("Seri Oyun kilitli", "Series Game is locked"), color = SonHarfTheme.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
         Text(sh("Seri Oyun veya PRO satın alındığında kalıcı olarak açılır.", "It unlocks permanently with Series Game or PRO."), color = SonHarfTheme.TextSecondary, textAlign = TextAlign.Center)
         Spacer(Modifier.height(16.dp))
-        Button(onClick = onExit) { Text(sh("MAĞAZAYA DÖN", "BACK TO STORE")) }
+        Button(onClick = onPurchase) {
+            Icon(Icons.Rounded.ShoppingCart, null)
+            Spacer(Modifier.width(7.dp))
+            Text(sh("SERİ OYUN'U AÇ", "UNLOCK SERIES GAME"), fontWeight = FontWeight.Black)
+        }
+        TextButton(onClick = onExit) { Text(sh("GERİ DÖN", "GO BACK")) }
     }
 }
 

@@ -21,7 +21,8 @@ class WordSiegePremiumPurchaseContractTest {
         assertTrue(dialog.contains("queryOneTimeProducts(listOf(productId))"))
         assertTrue(dialog.contains("manager.launchProduct(activity, selected)"))
         assertTrue(dialog.contains("PlayPurchaseVerification.verify(productId, purchase.purchaseToken)"))
-        assertTrue(dialog.contains("ProductCatalog.LETTER_TABLE || productId == ProductCatalog.SCORE_CALCULATOR"))
+        assertTrue(dialog.contains("ProductCatalog.SERIES_GAME"))
+        assertTrue(dialog.contains("productId in setOf(ProductCatalog.SERIES_GAME, ProductCatalog.LETTER_TABLE, ProductCatalog.SCORE_CALCULATOR)"))
         assertTrue(dialog.contains("manager.restorePurchases(setOf(productId))"))
     }
 

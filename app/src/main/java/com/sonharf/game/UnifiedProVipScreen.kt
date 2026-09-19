@@ -63,7 +63,7 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text("KELİME KUŞATMASI PRO", color = SonHarfTheme.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Premium üyelik", "Premium membership"), color = SonHarfTheme.Purple, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Text(sh("Tek ödeme • kalıcı PRO", "One payment • lifetime PRO"), color = SonHarfTheme.Purple, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
                 Icon(Icons.Rounded.WorkspacePremium, null, tint = SonHarfTheme.Purple, modifier = Modifier.size(30.dp))
             }
@@ -147,21 +147,21 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                 ProAccessCard(
                     icon = Icons.Rounded.Block,
                     label = sh("REKLAMSIZ", "AD-FREE"),
-                    enabled = active && e?.rewardedAdBypass == true,
+                    enabled = active,
                     accent = SonHarfTheme.Primary,
                     modifier = Modifier.weight(1f),
                 )
                 ProAccessCard(
-                    icon = Icons.Rounded.BarChart,
-                    label = sh("ANALİZ", "ANALYSIS"),
-                    enabled = active && e?.postMatchAnalysis == true,
+                    icon = Icons.Rounded.Bolt,
+                    label = sh("SERİ OYUN", "SERIES GAME"),
+                    enabled = active && e?.seriesGameAccess == true,
                     accent = SonHarfTheme.Turquoise,
                     modifier = Modifier.weight(1f),
                 )
                 ProAccessCard(
-                    icon = Icons.Rounded.MeetingRoom,
-                    label = sh("ÖZEL ODA", "PRIVATE ROOM"),
-                    enabled = active && e?.privateRooms == true,
+                    icon = Icons.Rounded.ViewAgenda,
+                    label = sh("50 OYUN", "50 GAMES"),
+                    enabled = active && (e?.activeGameLimit ?: 10) >= 50,
                     accent = SonHarfTheme.Purple,
                     modifier = Modifier.weight(1f),
                 )
@@ -183,10 +183,16 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Black,
                     )
-                    ProBenefitRow(Icons.Rounded.Palette, sh("PRO Style ve profil ayrıcalıkları", "PRO Style and profile benefits"), SonHarfTheme.Purple)
-                    ProBenefitRow(Icons.Rounded.AutoGraph, sh("Gelişmiş istatistik ve maç analizi", "Advanced stats and match analysis"), SonHarfTheme.Turquoise)
-                    ProBenefitRow(Icons.Rounded.Groups, sh("Sosyal ve arkadaş ayrıcalıkları", "Social and friend benefits"), SonHarfTheme.Primary)
-                    ProBenefitRow(Icons.Rounded.DoorFront, sh("Özel oda erişimi", "Private room access"), SonHarfTheme.ActionOrange)
+                    ProBenefitRow(Icons.Rounded.Block, sh("Reklamsız kullanım", "Ad-free use"), SonHarfTheme.Primary)
+                    ProBenefitRow(Icons.Rounded.Calculate, sh("Puan Hesaplayıcı", "Score Calculator"), SonHarfTheme.Turquoise)
+                    ProBenefitRow(Icons.Rounded.GridView, sh("Harf Tablosu", "Letter Table"), SonHarfTheme.Turquoise)
+                    ProBenefitRow(Icons.Rounded.Bolt, sh("Seri Oyun", "Series Game"), SonHarfTheme.ActionOrange)
+                    ProBenefitRow(Icons.Rounded.Groups, sh("Arkadaş Listesi", "Friends List"), SonHarfTheme.Primary)
+                    ProBenefitRow(Icons.Rounded.History, sh("Son Harf tam kelime geçmişi", "Full Son Harf word history"), SonHarfTheme.Purple)
+                    ProBenefitRow(Icons.Rounded.ViewAgenda, sh("Aynı anda 50 aktif oyun", "Up to 50 active games"), SonHarfTheme.ActionOrange)
+                    ProBenefitRow(Icons.Rounded.AccountCircle, sh("PRO profil çerçevesi", "PRO profile frame"), SonHarfTheme.Purple)
+                    ProBenefitRow(Icons.Rounded.WorkspacePremium, sh("PRO rozeti ve prestij", "PRO badge and prestige"), SonHarfTheme.Purple)
+                    ProBenefitRow(Icons.Rounded.Toll, sh("İlk başarılı PRO aktivasyonunda bir kez 100 Son Coin", "100 Son Coins once on the first successful PRO activation"), SonHarfTheme.ActionOrange)
                 }
             }
         }
@@ -219,7 +225,7 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                     ) {
                         Icon(Icons.Rounded.CheckCircle, null, tint = SonHarfTheme.Turquoise, modifier = Modifier.size(20.dp))
                         Spacer(Modifier.width(7.dp))
-                        Text(sh("PRO ÜYELİĞİN AKTİF", "YOUR PRO MEMBERSHIP IS ACTIVE"), color = SonHarfTheme.Turquoise, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        Text(sh("PRO ERİŞİMİN AKTİF", "YOUR PRO ACCESS IS ACTIVE"), color = SonHarfTheme.Turquoise, fontWeight = FontWeight.Black, fontSize = 11.sp)
                     }
                 }
             }
@@ -239,7 +245,7 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
     if (showPurchase) {
         VipPurchaseDialog(
             onVerified = {
-                notice = sh("PRO üyeliğin doğrulandı.", "Your PRO membership was verified.")
+                notice = sh("PRO erişimin doğrulandı.", "Your PRO access was verified.")
                 scope.launch { reload() }
             },
             onDismiss = { showPurchase = false },

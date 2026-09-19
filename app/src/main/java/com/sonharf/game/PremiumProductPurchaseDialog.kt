@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -48,7 +49,7 @@ internal fun PremiumProductPurchaseDialog(
     onVerified: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    require(productId == ProductCatalog.LETTER_TABLE || productId == ProductCatalog.SCORE_CALCULATOR)
+    require(productId in setOf(ProductCatalog.SERIES_GAME, ProductCatalog.LETTER_TABLE, ProductCatalog.SCORE_CALCULATOR))
 
     val context = LocalContext.current
     val activity = context as? Activity
@@ -94,27 +95,38 @@ internal fun PremiumProductPurchaseDialog(
         onDispose { manager.close() }
     }
 
+    val isSeriesGame = productId == ProductCatalog.SERIES_GAME
     val isLetterTable = productId == ProductCatalog.LETTER_TABLE
-    val title = if (isLetterTable) sh("Harf Tablosu", "Letter Table") else sh("Puan Hesaplayıcı", "Score Calculator")
-    val description = if (isLetterTable) {
-        sh(
+    val title = when (productId) {
+        ProductCatalog.SERIES_GAME -> sh("Seri Oyun", "Series Game")
+        ProductCatalog.LETTER_TABLE -> sh("Harf Tablosu", "Letter Table")
+        else -> sh("Puan Hesaplayıcı", "Score Calculator")
+    }
+    val description = when (productId) {
+        ProductCatalog.SERIES_GAME -> sh(
+            "3, 5 veya 10 dakikalık server zamanlı ayrı eşleşme havuzunu kalıcı olarak açar. Tek ödeme ile kalıcı erişim.",
+            "Permanently unlocks the separate server-timed 3, 5 or 10 minute matchmaking pool. One payment for permanent access.",
+        )
+        ProductCatalog.LETTER_TABLE -> sh(
             "Kelime Kuşatması sırasında kalan harf adetlerini server doğrulamasıyla gösterir. Tek ödeme ile kalıcı erişim.",
             "Shows remaining letter counts during Word Siege with server validation. One payment for permanent access.",
         )
-    } else {
-        sh(
+        else -> sh(
             "Hamleni göndermeden önce kelime ve bölge puanı ön izlemesini server doğrulamasıyla gösterir. Tek ödeme ile kalıcı erişim.",
             "Shows a server-validated word and territory score preview before submitting your move. One payment for permanent access.",
         )
     }
-    val price = product?.oneTimePurchaseOfferDetails?.formattedPrice
-        ?: if (isLetterTable) ProductCatalog.LETTER_TABLE_FALLBACK_PRICE_TRY else ProductCatalog.SCORE_CALCULATOR_FALLBACK_PRICE_TRY
+    val price = product?.oneTimePurchaseOfferDetails?.formattedPrice ?: when (productId) {
+        ProductCatalog.SERIES_GAME -> ProductCatalog.SERIES_GAME_FALLBACK_PRICE_TRY
+        ProductCatalog.LETTER_TABLE -> ProductCatalog.LETTER_TABLE_FALLBACK_PRICE_TRY
+        else -> ProductCatalog.SCORE_CALCULATOR_FALLBACK_PRICE_TRY
+    }
 
     AlertDialog(
         onDismissRequest = { if (!busy) onDismiss() },
         icon = {
             Icon(
-                if (isLetterTable) Icons.Rounded.GridView else Icons.Rounded.Calculate,
+                when { isSeriesGame -> Icons.Rounded.Timer; isLetterTable -> Icons.Rounded.GridView; else -> Icons.Rounded.Calculate },
                 contentDescription = null,
                 tint = WordSiegeGameUi.Blue,
             )

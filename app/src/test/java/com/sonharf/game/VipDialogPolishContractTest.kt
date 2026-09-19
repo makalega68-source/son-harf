@@ -9,7 +9,7 @@ import org.junit.Test
 class VipDialogPolishContractTest {
 
     @Test
-    fun vipDialogUsesLifetimeProductAndKeepsFairPlayPromise() {
+    fun vipDialogUsesLifetimeProductWithoutSubscriptionOrFairPlaySalesBlock() {
         val source = projectFile("app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt").readText()
 
         assertTrue(source.contains("BillingManager("))
@@ -28,9 +28,9 @@ class VipDialogPolishContractTest {
         assertFalse(source.contains("Restore purchases"))
         assertFalse(source.contains("rememberInfiniteTransition"))
 
-        assertTrue(source.contains("ADİL REKABET"))
-        assertTrue(source.contains("FAIR PLAY"))
-        assertTrue(source.contains("gives no score, target-letter, or word advantage"))
+        assertFalse(source.contains("ADİL REKABET"))
+        assertFalse(source.contains("FAIR PLAY"))
+        assertFalse(source.contains("gives no score, target-letter, or word advantage"))
         assertFalse(source.contains("2x SKOR"))
         assertFalse(source.contains("2x SCORE"))
         assertFalse(source.contains("server validated and consumed atomically"))

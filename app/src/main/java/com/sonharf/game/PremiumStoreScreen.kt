@@ -205,6 +205,13 @@ internal fun PremiumStoreScreen(
                     item {
                         PremiumStoreProHero(entitlements?.isPro == true) { tab = 3 }
                     }
+                    item {
+                        GooglePlayProductsCard(
+                            onPurchased = { scope.launch { reload() } },
+                            showPremiumProducts = true,
+                            showCoinPacks = false,
+                        )
+                    }
                     products.firstOrNull { it.id == PremiumStoreBlackThemeId }?.let { black ->
                         item {
                             PremiumStoreFeaturedTheme(
@@ -295,7 +302,11 @@ internal fun PremiumStoreScreen(
 
     if (showCoins) {
         ModalBottomSheet(onDismissRequest = { showCoins = false }, containerColor = SonHarfTheme.Surface) {
-            GooglePlayProductsCard { scope.launch { reload() } }
+            GooglePlayProductsCard(
+                onPurchased = { scope.launch { reload() } },
+                showPremiumProducts = false,
+                showCoinPacks = true,
+            )
             Spacer(Modifier.navigationBarsPadding().height(12.dp))
         }
     }
