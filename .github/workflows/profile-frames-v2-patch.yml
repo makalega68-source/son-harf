@@ -28,6 +28,8 @@ jobs:
           validate-wrappers: false
       - name: Apply focused Profile Frames V2 patch
         run: python3 automation/profile_frames_v2_patch.py
+      - name: Apply visibility and gender-symbol fix
+        run: python3 automation/profile_frames_visibility_fix.py
       - name: Validate profile frame visual geometry
         run: python3 automation/validate_profile_frame_geometry.py
       - name: Build and test debug
@@ -75,7 +77,14 @@ jobs:
           set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt app/src/main/java/com/sonharf/game/ProfileFramesV2.kt
+          git add \
+            app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt \
+            app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt \
+            app/src/main/java/com/sonharf/game/ProfileFramesV2.kt \
+            app/src/main/java/com/sonharf/game/ProfilePhotoRuntime.kt \
+            app/src/main/java/com/sonharf/game/MainPlayerProfileScreen.kt \
+            app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt \
+            app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt
           git diff --cached --quiet && exit 0
-          git commit -m "Harden Profile Frames V2 visual previews"
+          git commit -m "Fix visible profile frames across profile store and games"
           git push origin HEAD:feature/profile-frames-store-20260919
