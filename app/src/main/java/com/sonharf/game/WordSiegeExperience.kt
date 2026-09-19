@@ -418,7 +418,7 @@ private fun WordSiegeGamesList(
                     Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = MainUi.Text)
                 }
                 Column(Modifier.weight(1f)) {
-                    Text(sh("KELİME TAHTI", "KELİME TAHTI"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                    Text(sh("KELİME KUŞATMASI", "WORD SIEGE"), color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
                     Text(
                         sh("Süre yok • 1v1 • En fazla 10 devam eden oyun", "No timer • 1v1 • Up to 10 ongoing games"),
                         color = MainUi.Muted,
@@ -435,7 +435,7 @@ private fun WordSiegeGamesList(
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Image(
                     painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
-                    contentDescription = sh("Kelime Tahtı logosu", "Kelime Tahtı logo"),
+                    contentDescription = sh("Kelime Kuşatması logosu", "Word Siege logo"),
                     modifier = Modifier.size(96.dp),
                     contentScale = ContentScale.Fit,
                 )

@@ -63,7 +63,7 @@ internal fun WordSiegeEntryScreen(
             return
         }
         WordSiegeEntryMode.SERIES -> {
-            WordSiegeSeriesScreen { mode = null }
+            WordSiegeSeriesScreen(verifiedAccess = true) { mode = null }
             return
         }
         null -> Unit

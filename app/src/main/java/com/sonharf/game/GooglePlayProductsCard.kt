@@ -205,7 +205,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
             properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         ) {
             Surface(Modifier.fillMaxSize(), color = SonHarfTheme.Background) {
-                WordSiegeSeriesScreen(onExit = { showSeriesGame = false })
+                WordSiegeSeriesScreen(verifiedAccess = true, onExit = { showSeriesGame = false })
             }
         }
     }
