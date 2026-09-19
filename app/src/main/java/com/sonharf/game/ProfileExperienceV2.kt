@@ -37,6 +37,7 @@ import com.sonharf.game.data.claimCompetitiveSeasonReward
 import com.sonharf.game.data.getCompetitiveSeason
 import com.sonharf.game.data.getCompetitiveSeasonHistory
 import com.sonharf.game.data.getPersonalRecords
+import com.sonharf.game.data.getVipEntitlements
 import io.github.jan.supabase.auth.auth
 import io.github.jan.supabase.postgrest.from
 import io.github.jan.supabase.postgrest.postgrest
@@ -137,6 +138,7 @@ fun ProfileExperienceV2Screen() {
     val scope = rememberCoroutineScope()
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     var profile by remember { mutableStateOf<ProfileV2Dto?>(null) }
+    var proActive by remember { mutableStateOf(false) }
     var season by remember { mutableStateOf<CompetitiveSeasonDto?>(null) }
     var seasonHistory by remember { mutableStateOf<List<CompetitiveSeasonHistoryDto>>(emptyList()) }
     var achievements by remember { mutableStateOf<List<AchievementProgressDto>>(emptyList()) }
@@ -152,6 +154,7 @@ fun ProfileExperienceV2Screen() {
     suspend fun refresh() {
         loading = true
         profile = runCatching { loadProfileV2() }.getOrNull()
+        proActive = runCatching { backend?.let { backend.getVipEntitlements().isPro } ?: false }.getOrDefault(false)
         avatarBytes = profile?.avatarPath?.let { runCatching { ProfilePhotoStorageV2.download(it) }.getOrNull() }
         season = runCatching { backend?.getCompetitiveSeason() }.getOrNull()
         seasonHistory = runCatching { backend?.getCompetitiveSeasonHistory(12).orEmpty() }.getOrDefault(emptyList())
@@ -204,8 +207,8 @@ fun ProfileExperienceV2Screen() {
                 Spacer(Modifier.height(10.dp))
                 Text(p?.displayName ?: sh("Oyuncu", "Player"), fontSize = 29.sp, fontWeight = FontWeight.Black)
                 Text(
-                    if (p?.isVip == true) sh("SON HARF VIP", "SON HARF VIP") else sh("SON HARF OYUNCUSU", "SON HARF PLAYER"),
-                    color = if (p?.isVip == true) SonHarfGold else SonHarfMuted,
+                    if (proActive) sh("SON HARF PRO", "SON HARF PRO") else sh("SON HARF OYUNCUSU", "SON HARF PLAYER"),
+                    color = if (proActive) SonHarfGold else SonHarfMuted,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                 )

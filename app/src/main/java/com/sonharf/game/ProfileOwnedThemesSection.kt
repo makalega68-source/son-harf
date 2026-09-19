@@ -79,7 +79,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
                     owned = nextOwned
                     collection = nextCollection.filterNot { it.id in retiredThemeIds }
                     equipped = nextEquipped
-                    SonHarfCosmetics.applyAndPersist(context, nextEquipped)
+                    SonHarfCosmetics.applyAndPersist(context, nextEquipped, nextOwned)
                 }
             }
         } catch (error: Exception) {
@@ -101,7 +101,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
                     backend.getEquippedCosmetics()
                 }
                 equipped = next
-                SonHarfCosmetics.applyAndPersist(context, next)
+                SonHarfCosmetics.applyAndPersist(context, next, owned)
                 notice = sh("Görünüm uygulandı.", "Appearance applied.")
             } catch (error: Exception) {
                 if (error is CancellationException && error !is TimeoutCancellationException) throw error
