@@ -6,7 +6,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WordSiegeStableRegressionTest {
-    @Test fun latestStableSiegeKeepsPracticePanProfilesActionsAndFinalRules() {
+    @Test fun latestStableSiegeKeepsPracticePanProfilesActionsFramesAndFinalRules() {
         val experience = projectFile("app/src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
         val practice = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
         val engine = projectFile("app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
@@ -23,11 +23,14 @@ class WordSiegeStableRegressionTest {
         assertTrue(experience.contains("ProfileDto"))
         assertTrue(experience.contains("statusBarsPadding"))
         assertTrue(pan.contains("WordSiegeScoreCard("))
-        assertTrue(scoreCard.contains("ProfilePhotoAvatarWithGender("))
+        assertTrue(scoreCard.contains("FramedProfilePhotoAvatar("))
+        assertTrue(scoreCard.contains("frameId: String? = null"))
+        assertTrue(scoreCard.contains("isPro: Boolean = false"))
         assertTrue(!pan.contains("Yön otomatik algılanır"))
         assertTrue(pan.contains("Torba ${'$'}{game.bag.length}"))
         assertTrue(practice.contains("showPass"))
         assertTrue(practice.contains("showExchange"))
+        assertTrue(practice.contains("ProfileFrameV2Catalog.ownedPaidFrame"))
         assertTrue(!practice.contains("Yön otomatik algılanır"))
         assertTrue(practice.contains("Torba ${'$'}{state.bag.length}"))
         assertTrue(engine.contains("exchange"))
