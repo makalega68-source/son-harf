@@ -114,9 +114,15 @@ def v2(s):
         'onLetterPath: () -> Unit,\n) {',
         'onLetterPath: () -> Unit,\n    onSeries: () -> Unit,\n) {',
         'GameCenter Series callback signature')
+
+    # Scope the card search to PremiumV2GameCenter. The same Harf Yolu title also exists
+    # in the home secondary-modes section; searching globally inserted the Series item
+    # outside LazyColumn and caused the Kotlin compile failure in run 35440498780.
+    game_center = s.find('private fun PremiumV2GameCenter(')
+    if game_center < 0: raise SystemExit('missing PremiumV2GameCenter')
     marker = 'title = sh("HARF YOLU", "LETTER PATH")'
-    m = s.find(marker)
-    if m < 0: raise SystemExit('missing Harf Yolu card')
+    m = s.find(marker, game_center)
+    if m < 0: raise SystemExit('missing GameCenter Harf Yolu card')
     close = s.find('\n        }\n    }\n}', m)
     if close < 0: raise SystemExit('cannot locate GameCenter close')
     insert = '''\n        item {\n            PremiumV2GameCard(\n                icon = if (seriesUnlocked) Icons.Rounded.Timer else Icons.Rounded.Lock,\n                title = sh("SERİ OYUN", "SERIES GAME"),\n                subtitle = if (seriesUnlocked) sh("3 / 5 / 10 dakikalık premium hızlı mod", "Premium fast mode with 3 / 5 / 10 minute turns") else sh("Premium mod • satın al veya PRO ile aç", "Premium mode • buy it or unlock with PRO"),\n                language = seriesLanguage,\n                onLanguageChange = onSeriesLanguage,\n                accent = SonHarfTheme.ActionOrange,\n                onClick = onSeries,\n            )\n        }'''
