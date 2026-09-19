@@ -60,6 +60,7 @@ internal fun PremiumStoreScreen(
     val scope = rememberCoroutineScope()
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 3)) }
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
+    var entitlements by remember { mutableStateOf<VipEntitlementsDto?>(null) }
     var products by remember { mutableStateOf<List<ShopItemDto>>(emptyList()) }
     var owned by remember { mutableStateOf<Set<String>>(emptySet()) }
     var equipped by remember { mutableStateOf<EquippedCosmeticsDto?>(null) }
@@ -80,6 +81,7 @@ internal fun PremiumStoreScreen(
         runCatching {
             val id = requireNotNull(b.currentUserId())
             profile = b.getProfile(id)
+            entitlements = runCatching { b.getVipEntitlements() }.getOrNull()
             products = b.getShopItems()
                 .filter { it.kind in PremiumStoreKinds }
                 .filterNot { it.id in setOf("theme_dark_arena", "theme_monster_blue", "theme_aurora", "theme_neon", "theme_midnight") }
@@ -87,8 +89,8 @@ internal fun PremiumStoreScreen(
             owned = b.getInventory()
             equipped = b.getEquippedCosmetics()
             storefront = runCatching { b.getStorefront() }.getOrNull()
-            SonHarfCosmetics.apply(equipped)
-            onMembershipChanged(profile?.isVip == true)
+            SonHarfCosmetics.apply(equipped, owned)
+            onMembershipChanged(entitlements?.isPro == true)
         }.onFailure {
             notice = sh("Mağaza verileri yenilenemedi.", "Shop data could not be refreshed.")
         }
@@ -201,7 +203,7 @@ internal fun PremiumStoreScreen(
                         }
                     }
                     item {
-                        PremiumStoreProHero(profile?.isVip == true) { tab = 3 }
+                        PremiumStoreProHero(entitlements?.isPro == true) { tab = 3 }
                     }
                     products.firstOrNull { it.id == PremiumStoreBlackThemeId }?.let { black ->
                         item {

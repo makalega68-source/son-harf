@@ -37,13 +37,13 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
         loading = true
         val id = backend.currentUserId()
         profile = id?.let { runCatching { backend.getProfile(it) }.getOrNull() }
-        entitlements = if (profile?.isVip == true) runCatching { backend.getVipEntitlements() }.getOrNull() else null
+        entitlements = runCatching { backend.getVipEntitlements() }.getOrNull()
         loading = false
     }
 
     LaunchedEffect(Unit) { reload() }
-    val active = profile?.isVip == true
     val e = entitlements
+    val active = e?.isPro == true
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -126,8 +126,8 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                         )
                         Text(
                             if (active) sh(
-                                "Reklamsız deneyim, premium kozmetik ve gelişmiş analiz aktif.",
-                                "Ad-free experience, premium cosmetics and advanced analysis are active.",
+                                "Reklamsız kullanım ve PRO erişimleri aktif. Ücretli kozmetikler ayrıca satın alınır.",
+                                "Ad-free use and PRO access are active. Paid cosmetics remain separate purchases.",
                             ) else sh(
                                 "Daha temiz, daha kişisel ve daha premium bir oyun deneyimi.",
                                 "A cleaner, more personal and more premium game experience.",
@@ -202,7 +202,7 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                 ) {
                     Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(7.dp))
-                    Text(sh("PRO PLANLARINI GÖR", "VIEW PRO PLANS"), fontWeight = FontWeight.Black)
+                    Text(sh("PRO LIFETIME’I GÖR", "VIEW PRO LIFETIME"), fontWeight = FontWeight.Black)
                 }
             }
         } else {

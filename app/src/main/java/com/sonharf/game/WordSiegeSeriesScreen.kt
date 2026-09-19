@@ -76,7 +76,7 @@ internal fun WordSiegeSeriesScreen(onExit: () -> Unit) {
             .getOrDefault(games)
         games = nextGames
         loadProfiles(nextGames.flatMap { listOf(it.playerOneId, it.playerTwoId) })
-        friends = runCatching { backend.getFriends() }.getOrDefault(friends)
+        friends = runCatching { backend.getSeriesFriends() }.getOrDefault(friends)
         invites = runCatching { backend.getIncomingWordSiegeSeriesInvites() }.getOrDefault(invites)
         loadProfiles(invites.map { it.senderId })
         if (showProgress) loading = false

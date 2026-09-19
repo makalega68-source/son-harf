@@ -27,11 +27,14 @@ import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.SharedDictionaryService
+import com.sonharf.game.data.getEquippedCosmetics
+import com.sonharf.game.data.getInventory
+import com.sonharf.game.data.getVipEntitlements
 import kotlinx.coroutines.delay
 
 private enum class PremiumV2Destination {
     HOME, SOCIAL, GAMES, SHOP, PROFILE,
-    LAST_LETTER, SIEGE, LETTER_PATH,
+    LAST_LETTER, SIEGE, LETTER_PATH, SERIES,
     COMPETE, COLLECTION, SETTINGS, ACCOUNT, PROFILE_DETAILS,
 }
 
@@ -50,6 +53,8 @@ fun PremiumCanvaAppV2(onSignedOut: () -> Unit) {
     var siegeLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var lastLetterLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
     var letterPathLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
+    var seriesLanguage by rememberSaveable { mutableStateOf(defaultGameLanguage) }
+    var seriesAccess by remember { mutableStateOf(false) }
     var uiLanguageBeforeGame by rememberSaveable { mutableStateOf<String?>(null) }
 
     fun openGame(target: PremiumV2Destination, language: String) {
@@ -70,16 +75,20 @@ fun PremiumCanvaAppV2(onSignedOut: () -> Unit) {
     }
 
     LaunchedEffect(Unit) {
-        backend.currentUserId()?.let { id ->
-            runCatching { backend.getEquippedCosmetics() }.getOrNull()?.let(SonHarfCosmetics::apply)
-            isPro = runCatching { backend.getProfile(id).isVip }.getOrDefault(false)
+        backend.currentUserId()?.let {
+            val owned = runCatching { backend.getInventory() }.getOrDefault(emptySet())
+            val equipped = runCatching { backend.getEquippedCosmetics() }.getOrNull()
+            SonHarfCosmetics.apply(equipped, owned)
+            val premium = runCatching { backend.getVipEntitlements() }.getOrNull()
+            isPro = premium?.isPro == true
+            seriesAccess = premium?.seriesGameAccess == true
         }
     }
     LaunchedEffect(homeRequest) {
         if (homeRequest > 0) leaveGame(PremiumV2Destination.HOME)
     }
     LaunchedEffect(destination) {
-        if (destination !in setOf(PremiumV2Destination.LAST_LETTER, PremiumV2Destination.SIEGE, PremiumV2Destination.LETTER_PATH)) {
+        if (destination !in setOf(PremiumV2Destination.LAST_LETTER, PremiumV2Destination.SIEGE, PremiumV2Destination.LETTER_PATH, PremiumV2Destination.SERIES)) {
             while (true) {
                 runCatching { backend.setPresence("online") }
                 delay(55_000)
@@ -95,7 +104,8 @@ fun PremiumCanvaAppV2(onSignedOut: () -> Unit) {
             PremiumV2Destination.ACCOUNT -> PremiumV2Destination.SETTINGS
             PremiumV2Destination.LAST_LETTER,
             PremiumV2Destination.SIEGE,
-            PremiumV2Destination.LETTER_PATH -> {
+            PremiumV2Destination.LETTER_PATH,
+            PremiumV2Destination.SERIES -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
                 uiLanguageBeforeGame = null
                 PremiumV2Destination.HOME
@@ -104,7 +114,7 @@ fun PremiumCanvaAppV2(onSignedOut: () -> Unit) {
         }
     }
 
-    val inGame = destination in setOf(PremiumV2Destination.LAST_LETTER, PremiumV2Destination.SIEGE, PremiumV2Destination.LETTER_PATH)
+    val inGame = destination in setOf(PremiumV2Destination.LAST_LETTER, PremiumV2Destination.SIEGE, PremiumV2Destination.LETTER_PATH, PremiumV2Destination.SERIES)
     val topLevel = destination in setOf(PremiumV2Destination.HOME, PremiumV2Destination.SOCIAL, PremiumV2Destination.GAMES, PremiumV2Destination.SHOP, PremiumV2Destination.PROFILE)
 
     val scheme = lightColorScheme(
@@ -159,12 +169,16 @@ fun PremiumCanvaAppV2(onSignedOut: () -> Unit) {
                         siegeLanguage = siegeLanguage,
                         lastLetterLanguage = lastLetterLanguage,
                         letterPathLanguage = letterPathLanguage,
+                        seriesLanguage = seriesLanguage,
+                        seriesUnlocked = seriesAccess,
                         onSiegeLanguage = { siegeLanguage = it },
                         onLastLetterLanguage = { lastLetterLanguage = it },
                         onLetterPathLanguage = { letterPathLanguage = it },
+                        onSeriesLanguage = { seriesLanguage = it },
                         onSiege = { openGame(PremiumV2Destination.SIEGE, siegeLanguage) },
                         onLastLetter = { openGame(PremiumV2Destination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(PremiumV2Destination.LETTER_PATH, letterPathLanguage) },
+                        onSeries = { if (seriesAccess) openGame(PremiumV2Destination.SERIES, seriesLanguage) else openStore(0) },
                     )
                     PremiumV2Destination.SOCIAL -> MainSocialScreen(
                         backend = backend,
@@ -198,6 +212,7 @@ fun PremiumCanvaAppV2(onSignedOut: () -> Unit) {
                     PremiumV2Destination.LAST_LETTER -> OnlineGameScreenV6()
                     PremiumV2Destination.SIEGE -> WordSiegeExperienceScreen { leaveGame() }
                     PremiumV2Destination.LETTER_PATH -> LetterLadderGameScreen { leaveGame() }
+                    PremiumV2Destination.SERIES -> WordSiegeSeriesScreen { leaveGame(PremiumV2Destination.GAMES) }
                 }
             }
         }
@@ -362,12 +377,16 @@ private fun PremiumV2GameCenter(
     siegeLanguage: String,
     lastLetterLanguage: String,
     letterPathLanguage: String,
+    seriesLanguage: String,
+    seriesUnlocked: Boolean,
     onSiegeLanguage: (String) -> Unit,
     onLastLetterLanguage: (String) -> Unit,
     onLetterPathLanguage: (String) -> Unit,
+    onSeriesLanguage: (String) -> Unit,
     onSiege: () -> Unit,
     onLastLetter: () -> Unit,
     onLetterPath: () -> Unit,
+    onSeries: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().widthIn(max = 640.dp),
@@ -412,6 +431,17 @@ private fun PremiumV2GameCenter(
                 onLanguageChange = onLetterPathLanguage,
                 accent = SonHarfTheme.Purple,
                 onClick = onLetterPath,
+            )
+        }
+        item {
+            PremiumV2GameCard(
+                icon = if (seriesUnlocked) Icons.Rounded.Timer else Icons.Rounded.Lock,
+                title = sh("SERİ OYUN", "SERIES GAME"),
+                subtitle = if (seriesUnlocked) sh("3 / 5 / 10 dakikalık premium hızlı mod", "Premium fast mode with 3 / 5 / 10 minute turns") else sh("Premium mod • satın al veya PRO ile aç", "Premium mode • buy it or unlock with PRO"),
+                language = seriesLanguage,
+                onLanguageChange = onSeriesLanguage,
+                accent = SonHarfTheme.ActionOrange,
+                onClick = onSeries,
             )
         }
     }
