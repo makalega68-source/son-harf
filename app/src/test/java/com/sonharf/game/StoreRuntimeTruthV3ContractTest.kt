@@ -7,12 +7,15 @@ import org.junit.Test
 
 class StoreRuntimeTruthV3ContractTest {
     @Test
-    fun retiredProfileFramesCannotReenterStyleStore() {
+    fun retiredProfileFramesCannotReenterStorefronts() {
         val styleStore = projectFile("app/src/main/java/com/sonharf/game/MonsterStyleStoreScreen.kt").readText()
+        val mainShop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
         val ownedPolicy = projectFile("app/src/main/java/com/sonharf/game/OwnedStylePolicy.kt").readText()
 
         assertTrue(styleStore.contains("\"profile_frame\" -> false"))
         assertTrue(ownedPolicy.contains("\"profile_frame\" -> false"))
+        assertTrue(mainShop.contains("items = b.getShopItems().filter { it.isRuntimeReadyStyle() }"))
+        assertFalse(mainShop.contains("it.isRuntimeReadyStyle() || it.kind == \"profile_frame\""))
         assertFalse(styleStore.contains("StoreTab(sh(\"ÇERÇEVELER\", \"FRAMES\")"))
         assertTrue(styleStore.contains("catalog.any { it.kind == \"game_theme\" || it.kind == \"keyboard_theme\" }"))
         assertTrue(styleStore.contains("catalog.any { it.kind == \"victory_effect\" || it.kind == \"emoji_pack\" }"))
