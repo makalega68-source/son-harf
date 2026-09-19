@@ -1,6 +1,5 @@
 package com.sonharf.game
 
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
@@ -14,17 +13,31 @@ class ProfileFramesV2ContractTest {
     )
 
     @Test
-    fun activeV2CatalogContainsExactlyTheFourNewPlayFrameIds() {
+    fun activeV2CatalogContainsOnlyTheFourNewPlayFrameIds() {
         val catalog = File("src/main/java/com/sonharf/game/billing/ProductCatalog.kt").readText()
         productIds.forEach { id -> assertTrue("Missing V2 product $id", catalog.contains("\"$id\"")) }
         assertTrue(catalog.contains("PROFILE_FRAME_FALLBACK_PRICE_TRY = \"150 TL\""))
-        assertFalse(catalog.contains("profileFrameProducts = listOf(\n        PROFILE_FRAME_OCEAN"))
+        assertTrue(
+            catalog.contains(
+                """val profileFrameProducts = listOf(
+        PROFILE_FRAME_PINK_BLOSSOM,
+        PROFILE_FRAME_BLUE_ROYAL,
+        PROFILE_FRAME_AMETHYST,
+        PROFILE_FRAME_EMERALD,
+    )"""
+            )
+        )
     }
 
     @Test
     fun v2FramesUseVerifiedGooglePlayFlowAndPermanentOwnership() {
         val frames = File("src/main/java/com/sonharf/game/ProfileFramesV2.kt").readText()
-        productIds.forEach { id -> assertTrue("Missing V2 frame wiring $id", frames.contains(id.substringAfter("profile_frame_").uppercase().replace("_", "_")) || frames.contains("ProductCatalog.")) }
+        listOf(
+            "const val PINK_BLOSSOM = ProductCatalog.PROFILE_FRAME_PINK_BLOSSOM",
+            "const val BLUE_ROYAL = ProductCatalog.PROFILE_FRAME_BLUE_ROYAL",
+            "const val AMETHYST = ProductCatalog.PROFILE_FRAME_AMETHYST",
+            "const val EMERALD = ProductCatalog.PROFILE_FRAME_EMERALD",
+        ).forEach { wiring -> assertTrue("Missing V2 frame wiring $wiring", frames.contains(wiring)) }
         assertTrue(frames.contains("PlayPurchaseVerification.verify(productId, purchase.purchaseToken)"))
         assertTrue(frames.contains("billing.launchProduct(host, product)"))
         assertTrue(frames.contains("equippedId?.takeIf { it in paidIds && it in ownedIds }"))
