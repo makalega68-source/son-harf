@@ -46,6 +46,30 @@ on conflict (product_id) do update
 set enabled = false,
     updated_at = now();
 
+-- Database-level sale guard: an operator or future migration cannot accidentally
+-- re-enable a historical/unknown Play product without explicitly changing this guard.
+alter table public.store_catalog_config
+  drop constraint if exists store_catalog_enabled_product_guard_v2;
+
+alter table public.store_catalog_config
+  add constraint store_catalog_enabled_product_guard_v2
+  check (
+    enabled = false
+    or product_id in (
+      'vip_monthly',
+      'vip_yearly',
+      'season_pass_monthly',
+      'series_game',
+      'letter_table',
+      'score_calculator',
+      'pro_lifetime',
+      'coins_500',
+      'coins_1500',
+      'coins_3500',
+      'coins_8000'
+    )
+  );
+
 -- Bundles may stay in history, but an offer is not active if any member is no longer
 -- an active, currently saleable shop item. The purchase RPC already rejects such a
 -- bundle; this also makes the persisted catalog truthful instead of relying on UI hiding.
