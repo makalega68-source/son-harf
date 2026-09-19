@@ -30,7 +30,7 @@ fun EconomyShopScreen(
     onMembershipChanged: (Boolean) -> Unit = {},
     onCollection: () -> Unit = {},
 ) {
-    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 4)) }
+    var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 3)) }
     var rewards by remember { mutableStateOf(false) }
     if (rewards) {
         Column {
@@ -46,11 +46,11 @@ fun EconomyShopScreen(
             }
             Column(Modifier.padding(horizontal = 8.dp)) {
                 Text(sh("Mağaza", "Shop"), color = SonHarfText, fontSize = 22.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold)
-                Text(sh("Kelime Tahtı · Tarzını seç", "Kelime Tahtı · Make it yours"), color = SonHarfMuted, fontSize = 11.sp, lineHeight = 16.sp)
+                Text(sh("Kelime Kuşatması · Tarzını seç", "Kelime Kuşatması · Make it yours"), color = SonHarfMuted, fontSize = 11.sp, lineHeight = 16.sp)
             }
         }
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp, containerColor = Color.Transparent, divider = {}) {
-            listOf(sh("Öne Çıkan", "Featured"), sh("Sezon", "Season"), sh("Görünümler", "Styles"), sh("Maskotlar", "Mascots"), "PRO")
+            listOf(sh("Öne Çıkan", "Featured"), sh("Sezon", "Season"), sh("Görünümler", "Styles"), "PRO")
                 .forEachIndexed { index, label ->
                     Tab(selected = tab == index, onClick = { tab = index }, text = {
                         Text(label, fontSize = 12.sp, lineHeight = 16.sp, fontWeight = if (tab == index) FontWeight.Bold else FontWeight.Medium)
@@ -121,12 +121,9 @@ private fun EconomyCatalogScreen(
 
     val filtered = when (section) {
         2 -> items
-        3 -> items.filter { it.kind == "mascot" }
-        4 -> items.filter { it.vipOnly }
         else -> emptyList()
     }
     val bundles = storefront?.bundles.orEmpty().filter { b -> b.items.isNotEmpty() && b.items.all { it.isRuntimeReadyStyle() } }
-
 
     LazyColumn(
         Modifier.fillMaxSize(),
@@ -168,7 +165,7 @@ private fun EconomyCatalogScreen(
                     }
                 }
             }
-            item { ProShopCard(profile?.isVip == true) { onSection(4) } }
+            item { ProShopCard(profile?.isVip == true) { onSection(3) } }
             item { StorePromoCard(sh("Sezon Bileti", "Season Pass"), sh("Sezonu ve ödül yolunu keşfet", "Explore the season and reward track"), sh("İncele", "Explore")) { onSection(1) } }
             bundles.firstOrNull { it.section == "starter" }?.let { bundle ->
                 item { StoreBundleCard(bundle, owned, busy != null || loading) { selectedBundle = bundle } }
@@ -182,11 +179,11 @@ private fun EconomyCatalogScreen(
             }
             if (storefront?.rewardedEnabled == true) item { TextButton(onClick = onRewards) { Text(sh("İsteğe bağlı reklam ödülleri", "Optional ad rewards")) } }
         }
-        if (section == 4) {
+        if (section == 3) {
             item { ProShopCard(profile?.isVip == true) { showVip = true } }
             item { StoreProBenefits() }
         }
-        if (filtered.isEmpty() && !loading && section in setOf(2, 3)) {
+        if (filtered.isEmpty() && !loading && section == 2) {
             item {
                 Surface(
                     color = SonHarfSurface,
@@ -194,7 +191,7 @@ private fun EconomyCatalogScreen(
                     border = BorderStroke(1.dp, SonHarfTheme.Border),
                 ) {
                     Text(
-                        if (section == 3) sh("Maskot koleksiyonu hazırlanıyor.", "The mascot collection is on its way.") else sh("Şu anda satışta görünüm yok.", "No styles are on sale right now."),
+                        sh("Şu anda satışta görünüm yok.", "No styles are on sale right now."),
                         modifier = Modifier.fillMaxWidth().padding(16.dp),
                         color = SonHarfMuted,
                         fontSize = 11.sp,
@@ -241,8 +238,6 @@ private fun EconomyCatalogScreen(
                 }
             }
         }
-
-
 
         item {
             Surface(
@@ -332,7 +327,11 @@ private fun StoreCollectionHeader(balance: Int, ownedCount: Int, total: Int, onC
 
 @Composable
 private fun VerifiedProductsHero(items: List<ShopItemDto>, owned: Set<String>) {
-    val featured = items.filter { it.kind == "profile_frame" }.take(3)
+    val featured = listOfNotNull(
+        items.firstOrNull { it.kind == "game_theme" },
+        items.firstOrNull { it.kind == "keyboard_theme" },
+        items.firstOrNull { it.kind == "name_style" },
+    ).ifEmpty { items.take(3) }.take(3)
     if (featured.isEmpty()) return
     Card(
         colors = CardDefaults.cardColors(containerColor = SonHarfTheme.PrimarySoft.copy(alpha = .62f)),
@@ -340,8 +339,8 @@ private fun VerifiedProductsHero(items: List<ShopItemDto>, owned: Set<String>) {
         border = BorderStroke(1.dp, SonHarfTheme.Primary.copy(alpha = .25f)),
     ) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(sh("Yeni görünümler", "New styles"), color = SonHarfTheme.Primary, fontWeight = FontWeight.Black, fontSize = 12.sp)
-            Text(sh("Profiline küçük, güçlü bir dokunuş.", "A distinctive touch for your profile."), color = SonHarfMuted, fontSize = 9.sp)
+            Text(sh("Öne çıkan görünümler", "Featured styles"), color = SonHarfTheme.Primary, fontWeight = FontWeight.Black, fontSize = 12.sp)
+            Text(sh("Tahta, klavye ve profil görünümünü kişiselleştir.", "Personalize your board, keyboard, and profile style."), color = SonHarfMuted, fontSize = 9.sp)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 featured.forEach { item ->
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -444,12 +443,12 @@ private fun ProShopCard(active: Boolean, onClick: () -> Unit) {
                     }
                     Column {
                         Text("PRO", color = MainUi.Blue, fontSize = 24.sp, fontWeight = FontWeight.Black)
-                        Text(sh("Reklamsız + kozmetik + analiz", "Ad-free + cosmetics + analysis"), color = SonHarfMuted, fontSize = 9.sp)
+                        Text(sh("Reklamsız + profil + analiz", "Ad-free + profile + analysis"), color = SonHarfMuted, fontSize = 9.sp)
                     }
                 }
                 Text(if (active) sh("AKTİF", "ACTIVE") else sh("KEŞFET ›", "EXPLORE ›"), color = if (active) SonHarfTheme.Success else MainUi.Blue, fontWeight = FontWeight.Black)
             }
-            Text(sh("Özel oda • özel kozmetik • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar", "Private rooms • exclusive cosmetics • advanced stats • ad-free experience • social benefits"), color = SonHarfText, fontSize = 10.sp)
+            Text(sh("Özel oda • PRO profil rozeti • gelişmiş istatistik • reklamsız deneyim • sosyal ayrıcalıklar", "Private rooms • PRO profile badge • advanced stats • ad-free experience • social benefits"), color = SonHarfText, fontSize = 10.sp)
             Text(sh("PRO, dereceli maçlarda skor, kelime ipucu veya rating avantajı vermez.", "PRO provides no score, word-hint, or rating advantage in ranked matches."), color = SonHarfTheme.Success, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         }
     }

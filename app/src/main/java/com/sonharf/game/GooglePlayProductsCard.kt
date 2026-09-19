@@ -98,7 +98,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
 
     fun buy(productId: String) {
         val product = products[productId]
-        if (activity == null || product == null) {
+        if (activity == null || product?.oneTimePurchaseOfferDetails == null) {
             notice = sh("Bu ürün Google Play'de henüz satın alınabilir değil.", "This product is not yet purchasable on Google Play.")
             return
         }
@@ -118,7 +118,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(sh("PREMİUM ÖZELLİKLER", "PREMIUM FEATURES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 16.sp)
             Text(
-                sh("Tek ödeme ile kalıcı kullanım. PRO; tüm premium özellikleri, reklamsız kullanımı, arkadaş listesini, Son Harf kelime geçmişini, 50 aktif oyun limitini, PRO çerçevesini ve 100 Son Coin'i açar.", "One payment, permanent access. PRO unlocks all premium features, ad-free play, friends list, Son Harf word history, a 50 active-game limit, the PRO frame and 100 Son Coins."),
+                sh("Tek ödeme ile kalıcı kullanım. PRO; tüm premium özellikleri, reklamsız kullanımı, arkadaş listesini, Son Harf kelime geçmişini, 50 aktif oyun limitini ve 100 Son Coin'i açar.", "One payment, permanent access. PRO unlocks all premium features, ad-free play, friends list, Son Harf word history, a 50 active-game limit, and 100 Son Coins."),
                 color = SonHarfMuted,
                 fontSize = 11.sp,
                 lineHeight = 15.sp,
@@ -129,7 +129,6 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 subtitle = sh("3/5/10 dk tur • otomatik pas • 3 kaçırma = mağlubiyet", "3/5/10 min turns • auto-pass • 3 misses = defeat"),
                 imageRes = R.drawable.premium_series_game,
                 product = products[ProductCatalog.SERIES_GAME],
-                fallbackPrice = ProductCatalog.SERIES_GAME_FALLBACK_PRICE_TRY,
                 busy = busy != null,
                 owned = entitlements.seriesGameAccess,
                 onOpen = { showSeriesGame = true },
@@ -139,7 +138,6 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 subtitle = sh("Kalan harfleri gör", "See remaining letters"),
                 imageRes = R.drawable.premium_letter_table,
                 product = products[ProductCatalog.LETTER_TABLE],
-                fallbackPrice = ProductCatalog.LETTER_TABLE_FALLBACK_PRICE_TRY,
                 busy = busy != null,
                 owned = entitlements.letterTableAccess,
             ) { buy(ProductCatalog.LETTER_TABLE) }
@@ -148,7 +146,6 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 subtitle = sh("Hamle puanını önceden gör", "Preview move score"),
                 imageRes = R.drawable.premium_score_calculator,
                 product = products[ProductCatalog.SCORE_CALCULATOR],
-                fallbackPrice = ProductCatalog.SCORE_CALCULATOR_FALLBACK_PRICE_TRY,
                 busy = busy != null,
                 owned = entitlements.scoreCalculatorAccess,
             ) { buy(ProductCatalog.SCORE_CALCULATOR) }
@@ -157,7 +154,6 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 subtitle = sh("Tüm premium özellikler", "All premium features"),
                 imageRes = R.drawable.premium_pro,
                 product = products[ProductCatalog.PRO_LIFETIME],
-                fallbackPrice = ProductCatalog.PRO_LIFETIME_FALLBACK_PRICE_TRY,
                 busy = busy != null,
                 owned = entitlements.isPro,
             ) { buy(ProductCatalog.PRO_LIFETIME) }
@@ -221,12 +217,12 @@ private fun PremiumProductRow(
     subtitle: String,
     @DrawableRes imageRes: Int,
     product: ProductDetails?,
-    fallbackPrice: String,
     busy: Boolean,
     owned: Boolean = false,
     onOpen: (() -> Unit)? = null,
     onBuy: () -> Unit,
 ) {
+    val offer = product?.oneTimePurchaseOfferDetails
     Surface(
         color = SonHarfTheme.SurfaceSecondary,
         shape = RoundedCornerShape(18.dp),
@@ -258,7 +254,7 @@ private fun PremiumProductRow(
                 Text(subtitle, color = SonHarfMuted, fontSize = 11.sp, lineHeight = 15.sp)
                 when {
                     owned -> Text(sh("SATIN ALINDI", "OWNED"), color = SonHarfTheme.Success, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    product == null -> Text(sh("Google Play fiyatı bağlanınca satış açılır", "Sale opens when the Google Play price is linked"), color = SonHarfMuted, fontSize = 9.sp, lineHeight = 12.sp)
+                    offer == null -> Text(sh("Google Play teklifi kullanılabilir olduğunda satış açılır", "Sale opens when the Google Play offer is available"), color = SonHarfMuted, fontSize = 9.sp, lineHeight = 12.sp)
                 }
             }
             if (owned && onOpen != null) {
@@ -281,13 +277,13 @@ private fun PremiumProductRow(
             } else {
                 Button(
                     onClick = onBuy,
-                    enabled = !busy && product?.oneTimePurchaseOfferDetails != null,
+                    enabled = !busy && offer != null,
                     modifier = Modifier.defaultMinSize(minWidth = 78.dp, minHeight = 40.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary, disabledContainerColor = SonHarfTheme.DisabledBackground, disabledContentColor = SonHarfTheme.DisabledContent),
                     shape = RoundedCornerShape(12.dp),
                     contentPadding = PaddingValues(horizontal = 13.dp, vertical = 8.dp),
                 ) {
-                    Text(if (product != null) product.oneTimePurchaseOfferDetails?.formattedPrice ?: fallbackPrice else fallbackPrice, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                    Text(offer?.formattedPrice ?: sh("PLAY'DE YOK", "NOT ON PLAY"), fontWeight = FontWeight.Black, fontSize = 11.sp)
                 }
             }
         }
@@ -303,6 +299,7 @@ private fun CoinProductRow(
     busy: Boolean,
     onBuy: () -> Unit,
 ) {
+    val offer = product?.oneTimePurchaseOfferDetails
     Surface(color = SonHarfTheme.SurfaceSecondary, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, SonHarfTheme.Border)) {
         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Image(
@@ -317,12 +314,12 @@ private fun CoinProductRow(
             }
             Button(
                 onClick = onBuy,
-                enabled = !busy && product?.oneTimePurchaseOfferDetails != null,
+                enabled = !busy && offer != null,
                 colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary, disabledContainerColor = SonHarfTheme.DisabledBackground, disabledContentColor = SonHarfTheme.DisabledContent),
                 shape = RoundedCornerShape(12.dp),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
             ) {
-                Text(when { busy -> "…"; product != null -> product.oneTimePurchaseOfferDetails?.formattedPrice ?: sh("SATIN AL", "BUY"); else -> sh("PLAY'DE YOK", "NOT ON PLAY") }, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                Text(when { busy -> "…"; offer != null -> offer.formattedPrice; else -> sh("PLAY'DE YOK", "NOT ON PLAY") }, fontWeight = FontWeight.Black, fontSize = 10.sp)
             }
         }
     }

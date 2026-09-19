@@ -66,7 +66,7 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, null, tint = UProText) }
                 Column(Modifier.weight(1f)) {
-                    Text("SON HARF PRO", color = UProText, fontSize = 23.sp, fontWeight = FontWeight.Black)
+                    Text("KELİME KUŞATMASI PRO", color = UProText, fontSize = 23.sp, fontWeight = FontWeight.Black)
                     Text(sh("Premier üyelik ve fair-play ayrıcalıkları", "Premier membership and fair-play benefits"), color = UProBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
                 Icon(Icons.Rounded.WorkspacePremium, null, tint = UProGold, modifier = Modifier.size(30.dp))
@@ -86,8 +86,8 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                     Text(if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("FREE PLAN", "FREE PLAN"), color = if (active) UProGold else UProMuted, fontWeight = FontWeight.Black)
                     Text(profile?.displayName ?: sh("Oyuncu", "Player"), color = UProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
-                        if (active) sh("Reklamsız deneyim + Style + özel oda + gelişmiş analiz", "Ad-free experience + Style + private rooms + advanced analysis")
-                        else sh("PRO ile kozmetik, sosyal ve analiz özelliklerini aç.", "Unlock cosmetic, social, and analysis features with PRO."),
+                        if (active) sh("Reklamsız deneyim + PRO profil + özel oda + gelişmiş analiz", "Ad-free experience + PRO profile + private rooms + advanced analysis")
+                        else sh("PRO ile sosyal, profil ve analiz özelliklerini aç.", "Unlock social, profile, and analysis features with PRO."),
                         color = UProMuted,
                         fontSize = 10.sp,
                     )
@@ -107,7 +107,7 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
             Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
                 Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ProLine("🚫", sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
-                    ProLine("🎨", sh("PRO Style ve profil ayrıcalıkları", "PRO Style and profile benefits"))
+                    ProLine("🏷️", sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
                     ProLine("📊", sh("Gelişmiş istatistik ve maç analizi", "Advanced stats and match analysis"))
                     ProLine("♛", sh("Özel oda ayrıcalıkları", "Private room benefits"))
                     ProLine("👥", sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))

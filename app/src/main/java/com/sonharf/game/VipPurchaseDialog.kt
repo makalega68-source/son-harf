@@ -108,14 +108,14 @@ fun VipPurchaseDialog(onVerified: () -> Unit = {}, onDismiss: () -> Unit) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(sh("Kelime Tahtı PRO", "Kelime Tahtı PRO"), color = ProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
+                        Text("KELİME KUŞATMASI PRO", color = ProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
                         Text(sh("Adil premium üyelik", "Fair-play premium membership"), color = ProBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                     TextButton(onClick = onDismiss, enabled = !busy) { Text("✕", color = ProText, fontSize = 18.sp) }
                 }
 
                 ProBenefit(Icons.Rounded.Block, sh("REKLAMSIZ", "AD-FREE"), sh("Menü ve mağazada reklamsız deneyim", "Ad-free menus and shop"))
-                ProBenefit(Icons.Rounded.Palette, sh("PRO STYLE", "PRO STYLE"), sh("Özel görünüm ve profil ayrıcalıkları", "Exclusive appearance and profile benefits"))
+                ProBenefit(Icons.Rounded.Badge, sh("PRO PROFİL", "PRO PROFILE"), sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
                 ProBenefit(Icons.Rounded.MeetingRoom, sh("ÖZEL ODALAR", "PRIVATE ROOMS"), sh("Arkadaşlarınla özel oyun alanları", "Private play spaces with friends"))
                 ProBenefit(Icons.Rounded.Insights, sh("GELİŞMİŞ İSTATİSTİK", "ADVANCED STATS"), sh("Detaylı maç analizi ve performans", "Detailed match analysis and performance"))
                 ProBenefit(Icons.Rounded.Groups, sh("SOSYAL AYRICALIKLAR", "SOCIAL BENEFITS"), sh("Kaydedilmiş arkadaş listesi ve PRO profil değeri", "Saved friend list and PRO profile value"))

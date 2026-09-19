@@ -78,7 +78,7 @@ internal fun StoreProBenefits() {
     Column(verticalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.padding(8.dp)) {
         listOf(
             sh("Zorunlu reklamsız kullanım", "No mandatory ads"),
-            sh("PRO rozeti ve özel profil görünümleri", "PRO badge and exclusive profile styles"),
+            sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"),
             sh("Gelişmiş maç analizi", "Advanced match analysis"),
             sh("Özel odalar ve kayıtlı arkadaş listesi", "Private rooms and saved friends"),
         ).forEach { benefit ->
