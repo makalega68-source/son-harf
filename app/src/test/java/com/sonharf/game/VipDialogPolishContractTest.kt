@@ -23,9 +23,9 @@ class VipDialogPolishContractTest {
         assertFalse(source.contains("querySubscriptions("))
         assertFalse(source.contains("rememberInfiniteTransition"))
 
-        assertTrue(source.contains("Puan Hesaplayıcı"))
-        assertTrue(source.contains("Harf Tablosu"))
-        assertTrue(source.contains("Seri Oyun"))
+        assertTrue(source.contains("PUAN HESAPLAYICI"))
+        assertTrue(source.contains("HARF TABLOSU"))
+        assertTrue(source.contains("SERİ OYUN"))
         assertTrue(source.contains("50 AKTİF OYUN"))
         assertTrue(source.contains("100 SON COIN"))
         assertFalse(source.contains("2x SKOR"))
