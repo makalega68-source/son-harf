@@ -115,12 +115,13 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
         shape = RoundedCornerShape(22.dp),
         border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .28f)),
     ) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(sh("PREMİUM ÖZELLİKLER", "PREMIUM FEATURES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Text(sh("PREMİUM ÖZELLİKLER", "PREMIUM FEATURES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 16.sp)
             Text(
                 sh("Tek ödeme ile kalıcı kullanım. PRO; tüm premium özellikleri, reklamsız kullanımı, arkadaş listesini, Son Harf kelime geçmişini, 50 aktif oyun limitini, PRO çerçevesini ve 100 Son Coin'i açar.", "One payment, permanent access. PRO unlocks all premium features, ad-free play, friends list, Son Harf word history, a 50 active-game limit, the PRO frame and 100 Son Coins."),
                 color = SonHarfMuted,
-                fontSize = 9.sp,
+                fontSize = 11.sp,
+                lineHeight = 15.sp,
             )
 
             PremiumProductRow(
@@ -202,49 +203,67 @@ private fun PremiumProductRow(
     onOpen: (() -> Unit)? = null,
     onBuy: () -> Unit,
 ) {
-    Surface(color = SonHarfTheme.SurfaceSecondary, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, SonHarfTheme.Border)) {
-        Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Surface(shape = RoundedCornerShape(14.dp), color = SonHarfTheme.Primary.copy(alpha = .06f)) {
+    Surface(
+        color = SonHarfTheme.SurfaceSecondary,
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(1.dp, SonHarfTheme.Border),
+    ) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 104.dp).padding(horizontal = 12.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Surface(
+                modifier = Modifier.size(78.dp),
+                shape = RoundedCornerShape(18.dp),
+                color = SonHarfTheme.Surface,
+                border = BorderStroke(1.dp, SonHarfTheme.Primary.copy(alpha = .16f)),
+            ) {
                 Image(
                     painter = painterResource(imageRes),
                     contentDescription = null,
-                    modifier = Modifier.padding(5.dp).size(48.dp),
+                    modifier = Modifier.fillMaxSize().padding(6.dp),
                     contentScale = ContentScale.Fit,
                 )
             }
-            Column(Modifier.weight(1f)) {
-                Text(title, fontWeight = FontWeight.Black, color = SonHarfText, fontSize = 14.sp)
-                Text(subtitle, color = SonHarfMuted, fontSize = 9.sp)
+            Column(
+                Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Text(title, fontWeight = FontWeight.Black, color = SonHarfText, fontSize = 16.sp, lineHeight = 19.sp)
+                Text(subtitle, color = SonHarfMuted, fontSize = 11.sp, lineHeight = 15.sp)
                 when {
-                    owned -> Text(sh("SATIN ALINDI", "OWNED"), color = SonHarfTheme.Success, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                    product == null -> Text(sh("Google Play fiyatı bağlanınca satış açılır", "Sale opens when the Google Play price is linked"), color = SonHarfMuted, fontSize = 8.sp)
+                    owned -> Text(sh("SATIN ALINDI", "OWNED"), color = SonHarfTheme.Success, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    product == null -> Text(sh("Google Play fiyatı bağlanınca satış açılır", "Sale opens when the Google Play price is linked"), color = SonHarfMuted, fontSize = 9.sp, lineHeight = 12.sp)
                 }
             }
             if (owned && onOpen != null) {
                 Button(
                     onClick = onOpen,
                     enabled = !busy,
+                    modifier = Modifier.defaultMinSize(minWidth = 74.dp, minHeight = 40.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary),
                     shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    contentPadding = PaddingValues(horizontal = 13.dp, vertical = 8.dp),
                 ) {
-                    Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(3.dp))
-                    Text(sh("AÇ", "OPEN"), fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(sh("AÇ", "OPEN"), fontWeight = FontWeight.Black, fontSize = 11.sp)
                 }
             } else if (owned) {
                 Surface(shape = RoundedCornerShape(12.dp), color = SonHarfTheme.Success.copy(alpha = .12f)) {
-                    Text("✓", Modifier.padding(horizontal = 13.dp, vertical = 7.dp), color = SonHarfTheme.Success, fontWeight = FontWeight.Black)
+                    Text("✓", Modifier.padding(horizontal = 15.dp, vertical = 9.dp), color = SonHarfTheme.Success, fontWeight = FontWeight.Black, fontSize = 14.sp)
                 }
             } else {
                 Button(
                     onClick = onBuy,
                     enabled = !busy && product?.oneTimePurchaseOfferDetails != null,
+                    modifier = Modifier.defaultMinSize(minWidth = 78.dp, minHeight = 40.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary, disabledContainerColor = SonHarfTheme.DisabledBackground, disabledContentColor = SonHarfTheme.DisabledContent),
                     shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    contentPadding = PaddingValues(horizontal = 13.dp, vertical = 8.dp),
                 ) {
-                    Text(if (product != null) product.oneTimePurchaseOfferDetails?.formattedPrice ?: fallbackPrice else fallbackPrice, fontWeight = FontWeight.Black, fontSize = 10.sp)
+                    Text(if (product != null) product.oneTimePurchaseOfferDetails?.formattedPrice ?: fallbackPrice else fallbackPrice, fontWeight = FontWeight.Black, fontSize = 11.sp)
                 }
             }
         }
