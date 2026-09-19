@@ -1,0 +1,89 @@
+name: V2 Premium One-Shot Finalizer
+on:
+  push:
+    branches: [integration/v2-premium-corrected-final-20260919]
+    paths: ['.github/workflows/v2-premium-finalize-release.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  finalize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/v2-premium-corrected-final-20260919
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Add server-authoritative PRO frame to canonical V2 profile
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path('app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt')
+          s = p.read_text()
+          old = '                    ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 112)\n'
+          new = '''                    if (proActive) {\n                        Surface(\n                            modifier = Modifier.size(120.dp),\n                            shape = CircleShape,\n                            color = Color.Transparent,\n                            border = BorderStroke(4.dp, SonHarfGold),\n                            shadowElevation = 5.dp,\n                        ) {\n                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {\n                                ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 106)\n                            }\n                        }\n                        Surface(\n                            modifier = Modifier.align(Alignment.TopEnd),\n                            shape = RoundedCornerShape(50),\n                            color = SonHarfGold,\n                            shadowElevation = 3.dp,\n                        ) {\n                            Text(\n                                "PRO",\n                                Modifier.padding(horizontal = 7.dp, vertical = 3.dp),\n                                color = Color.White,\n                                fontSize = 10.sp,\n                                fontWeight = FontWeight.Black,\n                            )\n                        }\n                    } else {\n                        ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 112)\n                    }\n'''
+          if old not in s:
+              raise SystemExit('Canonical V2 avatar anchor not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+
+          t = Path('app/src/test/java/com/sonharf/game/V2PremiumFinalAcceptanceContractTest.kt')
+          ts = t.read_text()
+          marker = '\n    @Test fun seriesBackendSourceIsSeparateAndServerTimed() {'
+          addition = '''\n    @Test fun proProfileFrameIsServerAuthoritativeAndCosmetic() {\n        val s = source("app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt")\n        assertTrue("backend.getVipEntitlements().isPro" in s)\n        assertTrue("if (proActive)" in s)\n        assertTrue("BorderStroke(4.dp, SonHarfGold)" in s)\n        assertTrue("Text(\\n                                \\\"PRO\\\"" in s)\n        assertTrue("ProfileAvatarV2(avatarBytes" in s)\n    }\n'''
+          if marker not in ts:
+              raise SystemExit('Final acceptance insertion anchor not found')
+          ts = ts.replace(marker, addition + marker, 1)
+          t.write_text(ts)
+          PY
+
+      - name: Final source regression guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'BorderStroke(4.dp, SonHarfGold)' app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt
+          grep -q 'backend.getVipEntitlements().isPro' app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt
+          grep -q 'Text(' app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt
+          grep -q 'PremiumCanvaAppV2' app/src/main/java/com/sonharf/game/StableV1App.kt
+          ! grep -q 'MonsterLime' app/src/main/java/com/sonharf/game/StableV1App.kt
+          grep -q 'blackThemeOwned && gameThemeId == BLACK_THEME_ID' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
+
+      - name: Full unit suite and installable APK smoke build
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+
+      - name: Remove transient integration scaffolding
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm -f --ignore-unmatch \
+            .github/workflows/v2-premium-finalize-release.yml \
+            .github/workflows/v2-premium-final-acceptance-patch.yml \
+            .github/workflows/v2-premium-final-acceptance-recovery.yml \
+            .github/workflows/canva-contact-sheet-v2.yml \
+            .github/workflows/canva-product-icon-preview.yml \
+            .github/workflows/apply-v2-runtime-integration.yml \
+            .github/workflows/v2-premium-security-followup.yml \
+            tools/patch_v2_premium_final_acceptance.py \
+            tools/patch_v2_premium_security_followup.py \
+            tools/apply_v2_premium_corrected_final.py \
+            tools/canva_contact_urls_20260919.txt \
+            tools/canva_product_icon_url_20260919.txt
+
+      - name: Commit verified final source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'release(v2): finalize canonical premium corrected source'
+          git push origin HEAD:integration/v2-premium-corrected-final-20260919
