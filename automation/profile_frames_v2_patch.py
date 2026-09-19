@@ -104,10 +104,17 @@ required_frame_fragments = [
     "val previewVisual = remember(spec.productId) { ProfileFrameV2Catalog.visual(spec.productId, false) }",
     "Modifier.size(104.dp * previewVisual.photoRatio)",
     "painterResource(previewVisual.drawable)",
+    "ProfilePhotoRuntime.load(avatarPath)",
+    "ProfileFrameGenderBadge(gender = gender, outerSize = outerSize)",
 ]
 for fragment in required_frame_fragments:
     if fragment not in frames_text:
         raise SystemExit(f"ProfileFramesV2 missing: {fragment}")
+
+# V2 must render the raw photo directly. Reusing the historical avatar composable would add
+# another sweep-gradient ring plus padding underneath the PNG and produce a double-frame halo.
+if "ProfilePhotoAvatarWithGender(" in frames_text:
+    raise SystemExit("ProfileFramesV2 must not call ProfilePhotoAvatarWithGender; legacy ring would be rendered under V2 artwork")
 
 required_assets = [
     "profile_frame_default_gray.png",
