@@ -52,10 +52,17 @@ class StoreVisualIntegrityContractTest {
     }
 
     @Test
-    fun playProductsNeverPretendAnUnavailablePriceIsARealPurchaseButton() {
+    fun playProductsUseTruthfulPurchaseStatesAndDistinctCoinPackArtwork() {
         val play = projectFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
 
-        assertTrue(play.contains("style_icon_coin"))
+        listOf(
+            "R.drawable.premium_coin_500",
+            "R.drawable.premium_coin_1500",
+            "R.drawable.premium_coin_3500",
+            "R.drawable.premium_coin_8000",
+        ).forEach { artwork -> assertTrue("Missing coin artwork mapping $artwork", play.contains(artwork)) }
+        assertFalse(play.contains("R.drawable.style_icon_coin"))
+        assertTrue(play.contains("@DrawableRes imageRes: Int"))
         assertTrue(play.contains("product != null"))
         assertTrue(play.contains("PLAY'DE YOK"))
         assertFalse(play.contains("?: \"PLAY\""))

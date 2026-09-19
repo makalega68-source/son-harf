@@ -170,10 +170,34 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 fontSize = 9.sp,
             )
 
-            CoinProductRow(500, sh("Mini paket", "Mini pack"), products[ProductCatalog.COINS_500], busy != null) { buy(ProductCatalog.COINS_500) }
-            CoinProductRow(1500, sh("Standart paket", "Standard pack"), products[ProductCatalog.COINS_1500], busy != null) { buy(ProductCatalog.COINS_1500) }
-            CoinProductRow(3500, sh("Popüler paket", "Popular pack"), products[ProductCatalog.COINS_3500], busy != null) { buy(ProductCatalog.COINS_3500) }
-            CoinProductRow(8000, sh("Mega paket", "Mega pack"), products[ProductCatalog.COINS_8000], busy != null) { buy(ProductCatalog.COINS_8000) }
+            CoinProductRow(
+                amount = 500,
+                subtitle = sh("Mini paket", "Mini pack"),
+                imageRes = R.drawable.premium_coin_500,
+                product = products[ProductCatalog.COINS_500],
+                busy = busy != null,
+            ) { buy(ProductCatalog.COINS_500) }
+            CoinProductRow(
+                amount = 1500,
+                subtitle = sh("Standart paket", "Standard pack"),
+                imageRes = R.drawable.premium_coin_1500,
+                product = products[ProductCatalog.COINS_1500],
+                busy = busy != null,
+            ) { buy(ProductCatalog.COINS_1500) }
+            CoinProductRow(
+                amount = 3500,
+                subtitle = sh("Popüler paket", "Popular pack"),
+                imageRes = R.drawable.premium_coin_3500,
+                product = products[ProductCatalog.COINS_3500],
+                busy = busy != null,
+            ) { buy(ProductCatalog.COINS_3500) }
+            CoinProductRow(
+                amount = 8000,
+                subtitle = sh("Mega paket", "Mega pack"),
+                imageRes = R.drawable.premium_coin_8000,
+                product = products[ProductCatalog.COINS_8000],
+                busy = busy != null,
+            ) { buy(ProductCatalog.COINS_8000) }
 
             if (notice.isNotBlank()) Text(notice, color = SonHarfMuted, fontSize = 9.sp)
         }
@@ -271,13 +295,22 @@ private fun PremiumProductRow(
 }
 
 @Composable
-private fun CoinProductRow(amount: Int, subtitle: String, product: ProductDetails?, busy: Boolean, onBuy: () -> Unit) {
+private fun CoinProductRow(
+    amount: Int,
+    subtitle: String,
+    @DrawableRes imageRes: Int,
+    product: ProductDetails?,
+    busy: Boolean,
+    onBuy: () -> Unit,
+) {
     Surface(color = SonHarfTheme.SurfaceSecondary, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, SonHarfTheme.Border)) {
         Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                Image(painter = painterResource(R.drawable.style_icon_coin), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                Text(if (amount >= 1000) "${amount / 1000}K" else amount.toString(), color = SonHarfText, fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.BottomEnd))
-            }
+            Image(
+                painter = painterResource(imageRes),
+                contentDescription = null,
+                modifier = Modifier.size(54.dp),
+                contentScale = ContentScale.Fit,
+            )
             Column(Modifier.weight(1f)) {
                 Text("$amount Son Coin", fontWeight = FontWeight.Black, color = SonHarfText, fontSize = 14.sp)
                 Text(subtitle, color = SonHarfMuted, fontSize = 9.sp)
