@@ -55,6 +55,8 @@ class PremiumStoreProContractTest {
         assertTrue(migration.contains("frame_round_golden_avatar"))
         assertTrue(migration.contains("active_game_limit"))
         assertTrue(migration.contains("50"))
+        assertTrue(migration.contains("10"))
+        assertTrue(migration.contains("ad_free"))
     }
 
     @Test
@@ -93,7 +95,7 @@ class PremiumStoreProContractTest {
     }
 
     @Test
-    fun `friend list accepted rows and outgoing friend invites are server gated by pro`() {
+    fun `friend list is pro gated while Series gets only entitlement scoped invite candidates`() {
         val friends = repoFile("supabase/migrations/20260919120000_pro_friend_list_rls_v1.sql").readText()
         assertTrue(friends.contains("can_use_pro_friend_list_v1"))
         assertTrue(friends.contains("friendships pro accepted read v1"))
@@ -101,6 +103,13 @@ class PremiumStoreProContractTest {
         assertTrue(friends.contains("enforce_pro_friend_request_sender_v1"))
         assertTrue(friends.contains("enforce_pro_friend_game_invite_sender_v1"))
         assertTrue(friends.contains("word_siege_invites_pro_sender_guard_v1"))
+
+        val v2 = repoFile("supabase/migrations/20260919121000_pro_friend_list_rls_perf_and_series_picker_v2.sql").readText()
+        assertTrue(v2.contains("friendships pro and series scoped read v2"))
+        assertTrue(v2.contains("public.has_series_game_access_v1((select auth.uid()))"))
+        assertTrue(v2.contains("public.has_series_game_access_v1("))
+        assertTrue(v2.contains("status = 'accepted'"))
+        assertTrue(v2.contains("(select auth.uid())"))
     }
 
     @Test
