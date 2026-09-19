@@ -1,145 +1,67 @@
 from pathlib import Path
 
+STORE = Path("app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt")
+PROFILE_FRAMES = Path("app/src/main/java/com/sonharf/game/ProfileFramesV2.kt")
+PRODUCT_CATALOG = Path("app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt")
+DRAWABLE = Path("app/src/main/res/drawable")
 
-def replace_once(path: str, old: str, new: str) -> None:
-    p = Path(path)
-    text = p.read_text(encoding="utf-8")
-    count = text.count(old)
-    if count != 1:
-        raise SystemExit(f"{path}: expected exactly one match, found {count}")
-    p.write_text(text.replace(old, new, 1), encoding="utf-8")
+# The V2 frames are Google Play non-consumables rendered by ProfileFramesV2StoreRow.
+# They must never also enter PremiumStoreScreen's generic Son Coin purchase list.
+store_text = STORE.read_text(encoding="utf-8")
+filter_line = "                .filterNot { it.id in ProfileFrameV2Catalog.paidIds }\n"
+anchor = "            products = b.getShopItems()\n"
 
+if filter_line not in store_text:
+    if store_text.count(anchor) != 1:
+        raise SystemExit(f"PremiumStoreScreen: expected one getShopItems anchor, found {store_text.count(anchor)}")
+    store_text = store_text.replace(anchor, anchor + filter_line, 1)
+    STORE.write_text(store_text, encoding="utf-8")
+    print("Added V2 Google Play frame exclusion to generic store catalog")
+else:
+    print("V2 Google Play frame exclusion already present")
 
-# Current premium store: put the four Play-billed frames directly in Görünümler / Styles.
-store = "app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt"
-replace_once(
-    store,
-    '''                if (loading) {
-                    item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfTheme.Turquoise, trackColor = SonHarfTheme.SurfaceSecondary) }
-                }
+# Focused release-contract checks. Fail before Gradle if the V2 integration is incomplete.
+store_text = STORE.read_text(encoding="utf-8")
+frames_text = PROFILE_FRAMES.read_text(encoding="utf-8")
+catalog_text = PRODUCT_CATALOG.read_text(encoding="utf-8")
 
-                if (tab == 0) {''',
-    '''                if (loading) {
-                    item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfTheme.Turquoise, trackColor = SonHarfTheme.SurfaceSecondary) }
-                }
+required_store_fragments = [
+    "ProfileFramesV2StoreRow(",
+    ".filterNot { it.id in ProfileFrameV2Catalog.paidIds }",
+]
+for fragment in required_store_fragments:
+    if fragment not in store_text:
+        raise SystemExit(f"PremiumStoreScreen missing: {fragment}")
 
-                if (tab == 2) {
-                    item {
-                        ProfileFramesV2StoreRow(
-                            backend = backend,
-                            onChanged = { scope.launch { reload() } },
-                        )
-                    }
-                }
+required_product_ids = [
+    "profile_frame_pink_blossom",
+    "profile_frame_blue_royal",
+    "profile_frame_amethyst",
+    "profile_frame_emerald",
+]
+for product_id in required_product_ids:
+    if product_id not in catalog_text or product_id not in frames_text:
+        raise SystemExit(f"Profile Frames V2 catalog wiring missing: {product_id}")
 
-                if (tab == 0) {''',
-)
+required_frame_fragments = [
+    "PlayPurchaseVerification.verify(productId, purchase.purchaseToken)",
+    "billing.launchProduct(host, product)",
+    "fun ownedPaidFrame(equippedId: String?, ownedIds: Set<String>)",
+]
+for fragment in required_frame_fragments:
+    if fragment not in frames_text:
+        raise SystemExit(f"ProfileFramesV2 missing: {fragment}")
 
-# Current profile: load authoritative frame ownership/equipped state and render the V2 frame around the avatar.
-profile = "app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt"
-replace_once(
-    profile,
-    '''import com.sonharf.game.data.getCompetitiveSeasonHistory
-import com.sonharf.game.data.getPersonalRecords
-import com.sonharf.game.data.getVipEntitlements''',
-    '''import com.sonharf.game.data.getCompetitiveSeasonHistory
-import com.sonharf.game.data.getEquippedCosmetics
-import com.sonharf.game.data.getInventory
-import com.sonharf.game.data.getPersonalRecords
-import com.sonharf.game.data.getVipEntitlements''',
-)
-replace_once(
-    profile,
-    '''    var profile by remember { mutableStateOf<ProfileV2Dto?>(null) }
-    var proActive by remember { mutableStateOf(false) }
-    var season by remember { mutableStateOf<CompetitiveSeasonDto?>(null) }''',
-    '''    var profile by remember { mutableStateOf<ProfileV2Dto?>(null) }
-    var proActive by remember { mutableStateOf(false) }
-    var ownedFrameIds by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var equippedPaidFrameId by remember { mutableStateOf<String?>(null) }
-    var season by remember { mutableStateOf<CompetitiveSeasonDto?>(null) }''',
-)
-replace_once(
-    profile,
-    '''        profile = runCatching { loadProfileV2() }.getOrNull()
-        proActive = runCatching { backend?.let { backend.getVipEntitlements().isPro } ?: false }.getOrDefault(false)
-        avatarBytes = profile?.avatarPath?.let { runCatching { ProfilePhotoStorageV2.download(it) }.getOrNull() }''',
-    '''        profile = runCatching { loadProfileV2() }.getOrNull()
-        proActive = runCatching { backend?.let { backend.getVipEntitlements().isPro } ?: false }.getOrDefault(false)
-        val frameOwned = runCatching { backend?.getInventory().orEmpty() }.getOrDefault(emptySet())
-        val frameEquipped = runCatching { backend?.getEquippedCosmetics() }.getOrNull()
-        ownedFrameIds = frameOwned
-        equippedPaidFrameId = ProfileFrameV2Catalog.ownedPaidFrame(frameEquipped?.profileFrameId, frameOwned)
-        SonHarfCosmetics.apply(frameEquipped, frameOwned)
-        avatarBytes = profile?.avatarPath?.let { runCatching { ProfilePhotoStorageV2.download(it) }.getOrNull() }''',
-)
-replace_once(
-    profile,
-    '''                    if (proActive) {
-                        Surface(
-                            modifier = Modifier.size(120.dp),
-                            shape = CircleShape,
-                            color = Color.Transparent,
-                            border = BorderStroke(4.dp, SonHarfGold),
-                            shadowElevation = 5.dp,
-                        ) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 106)
-                            }
-                        }
-                        Surface(
-                            modifier = Modifier.align(Alignment.TopEnd),
-                            shape = RoundedCornerShape(50),
-                            color = SonHarfGold,
-                            shadowElevation = 3.dp,
-                        ) {
-                            Text(
-                                "PRO",
-                                Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                                color = Color.White,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                        }
-                    } else {
-                        ProfileAvatarV2(avatarBytes, p?.displayName ?: "O", 112)
-                    }''',
-    '''                    ProfileFrameAvatarBytesV2(
-                        avatarBytes = avatarBytes,
-                        name = p?.displayName ?: "O",
-                        outerSize = 120.dp,
-                        equippedPaidFrameId = equippedPaidFrameId,
-                        isPro = proActive,
-                    )
-                    if (proActive) {
-                        Surface(
-                            modifier = Modifier.align(Alignment.TopEnd),
-                            shape = RoundedCornerShape(50),
-                            color = SonHarfGold,
-                            shadowElevation = 3.dp,
-                        ) {
-                            Text(
-                                "PRO",
-                                Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
-                                color = Color.White,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                        }
-                    }''',
-)
+required_assets = [
+    "profile_frame_default_gray.png",
+    "profile_frame_pro_gold.png",
+    "profile_frame_shop_pink_blossom.png",
+    "profile_frame_shop_blue_royal.png",
+    "profile_frame_shop_amethyst.png",
+    "profile_frame_shop_emerald.png",
+]
+missing_assets = [name for name in required_assets if not (DRAWABLE / name).is_file()]
+if missing_assets:
+    raise SystemExit(f"Missing Profile Frames V2 assets: {', '.join(missing_assets)}")
 
-# Keep this state read visible to lint/compiler and document the trust boundary.
-replace_once(
-    profile,
-    '''    val winRate = if (totalMatches == 0) 0 else wins * 100 / totalMatches
-
-    LazyColumn(''',
-    '''    val winRate = if (totalMatches == 0) 0 else wins * 100 / totalMatches
-    val verifiedFrameOwnershipCount = ownedFrameIds.count { it in ProfileFrameV2Catalog.paidIds }
-    @Suppress("UNUSED_VARIABLE") val frameOwnershipAudit = verifiedFrameOwnershipCount
-
-    LazyColumn(''',
-)
-
-print("Profile Frames V2 source patch applied")
+print("Profile Frames V2 post-integration hardening checks passed")
