@@ -1,0 +1,47 @@
+name: V2 Premium Security Follow-up
+on:
+  push:
+    branches: [integration/v2-premium-corrected-final-20260919]
+    paths:
+      - 'tools/patch_v2_premium_security_followup.py'
+      - '.github/workflows/v2-premium-security-followup.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  patch-test-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/v2-premium-corrected-final-20260919
+          fetch-depth: 0
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+      - name: Apply deterministic premium security patch
+        run: python tools/patch_v2_premium_security_followup.py
+      - name: Guard authoritative premium and Black Theme state
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'applyAndPersist(context, nextEquipped, nextOwned)' app/src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt
+          grep -q 'applyAndPersist(context, next, owned)' app/src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt
+          grep -q 'backend.getVipEntitlements().isPro' app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt
+          grep -q 'blackThemeOwned && gameThemeId == BLACK_THEME_ID' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
+          ! grep -q 'theme_dark_arena.*BLACK_THEME_ID' app/src/main/java/com/sonharf/game/CosmeticRuntime.kt
+      - name: Unit tests and debug APK
+        run: ./gradlew --no-daemon testDebugUnitTest assembleDebug
+      - name: Commit only tested source changes
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt app/src/main/java/com/sonharf/game/ProfileExperienceV2.kt
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'fix(v2): enforce authoritative premium and Black Theme state'
+          git push origin HEAD:integration/v2-premium-corrected-final-20260919
