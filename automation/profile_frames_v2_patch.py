@@ -40,10 +40,14 @@ required_product_ids = [
     "profile_frame_emerald",
 ]
 for product_id in required_product_ids:
-    if product_id not in catalog_text or product_id not in frames_text:
-        raise SystemExit(f"Profile Frames V2 catalog wiring missing: {product_id}")
+    if product_id not in catalog_text:
+        raise SystemExit(f"ProductCatalog missing V2 product: {product_id}")
 
 required_frame_fragments = [
+    "const val PINK_BLOSSOM = ProductCatalog.PROFILE_FRAME_PINK_BLOSSOM",
+    "const val BLUE_ROYAL = ProductCatalog.PROFILE_FRAME_BLUE_ROYAL",
+    "const val AMETHYST = ProductCatalog.PROFILE_FRAME_AMETHYST",
+    "const val EMERALD = ProductCatalog.PROFILE_FRAME_EMERALD",
     "PlayPurchaseVerification.verify(productId, purchase.purchaseToken)",
     "billing.launchProduct(host, product)",
     "fun ownedPaidFrame(equippedId: String?, ownedIds: Set<String>)",
