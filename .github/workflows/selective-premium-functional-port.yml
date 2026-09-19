@@ -1,0 +1,60 @@
+name: Selective Premium Functional Port
+on:
+  push:
+    branches: [integration/v2-premium-corrected-final-20260919]
+    paths: ['.github/workflows/selective-premium-functional-port.yml']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  port:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/v2-premium-corrected-final-20260919
+          fetch-depth: 0
+      - name: Port only functional files from verified Premium work
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin stable/kelime-kusatmasi-v2-premium-integrated-20260919
+          src=origin/stable/kelime-kusatmasi-v2-premium-integrated-20260919
+          files=(
+            app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt
+            app/src/main/java/com/sonharf/game/GooglePlayProductsCardCompat.kt
+            app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt
+            app/src/main/java/com/sonharf/game/WordSiegePremiumPanel.kt
+            app/src/main/java/com/sonharf/game/WordSiegeSeriesScreen.kt
+            app/src/main/java/com/sonharf/game/billing/ProductCatalog.kt
+            app/src/main/java/com/sonharf/game/data/PremiumWordSiegeBackend.kt
+            app/src/main/java/com/sonharf/game/data/VipEntitlements.kt
+            app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt
+            supabase/functions/verify-play-purchase/index.ts
+            supabase/migrations/20260919013000_premium_permanent_products_v1.sql
+            supabase/migrations/20260919020000_premium_entitlement_source_v1.sql
+            supabase/migrations/20260919030000_pro_word_history_gate_v1.sql
+            supabase/migrations/20260919043000_word_siege_series_game_v1.sql
+            supabase/migrations/20260919120000_pro_friend_list_rls_v1.sql
+            supabase/migrations/20260919121000_pro_friend_list_rls_perf_and_series_picker_v2.sql
+          )
+          git checkout "$src" -- "${files[@]}"
+          # Explicit guard: do not import placeholder vectors or any shell/theme file.
+          test ! -e app/src/main/res/drawable/premium_series_game.xml
+          test ! -e app/src/main/res/drawable/premium_letter_table.xml
+          test ! -e app/src/main/res/drawable/premium_score_calculator.xml
+          test ! -e app/src/main/res/drawable/premium_pro.xml
+          git diff --name-only --cached | tee /tmp/ported.txt
+          if grep -E 'Monster|MainActivity|StableV1App|PremiumCanvaAppV2|PremiumStoreScreen|ProfileExperienceV2|MainPlayerProfileScreen' /tmp/ported.txt; then
+            echo 'Forbidden visual shell file entered selective port' >&2
+            exit 1
+          fi
+      - name: Commit selective port
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'feat(premium): port functional backend and game tools onto canonical V2'
+          git push origin HEAD:integration/v2-premium-corrected-final-20260919
