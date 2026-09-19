@@ -29,9 +29,13 @@ class GoldenProProfileFrameContractTest {
     }
 
     @Test
-    fun proAvatarRingIsIntentionallyThin() {
-        val frame = read("src/main/java/com/sonharf/game/FramedProfileAvatar.kt")
-        assertTrue(frame.contains("val ringWidth = if (isPro) 1.5.dp else 1.dp"))
+    fun proAvatarUsesTheNewAutomaticGoldArtworkWithoutReactivatingLegacyOverlay() {
+        val v2 = read("src/main/java/com/sonharf/game/ProfileFramesV2.kt")
+        val wrapper = read("src/main/java/com/sonharf/game/FramedProfileAvatar.kt")
+        assertTrue(v2.contains("R.drawable.profile_frame_pro_gold"))
+        assertTrue(v2.contains("if (isPro) proVisual else defaultVisual"))
+        assertTrue(wrapper.contains("ProfileFrameAvatarPathV2("))
+        assertTrue(!wrapper.contains("PurchasedProfileFrameOverlay("))
     }
 
     @Test
