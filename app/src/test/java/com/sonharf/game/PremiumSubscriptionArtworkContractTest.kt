@@ -27,18 +27,23 @@ class PremiumSubscriptionArtworkContractTest {
     fun `PRO monthly yearly and Season Pass map to exact artwork while billing stays authoritative`() {
         val vip = repoFile("app/src/main/java/com/sonharf/game/VipPurchaseDialog.kt").readText()
         val season = repoFile("app/src/main/java/com/sonharf/game/SeasonPassPurchaseCard.kt").readText()
+        val billing = repoFile("app/src/main/java/com/sonharf/game/billing/BillingManager.kt").readText()
 
         assertTrue(vip.contains("ProductCatalog.VIP_MONTHLY"))
         assertTrue(vip.contains("ProductCatalog.VIP_YEARLY"))
         assertTrue(vip.contains("R.drawable.premium_vip_monthly"))
         assertTrue(vip.contains("R.drawable.premium_vip_yearly"))
-        assertTrue(vip.contains("selectedProduct != null"))
+        assertTrue(vip.contains("selectedPurchasable = BillingManager.hasPurchasableOffer(selectedProduct)"))
+        assertTrue(vip.contains("enabled = !busy && selectedPurchasable"))
         assertTrue(vip.contains("PlayPurchaseVerification.verify"))
 
         assertTrue(season.contains("ProductCatalog.SEASON_PASS_MONTHLY"))
         assertTrue(season.contains("R.drawable.premium_season_pass"))
-        assertTrue(season.contains("enabled = !busy && product != null"))
+        assertTrue(season.contains("enabled = !busy && BillingManager.hasPurchasableOffer(product)"))
         assertTrue(season.contains("PlayPurchaseVerification.verify"))
+
+        assertTrue(billing.contains("if (!hasPurchasableOffer(productDetails))"))
+        assertTrue(billing.contains("BillingClient.BillingResponseCode.ITEM_UNAVAILABLE"))
     }
 
     private fun repoFile(path: String): File = sequenceOf(File(path), File("../$path"))
