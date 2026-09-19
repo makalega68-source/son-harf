@@ -55,14 +55,19 @@ internal fun MainPlayerProfileScreen(
         val id = backend.currentUserId()
         val profileTask = async { id?.let { runCatching { backend.getProfile(it) }.getOrNull() } }
         val growthTask = async { runCatching { backend.getGrowthDashboard() }.getOrNull() }
-        val friendsTask = async { runCatching { backend.getFriends() }.getOrDefault(emptyList()) }
         val cosmeticsTask = async { runCatching { backend.getEquippedCosmetics() }.getOrNull() }
 
-        profile = profileTask.await()
+        val loadedProfile = profileTask.await()
+        profile = loadedProfile
         growth = growthTask.await()
-        friendsTask.await().let { friends ->
-            friendCount = friends.size
-            onlineFriendCount = friends.count { (_, friend) -> friend.presenceStatus == "online" }
+        if (loadedProfile?.isVip == true) {
+            runCatching { backend.getFriends() }.getOrDefault(emptyList()).let { friends ->
+                friendCount = friends.size
+                onlineFriendCount = friends.count { (_, friend) -> friend.presenceStatus == "online" }
+            }
+        } else {
+            friendCount = 0
+            onlineFriendCount = 0
         }
         SonHarfCosmetics.apply(cosmeticsTask.await())
         loading = false
@@ -224,17 +229,20 @@ internal fun MainPlayerProfileScreen(
             modifier = Modifier.fillMaxWidth().clickable(onClick = onSocial),
             shape = RoundedCornerShape(20.dp),
             color = SonHarfTheme.Surface,
-            border = BorderStroke(1.dp, SonHarfTheme.Border),
+            border = BorderStroke(1.dp, if (p?.isVip == true) SonHarfTheme.Border else SonHarfTheme.PremiumGold.copy(alpha = .32f)),
         ) {
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Surface(shape = RoundedCornerShape(14.dp), color = SonHarfTheme.Primary.copy(alpha = .11f)) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (p?.isVip == true) SonHarfTheme.Primary.copy(alpha = .11f) else SonHarfTheme.PremiumGold.copy(alpha = .11f),
+                ) {
                     Icon(
-                        Icons.Rounded.Groups,
+                        if (p?.isVip == true) Icons.Rounded.Groups else Icons.Rounded.WorkspacePremium,
                         contentDescription = null,
-                        tint = SonHarfTheme.Primary,
+                        tint = if (p?.isVip == true) SonHarfTheme.Primary else SonHarfTheme.PremiumGold,
                         modifier = Modifier.padding(10.dp).size(22.dp),
                     )
                 }
@@ -242,10 +250,20 @@ internal fun MainPlayerProfileScreen(
                 Column(Modifier.weight(1f)) {
                     Text(sh("Arkadaşlar", "Friends"), color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, fontSize = 12.sp)
                     Text(
-                        "$friendCount ${sh("arkadaş", "friends")} • $onlineFriendCount ${sh("çevrimiçi", "online")}",
+                        if (p?.isVip == true) {
+                            "$friendCount ${sh("arkadaş", "friends")} • $onlineFriendCount ${sh("çevrimiçi", "online")}"
+                        } else {
+                            sh("PRO ile arkadaş listesi ve yönetimi", "Friends list and management with PRO")
+                        },
                         color = SonHarfTheme.TextSecondary,
                         fontSize = 9.sp,
                     )
+                }
+                if (p?.isVip != true) {
+                    Surface(shape = RoundedCornerShape(99.dp), color = SonHarfTheme.PremiumGold.copy(alpha = .12f)) {
+                        Text("PRO", Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = SonHarfTheme.PremiumGold, fontWeight = FontWeight.Black, fontSize = 8.sp)
+                    }
+                    Spacer(Modifier.width(6.dp))
                 }
                 Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary)
             }
