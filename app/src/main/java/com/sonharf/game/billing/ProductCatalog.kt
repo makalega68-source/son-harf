@@ -21,14 +21,28 @@ object ProductCatalog {
     const val SCORE_CALCULATOR_FALLBACK_PRICE_TRY = "129 TL"
     const val PRO_LIFETIME_FALLBACK_PRICE_TRY = "479 TL"
 
-    /** Legacy identifiers retained only so old receipts can be recognized safely. Frames are not sold or rendered. */
-    @Deprecated("Profile frames were retired from the game")
+    // Profile Frames V2. Google Play one-time products; ownership is permanent and server-authoritative.
+    const val PROFILE_FRAME_PINK_BLOSSOM = "profile_frame_pink_blossom"
+    const val PROFILE_FRAME_BLUE_ROYAL = "profile_frame_blue_royal"
+    const val PROFILE_FRAME_AMETHYST = "profile_frame_amethyst"
+    const val PROFILE_FRAME_EMERALD = "profile_frame_emerald"
+    const val PROFILE_FRAME_FALLBACK_PRICE_TRY = "150 TL"
+
+    val profileFrameProducts = listOf(
+        PROFILE_FRAME_PINK_BLOSSOM,
+        PROFILE_FRAME_BLUE_ROYAL,
+        PROFILE_FRAME_AMETHYST,
+        PROFILE_FRAME_EMERALD,
+    )
+
+    /** Legacy identifiers retained only so old receipts can be recognized safely. Old artwork stays retired. */
+    @Deprecated("Legacy profile frame product; not offered by Profile Frames V2")
     const val PROFILE_FRAME_OCEAN = "profile_frame_ocean"
-    @Deprecated("Profile frames were retired from the game")
+    @Deprecated("Legacy profile frame product; not offered by Profile Frames V2")
     const val PROFILE_FRAME_BOTANIC = "profile_frame_botanic"
-    @Deprecated("Profile frames were retired from the game")
+    @Deprecated("Legacy profile frame product; not offered by Profile Frames V2")
     const val PROFILE_FRAME_LILAC = "profile_frame_lilac"
-    @Deprecated("Profile frames were retired from the game")
+    @Deprecated("Legacy profile frame product; not offered by Profile Frames V2")
     const val PROFILE_FRAME_ROSE = "profile_frame_rose"
 
     /** Historical entitlement only. The active shop must not offer it until a matching real asset exists. */
@@ -69,5 +83,5 @@ object ProductCatalog {
         COINS_1500,
         COINS_3500,
         COINS_8000,
-    )
+    ) + profileFrameProducts
 }
