@@ -7,7 +7,13 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class VipEntitlementsDto(
     @SerialName("is_vip") val isVip: Boolean = false,
-    @SerialName("is_pro") val isPro: Boolean = isVip,
+    @SerialName("is_pro") val isPro: Boolean = false,
+    @SerialName("series_game_direct_owned") val seriesGameDirectOwned: Boolean = false,
+    @SerialName("letter_table_direct_owned") val letterTableDirectOwned: Boolean = false,
+    @SerialName("score_calculator_direct_owned") val scoreCalculatorDirectOwned: Boolean = false,
+    @SerialName("series_game_access") val seriesGameAccess: Boolean = false,
+    @SerialName("letter_table_access") val letterTableAccess: Boolean = false,
+    @SerialName("score_calculator_access") val scoreCalculatorAccess: Boolean = false,
     @SerialName("daily_jokers_claimed") val dailyJokersClaimed: Boolean = false,
     @SerialName("freezer_count") val freezerCount: Int = 0,
     @SerialName("swap_count") val swapCount: Int = 0,
@@ -23,9 +29,6 @@ data class VipEntitlementsDto(
     @SerialName("post_match_analysis") val postMatchAnalysis: Boolean = false,
     @SerialName("saved_friend_list") val savedFriendList: Boolean = false,
     @SerialName("private_rooms") val privateRooms: Boolean = false,
-    @SerialName("score_calculator_access") val scoreCalculatorAccess: Boolean = false,
-    @SerialName("letter_table_access") val letterTableAccess: Boolean = false,
-    @SerialName("series_game_access") val seriesGameAccess: Boolean = false,
     @SerialName("active_game_limit") val activeGameLimit: Int = 10,
 )
 
@@ -41,7 +44,7 @@ data class VipDailyHelperClaimDto(
 )
 
 suspend fun OnlineGameBackend.getVipEntitlements(): VipEntitlementsDto =
-    SupabaseProvider.client.postgrest.rpc("get_vip_entitlements_v7").decodeAs()
+    SupabaseProvider.client.postgrest.rpc("get_premium_entitlements_v2").decodeAs()
 
 suspend fun OnlineGameBackend.claimVipDailyHelpers(): VipDailyHelperClaimDto =
     SupabaseProvider.client.postgrest.rpc("claim_vip_daily_jokers_v7").decodeAs()
