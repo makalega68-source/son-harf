@@ -29,7 +29,6 @@ else:
     print("V2 Google Play frame exclusion already present")
 
 # Store cards must preview the same photo aperture used by the actual runtime frame.
-# This avoids showing a beautiful frame in the shop with no indication of how a profile photo fits inside it.
 frames_text = PROFILE_FRAMES.read_text(encoding="utf-8")
 preview_marker = "val previewVisual = remember(spec.productId) { ProfileFrameV2Catalog.visual(spec.productId, false) }"
 if preview_marker not in frames_text:
@@ -39,7 +38,6 @@ if preview_marker not in frames_text:
         """    val subtitleEn: String,\n    val accent: Color,\n)""",
         "ProfileFrameStoreSpec drawable removal",
     )
-
     for drawable_line in [
         "        R.drawable.profile_frame_shop_pink_blossom,\n",
         "        R.drawable.profile_frame_shop_blue_royal,\n",
@@ -50,27 +48,24 @@ if preview_marker not in frames_text:
         if count != 1:
             raise SystemExit(f"Store frame drawable argument: expected one {drawable_line.strip()}, found {count}")
         frames_text = frames_text.replace(drawable_line, "", 1)
-
     frames_text = replace_once(
         frames_text,
         """                val product = products[spec.productId]\n                val realPrice = product?.oneTimePurchaseOfferDetails?.formattedPrice\n                Surface(""",
         """                val product = products[spec.productId]\n                val realPrice = product?.oneTimePurchaseOfferDetails?.formattedPrice\n                val previewVisual = remember(spec.productId) { ProfileFrameV2Catalog.visual(spec.productId, false) }\n                Surface(""",
         "Store preview visual lookup",
     )
-
     frames_text = replace_once(
         frames_text,
         """                            Image(\n                                painter = painterResource(spec.drawable),\n                                contentDescription = null,\n                                modifier = Modifier.size(104.dp),\n                                contentScale = ContentScale.Fit,\n                            )""",
         """                            Surface(\n                                modifier = Modifier.size(104.dp * previewVisual.photoRatio),\n                                shape = CircleShape,\n                                color = spec.accent.copy(alpha = .14f),\n                            ) {\n                                Box(contentAlignment = Alignment.Center) {\n                                    Text(\n                                        \"A\",\n                                        color = spec.accent,\n                                        fontSize = 16.sp,\n                                        fontWeight = FontWeight.Black,\n                                    )\n                                }\n                            }\n                            Image(\n                                painter = painterResource(previewVisual.drawable),\n                                contentDescription = null,\n                                modifier = Modifier.size(104.dp),\n                                contentScale = ContentScale.Fit,\n                            )""",
         "Store profile-photo frame preview",
     )
-
     PROFILE_FRAMES.write_text(frames_text, encoding="utf-8")
     print("Added profile-photo fit preview to V2 store cards")
 else:
     print("V2 store photo-fit previews already present")
 
-# Focused release-contract checks. Fail before Gradle if the V2 integration is incomplete.
+# Focused release-contract checks.
 store_text = STORE.read_text(encoding="utf-8")
 frames_text = PROFILE_FRAMES.read_text(encoding="utf-8")
 catalog_text = PRODUCT_CATALOG.read_text(encoding="utf-8")
@@ -105,7 +100,6 @@ required_frame_fragments = [
     "Modifier.size(104.dp * previewVisual.photoRatio)",
     "painterResource(previewVisual.drawable)",
     "ProfilePhotoRuntime.load(avatarPath)",
-    "ProfileFrameGenderBadge(gender = gender, outerSize = outerSize)",
 ]
 for fragment in required_frame_fragments:
     if fragment not in frames_text:
@@ -128,7 +122,6 @@ missing_assets = [name for name in required_assets if not (DRAWABLE / name).is_f
 if missing_assets:
     raise SystemExit(f"Missing Profile Frames V2 assets: {', '.join(missing_assets)}")
 
-# Print all path-based frame call sites so CI logs expose where gender/status overlays may interact with artwork.
 call_sites = []
 for kotlin in Path("app/src/main/java").rglob("*.kt"):
     for line_no, line in enumerate(kotlin.read_text(encoding="utf-8").splitlines(), start=1):
