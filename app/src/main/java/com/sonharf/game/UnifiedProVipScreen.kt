@@ -4,19 +4,20 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Analytics
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.MeetingRoom
 import androidx.compose.material.icons.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Security
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -75,36 +76,39 @@ internal fun UnifiedProVipScreen(
     val active = e?.isPro == true || profile?.isVip == true
 
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(
+        androidx.compose.foundation.lazy.LazyColumn(
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, null, tint = UProText) }
-                    Column(Modifier.weight(1f)) {
-                        Text("KELİME KUŞATMASI PRO", color = UProText, fontSize = 23.sp, fontWeight = FontWeight.Bold)
-                        Text(
-                            sh("Premier üyelik ve fair-play ayrıcalıkları", "Premier membership and fair-play benefits"),
-                            color = UProBlue,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
-                    }
-                    Icon(Icons.Rounded.WorkspacePremium, null, tint = UProGold, modifier = Modifier.size(30.dp))
-                }
+                MainScreenHeader(
+                    title = "KELİME KUŞATMASI PRO",
+                    subtitle = sh("Üyelik, profil ve sosyal ayrıcalıklar", "Membership, profile and social benefits"),
+                    onBack = onBack,
+                    actionIcon = Icons.Rounded.WorkspacePremium,
+                    actionDescription = "PRO",
+                    onAction = {},
+                )
             }
 
-            if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = UProBlue, trackColor = SonHarfTheme.SurfaceElevated) }
+            if (loading) {
+                item {
+                    LinearProgressIndicator(
+                        Modifier.fillMaxWidth(),
+                        color = UProBlue,
+                        trackColor = SonHarfTheme.SurfaceElevated,
+                    )
+                }
+            }
 
             item {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = MainUiShape.Hero,
                     color = UProSurface,
-                    border = BorderStroke(1.dp, if (active) UProGold.copy(alpha = .7f) else UProBorder),
-                    shadowElevation = 1.dp,
+                    border = BorderStroke(1.dp, if (active) UProGold.copy(alpha = .65f) else UProBorder),
+                    shadowElevation = MainUiElevation.Card,
                 ) {
                     Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         MainBadge(
@@ -114,11 +118,11 @@ internal fun UnifiedProVipScreen(
                         Text(profile?.displayName ?: sh("Oyuncu", "Player"), color = UProText, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                         Text(
                             if (active) sh(
-                                "Reklamsız deneyim + PRO profil + özel oda + maç-sonu analiz",
-                                "Ad-free experience + PRO profile + private rooms + post-match analysis",
+                                "Reklamsız deneyim, PRO profil, özel oda ve maç-sonu analiz.",
+                                "Ad-free experience, PRO profile, private rooms and post-match analysis.",
                             ) else sh(
-                                "PRO ile sosyal, profil ve analiz özelliklerini aç.",
-                                "Unlock social, profile, and analysis features with PRO.",
+                                "PRO sosyal, profil ve analiz özelliklerini açar; rekabet gücü satmaz.",
+                                "PRO unlocks social, profile and analysis features without selling competitive power.",
                             ),
                             color = UProMuted,
                             fontSize = 11.sp,
@@ -130,15 +134,15 @@ internal fun UnifiedProVipScreen(
 
             item {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ProAccessCard("🚫", sh("REKLAMSIZ", "AD-FREE"), active && e?.rewardedAdBypass == true, UProBlue, Modifier.weight(1f))
-                    ProAccessCard("📊", sh("ANALİZ", "ANALYSIS"), active && e?.postMatchAnalysis == true, UProGreen, Modifier.weight(1f))
-                    ProAccessCard("♛", sh("ÖZEL ODA", "PRIVATE ROOM"), active && e?.privateRooms == true, UProGold, Modifier.weight(1f))
+                    ProAccessCard(Icons.Rounded.Block, sh("REKLAMSIZ", "AD-FREE"), active && e?.rewardedAdBypass == true, UProBlue, Modifier.weight(1f))
+                    ProAccessCard(Icons.Rounded.Analytics, sh("ANALİZ", "ANALYSIS"), active && e?.postMatchAnalysis == true, UProGreen, Modifier.weight(1f))
+                    ProAccessCard(Icons.Rounded.MeetingRoom, sh("ÖZEL ODA", "PRIVATE ROOM"), active && e?.privateRooms == true, UProGold, Modifier.weight(1f))
                 }
             }
 
             if (active) {
                 item {
-                    Surface(shape = MainUiShape.Card, color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
+                    MainGameCard {
                         Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                             MainSectionTitle(sh("PRO ARAÇLARI", "PRO TOOLS"))
                             Text(
@@ -168,25 +172,36 @@ internal fun UnifiedProVipScreen(
             }
 
             item {
-                Surface(shape = MainUiShape.Card, color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
+                MainGameCard {
                     Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        ProLine("🚫", sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
-                        ProLine("🏷️", sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
-                        ProLine("📊", sh("Tamamlanmış maçlar için gelişmiş analiz", "Advanced analysis for completed matches"))
-                        ProLine("♛", sh("Son Harf davet kodlu özel oda", "Last Letter invite-code private room"))
-                        ProLine("👥", sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))
-                        Surface(shape = RoundedCornerShape(12.dp), color = UProGreen.copy(alpha = .09f), border = BorderStroke(1.dp, UProGreen.copy(alpha = .30f))) {
-                            Text(
-                                sh(
-                                    "ADİL REKABET: PRO, dereceli maçlarda skor, hedef harf, kelime ipucu, ek süre veya rating avantajı vermez.",
-                                    "FAIR PLAY: PRO gives no score, target-letter, word-hint, extra-time, or rating advantage in ranked matches.",
-                                ),
-                                Modifier.fillMaxWidth().padding(10.dp),
-                                color = UProGreen,
-                                fontSize = 10.sp,
-                                textAlign = TextAlign.Center,
-                                fontWeight = FontWeight.SemiBold,
-                            )
+                        MainSectionTitle(sh("PRO AYRICALIKLARI", "PRO BENEFITS"))
+                        ProLine(Icons.Rounded.Block, sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
+                        ProLine(Icons.Rounded.WorkspacePremium, sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
+                        ProLine(Icons.Rounded.Analytics, sh("Tamamlanmış maçlar için gelişmiş analiz", "Advanced analysis for completed matches"))
+                        ProLine(Icons.Rounded.MeetingRoom, sh("Son Harf davet kodlu özel oda", "Last Letter invite-code private room"))
+                        ProLine(Icons.Rounded.Groups, sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))
+                        Surface(
+                            shape = MainUiShape.Control,
+                            color = UProGreen.copy(alpha = .09f),
+                            border = BorderStroke(1.dp, UProGreen.copy(alpha = .26f)),
+                        ) {
+                            Row(
+                                Modifier.fillMaxWidth().padding(11.dp),
+                                verticalAlignment = Alignment.Top,
+                            ) {
+                                Icon(Icons.Rounded.Security, null, tint = UProGreen, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    sh(
+                                        "ADİL REKABET: PRO, dereceli maçlarda skor, hedef harf, kelime ipucu, ek süre veya rating avantajı vermez.",
+                                        "FAIR PLAY: PRO gives no score, target-letter, word-hint, extra-time, or rating advantage in ranked matches.",
+                                    ),
+                                    color = UProGreen,
+                                    fontSize = 10.sp,
+                                    lineHeight = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                            }
                         }
                     }
                 }
@@ -219,8 +234,15 @@ internal fun UnifiedProVipScreen(
 
             notice?.let { message ->
                 item {
-                    Surface(shape = RoundedCornerShape(14.dp), color = UProBlue.copy(alpha = .08f), border = BorderStroke(1.dp, UProBorder)) {
-                        Text(message, Modifier.fillMaxWidth().padding(11.dp), color = UProText, fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.SemiBold)
+                    Surface(shape = MainUiShape.Control, color = UProBlue.copy(alpha = .07f), border = BorderStroke(1.dp, UProBorder)) {
+                        Text(
+                            message,
+                            Modifier.fillMaxWidth().padding(11.dp),
+                            color = UProText,
+                            fontSize = 10.sp,
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.SemiBold,
+                        )
                     }
                 }
             }
@@ -249,20 +271,33 @@ internal fun UnifiedProVipScreen(
 }
 
 @Composable
-private fun ProAccessCard(icon: String, label: String, enabled: Boolean, accent: Color, modifier: Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = UProSurface, border = BorderStroke(1.dp, accent.copy(alpha = .30f))) {
-        Column(Modifier.padding(11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(icon, color = accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
-            Text(if (enabled) "✓" else "—", color = if (enabled) UProGreen else UProMuted, fontSize = 18.sp, fontWeight = FontWeight.Black)
-            Text(label, color = UProMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+private fun ProAccessCard(icon: ImageVector, label: String, enabled: Boolean, accent: Color, modifier: Modifier) {
+    Surface(
+        modifier = modifier,
+        shape = MainUiShape.Card,
+        color = UProSurface,
+        border = BorderStroke(1.dp, accent.copy(alpha = .28f)),
+    ) {
+        Column(
+            Modifier.padding(horizontal = 8.dp, vertical = 11.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            Surface(shape = MainUiShape.Control, color = accent.copy(alpha = .09f)) {
+                Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(19.dp))
+            }
+            Text(if (enabled) sh("AKTİF", "ACTIVE") else sh("KAPALI", "LOCKED"), color = if (enabled) UProGreen else UProMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = UProText, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         }
     }
 }
 
 @Composable
-private fun ProLine(icon: String, text: String) {
+private fun ProLine(icon: ImageVector, text: String) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(icon, fontSize = 16.sp)
+        Surface(shape = MainUiShape.Control, color = MainUi.SurfaceSoft) {
+            Icon(icon, null, tint = UProBlue, modifier = Modifier.padding(7.dp).size(17.dp))
+        }
         Spacer(Modifier.width(9.dp))
         Text(text, color = UProText, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
     }
