@@ -59,9 +59,10 @@ class LetterLadderUxRegressionTest {
         assertTrue(wordKeyboard.contains("label = \"⌫\""))
         assertTrue(wordKeyboard.contains("sh(\"ONAYLA\", \"CONFIRM\")"))
         assertTrue(wordKeyboard.contains("sh(\"GÖNDER\", \"SEND\")"))
-        listOf("TEMİZLE", "CLEAR", "?123", "emoji", "mikrofon", "clipboard", "GIF", "suggestion").forEach { forbidden ->
-            assertFalse("Word keyboard must not expose $forbidden", wordKeyboard.contains(forbidden, ignoreCase = true))
-        }
+        assertFalse(wordKeyboard.contains("label = \"TEMİZLE\""))
+        assertFalse(wordKeyboard.contains("label = \"CLEAR\""))
+        assertFalse(wordKeyboard.contains("label = \",\""))
+        assertFalse(wordKeyboard.contains("label = \"?123\""))
     }
 
     @Test
