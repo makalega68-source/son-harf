@@ -236,6 +236,7 @@ internal fun MainSettingsScreen(
                         scope.launch {
                             runCatching { backend.setPresence("offline") }
                             runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.signOut() }
+                            RememberedCredentialVault.clear(context)
                             SonHarfPreferences.setRememberLogin(context, false)
                             logoutDialog = false
                             onSignedOut()

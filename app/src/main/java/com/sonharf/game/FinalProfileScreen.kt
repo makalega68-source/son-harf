@@ -231,6 +231,8 @@ fun FinalProfileScreen() {
                             deleteBusy = true
                             runCatching { AccountDeletion.deleteCurrentAccount() }
                                 .onSuccess {
+                                    RememberedCredentialVault.clear(context)
+                                    SonHarfPreferences.setRememberLogin(context, false)
                                     showDeleteDialog = false
                                     (context as? Activity)?.recreate()
                                 }
