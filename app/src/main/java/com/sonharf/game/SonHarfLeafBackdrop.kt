@@ -8,82 +8,59 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 
-/** Shared application backdrop for both the premium light system and the sellable Black Theme. */
+/** Shared restrained application backdrop for the light system and optional Black Theme. */
 @Composable
 internal fun SonHarfLeafBackdrop(modifier: Modifier = Modifier) {
     val dark = SonHarfTheme.IsDark
     Canvas(modifier) {
-        val baseStops = if (dark) {
-            arrayOf(
-                0.00f to Color(0xFF090B10),
-                0.42f to Color(0xFF0D1119),
-                0.76f to Color(0xFF101724),
-                1.00f to Color(0xFF120E1B),
-            )
+        val background = if (dark) {
+            listOf(Color(0xFF101412), Color(0xFF151B18), Color(0xFF101412))
         } else {
-            arrayOf(
-                0.00f to Color(0xFFFBFDFF),
-                0.42f to Color(0xFFF7FAFF),
-                0.76f to Color(0xFFF3F8FF),
-                1.00f to Color(0xFFF8F5FF),
-            )
+            listOf(Color(0xFFFFFEFA), Color(0xFFF7F6F1), Color(0xFFF4F2EC))
         }
-        drawRect(brush = Brush.verticalGradient(colorStops = baseStops))
+        drawRect(brush = Brush.verticalGradient(background))
 
-        val lowerGlow = Path().apply {
-            moveTo(0f, size.height * .76f)
-            cubicTo(size.width * .22f, size.height * .66f, size.width * .58f, size.height * .91f, size.width, size.height * .76f)
-            lineTo(size.width, size.height)
-            lineTo(0f, size.height)
-            close()
-        }
-        drawPath(
-            lowerGlow,
-            brush = Brush.verticalGradient(
-                listOf(
-                    if (dark) Color(0x191FD1C2) else Color(0x0D12B8A6),
-                    if (dark) Color(0x243B82F6) else Color(0x142563EB),
-                    if (dark) Color(0x209B6CFF) else Color(0x107C3AED),
-                ),
-                startY = size.height * .69f,
-                endY = size.height,
+        val sage = if (dark) Color(0xFF78A493) else Color(0xFF365F53)
+        val slate = if (dark) Color(0xFF8DA1AF) else Color(0xFF718693)
+        val terracotta = if (dark) Color(0xFFC98770) else Color(0xFFAD6A57)
+
+        drawCircle(
+            brush = Brush.radialGradient(
+                listOf(sage.copy(alpha = if (dark) .11f else .07f), Color.Transparent),
+                center = Offset(size.width * .90f, size.height * .12f),
+                radius = size.minDimension * .62f,
             ),
+            radius = size.minDimension * .62f,
+            center = Offset(size.width * .90f, size.height * .12f),
         )
-
-        val topAura = Path().apply {
-            moveTo(size.width * .52f, 0f)
-            cubicTo(size.width * .72f, size.height * .07f, size.width * .87f, size.height * .02f, size.width, size.height * .11f)
-            lineTo(size.width, 0f)
-            close()
-        }
-        drawPath(
-            topAura,
-            brush = Brush.horizontalGradient(
-                if (dark) listOf(Color.Transparent, Color(0x243B82F6), Color(0x209B6CFF))
-                else listOf(Color.Transparent, Color(0x122563EB), Color(0x117C3AED)),
+        drawCircle(
+            brush = Brush.radialGradient(
+                listOf(slate.copy(alpha = if (dark) .09f else .05f), Color.Transparent),
+                center = Offset(size.width * .08f, size.height * .84f),
+                radius = size.minDimension * .60f,
             ),
+            radius = size.minDimension * .60f,
+            center = Offset(size.width * .08f, size.height * .84f),
         )
 
         data class Marker(val x: Float, val y: Float, val side: Float, val color: Color, val alpha: Float)
         val markers = listOf(
-            Marker(.030f, .10f, 12f, if (dark) Color(0xFF3B82F6) else Color(0xFF2563EB), if (dark) .25f else .18f),
-            Marker(.074f, .18f, 8f, if (dark) Color(0xFF1FD1C2) else Color(0xFF12B8A6), if (dark) .23f else .17f),
-            Marker(.958f, .09f, 11f, if (dark) Color(0xFF9B6CFF) else Color(0xFF7C3AED), if (dark) .23f else .17f),
-            Marker(.907f, .22f, 7f, if (dark) Color(0xFFFF8A34) else Color(0xFFF97316), if (dark) .21f else .16f),
-            Marker(.025f, .47f, 8f, if (dark) Color(0xFFFF8A34) else Color(0xFFF97316), if (dark) .18f else .12f),
-            Marker(.970f, .53f, 9f, if (dark) Color(0xFF1FD1C2) else Color(0xFF12B8A6), if (dark) .19f else .14f),
-            Marker(.060f, .78f, 7f, if (dark) Color(0xFF9B6CFF) else Color(0xFF7C3AED), if (dark) .18f else .12f),
-            Marker(.930f, .74f, 8f, if (dark) Color(0xFF3B82F6) else Color(0xFF2563EB), if (dark) .18f else .12f),
+            Marker(.030f, .11f, 10f, sage, if (dark) .16f else .10f),
+            Marker(.078f, .19f, 7f, slate, if (dark) .14f else .08f),
+            Marker(.960f, .10f, 9f, slate, if (dark) .15f else .09f),
+            Marker(.928f, .24f, 6f, terracotta, if (dark) .12f else .06f),
+            Marker(.028f, .50f, 6f, terracotta, if (dark) .10f else .05f),
+            Marker(.966f, .58f, 7f, sage, if (dark) .12f else .07f),
+            Marker(.060f, .80f, 6f, slate, if (dark) .10f else .06f),
+            Marker(.936f, .78f, 7f, sage, if (dark) .10f else .06f),
         )
         markers.forEach { marker ->
-            val side = marker.side
             drawRoundRect(
                 color = marker.color.copy(alpha = marker.alpha),
-                topLeft = Offset(size.width * marker.x - side / 2f, size.height * marker.y - side / 2f),
-                size = Size(side, side),
-                cornerRadius = CornerRadius(side * .30f, side * .30f),
+                topLeft = Offset(size.width * marker.x - marker.side / 2f, size.height * marker.y - marker.side / 2f),
+                size = Size(marker.side, marker.side),
+                cornerRadius = CornerRadius(marker.side * .26f, marker.side * .26f),
             )
         }
     }
