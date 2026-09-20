@@ -1,10 +1,10 @@
-name: Rollback to Last Stable
+name: Prepare Rollback to Last Stable
 
 on:
   workflow_dispatch:
     inputs:
       confirm:
-        description: "Son cihaz testinde onaylanan STABLE sürüme dön. Oyuncu veritabanına dokunulmaz."
+        description: "Son cihaz testinde onaylanan STABLE sürüm için rollback dalı hazırla. Oyuncu veritabanına dokunulmaz."
         required: true
         type: boolean
         default: false
@@ -13,11 +13,11 @@ permissions:
   contents: write
 
 concurrency:
-  group: rollback-main
+  group: prepare-rollback
   cancel-in-progress: false
 
 jobs:
-  rollback:
+  prepare-rollback:
     if: ${{ inputs.confirm == true }}
     runs-on: ubuntu-latest
     steps:
@@ -62,44 +62,61 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          TAG="before-rollback-$(date -u +%Y%m%d-%H%M%S)"
-          git tag -a "$TAG" -m "Automatic recovery point before rollback" HEAD
+          TAG="before-rollback-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$TAG" -m "Automatic recovery point before rollback preparation" HEAD
           git push origin "$TAG"
 
-      - name: Restore code from approved stable
+      - name: Prepare rollback branch without changing main
+        id: prepare
         shell: bash
         run: |
           set -euo pipefail
           TARGET="${{ steps.target.outputs.sha }}"
-          git checkout "$TARGET" -- .
-          git reset
+          BRANCH="rollback/${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          git switch -c "$BRANCH"
+          git read-tree --reset -u "$TARGET"
           git add -A
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          if git diff --cached --quiet; then
+            echo "no_changes=true" >> "$GITHUB_OUTPUT"
+            echo "Kod zaten ${{ steps.target.outputs.tag }} sürümüyle aynı."
+          else
+            echo "no_changes=false" >> "$GITHUB_OUTPUT"
+          fi
 
-      - name: Verify restored app before push
+      - name: Verify rollback candidate before publishing branch
+        if: ${{ steps.prepare.outputs.no_changes == 'false' }}
         shell: bash
         run: |
           set -o pipefail
           ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
-      - name: Commit safe rollback
+      - name: Commit and publish rollback branch
+        if: ${{ steps.prepare.outputs.no_changes == 'false' }}
         shell: bash
         run: |
           set -euo pipefail
           TAG="${{ steps.target.outputs.tag }}"
           TARGET="${{ steps.target.outputs.sha }}"
+          BRANCH="${{ steps.prepare.outputs.branch }}"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          if git diff --cached --quiet; then
-            echo "Kod zaten $TAG sürümüyle aynı."
-            exit 0
-          fi
-          git commit -m "Safe rollback to $TAG ($TARGET) [admin]"
-          git push origin HEAD:main
+          git commit -m "Prepare safe rollback to $TAG ($TARGET) [admin]"
+          git push --set-upstream origin "$BRANCH"
 
       - name: Summary
+        shell: bash
         run: |
-          echo "### Güvenli geri dönüş tamamlandı" >> "$GITHUB_STEP_SUMMARY"
+          echo "### Rollback hazırlığı" >> "$GITHUB_STEP_SUMMARY"
           echo "- Hedef: ${{ steps.target.outputs.tag }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Commit: ${{ steps.target.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- Oyuncu veritabanı geri sarılmadı veya silinmedi." >> "$GITHUB_STEP_SUMMARY"
-          echo "- Geri dönüşten önce mevcut kod için recovery tag oluşturuldu." >> "$GITHUB_STEP_SUMMARY"
+          echo "- Stable commit: ${{ steps.target.outputs.sha }}" >> "$GITHUB_STEP_SUMMARY"
+          if [ "${{ steps.prepare.outputs.no_changes }}" = "true" ]; then
+            echo "- Main zaten hedef stable sürümle aynı; dal veya PR gerekmedi." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "- Hazırlanan dal: \`${{ steps.prepare.outputs.branch }}\`" >> "$GITHUB_STEP_SUMMARY"
+            echo "- Main değiştirilmedi." >> "$GITHUB_STEP_SUMMARY"
+            echo "- Bu dal için PR açılmalı; Final Unified Validation, Android CI ve Frame Provenance Gate yeşil olmadan merge yapılmamalı." >> "$GITHUB_STEP_SUMMARY"
+          fi
+          echo "- Oyuncu veritabanına dokunulmadı." >> "$GITHUB_STEP_SUMMARY"
