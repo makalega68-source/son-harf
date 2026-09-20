@@ -10,7 +10,7 @@ class ProfileOwnedStyleCollectionContractTest {
     @Test fun ownedCollectionSurvivesStoreRotationAndRefreshFailures() {
         val profile = projectFile("app/src/main/java/com/sonharf/game/ProfileOwnedThemesSection.kt").readText()
         val economy = projectFile("app/src/main/java/com/sonharf/game/data/EconomyStore.kt").readText()
-        val migration = projectFile("supabase/migrations/20260908120313_permanent_style_ownership.sql").readText()
+        val migration = projectFile("supabase/migrations/20260920150000_store_runtime_equip_parity.sql").readText()
         val databaseTest = projectFile("supabase/tests/permanent_style_ownership.sql").readText()
 
         assertTrue(profile.contains("backend.getOwnedShopItems(nextOwned)"))
@@ -18,11 +18,12 @@ class ProfileOwnedStyleCollectionContractTest {
         assertTrue(profile.contains("enabled = enabled && supported && !active"))
         assertTrue(economy.contains("filter { it.id in owned }"))
 
-        assertTrue(migration.contains("create policy shop_items_owned_read"))
-        assertTrue(migration.contains("revoke execute on function public.equip_shop_item(text) from public, anon"))
-        assertTrue(migration.contains("grant execute on function public.equip_shop_item(text) to authenticated"))
-        assertTrue(databaseTest.contains("owner_cannot_read_retired_product"))
-        assertTrue(databaseTest.contains("retired_product_leaked_to_non_owner"))
+        assertTrue(migration.contains("Do not require active=true here"))
+        assertTrue(migration.contains("if not v_owned then raise exception 'not_owned'; end if;"))
+        assertTrue(migration.contains("revoke all on function public.equip_shop_item(text) from public,anon"))
+        assertTrue(migration.contains("grant execute on function public.equip_shop_item(text) to authenticated,service_role"))
+        assertTrue(databaseTest.contains("store_rotation_still_revokes_owned_runtime_style"))
+        assertTrue(databaseTest.contains("equip_ownership_gate_missing"))
         assertTrue(databaseTest.contains("anonymous_equip_rpc_exposed"))
         assertTrue(databaseTest.contains("rollback;"))
     }
