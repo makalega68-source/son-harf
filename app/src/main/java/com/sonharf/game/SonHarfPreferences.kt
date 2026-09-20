@@ -38,7 +38,7 @@ object SonHarfPreferences {
     fun darkModeEnabled(context: Context): Boolean = false
     fun language(context: Context): String = prefs(context).getString(LANGUAGE, "tr")?.takeIf { it in setOf("tr", "en") } ?: "tr"
     fun botDifficulty(context: Context): String = prefs(context).getString(BOT_DIFFICULTY, "normal")?.takeIf { it in setOf("easy","normal","hard") } ?: "normal"
-    fun rememberLogin(context: Context): Boolean = prefs(context).getBoolean(REMEMBER_LOGIN, true)
+    fun rememberLogin(context: Context): Boolean = prefs(context).getBoolean(REMEMBER_LOGIN, false)
     fun rememberedEmail(context: Context): String = prefs(context).getString(REMEMBERED_EMAIL, "").orEmpty()
     fun dismissedMatchSummaryId(context: Context): String? = prefs(context).getString(DISMISSED_MATCH_SUMMARY_ID, null)
 
