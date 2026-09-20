@@ -110,6 +110,12 @@ internal fun MainPlayerProfileScreen(
         }
 
         val profileAccent = if (p?.isVip == true) SonHarfTheme.PremiumGold else SonHarfTheme.Primary
+        val hasEquippedNameStyle = !SonHarfCosmetics.nameStyleId.isNullOrBlank()
+        val displayNameColor = when {
+            hasEquippedNameStyle -> SonHarfCosmetics.playerNameColor
+            p?.isVip == true -> Color.White
+            else -> SonHarfTheme.TextPrimary
+        }
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(30.dp),
@@ -156,7 +162,7 @@ internal fun MainPlayerProfileScreen(
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             p?.displayName ?: sh("Oyuncu", "Player"),
-                            color = if (p?.isVip == true) Color.White else SonHarfCosmetics.playerNameColor,
+                            color = displayNameColor,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Black,
                             maxLines = 1,
