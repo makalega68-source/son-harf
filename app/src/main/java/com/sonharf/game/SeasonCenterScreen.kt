@@ -6,10 +6,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -30,6 +34,7 @@ fun SeasonCenterContent() {
     var loading by remember { mutableStateOf(true) }
     var busyReward by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf("") }
+    var rewardVfxKey by remember { mutableStateOf<String?>(null) }
 
     suspend fun reload() {
         val b = backend
@@ -41,145 +46,173 @@ fun SeasonCenterContent() {
         }
         runCatching { b.getStoreSeason() }
             .onSuccess { season = it }
-            .onFailure {
-                notice = sh("Sezon bilgileri yüklenemedi.", "Season information could not be loaded.")
-            }
+            .onFailure { notice = sh("Sezon bilgileri yüklenemedi.", "Season information could not be loaded.") }
         loading = false
     }
 
     LaunchedEffect(Unit) { reload() }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().background(SonHarfBg),
-        contentPadding = PaddingValues(14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            SeasonCenterHero(season)
-        }
+    Box(Modifier.fillMaxSize().background(MainUi.Background)) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item { SeasonCenterHero(season) }
 
-        if (loading) {
-            item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfCyan) }
-        } else {
-            val currentSeason = season
-            if (currentSeason == null || !currentSeason.active) {
+            if (loading) {
                 item {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
-                        shape = RoundedCornerShape(20.dp),
-                        border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .14f)),
-                    ) {
-                        Text(
-                            sh("Şu anda aktif sezon bulunmuyor.", "There is no active season right now."),
-                            modifier = Modifier.fillMaxWidth().padding(20.dp),
-                            color = SonHarfMuted,
-                            textAlign = TextAlign.Center,
-                            fontSize = 11.sp,
-                        )
-                    }
+                    LinearProgressIndicator(
+                        Modifier.fillMaxWidth(),
+                        color = MainUi.Blue,
+                        trackColor = MainUi.SurfaceRaised,
+                    )
                 }
             } else {
-                if (!currentSeason.premiumActive) {
+                val currentSeason = season
+                if (currentSeason == null || !currentSeason.active) {
                     item {
-                        SeasonPassPurchaseCard {
-                            scope.launch {
-                                loading = true
-                                reload()
-                            }
-                        }
-                    }
-                } else {
-                    item {
-                        Surface(
-                            color = SonHarfPurple.copy(alpha = .10f),
-                            shape = RoundedCornerShape(16.dp),
-                            border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .28f)),
-                        ) {
+                        MainGameCard {
                             Text(
-                                sh("✓ PREMIUM ÖDÜL YOLU AKTİF", "✓ PREMIUM REWARD TRACK ACTIVE"),
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
-                                color = SonHarfPurple,
-                                fontWeight = FontWeight.Black,
+                                sh("Şu anda aktif sezon bulunmuyor.", "There is no active season right now."),
+                                modifier = Modifier.fillMaxWidth().padding(22.dp),
+                                color = MainUi.Muted,
                                 textAlign = TextAlign.Center,
-                                fontSize = 11.sp,
+                                fontSize = 12.sp,
                             )
                         }
                     }
-                }
-
-                item {
-                    Text(
-                        sh(
-                            "Premium ödüller yalnız kozmetik, prestij ve ilerleme içindir; maç gücü, rating, süre veya rekabet avantajı vermez.",
-                            "Premium rewards are cosmetic, prestige and progression only; they never grant match power, rating, time or competitive advantages.",
-                        ),
-                        color = SonHarfGreen,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-
-                items(
-                    items = currentSeason.rewards,
-                    key = { reward -> rewardIdentity(reward) },
-                ) { reward ->
-                    SeasonRewardCard(
-                        reward = reward,
-                        playerLevel = currentSeason.level,
-                        busy = busyReward == rewardIdentity(reward),
-                        anotherBusy = busyReward != null && busyReward != rewardIdentity(reward),
-                        onClaim = {
-                            val b = backend ?: return@SeasonRewardCard
-                            val identity = rewardIdentity(reward)
-                            scope.launch {
-                                busyReward = identity
-                                notice = ""
-                                val result = runCatching { b.claimStoreSeasonReward(reward) }
-                                if (result.isSuccess) {
-                                    notice = if (reward.rewardType == "son_coin") {
-                                        sh("Sezon ödülü Son Coin bakiyene eklendi.", "Season reward was added to your Son Coin balance.")
-                                    } else {
-                                        sh(
-                                            "Sezon Style ödülü kalıcı koleksiyonuna eklendi; Profil > Style alanından kullanabilirsin.",
-                                            "Season Style reward was added to your permanent collection; equip it from Profile > Style.",
-                                        )
-                                    }
+                } else {
+                    if (!currentSeason.premiumActive) {
+                        item {
+                            SeasonPassPurchaseCard {
+                                scope.launch {
+                                    loading = true
                                     reload()
-                                } else {
-                                    notice = seasonClaimError(result.exceptionOrNull())
                                 }
-                                busyReward = null
                             }
-                        },
-                    )
+                        }
+                    } else {
+                        item {
+                            Surface(
+                                color = MainUi.GoldSoft,
+                                shape = MainUiShape.Control,
+                                border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .32f)),
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 11.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Icon(Icons.Rounded.Verified, null, tint = MainUi.Gold, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(7.dp))
+                                    Text(
+                                        sh("PREMIUM ÖDÜL YOLU AKTİF", "PREMIUM REWARD TRACK ACTIVE"),
+                                        color = MainUi.Text,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        Surface(
+                            shape = MainUiShape.Control,
+                            color = MainUi.GreenSoft,
+                            border = BorderStroke(1.dp, MainUi.Green.copy(alpha = .18f)),
+                        ) {
+                            Text(
+                                sh(
+                                    "Premium ödüller kozmetik, prestij ve ilerleme içindir; maç gücü, rating, süre veya rekabet avantajı vermez.",
+                                    "Premium rewards are cosmetic, prestige and progression only; they never grant match power, rating, time or competitive advantages.",
+                                ),
+                                modifier = Modifier.padding(horizontal = 13.dp, vertical = 10.dp),
+                                color = MainUi.Green,
+                                fontSize = 10.sp,
+                                lineHeight = 14.sp,
+                                fontWeight = FontWeight.SemiBold,
+                            )
+                        }
+                    }
+
+                    items(
+                        items = currentSeason.rewards,
+                        key = { reward -> rewardIdentity(reward) },
+                    ) { reward ->
+                        SeasonRewardCard(
+                            reward = reward,
+                            playerLevel = currentSeason.level,
+                            busy = busyReward == rewardIdentity(reward),
+                            anotherBusy = busyReward != null && busyReward != rewardIdentity(reward),
+                            onClaim = {
+                                val b = backend ?: return@SeasonRewardCard
+                                val identity = rewardIdentity(reward)
+                                scope.launch {
+                                    busyReward = identity
+                                    notice = ""
+                                    val result = runCatching { b.claimStoreSeasonReward(reward) }
+                                    if (result.isSuccess) {
+                                        rewardVfxKey = "$identity:${System.nanoTime()}"
+                                        SonHarfSoundFx.reward()
+                                        notice = if (reward.rewardType == "son_coin") {
+                                            sh("Sezon ödülü Son Coin bakiyene eklendi.", "Season reward was added to your Son Coin balance.")
+                                        } else {
+                                            sh(
+                                                "Sezon Style ödülü kalıcı koleksiyonuna eklendi; Profil > Style alanından kullanabilirsin.",
+                                                "Season Style reward was added to your permanent collection; equip it from Profile > Style.",
+                                            )
+                                        }
+                                        reload()
+                                    } else {
+                                        notice = seasonClaimError(result.exceptionOrNull())
+                                        SonHarfSoundFx.warning()
+                                    }
+                                    busyReward = null
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+
+            if (notice.isNotBlank()) {
+                item {
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = MainUiShape.Control,
+                        color = MainUi.Surface,
+                        border = BorderStroke(1.dp, MainUi.Border),
+                    ) {
+                        Text(
+                            notice,
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp),
+                            color = MainUi.Muted,
+                            fontSize = 10.sp,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
             }
         }
 
-        if (notice.isNotBlank()) {
-            item {
-                Text(
-                    notice,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    color = SonHarfMuted,
-                    fontSize = 10.sp,
-                    textAlign = TextAlign.Center,
-                )
-            }
+        rewardVfxKey?.let { key ->
+            PurchasedMomentVfx(
+                eventKey = "season-reward:$key",
+                kind = PurchasedMomentVfxKind.REWARD,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
 
 @Composable
 private fun SeasonCenterHero(season: StoreSeasonDto?) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfSurface.copy(alpha = .97f)),
-        shape = RoundedCornerShape(24.dp),
-        border = BorderStroke(1.2.dp, SonHarfCyan.copy(alpha = .26f)),
-    ) {
+    MainGameCard(elevated = true) {
         Column(
-            Modifier.fillMaxWidth().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(7.dp),
+            Modifier.fillMaxWidth().padding(17.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             Row(
                 Modifier.fillMaxWidth(),
@@ -187,14 +220,22 @@ private fun SeasonCenterHero(season: StoreSeasonDto?) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text(sh("SEZON MERKEZİ", "SEASON CENTER"), color = SonHarfCyan, fontSize = 24.sp, fontWeight = FontWeight.Black)
+                    Text(sh("SEZON MERKEZİ", "SEASON CENTER"), color = MainUi.Text, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(3.dp))
                     Text(
-                        sh("Sunucu tarafından yönetilen Free + Premium ödül yolu", "Server-driven Free + Premium reward track"),
-                        color = SonHarfMuted,
-                        fontSize = 9.sp,
+                        sh("Ücretsiz ve Premium ödül yolu", "Free and Premium reward track"),
+                        color = MainUi.Muted,
+                        fontSize = 11.sp,
                     )
                 }
-                Text("🏆", fontSize = 32.sp)
+                Surface(shape = MainUiShape.Control, color = MainUi.GoldSoft) {
+                    Icon(
+                        Icons.Rounded.EmojiEvents,
+                        contentDescription = null,
+                        tint = MainUi.Gold,
+                        modifier = Modifier.padding(11.dp).size(25.dp),
+                    )
+                }
             }
             if (season?.active == true) {
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -202,14 +243,11 @@ private fun SeasonCenterHero(season: StoreSeasonDto?) {
                     SeasonStatChip(sh("SÜRE", "DAYS"), season.durationDays.toString(), Modifier.weight(1f))
                     SeasonStatChip(sh("ÖDÜL", "REWARDS"), season.rewards.size.toString(), Modifier.weight(1f))
                 }
-                Text(
-                    listOfNotNull(
-                        season.seasonId.takeIf { it.isNotBlank() },
-                        season.endsAt?.take(10)?.let { sh("Bitiş $it", "Ends $it") },
-                    ).joinToString(" • "),
-                    color = SonHarfMuted,
-                    fontSize = 9.sp,
-                )
+                val meta = listOfNotNull(
+                    season.seasonId.takeIf { it.isNotBlank() },
+                    season.endsAt?.take(10)?.let { sh("Bitiş $it", "Ends $it") },
+                ).joinToString(" • ")
+                if (meta.isNotBlank()) Text(meta, color = MainUi.Muted, fontSize = 9.sp)
             }
         }
     }
@@ -219,16 +257,16 @@ private fun SeasonCenterHero(season: StoreSeasonDto?) {
 private fun SeasonStatChip(label: String, value: String, modifier: Modifier = Modifier) {
     Surface(
         modifier = modifier,
-        color = SonHarfCyan.copy(alpha = .09f),
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, SonHarfCyan.copy(alpha = .16f)),
+        color = MainUi.BlueSoft,
+        shape = MainUiShape.Control,
+        border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .14f)),
     ) {
         Column(
             Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Text(value, color = SonHarfText, fontSize = 17.sp, fontWeight = FontWeight.Black)
-            Text(label, color = SonHarfMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            Text(value, color = MainUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -242,7 +280,8 @@ private fun SeasonRewardCard(
     onClaim: () -> Unit,
 ) {
     val premium = reward.track.equals("premium", ignoreCase = true)
-    val accent = if (premium) SonHarfPurple else SonHarfCyan
+    val accent = if (premium) MainUi.Gold else MainUi.Blue
+    val accentSoft = if (premium) MainUi.GoldSoft else MainUi.BlueSoft
     val canClaim = reward.unlocked && reward.premiumAccess && !reward.claimed
     val buttonText = when {
         reward.claimed -> sh("ALINDI", "CLAIMED")
@@ -252,11 +291,7 @@ private fun SeasonRewardCard(
         else -> sh("AL", "CLAIM")
     }
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfSurface.copy(alpha = .97f)),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = if (reward.claimed) .15f else .30f)),
-    ) {
+    MainGameCard {
         Column(
             Modifier.fillMaxWidth().padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -267,29 +302,34 @@ private fun SeasonRewardCard(
                 verticalAlignment = Alignment.Top,
             ) {
                 Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = accent.copy(alpha = .12f), shape = RoundedCornerShape(14.dp)) {
-                        Text(rewardIcon(reward.rewardType), Modifier.padding(10.dp), fontSize = 22.sp)
+                    Surface(color = accentSoft, shape = MainUiShape.Control) {
+                        Icon(
+                            seasonRewardIcon(reward.rewardType),
+                            contentDescription = null,
+                            tint = accent,
+                            modifier = Modifier.padding(10.dp).size(22.dp),
+                        )
                     }
                     Column(Modifier.weight(1f)) {
-                        Text(rewardTitle(reward), color = SonHarfText, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                        Text(rewardTitle(reward), color = MainUi.Text, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         Text(
                             if (premium) sh("Premium yol • Seviye ${reward.level}", "Premium track • Level ${reward.level}")
                             else sh("Ücretsiz yol • Seviye ${reward.level}", "Free track • Level ${reward.level}"),
                             color = accent,
                             fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.SemiBold,
                         )
                         if (!reward.unlocked) {
                             Text(
                                 sh("Mevcut seviyen: $playerLevel", "Your current level: $playerLevel"),
-                                color = SonHarfMuted,
+                                color = MainUi.Muted,
                                 fontSize = 8.sp,
                             )
                         }
                     }
                 }
                 if (reward.claimed) {
-                    Text("✓", color = SonHarfGreen, fontWeight = FontWeight.Black, fontSize = 20.sp)
+                    Icon(Icons.Rounded.CheckCircle, null, tint = MainUi.Green, modifier = Modifier.size(21.dp))
                 }
             }
 
@@ -297,10 +337,15 @@ private fun SeasonRewardCard(
                 onClick = onClaim,
                 enabled = canClaim && !busy && !anotherBusy,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = accent),
-                shape = RoundedCornerShape(14.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accent,
+                    contentColor = if (premium) Color(0xFF2B2418) else Color.White,
+                    disabledContainerColor = MainUi.SurfaceRaised,
+                    disabledContentColor = MainUi.Muted,
+                ),
+                shape = MainUiShape.Control,
             ) {
-                Text(buttonText, fontWeight = FontWeight.Black)
+                Text(buttonText, fontWeight = FontWeight.Bold)
             }
         }
     }
@@ -322,13 +367,13 @@ private fun rewardTitle(reward: SeasonRewardDto): String = when (reward.rewardTy
     else -> sh("SEZON ÖDÜLÜ", "SEASON REWARD")
 }
 
-private fun rewardIcon(type: String): String = when (type) {
-    "son_coin" -> "◈"
-    "badge" -> "🏅"
-    "title" -> "👑"
-    "victory_effect", "word_effect" -> "✨"
-    "vs_intro" -> "⚔"
-    else -> "🎁"
+private fun seasonRewardIcon(type: String): ImageVector = when (type) {
+    "son_coin" -> Icons.Rounded.Paid
+    "badge" -> Icons.Rounded.MilitaryTech
+    "title", "nameplate" -> Icons.Rounded.WorkspacePremium
+    "victory_effect", "word_effect", "final_style" -> Icons.Rounded.AutoAwesome
+    "vs_intro" -> Icons.Rounded.SportsScore
+    else -> Icons.Rounded.CardGiftcard
 }
 
 private fun seasonClaimError(error: Throwable?): String {
