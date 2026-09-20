@@ -8,18 +8,24 @@ import org.junit.Test
 /** Guards the cosmetic paths that are visible in the live Premier match and store. */
 class PremiumCosmeticApplicationContractTest {
     @Test
-    fun premierMatchUsesTheEquippedKeyboardAndNameStyle() {
+    fun premierAndLetterPathShareMinimalKeyboardWhileEquippedSkinAndNameStyleStillApply() {
         val premier = source("PremierWordDuelScreen.kt")
+        val shared = source("SharedInputPrimitives.kt")
+        val ladderCompat = source("HarfYoluKeyboard.kt")
 
-        assertTrue(premier.contains("val palette = SonHarfCosmetics.keyboardPalette"))
-        assertTrue(premier.contains("color = palette.background"))
+        assertTrue(premier.contains("EmbeddedWordKeyboard("))
+        assertTrue(ladderCompat.contains("EmbeddedWordKeyboard("))
+        assertTrue(shared.contains("val palette = SonHarfCosmetics.keyboardPalette"))
+        assertTrue(shared.contains("color = palette.background"))
+        assertTrue(shared.contains("palette = palette"))
         assertTrue(premier.contains("nameColor = SonHarfCosmetics.playerNameColor"))
+        assertFalse(premier.contains("TEMİZLE"))
+        assertFalse(premier.contains("CLEAR"))
     }
 
     @Test
     fun everySellableKeyboardHasADistinctRuntimePalette() {
         val runtime = source("CosmeticRuntime.kt")
-
         listOf(
             "\"keyboard_crystal\" -> WordKeyboardPalette(",
             "\"keyboard_obsidian\" -> WordKeyboardPalette(",
@@ -32,7 +38,6 @@ class PremiumCosmeticApplicationContractTest {
     @Test
     fun equippedNameStyleOverridesProWhiteOnTheProfile() {
         val profile = source("MainPlayerProfileScreen.kt")
-
         assertTrue(profile.contains("val hasEquippedNameStyle = !SonHarfCosmetics.nameStyleId.isNullOrBlank()"))
         assertTrue(profile.contains("hasEquippedNameStyle -> SonHarfCosmetics.playerNameColor"))
         assertTrue(profile.contains("color = displayNameColor"))
@@ -42,7 +47,6 @@ class PremiumCosmeticApplicationContractTest {
     @Test
     fun storeKeyboardCardsUseTextFreeCanvaAlignedArtworkInsteadOfScreenshots() {
         val preview = source("StoreProductPreview.kt")
-
         listOf(
             "R.drawable.store_art_keyboard_crystal",
             "R.drawable.store_art_keyboard_obsidian",
@@ -50,7 +54,6 @@ class PremiumCosmeticApplicationContractTest {
             "R.drawable.store_art_keyboard_black_gold",
             "R.drawable.store_art_keyboard_premium_white",
         ).forEach { drawable -> assertTrue("Missing keyboard artwork $drawable", preview.contains(drawable)) }
-
         assertTrue(preview.contains("contentScale = ContentScale.Fit"))
         assertTrue(preview.contains("Color.Transparent"))
         assertFalse(preview.contains("browser screenshot", ignoreCase = true))
