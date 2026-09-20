@@ -150,7 +150,7 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
     LaunchedEffect(selectedGameId, showChat) {
         val gameId = selectedGameId ?: return@LaunchedEffect
         while (currentCoroutineContext().isActive) {
-            runCatching { backend.getWordSiegeGame(gameId) }
+            runCatching { backend.refreshWordSiegeGame(gameId) }
                 .onSuccess { next ->
                     val turnChanged = currentGame?.moveCount != next.moveCount ||
                         currentGame?.currentPlayerId != next.currentPlayerId
