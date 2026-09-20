@@ -71,6 +71,7 @@ class MainActivity : ComponentActivity() {
          * out an active non-remembered session while still re-applying the policy after process death.
          */
         private var startupSessionPolicyApplied = false
+        private const val PASSWORD_RECOVERY_STATE_KEY = "password_recovery_requested"
     }
 
     private var passwordRecoveryRequested by mutableStateOf(false)
@@ -126,8 +127,14 @@ class MainActivity : ComponentActivity() {
         super.onDestroy()
     }
 
+    override fun onSaveInstanceState(outState: Bundle) {
+        outState.putBoolean(PASSWORD_RECOVERY_STATE_KEY, passwordRecoveryRequested)
+        super.onSaveInstanceState(outState)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        passwordRecoveryRequested = savedInstanceState?.getBoolean(PASSWORD_RECOVERY_STATE_KEY) == true
 
         // Nothing optional is allowed to prevent the first frame from being rendered. Audio,
         // cached cosmetics/experience data and privacy SDKs are useful, but a device-specific
@@ -186,7 +193,12 @@ class MainActivity : ComponentActivity() {
                 AppStartupGate(
                     clearUnrememberedSession = clearUnrememberedSession,
                     passwordRecoveryRequested = passwordRecoveryRequested,
-                    onPasswordRecoveryFinished = { passwordRecoveryRequested = false },
+                    onPasswordRecoveryFinished = {
+                        passwordRecoveryRequested = false
+                        if (isPasswordRecoveryDeepLink(intent)) {
+                            setIntent(Intent(intent).apply { data = null })
+                        }
+                    },
                 )
             }
         }
