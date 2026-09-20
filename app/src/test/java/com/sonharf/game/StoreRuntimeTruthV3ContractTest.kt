@@ -63,6 +63,8 @@ class StoreRuntimeTruthV3ContractTest {
         assertTrue(migration.contains("p_item_id in ('theme_black','theme_dark_arena')"))
         assertTrue(migration.contains("when 'victory_effect' then p_item_id='victory_crown'"))
         assertTrue(migration.contains("when 'emoji_pack' then p_item_id='emoji_vip'"))
+        assertTrue(migration.contains("shop_items_active_runtime_supported_v1"))
+        assertTrue(migration.contains("check (not active or public.is_runtime_supported_shop_item_v1(id,kind))"))
         assertTrue(migration.contains("mascot_id=null"))
 
         val purchaseStart = migration.indexOf("create or replace function public.purchase_shop_item")
