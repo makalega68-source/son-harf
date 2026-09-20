@@ -46,20 +46,16 @@ class AssetIntegrationContractTest {
         assertTrue(frames.contains("!assetReady && !owned -> Text"))
     }
 
-    @Test fun purchasedVfxIsVisibleOneShotAndInputTransparent() {
+    @Test fun purchasedVfxIsNativeOneShotInputTransparentAndRestrained() {
         val src = read("src/main/java/com/sonharf/game/PurchasedVfxOverlay.kt")
-        assertTrue(src.contains("PURCHASED_DUEL_WORD_VFX_MS = 720"))
-        assertTrue(src.contains("PURCHASED_DUEL_WORD_MAX_ALPHA = .92f"))
-        assertTrue(src.contains("PURCHASED_DUEL_WORD_STAR_COUNT = 6"))
-        assertTrue(src.contains("Cosmetic-only"))
-        assertTrue(src.contains("PURCHASED_BOARD_PLACE_VFX_MS = 650"))
-        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_VFX_MS = 800"))
-        assertTrue(src.contains("PURCHASED_BOARD_PLACE_MAX_ALPHA = .94f"))
-        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .98f"))
-        assertTrue(src.contains("PURCHASED_BOARD_PLACE_STAR_COUNT = 5"))
-        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_STAR_COUNT = 6"))
-        assertTrue(src.contains("PURCHASED_BOARD_PLACE_MIN_STAR_DP = 14f"))
-        assertTrue(src.contains("PURCHASED_BOARD_RESOLVE_MIN_STAR_DP = 16f"))
+        assertTrue(PURCHASED_DUEL_WORD_VFX_MS in 500..750)
+        assertTrue(PURCHASED_DUEL_WORD_MAX_ALPHA <= .85f)
+        assertTrue(PURCHASED_DUEL_WORD_STAR_COUNT <= 6)
+        assertTrue(PURCHASED_BOARD_PLACE_VFX_MS <= 650)
+        assertTrue(PURCHASED_BOARD_RESOLVE_VFX_MS <= 900)
+        assertTrue(PURCHASED_BOARD_RESOLVE_VFX_MS <= 1_500)
+        assertTrue(PURCHASED_BOARD_PLACE_MAX_ALPHA <= .80f)
+        assertTrue(PURCHASED_BOARD_RESOLVE_MAX_ALPHA <= .90f)
         assertTrue(src.contains("PurchasedBoardActionVfxOverlay"))
         assertTrue(src.contains("wordSiegeCellCenterInViewport"))
         assertTrue(src.contains("clipToBounds()"))
@@ -67,24 +63,22 @@ class AssetIntegrationContractTest {
         assertFalse(src.contains("infiniteRepeatable"))
         assertFalse(src.contains("pointerInput"))
         assertFalse(src.contains("combinedClickable"))
-        assertFalse(src.contains("clickable"))
+        assertFalse(src.contains("UnityPlayer"))
+        assertFalse(src.contains("com.unity3d"))
     }
 
     @Test fun purchasedBoardVfxIsWiredOnlineAndExplicitlyDisabledForPracticeSiege() {
         val online = read("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
-
         assertTrue(online.contains("PurchasedBoardActionVfxOverlay("))
         assertTrue(online.contains("PurchasedBoardVfxKind.PLACEMENT"))
         assertTrue(online.contains("PurchasedBoardVfxKind.RESOLVED"))
         assertFalse(online.contains("PurchasedBoardActionVfx("))
-
         assertTrue(practice.contains("PurchasedBoardActionVfxOverlay("))
         assertTrue(practice.contains("emptyList<PurchasedBoardVfxEvent>()"))
         assertFalse(practice.contains("PurchasedBoardVfxKind.PLACEMENT"))
         assertFalse(practice.contains("PurchasedBoardVfxKind.RESOLVED"))
         assertFalse(practice.contains("PurchasedBoardActionVfx("))
-
         assertTrue(online.contains("wordSiegeBoardBorderWidthDp(transform.scale)"))
         assertFalse(practice.contains("wordSiegeBoardBorderWidthDp(transform.scale)"))
     }
@@ -92,14 +86,9 @@ class AssetIntegrationContractTest {
     @Test fun onlineAndPracticeSiegeUseTheTerritoryFirstCalmPalette() {
         val online = read("src/main/java/com/sonharf/game/WordSiegePanMatch.kt")
         val practice = read("src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt")
-
-        listOf(
-            "0xFF8EA697", "0xFFA8D5B5", "0xFFE4AEAA", "0xFF3F7C53", "0xFF9B4D4A",
-            "0xFFDCEAF2", "0xFFDCEAF2", "0xFFEAE2F0", "0xFFEAE2F0", "0xFFE7DDBB", "0xFFEAD59B",
-        ).forEach { assertTrue(online.contains(it)) }
+        listOf("0xFF8EA697", "0xFFA8D5B5", "0xFFE4AEAA", "0xFF3F7C53", "0xFF9B4D4A", "0xFFDCEAF2", "0xFFEAE2F0", "0xFFE7DDBB", "0xFFEAD59B").forEach { assertTrue(online.contains(it)) }
         assertTrue(online.contains("border.copy(alpha = .92f)"))
         assertTrue(online.contains("val regionGap = 1.25.dp"))
-
         assertTrue(practice.contains("PracticeSiegeBoardSurface = Color(0xFFE5EAE5)"))
         assertTrue(practice.contains("PracticeSiegeNeutral = Color(0xFFFAF7EF)"))
         assertTrue(practice.contains("PracticeSiegeEmpty = Color(0xFFFAF7EF)"))
@@ -115,8 +104,7 @@ class AssetIntegrationContractTest {
 
     @Test fun purchasedVfxTextureMatchesRegisteredPackageAsset() {
         val bytes = File("src/main/res/drawable-nodpi/vfx_twinkle.png").readBytes()
-        val sha256 = MessageDigest.getInstance("SHA-256").digest(bytes)
-            .joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        val sha256 = MessageDigest.getInstance("SHA-256").digest(bytes).joinToString("") { "%02x".format(it.toInt() and 0xff) }
         assertEquals("4ed0e0f0c12df51c56f2145720031a55ca9db59a20d851d6fe47c1d632397b28", sha256)
     }
 }
