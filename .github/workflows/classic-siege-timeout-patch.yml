@@ -1,0 +1,33 @@
+name: Classic Siege Timeout Patch
+
+on:
+  push:
+    branches: [ fix/classic-siege-timeout-refresh-20260920 ]
+    paths:
+      - 'tools/classic-siege-timeout-trigger.txt'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/classic-siege-timeout-refresh-20260920
+          fetch-depth: 0
+      - name: Apply exact timeout poll patch
+        run: python tools/apply_classic_siege_timeout_refresh.py
+      - name: Validate patch
+        run: |
+          git diff --check
+          grep -n 'refreshWordSiegeGame(gameId)' app/src/main/java/com/sonharf/game/WordSiegeExperience.kt
+          ! grep -n 'runCatching { backend.getWordSiegeGame(gameId) }' app/src/main/java/com/sonharf/game/WordSiegeExperience.kt
+      - name: Commit source change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/WordSiegeExperience.kt
+          git commit -m "Refresh classic Siege timeouts from server [skip ci]"
+          git push origin HEAD:fix/classic-siege-timeout-refresh-20260920
