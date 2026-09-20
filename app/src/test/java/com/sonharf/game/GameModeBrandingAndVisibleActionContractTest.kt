@@ -13,10 +13,7 @@ class GameModeBrandingAndVisibleActionContractTest {
         val brand = projectFile("app/src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeDrawable = projectFile("app/src/main/res/drawable/kelime_kusatma_logo_hd.xml")
 
-        assertTrue(
-            home.contains("\"KELİME KUŞATMASI\"") ||
-                home.contains("\"KELİME\\nKUŞATMASI\"")
-        )
+        assertTrue(home.contains("\"KELİME KUŞATMASI\"") || home.contains("\"KELİME\\nKUŞATMASI\""))
         assertTrue(home.contains("onClick = onSiege"))
         assertTrue(home.contains("sh(\"HEMEN OYNA\", \"PLAY NOW\")"))
         assertTrue(home.contains("onClick = onPlay"))
@@ -54,15 +51,18 @@ class GameModeBrandingAndVisibleActionContractTest {
     }
 
     @Test
-    fun purchasedSuccessVfxHasReadableRingAndStillDoesNotCaptureInput() {
+    fun purchasedSuccessVfxHasReadableRestrainedRingAndStillDoesNotCaptureInput() {
         val vfx = projectFile("app/src/main/java/com/sonharf/game/PurchasedVfxOverlay.kt").readText()
         assertTrue(vfx.contains("PurchasedWordSuccessGreen"))
-        assertTrue(vfx.contains("30f + 58f * p"))
+        assertTrue(vfx.contains("25f + 47f * p"))
         assertTrue(vfx.contains("drawCircle("))
         assertTrue(vfx.contains("R.drawable.vfx_twinkle"))
+        assertTrue(vfx.contains("PURCHASED_DUEL_WORD_VFX_MS = 620"))
+        assertTrue(vfx.contains("PURCHASED_DUEL_WORD_MAX_ALPHA = .78f"))
         assertFalse(vfx.contains("pointerInput"))
         assertFalse(vfx.contains("clickable"))
         assertFalse(vfx.contains("infiniteRepeatable"))
+        assertFalse(vfx.contains("UnityPlayer"))
     }
 
     private fun projectFile(path: String): File =

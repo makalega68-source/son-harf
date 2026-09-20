@@ -1,14 +1,7 @@
 package com.sonharf.game
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -16,105 +9,64 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-/** Harf Yolu'na özel mavi-turkuaz-beyaz-turuncu-eflatun hareketli arka plan. */
+/**
+ * Harf Yolu background aligned with the shared mature word-game design system.
+ * It is intentionally static: gameplay keeps the visual priority and low/mid devices avoid a
+ * permanent animation cost. Decorative tiles stay at the edges and never carry embedded text.
+ */
 @Composable
 internal fun HarfYoluBackdrop(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "harfYoluBackdrop")
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 6400, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "harfYoluBackdropPhase",
-    )
-    val pulse by transition.animateFloat(
-        initialValue = .72f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2600, easing = LinearEasing),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "harfYoluBackdropPulse",
-    )
-
     Canvas(modifier = modifier) {
-        val blue = Color(0xFF278DC3)
-        val turquoise = Color(0xFF22BFC4)
-        val orange = Color(0xFFFF9F43)
-        val purple = Color(0xFF8B5CF6)
-        val paleBlue = Color(0xFFEAF8FC)
+        val paper = Color(0xFFF6F4EE)
+        val surface = Color(0xFFFFFEFA)
+        val sage = Color(0xFF77977F)
+        val forest = Color(0xFF285943)
+        val mistBlue = Color(0xFF6F8794)
+        val gold = Color(0xFFB58A39)
 
         drawRect(
             brush = Brush.verticalGradient(
-                colors = listOf(
-                    Color.White,
-                    Color(0xFFF7FCFE),
-                    paleBlue.copy(alpha = .80f),
-                    Color(0xFFFDF9FF),
-                    Color.White,
-                ),
+                listOf(surface, paper, Color(0xFFF0F2EC)),
             ),
         )
 
-        val driftX = size.width * (.020f * phase)
-        val driftY = size.height * (.016f * phase)
-
-        fun glow(color: Color, x: Float, y: Float, radius: Float, alpha: Float) {
-            val center = Offset(size.width * x, size.height * y)
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(color.copy(alpha = alpha * pulse), Color.Transparent),
-                    center = center,
-                    radius = size.minDimension * radius,
-                ),
-                radius = size.minDimension * radius,
-                center = center,
-            )
-        }
-
-        glow(blue, .93f + .015f * phase, .14f + .010f * phase, .58f, .17f)
-        glow(turquoise, .05f - .012f * phase, .74f - .010f * phase, .64f, .18f)
-        glow(orange, .04f + .010f * phase, .34f, .34f, .10f)
-        glow(purple, .96f - .010f * phase, .80f, .40f, .12f)
-        glow(Color.White, .50f, .47f, .54f, .95f)
-
-        data class Tile(val x: Float, val y: Float, val scale: Float, val color: Color)
-        val tiles = listOf(
-            Tile(.03f, .11f, .060f, blue),
-            Tile(.13f, .055f, .035f, purple),
-            Tile(.94f, .09f, .056f, turquoise),
-            Tile(.985f, .25f, .035f, orange),
-            Tile(.02f, .34f, .030f, orange),
-            Tile(.97f, .46f, .034f, purple),
-            Tile(.035f, .67f, .052f, turquoise),
-            Tile(.96f, .72f, .046f, blue),
-            Tile(.10f, .89f, .034f, purple),
-            Tile(.88f, .93f, .040f, orange),
-            Tile(.02f, .93f, .026f, turquoise),
-            Tile(.98f, .60f, .024f, orange),
+        // Quiet edge glows separate the puzzle from the app shell without an arcade look.
+        val topRight = Offset(size.width * .94f, size.height * .12f)
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(mistBlue.copy(alpha = .09f), Color.Transparent),
+                center = topRight,
+                radius = size.minDimension * .46f,
+            ),
+            radius = size.minDimension * .46f,
+            center = topRight,
+        )
+        val bottomLeft = Offset(size.width * .06f, size.height * .82f)
+        drawCircle(
+            brush = Brush.radialGradient(
+                colors = listOf(sage.copy(alpha = .10f), Color.Transparent),
+                center = bottomLeft,
+                radius = size.minDimension * .52f,
+            ),
+            radius = size.minDimension * .52f,
+            center = bottomLeft,
         )
 
-        tiles.forEachIndexed { index, tile ->
-            val side = size.minDimension * tile.scale
-            val motion = if (index % 2 == 0) phase else 1f - phase
-            val center = Offset(
-                x = size.width * tile.x + (motion - .5f) * side * .34f + if (index % 3 == 0) driftX * .15f else 0f,
-                y = size.height * tile.y + (motion - .5f) * side * .46f + if (index % 3 == 1) driftY * .18f else 0f,
-            )
+        data class EdgeTile(val x: Float, val y: Float, val side: Float, val color: Color, val alpha: Float)
+        listOf(
+            EdgeTile(.035f, .10f, 13f, forest, .10f),
+            EdgeTile(.095f, .055f, 8f, sage, .10f),
+            EdgeTile(.955f, .16f, 11f, mistBlue, .10f),
+            EdgeTile(.975f, .42f, 8f, gold, .08f),
+            EdgeTile(.025f, .58f, 10f, sage, .08f),
+            EdgeTile(.935f, .78f, 12f, forest, .08f),
+            EdgeTile(.085f, .93f, 8f, gold, .07f),
+        ).forEach { tile ->
             drawRoundRect(
-                color = tile.color.copy(alpha = (if (index < 4) .16f else .11f) * pulse),
-                topLeft = Offset(center.x - side / 2f, center.y - side / 2f),
-                size = Size(side, side),
-                cornerRadius = CornerRadius(side * .25f, side * .25f),
-            )
-            val inset = side * .20f
-            drawRoundRect(
-                color = Color.White.copy(alpha = .52f),
-                topLeft = Offset(center.x - side / 2f + inset, center.y - side / 2f + inset),
-                size = Size(side - inset * 2f, side - inset * 2f),
-                cornerRadius = CornerRadius(side * .14f, side * .14f),
+                color = tile.color.copy(alpha = tile.alpha),
+                topLeft = Offset(size.width * tile.x - tile.side / 2f, size.height * tile.y - tile.side / 2f),
+                size = Size(tile.side, tile.side),
+                cornerRadius = CornerRadius(tile.side * .22f, tile.side * .22f),
             )
         }
     }

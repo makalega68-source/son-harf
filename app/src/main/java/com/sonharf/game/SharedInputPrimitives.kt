@@ -14,7 +14,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Generic keyboard retained for independent game modes; no classic Son Harf duel logic lives here. */
+/**
+ * Shared word-game keyboard for Son Harf / Harf Yolu and independent word inputs.
+ * It intentionally contains only letters, backspace and the game action. System-keyboard
+ * controls (?123, emoji, mic, clipboard, language, punctuation and suggestions) are excluded.
+ * Purchased keyboard skins only affect presentation; geometry and available actions stay fixed.
+ */
 @Composable
 internal fun EmbeddedWordKeyboard(
     value: String,
@@ -25,6 +30,9 @@ internal fun EmbeddedWordKeyboard(
     onValueChange: (String) -> Unit,
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
+    submitLabel: String? = null,
+    keySound: () -> Unit = { SonHarfSoundFx.typingClick() },
+    actionSound: () -> Unit = { SonHarfSoundFx.tap() },
 ) {
     val palette = SonHarfCosmetics.keyboardPalette
     val rows = if (language.lowercase() == "en") {
@@ -40,15 +48,17 @@ internal fun EmbeddedWordKeyboard(
             listOf("Z","X","C","V","B","N","M","Ö","Ç"),
         )
     }
+    val actionText = submitLabel ?: if (maxLength == 5) sh("ONAYLA", "CONFIRM") else sh("GÖNDER", "SEND")
 
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = palette.background,
-        shape = RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp),
-        border = BorderStroke(1.dp, palette.border),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        border = BorderStroke(1.dp, palette.border.copy(alpha = .78f)),
+        shadowElevation = 2.dp,
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 7.dp),
             verticalArrangement = Arrangement.spacedBy(5.dp),
         ) {
             rows.forEachIndexed { index, row ->
@@ -65,8 +75,9 @@ internal fun EmbeddedWordKeyboard(
                             label = key,
                             enabled = enabled && value.length < maxLength,
                             modifier = Modifier.weight(1f),
+                            palette = palette,
                             onClick = {
-                                SonHarfSoundFx.typingClick()
+                                keySound()
                                 onValueChange((value + key).take(maxLength))
                             },
                         )
@@ -82,29 +93,21 @@ internal fun EmbeddedWordKeyboard(
                     label = "⌫",
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     alt = true,
                     onClick = {
-                        SonHarfSoundFx.tap()
+                        actionSound()
                         onValueChange(value.dropLast(1))
                     },
                 )
                 SharedKeyboardKeyButton(
-                    label = "TEMİZLE",
-                    enabled = enabled && value.isNotEmpty(),
-                    modifier = Modifier.weight(1.35f),
-                    alt = true,
-                    onClick = {
-                        SonHarfSoundFx.tap()
-                        onValueChange("")
-                    },
-                )
-                SharedKeyboardKeyButton(
-                    label = "GÖNDER  ➤",
+                    label = "$actionText  →",
                     enabled = submitEnabled && value.isNotBlank(),
-                    modifier = Modifier.weight(2.15f),
+                    modifier = Modifier.weight(3.1f),
+                    palette = palette,
                     action = true,
                     onClick = {
-                        SonHarfSoundFx.tap()
+                        actionSound()
                         onSubmit()
                     },
                 )
@@ -139,6 +142,7 @@ internal fun EmbeddedNumberKeyboard(
                             label = key,
                             enabled = enabled,
                             modifier = Modifier.weight(1f),
+                            palette = palette,
                             onClick = {
                                 SonHarfSoundFx.typingClick()
                                 onValueChange((value + key).take(12))
@@ -152,6 +156,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = if (value.contains(",") || value.contains(".")) "−" else ",",
                     enabled = enabled,
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     alt = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -165,6 +170,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = "0",
                     enabled = enabled,
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     onClick = {
                         SonHarfSoundFx.typingClick()
                         onValueChange((value + "0").take(12))
@@ -174,6 +180,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = "⌫",
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     alt = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -184,6 +191,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = "✓",
                     enabled = enabled && value.replace(',', '.').toDoubleOrNull() != null,
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     action = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -200,37 +208,43 @@ private fun SharedKeyboardKeyButton(
     label: String,
     enabled: Boolean,
     modifier: Modifier,
+    palette: WordKeyboardPalette,
     alt: Boolean = false,
     action: Boolean = false,
     onClick: () -> Unit,
 ) {
-    val palette = SonHarfCosmetics.keyboardPalette
+    val keyBackground = when {
+        action -> palette.action
+        alt -> palette.keyAlt
+        else -> palette.key
+    }
+    val keyText = if (action) palette.actionText else palette.text
+    val keyBorder = when {
+        action -> palette.action.copy(alpha = .86f)
+        alt -> palette.secondaryBorder.copy(alpha = .62f)
+        else -> palette.border
+    }
+
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(38.dp),
-        contentPadding = PaddingValues(0.dp),
-        shape = RoundedCornerShape(11.dp),
+        modifier = modifier.height(42.dp),
+        contentPadding = PaddingValues(horizontal = 1.dp, vertical = 0.dp),
+        shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = when {
-                action -> palette.action
-                alt -> palette.keyAlt
-                else -> palette.key
-            },
-            contentColor = if (action) palette.actionText else palette.text,
-            disabledContainerColor = if (alt) palette.keyAlt.copy(alpha = .55f) else palette.key.copy(alpha = .55f),
+            containerColor = keyBackground,
+            contentColor = keyText,
+            disabledContainerColor = palette.keyAlt.copy(alpha = .55f),
             disabledContentColor = palette.text.copy(alpha = .42f),
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp),
-        border = BorderStroke(
-            1.dp,
-            when {
-                action -> palette.action.copy(alpha = .82f)
-                alt -> palette.secondaryBorder.copy(alpha = .55f)
-                else -> palette.border
-            },
-        ),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp, pressedElevation = 0.dp),
+        border = BorderStroke(1.dp, keyBorder),
     ) {
-        Text(label, fontSize = if (label.length > 4) 10.sp else 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(
+            label,
+            fontSize = if (label.length > 5) 10.sp else 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+        )
     }
 }

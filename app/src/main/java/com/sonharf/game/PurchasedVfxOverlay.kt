@@ -27,21 +27,31 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
-internal const val PURCHASED_DUEL_WORD_VFX_MS = 720
-internal const val PURCHASED_DUEL_WORD_MAX_ALPHA = .92f
-internal const val PURCHASED_DUEL_WORD_STAR_COUNT = 6
-internal const val PURCHASED_DUEL_WORD_CENTER_STAR_DP = 34f
+/**
+ * Native Android/Compose adaptation of the purchased UI & interaction VFX bundle.
+ *
+ * The source package was authored for Unity; no Unity runtime or dependency is used here.
+ * Effects are intentionally short and sparse so feedback feels premium rather than arcade-like.
+ */
+internal const val PURCHASED_DUEL_WORD_VFX_MS = 620
+internal const val PURCHASED_DUEL_WORD_MAX_ALPHA = .78f
+internal const val PURCHASED_DUEL_WORD_STAR_COUNT = 5
+internal const val PURCHASED_DUEL_WORD_CENTER_STAR_DP = 27f
 
-internal const val PURCHASED_BOARD_PLACE_VFX_MS = 650
-internal const val PURCHASED_BOARD_RESOLVE_VFX_MS = 800
-internal const val PURCHASED_BOARD_PLACE_MAX_ALPHA = .94f
-internal const val PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .98f
-internal const val PURCHASED_BOARD_PLACE_STAR_COUNT = 5
-internal const val PURCHASED_BOARD_RESOLVE_STAR_COUNT = 6
-internal const val PURCHASED_BOARD_PLACE_MIN_STAR_DP = 14f
-internal const val PURCHASED_BOARD_RESOLVE_MIN_STAR_DP = 16f
+internal const val PURCHASED_BOARD_PLACE_VFX_MS = 520
+internal const val PURCHASED_BOARD_RESOLVE_VFX_MS = 760
+internal const val PURCHASED_BOARD_PLACE_MAX_ALPHA = .72f
+internal const val PURCHASED_BOARD_RESOLVE_MAX_ALPHA = .82f
+internal const val PURCHASED_BOARD_PLACE_STAR_COUNT = 4
+internal const val PURCHASED_BOARD_RESOLVE_STAR_COUNT = 5
+internal const val PURCHASED_BOARD_PLACE_MIN_STAR_DP = 11f
+internal const val PURCHASED_BOARD_RESOLVE_MIN_STAR_DP = 13f
+
+internal const val PURCHASED_REWARD_VFX_MS = 1050
+internal const val PURCHASED_WIN_VFX_MS = 1250
 
 internal enum class PurchasedBoardVfxKind { PLACEMENT, RESOLVED }
+internal enum class PurchasedMomentVfxKind { REWARD, LEVEL_UP, LEAGUE_UP, PRO, WIN }
 
 internal data class PurchasedBoardVfxEvent(
     val eventKey: String,
@@ -50,29 +60,31 @@ internal data class PurchasedBoardVfxEvent(
 )
 
 private val PurchasedDuelWordVfxDirections = listOf(
-    -0.86f to -0.38f,
-    0.86f to -0.44f,
-    -0.68f to 0.62f,
-    0.68f to 0.66f,
+    -0.82f to -0.34f,
+    0.82f to -0.40f,
+    -0.58f to 0.64f,
+    0.58f to 0.66f,
     0.00f to -1.00f,
-    0.02f to 1.00f,
 )
 
 private val PurchasedBoardVfxDirections = listOf(
-    -0.90f to -0.62f,
-    0.90f to -0.52f,
-    -0.72f to 0.72f,
-    0.72f to 0.76f,
-    0.05f to -1.00f,
-    0.02f to 1.00f,
+    -0.88f to -0.56f,
+    0.88f to -0.50f,
+    -0.64f to 0.70f,
+    0.64f to 0.72f,
+    0.03f to -1.00f,
 )
-private val PurchasedPlacementCyan = Color(0xFF35D6FF)
-private val PurchasedWordSuccessGreen = Color(0xFF4B765D)
+
+private val PurchasedPlacementTint = Color(0xFF6F8794)
+private val PurchasedWordSuccessGreen = Color(0xFF3F7C53)
+private val PurchasedResolvedGold = Color(0xFFB58A39)
+private val PurchasedRewardGold = Color(0xFFC09A52)
+private val PurchasedLeagueBlue = Color(0xFF6F8794)
+private val PurchasedProGold = Color(0xFFB58A39)
 
 /**
- * Cosmetic-only, bounded Compose adaptation of a purchased Eric Wang VFX texture.
- * The one-shot ring makes successful word feedback clearly readable without turning it into a
- * full-screen celebration or a persistent idle effect.
+ * Correct-word / accepted-move feedback used by Son Harf.
+ * A compact ring + a handful of particles; never a full-screen confetti shower.
  */
 @Composable
 internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier) {
@@ -83,29 +95,29 @@ internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier
         progress.animateTo(1f, tween(PURCHASED_DUEL_WORD_VFX_MS))
     }
     val p = progress.value
-    val envelope = if (p < .16f) p / .16f else ((1f - p) / .84f).coerceIn(0f, 1f)
+    val envelope = if (p < .18f) p / .18f else ((1f - p) / .82f).coerceIn(0f, 1f)
     val alpha = envelope * PURCHASED_DUEL_WORD_MAX_ALPHA
 
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Canvas(Modifier.fillMaxSize()) {
-            val ringRadiusPx = with(density) { (30f + 58f * p).dp.toPx() }
-            val innerRadiusPx = with(density) { (20f + 38f * p).dp.toPx() }
-            val glowStrokePx = with(density) { 11.dp.toPx() }
-            val ringStrokePx = with(density) { 4.dp.toPx() }
+            val ringRadiusPx = with(density) { (25f + 47f * p).dp.toPx() }
+            val innerRadiusPx = with(density) { (17f + 30f * p).dp.toPx() }
+            val glowStrokePx = with(density) { 8.dp.toPx() }
+            val ringStrokePx = with(density) { 3.dp.toPx() }
             drawCircle(
-                color = PurchasedWordSuccessGreen.copy(alpha = alpha * .22f),
+                color = PurchasedWordSuccessGreen.copy(alpha = alpha * .16f),
                 radius = ringRadiusPx,
                 center = center,
                 style = Stroke(width = glowStrokePx),
             )
             drawCircle(
-                color = PurchasedWordSuccessGreen.copy(alpha = alpha * .88f),
+                color = PurchasedWordSuccessGreen.copy(alpha = alpha * .74f),
                 radius = ringRadiusPx,
                 center = center,
                 style = Stroke(width = ringStrokePx),
             )
             drawCircle(
-                color = PurchasedWordSuccessGreen.copy(alpha = alpha * .44f),
+                color = PurchasedWordSuccessGreen.copy(alpha = alpha * .28f),
                 radius = innerRadiusPx,
                 center = center,
                 style = Stroke(width = ringStrokePx),
@@ -114,8 +126,8 @@ internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier
 
         repeat(PURCHASED_DUEL_WORD_STAR_COUNT) { index ->
             val (xDirection, yDirection) = PurchasedDuelWordVfxDirections[index]
-            val distance = 36f + 56f * p
-            val starSize = 17f + (index % 2) * 3f + p * 4f
+            val distance = 29f + 43f * p
+            val starSize = 13f + (index % 2) * 2f + p * 3f
             Image(
                 painter = painterResource(R.drawable.vfx_twinkle),
                 contentDescription = null,
@@ -123,7 +135,7 @@ internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier
                 modifier = Modifier
                     .offset((xDirection * distance).dp, (yDirection * distance).dp)
                     .size(starSize.dp)
-                    .rotate(index * 43f + p * 92f)
+                    .rotate(index * 37f + p * 72f)
                     .alpha(alpha),
             )
         }
@@ -132,17 +144,17 @@ internal fun PurchasedVictoryVfx(eventKey: String, modifier: Modifier = Modifier
             contentDescription = null,
             colorFilter = ColorFilter.tint(PurchasedWordSuccessGreen),
             modifier = Modifier
-                .offset(y = (-42).dp)
+                .offset(y = (-35).dp)
                 .size(PURCHASED_DUEL_WORD_CENTER_STAR_DP.dp)
-                .rotate(p * 90f)
+                .rotate(p * 70f)
                 .alpha(alpha),
         )
     }
 }
 
 /**
- * Input-transparent screen-space overlay for board action feedback.
- * The overlay is clipped only at the board viewport, while event centers follow board pan/scale.
+ * Input-transparent board overlay. Placement is a muted blue selection pulse; resolved moves use
+ * restrained gold to emphasize capture/score resolution. Pan and zoom only move the center.
  */
 @Composable
 internal fun PurchasedBoardActionVfxOverlay(
@@ -165,7 +177,7 @@ internal fun PurchasedBoardActionVfxOverlay(
     }
 }
 
-/** One-shot action effect. Pan/recomposition only updates centerPx and never restarts progress. */
+/** One-shot action effect. Recomposition never restarts the animation. */
 @Composable
 private fun PurchasedBoardActionVfx(
     eventKey: String,
@@ -184,28 +196,24 @@ private fun PurchasedBoardActionVfx(
     }
 
     val p = progress.value
-    val envelope = if (p < .14f) p / .14f else ((1f - p) / .86f).coerceIn(0f, 1f)
-    val tint = if (kind == PurchasedBoardVfxKind.PLACEMENT) PurchasedPlacementCyan else MainUi.Gold
+    val envelope = if (p < .16f) p / .16f else ((1f - p) / .84f).coerceIn(0f, 1f)
+    val tint = if (kind == PurchasedBoardVfxKind.PLACEMENT) PurchasedPlacementTint else PurchasedResolvedGold
     val maxAlpha = if (kind == PurchasedBoardVfxKind.PLACEMENT) PURCHASED_BOARD_PLACE_MAX_ALPHA else PURCHASED_BOARD_RESOLVE_MAX_ALPHA
     val count = if (kind == PurchasedBoardVfxKind.PLACEMENT) PURCHASED_BOARD_PLACE_STAR_COUNT else PURCHASED_BOARD_RESOLVE_STAR_COUNT
     val minStarDp = if (kind == PurchasedBoardVfxKind.PLACEMENT) PURCHASED_BOARD_PLACE_MIN_STAR_DP else PURCHASED_BOARD_RESOLVE_MIN_STAR_DP
-    val ringStartDp = if (kind == PurchasedBoardVfxKind.PLACEMENT) 16f else 20f
-    val ringTravelDp = if (kind == PurchasedBoardVfxKind.PLACEMENT) 26f else 32f
-    val particleStartDp = if (kind == PurchasedBoardVfxKind.PLACEMENT) 15f else 18f
-    val particleTravelDp = if (kind == PurchasedBoardVfxKind.PLACEMENT) 24f else 29f
+    val ringStartDp = if (kind == PurchasedBoardVfxKind.PLACEMENT) 14f else 18f
+    val ringTravelDp = if (kind == PurchasedBoardVfxKind.PLACEMENT) 20f else 27f
+    val particleStartDp = if (kind == PurchasedBoardVfxKind.PLACEMENT) 13f else 16f
+    val particleTravelDp = if (kind == PurchasedBoardVfxKind.PLACEMENT) 18f else 24f
     val density = LocalDensity.current
 
     Box(modifier.fillMaxSize()) {
         Canvas(Modifier.matchParentSize()) {
             val ringRadiusPx = with(density) { (ringStartDp + ringTravelDp * p).dp.toPx() }
-            val ringStrokePx = with(density) {
-                (if (kind == PurchasedBoardVfxKind.PLACEMENT) 3.2f else 3.5f).dp.toPx()
-            }
-            val glowStrokePx = with(density) {
-                (if (kind == PurchasedBoardVfxKind.PLACEMENT) 7f else 8f).dp.toPx()
-            }
+            val ringStrokePx = with(density) { (if (kind == PurchasedBoardVfxKind.PLACEMENT) 2.4f else 3f).dp.toPx() }
+            val glowStrokePx = with(density) { (if (kind == PurchasedBoardVfxKind.PLACEMENT) 5f else 7f).dp.toPx() }
             drawCircle(
-                color = tint.copy(alpha = envelope * maxAlpha * .26f),
+                color = tint.copy(alpha = envelope * maxAlpha * .18f),
                 radius = ringRadiusPx,
                 center = centerPx,
                 style = Stroke(width = glowStrokePx),
@@ -220,7 +228,7 @@ private fun PurchasedBoardActionVfx(
 
         repeat(count) { index ->
             val (xDirection, yDirection) = PurchasedBoardVfxDirections[index]
-            val starDp = minStarDp + p * 9f + (index % 2) * 2.5f
+            val starDp = minStarDp + p * 6f + (index % 2) * 1.5f
             val starPx = with(density) { starDp.dp.toPx() }
             val distancePx = with(density) { (particleStartDp + particleTravelDp * p).dp.toPx() }
             Image(
@@ -235,8 +243,72 @@ private fun PurchasedBoardActionVfx(
                         )
                     }
                     .size(starDp.dp)
-                    .rotate(index * 41f + p * 105f)
+                    .rotate(index * 35f + p * 82f)
                     .alpha(envelope * maxAlpha),
+            )
+        }
+    }
+}
+
+/**
+ * Reusable high-value moment effect for rewards, level/league progression, PRO and match victory.
+ * Callers provide a stable event key so it plays once per server-confirmed event.
+ */
+@Composable
+internal fun PurchasedMomentVfx(
+    eventKey: String,
+    kind: PurchasedMomentVfxKind,
+    modifier: Modifier = Modifier,
+) {
+    val progress = remember(eventKey, kind) { Animatable(0f) }
+    val density = LocalDensity.current
+    val duration = if (kind == PurchasedMomentVfxKind.WIN) PURCHASED_WIN_VFX_MS else PURCHASED_REWARD_VFX_MS
+    val tint = when (kind) {
+        PurchasedMomentVfxKind.REWARD -> PurchasedRewardGold
+        PurchasedMomentVfxKind.LEVEL_UP -> PurchasedWordSuccessGreen
+        PurchasedMomentVfxKind.LEAGUE_UP -> PurchasedLeagueBlue
+        PurchasedMomentVfxKind.PRO -> PurchasedProGold
+        PurchasedMomentVfxKind.WIN -> PurchasedWordSuccessGreen
+    }
+    val particleCount = if (kind == PurchasedMomentVfxKind.WIN) 8 else 6
+
+    LaunchedEffect(eventKey, kind) {
+        progress.snapTo(0f)
+        progress.animateTo(1f, tween(duration))
+    }
+    val p = progress.value
+    val envelope = if (p < .14f) p / .14f else ((1f - p) / .86f).coerceIn(0f, 1f)
+
+    Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.fillMaxSize()) {
+            val radius = with(density) { (42f + 92f * p).dp.toPx() }
+            drawCircle(
+                color = tint.copy(alpha = envelope * .18f),
+                radius = radius,
+                center = center,
+                style = Stroke(with(density) { 10.dp.toPx() }),
+            )
+            drawCircle(
+                color = tint.copy(alpha = envelope * .62f),
+                radius = radius,
+                center = center,
+                style = Stroke(with(density) { 2.5.dp.toPx() }),
+            )
+        }
+        repeat(particleCount) { index ->
+            val angleSlot = index % PurchasedBoardVfxDirections.size
+            val (dx, dy) = PurchasedBoardVfxDirections[angleSlot]
+            val distance = 58f + 86f * p + (index / PurchasedBoardVfxDirections.size) * 12f
+            val size = 14f + (index % 3) * 2f + 5f * (1f - p)
+            Image(
+                painter = painterResource(R.drawable.vfx_twinkle),
+                contentDescription = null,
+                colorFilter = ColorFilter.tint(tint),
+                modifier = Modifier
+                    .offset((dx * distance).dp, (dy * distance).dp)
+                    .size(size.dp)
+                    .rotate(index * 31f + p * 120f)
+                    .alpha(envelope * .82f),
             )
         }
     }

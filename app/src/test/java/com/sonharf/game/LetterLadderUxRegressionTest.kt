@@ -8,18 +8,16 @@ import org.junit.Test
 
 class LetterLadderUxRegressionTest {
     @Test
-    fun harfYoluStaysFixedAlignedAndUsesReliableHinting() {
+    fun harfYoluKeepsFiveMoveEngineButShowsOnlyFourIntermediateRows() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
 
+        assertTrue(source.contains("const val MOVE_COUNT = 5"))
+        assertTrue(source.contains("for (move in 1 until LetterLadderEngine.MOVE_COUNT)"))
+        assertFalse(source.contains("for (move in 1..LetterLadderEngine.MOVE_COUNT)"))
+        assertTrue(source.contains("path.size == LetterLadderEngine.MOVE_COUNT + 1"))
+        assertTrue(source.contains("sh(\"HEDEF\", \"TARGET\")"))
         assertFalse(source.contains("verticalScroll("))
         assertFalse(source.contains("rememberScrollState"))
-        assertFalse(source.contains("number: Int"))
-        assertTrue(source.contains("completionPath("))
-        assertTrue(source.contains("viableNextMoveIndices("))
-        assertTrue(source.contains("Bu hamle çıkmaza götürüyor"))
-        assertTrue(source.contains("turuncu işaretli kutudaki harfi değiştir"))
-        assertTrue(source.contains("compact = true"))
-        assertTrue(source.contains("keySound = { SonHarfSoundFx.puzzleKey() }"))
     }
 
     @Test
@@ -33,82 +31,54 @@ class LetterLadderUxRegressionTest {
         assertTrue(source.contains("enabled = !hintUsed"))
         assertTrue(source.contains("hintedIndex = hintIndex"))
         assertTrue(source.contains("İPUCU 1/1"))
-        assertTrue(source.contains("turuncu işaretli kutudaki harfi değiştir"))
-        assertFalse(source.contains("sarı işaretli"))
+        assertTrue(source.contains("işaretli kutudaki harfi değiştir"))
     }
 
     @Test
-    fun harfYoluShowsOnlyFourIntermediateCubeRows() {
+    fun harfYoluShowsLiveInputAndRetainsUndoDictionaryAndDeadEndGuards() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-
-        assertTrue(source.contains("for (move in 1 until LetterLadderEngine.MOVE_COUNT)"))
-        assertFalse(source.contains("for (move in 1..LetterLadderEngine.MOVE_COUNT)"))
-        assertTrue(source.contains("path.size == LetterLadderEngine.MOVE_COUNT + 1"))
-    }
-
-    @Test
-    fun harfYoluShowsLiveKeyboardInputInTheNextPlayableRow() {
-        val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-        val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
 
         assertTrue(source.contains("activeInput = input.uppercase(locale).takeIf { isActiveEntry }"))
         assertTrue(source.contains("activeInput?.padEnd(LetterLadderEngine.WORD_LENGTH, ' ')"))
-        assertTrue(keyboard.contains("onValueChange((value + key).take(maxLength))"))
+        assertTrue(source.contains("completionPath("))
+        assertTrue(source.contains("viableNextMoveIndices("))
+        assertTrue(source.contains("POSITION_ALREADY_USED"))
+        assertTrue(source.contains("NOT_DICTIONARY"))
+        assertTrue(source.contains("GERİ AL"))
+        assertTrue(source.contains("UNDO"))
     }
 
     @Test
-    fun harfYoluRemovesResetAndShowsNewGameOnlyAfterCompletion() {
-        val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
+    fun sharedWordKeyboardIsAndroidLikeAndContainsOnlyGameRelevantActions() {
+        val keyboardFile = projectFile("app/src/main/java/com/sonharf/game/SharedInputPrimitives.kt").readText()
+        val wordKeyboard = keyboardFile.substringBefore("internal fun EmbeddedNumberKeyboard")
 
-        assertFalse(source.contains("SIFIRLA"))
-        assertFalse(source.contains("RESET"))
-        assertFalse(source.contains("fun resetCurrent()"))
-        assertTrue(source.contains("YENİ OYUN"))
-        assertTrue(source.contains("NEW GAME"))
-        assertTrue(source.contains("if (!completed)"))
-        assertTrue(source.contains("} else {\n                    Button("))
+        assertTrue(wordKeyboard.contains("listOf(\"Q\",\"W\",\"E\",\"R\",\"T\",\"Y\",\"U\",\"I\",\"O\",\"P\",\"Ğ\",\"Ü\")"))
+        assertTrue(wordKeyboard.contains("listOf(\"A\",\"S\",\"D\",\"F\",\"G\",\"H\",\"J\",\"K\",\"L\",\"Ş\",\"İ\")"))
+        assertTrue(wordKeyboard.contains("listOf(\"Z\",\"X\",\"C\",\"V\",\"B\",\"N\",\"M\",\"Ö\",\"Ç\")"))
+        assertTrue(wordKeyboard.contains("label = \"⌫\""))
+        assertTrue(wordKeyboard.contains("sh(\"ONAYLA\", \"CONFIRM\")"))
+        assertTrue(wordKeyboard.contains("sh(\"GÖNDER\", \"SEND\")"))
+        assertFalse(wordKeyboard.contains("label = \"TEMİZLE\""))
+        assertFalse(wordKeyboard.contains("label = \"CLEAR\""))
+        assertFalse(wordKeyboard.contains("label = \",\""))
+        assertFalse(wordKeyboard.contains("label = \"?123\""))
     }
 
     @Test
-    fun harfYoluUsesItsOwnDynamicFiveColorBackdrop() {
+    fun harfYoluUsesCalmStaticBackdropAndDedicatedFeedback() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
         val backdrop = projectFile("app/src/main/java/com/sonharf/game/HarfYoluBackdrop.kt").readText()
-
-        assertTrue(source.contains("HarfYoluBackdrop(Modifier.fillMaxSize())"))
-        assertFalse(source.contains("FirstRunLanguageBackdrop(Modifier.fillMaxSize())"))
-        assertTrue(backdrop.contains("rememberInfiniteTransition"))
-        assertTrue(backdrop.contains("0xFF278DC3"))
-        assertTrue(backdrop.contains("0xFF22BFC4"))
-        assertTrue(backdrop.contains("0xFFFF9F43"))
-        assertTrue(backdrop.contains("0xFF8B5CF6"))
-    }
-
-    @Test
-    fun harfYoluUsesIsolatedFiveColorKeyboardAndQuietDedicatedFeedback() {
-        val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
         val sound = projectFile("app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt").readText()
 
-        assertTrue(keyboard.contains("Harf Yolu'na özel kompakt klavye"))
-        assertTrue(keyboard.contains("HarfYoluKeyboardUi"))
-        assertFalse(keyboard.contains("SonHarfCosmetics.keyboardPalette"))
-        assertTrue(keyboard.contains("0xFF278DC3"))
-        assertTrue(keyboard.contains("0xFF22BFC4"))
-        assertTrue(keyboard.contains("0xFFF2ECFF"))
-        assertTrue(keyboard.contains("keySound()"))
-        assertTrue(keyboard.contains("actionSound()"))
-        assertTrue(keyboard.contains("33.dp"))
+        assertTrue(source.contains("HarfYoluBackdrop(Modifier.fillMaxSize())"))
+        assertFalse(backdrop.contains("rememberInfiniteTransition"))
+        assertTrue(backdrop.contains("0xFFF6F4EE"))
+        assertTrue(backdrop.contains("0xFF285943"))
+        assertTrue(backdrop.contains("0xFF77977F"))
         assertTrue(sound.contains("fun puzzleKey()"))
         assertTrue(sound.contains("fun puzzleError()"))
         assertTrue(sound.contains("fun puzzleHint()"))
-    }
-
-    @Test
-    fun harfYoluKeyboardActionsFollowSelectedLanguage() {
-        val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
-
-        assertTrue(keyboard.contains("val isEnglish = language.equals(\"en\", ignoreCase = true)"))
-        assertTrue(keyboard.contains("label = if (isEnglish) \"CLEAR\" else \"TEMİZLE\""))
-        assertTrue(keyboard.contains("label = if (isEnglish) \"SUBMIT  ➤\" else \"GÖNDER  ➤\""))
     }
 
     private fun projectFile(path: String): File {

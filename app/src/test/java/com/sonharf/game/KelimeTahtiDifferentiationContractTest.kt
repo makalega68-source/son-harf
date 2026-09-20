@@ -25,7 +25,7 @@ class KelimeTahtiDifferentiationContractTest {
         val scoreCard = projectFile("app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt").readText()
         assertTrue(scoreCard.contains("Kelime Puanı"))
         assertTrue(scoreCard.contains("Bölge Puanı"))
-        assertTrue(scoreCard.contains("1 küp = 2 puan"))
+        assertTrue(scoreCard.contains("1 bölge = 2 puan"))
         assertTrue(screen.contains("PracticePlayerAccent = Color(0xFF567A64)"))
         assertTrue(screen.contains("PracticeRivalAccent = Color(0xFF9B4D4A)"))
         assertTrue(board.contains("PracticeSiegeMine = Color(0xFFA8D5B5)"))
