@@ -18,12 +18,10 @@ class WordSiegeVfxVisibilityTest {
             viewportHeightPx = 800f,
             boardWidthPx = boardPx,
         )
-
         assertEquals(360f / 780f, transform.scale, tolerance)
         assertEquals(0f, transform.pan.x, tolerance)
         assertEquals(220f, transform.pan.y, tolerance)
         assertEquals(Offset(180f, 400f), wordSiegeCellCenterInViewport(WordSiegeBoardSpec.CenterIndex, transform, cellPx))
-
         repeat(WordSiegeBoardSpec.CellCount) { index ->
             val center = wordSiegeCellCenterInViewport(index, transform, cellPx)
             assertTrue(center.x in 0f..360f)
@@ -42,13 +40,9 @@ class WordSiegeVfxVisibilityTest {
         )
         val index = WordSiegeBoardSpec.index(6, 9)
         assertEquals(
-            Offset(
-                close.pan.x + (9.5f * cellPx * close.scale),
-                close.pan.y + (6.5f * cellPx * close.scale),
-            ),
+            Offset(close.pan.x + (9.5f * cellPx * close.scale), close.pan.y + (6.5f * cellPx * close.scale)),
             wordSiegeCellCenterInViewport(index, close, cellPx),
         )
-
         val fit = wordSiegeBoardTransform(
             mode = WordSiegeBoardViewportMode.FIT,
             viewportWidthPx = 360f,
@@ -56,10 +50,7 @@ class WordSiegeVfxVisibilityTest {
             boardWidthPx = boardPx,
         )
         assertEquals(
-            Offset(
-                fit.pan.x + (9.5f * cellPx * fit.scale),
-                fit.pan.y + (6.5f * cellPx * fit.scale),
-            ),
+            Offset(fit.pan.x + (9.5f * cellPx * fit.scale), fit.pan.y + (6.5f * cellPx * fit.scale)),
             wordSiegeCellCenterInViewport(index, fit, cellPx),
         )
     }
@@ -70,7 +61,6 @@ class WordSiegeVfxVisibilityTest {
         val fitScale = 360f / boardPx
         val closeBoardDp = wordSiegeBoardBorderWidthDp(closeScale)
         val fitBoardDp = wordSiegeBoardBorderWidthDp(fitScale)
-
         assertEquals(1.3f, closeBoardDp * closeScale, tolerance)
         assertEquals(1.3f, fitBoardDp * fitScale, tolerance)
         assertTrue(closeBoardDp * closeScale >= WORD_SIEGE_MIN_SCREEN_BORDER_DP)
@@ -79,14 +69,14 @@ class WordSiegeVfxVisibilityTest {
     }
 
     @Test
-    fun `action VFX visibility thresholds stay within acceptance ranges`() {
-        assertTrue(PURCHASED_BOARD_PLACE_VFX_MS in 600..700)
-        assertTrue(PURCHASED_BOARD_RESOLVE_VFX_MS in 750..850)
-        assertTrue(PURCHASED_BOARD_PLACE_MAX_ALPHA in 0.90f..0.96f)
-        assertTrue(PURCHASED_BOARD_RESOLVE_MAX_ALPHA in 0.95f..1.00f)
-        assertEquals(5, PURCHASED_BOARD_PLACE_STAR_COUNT)
-        assertEquals(6, PURCHASED_BOARD_RESOLVE_STAR_COUNT)
-        assertTrue(PURCHASED_BOARD_PLACE_MIN_STAR_DP in 13f..15f)
-        assertTrue(PURCHASED_BOARD_RESOLVE_MIN_STAR_DP in 15f..17f)
+    fun `action VFX stays visible without arcade intensity`() {
+        assertTrue(PURCHASED_BOARD_PLACE_VFX_MS in 400..650)
+        assertTrue(PURCHASED_BOARD_RESOLVE_VFX_MS in 600..900)
+        assertTrue(PURCHASED_BOARD_PLACE_MAX_ALPHA in 0.60f..0.80f)
+        assertTrue(PURCHASED_BOARD_RESOLVE_MAX_ALPHA in 0.70f..0.90f)
+        assertEquals(4, PURCHASED_BOARD_PLACE_STAR_COUNT)
+        assertEquals(5, PURCHASED_BOARD_RESOLVE_STAR_COUNT)
+        assertTrue(PURCHASED_BOARD_PLACE_MIN_STAR_DP in 10f..12f)
+        assertTrue(PURCHASED_BOARD_RESOLVE_MIN_STAR_DP in 12f..14f)
     }
 }
