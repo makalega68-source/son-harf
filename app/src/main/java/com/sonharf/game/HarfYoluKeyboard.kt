@@ -52,7 +52,8 @@ internal fun EmbeddedWordKeyboard(
     keySound: () -> Unit,
     actionSound: () -> Unit,
 ) {
-    val rows = if (language.lowercase() == "en") {
+    val isEnglish = language.equals("en", ignoreCase = true)
+    val rows = if (isEnglish) {
         listOf(
             listOf("Q","W","E","R","T","Y","U","I","O","P"),
             listOf("A","S","D","F","G","H","J","K","L"),
@@ -121,7 +122,7 @@ internal fun EmbeddedWordKeyboard(
                     },
                 )
                 HarfYoluKeyButton(
-                    label = "TEMİZLE",
+                    label = if (isEnglish) "CLEAR" else "TEMİZLE",
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1.35f),
                     height = keyHeight,
@@ -132,7 +133,7 @@ internal fun EmbeddedWordKeyboard(
                     },
                 )
                 HarfYoluKeyButton(
-                    label = "GÖNDER  ➤",
+                    label = if (isEnglish) "SUBMIT  ➤" else "GÖNDER  ➤",
                     enabled = submitEnabled && value.isNotBlank(),
                     modifier = Modifier.weight(2.15f),
                     height = keyHeight,

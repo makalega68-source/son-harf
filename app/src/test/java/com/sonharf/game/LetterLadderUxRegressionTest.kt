@@ -102,6 +102,15 @@ class LetterLadderUxRegressionTest {
         assertTrue(sound.contains("fun puzzleHint()"))
     }
 
+    @Test
+    fun harfYoluKeyboardActionsFollowSelectedLanguage() {
+        val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
+
+        assertTrue(keyboard.contains("val isEnglish = language.equals(\"en\", ignoreCase = true)"))
+        assertTrue(keyboard.contains("label = if (isEnglish) \"CLEAR\" else \"TEMİZLE\""))
+        assertTrue(keyboard.contains("label = if (isEnglish) \"SUBMIT  ➤\" else \"GÖNDER  ➤\""))
+    }
+
     private fun projectFile(path: String): File {
         val candidates = listOf(File(path), File("../$path"))
         val file = candidates.firstOrNull(File::isFile)
