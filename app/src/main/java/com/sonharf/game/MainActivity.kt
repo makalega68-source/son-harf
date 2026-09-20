@@ -47,6 +47,22 @@ private val SonHarfTypography = Typography(
 
 enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
 
+internal fun isPasswordRecoveryDeepLink(intent: Intent): Boolean {
+    val uri = intent.data ?: return false
+    if (uri.scheme != "sonharf" || uri.host != "auth") return false
+
+    val queryType = uri.getQueryParameter("type")
+    if (queryType.equals("recovery", ignoreCase = true)) return true
+
+    return uri.fragment
+        ?.split('&')
+        ?.any { part ->
+            val key = part.substringBefore('=', missingDelimiterValue = "")
+            val value = part.substringAfter('=', missingDelimiterValue = "")
+            key == "type" && value.equals("recovery", ignoreCase = true)
+        } == true
+}
+
 class MainActivity : ComponentActivity() {
     companion object {
         /**
@@ -57,6 +73,8 @@ class MainActivity : ComponentActivity() {
         private var startupSessionPolicyApplied = false
     }
 
+    private var passwordRecoveryRequested by mutableStateOf(false)
+
     private fun bestEffortStartup(name: String, block: () -> Unit) {
         runCatching(block).onFailure { Log.e("SonHarfStartup", "$name failed; continuing launch", it) }
     }
@@ -64,17 +82,23 @@ class MainActivity : ComponentActivity() {
     private fun handleAuthDeepLink(intent: Intent) {
         val uri = intent.data
         if (!SupabaseProvider.configured || uri?.scheme != "sonharf" || uri.host != "auth") return
+        val recoveryRequested = isPasswordRecoveryDeepLink(intent)
         bestEffortStartup("auth deeplink") {
             SupabaseProvider.client.handleDeeplinks(
                 intent = intent,
                 onSessionSuccess = { session ->
-                    val verifiedEmail = session.user?.email.orEmpty()
-                    if (verifiedEmail.isNotBlank()) {
-                        bestEffortStartup("remember login") {
-                            SonHarfPreferences.setRememberLogin(this, true, verifiedEmail)
+                    if (recoveryRequested) {
+                        // A password-recovery session must never be promoted to a normal remembered login.
+                        runOnUiThread { passwordRecoveryRequested = true }
+                    } else {
+                        val verifiedEmail = session.user?.email.orEmpty()
+                        if (verifiedEmail.isNotBlank()) {
+                            bestEffortStartup("remember login") {
+                                SonHarfPreferences.setRememberLogin(this, true, verifiedEmail)
+                            }
                         }
+                        runOnUiThread { recreate() }
                     }
-                    runOnUiThread { recreate() }
                 },
             )
         }
@@ -159,7 +183,11 @@ class MainActivity : ComponentActivity() {
                 colorScheme = appColors,
                 typography = SonHarfTypography,
             ) {
-                AppStartupGate(clearUnrememberedSession = clearUnrememberedSession)
+                AppStartupGate(
+                    clearUnrememberedSession = clearUnrememberedSession,
+                    passwordRecoveryRequested = passwordRecoveryRequested,
+                    onPasswordRecoveryFinished = { passwordRecoveryRequested = false },
+                )
             }
         }
 
@@ -168,7 +196,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun AppStartupGate(clearUnrememberedSession: Boolean) {
+private fun AppStartupGate(
+    clearUnrememberedSession: Boolean,
+    passwordRecoveryRequested: Boolean,
+    onPasswordRecoveryFinished: () -> Unit,
+) {
     var state by remember { mutableStateOf<StartupState>(StartupState.Loading) }
     LaunchedEffect(clearUnrememberedSession) {
         state = StartupState.Loading
@@ -183,7 +215,13 @@ private fun AppStartupGate(clearUnrememberedSession: Boolean) {
 
     when (state) {
         StartupState.Loading -> StartupLoading()
-        StartupState.Ready -> Box(Modifier.fillMaxSize()) { StableV1App() }
+        StartupState.Ready -> Box(Modifier.fillMaxSize()) {
+            if (passwordRecoveryRequested) {
+                PasswordRecoveryScreen(onFinished = onPasswordRecoveryFinished)
+            } else {
+                StableV1App()
+            }
+        }
     }
 }
 
