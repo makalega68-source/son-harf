@@ -7,7 +7,7 @@ import org.junit.Test
 
 class BrandStartupRegressionTest {
     @Test
-    fun startupBrandUsesCurrentCompatibilityAssetsAndLauncherIcon() {
+    fun startupBrandUsesCurrentProductAssetsAndLauncherIcon() {
         val authGate = File("src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
         val officialLogo = File("src/main/java/com/sonharf/game/SonHarfOfficialLogo.kt").readText()
         val siegeHub = File("src/main/java/com/sonharf/game/WordSiegeExperience.kt").readText()
@@ -34,7 +34,8 @@ class BrandStartupRegressionTest {
         assertTrue(launcherBadge.isFile)
 
         assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
-        assertTrue(authGate.contains("painterResource(R.drawable.son_harf_gold_teal_logo)"))
+        assertTrue(authGate.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
+        assertFalse(authGate.contains("painterResource(R.drawable.son_harf_gold_teal_logo)"))
         assertTrue(siegeHub.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(home.contains("R.drawable.son_harf_app_icon_master"))
         listOf(launcherVector, homeVector, authVector, gameVector).forEach {
