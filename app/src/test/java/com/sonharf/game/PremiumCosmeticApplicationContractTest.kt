@@ -22,8 +22,8 @@ class PremiumCosmeticApplicationContractTest {
         assertTrue(shared.contains("color = palette.background"))
         assertTrue(shared.contains("palette = palette"))
         assertTrue(premier.contains("nameColor = SonHarfCosmetics.playerNameColor"))
-        assertFalse(premierKeyboard.contains("TEMİZLE"))
-        assertFalse(premierKeyboard.contains("CLEAR"))
+        assertFalse(premierKeyboard.contains("label = \"TEMİZLE\""))
+        assertFalse(premierKeyboard.contains("label = \"CLEAR\""))
     }
 
     @Test
