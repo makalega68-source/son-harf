@@ -1,52 +1,64 @@
--- Run as database maintainer after permanent_style_ownership migration.
--- Uses an existing owned frame only inside a transaction. Every fixture change is rolled back.
--- Stops quickly rather than blocking a player's purchase or selection.
+-- Permanent ownership policy after store_runtime_equip_parity.
+-- Store rotation may retire a product from sale without revoking an owned runtime-supported style.
+-- Globally retired runtime classes (profile frames, mascots, unsupported themes) remain blocked.
 begin;
 set local lock_timeout='2s';
 set local statement_timeout='10s';
 
-do $test$
+do $runtime_policy$
 declare
-  owner_id uuid;
-  product_id text;
-  outsider_id uuid := gen_random_uuid();
+  equip_def text;
+  purchase_def text;
+  compact_equip text;
+  compact_purchase text;
 begin
-  select i.user_id, i.item_id into owner_id, product_id
-  from public.user_inventory i join public.shop_items s on s.id=i.item_id
-  where s.kind='profile_frame' and s.id like 'frame_asset_%'
-  limit 1;
-  if owner_id is null then raise exception 'no_owned_frame_fixture'; end if;
-  update public.shop_items set active=false where id=product_id;
-  perform set_config('request.jwt.claim.sub',owner_id::text,true);
-  set local role authenticated;
-  if not exists(select 1 from public.shop_items where id=product_id) then
-    raise exception 'owner_cannot_read_retired_product';
+  if not public.is_runtime_supported_shop_item_v1('theme_dark_arena','game_theme') then
+    raise exception 'legacy_runtime_theme_not_supported';
   end if;
-  perform public.equip_shop_item(product_id);
-  if not exists(select 1 from public.user_equipped_cosmetics where user_id=owner_id and profile_frame_id=product_id) then
-    raise exception 'owner_cannot_equip_retired_product';
+  if not public.is_runtime_supported_shop_item_v1('theme_black','game_theme') then
+    raise exception 'current_black_theme_not_supported';
   end if;
-  perform set_config('request.jwt.claim.sub',outsider_id::text,true);
-  if exists(select 1 from public.shop_items where id=product_id) then
-    raise exception 'retired_product_leaked_to_non_owner';
+  if public.is_runtime_supported_shop_item_v1('frame_round_golden_avatar','profile_frame') then
+    raise exception 'retired_profile_frame_runtime_reopened';
   end if;
-  if exists(select 1 from public.user_inventory where user_id=owner_id) then
-    raise exception 'inventory_leaked_to_non_owner';
+  if public.is_runtime_supported_shop_item_v1('mascot_chibi_wizard','mascot') then
+    raise exception 'retired_mascot_runtime_reopened';
   end if;
-  begin
-    perform public.equip_shop_item(product_id);
-    raise exception 'non_owner_equip_was_not_rejected';
-  exception when others then
-    if sqlerrm <> 'not_owned' then raise; end if;
-  end;
-  reset role;
+
+  select pg_get_functiondef('public.equip_shop_item(text)'::regprocedure) into equip_def;
+  select pg_get_functiondef('public.purchase_shop_item(text)'::regprocedure) into purchase_def;
+  compact_equip := regexp_replace(lower(equip_def),'\s+','','g');
+  compact_purchase := regexp_replace(lower(purchase_def),'\s+','','g');
+
+  if compact_equip like '%whereid=p_item_idandactive=true%' then
+    raise exception 'store_rotation_still_revokes_owned_runtime_style';
+  end if;
+  if compact_equip not like '%frompublic.user_inventorywhereuser_id=v_uidanditem_id=p_item_id%' then
+    raise exception 'equip_ownership_gate_missing';
+  end if;
+  if compact_equip not like '%item_runtime_unavailable%' then
+    raise exception 'equip_runtime_gate_missing';
+  end if;
+
+  if compact_purchase not like '%andactive=true%' then
+    raise exception 'purchase_active_gate_missing';
+  end if;
+  if compact_purchase not like '%item_runtime_unavailable%' then
+    raise exception 'purchase_runtime_gate_missing';
+  end if;
 end
-$test$;
+$runtime_policy$;
 
 do $permissions$
 begin
   if has_function_privilege('anon','public.equip_shop_item(text)','EXECUTE') then
     raise exception 'anonymous_equip_rpc_exposed';
+  end if;
+  if has_function_privilege('anon','public.purchase_shop_item(text)','EXECUTE') then
+    raise exception 'anonymous_purchase_rpc_exposed';
+  end if;
+  if has_function_privilege('authenticated','public.is_runtime_supported_shop_item_v1(text,text)','EXECUTE') then
+    raise exception 'internal_runtime_policy_exposed';
   end if;
 end
 $permissions$;
