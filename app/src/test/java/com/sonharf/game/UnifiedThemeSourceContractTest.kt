@@ -8,8 +8,8 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeShellUsesPremiumThemeWithOneOptionalBlackCosmetic() {
-        val premium = source("PremiumCanvaAppV2.kt")
+    fun activeShellUsesRestrainedPremiumThemeWithOneOptionalBlackCosmetic() {
+        val premium = source("PremiumAdultApp.kt")
         val startup = source("StableV1App.kt")
         val theme = source("SonHarfTheme.kt")
         val cosmetics = source("CosmeticRuntime.kt")
@@ -17,21 +17,25 @@ class UnifiedThemeSourceContractTest {
 
         assertTrue(premium.contains("SonHarfTheme.Background"))
         assertTrue(premium.contains("SonHarfTheme.NavigationSurface"))
-        assertTrue(startup.contains("PremiumCanvaAppV2"))
+        assertTrue(startup.contains("PremiumAdultApp"))
+        assertFalse(startup.contains("PremiumCanvaAppV2(onSignedOut"))
         assertFalse(startup.contains("PremiumUnifiedProApp"))
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
 
         assertTrue(theme.contains("val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive"))
         assertTrue(theme.contains("internal object BlackThemePalette"))
         assertTrue(cosmetics.contains("BLACK_THEME_ID = \"theme_black\""))
-        assertTrue(theme.contains("Color(0xFF2563EB)"))
-        assertTrue(theme.contains("Color(0xFF12B8A6)"))
-        assertTrue(theme.contains("Color(0xFF7C3AED)"))
-        assertTrue(theme.contains("Color(0xFFF97316)"))
+        assertTrue(theme.contains("Color(0xFF365F53)"))
+        assertTrue(theme.contains("Color(0xFF4F7B6E)"))
+        assertTrue(theme.contains("Color(0xFF6E7F8C)"))
+        assertTrue(theme.contains("Color(0xFFAD6A57)"))
+        assertTrue(theme.contains("Color(0xFFF4F2EC)"))
         assertTrue(theme.contains("val NavigationSurface: Color get()"))
         assertTrue(theme.contains("val GameSurface: Color get()"))
         assertTrue(theme.contains("val GameTile: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
+        assertFalse(theme.contains("Color(0xFF7C3AED)"))
+        assertFalse(theme.contains("Color(0xFFF97316)"))
         assertFalse(theme.contains("MonsterLime"))
         assertFalse(theme.contains("MonsterPink"))
 
