@@ -7,26 +7,31 @@ import org.junit.Test
 
 class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
-    fun canonicalPaletteMatchesCurrentPurchasedThemeDirection() {
+    fun canonicalPaletteMatchesMatureWordGameDirection() {
         val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF0D0F12", // Monster black
-            "0xFF15171C", // Monster surface
-            "0xFF1B1E24", // Secondary surface
-            "0xFFEFFF19", // Neon lime CTA
-            "0xFFFF3B30", // Red accent
-            "0xFFFF245C", // Pink accent
-            "0xFFF7F8FA", // Primary text
-            "0xFF9AA0AA", // Muted text
-            "0xFF2B2F37", // Border
+            "0xFFF6F4EE", // warm paper
+            "0xFFFFFEFA", // surface
+            "0xFFF0F2EC", // secondary surface
+            "0xFF285943", // forest primary
+            "0xFF173B2E", // forest deep
+            "0xFF77977F", // sage
+            "0xFF6F8794", // desaturated blue
+            "0xFFAA6255", // restrained rival/error
+            "0xFFB58A39", // sparse gold
+            "0xFF18322A", // primary ink
+            "0xFF66766F", // muted text
+            "0xFFD9DED7", // border
         ).forEach { token -> assertTrue("Missing current theme palette token $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
+        assertTrue(theme.contains("private val alternateDark"))
         assertTrue(theme.contains("val ActionOrange: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
         assertTrue(theme.contains("val HeroMiddle: Color get()"))
         assertTrue(theme.contains("val HeroEnd: Color get()"))
+        assertFalse(theme.contains("0xFFEFFF19"))
+        assertFalse(theme.contains("0xFFFF245C"))
     }
 
     @Test
@@ -70,12 +75,9 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
         val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
 
-        // Retired: CLUB destination is intercepted and bounced to HOME, never renders CompetitionHubScreen anymore.
         assertFalse(shell.contains("PremiumDestination.CLUB -> CompetitionHubScreen("))
         assertTrue(shell.contains("PremiumDestination.CLUB -> {"))
         assertTrue(shell.contains("destination = PremiumDestination.HOME"))
-
-        // Club source stays for audit but nothing opens it.
         assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
         assertTrue(club.contains("b.getClubMessages(current.clubId)"))
         assertTrue(club.contains("b.sendClubMessage(current.clubId, outgoing)"))
@@ -142,7 +144,6 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
     fun territoryScoringRemainsPermanentWordScorePlusTwoPerOwnedCube() {
         val rules = File("src/main/java/com/sonharf/game/WordSiegeFinalRules.kt").readText()
-
         assertTrue(rules.contains("const val CUBE_TRANSFER_POINTS: Int = 2"))
         assertTrue(rules.contains("wordScore + cubeTransfer(ownedCubes)"))
         assertTrue(rules.contains("Word points are permanent"))
@@ -159,7 +160,6 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(migration.contains("if p_forfeit_winner is not null then"))
         assertFalse(migration.contains("v_one_total > v_two_total"))
         assertFalse(migration.contains("v_two_total > v_one_total"))
-
         assertTrue(practice.contains("state.playerArea > state.botArea -> 1"))
         assertTrue(practice.contains("state.botArea > state.playerArea -> 2"))
         assertFalse(practice.contains("totalScore(state, 1) > totalScore(state, 2) -> 1"))
