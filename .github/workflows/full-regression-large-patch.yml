@@ -22,21 +22,18 @@ jobs:
       - name: Validate patch syntax and contracts
         run: |
           git diff --check
-          grep -n 'for (attempt in 0 until 16)' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
-          ! grep -n 'return@repeat' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
-          grep -n 'KELİME KUŞATMASI' app/src/main/java/com/sonharf/game/WordSiegeExperience.kt
-          grep -n 'verifiedAccess = true' app/src/main/java/com/sonharf/game/WordSiegeEntryScreen.kt
-          grep -n 'Kelime Kuşatması.*Android' app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt
+          grep -n 'PremiumDestination.PRO' app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt
+          grep -n 'PremiumDestination.PRIVATE_ROOM' app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt
+          grep -n 'PRO ARAÇLARINI AÇ' app/src/main/java/com/sonharf/game/EconomyShopScreen.kt
+          grep -n "Kelime Kuşatması'na davet edildi" app/src/main/java/com/sonharf/game/MainSocialScreen.kt
+          grep -n '"siege" -> sh("Kelime Kuşatması", "Word Siege")' app/src/main/java/com/sonharf/game/PremiumAnalysisCenter.kt
       - name: Commit patched sources
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt \
-                  app/src/main/java/com/sonharf/game/WordSiegeExperience.kt \
-                  app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt \
-                  app/src/main/java/com/sonharf/game/WordSiegeSeriesScreen.kt \
-                  app/src/main/java/com/sonharf/game/WordSiegeEntryScreen.kt \
-                  app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt \
-                  app/src/main/java/com/sonharf/game/MainSettingsVipScreen.kt
-          git commit -m "Fix rematch, Series access and active screen copy [skip ci]"
+          git add app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt \
+                  app/src/main/java/com/sonharf/game/EconomyShopScreen.kt \
+                  app/src/main/java/com/sonharf/game/MainSocialScreen.kt \
+                  app/src/main/java/com/sonharf/game/PremiumAnalysisCenter.kt
+          git commit -m "Wire PRO tools into active runtime [skip ci]"
           git push origin HEAD:fix/full-regression-audit-20260920
