@@ -59,6 +59,7 @@ object SonHarfSoundFx {
     fun wordAccepted() = play(R.raw.sfx_word_accepted, .30f)
     fun warning() = play(R.raw.sfx_ui_tap, .16f, .92f)
     fun bonus() = play(R.raw.sfx_bonus, .32f)
+    fun reward() = play(R.raw.sfx_bonus, .30f)
     fun victory() = play(R.raw.sfx_victory, .42f)
     fun defeat() = play(R.raw.sfx_defeat, .34f)
     fun countdown() { /* countdown uses heartbeat/haptic only; no beep */ }
