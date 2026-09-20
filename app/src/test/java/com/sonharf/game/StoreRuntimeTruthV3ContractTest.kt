@@ -63,6 +63,7 @@ class StoreRuntimeTruthV3ContractTest {
         assertTrue(migration.contains("p_item_id in ('theme_black','theme_dark_arena')"))
         assertTrue(migration.contains("when 'victory_effect' then p_item_id='victory_crown'"))
         assertTrue(migration.contains("when 'emoji_pack' then p_item_id='emoji_vip'"))
+        assertTrue(migration.contains("mascot_id=null"))
 
         val purchaseStart = migration.indexOf("create or replace function public.purchase_shop_item")
         val equipStart = migration.indexOf("create or replace function public.equip_shop_item")
@@ -77,6 +78,8 @@ class StoreRuntimeTruthV3ContractTest {
         assertFalse(equipBody.contains("where id=p_item_id and active=true"))
         assertTrue(equipBody.contains("is_runtime_supported_shop_item_v1(v_item.id,v_item.kind)"))
         assertTrue(equipBody.contains("if not v_owned then raise exception 'not_owned'; end if;"))
+        assertFalse(equipBody.contains("profile_frame_id="))
+        assertFalse(equipBody.contains("mascot_id="))
         assertFalse(equipBody.contains("frame_round_golden_avatar"))
     }
 
