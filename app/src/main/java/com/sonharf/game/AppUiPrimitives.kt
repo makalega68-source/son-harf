@@ -37,7 +37,9 @@ internal object MainUi {
     val Orange: Color get() = SonHarfTheme.ActionOrange
     val Border: Color get() = SonHarfTheme.Border
     val Green: Color get() = SonHarfTheme.Success
+    val GreenSoft: Color get() = SonHarfTheme.Success.copy(alpha = .10f).compositeOver(SonHarfTheme.Surface)
     val Gold: Color get() = SonHarfTheme.PremiumGold
+    val GoldSoft: Color get() = SonHarfTheme.PremiumGold.copy(alpha = .12f).compositeOver(SonHarfTheme.Surface)
     val Red: Color get() = SonHarfTheme.Error
     val Purple: Color get() = SonHarfTheme.Lavender
 }
