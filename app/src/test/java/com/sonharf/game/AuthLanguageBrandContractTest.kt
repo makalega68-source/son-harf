@@ -28,6 +28,14 @@ class AuthLanguageBrandContractTest {
         assertTrue(auth.contains("Incorrect email or password"))
         assertTrue(auth.contains("Verification email sent"))
 
+        assertTrue(auth.contains("sh(\"E-postanı doğrula\", \"Verify your email\")"))
+        assertTrue(auth.contains("Word Siege. If the link does not work"))
+        assertTrue(auth.contains("sh(\"6 haneli doğrulama kodu\", \"6-digit verification code\")"))
+        assertTrue(auth.contains("sh(\"KODU DOĞRULA\", \"VERIFY CODE\")"))
+        assertTrue(auth.contains("sh(\"KODU YENİDEN GÖNDER\", \"RESEND CODE\")"))
+        assertTrue(auth.contains("sh(\"E-POSTA ADRESİNİ DEĞİŞTİR\", \"CHANGE EMAIL ADDRESS\")"))
+        assertFalse(auth.contains("Son Harf otomatik açılır"))
+
         assertTrue(startup.contains("R.drawable.kelime_kusatma_logo_hd"))
         assertTrue(startup.contains("KELİME KUŞATMASI / WORD SIEGE"))
         assertFalse(startup.contains("SonHarfOfficialLogo(modifier"))
