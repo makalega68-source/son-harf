@@ -32,11 +32,11 @@ import kotlinx.coroutines.launch
 private const val SERIES_DEFAULT_TURN_MINUTES = 5
 
 @Composable
-internal fun WordSiegeSeriesScreen(onExit: () -> Unit) {
+internal fun WordSiegeSeriesScreen(verifiedAccess: Boolean = false, onExit: () -> Unit) {
     val backend = remember { OnlineGameBackend() }
     val scope = rememberCoroutineScope()
     val me = remember { backend.currentUserId() }
-    var entitlement by remember { mutableStateOf<VipEntitlementsDto?>(null) }
+    var entitlement by remember { mutableStateOf<VipEntitlementsDto?>(if (verifiedAccess) VipEntitlementsDto(seriesGameAccess = true) else null) }
     var games by remember { mutableStateOf<List<WordSiegeGameDto>>(emptyList()) }
     var friends by remember { mutableStateOf<List<Pair<FriendshipDto, ProfileDto>>>(emptyList()) }
     var invites by remember { mutableStateOf<List<WordSiegeSeriesInviteDto>>(emptyList()) }
@@ -105,7 +105,7 @@ internal fun WordSiegeSeriesScreen(onExit: () -> Unit) {
     }
 
     LaunchedEffect(Unit) {
-        entitlement = runCatching { backend.getVipEntitlements() }.getOrDefault(VipEntitlementsDto())
+        entitlement = runCatching { backend.getVipEntitlements() }.getOrElse { entitlement ?: VipEntitlementsDto() }
         if (entitlement?.seriesGameAccess == true) refreshLobby(showProgress = true) else loading = false
     }
 

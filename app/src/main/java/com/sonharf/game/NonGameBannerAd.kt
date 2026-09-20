@@ -30,8 +30,10 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
 import com.google.android.gms.ads.LoadAdError
+import com.sonharf.game.data.OnlineGameBackend
+import com.sonharf.game.data.getVipEntitlements
 
-/** Central policy point for future Premium/no-ads support. */
+/** Central policy point for Premium/no-ads support. */
 internal object SonHarfAdPolicy {
     var adsEnabled: Boolean = true
     var isPremium: Boolean = false
@@ -42,10 +44,10 @@ internal object SonHarfAdPolicy {
 }
 
 /**
- * Thin anchored adaptive banner shared by every app destination, including gameplay.
- * The banner slot can exist before consent/ad availability, but the Google AdView itself
- * is not constructed until policy allows an ad request. This keeps authentication-to-home
- * navigation independent from the ads SDK lifecycle.
+ * Thin anchored adaptive banner for eligible non-gameplay destinations.
+ * Premium state is revalidated before any slot or AdView is created. If that check fails,
+ * the banner fails closed so a paid user is never shown an ad because of a transient profile
+ * or entitlement lookup failure. The production navigation shell separately excludes gameplay.
  */
 @Composable
 fun SonHarfTopAdBanner(
@@ -54,7 +56,20 @@ fun SonHarfTopAdBanner(
 ) {
     val context = LocalContext.current
     val configuration = LocalConfiguration.current
-    SonHarfAdPolicy.isPremium = isPremium
+    val backend = remember { OnlineGameBackend() }
+    var resolvedPremium by remember(isPremium) { mutableStateOf<Boolean?>(if (isPremium) true else null) }
+
+    LaunchedEffect(isPremium) {
+        if (isPremium) {
+            resolvedPremium = true
+        } else {
+            resolvedPremium = runCatching { backend.getVipEntitlements().isPro }.getOrNull()
+        }
+    }
+
+    // Unknown membership must not temporarily become an ad-eligible state.
+    val premium = resolvedPremium ?: return
+    SonHarfAdPolicy.isPremium = premium
 
     val adUnitId = BuildConfig.ADMOB_BANNER_AD_UNIT_ID
     val slotVisible = SonHarfAdPolicy.canReserveBanner()

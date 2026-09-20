@@ -24,7 +24,7 @@ import kotlinx.coroutines.delay
 private enum class PremiumDestination {
     HOME, GAMES, CLUB, COMPETE, PROFILE, COLLECTION,
     LAST_LETTER, SIEGE, LETTER_PATH,
-    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP
+    SOCIAL, SETTINGS, ACCOUNT, PROFILE_DETAILS, SHOP, PRO, PRIVATE_ROOM
 }
 
 @Composable
@@ -80,7 +80,8 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
-            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION -> PremiumDestination.PROFILE
+            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION, PremiumDestination.PRO -> PremiumDestination.PROFILE
+            PremiumDestination.PRIVATE_ROOM -> PremiumDestination.PRO
             PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.HOME
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
             PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
@@ -175,7 +176,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                     PremiumDestination.PROFILE -> MainPlayerProfileScreen(
                         backend,
                         { destination = PremiumDestination.PROFILE_DETAILS },
-                        { destination = PremiumDestination.SHOP },
+                        { destination = PremiumDestination.PRO },
                         { destination = PremiumDestination.COLLECTION },
                         { destination = PremiumDestination.SETTINGS },
                         { destination = PremiumDestination.SOCIAL },
@@ -185,11 +186,22 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onBack = { destination = PremiumDestination.HOME },
                         onMembershipChanged = { isPro = it },
                         onCollection = { destination = PremiumDestination.COLLECTION },
+                        onPro = { destination = PremiumDestination.PRO },
+                    )
+                    PremiumDestination.PRO -> UnifiedProVipScreen(
+                        backend = backend,
+                        onBack = { destination = PremiumDestination.PROFILE },
+                        onPrivateRoom = { destination = PremiumDestination.PRIVATE_ROOM },
+                    )
+                    PremiumDestination.PRIVATE_ROOM -> PrivateRoomCenterScreen(
+                        onBack = { destination = PremiumDestination.PRO },
+                        onRoomReady = { language -> openGame(PremiumDestination.LAST_LETTER, language) },
                     )
                     PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()
-                    PremiumDestination.SIEGE -> WordSiegeExperienceScreen {
-                        leaveGame()
-                    }
+                    PremiumDestination.SIEGE -> WordSiegeEntryScreen(
+                        onExit = { leaveGame() },
+                        onOpenStore = { leaveGame(PremiumDestination.SHOP) },
+                    )
                     PremiumDestination.LETTER_PATH -> LetterLadderGameScreen {
                         leaveGame()
                     }

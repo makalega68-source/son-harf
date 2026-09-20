@@ -471,12 +471,12 @@ fun PremierWordDuelScreen() {
                                 runCatching { backend.requestRematch(active.id) }
                                     .onSuccess {
                                         notice = pt(language, "Rövanş teklifi gönderildi.", "Rematch request sent.")
-                                        repeat(16) {
+                                        for (attempt in 0 until 16) {
                                             delay(750)
                                             val next = runCatching { backend.findPremierActiveRoom() }.getOrNull()
                                             if (next != null && next.id != active.id) {
                                                 adoptRoom(next, cinematic = true)
-                                                return@repeat
+                                                break
                                             }
                                         }
                                     }

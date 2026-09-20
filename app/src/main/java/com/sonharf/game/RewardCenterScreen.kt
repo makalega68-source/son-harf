@@ -80,7 +80,6 @@ fun RewardCenterScreen() {
 
     fun showRewarded(rewardType: String, trialItemId: String? = null) {
         if (isPro) {
-            // PRO is deliberately ad-free. Do not fabricate a reward or bypass SSV/economy authority.
             notice = sh("PRO hesabında reklam gösterilmez.", "Ads are disabled on PRO accounts.")
             return
         }
@@ -166,7 +165,7 @@ fun RewardCenterScreen() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text(sh("KELİME TAHTI ÖDÜLLERİ", "KELIME TAHTI REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
+            Text(sh("KELİME KUŞATMASI ÖDÜLLERİ", "WORD SIEGE REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
             Text(
                 if (isPro) {
                     sh(

@@ -29,6 +29,7 @@ fun EconomyShopScreen(
     onBack: (() -> Unit)? = null,
     onMembershipChanged: (Boolean) -> Unit = {},
     onCollection: () -> Unit = {},
+    onPro: () -> Unit = {},
 ) {
     var tab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 3)) }
     var rewards by remember { mutableStateOf(false) }
@@ -59,7 +60,7 @@ fun EconomyShopScreen(
         }
         Box(Modifier.weight(1f)) {
             if (tab == 1) SeasonCenterContent()
-            else EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection)
+            else EconomyCatalogScreen(tab, { tab = it }, { rewards = true }, onMembershipChanged, onCollection, onPro)
         }
     }
 }
@@ -72,6 +73,7 @@ private fun EconomyCatalogScreen(
     onRewards: () -> Unit,
     onMembershipChanged: (Boolean) -> Unit,
     onCollection: () -> Unit,
+    onPro: () -> Unit,
 ) {
     val backend = remember { if (SupabaseProvider.configured) OnlineGameBackend() else null }
     val scope = rememberCoroutineScope()
@@ -180,8 +182,14 @@ private fun EconomyCatalogScreen(
             if (storefront?.rewardedEnabled == true) item { TextButton(onClick = onRewards) { Text(sh("İsteğe bağlı reklam ödülleri", "Optional ad rewards")) } }
         }
         if (section == 3) {
-            item { ProShopCard(profile?.isVip == true) { showVip = true } }
+            val proActive = profile?.isVip == true
+            item { ProShopCard(proActive) { if (proActive) onPro() else showVip = true } }
             item { StoreProBenefits() }
+            if (proActive) item {
+                TextButton(onClick = onPro, modifier = Modifier.fillMaxWidth()) {
+                    Text(sh("PRO ARAÇLARINI AÇ", "OPEN PRO TOOLS"), fontWeight = FontWeight.Black)
+                }
+            }
         }
         if (filtered.isEmpty() && !loading && section == 2) {
             item {
