@@ -120,23 +120,23 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
     var otpCode by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
     fun friendly(raw: String): String = when {
-        "Email not confirmed" in raw || "email_not_confirmed" in raw -> "E-posta adresini onaylamadan giriş yapamazsın. Gelen kutunu kontrol et."
-        "Invalid login credentials" in raw -> "E-posta veya şifre hatalı."
-        "existing_confirmed_account" in raw -> "Bu e-posta zaten kayıtlı ve doğrulanmış. Giriş Yap bölümünü kullan; şifreni unuttuysan Şifremi unuttum'a dokun."
-        "already registered" in raw.lowercase() || "user_already_exists" in raw.lowercase() -> "Bu e-posta zaten kayıtlı. Giriş Yap bölümünü kullan."
-        "email rate limit" in raw.lowercase() || "over_email_send_rate_limit" in raw.lowercase() -> "Çok sık e-posta istendi. Birkaç dakika bekleyip tekrar dene."
-        "Unable to validate email address" in raw || "validation_failed" in raw.lowercase() -> "E-posta adresi geçerli görünmüyor. Adresi kontrol edip tekrar dene."
-        "invalid_display_name" in raw -> "Oyuncu adı 2-24 karakter olmalı."
-        "invalid_gender" in raw -> "Cinsiyet seçimi gerekli."
-        "password" in raw.lowercase() && "6" in raw -> "Şifre en az 6 karakter olmalı."
-        else -> raw.take(170).ifBlank { "İşlem tamamlanamadı. Tekrar dene." }
+        "Email not confirmed" in raw || "email_not_confirmed" in raw -> sh("E-posta adresini onaylamadan giriş yapamazsın. Gelen kutunu kontrol et.", "Confirm your email before signing in. Check your inbox.")
+        "Invalid login credentials" in raw -> sh("E-posta veya şifre hatalı.", "Incorrect email or password.")
+        "existing_confirmed_account" in raw -> sh("Bu e-posta zaten kayıtlı ve doğrulanmış. Giriş Yap bölümünü kullan; şifreni unuttuysan Şifremi unuttum'a dokun.", "This email is already registered and verified. Use Sign In, or Forgot password if needed.")
+        "already registered" in raw.lowercase() || "user_already_exists" in raw.lowercase() -> sh("Bu e-posta zaten kayıtlı. Giriş Yap bölümünü kullan.", "This email is already registered. Use Sign In.")
+        "email rate limit" in raw.lowercase() || "over_email_send_rate_limit" in raw.lowercase() -> sh("Çok sık e-posta istendi. Birkaç dakika bekleyip tekrar dene.", "Too many emails were requested. Wait a few minutes and try again.")
+        "Unable to validate email address" in raw || "validation_failed" in raw.lowercase() -> sh("E-posta adresi geçerli görünmüyor. Adresi kontrol edip tekrar dene.", "The email address does not look valid. Check it and try again.")
+        "invalid_display_name" in raw -> sh("Oyuncu adı 2-24 karakter olmalı.", "Player name must be 2-24 characters.")
+        "invalid_gender" in raw -> sh("Profil seçimi gerekli.", "Profile selection is required.")
+        "password" in raw.lowercase() && "6" in raw -> sh("Şifre en az 6 karakter olmalı.", "Password must be at least 6 characters.")
+        else -> raw.take(170).ifBlank { sh("İşlem tamamlanamadı. Tekrar dene.", "The action could not be completed. Try again.") }
     }
 
     fun verifyPendingEmail() {
         val targetEmail = pendingVerificationEmail ?: return
         if (busy) return
         if (otpCode.length != 6) {
-            notice = "E-postana gelen 6 haneli kodu gir."
+            notice = sh("E-postana gelen 6 haneli kodu gir.", "Enter the 6-digit code sent to your email.")
             success = false
             return
         }
@@ -161,7 +161,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 SonHarfPreferences.setRememberLogin(context, true, targetEmail)
             }.onSuccess {
                 success = true
-                notice = "E-posta doğrulandı. Hoş geldin!"
+                notice = sh("E-posta doğrulandı. Hoş geldin!", "Email verified. Welcome!")
                 pendingVerificationEmail = null
                 otpCode = ""
                 onAuthenticated()
@@ -187,7 +187,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 )
             }.onSuccess {
                 success = true
-                notice = "Yeni doğrulama e-postası gönderildi. Gelen kutunu ve spam klasörünü kontrol et."
+                notice = sh("Yeni doğrulama e-postası gönderildi. Gelen kutunu ve spam klasörünü kontrol et.", "A new verification email was sent. Check your inbox and spam folder.")
             }.onFailure {
                 notice = friendly(it.message.orEmpty())
             }
@@ -292,15 +292,23 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 ) {
                     Spacer(Modifier.weight(.42f))
                     Image(
-                        painter = painterResource(R.drawable.son_harf_gold_teal_logo),
-                        contentDescription = "Son Harf",
-                        modifier = Modifier.fillMaxWidth(.94f).heightIn(max = 255.dp),
+                        painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
+                        contentDescription = sh("Kelime Kuşatması logosu", "Word Siege logo"),
+                        modifier = Modifier.fillMaxWidth(.72f).heightIn(max = 150.dp),
                         contentScale = ContentScale.Fit,
                     )
                     Text(
-                        sh("Kelimeyi Sürdür, Rakibini Geç", "Continue the Word, Beat Your Rival"),
+                        sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                        color = AuthUi.Text,
+                        fontSize = 27.sp,
+                        fontWeight = FontWeight.Black,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(7.dp))
+                    Text(
+                        sh("Kelime oyunu • taktik alan savaşı • sosyal rekabet", "Word game • tactical territory battle • social competition"),
                         color = AuthUi.Primary,
-                        fontSize = 17.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
                     )
@@ -382,7 +390,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                     FilterChip(
                                         selected = register,
                                         onClick = { register = true; notice = "" },
-                                        label = { Text("ÜYE OL", fontSize = 15.sp) },
+                                        label = { Text(sh("ÜYE OL", "REGISTER"), fontSize = 15.sp) },
                                         modifier = Modifier.weight(1f),
                                         colors = FilterChipDefaults.filterChipColors(
                                             containerColor = AuthUi.Surface,
@@ -400,7 +408,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                     FilterChip(
                                         selected = !register,
                                         onClick = { register = false; notice = "" },
-                                        label = { Text("GİRİŞ YAP", fontSize = 15.sp) },
+                                        label = { Text(sh("GİRİŞ YAP", "SIGN IN"), fontSize = 15.sp) },
                                         modifier = Modifier.weight(1f),
                                         colors = FilterChipDefaults.filterChipColors(
                                             containerColor = AuthUi.Surface,
@@ -417,11 +425,11 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                     )
                                 }
                                 if (register) {
-                                    OutlinedTextField(displayName, { displayName = it.take(24) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("Oyuncu adı") })
+                                    OutlinedTextField(displayName, { displayName = it.take(24) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(sh("Oyuncu adı", "Player name")) })
                                     Text(sh("Bu ad oyuncu profilinde kalıcı olarak görünür.", "This name will remain on your player profile."), color = authColors.onSurfaceVariant, fontSize = 12.sp)
                                     Text(sh("Profil seçimi", "Profile selection"), color = authColors.onSurface, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        listOf("erkek" to "Erkek", "kadın" to "Kadın", "diğer" to "Diğer").forEach { (value, label) ->
+                                        listOf("erkek" to sh("Erkek", "Male"), "kadın" to sh("Kadın", "Female"), "diğer" to sh("Diğer", "Other")).forEach { (value, label) ->
                                             val selected = gender == value
                                             FilterChip(
                                                 selected = selected,
@@ -444,17 +452,17 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                         }
                                     }
                                 }
-                                OutlinedTextField(email, { email = it.trim().take(120) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text("E-posta") })
+                                OutlinedTextField(email, { email = it.trim().take(120) }, modifier = Modifier.fillMaxWidth(), singleLine = true, label = { Text(sh("E-posta", "Email")) })
                                 OutlinedTextField(
                                     password,
                                     { password = it.take(64) },
                                     modifier = Modifier.fillMaxWidth(),
                                     singleLine = true,
-                                    label = { Text("Şifre") },
+                                    label = { Text(sh("Şifre", "Password")) },
                                     visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                                     trailingIcon = {
                                         TextButton(onClick = { showPassword = !showPassword }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                            Text(if (showPassword) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                            Text(if (showPassword) sh("GİZLE", "HIDE") else sh("GÖSTER", "SHOW"), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                                         }
                                     },
                                 )
@@ -464,11 +472,11 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                         { password2 = it.take(64) },
                                         modifier = Modifier.fillMaxWidth(),
                                         singleLine = true,
-                                        label = { Text("Şifre tekrar") },
+                                        label = { Text(sh("Şifre tekrar", "Confirm password")) },
                                         visualTransformation = if (showPassword2) VisualTransformation.None else PasswordVisualTransformation(),
                                         trailingIcon = {
                                             TextButton(onClick = { showPassword2 = !showPassword2 }, contentPadding = PaddingValues(horizontal = 8.dp)) {
-                                                Text(if (showPassword2) "GİZLE" else "GÖSTER", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                                Text(if (showPassword2) sh("GİZLE", "HIDE") else sh("GÖSTER", "SHOW"), fontWeight = FontWeight.Bold, fontSize = 11.sp)
                                             }
                                         },
                                     )
@@ -492,7 +500,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                         onClick = {
                                             if (busy) return@TextButton
                                             if (!email.contains("@")) {
-                                                notice = "Önce geçerli e-posta adresini gir."
+                                                notice = sh("Önce geçerli e-posta adresini gir.", "Enter a valid email address first.")
                                                 success = false
                                                 return@TextButton
                                             }
@@ -507,7 +515,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                                     )
                                                 }.onSuccess {
                                                     success = true
-                                                    notice = "Şifre sıfırlama bağlantısı e-posta adresine gönderildi. Gelen kutunu ve spam klasörünü kontrol et."
+                                                    notice = sh("Şifre sıfırlama bağlantısı e-posta adresine gönderildi. Gelen kutunu ve spam klasörünü kontrol et.", "A password reset link was sent. Check your inbox and spam folder.")
                                                 }.onFailure {
                                                     notice = friendly(it.message.orEmpty())
                                                 }
@@ -523,10 +531,10 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 Button(
                                     onClick = {
                                         if (busy) return@Button
-                                        if (!email.contains("@") || password.length < 6) { notice = "Geçerli e-posta ve en az 6 karakterli şifre gir."; return@Button }
-                                        if (register && displayName.trim().length < 2) { notice = "Oyuncu adı en az 2 karakter olmalı."; return@Button }
-                                        if (register && gender.isBlank()) { notice = "Kadın, Erkek veya Diğer seçeneklerinden birini seç."; return@Button }
-                                        if (register && password != password2) { notice = "Şifreler aynı değil."; return@Button }
+                                        if (!email.contains("@") || password.length < 6) { notice = sh("Geçerli e-posta ve en az 6 karakterli şifre gir.", "Enter a valid email and a password of at least 6 characters."); return@Button }
+                                        if (register && displayName.trim().length < 2) { notice = sh("Oyuncu adı en az 2 karakter olmalı.", "Player name must be at least 2 characters."); return@Button }
+                                        if (register && gender.isBlank()) { notice = sh("Kadın, Erkek veya Diğer seçeneklerinden birini seç.", "Select Female, Male, or Other."); return@Button }
+                                        if (register && password != password2) { notice = sh("Şifreler aynı değil.", "Passwords do not match."); return@Button }
                                         scope.launch {
                                             busy = true; notice = ""; success = false
                                             if (register) {
@@ -554,7 +562,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                                     SonHarfPreferences.clearPendingRegistration(context, targetEmail)
                                                     SonHarfPreferences.setRememberLogin(context, true, targetEmail)
                                                     success = true
-                                                    notice = "Hesabın zaten vardı; giriş yapıldı."
+                                                    notice = sh("Hesabın zaten vardı; giriş yapıldı.", "Your account already existed; you were signed in.")
                                                     busy = false
                                                     onAuthenticated()
                                                     return@launch
@@ -574,7 +582,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                                         success = true
                                                         pendingVerificationEmail = targetEmail
                                                         otpCode = ""
-                                                        notice = "Doğrulama e-postası yeniden gönderildi. Gelen kutusu ve spam klasörünü kontrol et."
+                                                        notice = sh("Doğrulama e-postası yeniden gönderildi. Gelen kutusu ve spam klasörünü kontrol et.", "The verification email was sent again. Check your inbox and spam folder.")
                                                     }.onFailure {
                                                         notice = friendly(it.message.orEmpty())
                                                     }
@@ -599,7 +607,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                                             success = true
                                                             pendingVerificationEmail = targetEmail
                                                             otpCode = ""
-                                                            notice = "Doğrulama e-postası gönderildi. Maildeki doğrulama bağlantısına dokun veya 6 haneli kodu buraya gir."
+                                                            notice = sh("Doğrulama e-postası gönderildi. Maildeki doğrulama bağlantısına dokun veya 6 haneli kodu buraya gir.", "Verification email sent. Tap the verification link or enter the 6-digit code here.")
                                                         }
                                                     }.onFailure {
                                                         notice = friendly(it.message.orEmpty())
