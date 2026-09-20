@@ -8,7 +8,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.MeetingRoom
 import androidx.compose.material.icons.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.WorkspacePremium
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -36,26 +38,37 @@ private val UProGold = Color(0xFFF59E0B)
 private val UProGreen = Color(0xFF10B981)
 
 @Composable
-internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit) {
+internal fun UnifiedProVipScreen(
+    backend: OnlineGameBackend,
+    onBack: () -> Unit,
+    onPrivateRoom: () -> Unit,
+) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var entitlements by remember { mutableStateOf<VipEntitlementsDto?>(null) }
     var loading by remember { mutableStateOf(true) }
+    var entitlementError by remember { mutableStateOf(false) }
     var showPurchase by remember { mutableStateOf(false) }
     var notice by remember { mutableStateOf<String?>(null) }
 
     suspend fun reload() {
         loading = true
+        entitlementError = false
         val id = backend.currentUserId()
         profile = id?.let { runCatching { backend.getProfile(it) }.getOrNull() }
-        entitlements = if (profile?.isVip == true) runCatching { backend.getVipEntitlements() }.getOrNull() else null
+        runCatching { backend.getVipEntitlements() }
+            .onSuccess { entitlements = it }
+            .onFailure {
+                entitlementError = true
+                notice = sh("PRO hakları şu anda doğrulanamadı. Satın alımın silinmedi; yeniden deneyebilirsin.", "PRO benefits could not be verified. Your purchase was not removed; you can retry.")
+            }
         loading = false
     }
 
     LaunchedEffect(Unit) { reload() }
-    val active = profile?.isVip == true
     val e = entitlements
+    val active = e?.isPro == true || profile?.isVip == true
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -86,7 +99,7 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
                     Text(if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("FREE PLAN", "FREE PLAN"), color = if (active) UProGold else UProMuted, fontWeight = FontWeight.Black)
                     Text(profile?.displayName ?: sh("Oyuncu", "Player"), color = UProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
                     Text(
-                        if (active) sh("Reklamsız deneyim + PRO profil + özel oda + gelişmiş analiz", "Ad-free experience + PRO profile + private rooms + advanced analysis")
+                        if (active) sh("Reklamsız deneyim + PRO profil + özel oda + maç-sonu analiz", "Ad-free experience + PRO profile + private rooms + post-match analysis")
                         else sh("PRO ile sosyal, profil ve analiz özelliklerini aç.", "Unlock social, profile, and analysis features with PRO."),
                         color = UProMuted,
                         fontSize = 10.sp,
@@ -103,19 +116,60 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
             }
         }
 
+        if (active) {
+            item {
+                Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
+                    Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(sh("PRO ARAÇLARI", "PRO TOOLS"), color = UProText, fontWeight = FontWeight.Black)
+                        Text(
+                            sh("Satın aldığın özellikleri buradan doğrudan kullanabilirsin.", "Use your purchased benefits directly from here."),
+                            color = UProMuted,
+                            fontSize = 10.sp,
+                        )
+                        if (e?.postMatchAnalysis == true) {
+                            PremiumAnalysisCenterLauncher(Modifier.fillMaxWidth())
+                        }
+                        if (e?.privateRooms == true) {
+                            Button(
+                                onClick = onPrivateRoom,
+                                modifier = Modifier.fillMaxWidth().height(48.dp),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = UProGold, contentColor = UProBg),
+                            ) {
+                                Icon(Icons.Rounded.MeetingRoom, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(sh("ÖZEL ODA AÇ / KATIL", "CREATE / JOIN PRIVATE ROOM"), fontWeight = FontWeight.Black)
+                            }
+                        }
+                        if (entitlementError || e == null) {
+                            OutlinedButton(
+                                onClick = { scope.launch { reload() } },
+                                modifier = Modifier.fillMaxWidth(),
+                                border = BorderStroke(1.dp, UProBlue),
+                            ) {
+                                Icon(Icons.Rounded.Refresh, null, tint = UProBlue)
+                                Spacer(Modifier.width(7.dp))
+                                Text(sh("PRO HAKLARINI YENİLE", "REFRESH PRO BENEFITS"), color = UProBlue, fontWeight = FontWeight.Black)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         item {
             Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
                 Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     ProLine("🚫", sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
                     ProLine("🏷️", sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
-                    ProLine("📊", sh("Gelişmiş istatistik ve maç analizi", "Advanced stats and match analysis"))
-                    ProLine("♛", sh("Özel oda ayrıcalıkları", "Private room benefits"))
+                    ProLine("📊", sh("Tamamlanmış maçlar için gelişmiş analiz", "Advanced analysis for completed matches"))
+                    ProLine("♛", sh("Son Harf davet kodlu özel oda", "Last Letter invite-code private room"))
                     ProLine("👥", sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))
                     Surface(shape = RoundedCornerShape(12.dp), color = UProGreen.copy(alpha = .10f), border = BorderStroke(1.dp, UProGreen.copy(alpha = .35f))) {
                         Text(
                             sh(
-                                "ADİL REKABET: PRO, dereceli Premier maçlarda skor, hedef harf, kelime ipucu veya rating avantajı vermez.",
-                                "FAIR PLAY: PRO gives no score, target-letter, word-hint, or rating advantage in ranked Premier matches.",
+                                "ADİL REKABET: PRO, dereceli maçlarda skor, hedef harf, kelime ipucu, ek süre veya rating avantajı vermez.",
+                                "FAIR PLAY: PRO gives no score, target-letter, word-hint, extra-time, or rating advantage in ranked matches.",
                             ),
                             Modifier.fillMaxWidth().padding(10.dp), color = UProGreen, fontSize = 9.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
                         )
