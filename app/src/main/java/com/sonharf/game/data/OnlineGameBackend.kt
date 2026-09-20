@@ -76,6 +76,12 @@ data class GameRoomDto(
 )
 
 @Serializable
+data class PremierReconnectClockDto(
+    @SerialName("remaining_ms") val remainingMs: Long = 0,
+    @SerialName("reconnect_deadline") val reconnectDeadline: String? = null,
+)
+
+@Serializable
 data class GameWordDto(
     val id: Long,
     @SerialName("room_id") val roomId: String,
@@ -240,6 +246,12 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
 
     suspend fun heartbeatRoom(roomId: String): GameRoomDto =
         supabase.postgrest.rpc("heartbeat_room", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()
+
+    suspend fun getPremierReconnectClock(roomId: String): PremierReconnectClockDto =
+        supabase.postgrest.rpc(
+            "get_premier_reconnect_clock_v1",
+            buildJsonObject { put("p_room_id", roomId) },
+        ).decodeSingle()
 
     suspend fun botTakeTurn(roomId: String): GameRoomDto =
         supabase.postgrest.rpc("bot_take_turn", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()

@@ -48,6 +48,7 @@ import kotlinx.coroutines.launch
 private enum class PremierStage { Loading, Lobby, Searching, Vs, Playing, Finished }
 private data class PremierMoveFeedback(val accepted: Boolean, val message: String)
 private const val PREMIER_TURN_SECONDS = 15
+private const val PREMIER_RECONNECT_SECONDS = 60
 
 /** Fixed high-legibility gameplay palette from the same calm Son Harf color family. */
 private object PremierUi {
@@ -79,6 +80,11 @@ internal fun premierRemainingTurnSecondsFromMillis(remainingMillis: Long): Int {
 
 internal fun premierRemainingTurnSeconds(deadline: Instant, now: Instant = Instant.now()): Int =
     premierRemainingTurnSecondsFromMillis(Duration.between(now, deadline).toMillis())
+
+internal fun premierRemainingReconnectSecondsFromMillis(remainingMillis: Long): Int {
+    if (remainingMillis <= 0L) return 0
+    return ((remainingMillis + 999L) / 1000L).coerceIn(1L, PREMIER_RECONNECT_SECONDS.toLong()).toInt()
+}
 
 @Composable
 fun PremierWordDuelScreen() {
@@ -206,8 +212,10 @@ fun PremierWordDuelScreen() {
         }
     }
 
-    LaunchedEffect(turnSeconds, stage) {
-        if (stage == PremierStage.Playing && turnSeconds in 1..5) {
+    LaunchedEffect(turnSeconds, stage, room?.disconnectedPlayerId, room?.currentPlayerId) {
+        val reconnectGraceActive = room?.disconnectedPlayerId != null &&
+            room?.disconnectedPlayerId == room?.currentPlayerId
+        if (stage == PremierStage.Playing && !reconnectGraceActive && turnSeconds in 1..5) {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
     }
@@ -250,11 +258,68 @@ fun PremierWordDuelScreen() {
         notice = pt(language, "Rakip hamlesi yeniden eşitleniyor…", "Resyncing rival move…")
     }
 
-    LaunchedEffect(room?.id, room?.turnDeadline, room?.currentPlayerId, room?.status, room?.botTurn) {
+    LaunchedEffect(
+        room?.id,
+        room?.turnDeadline,
+        room?.currentPlayerId,
+        room?.status,
+        room?.botTurn,
+        room?.disconnectedPlayerId,
+        room?.reconnectDeadline,
+    ) {
         val active = room ?: return@LaunchedEffect
         if (active.status !in setOf("playing", "final", "sudden_death") || active.botTurn) {
             turnSeconds = PREMIER_TURN_SECONDS
             return@LaunchedEffect
+        }
+
+        val reconnectDeadline = if (
+            !active.isBot &&
+            active.disconnectedPlayerId != null &&
+            active.disconnectedPlayerId == active.currentPlayerId
+        ) {
+            active.reconnectDeadline?.let { runCatching { Instant.parse(it) }.getOrNull() }
+        } else {
+            null
+        }
+
+        if (reconnectDeadline != null) {
+            // The database clock is authoritative; phone wall-clock drift must not shorten reconnect grace.
+            val requestStartedAt = SystemClock.elapsedRealtime()
+            val reconnectClock = runCatching { backend.getPremierReconnectClock(active.id) }.getOrNull()
+            val requestFinishedAt = SystemClock.elapsedRealtime()
+            val halfRoundTripMs = ((requestFinishedAt - requestStartedAt) / 2L).coerceIn(0L, 750L)
+            val initialReconnectMs = if (reconnectClock != null) {
+                (reconnectClock.remainingMs - halfRoundTripMs).coerceAtLeast(0L)
+            } else {
+                PREMIER_RECONNECT_SECONDS * 1000L
+            }
+            val reconnectAnchor = SystemClock.elapsedRealtime()
+            while (true) {
+                val elapsedMs = SystemClock.elapsedRealtime() - reconnectAnchor
+                val remaining = premierRemainingReconnectSecondsFromMillis(initialReconnectMs - elapsedMs)
+                if (remaining > 0) {
+                    turnSeconds = remaining
+                    delay(250)
+                    continue
+                }
+
+                turnSeconds = 1
+                val resolved = runCatching { backend.heartbeatRoom(active.id) }.getOrNull()
+                if (resolved != null) {
+                    room = resolved
+                    notice = if (resolved.isPremierFinished()) {
+                        pt(language, "Yeniden bağlanma süresi doldu. Maç sonuçlandı.", "Reconnect window expired. Match finished.")
+                    } else {
+                        ""
+                    }
+                    if (resolved.isPremierFinished()) stage = PremierStage.Finished
+                    return@LaunchedEffect
+                }
+
+                notice = pt(language, "Yeniden bağlanma durumu eşitleniyor…", "Syncing reconnect status…")
+                delay(1000)
+            }
         }
 
         val deadline = active.turnDeadline?.let { runCatching { Instant.parse(it) }.getOrNull() }
@@ -299,7 +364,9 @@ fun PremierWordDuelScreen() {
                     synced.turnDeadline != active.turnDeadline ||
                         synced.currentPlayerId != active.currentPlayerId ||
                         synced.status != active.status ||
-                        synced.botTurn != active.botTurn
+                        synced.botTurn != active.botTurn ||
+                        synced.disconnectedPlayerId != active.disconnectedPlayerId ||
+                        synced.reconnectDeadline != active.reconnectDeadline
                 )
             ) {
                 room = synced
@@ -310,7 +377,15 @@ fun PremierWordDuelScreen() {
             val advanced = runCatching { backend.claimTurnTimeout(active.id) }.getOrNull()
             if (advanced != null) {
                 room = advanced
-                notice = pt(language, "Süre doldu. Sıra güncellendi.", "Time expired. Turn updated.")
+                val reconnectProtected = !advanced.isBot &&
+                    advanced.disconnectedPlayerId != null &&
+                    advanced.disconnectedPlayerId == advanced.currentPlayerId &&
+                    advanced.reconnectDeadline != null
+                notice = if (reconnectProtected) {
+                    pt(language, "Oyuncu yeniden bağlanıyor…", "Player is reconnecting…")
+                } else {
+                    pt(language, "Süre doldu. Sıra güncellendi.", "Time expired. Turn updated.")
+                }
                 return@LaunchedEffect
             }
 
@@ -815,7 +890,13 @@ private fun PremierArena(
     val rivalRounds = if (amHost) room.guestRounds else room.hostRounds
     val myStreak = if (amHost) room.hostStreak else room.guestStreak
     val rivalStreak = if (amHost) room.guestStreak else room.hostStreak
-    val myTurn = room.currentPlayerId == meId && !room.botTurn && room.status in setOf("playing", "final", "sudden_death")
+    val reconnectGraceActive = !room.isBot &&
+        room.disconnectedPlayerId != null &&
+        room.disconnectedPlayerId == room.currentPlayerId &&
+        room.reconnectDeadline != null
+    val reconnectingMe = reconnectGraceActive && room.disconnectedPlayerId == meId
+    val myTurn = room.currentPlayerId == meId && !room.botTurn && !reconnectingMe &&
+        room.status in setOf("playing", "final", "sudden_death")
     val rivalName = if (room.isBot) room.botName ?: pt(language, "KelimeBot", "WordBot") else opponent?.displayName ?: pt(language, "Rakip", "Rival")
     val required = premierRequiredToken(room, words)
     val latestPlayedWord = words.lastOrNull()?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
@@ -832,7 +913,11 @@ private fun PremierArena(
             PremierArenaHeader(language, room, me, opponent, rivalName, myScore, rivalScore, myRounds, rivalRounds, myStreak, rivalStreak, turnSeconds, unreadChat, onForfeit, onQuickChat)
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(primaryGap))
-                PremierTurnBadge(language, myTurn, room.status)
+                if (reconnectGraceActive) {
+                    PremierReconnectBanner(language, reconnectingMe, turnSeconds)
+                } else {
+                    PremierTurnBadge(language, myTurn, room.status)
+                }
                 Spacer(Modifier.height(primaryGap))
                 PremierTargetCard(language, required, room.gameMode, room.roundNo, targetSize)
                 Spacer(Modifier.height(primaryGap))
@@ -1081,6 +1166,36 @@ private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String) 
             fontSize = 10.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = .4.sp,
+        )
+    }
+}
+
+@Composable
+private fun PremierReconnectBanner(language: String, reconnectingMe: Boolean, seconds: Int) {
+    Surface(
+        shape = RoundedCornerShape(99.dp),
+        color = PremierUi.GoldSoft,
+        border = BorderStroke(1.dp, PremierUi.Gold.copy(alpha = .35f)),
+    ) {
+        Text(
+            if (reconnectingMe) {
+                pt(
+                    language,
+                    "Bağlantın yeniden doğrulanıyor • ${seconds.coerceAtLeast(1)} sn",
+                    "Revalidating your connection • ${seconds.coerceAtLeast(1)} sec",
+                )
+            } else {
+                pt(
+                    language,
+                    "Rakip yeniden bağlanıyor • ${seconds.coerceAtLeast(1)} sn",
+                    "Rival is reconnecting • ${seconds.coerceAtLeast(1)} sec",
+                )
+            },
+            Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
+            color = PremierUi.Gold,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center,
         )
     }
 }
