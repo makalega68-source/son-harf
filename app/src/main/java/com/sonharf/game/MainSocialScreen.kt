@@ -195,7 +195,7 @@ internal fun MainSocialScreen(
                                 busyKey = friend.id
                                 runCatching { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
                                     .onSuccess {
-                                        notice = sh("${friend.displayName} Kelime Tahtı'na davet edildi.", "${friend.displayName} was invited to Kelime Tahtı.")
+                                        notice = sh("${friend.displayName} Kelime Kuşatması'na davet edildi.", "${friend.displayName} was invited to Word Siege.")
                                         SonHarfSoundFx.softNotify()
                                     }
                                     .onFailure { notice = sh("Kuşatma daveti gönderilemedi veya bekleyen bir davet var.", "Siege invite could not be sent or one is already pending.") }
