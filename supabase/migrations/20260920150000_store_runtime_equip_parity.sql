@@ -27,6 +27,14 @@ as $function$
 $function$;
 
 revoke all on function public.is_runtime_supported_shop_item_v1(text,text) from public,anon,authenticated;
+grant execute on function public.is_runtime_supported_shop_item_v1(text,text) to service_role;
+
+-- Catalog defense-in-depth: an unsupported row cannot accidentally become sellable later.
+alter table public.shop_items
+  drop constraint if exists shop_items_active_runtime_supported_v1;
+alter table public.shop_items
+  add constraint shop_items_active_runtime_supported_v1
+  check (not active or public.is_runtime_supported_shop_item_v1(id,kind));
 
 -- Retired classes keep purchase/inventory history, but must not remain silently equipped.
 update public.user_equipped_cosmetics
@@ -62,15 +70,6 @@ begin
 
   if not public.is_runtime_supported_shop_item_v1(v_item.id,v_item.kind) then
     raise exception 'item_runtime_unavailable';
-  end if;
-
-  if p_item_id in (
-    'profile_frame_pink_blossom',
-    'profile_frame_blue_royal',
-    'profile_frame_amethyst',
-    'profile_frame_emerald'
-  ) then
-    raise exception 'google_play_required';
   end if;
 
   if exists(select 1 from public.user_inventory where user_id=v_uid and item_id=p_item_id) then raise exception 'already_owned'; end if;
