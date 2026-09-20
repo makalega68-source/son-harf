@@ -54,6 +54,32 @@ class StoreRuntimeTruthV3ContractTest {
         assertFalse(migration.contains("delete from public.user_inventory"))
     }
 
+    @Test
+    fun purchaseNeedsLiveRuntimeButOwnedSupportedArchiveItemsRemainEquipable() {
+        val migration = projectFile("supabase/migrations/20260920150000_store_runtime_equip_parity.sql").readText()
+
+        assertTrue(migration.contains("create or replace function public.is_runtime_supported_shop_item_v1"))
+        assertTrue(migration.contains("when 'profile_frame' then false"))
+        assertTrue(migration.contains("p_item_id in ('theme_black','theme_dark_arena')"))
+        assertTrue(migration.contains("when 'victory_effect' then p_item_id='victory_crown'"))
+        assertTrue(migration.contains("when 'emoji_pack' then p_item_id='emoji_vip'"))
+
+        val purchaseStart = migration.indexOf("create or replace function public.purchase_shop_item")
+        val equipStart = migration.indexOf("create or replace function public.equip_shop_item")
+        val purchaseBody = migration.substring(purchaseStart, equipStart)
+        val equipBody = migration.substring(equipStart)
+
+        assertTrue(purchaseBody.contains("and active=true"))
+        assertTrue(purchaseBody.contains("is_runtime_supported_shop_item_v1(v_item.id,v_item.kind)"))
+        assertTrue(purchaseBody.contains("raise exception 'item_runtime_unavailable'"))
+
+        assertTrue(equipBody.contains("select * into v_item from public.shop_items where id=p_item_id;"))
+        assertFalse(equipBody.contains("where id=p_item_id and active=true"))
+        assertTrue(equipBody.contains("is_runtime_supported_shop_item_v1(v_item.id,v_item.kind)"))
+        assertTrue(equipBody.contains("if not v_owned then raise exception 'not_owned'; end if;"))
+        assertFalse(equipBody.contains("frame_round_golden_avatar"))
+    }
+
     private fun projectFile(path: String): File =
         sequenceOf(File(path), File("../$path"))
             .firstOrNull { it.exists() }
