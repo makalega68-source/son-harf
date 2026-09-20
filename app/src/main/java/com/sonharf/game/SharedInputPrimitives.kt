@@ -11,12 +11,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
- * Shared custom word keyboard. It intentionally contains only letters, backspace and the game
- * action. System-keyboard extras and a separate clear key are deliberately excluded.
+ * Shared custom word keyboard for Son Harf-compatible word entry and Harf Yolu.
+ * It intentionally contains only letters, backspace and the game action. System-keyboard extras
+ * and a separate clear key are deliberately excluded.
  */
 @Composable
 internal fun EmbeddedWordKeyboard(
@@ -29,6 +31,13 @@ internal fun EmbeddedWordKeyboard(
     onSubmit: () -> Unit,
     modifier: Modifier = Modifier,
     submitLabel: String? = null,
+    keyHeight: Dp = 38.dp,
+    rowGap: Dp = 5.dp,
+    keyGap: Dp = 3.dp,
+    secondInset: Dp = 7.dp,
+    thirdInset: Dp = 17.dp,
+    keySound: () -> Unit = { SonHarfSoundFx.typingClick() },
+    actionSound: () -> Unit = { SonHarfSoundFx.tap() },
 ) {
     val palette = SonHarfCosmetics.keyboardPalette
     val rows = if (language.lowercase() == "en") {
@@ -55,16 +64,16 @@ internal fun EmbeddedWordKeyboard(
     ) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 6.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            verticalArrangement = Arrangement.spacedBy(rowGap),
         ) {
             rows.forEachIndexed { index, row ->
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = when (index) {
-                        1 -> 7.dp
-                        2 -> 17.dp
+                        1 -> secondInset
+                        2 -> thirdInset
                         else -> 0.dp
                     }),
-                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(keyGap),
                 ) {
                     row.forEach { key ->
                         SharedKeyboardKeyButton(
@@ -72,8 +81,9 @@ internal fun EmbeddedWordKeyboard(
                             enabled = enabled && value.length < maxLength,
                             modifier = Modifier.weight(1f),
                             palette = palette,
+                            height = keyHeight,
                             onClick = {
-                                SonHarfSoundFx.typingClick()
+                                keySound()
                                 onValueChange((value + key).take(maxLength))
                             },
                         )
@@ -82,7 +92,7 @@ internal fun EmbeddedWordKeyboard(
             }
 
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 17.dp),
+                Modifier.fillMaxWidth().padding(horizontal = thirdInset),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 SharedKeyboardKeyButton(
@@ -90,9 +100,10 @@ internal fun EmbeddedWordKeyboard(
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1f),
                     palette = palette,
+                    height = keyHeight,
                     alt = true,
                     onClick = {
-                        SonHarfSoundFx.tap()
+                        actionSound()
                         onValueChange(value.dropLast(1))
                     },
                 )
@@ -101,9 +112,10 @@ internal fun EmbeddedWordKeyboard(
                     enabled = submitEnabled && value.isNotBlank(),
                     modifier = Modifier.weight(3.1f),
                     palette = palette,
+                    height = keyHeight,
                     action = true,
                     onClick = {
-                        SonHarfSoundFx.tap()
+                        actionSound()
                         onSubmit()
                     },
                 )
@@ -139,6 +151,7 @@ internal fun EmbeddedNumberKeyboard(
                             enabled = enabled,
                             modifier = Modifier.weight(1f),
                             palette = palette,
+                            height = 38.dp,
                             onClick = {
                                 SonHarfSoundFx.typingClick()
                                 onValueChange((value + key).take(12))
@@ -153,6 +166,7 @@ internal fun EmbeddedNumberKeyboard(
                     enabled = enabled,
                     modifier = Modifier.weight(1f),
                     palette = palette,
+                    height = 38.dp,
                     alt = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -167,6 +181,7 @@ internal fun EmbeddedNumberKeyboard(
                     enabled = enabled,
                     modifier = Modifier.weight(1f),
                     palette = palette,
+                    height = 38.dp,
                     onClick = {
                         SonHarfSoundFx.typingClick()
                         onValueChange((value + "0").take(12))
@@ -177,6 +192,7 @@ internal fun EmbeddedNumberKeyboard(
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1f),
                     palette = palette,
+                    height = 38.dp,
                     alt = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -188,6 +204,7 @@ internal fun EmbeddedNumberKeyboard(
                     enabled = enabled && value.replace(',', '.').toDoubleOrNull() != null,
                     modifier = Modifier.weight(1f),
                     palette = palette,
+                    height = 38.dp,
                     action = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -205,6 +222,7 @@ private fun SharedKeyboardKeyButton(
     enabled: Boolean,
     modifier: Modifier,
     palette: WordKeyboardPalette,
+    height: Dp,
     alt: Boolean = false,
     action: Boolean = false,
     onClick: () -> Unit,
@@ -212,7 +230,7 @@ private fun SharedKeyboardKeyButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(38.dp),
+        modifier = modifier.height(height),
         contentPadding = PaddingValues(0.dp),
         shape = RoundedCornerShape(9.dp),
         colors = ButtonDefaults.buttonColors(
