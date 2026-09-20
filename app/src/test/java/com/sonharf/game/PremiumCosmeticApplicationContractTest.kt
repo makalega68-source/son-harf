@@ -21,11 +21,11 @@ class PremiumCosmeticApplicationContractTest {
         val runtime = source("CosmeticRuntime.kt")
 
         listOf(
-            "\"keyboard_crystal\" -> KeyboardPalette(",
-            "\"keyboard_obsidian\" -> KeyboardPalette(",
-            "\"keyboard_midnight\" -> KeyboardPalette(",
-            "\"keyboard_black_gold\" -> KeyboardPalette(",
-            "\"keyboard_premium_white\" -> KeyboardPalette(",
+            "\"keyboard_crystal\" -> WordKeyboardPalette(",
+            "\"keyboard_obsidian\" -> WordKeyboardPalette(",
+            "\"keyboard_midnight\" -> WordKeyboardPalette(",
+            "\"keyboard_black_gold\" -> WordKeyboardPalette(",
+            "\"keyboard_premium_white\" -> WordKeyboardPalette(",
         ).forEach { mapping -> assertTrue("Missing keyboard runtime mapping $mapping", runtime.contains(mapping)) }
     }
 
