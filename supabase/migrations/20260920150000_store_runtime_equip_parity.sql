@@ -28,6 +28,13 @@ $function$;
 
 revoke all on function public.is_runtime_supported_shop_item_v1(text,text) from public,anon,authenticated;
 
+-- Retired classes keep purchase/inventory history, but must not remain silently equipped.
+update public.user_equipped_cosmetics
+set profile_frame_id=null,
+    mascot_id=null,
+    updated_at=now()
+where profile_frame_id is not null or mascot_id is not null;
+
 create or replace function public.purchase_shop_item(p_item_id text)
 returns jsonb
 language plpgsql
@@ -139,13 +146,11 @@ begin
 
   insert into public.user_equipped_cosmetics(user_id) values(v_uid) on conflict(user_id) do nothing;
   update public.user_equipped_cosmetics
-  set profile_frame_id=case when v_item.kind='profile_frame' then p_item_id else profile_frame_id end,
-      name_style_id=case when v_item.kind='name_style' then p_item_id else name_style_id end,
+  set name_style_id=case when v_item.kind='name_style' then p_item_id else name_style_id end,
       game_theme_id=case when v_item.kind='game_theme' then p_item_id else game_theme_id end,
       keyboard_theme_id=case when v_item.kind='keyboard_theme' then p_item_id else keyboard_theme_id end,
       victory_effect_id=case when v_item.kind='victory_effect' then p_item_id else victory_effect_id end,
       emoji_pack_id=case when v_item.kind='emoji_pack' then p_item_id else emoji_pack_id end,
-      mascot_id=case when v_item.kind='mascot' then p_item_id else mascot_id end,
       updated_at=now()
   where user_id=v_uid;
 
