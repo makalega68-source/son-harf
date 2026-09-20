@@ -46,10 +46,14 @@ class LetterLadderUxRegressionTest {
     @Test
     fun harfYoluShowsLiveKeyboardInputInTheNextPlayableRow() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-        val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
+        val sharedKeyboard = projectFile("app/src/main/java/com/sonharf/game/SharedInputPrimitives.kt").readText()
+        val compatibilityWrapper = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
         assertTrue(source.contains("activeInput = input.uppercase(locale).takeIf { isActiveEntry }"))
         assertTrue(source.contains("activeInput?.padEnd(LetterLadderEngine.WORD_LENGTH, ' ')"))
-        assertTrue(keyboard.contains("onValueChange((value + key).take(maxLength))"))
+        assertTrue(sharedKeyboard.contains("onValueChange((value + key).take(maxLength))"))
+        assertTrue(compatibilityWrapper.contains("EmbeddedWordKeyboard("))
+        assertFalse(sharedKeyboard.contains("TEMİZLE"))
+        assertFalse(sharedKeyboard.contains("CLEAR"))
     }
 
     @Test
@@ -65,33 +69,35 @@ class LetterLadderUxRegressionTest {
     }
 
     @Test
-    fun harfYoluUsesItsOwnDynamicApprovedFiveColorBackdrop() {
+    fun harfYoluUsesRestrainedStaticAdultBackdrop() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
         val backdrop = projectFile("app/src/main/java/com/sonharf/game/HarfYoluBackdrop.kt").readText()
         assertTrue(source.contains("HarfYoluBackdrop(Modifier.fillMaxSize())"))
         assertFalse(source.contains("FirstRunLanguageBackdrop(Modifier.fillMaxSize())"))
-        assertTrue(backdrop.contains("rememberInfiniteTransition"))
-        assertTrue(backdrop.contains("0xFF2563EB"))
-        assertTrue(backdrop.contains("0xFF12B8A6"))
-        assertTrue(backdrop.contains("0xFFF97316"))
-        assertTrue(backdrop.contains("0xFF7C3AED"))
-        assertTrue(backdrop.contains("Color.White"))
+        assertFalse(backdrop.contains("rememberInfiniteTransition"))
+        assertTrue(backdrop.contains("0xFF365F53"))
+        assertTrue(backdrop.contains("0xFF718693"))
+        assertTrue(backdrop.contains("0xFFAD6A57"))
+        assertTrue(backdrop.contains("0xFFF4F2EC"))
+        assertFalse(backdrop.contains("0xFF7C3AED"))
+        assertFalse(backdrop.contains("0xFFF97316"))
     }
 
     @Test
-    fun harfYoluKeyboardUsesSharedPremiumThemeAndQuietDedicatedFeedback() {
+    fun harfYoluKeyboardUsesSharedMinimalRendererAndQuietDedicatedFeedback() {
         val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
+        val shared = projectFile("app/src/main/java/com/sonharf/game/SharedInputPrimitives.kt").readText()
         val sound = projectFile("app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt").readText()
-        assertTrue(keyboard.contains("Harf Yolu'na özel kompakt klavye"))
-        assertTrue(keyboard.contains("HarfYoluKeyboardUi"))
-        assertFalse(keyboard.contains("SonHarfCosmetics.keyboardPalette"))
-        assertTrue(keyboard.contains("SonHarfTheme.PrimarySoft"))
-        assertTrue(keyboard.contains("SonHarfTheme.Primary"))
-        assertTrue(keyboard.contains("SonHarfTheme.Turquoise"))
-        assertTrue(keyboard.contains("SonHarfTheme.Purple.copy(alpha = .09f)"))
-        assertTrue(keyboard.contains("keySound()"))
-        assertTrue(keyboard.contains("actionSound()"))
+        assertTrue(keyboard.contains("Rendering is delegated to the shared game keyboard"))
+        assertTrue(keyboard.contains("submitLabel = sh(\"ONAYLA\", \"CONFIRM\")"))
         assertTrue(keyboard.contains("33.dp"))
+        assertTrue(keyboard.contains("keySound = keySound"))
+        assertTrue(keyboard.contains("actionSound = actionSound"))
+        assertTrue(shared.contains("val palette = SonHarfCosmetics.keyboardPalette"))
+        assertTrue(shared.contains("keySound()"))
+        assertTrue(shared.contains("actionSound()"))
+        assertFalse(shared.contains("TEMİZLE"))
+        assertFalse(shared.contains("CLEAR"))
         assertTrue(sound.contains("fun puzzleKey()"))
         assertTrue(sound.contains("fun puzzleError()"))
         assertTrue(sound.contains("fun puzzleHint()"))
