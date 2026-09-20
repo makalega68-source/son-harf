@@ -212,8 +212,10 @@ fun PremierWordDuelScreen() {
         }
     }
 
-    LaunchedEffect(turnSeconds, stage, room?.disconnectedPlayerId) {
-        if (stage == PremierStage.Playing && room?.disconnectedPlayerId == null && turnSeconds in 1..5) {
+    LaunchedEffect(turnSeconds, stage, room?.disconnectedPlayerId, room?.currentPlayerId) {
+        val reconnectGraceActive = room?.disconnectedPlayerId != null &&
+            room?.disconnectedPlayerId == room?.currentPlayerId
+        if (stage == PremierStage.Playing && !reconnectGraceActive && turnSeconds in 1..5) {
             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
         }
     }
@@ -282,8 +284,16 @@ fun PremierWordDuelScreen() {
         }
 
         if (reconnectDeadline != null) {
-            // This countdown is presentation-only. The database reconnect_deadline remains authoritative.
-            val initialReconnectMs = Duration.between(Instant.now(), reconnectDeadline).toMillis().coerceAtLeast(0L)
+            // The database clock is authoritative; phone wall-clock drift must not shorten reconnect grace.
+            val requestStartedAt = SystemClock.elapsedRealtime()
+            val reconnectClock = runCatching { backend.getPremierReconnectClock(active.id) }.getOrNull()
+            val requestFinishedAt = SystemClock.elapsedRealtime()
+            val halfRoundTripMs = ((requestFinishedAt - requestStartedAt) / 2L).coerceIn(0L, 750L)
+            val initialReconnectMs = if (reconnectClock != null) {
+                (reconnectClock.remainingMs - halfRoundTripMs).coerceAtLeast(0L)
+            } else {
+                PREMIER_RECONNECT_SECONDS * 1000L
+            }
             val reconnectAnchor = SystemClock.elapsedRealtime()
             while (true) {
                 val elapsedMs = SystemClock.elapsedRealtime() - reconnectAnchor
@@ -903,10 +913,10 @@ private fun PremierArena(
             PremierArenaHeader(language, room, me, opponent, rivalName, myScore, rivalScore, myRounds, rivalRounds, myStreak, rivalStreak, turnSeconds, unreadChat, onForfeit, onQuickChat)
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(primaryGap))
-                PremierTurnBadge(language, myTurn, room.status)
                 if (reconnectGraceActive) {
-                    Spacer(Modifier.height(primaryGap))
                     PremierReconnectBanner(language, reconnectingMe, turnSeconds)
+                } else {
+                    PremierTurnBadge(language, myTurn, room.status)
                 }
                 Spacer(Modifier.height(primaryGap))
                 PremierTargetCard(language, required, room.gameMode, room.roundNo, targetSize)
