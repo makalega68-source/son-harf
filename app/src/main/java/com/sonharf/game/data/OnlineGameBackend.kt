@@ -390,8 +390,16 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
 
     fun observeRoom(id: String, intervalMs: Long = 700): Flow<GameRoomDto> = flow {
         var previous: GameRoomDto? = null
+        var lastHeartbeatAt = 0L
         while (currentCoroutineContext().isActive) {
-            val result = runCatching { getRoom(id) }
+            val now = System.nanoTime()
+            val heartbeatDue = now - lastHeartbeatAt >= 4_000_000_000L
+            val result = if (heartbeatDue) {
+                lastHeartbeatAt = now
+                runCatching { heartbeatRoom(id) }
+            } else {
+                runCatching { getRoom(id) }
+            }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {
