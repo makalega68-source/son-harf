@@ -37,7 +37,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeout
 
 private const val ProfileThemeTimeoutMs = 10_000L
-private const val DarkArenaThemeId = "theme_dark_arena"
+private const val BlackThemeId = "theme_black"
+private const val LegacyDarkArenaThemeId = "theme_dark_arena"
+private val DarkThemeIds = setOf(BlackThemeId, LegacyDarkArenaThemeId)
 
 /**
  * Owned Style collection. Store rotation may stop new sales, but supported purchased visuals remain
@@ -111,9 +113,17 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
 
     LaunchedEffect(backend) { reloadCollection() }
 
-    // SonHarfCosmetics is persisted locally, so a transient network failure does not visually reset it.
-    val darkActive = SonHarfCosmetics.gameThemeId == DarkArenaThemeId
-    val showDarkArena = darkActive || DarkArenaThemeId in owned
+    // Current Black Theme and the retired Night Arena id share the same supported dark-theme family.
+    // Prefer the current sellable id while preserving historical ownership/equipment.
+    val activeDarkThemeId = SonHarfCosmetics.gameThemeId?.takeIf { it in DarkThemeIds }
+    val ownedDarkThemeId = when {
+        BlackThemeId in owned -> BlackThemeId
+        LegacyDarkArenaThemeId in owned -> LegacyDarkArenaThemeId
+        activeDarkThemeId != null -> activeDarkThemeId
+        else -> null
+    }
+    val darkActive = activeDarkThemeId != null
+    val showBlackTheme = ownedDarkThemeId != null
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -126,23 +136,23 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ProfileThemeCard(
-                title = sh("Ana Yeşil Beyaz", "Main Green & White"),
+                title = sh("Ana Tema", "Main Theme"),
                 subtitle = sh("Varsayılan görünüm • Ücretsiz", "Default look • Free"),
                 active = !darkActive,
                 enabled = !busy && !loading,
-                dark = false,
+                blackVariant = false,
                 modifier = Modifier.weight(1f),
                 onClick = { equipStyle(null) },
             )
-            if (showDarkArena) {
+            if (showBlackTheme) {
                 ProfileThemeCard(
-                    title = sh("Gece Arenası", "Night Arena"),
+                    title = "Black Theme",
                     subtitle = sh("Koleksiyonunda", "In your collection"),
                     active = darkActive,
                     enabled = !busy && !loading,
-                    dark = true,
+                    blackVariant = true,
                     modifier = Modifier.weight(1f),
-                    onClick = { equipStyle(DarkArenaThemeId) },
+                    onClick = { equipStyle(ownedDarkThemeId ?: BlackThemeId) },
                 )
             }
         }
@@ -158,8 +168,9 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
         }
 
         // Historical ownership stays safely on the server, but products with no live game
-        // integration must not occupy the player's visible profile collection.
-        val styles = collection.filter { it.id != DarkArenaThemeId && it.isSupportedOwnedStyle() }
+        // integration must not occupy the player's visible profile collection. Theme aliases are
+        // represented by the single canonical theme card above to avoid duplicate equipped states.
+        val styles = collection.filter { it.id !in DarkThemeIds && it.isSupportedOwnedStyle() }
         Text(
             sh("STYLE KOLEKSİYONUM", "MY STYLE COLLECTION"),
             color = MainUi.Text,
@@ -200,7 +211,7 @@ private fun ProfileThemeCard(
     subtitle: String,
     active: Boolean,
     enabled: Boolean,
-    dark: Boolean,
+    blackVariant: Boolean,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -214,10 +225,16 @@ private fun ProfileThemeCard(
         Column(Modifier.padding(9.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Box(
                 Modifier.fillMaxWidth().height(68.dp).background(
-                    brush = if (dark) {
-                        Brush.linearGradient(listOf(Color(0xFF070A12), Color(0xFF1A2331), Color(0xFF5A431A)))
+                    brush = if (blackVariant) {
+                        Brush.linearGradient(listOf(Color(0xFF050608), Color(0xFF111318), Color(0xFF20242B)))
                     } else {
-                        Brush.linearGradient(listOf(Color(0xFFFFFEF8), Color(0xFFE4F0E8), Color(0xFF2F6B52)))
+                        Brush.linearGradient(
+                            listOf(
+                                KelimeKusatmasiPalette.MonsterBlack,
+                                KelimeKusatmasiPalette.MonsterSurface,
+                                KelimeKusatmasiPalette.MonsterPink.copy(alpha = .72f),
+                            )
+                        )
                     },
                     shape = RoundedCornerShape(12.dp),
                 ),
@@ -226,7 +243,7 @@ private fun ProfileThemeCard(
                     Icon(
                         Icons.Rounded.CheckCircle,
                         null,
-                        tint = if (dark) Color(0xFFF0B84D) else Color(0xFF2F6B52),
+                        tint = if (blackVariant) SonHarfTheme.PremiumGold else SonHarfTheme.Primary,
                         modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(20.dp),
                     )
                 }
