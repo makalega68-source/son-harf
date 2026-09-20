@@ -80,11 +80,16 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
 
     BackHandler(enabled = destination != PremiumDestination.HOME) {
         destination = when (destination) {
-            PremiumDestination.SETTINGS, PremiumDestination.PROFILE_DETAILS, PremiumDestination.COLLECTION, PremiumDestination.PRO -> PremiumDestination.PROFILE
+            PremiumDestination.SETTINGS,
+            PremiumDestination.PROFILE_DETAILS,
+            PremiumDestination.COLLECTION,
+            PremiumDestination.PRO -> PremiumDestination.PROFILE
             PremiumDestination.PRIVATE_ROOM -> PremiumDestination.PRO
             PremiumDestination.SOCIAL, PremiumDestination.SHOP -> PremiumDestination.HOME
             PremiumDestination.ACCOUNT -> PremiumDestination.SETTINGS
-            PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH -> {
+            PremiumDestination.LAST_LETTER,
+            PremiumDestination.SIEGE,
+            PremiumDestination.LETTER_PATH -> {
                 uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
                 uiLanguageBeforeGame = null
                 PremiumDestination.HOME
@@ -93,12 +98,16 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         }
     }
 
-    // Top-level navigation: Home, Friends/Social, Store, Profile. Club is hidden.
     val topLevel = destination in setOf(
         PremiumDestination.HOME,
         PremiumDestination.SOCIAL,
         PremiumDestination.SHOP,
         PremiumDestination.PROFILE,
+    )
+    val inGameplay = destination in setOf(
+        PremiumDestination.LAST_LETTER,
+        PremiumDestination.SIEGE,
+        PremiumDestination.LETTER_PATH,
     )
     val scheme = if (SonHarfTheme.IsDark) {
         darkColorScheme(
@@ -119,18 +128,30 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             tertiary = SonHarfTheme.Success,
             background = SonHarfTheme.Background,
             surface = SonHarfTheme.Surface,
+            surfaceVariant = SonHarfTheme.SurfaceSecondary,
             onPrimary = SonHarfTheme.OnPrimary,
             onBackground = SonHarfTheme.TextPrimary,
             onSurface = SonHarfTheme.TextPrimary,
+            onSurfaceVariant = SonHarfTheme.TextSecondary,
+            outline = SonHarfTheme.Border,
             error = SonHarfTheme.Error,
         )
     }
 
-    MaterialTheme(colorScheme = scheme) {
+    MaterialTheme(
+        colorScheme = scheme,
+        shapes = Shapes(
+            extraSmall = RoundedCornerShape(8.dp),
+            small = RoundedCornerShape(12.dp),
+            medium = RoundedCornerShape(16.dp),
+            large = RoundedCornerShape(22.dp),
+            extraLarge = RoundedCornerShape(28.dp),
+        ),
+    ) {
         Scaffold(
             containerColor = SonHarfTheme.Background,
             topBar = {
-                if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)) SonHarfTopAdBanner(isPremium = isPro)
+                if (!inGameplay) SonHarfTopAdBanner(isPremium = isPro)
             },
             bottomBar = {
                 if (topLevel) {
@@ -145,7 +166,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
             },
         ) { padding ->
             Box(Modifier.fillMaxSize().padding(padding)) {
-                if (!SonHarfTheme.IsDark) SonHarfLeafBackdrop(Modifier.matchParentSize())
+                if (!inGameplay) PurchasedGameBackdrop(Modifier.matchParentSize())
                 when (destination) {
                     PremiumDestination.HOME -> PremiumHomeScreen(
                         backend = backend,
@@ -153,6 +174,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onCompete = { destination = PremiumDestination.COMPETE },
                         onProfile = { destination = PremiumDestination.PROFILE },
                         onSocial = { destination = PremiumDestination.SOCIAL },
+                        onShop = { destination = PremiumDestination.SHOP },
                         onLastLetter = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
                         onLetterPath = { openGame(PremiumDestination.LETTER_PATH, letterPathLanguage) },
                     )
@@ -202,9 +224,7 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
                         onExit = { leaveGame() },
                         onOpenStore = { leaveGame(PremiumDestination.SHOP) },
                     )
-                    PremiumDestination.LETTER_PATH -> LetterLadderGameScreen {
-                        leaveGame()
-                    }
+                    PremiumDestination.LETTER_PATH -> LetterLadderGameScreen { leaveGame() }
                     PremiumDestination.SOCIAL -> MainSocialScreen(
                         backend = backend,
                         onPlay = { openGame(PremiumDestination.LAST_LETTER, lastLetterLanguage) },
@@ -235,6 +255,7 @@ private fun PremiumHomeScreen(
     onCompete: () -> Unit,
     onProfile: () -> Unit,
     onSocial: () -> Unit,
+    onShop: () -> Unit,
     onLastLetter: () -> Unit,
     onLetterPath: () -> Unit,
 ) {
@@ -249,8 +270,8 @@ private fun PremiumHomeScreen(
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
             modifier = Modifier.widthIn(max = 600.dp).fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onSocial)
@@ -258,9 +279,16 @@ private fun PremiumHomeScreen(
             item(key = "home_secondary_modes") {
                 PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)
             }
-            item(key = "daily_objective") {
+            item(key = "home_league") {
+                PremiumLeagueProgress(profile = profile, onLeague = onCompete)
+            }
+            item(key = "weekly_top") {
                 PremiumDailyObjective(onClick = onCompete)
             }
+            item(key = "home_extras") {
+                PremiumHomeExtras(profile = profile, onShop = onShop, onSocial = onSocial)
+            }
+            item { Spacer(Modifier.height(4.dp)) }
         }
     }
 }
@@ -283,12 +311,12 @@ private fun PremiumGameCenter(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text(
-                sh("OYUN MODLARI", "GAME MODES"),
-                color = SonHarfTheme.TextPrimary,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Black,
+            PurchasedSectionHeader(
+                title = sh("OYUN MODLARI", "GAME MODES"),
+                icon = Icons.Rounded.SportsEsports,
+                accent = PurchasedCasualUi2.Blue,
             )
+            Spacer(Modifier.height(4.dp))
             Text(
                 sh(
                     "Modunu seç, dilini ayarla ve doğrudan arenaya gir.",
@@ -297,12 +325,12 @@ private fun PremiumGameCenter(
                 color = SonHarfTheme.TextSecondary,
                 fontSize = 12.sp,
             )
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(6.dp))
         }
         item {
             PremiumGameCard(
                 icon = Icons.Rounded.GridView,
-                title = sh("KELİME KUŞATMASI", "KELİME KUŞATMASI"),
+                title = sh("KELİME KUŞATMASI", "WORD SIEGE"),
                 subtitle = sh("Ana oyun • taktik alan savaşı", "Main game • tactical territory battle"),
                 language = siegeLanguage,
                 onLanguageChange = onSiegeLanguage,
@@ -324,7 +352,7 @@ private fun PremiumGameCenter(
             PremiumGameCard(
                 icon = Icons.Rounded.Route,
                 title = sh("HARF YOLU", "LETTER PATH"),
-                subtitle = sh("Kelime rotanı tamamla", "Complete your word path"),
+                subtitle = sh("Beş harfli rotanı tamamla", "Complete your five-letter path"),
                 language = letterPathLanguage,
                 onLanguageChange = onLetterPathLanguage,
                 onClick = onLetterPath,
@@ -343,19 +371,15 @@ private fun PremiumGameCard(
     primary: Boolean = false,
     onClick: () -> Unit,
 ) {
-    Surface(
+    val accent = if (primary) PurchasedCasualUi2.Green else PurchasedCasualUi2.Blue
+    PurchasedGamePanel(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        color = if (primary) SonHarfTheme.Primary.copy(alpha = .12f) else SonHarfTheme.Surface.copy(alpha = .98f),
-        border = BorderStroke(1.dp, if (primary) SonHarfTheme.Primary.copy(alpha = .34f) else SonHarfTheme.Border),
-        shadowElevation = if (primary) 5.dp else 1.dp,
+        accent = accent,
+        emphasized = primary,
     ) {
         Column(Modifier.padding(horizontal = 18.dp, vertical = 16.dp)) {
             if (primary) {
-                Surface(
-                    shape = RoundedCornerShape(99.dp),
-                    color = SonHarfTheme.PremiumGold.copy(alpha = .16f),
-                ) {
+                Surface(shape = RoundedCornerShape(99.dp), color = SonHarfTheme.PremiumGold.copy(alpha = .14f)) {
                     Text(
                         sh("ANA ARENA", "MAIN ARENA"),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
@@ -368,20 +392,16 @@ private fun PremiumGameCard(
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = if (primary) SonHarfTheme.Primary.copy(alpha = .18f) else SonHarfTheme.Turquoise.copy(alpha = .12f),
+                    shape = RoundedCornerShape(16.dp),
+                    color = accent.copy(alpha = .12f),
+                    border = BorderStroke(1.dp, accent.copy(alpha = .16f)),
                 ) {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        tint = if (primary) SonHarfTheme.Primary else SonHarfTheme.Turquoise,
-                        modifier = Modifier.padding(12.dp).size(26.dp),
-                    )
+                    Icon(icon, null, tint = accent, modifier = Modifier.padding(12.dp).size(27.dp))
                 }
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(13.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(title, color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                    Spacer(Modifier.height(4.dp))
+                    Text(title, color = SonHarfTheme.TextPrimary, fontWeight = FontWeight.Black, fontSize = 15.sp)
+                    Spacer(Modifier.height(3.dp))
                     Text(subtitle, color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
                 }
             }
@@ -392,18 +412,15 @@ private fun PremiumGameCard(
                     onLanguageChange = onLanguageChange,
                     modifier = Modifier.weight(1f),
                 )
-                Spacer(Modifier.width(12.dp))
-                Button(
+                Spacer(Modifier.width(10.dp))
+                PurchasedGlossButton(
+                    text = sh("OYNA", "PLAY"),
                     onClick = onClick,
-                    shape = RoundedCornerShape(14.dp),
-                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (primary) SonHarfTheme.Primary else SonHarfTheme.Forest,
-                        contentColor = SonHarfTheme.OnPrimary,
-                    ),
-                ) {
-                    Text(sh("ARENA'YA GİR", "ENTER"), fontWeight = FontWeight.Black, fontSize = 10.sp)
-                }
+                    modifier = Modifier.widthIn(min = 112.dp),
+                    color = accent,
+                    icon = Icons.Rounded.PlayArrow,
+                    minHeight = 46.dp,
+                )
             }
         }
     }
@@ -415,13 +432,13 @@ private fun PremiumLanguageChoice(
     onLanguageChange: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
         FilterChip(
             selected = language == "tr",
             onClick = { onLanguageChange("tr") },
             label = { Text("TR", fontWeight = FontWeight.Bold, fontSize = 10.sp) },
             leadingIcon = if (language == "tr") {
-                { Icon(Icons.Rounded.Check, null, Modifier.size(15.dp)) }
+                { Icon(Icons.Rounded.Check, null, Modifier.size(14.dp)) }
             } else null,
         )
         FilterChip(
@@ -429,7 +446,7 @@ private fun PremiumLanguageChoice(
             onClick = { onLanguageChange("en") },
             label = { Text("EN", fontWeight = FontWeight.Bold, fontSize = 10.sp) },
             leadingIcon = if (language == "en") {
-                { Icon(Icons.Rounded.Check, null, Modifier.size(15.dp)) }
+                { Icon(Icons.Rounded.Check, null, Modifier.size(14.dp)) }
             } else null,
         )
     }
@@ -445,31 +462,38 @@ private fun PremiumBottomBar(
 ) {
     val items = listOf(
         Triple(PremiumDestination.HOME, Icons.Rounded.Home, sh("ANA SAYFA", "HOME")) to onHome,
-        Triple(PremiumDestination.SOCIAL, Icons.Rounded.People, sh("ARKADAŞLAR", "FRIENDS")) to onSocial,
+        Triple(PremiumDestination.SOCIAL, Icons.Rounded.People, sh("SOSYAL", "SOCIAL")) to onSocial,
         Triple(PremiumDestination.SHOP, Icons.Rounded.Storefront, sh("MAĞAZA", "STORE")) to onShop,
         Triple(PremiumDestination.PROFILE, Icons.Rounded.Person, sh("PROFİL", "PROFILE")) to onProfile,
     )
-    NavigationBar(containerColor = SonHarfTheme.NavigationSurface, tonalElevation = 0.dp) {
-        items.forEach { (item, onClick) ->
-            NavigationBarItem(
-                selected = destination == item.first,
-                onClick = onClick,
-                icon = { Icon(item.second, null) },
-                label = {
-                    Text(
-                        item.third,
-                        fontSize = 8.sp,
-                        fontWeight = if (destination == item.first) FontWeight.Bold else FontWeight.Normal,
-                    )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = SonHarfTheme.Primary,
-                    selectedTextColor = SonHarfTheme.Primary,
-                    indicatorColor = SonHarfTheme.Primary.copy(alpha = .12f),
-                    unselectedIconColor = SonHarfTheme.TextSecondary,
-                    unselectedTextColor = SonHarfTheme.TextSecondary,
-                ),
-            )
+    Surface(
+        color = SonHarfTheme.NavigationSurface,
+        shadowElevation = 10.dp,
+        border = BorderStroke(1.dp, SonHarfTheme.Border.copy(alpha = .7f)),
+    ) {
+        NavigationBar(containerColor = SonHarfTheme.NavigationSurface, tonalElevation = 0.dp) {
+            items.forEach { (item, onClick) ->
+                val selected = destination == item.first
+                NavigationBarItem(
+                    selected = selected,
+                    onClick = onClick,
+                    icon = { Icon(item.second, null, modifier = Modifier.size(if (selected) 25.dp else 23.dp)) },
+                    label = {
+                        Text(
+                            item.third,
+                            fontSize = 8.sp,
+                            fontWeight = if (selected) FontWeight.Black else FontWeight.SemiBold,
+                        )
+                    },
+                    colors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = SonHarfTheme.Primary,
+                        selectedTextColor = SonHarfTheme.Primary,
+                        indicatorColor = SonHarfTheme.Primary.copy(alpha = .12f),
+                        unselectedIconColor = SonHarfTheme.TextSecondary.copy(alpha = .72f),
+                        unselectedTextColor = SonHarfTheme.TextSecondary,
+                    ),
+                )
+            }
         }
     }
 }
