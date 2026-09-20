@@ -1,0 +1,73 @@
+name: APK V2 Refresh Verify
+
+on:
+  push:
+    branches:
+      - ui/user-apk-v2-refresh-20260921
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+jobs:
+  build-apk-v2:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+
+      - name: Verify exact APK-v2 source line
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "SOURCE_SHA=$(git rev-parse HEAD)"
+          git merge-base --is-ancestor e66eec3b0d33e7419aa46686490a04dac57b680b HEAD
+          grep -q 'PremiumAdultApp(onSignedOut' app/src/main/java/com/sonharf/game/StableV1App.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
+          test -f app/src/main/java/com/sonharf/game/ProfileFramesV2.kt
+          test -f app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt
+          ! grep -q 'TEMİZLE' app/src/main/java/com/sonharf/game/SharedInputPrimitives.kt
+          ! grep -q 'CLEAR' app/src/main/java/com/sonharf/game/SharedInputPrimitives.kt
+
+      - name: Unit tests and debug APK
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Verify APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose "$APK"
+          sha256sum "$APK" | tee apk-sha256.txt
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Kelime-Kusatmasi-APK-v2-Yenilenmis
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            apk-sha256.txt
+          if-no-files-found: error
+          retention-days: 14
