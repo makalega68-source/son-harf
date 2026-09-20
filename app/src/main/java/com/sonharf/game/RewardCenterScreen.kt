@@ -5,13 +5,17 @@ import android.content.Context
 import android.content.ContextWrapper
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.Paid
+import androidx.compose.material.icons.rounded.Savings
+import androidx.compose.material.icons.rounded.VerifiedUser
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -117,7 +121,7 @@ fun RewardCenterScreen() {
                                     else -> sh("Style denemen başladı.", "Your Style trial has started.")
                                 }
                                 rewardVfxKey = "reward:$rewardType:$responseId"
-                                SonHarfSoundFx.scoreTick()
+                                SonHarfSoundFx.reward()
                                 reload()
                             }
                             .onFailure { e ->
@@ -162,34 +166,32 @@ fun RewardCenterScreen() {
     }
 
     Box(Modifier.fillMaxSize()) {
-        LazyColumn(
+        androidx.compose.foundation.lazy.LazyColumn(
             Modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             item {
-                Text(sh("KELİME KUŞATMASI ÖDÜLLERİ", "WORD SIEGE REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
-                Text(
-                    if (isPro) {
+                MainScreenHeader(
+                    title = sh("Kelime Kuşatması Ödülleri", "Word Siege Rewards"),
+                    subtitle = if (isPro) {
                         sh(
-                            "PRO hesabında reklam gösterilmez. Kumbara ve sunucu kontrollü ilerleme sistemleri normal şekilde devam eder.",
-                            "Ads are disabled on PRO. Piggy Bank and server-controlled progression continue normally.",
+                            "PRO hesabında reklam yok; sunucu kontrollü ödüller devam eder.",
+                            "PRO is ad-free; server-controlled rewards remain available.",
                         )
                     } else {
                         sh(
-                            "Ödüllü reklamlar isteğe bağlıdır. Maçlarda ve oyun alanında reklam yoktur.",
-                            "Rewarded ads are optional. Matches and gameplay remain ad-free.",
+                            "Ödüllü reklamlar isteğe bağlıdır; oyun ekranlarında reklam yoktur.",
+                            "Rewarded ads are optional; gameplay screens remain ad-free.",
                         )
                     },
-                    color = SonHarfMuted,
-                    fontSize = 10.sp,
                 )
             }
 
             if (!isPro) {
                 item {
                     RewardAdCard(
-                        icon = "◈",
+                        icon = Icons.Rounded.Paid,
                         title = "SON COIN",
                         description = sh(
                             "Her tamamlanan reklam +${s?.coinPerAd ?: 10} Son Coin verir. Günlük kota sunucu tarafından tutulur.",
@@ -204,7 +206,7 @@ fun RewardCenterScreen() {
 
                 item {
                     RewardAdCard(
-                        icon = "✨",
+                        icon = Icons.Rounded.AutoAwesome,
                         title = sh("STYLE DENEME", "STYLE TRIAL"),
                         description = listOfNotNull(trialCandidateName, trialDescription).joinToString(" • ").ifBlank {
                             sh("Sunucu kataloğundaki uygun bir Style ürününü dene.", "Try an eligible Style item from the server catalog.")
@@ -218,65 +220,82 @@ fun RewardCenterScreen() {
             }
 
             if (s?.trialItemId != null) item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = SonHarfPurple.copy(alpha = .12f)),
-                    shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .45f)),
-                ) {
+                MainGameCard {
                     Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(sh("AKTİF DENEME", "ACTIVE TRIAL"), color = SonHarfPurple, fontWeight = FontWeight.Black)
-                        Text(if (SonHarfUiState.isEnglish) activeTrialItem?.nameEn ?: s.trialItemId else activeTrialItem?.nameTr ?: s.trialItemId, fontWeight = FontWeight.Bold)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Surface(shape = MainUiShape.Control, color = MainUi.BlueSoft) {
+                                Icon(Icons.Rounded.AutoAwesome, null, tint = MainUi.Blue, modifier = Modifier.padding(9.dp).size(20.dp))
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(sh("AKTİF DENEME", "ACTIVE TRIAL"), color = MainUi.Blue, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                Text(
+                                    if (SonHarfUiState.isEnglish) activeTrialItem?.nameEn ?: s.trialItemId else activeTrialItem?.nameTr ?: s.trialItemId,
+                                    color = MainUi.Text,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                )
+                            }
+                        }
                         val remaining = when (s.trialMode) {
                             "match" -> sh("Kalan maç: ${s.trialMatchesRemaining ?: 0}", "Matches left: ${s.trialMatchesRemaining ?: 0}")
                             "minutes" -> s.trialExpiresAt.orEmpty()
                             else -> s.trialExpiresAt.orEmpty()
                         }
-                        if (remaining.isNotBlank()) Text(remaining, color = SonHarfMuted, fontSize = 9.sp)
-                        Button(
+                        if (remaining.isNotBlank()) Text(remaining, color = MainUi.Muted, fontSize = 10.sp)
+                        MainGameButton(
+                            text = if (busy == "equip_trial") "…" else sh("DENEMEYİ KULLAN", "USE TRIAL"),
                             onClick = {
-                                val b = backend ?: return@Button
+                                val b = backend ?: return@MainGameButton
                                 scope.launch {
                                     busy = "equip_trial"
                                     runCatching { b.equipRewardTrial() }
                                         .onSuccess {
                                             notice = sh("Deneme Style ürünü etkinleştirildi.", "Trial Style item equipped.")
                                             rewardVfxKey = "reward:trial-equip:${s.trialItemId}"
+                                            SonHarfSoundFx.reward()
                                             reload()
                                         }
-                                        .onFailure { notice = sh("Deneme artık aktif değil.", "The trial is no longer active."); reload() }
+                                        .onFailure {
+                                            notice = sh("Deneme artık aktif değil.", "The trial is no longer active.")
+                                            reload()
+                                        }
                                     busy = null
                                 }
                             },
                             enabled = busy == null,
-                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
-                        ) { Text(if (busy == "equip_trial") "…" else sh("DENEMEYİ KULLAN", "USE TRIAL"), fontWeight = FontWeight.Black) }
+                            modifier = Modifier.fillMaxWidth(),
+                        )
                     }
                 }
             }
 
             item {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
-                    shape = RoundedCornerShape(20.dp),
-                    border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .30f)),
-                ) {
+                MainGameCard {
                     Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(sh("KUMBARA", "PIGGY BANK"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
-                            Text("${s?.piggyMatchProgress ?: 0}/${s?.piggyMatchTarget ?: 8}", fontWeight = FontWeight.Black)
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Surface(shape = MainUiShape.Control, color = MainUi.GoldSoft) {
+                                    Icon(Icons.Rounded.Savings, null, tint = MainUi.Gold, modifier = Modifier.padding(9.dp).size(20.dp))
+                                }
+                                Spacer(Modifier.width(10.dp))
+                                Text(sh("KUMBARA", "PIGGY BANK"), color = MainUi.Text, fontWeight = FontWeight.Bold)
+                            }
+                            Text("${s?.piggyMatchProgress ?: 0}/${s?.piggyMatchTarget ?: 8}", color = MainUi.Gold, fontWeight = FontWeight.Bold)
                         }
-                        LinearProgressIndicator(
-                            progress = { ((s?.piggyMatchProgress ?: 0).toFloat() / (s?.piggyMatchTarget ?: 8).coerceAtLeast(1)).coerceIn(0f, 1f) },
+                        MainProgress(
+                            progress = ((s?.piggyMatchProgress ?: 0).toFloat() / (s?.piggyMatchTarget ?: 8).coerceAtLeast(1)).coerceIn(0f, 1f),
                             modifier = Modifier.fillMaxWidth(),
+                            accent = MainUi.Gold,
                         )
                         Text(
                             sh(
                                 "Tamamlanan maçlarla Kumbara dolar. Hazır olduğunda ${s?.piggyBonusSc ?: 0} Son Coin sunucu tarafından doğrulanarak açılır.",
                                 "Completed matches fill the Piggy Bank. When ready, ${s?.piggyBonusSc ?: 0} Son Coin is verified and granted by the server.",
                             ),
-                            color = SonHarfMuted,
-                            fontSize = 9.sp,
+                            color = MainUi.Muted,
+                            fontSize = 10.sp,
+                            lineHeight = 14.sp,
                         )
                         Button(
                             onClick = {
@@ -290,7 +309,7 @@ fun RewardCenterScreen() {
                                                 "Piggy Bank opened: +${reward.bonusSc} Son Coin.",
                                             )
                                             rewardVfxKey = "reward:piggy:${reward.bonusSc}:${s?.piggyMatchProgress}"
-                                            SonHarfSoundFx.scoreTick()
+                                            SonHarfSoundFx.reward()
                                             reload()
                                         }
                                         .onFailure { notice = sh("Kumbara henüz hazır değil.", "The Piggy Bank is not ready yet.") }
@@ -299,32 +318,55 @@ fun RewardCenterScreen() {
                             },
                             enabled = (s?.piggyBonusSc ?: 0) > 0 && busy == null,
                             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF211830)),
-                        ) { Text(if (busy == "piggy") "…" else sh("KUMBARAYI AÇ", "OPEN PIGGY BANK"), fontWeight = FontWeight.Black) }
+                            shape = MainUiShape.Control,
+                            colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold, contentColor = Color(0xFF2B2418)),
+                        ) {
+                            Text(if (busy == "piggy") "…" else sh("KUMBARAYI AÇ", "OPEN PIGGY BANK"), fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
             }
 
             item {
-                Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface2), shape = RoundedCornerShape(16.dp)) {
-                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(sh("SUNUCU KONTROLLÜ ÖDÜLLER", "SERVER-CONTROLLED REWARDS"), fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                        Text(
-                            sh(
-                                "Günlük kotalar, deneme süresi ve Kumbara ilerlemesi sunucuda tutulur; cihaz saatini değiştirmek veya uygulamayı silmek bunları sıfırlamaz.",
-                                "Daily quotas, trial duration and Piggy Bank progress are stored on the server; changing device time or reinstalling the app does not reset them.",
-                            ),
-                            color = SonHarfMuted,
-                            fontSize = 9.sp,
-                        )
-                        Text("◈ ${profile?.diamonds ?: 0}", color = SonHarfCyan, fontWeight = FontWeight.Black)
+                MainGameCard {
+                    Row(
+                        Modifier.fillMaxWidth().padding(13.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Surface(shape = MainUiShape.Control, color = MainUi.GreenSoft) {
+                            Icon(Icons.Rounded.VerifiedUser, null, tint = MainUi.Green, modifier = Modifier.padding(8.dp).size(19.dp))
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(sh("SUNUCU KONTROLLÜ ÖDÜLLER", "SERVER-CONTROLLED REWARDS"), color = MainUi.Text, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                            Text(
+                                sh(
+                                    "Günlük kotalar, deneme süresi ve Kumbara ilerlemesi sunucuda tutulur; cihaz saati veya yeniden kurulum bunları sıfırlamaz.",
+                                    "Daily quotas, trial duration and Piggy Bank progress are stored on the server; device time or reinstalling does not reset them.",
+                                ),
+                                color = MainUi.Muted,
+                                fontSize = 9.sp,
+                                lineHeight = 13.sp,
+                            )
+                        }
+                        Text("${profile?.diamonds ?: 0}", color = MainUi.Gold, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                     }
                 }
             }
 
             if (!notice.isNullOrBlank()) item {
-                Surface(color = SonHarfSurface2, shape = RoundedCornerShape(14.dp)) {
-                    Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfMuted, textAlign = TextAlign.Center, fontSize = 10.sp)
+                Surface(
+                    color = MainUi.Surface,
+                    shape = MainUiShape.Control,
+                    border = BorderStroke(1.dp, MainUi.Border),
+                ) {
+                    Text(
+                        notice!!,
+                        Modifier.fillMaxWidth().padding(12.dp),
+                        color = MainUi.Muted,
+                        textAlign = TextAlign.Center,
+                        fontSize = 10.sp,
+                    )
                 }
             }
         }
@@ -341,7 +383,7 @@ fun RewardCenterScreen() {
 
 @Composable
 private fun RewardAdCard(
-    icon: String,
+    icon: ImageVector,
     title: String,
     description: String,
     progress: String,
@@ -349,24 +391,25 @@ private fun RewardAdCard(
     enabled: Boolean,
     onClick: () -> Unit,
 ) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, SonHarfMuted.copy(alpha = .14f)),
-    ) {
+    MainGameCard {
         Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(icon, fontSize = 24.sp)
+                    Surface(shape = MainUiShape.Control, color = MainUi.BlueSoft) {
+                        Icon(icon, null, tint = MainUi.Blue, modifier = Modifier.padding(9.dp).size(20.dp))
+                    }
                     Spacer(Modifier.width(10.dp))
-                    Text(title, fontWeight = FontWeight.Black)
+                    Text(title, color = MainUi.Text, fontWeight = FontWeight.Bold)
                 }
-                Text(progress, color = SonHarfCyan, fontWeight = FontWeight.Black)
+                MainBadge(progress, accent = MainUi.Blue)
             }
-            Text(description, color = SonHarfMuted, fontSize = 9.sp)
-            Button(onClick = onClick, enabled = enabled, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                Text(button, fontWeight = FontWeight.Black)
-            }
+            Text(description, color = MainUi.Muted, fontSize = 10.sp, lineHeight = 14.sp)
+            MainGameButton(
+                text = button,
+                onClick = onClick,
+                enabled = enabled,
+                modifier = Modifier.fillMaxWidth(),
+            )
         }
     }
 }
