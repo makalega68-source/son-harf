@@ -17,6 +17,29 @@ class PremiumCosmeticApplicationContractTest {
     }
 
     @Test
+    fun everySellableKeyboardHasADistinctRuntimePalette() {
+        val runtime = source("CosmeticRuntime.kt")
+
+        listOf(
+            "\"keyboard_crystal\" -> KeyboardPalette(",
+            "\"keyboard_obsidian\" -> KeyboardPalette(",
+            "\"keyboard_midnight\" -> KeyboardPalette(",
+            "\"keyboard_black_gold\" -> KeyboardPalette(",
+            "\"keyboard_premium_white\" -> KeyboardPalette(",
+        ).forEach { mapping -> assertTrue("Missing keyboard runtime mapping $mapping", runtime.contains(mapping)) }
+    }
+
+    @Test
+    fun equippedNameStyleOverridesProWhiteOnTheProfile() {
+        val profile = source("MainPlayerProfileScreen.kt")
+
+        assertTrue(profile.contains("val hasEquippedNameStyle = !SonHarfCosmetics.nameStyleId.isNullOrBlank()"))
+        assertTrue(profile.contains("hasEquippedNameStyle -> SonHarfCosmetics.playerNameColor"))
+        assertTrue(profile.contains("color = displayNameColor"))
+        assertFalse(profile.contains("color = if (p?.isVip == true) Color.White else SonHarfCosmetics.playerNameColor"))
+    }
+
+    @Test
     fun storeKeyboardCardsUseTextFreeCanvaAlignedArtworkInsteadOfScreenshots() {
         val preview = source("StoreProductPreview.kt")
 
