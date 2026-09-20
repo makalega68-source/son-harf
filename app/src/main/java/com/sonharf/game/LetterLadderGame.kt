@@ -53,27 +53,28 @@ import kotlin.random.Random
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
+/** Harf Yolu uses the same restrained adult word-game family as the rest of the product. */
 private object LetterLadderUi {
-    val Background = Color(0xFFF5FCFF)
-    val Surface = Color.White
-    val SurfaceRaised = Color(0xFFFCFEFF)
-    val SurfaceSoft = Color(0xFFEAF8FC)
-    val Text = Color(0xFF123A4A)
-    val Muted = Color(0xFF5D7C88)
-    val Border = Color(0xFFA9DCE7)
-    val Accent = Color(0xFF278DC3)
-    val AccentStrong = Color(0xFF1579B4)
-    val Turquoise = Color(0xFF22BFC4)
-    val TurquoiseStrong = Color(0xFF10AEB5)
-    val TurquoiseSoft = Color(0xFFDDF9FA)
-    val Orange = Color(0xFFFF9F43)
-    val OrangeSoft = Color(0xFFFFF0DE)
-    val Purple = Color(0xFF8B5CF6)
-    val PurpleSoft = Color(0xFFF2ECFF)
+    val Background = Color(0xFFF6F4EE)
+    val Surface = Color(0xFFFFFEFA)
+    val SurfaceRaised = Color(0xFFFBFAF6)
+    val SurfaceSoft = Color(0xFFF0F2EC)
+    val Text = Color(0xFF18322A)
+    val Muted = Color(0xFF66766F)
+    val Border = Color(0xFFD8DED7)
+    val Accent = Color(0xFF285943)
+    val AccentStrong = Color(0xFF173B2E)
+    val Turquoise = Color(0xFF4F7C74)
+    val TurquoiseStrong = Color(0xFF3D665F)
+    val TurquoiseSoft = Color(0xFFE2EBE6)
+    val Orange = Color(0xFFB58A39)
+    val OrangeSoft = Color(0xFFF2E9D8)
+    val Purple = Color(0xFF6F8794)
+    val PurpleSoft = Color(0xFFE7ECEF)
     val AccentText = Color.White
-    val Live = Purple
-    val Coral = Purple
-    val Green = Turquoise
+    val Live = Accent
+    val Coral = Color(0xFFA4554F)
+    val Green = Color(0xFF3F7C53)
     val Gold = Orange
 }
 
@@ -148,11 +149,6 @@ internal object LetterLadderEngine {
         return LetterLadderMoveCheck(true, changedIndex = changed)
     }
 
-    /**
-     * Finds a complete route from the current state to the target using only
-     * unused positions. This is deliberately tiny (maximum depth five), so it
-     * can be used for hints and dead-end prevention without a background job.
-     */
     fun completionPath(
         puzzle: LetterLadderPuzzle,
         current: String,
@@ -182,11 +178,6 @@ internal object LetterLadderEngine {
         return null
     }
 
-    /**
-     * Returns only positions that can be changed next while preserving at least one full route.
-     * The UI may reveal a position as a one-use hint, but never receives the replacement letter
-     * or the next solution word from this helper.
-     */
     fun viableNextMoveIndices(
         puzzle: LetterLadderPuzzle,
         current: String,
@@ -293,8 +284,6 @@ internal object LetterLadderEngine {
         if ((0 until WORD_LENGTH).any { start[it] == target[it] }) return null
         val routeEndpoints = listOf(start, target).sorted().joinToString("-")
         return LetterLadderPuzzle(
-            // The id represents puzzle content, not the random attempt. This makes recent-history
-            // exclusion reliable across app restarts and across different random seeds.
             id = "${language.lowercase(Locale.ROOT)}-$routeEndpoints",
             start = start,
             target = target,
@@ -392,10 +381,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                 language = language,
                 seed = gameSeed,
                 excludedPuzzleIds = recentPuzzleIds,
-            )
-                // Very small custom dictionaries may contain only recently played routes. In that
-                // exceptional case, keep the mode playable instead of showing a false load error.
-                ?: LetterLadderEngine.generate(loaded, language, gameSeed xor Long.MIN_VALUE)
+            ) ?: LetterLadderEngine.generate(loaded, language, gameSeed xor Long.MIN_VALUE)
         }
         if (generated != null) LetterLadderPuzzleHistory.remember(context, language, generated.id)
         puzzle = generated
@@ -474,9 +460,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
 
     Box(Modifier.fillMaxSize()) {
         HarfYoluBackdrop(Modifier.fillMaxSize())
-        Column(
-            Modifier.fillMaxSize(),
-        ) {
+        Column(Modifier.fillMaxSize()) {
             if (loading) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -532,7 +516,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                             maxLines = 1,
                         )
                     }
-                    Surface(shape = RoundedCornerShape(99.dp), color = LetterLadderUi.Gold.copy(alpha = .16f)) {
+                    Surface(shape = RoundedCornerShape(99.dp), color = LetterLadderUi.Gold.copy(alpha = .12f)) {
                         Text(
                             "${usedPositions.size}/5",
                             Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
@@ -546,7 +530,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                 Surface(
                     modifier = Modifier.fillMaxWidth().weight(1f),
                     shape = RoundedCornerShape(18.dp),
-                    color = LetterLadderUi.SurfaceRaised.copy(alpha = .94f),
+                    color = LetterLadderUi.SurfaceRaised.copy(alpha = .97f),
                     border = BorderStroke(1.dp, LetterLadderUi.Border),
                 ) {
                     Column(
@@ -564,6 +548,8 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                         )
                         Spacer(Modifier.height(3.dp))
 
+                        // Mechanically there are five changes. Visually, rows are only 1..4 and
+                        // the fifth/final change lands directly on HEDEF as required.
                         for (move in 1 until LetterLadderEngine.MOVE_COUNT) {
                             val committedWord = path.getOrNull(move)?.uppercase(locale)
                             val isCurrentWord = committedWord != null && move == path.lastIndex
@@ -596,14 +582,14 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                     color = when {
                         completed -> LetterLadderUi.Green.copy(alpha = .10f)
                         hintText != null -> LetterLadderUi.Gold.copy(alpha = .10f)
-                        else -> LetterLadderUi.Accent.copy(alpha = .07f)
+                        else -> LetterLadderUi.Accent.copy(alpha = .06f)
                     },
                     border = BorderStroke(
                         1.dp,
                         when {
                             completed -> LetterLadderUi.Green.copy(alpha = .25f)
                             hintText != null -> LetterLadderUi.Gold.copy(alpha = .30f)
-                            else -> LetterLadderUi.Accent.copy(alpha = .25f)
+                            else -> LetterLadderUi.Accent.copy(alpha = .22f)
                         },
                     ),
                 ) {
@@ -666,7 +652,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                             modifier = Modifier.weight(1f).height(40.dp).sonHarfPressScale(pressedScale = 0.94f),
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                             shape = RoundedCornerShape(13.dp),
-                            border = BorderStroke(1.dp, LetterLadderUi.Accent.copy(alpha = .72f)),
+                            border = BorderStroke(1.dp, LetterLadderUi.Accent.copy(alpha = .62f)),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = LetterLadderUi.AccentStrong,
                                 disabledContentColor = LetterLadderUi.Muted.copy(alpha = .34f),
@@ -691,8 +677,8 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                                     sh("Son hamleyi geri al ve farklı bir yol dene.", "Undo the last move and try a different route.")
                                 } else {
                                     sh(
-                                        "İpucu kullanıldı: turuncu işaretli kutudaki harfi değiştir. Harfi kendin bul.",
-                                        "Hint used: change the orange-marked tile. Find the letter yourself.",
+                                        "İpucu kullanıldı: altın işaretli kutudaki harfi değiştir. Harfi kendin bul.",
+                                        "Hint used: change the gold-marked tile. Find the letter yourself.",
                                     )
                                 }
                                 SonHarfSoundFx.puzzleHint()
@@ -700,7 +686,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                             modifier = Modifier.weight(1f).height(40.dp).sonHarfPressScale(pressedScale = 0.94f),
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                             shape = RoundedCornerShape(13.dp),
-                            border = BorderStroke(1.dp, LetterLadderUi.Orange.copy(alpha = .78f)),
+                            border = BorderStroke(1.dp, LetterLadderUi.Orange.copy(alpha = .70f)),
                             colors = ButtonDefaults.outlinedButtonColors(
                                 contentColor = LetterLadderUi.Orange,
                                 disabledContentColor = LetterLadderUi.Muted.copy(alpha = .34f),
@@ -722,7 +708,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                         modifier = Modifier.fillMaxWidth().height(46.dp).sonHarfPressScale(pressedScale = 0.94f),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = LetterLadderUi.Purple,
+                            containerColor = LetterLadderUi.Accent,
                             contentColor = Color.White,
                         ),
                     ) {
@@ -753,10 +739,18 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
         }
 
         if (successVfxNonce > 0) {
-            PurchasedVictoryVfx(
-                eventKey = "letter:${puzzle?.id}:$successVfxNonce",
-                modifier = Modifier.fillMaxSize(),
-            )
+            if (completed) {
+                PurchasedMomentVfx(
+                    eventKey = "letter-complete:${puzzle?.id}:$successVfxNonce",
+                    kind = PurchasedMomentVfxKind.REWARD,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                PurchasedVictoryVfx(
+                    eventKey = "letter:${puzzle?.id}:$successVfxNonce",
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
         }
     }
 }
@@ -795,17 +789,17 @@ private fun LadderWordTiles(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 shape = RoundedCornerShape(8.dp),
                 color = when {
-                    hinted -> LetterLadderUi.Gold.copy(alpha = .20f)
-                    index in locked -> LetterLadderUi.Green.copy(alpha = .13f)
-                    char.isNotEmpty() -> accent.copy(alpha = .09f)
+                    hinted -> LetterLadderUi.Gold.copy(alpha = .18f)
+                    index in locked -> LetterLadderUi.Green.copy(alpha = .12f)
+                    char.isNotEmpty() -> accent.copy(alpha = .08f)
                     else -> LetterLadderUi.SurfaceSoft
                 },
                 border = BorderStroke(
                     if (hinted) 2.dp else 1.dp,
                     when {
                         hinted -> LetterLadderUi.Gold
-                        index in locked -> LetterLadderUi.Green.copy(alpha = .55f)
-                        char.isNotEmpty() -> accent.copy(alpha = .40f)
+                        index in locked -> LetterLadderUi.Green.copy(alpha = .50f)
+                        char.isNotEmpty() -> accent.copy(alpha = .36f)
                         else -> LetterLadderUi.Border
                     },
                 ),
@@ -829,7 +823,7 @@ internal fun MonsterLetterLadderQuickCard(modifier: Modifier, onClick: () -> Uni
         modifier = modifier.height(136.dp).sonHarfPressScale(pressedScale = 0.95f).clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
         color = LetterLadderUi.SurfaceRaised,
-        border = BorderStroke(1.dp, LetterLadderUi.Accent.copy(alpha = .24f)),
+        border = BorderStroke(1.dp, LetterLadderUi.Accent.copy(alpha = .22f)),
     ) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 12.dp),
@@ -840,6 +834,7 @@ internal fun MonsterLetterLadderQuickCard(modifier: Modifier, onClick: () -> Uni
                 contentDescription = sh("Harf Yolu logosu", "Letter Path logo"),
                 modifier = Modifier.size(106.dp),
                 contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(LetterLadderUi.AccentStrong),
             )
             Spacer(Modifier.width(16.dp))
             Column(Modifier.weight(1f)) {
