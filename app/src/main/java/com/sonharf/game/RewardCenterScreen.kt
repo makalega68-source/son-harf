@@ -41,10 +41,10 @@ fun RewardCenterScreen() {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var adReady by remember { mutableStateOf(false) }
     val isPro = profile?.isVip == true
-    // Do not even request a rewarded ad until account entitlement is known and non-PRO.
     val adsAllowed = profile?.isVip == false && AdPrivacyManager.adsAllowed
     var busy by remember { mutableStateOf<String?>(null) }
     var notice by remember { mutableStateOf<String?>(null) }
+    var rewardVfxKey by remember { mutableStateOf<String?>(null) }
 
     suspend fun reload() {
         val b = backend
@@ -116,6 +116,8 @@ fun RewardCenterScreen() {
                                     )
                                     else -> sh("Style denemen başladı.", "Your Style trial has started.")
                                 }
+                                rewardVfxKey = "reward:$rewardType:$responseId"
+                                SonHarfSoundFx.scoreTick()
                                 reload()
                             }
                             .onFailure { e ->
@@ -159,167 +161,180 @@ fun RewardCenterScreen() {
         }
     }
 
-    LazyColumn(
-        Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Text(sh("KELİME KUŞATMASI ÖDÜLLERİ", "WORD SIEGE REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
-            Text(
-                if (isPro) {
-                    sh(
-                        "PRO hesabında reklam gösterilmez. Kumbara ve sunucu kontrollü ilerleme sistemleri normal şekilde devam eder.",
-                        "Ads are disabled on PRO. Piggy Bank and server-controlled progression continue normally.",
-                    )
-                } else {
-                    sh(
-                        "Ödüllü reklamlar isteğe bağlıdır. Maçlarda ve oyun alanında reklam yoktur.",
-                        "Rewarded ads are optional. Matches and gameplay remain ad-free.",
-                    )
-                },
-                color = SonHarfMuted,
-                fontSize = 10.sp,
-            )
-        }
-
-        if (!isPro) {
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             item {
-                RewardAdCard(
-                    icon = "◈",
-                    title = "SON COIN",
-                    description = sh(
-                        "Her tamamlanan reklam +${s?.coinPerAd ?: 10} Son Coin verir. Günlük kota sunucu tarafından tutulur.",
-                        "Each completed ad gives +${s?.coinPerAd ?: 10} Son Coin. The daily quota is enforced by the server.",
-                    ),
-                    progress = "${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 3}",
-                    button = sh("REKLAM İZLE", "WATCH AD"),
-                    enabled = adReady && (s?.coinAdsUsed ?: 0) < (s?.coinAdsLimit ?: 3) && busy == null,
-                    onClick = { showRewarded("diamonds") },
-                )
-            }
-
-            item {
-                RewardAdCard(
-                    icon = "✨",
-                    title = sh("STYLE DENEME", "STYLE TRIAL"),
-                    description = listOfNotNull(trialCandidateName, trialDescription).joinToString(" • ").ifBlank {
-                        sh("Sunucu kataloğundaki uygun bir Style ürününü dene.", "Try an eligible Style item from the server catalog.")
+                Text(sh("KELİME KUŞATMASI ÖDÜLLERİ", "WORD SIEGE REWARDS"), fontSize = 27.sp, fontWeight = FontWeight.Black)
+                Text(
+                    if (isPro) {
+                        sh(
+                            "PRO hesabında reklam gösterilmez. Kumbara ve sunucu kontrollü ilerleme sistemleri normal şekilde devam eder.",
+                            "Ads are disabled on PRO. Piggy Bank and server-controlled progression continue normally.",
+                        )
+                    } else {
+                        sh(
+                            "Ödüllü reklamlar isteğe bağlıdır. Maçlarda ve oyun alanında reklam yoktur.",
+                            "Rewarded ads are optional. Matches and gameplay remain ad-free.",
+                        )
                     },
-                    progress = "${s?.trialAdsUsed ?: 0}/${s?.trialAdsLimit ?: 1}",
-                    button = sh("DENEMEYİ BAŞLAT", "START TRIAL"),
-                    enabled = adReady && trialCandidate != null && (s?.trialAdsUsed ?: 0) < (s?.trialAdsLimit ?: 1) && busy == null,
-                    onClick = { showRewarded("trial", trialCandidate?.id) },
+                    color = SonHarfMuted,
+                    fontSize = 10.sp,
                 )
             }
-        }
 
-        if (s?.trialItemId != null) item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = SonHarfPurple.copy(alpha = .12f)),
-                shape = RoundedCornerShape(18.dp),
-                border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .45f)),
-            ) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(sh("AKTİF DENEME", "ACTIVE TRIAL"), color = SonHarfPurple, fontWeight = FontWeight.Black)
-                    Text(
-                        if (SonHarfUiState.isEnglish) activeTrialItem?.nameEn ?: s.trialItemId else activeTrialItem?.nameTr ?: s.trialItemId,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    val remaining = when (s.trialMode) {
-                        "match" -> sh("Kalan maç: ${s.trialMatchesRemaining ?: 0}", "Matches left: ${s.trialMatchesRemaining ?: 0}")
-                        "minutes" -> s.trialExpiresAt.orEmpty()
-                        else -> s.trialExpiresAt.orEmpty()
-                    }
-                    if (remaining.isNotBlank()) Text(remaining, color = SonHarfMuted, fontSize = 9.sp)
-                    Button(
-                        onClick = {
-                            val b = backend ?: return@Button
-                            scope.launch {
-                                busy = "equip_trial"
-                                runCatching { b.equipRewardTrial() }
-                                    .onSuccess { notice = sh("Deneme Style ürünü etkinleştirildi.", "Trial Style item equipped."); reload() }
-                                    .onFailure { notice = sh("Deneme artık aktif değil.", "The trial is no longer active."); reload() }
-                                busy = null
-                            }
-                        },
-                        enabled = busy == null,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
-                    ) { Text(if (busy == "equip_trial") "…" else sh("DENEMEYİ KULLAN", "USE TRIAL"), fontWeight = FontWeight.Black) }
-                }
-            }
-        }
-
-        item {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
-                shape = RoundedCornerShape(20.dp),
-                border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .30f)),
-            ) {
-                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(sh("KUMBARA", "PIGGY BANK"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
-                        Text("${s?.piggyMatchProgress ?: 0}/${s?.piggyMatchTarget ?: 8}", fontWeight = FontWeight.Black)
-                    }
-                    LinearProgressIndicator(
-                        progress = { ((s?.piggyMatchProgress ?: 0).toFloat() / (s?.piggyMatchTarget ?: 8).coerceAtLeast(1)).coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Text(
-                        sh(
-                            "Tamamlanan maçlarla Kumbara dolar. Hazır olduğunda ${s?.piggyBonusSc ?: 0} Son Coin sunucu tarafından doğrulanarak açılır.",
-                            "Completed matches fill the Piggy Bank. When ready, ${s?.piggyBonusSc ?: 0} Son Coin is verified and granted by the server.",
+            if (!isPro) {
+                item {
+                    RewardAdCard(
+                        icon = "◈",
+                        title = "SON COIN",
+                        description = sh(
+                            "Her tamamlanan reklam +${s?.coinPerAd ?: 10} Son Coin verir. Günlük kota sunucu tarafından tutulur.",
+                            "Each completed ad gives +${s?.coinPerAd ?: 10} Son Coin. The daily quota is enforced by the server.",
                         ),
-                        color = SonHarfMuted,
-                        fontSize = 9.sp,
+                        progress = "${s?.coinAdsUsed ?: 0}/${s?.coinAdsLimit ?: 3}",
+                        button = sh("REKLAM İZLE", "WATCH AD"),
+                        enabled = adReady && (s?.coinAdsUsed ?: 0) < (s?.coinAdsLimit ?: 3) && busy == null,
+                        onClick = { showRewarded("diamonds") },
                     )
-                    Button(
-                        onClick = {
-                            val b = backend ?: return@Button
-                            scope.launch {
-                                busy = "piggy"
-                                runCatching { b.openPiggyBank() }
-                                    .onSuccess { reward ->
-                                        notice = sh(
-                                            "Kumbara açıldı: +${reward.bonusSc} Son Coin.",
-                                            "Piggy Bank opened: +${reward.bonusSc} Son Coin.",
-                                        )
-                                        reload()
-                                    }
-                                    .onFailure { notice = sh("Kumbara henüz hazır değil.", "The Piggy Bank is not ready yet.") }
-                                busy = null
-                            }
+                }
+
+                item {
+                    RewardAdCard(
+                        icon = "✨",
+                        title = sh("STYLE DENEME", "STYLE TRIAL"),
+                        description = listOfNotNull(trialCandidateName, trialDescription).joinToString(" • ").ifBlank {
+                            sh("Sunucu kataloğundaki uygun bir Style ürününü dene.", "Try an eligible Style item from the server catalog.")
                         },
-                        enabled = (s?.piggyBonusSc ?: 0) > 0 && busy == null,
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF211830)),
-                    ) { Text(if (busy == "piggy") "…" else sh("KUMBARAYI AÇ", "OPEN PIGGY BANK"), fontWeight = FontWeight.Black) }
-                }
-            }
-        }
-
-        item {
-            Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface2), shape = RoundedCornerShape(16.dp)) {
-                Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(sh("SUNUCU KONTROLLÜ ÖDÜLLER", "SERVER-CONTROLLED REWARDS"), fontWeight = FontWeight.Bold, fontSize = 10.sp)
-                    Text(
-                        sh(
-                            "Günlük kotalar, deneme süresi ve Kumbara ilerlemesi sunucuda tutulur; cihaz saatini değiştirmek veya uygulamayı silmek bunları sıfırlamaz.",
-                            "Daily quotas, trial duration and Piggy Bank progress are stored on the server; changing device time or reinstalling the app does not reset them.",
-                        ),
-                        color = SonHarfMuted,
-                        fontSize = 9.sp,
+                        progress = "${s?.trialAdsUsed ?: 0}/${s?.trialAdsLimit ?: 1}",
+                        button = sh("DENEMEYİ BAŞLAT", "START TRIAL"),
+                        enabled = adReady && trialCandidate != null && (s?.trialAdsUsed ?: 0) < (s?.trialAdsLimit ?: 1) && busy == null,
+                        onClick = { showRewarded("trial", trialCandidate?.id) },
                     )
-                    Text("◈ ${profile?.diamonds ?: 0}", color = SonHarfCyan, fontWeight = FontWeight.Black)
+                }
+            }
+
+            if (s?.trialItemId != null) item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SonHarfPurple.copy(alpha = .12f)),
+                    shape = RoundedCornerShape(18.dp),
+                    border = BorderStroke(1.dp, SonHarfPurple.copy(alpha = .45f)),
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(sh("AKTİF DENEME", "ACTIVE TRIAL"), color = SonHarfPurple, fontWeight = FontWeight.Black)
+                        Text(if (SonHarfUiState.isEnglish) activeTrialItem?.nameEn ?: s.trialItemId else activeTrialItem?.nameTr ?: s.trialItemId, fontWeight = FontWeight.Bold)
+                        val remaining = when (s.trialMode) {
+                            "match" -> sh("Kalan maç: ${s.trialMatchesRemaining ?: 0}", "Matches left: ${s.trialMatchesRemaining ?: 0}")
+                            "minutes" -> s.trialExpiresAt.orEmpty()
+                            else -> s.trialExpiresAt.orEmpty()
+                        }
+                        if (remaining.isNotBlank()) Text(remaining, color = SonHarfMuted, fontSize = 9.sp)
+                        Button(
+                            onClick = {
+                                val b = backend ?: return@Button
+                                scope.launch {
+                                    busy = "equip_trial"
+                                    runCatching { b.equipRewardTrial() }
+                                        .onSuccess {
+                                            notice = sh("Deneme Style ürünü etkinleştirildi.", "Trial Style item equipped.")
+                                            rewardVfxKey = "reward:trial-equip:${s.trialItemId}"
+                                            reload()
+                                        }
+                                        .onFailure { notice = sh("Deneme artık aktif değil.", "The trial is no longer active."); reload() }
+                                    busy = null
+                                }
+                            },
+                            enabled = busy == null,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
+                        ) { Text(if (busy == "equip_trial") "…" else sh("DENEMEYİ KULLAN", "USE TRIAL"), fontWeight = FontWeight.Black) }
+                    }
+                }
+            }
+
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SonHarfSurface),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .30f)),
+                ) {
+                    Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(sh("KUMBARA", "PIGGY BANK"), color = LetharaPalette.Gold, fontWeight = FontWeight.Black)
+                            Text("${s?.piggyMatchProgress ?: 0}/${s?.piggyMatchTarget ?: 8}", fontWeight = FontWeight.Black)
+                        }
+                        LinearProgressIndicator(
+                            progress = { ((s?.piggyMatchProgress ?: 0).toFloat() / (s?.piggyMatchTarget ?: 8).coerceAtLeast(1)).coerceIn(0f, 1f) },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Text(
+                            sh(
+                                "Tamamlanan maçlarla Kumbara dolar. Hazır olduğunda ${s?.piggyBonusSc ?: 0} Son Coin sunucu tarafından doğrulanarak açılır.",
+                                "Completed matches fill the Piggy Bank. When ready, ${s?.piggyBonusSc ?: 0} Son Coin is verified and granted by the server.",
+                            ),
+                            color = SonHarfMuted,
+                            fontSize = 9.sp,
+                        )
+                        Button(
+                            onClick = {
+                                val b = backend ?: return@Button
+                                scope.launch {
+                                    busy = "piggy"
+                                    runCatching { b.openPiggyBank() }
+                                        .onSuccess { reward ->
+                                            notice = sh(
+                                                "Kumbara açıldı: +${reward.bonusSc} Son Coin.",
+                                                "Piggy Bank opened: +${reward.bonusSc} Son Coin.",
+                                            )
+                                            rewardVfxKey = "reward:piggy:${reward.bonusSc}:${s?.piggyMatchProgress}"
+                                            SonHarfSoundFx.scoreTick()
+                                            reload()
+                                        }
+                                        .onFailure { notice = sh("Kumbara henüz hazır değil.", "The Piggy Bank is not ready yet.") }
+                                    busy = null
+                                }
+                            },
+                            enabled = (s?.piggyBonusSc ?: 0) > 0 && busy == null,
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = SonHarfGold, contentColor = Color(0xFF211830)),
+                        ) { Text(if (busy == "piggy") "…" else sh("KUMBARAYI AÇ", "OPEN PIGGY BANK"), fontWeight = FontWeight.Black) }
+                    }
+                }
+            }
+
+            item {
+                Card(colors = CardDefaults.cardColors(containerColor = SonHarfSurface2), shape = RoundedCornerShape(16.dp)) {
+                    Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(sh("SUNUCU KONTROLLÜ ÖDÜLLER", "SERVER-CONTROLLED REWARDS"), fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        Text(
+                            sh(
+                                "Günlük kotalar, deneme süresi ve Kumbara ilerlemesi sunucuda tutulur; cihaz saatini değiştirmek veya uygulamayı silmek bunları sıfırlamaz.",
+                                "Daily quotas, trial duration and Piggy Bank progress are stored on the server; changing device time or reinstalling the app does not reset them.",
+                            ),
+                            color = SonHarfMuted,
+                            fontSize = 9.sp,
+                        )
+                        Text("◈ ${profile?.diamonds ?: 0}", color = SonHarfCyan, fontWeight = FontWeight.Black)
+                    }
+                }
+            }
+
+            if (!notice.isNullOrBlank()) item {
+                Surface(color = SonHarfSurface2, shape = RoundedCornerShape(14.dp)) {
+                    Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfMuted, textAlign = TextAlign.Center, fontSize = 10.sp)
                 }
             }
         }
 
-        if (!notice.isNullOrBlank()) item {
-            Surface(color = SonHarfSurface2, shape = RoundedCornerShape(14.dp)) {
-                Text(notice!!, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfMuted, textAlign = TextAlign.Center, fontSize = 10.sp)
-            }
+        rewardVfxKey?.let { key ->
+            PurchasedMomentVfx(
+                eventKey = key,
+                kind = PurchasedMomentVfxKind.REWARD,
+                modifier = Modifier.fillMaxSize(),
+            )
         }
     }
 }
