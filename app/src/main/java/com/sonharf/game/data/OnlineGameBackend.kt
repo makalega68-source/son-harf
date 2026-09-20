@@ -76,6 +76,12 @@ data class GameRoomDto(
 )
 
 @Serializable
+data class PremierReconnectClockDto(
+    @SerialName("remaining_ms") val remainingMs: Long = 0,
+    @SerialName("reconnect_deadline") val reconnectDeadline: String? = null,
+)
+
+@Serializable
 data class GameWordDto(
     val id: Long,
     @SerialName("room_id") val roomId: String,
@@ -241,6 +247,12 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
     suspend fun heartbeatRoom(roomId: String): GameRoomDto =
         supabase.postgrest.rpc("heartbeat_room", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()
 
+    suspend fun getPremierReconnectClock(roomId: String): PremierReconnectClockDto =
+        supabase.postgrest.rpc(
+            "get_premier_reconnect_clock_v1",
+            buildJsonObject { put("p_room_id", roomId) },
+        ).decodeSingle()
+
     suspend fun botTakeTurn(roomId: String): GameRoomDto =
         supabase.postgrest.rpc("bot_take_turn", buildJsonObject { put("p_room_id", roomId) }).decodeSingle()
 
@@ -390,8 +402,16 @@ class OnlineGameBackend(private val supabase: SupabaseClient = SupabaseProvider.
 
     fun observeRoom(id: String, intervalMs: Long = 700): Flow<GameRoomDto> = flow {
         var previous: GameRoomDto? = null
+        var lastHeartbeatAt = 0L
         while (currentCoroutineContext().isActive) {
-            val result = runCatching { getRoom(id) }
+            val now = System.nanoTime()
+            val heartbeatDue = now - lastHeartbeatAt >= 4_000_000_000L
+            val result = if (heartbeatDue) {
+                lastHeartbeatAt = now
+                runCatching { heartbeatRoom(id) }
+            } else {
+                runCatching { getRoom(id) }
+            }
             if (result.isSuccess) {
                 val next = result.getOrThrow()
                 if (next != previous) {
