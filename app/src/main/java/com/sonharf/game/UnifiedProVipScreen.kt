@@ -40,8 +40,8 @@ private val UProGreen = Color(0xFF10B981)
 @Composable
 internal fun UnifiedProVipScreen(
     backend: OnlineGameBackend,
-    onBack: () -> Unit,
-    onPrivateRoom: () -> Unit,
+    onBack: () -> Unit = {},
+    onPrivateRoom: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
