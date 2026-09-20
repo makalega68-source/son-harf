@@ -3,9 +3,7 @@ package com.sonharf.game
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -13,10 +11,9 @@ import androidx.compose.ui.graphics.Path
 /**
  * Shared lightweight app backdrop.
  *
- * The historical function name is intentionally retained to avoid touching screen wiring. The
- * artwork itself now follows the purchased compact sports-dashboard language: a clean center,
- * cool blue depth, turquoise motion and restrained orange action markers. Everything is vector
- * drawn, so the retheme adds no bitmap decode or startup-memory cost.
+ * The center is deliberately quiet for reading and play. Very low-contrast sage landscape forms
+ * remain at the edges so the product has a recognizable game identity without looking like a
+ * colorful children's dashboard. Everything is vector drawn; no bitmap or overdraw-heavy layer.
  */
 @Composable
 internal fun SonHarfLeafBackdrop(modifier: Modifier = Modifier) {
@@ -24,101 +21,84 @@ internal fun SonHarfLeafBackdrop(modifier: Modifier = Modifier) {
         drawRect(
             brush = Brush.verticalGradient(
                 colorStops = arrayOf(
-                    0.00f to Color(0xFFF9FCFF),
-                    0.45f to Color(0xFFF4F9FF),
-                    0.78f to Color(0xFFEDF7FF),
-                    1.00f to Color(0xFFE6F5F7),
+                    0.00f to Color(0xFFFFFEFA),
+                    0.55f to Color(0xFFF8F6F0),
+                    1.00f to Color(0xFFF1F2EC),
                 ),
             ),
         )
 
-        // Broad dashboard bands stay at the edges so cards and text keep a quiet center field.
-        val rearBand = Path().apply {
-            moveTo(0f, size.height * .70f)
+        val distant = Path().apply {
+            moveTo(0f, size.height * .78f)
             cubicTo(
-                size.width * .22f, size.height * .61f,
-                size.width * .58f, size.height * .86f,
-                size.width, size.height * .69f,
+                size.width * .16f, size.height * .68f,
+                size.width * .27f, size.height * .75f,
+                size.width * .40f, size.height * .69f,
+            )
+            cubicTo(
+                size.width * .58f, size.height * .61f,
+                size.width * .73f, size.height * .80f,
+                size.width, size.height * .70f,
             )
             lineTo(size.width, size.height)
             lineTo(0f, size.height)
             close()
         }
         drawPath(
-            rearBand,
+            distant,
             brush = Brush.verticalGradient(
-                listOf(Color(0x101559D6), Color(0x2815C7C4)),
-                startY = size.height * .62f,
+                listOf(Color(0x1277977F), Color(0x2677977F)),
+                startY = size.height * .64f,
                 endY = size.height,
             ),
         )
 
-        val frontBand = Path().apply {
-            moveTo(0f, size.height * .84f)
+        val foreground = Path().apply {
+            moveTo(0f, size.height * .89f)
             cubicTo(
-                size.width * .30f, size.height * .72f,
-                size.width * .66f, size.height * .94f,
-                size.width, size.height * .80f,
+                size.width * .22f, size.height * .78f,
+                size.width * .40f, size.height * .94f,
+                size.width * .58f, size.height * .85f,
+            )
+            cubicTo(
+                size.width * .74f, size.height * .78f,
+                size.width * .88f, size.height * .91f,
+                size.width, size.height * .83f,
             )
             lineTo(size.width, size.height)
             lineTo(0f, size.height)
             close()
         }
         drawPath(
-            frontBand,
+            foreground,
             brush = Brush.verticalGradient(
-                listOf(Color(0x1215C7C4), Color(0x211559D6)),
-                startY = size.height * .75f,
+                listOf(Color(0x173F6B52), Color(0x2B3F6B52)),
+                startY = size.height * .80f,
                 endY = size.height,
             ),
         )
 
-        // Faint live-score style guide lines create motion without competing with gameplay UI.
-        listOf(.18f, .52f, .86f).forEachIndexed { index, y ->
-            val start = Offset(-size.width * .04f, size.height * y)
-            val end = Offset(size.width * .33f, size.height * (y - .055f))
-            drawLine(
-                color = if (index == 1) Color(0xFF15C7C4).copy(alpha = .075f)
-                else Color(0xFF1559D6).copy(alpha = .055f),
-                start = start,
-                end = end,
-                strokeWidth = 2.2f,
-            )
-        }
-
-        data class Marker(val x: Float, val y: Float, val side: Float, val color: Color, val alpha: Float)
-        val markers = listOf(
-            Marker(.035f, .11f, 10f, Color(0xFF1559D6), .18f),
-            Marker(.075f, .19f, 7f, Color(0xFF15C7C4), .18f),
-            Marker(.955f, .08f, 9f, Color(0xFFFF8A24), .17f),
-            Marker(.905f, .23f, 6f, Color(0xFF1559D6), .13f),
-            Marker(.025f, .48f, 7f, Color(0xFFFF8A24), .12f),
-            Marker(.965f, .54f, 8f, Color(0xFF15C7C4), .14f),
-            Marker(.070f, .76f, 6f, Color(0xFF1559D6), .12f),
-            Marker(.915f, .73f, 7f, Color(0xFFFF8A24), .11f),
-        )
-        markers.forEach { marker ->
-            val side = marker.side
-            drawRoundRect(
-                color = marker.color.copy(alpha = marker.alpha),
-                topLeft = Offset(size.width * marker.x - side / 2f, size.height * marker.y - side / 2f),
-                size = Size(side, side),
-                cornerRadius = CornerRadius(side * .28f, side * .28f),
-            )
-        }
-
-        // Small turquoise/orange status dots echo the purchased kit's data-rich sports cards.
+        // Sparse edge details hint at map/territory geometry while leaving the reading field clear.
         listOf(
-            Triple(.13f, .31f, Color(0xFF15C7C4)),
-            Triple(.86f, .36f, Color(0xFFFF8A24)),
-            Triple(.18f, .91f, Color(0xFFFF8A24)),
-            Triple(.78f, .88f, Color(0xFF15C7C4)),
-        ).forEach { (x, y, color) ->
+            Offset(size.width * .05f, size.height * .20f),
+            Offset(size.width * .94f, size.height * .16f),
+            Offset(size.width * .04f, size.height * .55f),
+            Offset(size.width * .96f, size.height * .59f),
+        ).forEachIndexed { index, point ->
+            val radius = if (index % 2 == 0) 3.2f else 2.5f
             drawCircle(
-                color = color.copy(alpha = .11f),
-                radius = 2.1f,
-                center = Offset(size.width * x, size.height * y),
+                color = if (index % 2 == 0) Color(0xFF285943).copy(alpha = .08f)
+                else Color(0xFF6F8794).copy(alpha = .07f),
+                radius = radius,
+                center = point,
             )
         }
+
+        // A single soft gold marker is enough to carry the prestige accent.
+        drawCircle(
+            color = Color(0xFFB58A39).copy(alpha = .08f),
+            radius = 3f,
+            center = Offset(size.width * .90f, size.height * .34f),
+        )
     }
 }
