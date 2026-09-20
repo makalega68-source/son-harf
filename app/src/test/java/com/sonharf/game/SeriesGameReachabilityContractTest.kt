@@ -14,13 +14,15 @@ class SeriesGameReachabilityContractTest {
         val store = projectFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
 
         assertTrue(series.contains("internal fun WordSiegeSeriesScreen"))
+        assertTrue(series.contains("verifiedAccess: Boolean = false"))
         assertTrue(series.contains("findOrCreateWordSiegeSeriesGame"))
         assertTrue(entry.contains("SERİ / HIZLI OYUN"))
         assertTrue(entry.contains("mode = WordSiegeEntryMode.SERIES"))
+        assertTrue(entry.contains("WordSiegeSeriesScreen(verifiedAccess = true)"))
         assertTrue(entry.contains("onOpenStore"))
         assertTrue(shell.contains("PremiumDestination.SIEGE -> WordSiegeEntryScreen"))
         assertTrue(store.contains("showSeriesGame"))
-        assertTrue(store.contains("WordSiegeSeriesScreen"))
+        assertTrue(store.contains("WordSiegeSeriesScreen(verifiedAccess = true"))
         assertTrue(store.contains("owned = entitlements.seriesGameAccess"))
         assertFalse(store.contains("owned = false"))
     }
