@@ -146,12 +146,12 @@ internal fun WordSiegeScoreCard(
 @Composable
 private fun WordSiegeScoreEquation(wordPoints: Int, territoryPoints: Int, total: Int, accent: Color) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        WordSiegeScoreMetric(sh("Kelime", "Word"), wordPoints, Modifier.weight(1f))
+        WordSiegeScoreMetric(sh("Kelime Puanı", "Word Points"), wordPoints, Modifier.weight(1f))
         Text("+", color = WordSiegeGameUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        WordSiegeScoreMetric(sh("Bölge", "Territory"), territoryPoints, Modifier.weight(1f))
+        WordSiegeScoreMetric(sh("Bölge Puanı", "Territory Points"), territoryPoints, Modifier.weight(1f))
         Text("=", color = WordSiegeGameUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         Column(Modifier.weight(1f), horizontalAlignment = Alignment.End) {
-            Text(sh("Toplam", "Total"), color = WordSiegeGameUi.Muted, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+            Text(sh("Toplam", "Total"), color = WordSiegeGameUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
             Text(total.toString(), color = accent, fontSize = 13.sp, fontWeight = FontWeight.Black)
         }
     }
@@ -160,7 +160,7 @@ private fun WordSiegeScoreEquation(wordPoints: Int, territoryPoints: Int, total:
 @Composable
 private fun WordSiegeScoreMetric(label: String, value: Int, modifier: Modifier = Modifier) {
     Column(modifier) {
-        Text(label, color = WordSiegeGameUi.Muted, fontSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        Text(label, color = WordSiegeGameUi.Muted, fontSize = 8.sp, lineHeight = 10.sp, fontWeight = FontWeight.Bold, maxLines = 1)
         Text(value.toString(), color = WordSiegeGameUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
     }
 }
