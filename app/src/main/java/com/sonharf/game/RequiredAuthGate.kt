@@ -703,7 +703,7 @@ private fun EmailVerificationCard(
                 }
             }
             Text(
-                "E-postanı doğrula",
+                sh("E-postanı doğrula", "Verify your email"),
                 color = AuthUi.Text,
                 fontWeight = FontWeight.Black,
                 fontSize = 22.sp,
@@ -716,7 +716,10 @@ private fun EmailVerificationCard(
                 textAlign = TextAlign.Center,
             )
             Text(
-                "Maildeki doğrulama bağlantısına dokunduğunda Son Harf otomatik açılır. Bağlantı çalışmazsa e-postadaki 6 haneli kodu gir.",
+                sh(
+                    "Maildeki doğrulama bağlantısına dokunduğunda Kelime Kuşatması otomatik açılır. Bağlantı çalışmazsa e-postadaki 6 haneli kodu gir.",
+                    "Tap the verification link in the email to reopen Word Siege. If the link does not work, enter the 6-digit code from the email.",
+                ),
                 color = AuthUi.Muted,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
@@ -726,7 +729,7 @@ private fun EmailVerificationCard(
                 onValueChange = onOtpChange,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
-                label = { Text("6 haneli doğrulama kodu") },
+                label = { Text(sh("6 haneli doğrulama kodu", "6-digit verification code")) },
                 placeholder = { Text("000000") },
                 textStyle = LocalTextStyle.current.copy(
                     textAlign = TextAlign.Center,
@@ -742,7 +745,7 @@ private fun EmailVerificationCard(
                 shape = RoundedCornerShape(18.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = AuthUi.Primary, contentColor = Color.White),
             ) {
-                Text(if (busy) "…" else "KODU DOĞRULA", fontWeight = FontWeight.Black)
+                Text(if (busy) "…" else sh("KODU DOĞRULA", "VERIFY CODE"), fontWeight = FontWeight.Black)
             }
             OutlinedButton(
                 onClick = onResend,
@@ -751,10 +754,10 @@ private fun EmailVerificationCard(
                 border = BorderStroke(1.dp, AuthUi.Border),
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = AuthUi.Turquoise),
             ) {
-                Text("KODU YENİDEN GÖNDER", fontWeight = FontWeight.Bold)
+                Text(sh("KODU YENİDEN GÖNDER", "RESEND CODE"), fontWeight = FontWeight.Bold)
             }
             TextButton(onClick = onChangeEmail, enabled = !busy) {
-                Text("E-POSTA ADRESİNİ DEĞİŞTİR", color = AuthUi.Primary, fontWeight = FontWeight.Bold)
+                Text(sh("E-POSTA ADRESİNİ DEĞİŞTİR", "CHANGE EMAIL ADDRESS"), color = AuthUi.Primary, fontWeight = FontWeight.Bold)
             }
             if (notice.isNotBlank()) {
                 Surface(
