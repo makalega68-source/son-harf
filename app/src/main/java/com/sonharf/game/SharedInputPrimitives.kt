@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.sp
  * Shared word-game keyboard for Son Harf / Harf Yolu and independent word inputs.
  * It intentionally contains only letters, backspace and the game action. System-keyboard
  * controls (?123, emoji, mic, clipboard, language, punctuation and suggestions) are excluded.
+ * Purchased keyboard skins only affect presentation; geometry and available actions stay fixed.
  */
 @Composable
 internal fun EmbeddedWordKeyboard(
@@ -33,6 +34,7 @@ internal fun EmbeddedWordKeyboard(
     keySound: () -> Unit = { SonHarfSoundFx.typingClick() },
     actionSound: () -> Unit = { SonHarfSoundFx.tap() },
 ) {
+    val palette = SonHarfCosmetics.keyboardPalette
     val rows = if (language.lowercase() == "en") {
         listOf(
             listOf("Q","W","E","R","T","Y","U","I","O","P"),
@@ -46,14 +48,13 @@ internal fun EmbeddedWordKeyboard(
             listOf("Z","X","C","V","B","N","M","Ö","Ç"),
         )
     }
-    // Five-letter Harf Yolu inputs confirm a move; open-ended Son Harf inputs send a word.
     val actionText = submitLabel ?: if (maxLength == 5) sh("ONAYLA", "CONFIRM") else sh("GÖNDER", "SEND")
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = Color(0xFFF1F2EF),
+        color = palette.background,
         shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
-        border = BorderStroke(1.dp, Color(0xFFD8DDD7)),
+        border = BorderStroke(1.dp, palette.border.copy(alpha = .78f)),
         shadowElevation = 2.dp,
     ) {
         Column(
@@ -74,6 +75,7 @@ internal fun EmbeddedWordKeyboard(
                             label = key,
                             enabled = enabled && value.length < maxLength,
                             modifier = Modifier.weight(1f),
+                            palette = palette,
                             onClick = {
                                 keySound()
                                 onValueChange((value + key).take(maxLength))
@@ -91,6 +93,7 @@ internal fun EmbeddedWordKeyboard(
                     label = "⌫",
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     alt = true,
                     onClick = {
                         actionSound()
@@ -101,6 +104,7 @@ internal fun EmbeddedWordKeyboard(
                     label = "$actionText  →",
                     enabled = submitEnabled && value.isNotBlank(),
                     modifier = Modifier.weight(3.1f),
+                    palette = palette,
                     action = true,
                     onClick = {
                         actionSound()
@@ -138,6 +142,7 @@ internal fun EmbeddedNumberKeyboard(
                             label = key,
                             enabled = enabled,
                             modifier = Modifier.weight(1f),
+                            palette = palette,
                             onClick = {
                                 SonHarfSoundFx.typingClick()
                                 onValueChange((value + key).take(12))
@@ -151,6 +156,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = if (value.contains(",") || value.contains(".")) "−" else ",",
                     enabled = enabled,
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     alt = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -164,6 +170,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = "0",
                     enabled = enabled,
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     onClick = {
                         SonHarfSoundFx.typingClick()
                         onValueChange((value + "0").take(12))
@@ -173,6 +180,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = "⌫",
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     alt = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -183,6 +191,7 @@ internal fun EmbeddedNumberKeyboard(
                     label = "✓",
                     enabled = enabled && value.replace(',', '.').toDoubleOrNull() != null,
                     modifier = Modifier.weight(1f),
+                    palette = palette,
                     action = true,
                     onClick = {
                         SonHarfSoundFx.tap()
@@ -199,20 +208,21 @@ private fun SharedKeyboardKeyButton(
     label: String,
     enabled: Boolean,
     modifier: Modifier,
+    palette: WordKeyboardPalette,
     alt: Boolean = false,
     action: Boolean = false,
     onClick: () -> Unit,
 ) {
     val keyBackground = when {
-        action -> Color(0xFF285943)
-        alt -> Color(0xFFE5E8E3)
-        else -> Color(0xFFFFFEFB)
+        action -> palette.action
+        alt -> palette.keyAlt
+        else -> palette.key
     }
-    val keyText = if (action) Color.White else Color(0xFF18322A)
+    val keyText = if (action) palette.actionText else palette.text
     val keyBorder = when {
-        action -> Color(0xFF214B38)
-        alt -> Color(0xFFCDD3CD)
-        else -> Color(0xFFD7DBD6)
+        action -> palette.action.copy(alpha = .86f)
+        alt -> palette.secondaryBorder.copy(alpha = .62f)
+        else -> palette.border
     }
 
     Button(
@@ -224,8 +234,8 @@ private fun SharedKeyboardKeyButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = keyBackground,
             contentColor = keyText,
-            disabledContainerColor = Color(0xFFE8EAE6),
-            disabledContentColor = Color(0xFF9AA29D),
+            disabledContainerColor = palette.keyAlt.copy(alpha = .55f),
+            disabledContentColor = palette.text.copy(alpha = .42f),
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp, pressedElevation = 0.dp),
         border = BorderStroke(1.dp, keyBorder),
