@@ -14,7 +14,7 @@ class SeasonPassRuntimeContractTest {
 
         assertTrue(shop.contains("if (tab == 1) SeasonCenterContent()"))
         assertTrue(purchase.contains("ProductCatalog.SEASON_PASS_MONTHLY"))
-        assertTrue(purchase.contains("verifyPlayPurchase"))
+        assertTrue(purchase.contains("PlayPurchaseVerification.verify(productId, purchase.purchaseToken)"))
         assertTrue(season.contains("SeasonPassPurchaseCard"))
         assertTrue(season.contains("claimStoreSeasonReward"))
         assertTrue(backend.contains("get_store_season_v1"))
