@@ -1,5 +1,43 @@
 begin;
 
+create or replace function public.get_premier_reconnect_clock_v1(p_room_id uuid)
+returns jsonb
+language plpgsql
+security definer
+set search_path to 'public', 'pg_temp'
+as $function$
+declare
+  u uuid := auth.uid();
+  r public.game_rooms;
+  remaining_ms bigint := 0;
+begin
+  if u is null then raise exception 'unauthorized'; end if;
+
+  select * into r
+  from public.game_rooms
+  where id=p_room_id;
+
+  if r.id is null then raise exception 'room_not_found'; end if;
+  if u<>r.host_id and u is distinct from r.guest_id then raise exception 'not_participant'; end if;
+
+  if r.reconnect_deadline is not null then
+    remaining_ms := greatest(
+      0,
+      floor(extract(epoch from (r.reconnect_deadline-clock_timestamp()))*1000)::bigint
+    );
+  end if;
+
+  return jsonb_build_object(
+    'remaining_ms',remaining_ms,
+    'reconnect_deadline',r.reconnect_deadline
+  );
+end
+$function$;
+
+revoke all on function public.get_premier_reconnect_clock_v1(uuid) from public;
+revoke all on function public.get_premier_reconnect_clock_v1(uuid) from anon;
+grant execute on function public.get_premier_reconnect_clock_v1(uuid) to authenticated;
+
 create or replace function public.claim_turn_timeout(p_room_id uuid)
 returns public.game_rooms
 language plpgsql
