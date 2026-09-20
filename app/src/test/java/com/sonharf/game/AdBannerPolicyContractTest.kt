@@ -37,17 +37,26 @@ class AdBannerPolicyContractTest {
     }
 
     @Test
-    fun unifiedProUsesOneBannerAcrossAllRoutesIncludingGameplay() {
-        val app = source("src/main/java/com/sonharf/game/UnifiedProApp.kt")
-        assertTrue(app.contains("SonHarfTopAdBanner(isPremium = isPro)"))
-        assertFalse(app.contains("visible = !gameplay"))
-        assertTrue(app.contains("UnifiedDestination.GAME -> OnlineGameScreenV6()"))
-        assertTrue(app.contains("UnifiedDestination.SIEGE -> WordSiegeExperienceScreen"))
-        assertTrue(app.contains("UnifiedDestination.LETTER -> LetterLadderGameScreen"))
+    fun productionStartupUsesOnlyThePremiumShell() {
+        val startup = source("src/main/java/com/sonharf/game/StableV1App.kt")
+        assertTrue(startup.contains("PremiumUnifiedProApp(onSignedOut = { authenticated = false })"))
+        assertFalse(startup.contains("\n    UnifiedProApp(onSignedOut"))
     }
 
     @Test
-    fun gameplayImplementationsUseOnlyTheSharedShellBanner() {
+    fun premiumShellNeverMountsBannerOnGameplayRoutes() {
+        val app = source("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt")
+        val bannerGuard =
+            "if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)) SonHarfTopAdBanner(isPremium = isPro)"
+
+        assertTrue(app.contains(bannerGuard))
+        assertTrue(app.contains("PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()"))
+        assertTrue(app.contains("PremiumDestination.SIEGE -> WordSiegeEntryScreen("))
+        assertTrue(app.contains("PremiumDestination.LETTER_PATH -> LetterLadderGameScreen"))
+    }
+
+    @Test
+    fun gameplayImplementationsNeverHostTheirOwnBanner() {
         val sourceRoot = projectFile("src/main/java/com/sonharf/game")
         val offenders = sourceRoot.walkTopDown()
             .filter { it.isFile && (it.name.contains("Game", ignoreCase = true) || it.name.contains("Arena", ignoreCase = true)) }
