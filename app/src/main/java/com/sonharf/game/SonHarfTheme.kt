@@ -52,6 +52,13 @@ internal object KelimeKusatmasiPalette {
     val Lavender: Color get() = GamePurple
     val SlateBlue: Color get() = Muted
     val WarmAccent: Color get() = GameOrange
+
+    // Legacy purchased-theme preview aliases. These names are still referenced by the profile
+    // collection preview; keeping them avoids touching functional collection code while presenting
+    // the refreshed light palette.
+    val MonsterBlack: Color get() = Ink
+    val MonsterSurface: Color get() = SurfaceSoft
+    val MonsterPink: Color get() = GamePurple
 }
 
 /**
