@@ -33,7 +33,6 @@ internal fun EmbeddedWordKeyboard(
     keySound: () -> Unit = { SonHarfSoundFx.typingClick() },
     actionSound: () -> Unit = { SonHarfSoundFx.tap() },
 ) {
-    val palette = SonHarfCosmetics.keyboardPalette
     val rows = if (language.lowercase() == "en") {
         listOf(
             listOf("Q","W","E","R","T","Y","U","I","O","P"),
@@ -47,7 +46,8 @@ internal fun EmbeddedWordKeyboard(
             listOf("Z","X","C","V","B","N","M","Ö","Ç"),
         )
     }
-    val actionText = submitLabel ?: sh("GÖNDER", "SEND")
+    // Five-letter Harf Yolu inputs confirm a move; open-ended Son Harf inputs send a word.
+    val actionText = submitLabel ?: if (maxLength == 5) sh("ONAYLA", "CONFIRM") else sh("GÖNDER", "SEND")
 
     Surface(
         modifier = modifier.fillMaxWidth(),
