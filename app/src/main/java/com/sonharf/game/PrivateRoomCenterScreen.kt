@@ -2,30 +2,14 @@ package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MeetingRoom
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -35,9 +19,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.GameRoomDto
@@ -105,34 +90,39 @@ internal fun PrivateRoomCenterScreen(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = ::leave) { Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back")) }
-            Column(Modifier.weight(1f)) {
-                Text(sh("PRO ÖZEL ODA", "PRO PRIVATE ROOM"), fontSize = 22.sp, fontWeight = FontWeight.Black, color = SonHarfText)
-                Text(sh("Son Harf için davet kodlu özel düello", "Invite-code private duel for Last Letter"), fontSize = 10.sp, color = SonHarfMuted)
-            }
-            Icon(Icons.Rounded.Lock, null, tint = SonHarfGold)
-        }
+        MainScreenHeader(
+            title = sh("PRO Özel Oda", "PRO Private Room"),
+            subtitle = sh("Son Harf için davet kodlu özel düello", "Invite-code private duel for Last Letter"),
+            onBack = ::leave,
+            actionIcon = Icons.Rounded.Lock,
+            actionDescription = "PRO",
+            onAction = {},
+        )
 
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            color = SonHarfSurface,
-            border = BorderStroke(1.dp, SonHarfTheme.Border),
-        ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(sh("ODA OLUŞTUR", "CREATE ROOM"), fontWeight = FontWeight.Black, color = SonHarfText)
-                Text(
-                    sh("PRO sahibi oda oluşturur. Rakibin aşağıdaki kodla katılabilir.", "A PRO member creates the room. Your rival can join with its code."),
-                    fontSize = 10.sp,
-                    color = SonHarfMuted,
-                )
-                Button(
+        MainGameCard {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(shape = MainUiShape.Control, color = MainUi.BlueSoft) {
+                        Icon(Icons.Rounded.MeetingRoom, null, tint = MainUi.Blue, modifier = Modifier.padding(9.dp).size(21.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text(sh("Oda oluştur", "Create room"), fontWeight = FontWeight.Bold, color = MainUi.Text, fontSize = 15.sp)
+                        Text(
+                            sh("PRO sahibi oda oluşturur; rakibin kodla katılır.", "A PRO member creates the room; your rival joins by code."),
+                            fontSize = 10.sp,
+                            color = MainUi.Muted,
+                        )
+                    }
+                }
+
+                MainGameButton(
+                    text = sh("ÖZEL ODA OLUŞTUR", "CREATE PRIVATE ROOM"),
                     onClick = {
-                        if (busy || room != null) return@Button
+                        if (busy || room != null) return@MainGameButton
                         scope.launch {
                             busy = true
                             notice = null
@@ -149,36 +139,35 @@ internal fun PrivateRoomCenterScreen(
                         }
                     },
                     enabled = !busy && room == null,
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
-                ) {
-                    Icon(Icons.Rounded.MeetingRoom, null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(sh("ÖZEL ODA OLUŞTUR", "CREATE PRIVATE ROOM"), fontWeight = FontWeight.Black)
-                }
+                    icon = Icons.Rounded.MeetingRoom,
+                    modifier = Modifier.fillMaxWidth(),
+                )
 
                 room?.let { active ->
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = SonHarfSurface2,
-                        border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .45f)),
+                        shape = MainUiShape.Card,
+                        color = MainUi.SurfaceSoft,
+                        border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .34f)),
                     ) {
-                        Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(sh("ODA KODU", "ROOM CODE"), color = SonHarfMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                            Text(active.code, color = SonHarfGold, fontSize = 28.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
-                            Spacer(Modifier.height(6.dp))
+                        Column(
+                            Modifier.padding(14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(5.dp),
+                        ) {
+                            Text(sh("ODA KODU", "ROOM CODE"), color = MainUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text(active.code, color = MainUi.Gold, fontSize = 28.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(modifier = Modifier.width(16.dp).height(16.dp), strokeWidth = 2.dp)
+                                CircularProgressIndicator(Modifier.size(15.dp), color = MainUi.Blue, strokeWidth = 2.dp)
                                 Spacer(Modifier.width(7.dp))
-                                Text(sh("Rakip bekleniyor…", "Waiting for rival…"), color = SonHarfMuted, fontSize = 10.sp)
+                                Text(sh("Rakip bekleniyor…", "Waiting for rival…"), color = MainUi.Muted, fontSize = 10.sp)
                             }
                         }
                     }
-                    OutlinedButton(
+                    MainDestructiveButton(
+                        text = sh("ODAYI İPTAL ET", "CANCEL ROOM"),
                         onClick = {
-                            if (busy) return@OutlinedButton
+                            if (busy) return@MainDestructiveButton
                             scope.launch {
                                 busy = true
                                 runCatching { service.cancel(active.id) }
@@ -188,24 +177,24 @@ internal fun PrivateRoomCenterScreen(
                         },
                         enabled = !busy,
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text(sh("ODAYI İPTAL ET", "CANCEL ROOM"), fontWeight = FontWeight.Bold) }
+                    )
                 }
             }
         }
 
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            color = SonHarfSurface,
-            border = BorderStroke(1.dp, SonHarfTheme.Border),
-        ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(sh("KODLA KATIL", "JOIN WITH CODE"), fontWeight = FontWeight.Black, color = SonHarfText)
-                Text(
-                    sh("Oda sahibinin verdiği 6 karakterli kodu gir.", "Enter the 6-character code from the room host."),
-                    fontSize = 10.sp,
-                    color = SonHarfMuted,
-                )
+        MainGameCard {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(shape = MainUiShape.Control, color = MainUi.SurfaceSoft) {
+                        Icon(Icons.Rounded.Key, null, tint = MainUi.Blue, modifier = Modifier.padding(9.dp).size(21.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column {
+                        Text(sh("Kodla katıl", "Join with code"), fontWeight = FontWeight.Bold, color = MainUi.Text, fontSize = 15.sp)
+                        Text(sh("Oda sahibinin verdiği 6 karakterli kodu gir.", "Enter the 6-character code from the room host."), fontSize = 10.sp, color = MainUi.Muted)
+                    }
+                }
+
                 OutlinedTextField(
                     value = code,
                     onValueChange = { code = it.filter(Char::isLetterOrDigit).take(6).uppercase() },
@@ -214,10 +203,19 @@ internal fun PrivateRoomCenterScreen(
                     label = { Text(sh("Oda kodu", "Room code")) },
                     leadingIcon = { Icon(Icons.Rounded.Key, null) },
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                    shape = MainUiShape.Control,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = MainUi.Blue,
+                        unfocusedBorderColor = MainUi.Border,
+                        focusedContainerColor = MainUi.Surface,
+                        unfocusedContainerColor = MainUi.Surface,
+                    ),
                 )
-                Button(
+
+                MainGameButton(
+                    text = sh("ODAYA KATIL", "JOIN ROOM"),
                     onClick = {
-                        if (busy || code.length != 6) return@Button
+                        if (busy || code.length != 6) return@MainGameButton
                         scope.launch {
                             busy = true
                             notice = null
@@ -237,15 +235,20 @@ internal fun PrivateRoomCenterScreen(
                         }
                     },
                     enabled = !busy && code.length == 6,
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
-                ) { Text(sh("ODAYA KATIL", "JOIN ROOM"), fontWeight = FontWeight.Black) }
+                    modifier = Modifier.fillMaxWidth(),
+                )
             }
         }
 
         notice?.let {
-            Surface(shape = RoundedCornerShape(14.dp), color = SonHarfSurface2) {
-                Text(it, modifier = Modifier.fillMaxWidth().padding(12.dp), color = SonHarfText, fontSize = 10.sp)
+            Surface(shape = MainUiShape.Control, color = MainUi.BlueSoft, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .16f))) {
+                Text(
+                    it,
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    color = MainUi.Text,
+                    fontSize = 10.sp,
+                    textAlign = TextAlign.Center,
+                )
             }
         }
     }
@@ -258,10 +261,17 @@ private fun CenteredMessage(title: String, detail: String, onBack: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Black, color = SonHarfText)
-        Spacer(Modifier.height(8.dp))
-        Text(detail, color = SonHarfMuted, fontSize = 11.sp)
-        Spacer(Modifier.height(18.dp))
-        OutlinedButton(onClick = onBack) { Text(sh("GERİ", "BACK")) }
+        Surface(shape = MainUiShape.Card, color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
+            Column(
+                Modifier.padding(22.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(title, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MainUi.Text, textAlign = TextAlign.Center)
+                Text(detail, color = MainUi.Muted, fontSize = 11.sp, textAlign = TextAlign.Center)
+                Spacer(Modifier.height(4.dp))
+                MainSecondaryButton(sh("GERİ", "BACK"), onBack, Modifier.fillMaxWidth())
+            }
+        }
     }
 }
