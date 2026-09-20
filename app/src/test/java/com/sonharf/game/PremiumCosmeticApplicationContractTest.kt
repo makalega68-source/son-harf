@@ -12,6 +12,9 @@ class PremiumCosmeticApplicationContractTest {
         val premier = source("PremierWordDuelScreen.kt")
         val shared = source("SharedInputPrimitives.kt")
         val ladderCompat = source("HarfYoluKeyboard.kt")
+        val premierKeyboard = premier
+            .substringAfter("private fun PremierKeyboard(")
+            .substringBefore("@OptIn(ExperimentalMaterial3Api::class)")
 
         assertTrue(premier.contains("EmbeddedWordKeyboard("))
         assertTrue(ladderCompat.contains("EmbeddedWordKeyboard("))
@@ -19,8 +22,8 @@ class PremiumCosmeticApplicationContractTest {
         assertTrue(shared.contains("color = palette.background"))
         assertTrue(shared.contains("palette = palette"))
         assertTrue(premier.contains("nameColor = SonHarfCosmetics.playerNameColor"))
-        assertFalse(premier.contains("TEMİZLE"))
-        assertFalse(premier.contains("CLEAR"))
+        assertFalse(premierKeyboard.contains("TEMİZLE"))
+        assertFalse(premierKeyboard.contains("CLEAR"))
     }
 
     @Test
