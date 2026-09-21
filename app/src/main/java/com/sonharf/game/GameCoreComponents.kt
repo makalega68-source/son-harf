@@ -1,0 +1,158 @@
+package com.sonharf.game
+
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+
+internal fun gameText(tr: String, en: String): String =
+    if (SonHarfUiState.language.lowercase().startsWith("en")) en else tr
+
+@Composable
+internal fun GameSurface(
+    modifier: Modifier = Modifier,
+    elevated: Boolean = false,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        modifier = modifier,
+        shape = GameShapes.Large,
+        color = if (elevated) GameColors.SecondarySurface else GameColors.PrimarySurface,
+        border = BorderStroke(1.dp, GameColors.Border),
+        shadowElevation = if (elevated) GameElevation.Low else GameElevation.Flat,
+    ) {
+        Column(Modifier.padding(GameSpacing.Lg), content = content)
+    }
+}
+
+@Composable
+internal fun GameSectionHeader(title: String, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, Modifier.weight(1f), color = GameColors.TextPrimary, style = MaterialTheme.typography.titleMedium)
+        if (actionLabel != null && onAction != null) {
+            TextButton(onClick = onAction) {
+                Text(actionLabel, color = GameColors.PrimaryBlue, style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+@Composable
+private fun GameActionButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier,
+    container: Color,
+    enabled: Boolean,
+    icon: ImageVector?,
+) {
+    Button(
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.heightIn(min = 48.dp),
+        shape = GameShapes.Medium,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = container,
+            contentColor = Color.White,
+            disabledContainerColor = GameColors.Disabled,
+            disabledContentColor = GameColors.DisabledContent,
+        ),
+        elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+    ) {
+        if (icon != null) {
+            Icon(icon, null, Modifier.size(20.dp))
+            Spacer(Modifier.width(8.dp))
+        }
+        Text(text, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+internal fun GamePrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null) =
+    GameActionButton(text, onClick, modifier, GameColors.PlayGreen, enabled, icon)
+
+@Composable
+internal fun GameSecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null) =
+    GameActionButton(text, onClick, modifier, GameColors.PrimaryBlue, enabled, icon)
+
+@Composable
+internal fun GameTertiaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null) =
+    GameActionButton(text, onClick, modifier, GameColors.SecondarySurface, enabled, icon)
+
+@Composable
+internal fun GameDangerButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null) =
+    GameActionButton(text, onClick, modifier, GameColors.Danger, enabled, icon)
+
+@Composable
+internal fun GameIconButton(icon: ImageVector, contentDescription: String, onClick: () -> Unit, tint: Color = GameColors.TextPrimary) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.size(48.dp),
+        shape = CircleShape,
+        color = GameColors.SecondarySurface,
+        border = BorderStroke(1.dp, GameColors.Border),
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription, tint = tint, modifier = Modifier.size(23.dp))
+        }
+    }
+}
+
+@Composable
+internal fun GameStatChip(icon: ImageVector, text: String, accent: Color = GameColors.PrimaryBlue, modifier: Modifier = Modifier) {
+    Surface(modifier, shape = GameShapes.Pill, color = accent.copy(alpha = .14f)) {
+        Row(Modifier.padding(horizontal = 9.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(15.dp))
+            Spacer(Modifier.width(5.dp))
+            Text(text, color = GameColors.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+        }
+    }
+}
+
+@Composable
+internal fun LeagueBadge(text: String) {
+    Surface(shape = GameShapes.Pill, color = GameColors.PrestigeGold.copy(alpha = .14f), border = BorderStroke(1.dp, GameColors.PrestigeGold.copy(alpha = .35f))) {
+        Row(Modifier.padding(horizontal = 9.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.MilitaryTech, null, tint = GameColors.PrestigeGold, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
+            Text(text, color = GameColors.PrestigeGold, style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+internal fun RatingBadge(rating: Int) = GameStatChip(Icons.Rounded.EmojiEvents, "$rating RP", GameColors.RewardAmber)
+
+@Composable
+internal fun CurrencyChip(amount: Int) = GameStatChip(Icons.Rounded.Toll, amount.toString(), GameColors.TacticalTurquoise)
+
+@Composable
+internal fun GameProgress(progress: Float, color: Color, modifier: Modifier = Modifier) {
+    LinearProgressIndicator(
+        progress = { progress.coerceIn(0f, 1f) },
+        modifier = modifier.fillMaxWidth().height(6.dp),
+        color = color,
+        trackColor = GameColors.SecondarySurface,
+    )
+}
+
+@Composable
+internal fun MissionProgress(progress: Float, modifier: Modifier = Modifier) = GameProgress(progress, GameColors.PlayGreen, modifier)
+
+@Composable
+internal fun XPProgress(progress: Float, modifier: Modifier = Modifier) = GameProgress(progress, GameColors.PrimaryBlue, modifier)
+
+@Composable
+internal fun LeagueProgress(progress: Float, modifier: Modifier = Modifier) = GameProgress(progress, GameColors.PrestigeGold, modifier)
