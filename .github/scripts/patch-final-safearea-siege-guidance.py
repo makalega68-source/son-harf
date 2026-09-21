@@ -3,8 +3,8 @@ from pathlib import Path
 # 1) Keep the custom purchased bottom navigation above Android's navigation bar.
 home = Path('app/src/main/java/com/sonharf/game/PremiumAdultApp.kt')
 s = home.read_text()
-old = '        modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),\n        asset = PurchasedUiAsset.PANEL_LARGE,'
-new = '        modifier = Modifier\n            .fillMaxWidth()\n            .navigationBarsPadding()\n            .heightIn(min = 88.dp),\n        asset = PurchasedUiAsset.PANEL_LARGE,'
+old = '        modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),\n        asset = PurchasedUiAsset.PANEL_MEDIUM,'
+new = '        modifier = Modifier\n            .fillMaxWidth()\n            .navigationBarsPadding()\n            .heightIn(min = 88.dp),\n        asset = PurchasedUiAsset.PANEL_MEDIUM,'
 if old not in s:
     raise SystemExit('AdultBottomBar purchased panel anchor not found')
 s = s.replace(old, new, 1)
@@ -213,9 +213,9 @@ test = Path('app/src/test/java/com/sonharf/game/PurchasedFinalSafeAreaSiegeGuida
 test.write_text('''package com.sonharf.game
 
 import java.io.File
-import kotlin.test.Test
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
 class PurchasedFinalSafeAreaSiegeGuidanceContractTest {
     @Test
