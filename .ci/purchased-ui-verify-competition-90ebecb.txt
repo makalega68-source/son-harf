@@ -1,0 +1,2 @@
+Verify repaired Siege plus purchased Competition source at 90ebecb62236128a38770800c0c1439d521af51c.
+No runtime code.
