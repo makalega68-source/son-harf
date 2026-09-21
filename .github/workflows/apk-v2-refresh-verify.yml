@@ -1,16 +1,16 @@
-name: APK V2 Refresh Verify
+name: APK V2 Purchased UI Verify
 
 on:
   push:
     branches:
-      - ui/user-apk-v2-refresh-20260921
+      - ui/real-purchased-pack-full-overhaul-20260921
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: apk-v2-refresh-${{ github.ref }}
+  group: purchased-ui-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -40,16 +40,16 @@ jobs:
         with:
           validate-wrappers: false
 
-      - name: Verify exact APK-v2 source line
+      - name: Verify exact APK-v2 source line and purchased UI contract
         shell: bash
         run: |
           set -euo pipefail
           echo "SOURCE_SHA=$(git rev-parse HEAD)"
           git merge-base --is-ancestor e66eec3b0d33e7419aa46686490a04dac57b680b HEAD
           grep -q 'PremiumAdultApp(onSignedOut' app/src/main/java/com/sonharf/game/StableV1App.kt
-          test -f app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt
-          test -f app/src/main/java/com/sonharf/game/ProfileFramesV2.kt
-          test -f app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt
+          test -f app/src/main/java/com/sonharf/game/PurchasedGameTheme.kt
+          grep -q 'PurchasedUiAsset.PANEL_MEDIUM' app/src/main/java/com/sonharf/game/AppUiPrimitives.kt
+          for part in 00 01 02 03; do test -s "app/src/main/assets/purchased_ui_atlas_${part}.b64"; done
           ! grep -q 'TEMİZLE' app/src/main/java/com/sonharf/game/SharedInputPrimitives.kt
           ! grep -q 'CLEAR' app/src/main/java/com/sonharf/game/SharedInputPrimitives.kt
 
@@ -69,7 +69,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Kelime-Kusatmasi-APK-v2-Yenilenmis
+          name: Kelime-Kusatmasi-Purchased-UI-Work
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             apk-sha256.txt
