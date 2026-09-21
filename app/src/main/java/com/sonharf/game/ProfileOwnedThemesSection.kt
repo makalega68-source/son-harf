@@ -119,16 +119,20 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
     val visibleCollection = collection.filter(::collectionItemSupported)
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = RoundedCornerShape(12.dp), color = SonHarfTheme.PrimarySoft) {
-                Icon(Icons.Rounded.GridView, null, tint = SonHarfTheme.Primary, modifier = Modifier.padding(8.dp).size(19.dp))
+        PurchasedPanel(
+            modifier = Modifier.fillMaxWidth(),
+            asset = PurchasedUiAsset.PANEL_MEDIUM,
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PurchasedAsset(PurchasedUiAsset.ICON_GAMES, Modifier.size(38.dp))
+                Spacer(Modifier.width(9.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(sh("KOLEKSİYON", "COLLECTION"), color = Color(0xFF4A2D20), fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    Text(sh("Yalnızca sahip olduğun ürünleri burada yönet.", "Manage only the items you own here."), color = Color(0xFF765746), fontSize = 10.sp)
+                }
+                if (loading || busyId != null) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = SonHarfTheme.Primary)
             }
-            Spacer(Modifier.width(9.dp))
-            Column(Modifier.weight(1f)) {
-                Text(sh("KOLEKSİYON", "COLLECTION"), color = SonHarfTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
-                Text(sh("Yalnızca sahip olduğun ürünleri burada yönet.", "Manage only the items you own here."), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
-            }
-            if (loading || busyId != null) CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = SonHarfTheme.Primary)
         }
 
         ActiveStyleSummary(
@@ -207,23 +211,43 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
         }
 
         if (!loading && visibleCollection.none { it.kind != "game_theme" }) {
-            Surface(shape = MainUiShape.Control, color = SonHarfTheme.SurfaceSecondary) {
-                Text(
-                    sh("Mağazadan satın aldığın diğer ürünler burada kategorileri altında görünür.", "Other items you purchase from the shop will appear here under their categories."),
-                    Modifier.fillMaxWidth().padding(14.dp),
-                    color = SonHarfTheme.TextSecondary,
-                    fontSize = 11.sp,
-                )
+            PurchasedPanel(
+                modifier = Modifier.fillMaxWidth(),
+                asset = PurchasedUiAsset.PANEL_SMALL,
+                contentPadding = PaddingValues(12.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PurchasedAsset(PurchasedUiAsset.NAV_SHOP, Modifier.size(30.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        sh("Mağazadan satın aldığın diğer ürünler burada kategorileri altında görünür.", "Other items you purchase from the shop will appear here under their categories."),
+                        modifier = Modifier.weight(1f),
+                        color = Color(0xFF765746),
+                        fontSize = 10.sp,
+                    )
+                }
             }
         }
 
         notice?.let { message ->
-            Surface(shape = MainUiShape.Control, color = SonHarfTheme.PrimarySoft) {
-                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(message, Modifier.weight(1f), color = SonHarfTheme.TextPrimary, fontSize = 11.sp)
-                    TextButton(onClick = { scope.launch { reloadCollection() } }, enabled = busyId == null) {
-                        Text(sh("YENİLE", "REFRESH"), color = SonHarfTheme.Primary, fontWeight = FontWeight.Black)
-                    }
+            PurchasedPanel(
+                modifier = Modifier.fillMaxWidth(),
+                asset = PurchasedUiAsset.REWARD_PANEL,
+                contentPadding = PaddingValues(11.dp),
+            ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    PurchasedAsset(PurchasedUiAsset.ICON_CHECK, Modifier.size(28.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text(message, Modifier.weight(1f), color = Color(0xFF4A2D20), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.width(7.dp))
+                    PurchasedButton(
+                        text = sh("YENİLE", "REFRESH"),
+                        onClick = { scope.launch { reloadCollection() } },
+                        enabled = busyId == null,
+                        modifier = Modifier.width(108.dp),
+                        style = PurchasedButtonStyle.SECONDARY,
+                        leadingAsset = PurchasedUiAsset.ICON_REPEAT,
+                    )
                 }
             }
         }
@@ -232,9 +256,17 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
 
 @Composable
 private fun ActiveStyleSummary(theme: String, frame: String, keyboard: String) {
-    Surface(shape = MainUiShape.Card, color = SonHarfTheme.SurfaceSecondary, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
-        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(sh("AKTİF GÖRÜNÜM", "ACTIVE LOOK"), color = SonHarfTheme.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Black)
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_MEDIUM,
+        contentPadding = PaddingValues(13.dp),
+    ) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PurchasedAsset(PurchasedUiAsset.ICON_CROWN, Modifier.size(30.dp))
+                Spacer(Modifier.width(7.dp))
+                Text(sh("AKTİF GÖRÜNÜM", "ACTIVE LOOK"), color = Color(0xFF4A2D20), fontSize = 10.sp, fontWeight = FontWeight.Black)
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
                 SummaryChip(Icons.Rounded.Palette, theme, SonHarfTheme.Purple, Modifier.weight(1f))
                 SummaryChip(Icons.Rounded.AccountCircle, frame, SonHarfTheme.Primary, Modifier.weight(1f))
@@ -246,27 +278,36 @@ private fun ActiveStyleSummary(theme: String, frame: String, keyboard: String) {
 
 @Composable
 private fun SummaryChip(icon: ImageVector, text: String, accent: Color, modifier: Modifier) {
-    Surface(modifier, shape = RoundedCornerShape(12.dp), color = SonHarfTheme.Surface) {
-        Column(Modifier.padding(8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(17.dp))
+    PurchasedPanel(
+        modifier = modifier.heightIn(min = 76.dp),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 7.dp, vertical = 8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
             Spacer(Modifier.height(4.dp))
-            Text(text, color = SonHarfTheme.TextPrimary, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(text, color = Color(0xFF4A2D20), fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }
 
 @Composable
 private fun CollectionCategoryBlock(title: String, subtitle: String, icon: ImageVector, accent: Color, content: @Composable ColumnScope.() -> Unit) {
-    Surface(shape = MainUiShape.Card, color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border), shadowElevation = 2.dp) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_LARGE,
+        contentPadding = PaddingValues(14.dp),
+    ) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = .10f)) {
-                    Icon(icon, null, tint = accent, modifier = Modifier.padding(9.dp).size(20.dp))
-                }
-                Spacer(Modifier.width(10.dp))
+                PurchasedAsset(PurchasedUiAsset.ICON_GAMES, Modifier.size(38.dp))
+                Spacer(Modifier.width(7.dp))
+                Icon(icon, null, tint = accent, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(9.dp))
                 Column {
-                    Text(title, color = SonHarfTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
-                    Text(subtitle, color = SonHarfTheme.TextSecondary, fontSize = 9.sp)
+                    Text(title, color = Color(0xFF4A2D20), fontSize = 14.sp, fontWeight = FontWeight.Black)
+                    Text(subtitle, color = Color(0xFF765746), fontSize = 9.sp)
                 }
             }
             content()
@@ -318,21 +359,21 @@ private fun CollectionProductTile(item: ShopItemDto, active: Boolean, enabled: B
 
 @Composable
 private fun CollectionTileShell(active: Boolean, enabled: Boolean, modifier: Modifier, onClick: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    Surface(
+    PurchasedPanel(
         modifier = modifier.clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(17.dp),
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(if (active) 1.5.dp else 1.dp, if (active) SonHarfTheme.Turquoise else SonHarfTheme.Border),
+        asset = if (active) PurchasedUiAsset.REWARD_PANEL else PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(9.dp),
     ) {
-        Column(Modifier.fillMaxWidth().padding(9.dp), verticalArrangement = Arrangement.spacedBy(7.dp), content = content)
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.dp), content = content)
     }
 }
 
 @Composable
 private fun BoxScope.ActiveCheck(accent: Color) {
-    Surface(modifier = Modifier.align(Alignment.TopEnd).padding(6.dp), shape = RoundedCornerShape(99.dp), color = accent) {
-        Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.padding(4.dp).size(13.dp))
-    }
+    PurchasedAsset(
+        PurchasedUiAsset.ICON_CHECK,
+        modifier = Modifier.align(Alignment.TopEnd).padding(5.dp).size(28.dp),
+    )
 }
 
 private fun collectionItemSupported(item: ShopItemDto): Boolean = when (item.kind) {
