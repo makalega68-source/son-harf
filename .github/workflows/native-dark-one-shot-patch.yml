@@ -99,7 +99,6 @@ jobs:
 
           social = "app/src/main/java/com/sonharf/game/MainSocialScreen.kt"
           replace_all(social, "focusedContainerColor = Color.White", "focusedContainerColor = MainUi.SurfaceRaised")
-          replace_all(social, "unfocusedContainerColor = Color.White", "unfocusedContainerColor = MainUi.SurfaceRaised")
           replace_all(social, "color = Color(0xFFE8F1EB)", "color = MainUi.SurfaceRaised")
           replace_all(social, "Color(0xFF567A64)", "SonHarfTheme.Primary")
 
