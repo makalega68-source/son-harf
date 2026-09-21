@@ -1,0 +1,121 @@
+name: Native Dark Finish Patch
+
+on:
+  push:
+    branches:
+      - ui/native-dark-professional-20260921
+
+permissions:
+  contents: write
+
+jobs:
+  finish-native-ui:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply guarded finish patches
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              if old not in text:
+                  raise SystemExit(f"Guard failed in {path}: {old[:140]!r}")
+              p.write_text(text.replace(old, new, 1))
+
+          # Store: preserve dynamic backend catalog, replace only visual category accents.
+          store = "app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt"
+          replace_once(store, 'PremiumStoreCategory("Temalar", "Themes", Icons.Rounded.Palette, Color(0xFF7C3AED), setOf("game_theme")),', 'PremiumStoreCategory("Temalar", "Themes", Icons.Rounded.Palette, SonHarfTheme.Lavender, setOf("game_theme")),')
+          replace_once(store, 'PremiumStoreCategory("Profil Çerçeveleri", "Profile Frames", Icons.Rounded.AccountCircle, Color(0xFF2563EB), setOf("profile_frame")),', 'PremiumStoreCategory("Profil Çerçeveleri", "Profile Frames", Icons.Rounded.AccountCircle, SonHarfTheme.SoftBlue, setOf("profile_frame")),')
+          replace_once(store, 'PremiumStoreCategory("Tuş Stilleri", "Keyboard Styles", Icons.Rounded.Keyboard, Color(0xFF12B8A6), setOf("keyboard_theme")),', 'PremiumStoreCategory("Tuş Stilleri", "Keyboard Styles", Icons.Rounded.Keyboard, SonHarfTheme.Primary, setOf("keyboard_theme")),')
+          replace_once(store, 'PremiumStoreCategory("İsim & Prestij", "Name & Prestige", Icons.Rounded.AutoAwesome, Color(0xFFF97316), setOf("name_style", "victory_effect", "emoji_pack")),', 'PremiumStoreCategory("İsim & Prestij", "Name & Prestige", Icons.Rounded.AutoAwesome, SonHarfTheme.ActionOrange, setOf("name_style", "victory_effect", "emoji_pack")),')
+
+          # Backend: generalize existing safe report/block RPCs, retain club wrappers.
+          social = "app/src/main/java/com/sonharf/game/data/CompetitionSocial.kt"
+          replace_once(
+              social,
+              '''suspend fun OnlineGameBackend.reportClubMember(userId: String) {\n    val me = currentUserId() ?: error("not_authenticated")\n    require(userId != me) { "cannot_report_self" }\n    SupabaseProvider.client.postgrest.rpc(\n        "report_player",\n        buildJsonObject {\n            put("p_reported_id", userId)\n            put("p_reason", "club_chat_spam_or_abuse")\n        },\n    )\n}\n\nsuspend fun OnlineGameBackend.blockClubMember(userId: String) {\n    val me = currentUserId() ?: error("not_authenticated")\n    require(userId != me) { "cannot_block_self" }\n    SupabaseProvider.client.postgrest.rpc(\n        "block_user",\n        buildJsonObject { put("p_blocked_id", userId) },\n    )\n}\n''',
+              '''suspend fun OnlineGameBackend.reportPlayer(userId: String, reason: String = "chat_spam_or_abuse") {\n    val me = currentUserId() ?: error("not_authenticated")\n    require(userId != me) { "cannot_report_self" }\n    SupabaseProvider.client.postgrest.rpc(\n        "report_player",\n        buildJsonObject {\n            put("p_reported_id", userId)\n            put("p_reason", reason.trim().take(100).ifBlank { "chat_spam_or_abuse" })\n        },\n    )\n}\n\nsuspend fun OnlineGameBackend.blockPlayer(userId: String) {\n    val me = currentUserId() ?: error("not_authenticated")\n    require(userId != me) { "cannot_block_self" }\n    SupabaseProvider.client.postgrest.rpc(\n        "block_user",\n        buildJsonObject { put("p_blocked_id", userId) },\n    )\n}\n\nsuspend fun OnlineGameBackend.reportClubMember(userId: String) =\n    reportPlayer(userId, "club_chat_spam_or_abuse")\n\nsuspend fun OnlineGameBackend.blockClubMember(userId: String) = blockPlayer(userId)\n'''
+          )
+
+          # Siege chat: wire moderation actions and keep IME Send behavior.
+          siege = "app/src/main/java/com/sonharf/game/WordSiegeExperience.kt"
+          replace_once(
+              siege,
+              '''            onInput = { chatInput = it.take(300) },\n            onDismiss = { showChat = false },\n            onSend = {''',
+              '''            onInput = { chatInput = it.take(300) },\n            onDismiss = { showChat = false },\n            onReport = { target ->\n                scope.launch {\n                    runCatching { backend.reportPlayer(target, "word_siege_chat_spam_or_abuse") }\n                        .onSuccess { notice = sh("Oyuncu raporlandı.", "Player reported.") }\n                        .onFailure { notice = sh("Rapor gönderilemedi.", "Report could not be sent.") }\n                }\n            },\n            onBlock = { target ->\n                scope.launch {\n                    runCatching { backend.blockPlayer(target) }\n                        .onSuccess {\n                            notice = sh("Oyuncu engellendi.", "Player blocked.")\n                            messages = messages.filterNot { it.senderId == target }\n                        }\n                        .onFailure { notice = sh("Oyuncu engellenemedi.", "Player could not be blocked.") }\n                }\n            },\n            onSend = {'''
+          )
+          replace_once(
+              siege,
+              '''    onInput: (String) -> Unit,\n    onDismiss: () -> Unit,\n    onSend: () -> Unit,\n) {\n    AlertDialog(''',
+              '''    onInput: (String) -> Unit,\n    onDismiss: () -> Unit,\n    onReport: (String) -> Unit,\n    onBlock: (String) -> Unit,\n    onSend: () -> Unit,\n) {\n    var moderationTarget by remember { mutableStateOf<String?>(null) }\n    AlertDialog('''
+          )
+          replace_once(
+              siege,
+              '''                                Surface(\n                                    color = if (message.senderId == me) SiegeBlueSoft else SiegePurpleSoft,\n                                    shape = RoundedCornerShape(12.dp),\n                                ) {\n                                    Text(message.body, Modifier.padding(9.dp), color = MainUi.Text, fontSize = 11.sp)\n                                }''',
+              '''                                Surface(\n                                    color = if (message.senderId == me) SiegeBlueSoft else SiegePurpleSoft,\n                                    shape = RoundedCornerShape(12.dp),\n                                ) {\n                                    Text(message.body, Modifier.padding(9.dp), color = MainUi.Text, fontSize = 11.sp)\n                                }\n                                if (message.senderId != me) {\n                                    TextButton(\n                                        onClick = { moderationTarget = message.senderId },\n                                        modifier = Modifier.heightIn(min = 32.dp),\n                                        contentPadding = PaddingValues(horizontal = 7.dp),\n                                    ) { Text("•••", color = MainUi.Muted, fontWeight = FontWeight.Black) }\n                                }'''
+          )
+          replace_once(
+              siege,
+              '''                    }\n                }\n                Spacer(Modifier.height(8.dp))\n                OutlinedTextField(''',
+              '''                    }\n                }\n                moderationTarget?.let { target ->\n                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {\n                        TextButton(onClick = { onReport(target); moderationTarget = null }) {\n                            Text(sh("RAPORLA", "REPORT"), color = SonHarfTheme.Warning, fontSize = 9.sp, fontWeight = FontWeight.Black)\n                        }\n                        TextButton(onClick = { onBlock(target); moderationTarget = null }) {\n                            Text(sh("ENGELLE", "BLOCK"), color = SonHarfTheme.Error, fontSize = 9.sp, fontWeight = FontWeight.Black)\n                        }\n                    }\n                }\n                Spacer(Modifier.height(8.dp))\n                OutlinedTextField('''
+          )
+
+          # Profile: responsive scroll + personal streak + compact achievements.
+          profile = "app/src/main/java/com/sonharf/game/MainPlayerProfileScreen.kt"
+          replace_once(profile, "import androidx.compose.foundation.layout.*\n", "import androidx.compose.foundation.layout.*\nimport androidx.compose.foundation.rememberScrollState\nimport androidx.compose.foundation.verticalScroll\n")
+          replace_once(
+              profile,
+              '''    var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }\n    var friendCount by remember { mutableIntStateOf(0) }''',
+              '''    var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }\n    var records by remember { mutableStateOf<PersonalRecordsDto?>(null) }\n    var milestones by remember { mutableStateOf<List<MasteryMilestoneDto>>(emptyList()) }\n    var friendCount by remember { mutableIntStateOf(0) }'''
+          )
+          replace_once(
+              profile,
+              '''        val growthTask = async { runCatching { backend.getGrowthDashboard() }.getOrNull() }\n        val friendsTask = async { runCatching { backend.getFriends() }.getOrDefault(emptyList()) }''',
+              '''        val growthTask = async { runCatching { backend.getGrowthDashboard() }.getOrNull() }\n        val recordsTask = async { runCatching { backend.getPersonalRecords() }.getOrNull() }\n        val masteryTask = async { runCatching { backend.getMasteryPath() }.getOrDefault(emptyList()) }\n        val friendsTask = async { runCatching { backend.getFriends() }.getOrDefault(emptyList()) }'''
+          )
+          replace_once(
+              profile,
+              '''        growth = growthTask.await()\n        friendsTask.await().let { friends ->''',
+              '''        growth = growthTask.await()\n        records = recordsTask.await()\n        milestones = masteryTask.await()\n        friendsTask.await().let { friends ->'''
+          )
+          replace_once(
+              profile,
+              '''        modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp),''',
+              '''        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 14.dp),'''
+          )
+          replace_once(
+              profile,
+              '''                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {\n                    InlineProfileStat(wins.toString(), sh("Galibiyet", "Wins"))\n                    InlineProfileStat(losses.toString(), sh("Mağlubiyet", "Losses"))\n                    InlineProfileStat("%$winRate", sh("Kazanma", "Win rate"))\n                }''',
+              '''                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {\n                    InlineProfileStat(wins.toString(), sh("Galibiyet", "Wins"))\n                    InlineProfileStat(losses.toString(), sh("Mağlubiyet", "Losses"))\n                    InlineProfileStat("%$winRate", sh("Kazanma", "Win rate"))\n                    InlineProfileStat((records?.bestStreak ?: 0).toString(), sh("En iyi seri", "Best streak"))\n                }'''
+          )
+          replace_once(
+              profile,
+              '''        Surface(\n            modifier = Modifier.fillMaxWidth().clickable(onClick = onSocial),''',
+              '''        if (milestones.isNotEmpty()) {\n            Surface(\n                modifier = Modifier.fillMaxWidth(),\n                shape = RoundedCornerShape(20.dp),\n                color = SonHarfTheme.Surface,\n                border = BorderStroke(1.dp, SonHarfTheme.Border),\n            ) {\n                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {\n                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {\n                        Icon(Icons.Rounded.WorkspacePremium, null, tint = SonHarfTheme.Lavender, modifier = Modifier.size(19.dp))\n                        Spacer(Modifier.width(8.dp))\n                        Text(sh("Başarımlar", "Achievements"), color = SonHarfTheme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))\n                        Text("${milestones.count { it.unlocked }}/${milestones.size}", color = SonHarfTheme.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Bold)\n                    }\n                    milestones.take(3).forEach { milestone ->\n                        val target = milestone.target.coerceAtLeast(1)\n                        val ratio = (milestone.progress.toFloat() / target).coerceIn(0f, 1f)\n                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {\n                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {\n                                Text(if (SonHarfUiState.isEnglish) milestone.titleEn else milestone.titleTr, color = SonHarfTheme.TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.Bold)\n                                Text(if (milestone.unlocked) sh("TAMAM", "DONE") else "${milestone.progress}/$target", color = if (milestone.unlocked) SonHarfTheme.Primary else SonHarfTheme.TextSecondary, fontSize = 8.sp, fontWeight = FontWeight.Black)\n                            }\n                            LinearProgressIndicator(progress = { ratio }, modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape), color = if (milestone.unlocked) SonHarfTheme.Primary else SonHarfTheme.Lavender, trackColor = SonHarfTheme.SurfaceSecondary)\n                        }\n                    }\n                }\n            }\n        }\n\n        Surface(\n            modifier = Modifier.fillMaxWidth().clickable(onClick = onSocial),'''
+          )
+          replace_once(profile, "        Spacer(Modifier.weight(1f))\n", "        Spacer(Modifier.height(4.dp))\n")
+          PY
+
+          git diff --check
+
+      - name: Commit finish integration
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/com/sonharf/game/PremiumStoreScreen.kt \
+                  app/src/main/java/com/sonharf/game/MainPlayerProfileScreen.kt \
+                  app/src/main/java/com/sonharf/game/WordSiegeExperience.kt \
+                  app/src/main/java/com/sonharf/game/data/CompetitionSocial.kt
+          git commit -m "ui: finish store profile and safe siege chat integration"
+          git push origin HEAD:ui/native-dark-professional-20260921
