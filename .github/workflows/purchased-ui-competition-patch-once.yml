@@ -1,0 +1,45 @@
+name: Purchased UI Competition Patch Once
+
+on:
+  push:
+    branches:
+      - ui/real-purchased-pack-full-overhaul-20260921
+    paths:
+      - .github/workflows/purchased-ui-competition-patch-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/real-purchased-pack-full-overhaul-20260921
+          fetch-depth: 0
+      - name: Apply exact competition visual patch
+        run: python scripts/apply_purchased_competition_patch.py
+      - name: Verify protected competition contracts
+        run: |
+          grep -F 'getWeeklyTournamentLeaderboard(50)' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'getWeeklyTournamentHistory(12)' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'joinWeeklyTournament()' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'claimPreviousWeeklyTournamentReward()' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'getRivalHistory(30)' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'getMatchHistory(30)' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'inviteFriend(rival.opponentId, SonHarfUiState.language)' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'inviteFriendToWordArena(rival.opponentId, SonHarfUiState.language)' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'PurchasedUiAsset.RANK_ONE' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'PurchasedUiAsset.ICON_SWORDS' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+      - name: Commit competition overhaul
+        run: |
+          if git diff --quiet; then
+            echo 'No competition changes produced' >&2
+            exit 1
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          git commit -m 'ui: rebuild active competition screens with purchased assets'
+          git push origin HEAD:ui/real-purchased-pack-full-overhaul-20260921
