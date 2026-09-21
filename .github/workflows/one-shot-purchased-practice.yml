@@ -1,0 +1,233 @@
+name: One-shot purchased practice polish
+
+on:
+  push:
+    branches:
+      - ui/real-purchased-pack-full-overhaul-20260921
+
+permissions:
+  contents: write
+
+jobs:
+  patch-practice:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/real-purchased-pack-full-overhaul-20260921
+          fetch-depth: 0
+      - name: Patch visible practice/fallback shell only
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt')
+          s = p.read_text()
+
+          replacements = []
+          replacements.append((
+              'Surface(Modifier.fillMaxSize(), color = WordSiegeGameUi.Background) {\n        BoxWithConstraints(',
+              'Box(Modifier.fillMaxSize()) {\n        PurchasedGameBackdrop(Modifier.matchParentSize())\n        BoxWithConstraints('
+          ))
+          replacements.append((
+              'sh("KELİME TAHTI", "WORD THRONE")',
+              'sh("KELİME KUŞATMASI", "WORD SIEGE")'
+          ))
+
+          old_turn = '''                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = if (displayedOwner == 1) PracticePlayerAccent else PracticeRivalFill.copy(alpha = .42f),
+                    shape = RoundedCornerShape(11.dp),
+                    border = BorderStroke(1.dp, if (displayedOwner == 1) PracticePlayerAccent else PracticeRivalAccent),
+                ) {
+                    Row(
+                        Modifier.padding(horizontal = 9.dp, vertical = if (compact) 3.dp else 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (botThinking) CircularProgressIndicator(Modifier.size(14.dp), color = PracticeRivalAccent, strokeWidth = 2.dp)
+                        else Icon(
+                            if (displayedOwner == 1) Icons.Rounded.TouchApp else Icons.Rounded.SmartToy,
+                            null,
+                            tint = if (displayedOwner == 1) Color.White else PracticeRivalAccent,
+                            modifier = Modifier.size(15.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            when {
+                                state.status == "finished" && matchmakingFallback -> sh("BOT MAÇI BİTTİ • RAKİP ARAMASI SÜRÜYOR", "BOT MATCH FINISHED • MATCHMAKING CONTINUES")
+                                state.status == "finished" -> sh("ALIŞTIRMA BİTTİ", "PRACTICE FINISHED")
+                                botThinking -> sh("${botProfile.name.uppercase()} HAMLESİNİ HAZIRLIYOR", "${botProfile.name.uppercase()} IS PREPARING A MOVE")
+                                displayedOwner == 1 -> sh("SIRA SENDE • Kelimeni oluştur", "YOUR TURN • Build your word")
+                                else -> sh("${botProfile.name.uppercase()} OYNUYOR", "${botProfile.name.uppercase()} IS PLAYING")
+                            },
+                            color = if (displayedOwner == 1) Color.White else WordSiegeGameUi.Text,
+                            fontSize = if (compact) 11.sp else 13.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }'''
+          new_turn = '''                PurchasedPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    asset = PurchasedUiAsset.PANEL_SMALL,
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = if (compact) 5.dp else 7.dp),
+                ) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        PurchasedAsset(
+                            if (displayedOwner == 1) PurchasedUiAsset.ICON_SWORDS else PurchasedUiAsset.ICON_GAMES,
+                            Modifier.size(24.dp),
+                        )
+                        Spacer(Modifier.width(7.dp))
+                        Text(
+                            when {
+                                state.status == "finished" && matchmakingFallback -> sh("BOT MAÇI BİTTİ • RAKİP ARAMASI SÜRÜYOR", "BOT MATCH FINISHED • MATCHMAKING CONTINUES")
+                                state.status == "finished" -> sh("ALIŞTIRMA BİTTİ", "PRACTICE FINISHED")
+                                botThinking -> sh("${botProfile.name.uppercase()} HAMLESİNİ HAZIRLIYOR", "${botProfile.name.uppercase()} IS PREPARING A MOVE")
+                                displayedOwner == 1 -> sh("SIRA SENDE • Kelimeni oluştur", "YOUR TURN • Build your word")
+                                else -> sh("${botProfile.name.uppercase()} OYNUYOR", "${botProfile.name.uppercase()} IS PLAYING")
+                            },
+                            color = Color(0xFF4A2D20),
+                            fontSize = if (compact) 11.sp else 13.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        if (botThinking) CircularProgressIndicator(Modifier.size(14.dp), color = PracticeRivalAccent, strokeWidth = 2.dp)
+                    }
+                }'''
+          replacements.append((old_turn, new_turn))
+
+          old_confirm = '''                    Row(Modifier.fillMaxWidth()) {
+                        Button(
+                            onClick = ::applyPlayerMove,
+                            shape = RoundedCornerShape(12.dp),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+                            enabled = canPlayerAct && placements.isNotEmpty(),
+                            modifier = Modifier.weight(1f).height(52.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = PracticePlayerAccent,
+                                contentColor = Color.White,
+                                disabledContainerColor = WordSiegeGameUi.DisabledBackground,
+                                disabledContentColor = WordSiegeGameUi.DisabledContent,
+                            ),
+                            contentPadding = PaddingValues(horizontal = 4.dp),
+                        ) {
+                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 14.sp, fontWeight = FontWeight.Black)
+                        }
+                    }'''
+          new_confirm = '''                    PurchasedButton(
+                        text = sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"),
+                        onClick = ::applyPlayerMove,
+                        enabled = canPlayerAct && placements.isNotEmpty(),
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        style = PurchasedButtonStyle.PRIMARY,
+                        leadingAsset = PurchasedUiAsset.ICON_CHECK,
+                    )'''
+          replacements.append((old_confirm, new_confirm))
+
+          old_result = '''                    Surface(
+                        Modifier.fillMaxWidth(),
+                        color = color.copy(alpha = .08f),
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(1.dp, color.copy(alpha = .35f)),
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    if (won) sh("TAHT SENİN!", "THE THRONE IS YOURS!")
+                                    else if (draw) sh("BERABERE", "DRAW")
+                                    else sh("${botProfile.name.uppercase()} KAZANDI", "${botProfile.name.uppercase()} WON"),
+                                    color = color,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 14.sp,
+                                )
+                                Text(
+                                    sh("Kelime ve bölge puanların ayrı hesaplandı.", "Word and territory points were scored separately."),
+                                    color = WordSiegeGameUi.Muted,
+                                    fontSize = 8.sp,
+                                )
+                            }
+                            TextButton(onClick = ::startAgain) {
+                                Text(sh("YENİ OYUN", "NEW GAME"), color = WordSiegeGameUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                            }
+                        }
+                    }'''
+          new_result = '''                    PurchasedPanel(
+                        modifier = Modifier.fillMaxWidth(),
+                        asset = PurchasedUiAsset.REWARD_PANEL,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                    ) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            PurchasedAsset(
+                                if (won) PurchasedUiAsset.ICON_TROPHY else if (draw) PurchasedUiAsset.ICON_RANKING else PurchasedUiAsset.ICON_GAMES,
+                                Modifier.size(34.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(
+                                    if (won) sh("KUŞATMA ZAFERİ!", "SIEGE VICTORY!")
+                                    else if (draw) sh("BERABERE", "DRAW")
+                                    else sh("${botProfile.name.uppercase()} KAZANDI", "${botProfile.name.uppercase()} WON"),
+                                    color = Color(0xFF4A2D20),
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 14.sp,
+                                )
+                                Text(
+                                    sh("Kelime ve bölge puanların ayrı hesaplandı.", "Word and territory points were scored separately."),
+                                    color = Color(0xFF765746),
+                                    fontSize = 8.sp,
+                                )
+                            }
+                            PurchasedButton(
+                                text = sh("YENİ OYUN", "NEW GAME"),
+                                onClick = ::startAgain,
+                                modifier = Modifier.width(112.dp).height(48.dp),
+                                style = PurchasedButtonStyle.SECONDARY,
+                                leadingAsset = PurchasedUiAsset.ICON_REPEAT,
+                            )
+                        }
+                    }'''
+          replacements.append((old_result, new_result))
+
+          for old, new in replacements:
+              if old not in s:
+                  raise SystemExit('Expected source block not found; refusing partial patch:\n' + old[:180])
+              s = s.replace(old, new, 1)
+
+          # Preserve behavior contracts before writing.
+          required = [
+              'WordSiegePracticeEngine.applyMove(state, 1, placements)',
+              'resilientPracticeBotMove(',
+              'WordSiegeFinalRules.cubeTransfer(state.playerArea)',
+              'matchmakingFallback',
+              'SharedDictionaryService.preloadCanonical',
+          ]
+          for token in required:
+              if token not in s:
+                  raise SystemExit('Behavior contract missing after patch: ' + token)
+          if 'sh("KELİME TAHTI", "WORD THRONE")' in s:
+              raise SystemExit('Legacy practice brand still present')
+          if 'PurchasedButton(\n                        text = sh("HAMLEYİ ONAYLA"' not in s:
+              raise SystemExit('Purchased confirm CTA missing')
+
+          p.write_text(s)
+          PY
+      - name: Run focused regression tests and assemble
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+      - name: Commit patch and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/one-shot-purchased-practice.yml
+          git add app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt
+          git commit -m "ui: finish purchased siege practice shell"
+          git push origin HEAD:ui/real-purchased-pack-full-overhaul-20260921
