@@ -9,12 +9,12 @@ class GameplayAdPolicyRegressionTest {
     @Test fun productionShellKeepsAllGameDestinationsBannerFreeAndRewardedAdsVerified() {
         val shell = projectFile("app/src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val rewarded = projectFile("app/src/main/java/com/sonharf/game/RewardedAdController.kt").readText()
+        val gameplayBlock = shell.substringAfter("val inGameplay =").substringBefore("val scheme =")
 
-        assertTrue(shell.contains("PremiumDestination.LAST_LETTER"))
-        assertTrue(shell.contains("PremiumDestination.SIEGE"))
-        assertTrue(shell.contains("PremiumDestination.LETTER_PATH"))
-        assertTrue(shell.contains("destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)"))
-        assertTrue(shell.contains("SonHarfTopAdBanner(isPremium = isPro)"))
+        assertTrue(gameplayBlock.contains("PremiumDestination.LAST_LETTER"))
+        assertTrue(gameplayBlock.contains("PremiumDestination.SIEGE"))
+        assertTrue(gameplayBlock.contains("PremiumDestination.LETTER_PATH"))
+        assertTrue(shell.contains("if (!inGameplay) SonHarfTopAdBanner(isPremium = isPro)"))
         assertTrue(rewarded.contains("verificationUserId.isNullOrBlank()"))
         assertTrue(rewarded.contains("verificationData.isNullOrBlank()"))
         assertTrue(rewarded.contains("setServerSideVerificationOptions"))
