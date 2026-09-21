@@ -248,8 +248,8 @@ if 'TEMİZLE' in text or 'CLEAR' in text[text.find('private fun PremierKeyboard'
     raise RuntimeError("Son Harf active keyboard still contains clear key")
 if 'EmbeddedWordKeyboard(' not in text:
     raise RuntimeError("Son Harf purchased keyboard missing")
-if 'backend.submitWord' not in text and 'submitWord' not in text:
-    raise RuntimeError("Son Harf submit path unexpectedly missing")
+if 'backend.submitPremierWord(active.id, candidate)' not in text:
+    raise RuntimeError("Son Harf authoritative submit path unexpectedly missing")
 
 path.write_text(text)
 print("Son Harf purchased UI patch applied safely")
