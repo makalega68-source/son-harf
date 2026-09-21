@@ -1,5 +1,6 @@
 package com.sonharf.game
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -20,7 +21,8 @@ import androidx.compose.ui.unit.sp
 /**
  * Shared custom word keyboard for Son Harf and Harf Yolu.
  * Only letters, backspace and the game action are rendered; no system-keyboard extras exist.
- * Visual chrome comes from the real purchased Casual Game UI #02 assets.
+ * Visual chrome comes from the real purchased Casual Game UI #02 assets. Equipped keyboard
+ * cosmetics remain presentation-only and tint that purchased chrome without changing input logic.
  */
 @Composable
 internal fun EmbeddedWordKeyboard(
@@ -55,6 +57,10 @@ internal fun EmbeddedWordKeyboard(
         )
     }
     val actionText = submitLabel ?: if (maxLength == 5) sh("ONAYLA", "CONFIRM") else sh("GÖNDER", "SEND")
+    val palette = SonHarfCosmetics.keyboardPalette
+    val cosmeticActive = !SonHarfCosmetics.keyboardThemeId.isNullOrBlank()
+    val cosmeticAlpha = if (cosmeticActive) 0.62f else 0f
+    val letterTextColor = if (cosmeticActive) palette.text else Color.White
 
     PurchasedPanel(
         modifier = modifier.fillMaxWidth(),
@@ -81,6 +87,9 @@ internal fun EmbeddedWordKeyboard(
                             modifier = Modifier.weight(1f),
                             height = keyHeight,
                             asset = PurchasedUiAsset.BUTTON_BLUE,
+                            overlayColor = palette.key,
+                            overlayAlpha = cosmeticAlpha,
+                            textColor = letterTextColor,
                             onClick = {
                                 keySound()
                                 onValueChange((value + key).take(maxLength))
@@ -101,21 +110,27 @@ internal fun EmbeddedWordKeyboard(
                     modifier = Modifier.weight(1f),
                     height = keyHeight + 4.dp,
                     asset = PurchasedUiAsset.BUTTON_PURPLE,
+                    overlayColor = palette.keyAlt,
+                    overlayAlpha = cosmeticAlpha,
+                    textColor = letterTextColor,
                     onClick = {
                         actionSound()
                         onValueChange(value.dropLast(1))
                     },
                 )
-                PurchasedButton(
-                    text = actionText,
+                PurchasedKeyboardKey(
+                    label = actionText,
                     enabled = submitEnabled && value.isNotBlank(),
+                    modifier = Modifier.weight(3.1f),
+                    height = keyHeight + 8.dp,
+                    asset = PurchasedUiAsset.BUTTON_GREEN,
+                    overlayColor = palette.action,
+                    overlayAlpha = cosmeticAlpha,
+                    textColor = if (cosmeticActive) palette.actionText else Color.White,
                     onClick = {
                         actionSound()
                         onSubmit()
                     },
-                    modifier = Modifier.weight(3.1f).height(keyHeight + 8.dp),
-                    style = PurchasedButtonStyle.PRIMARY,
-                    leadingAsset = PurchasedUiAsset.ICON_CHECK,
                 )
             }
         }
@@ -217,6 +232,9 @@ private fun PurchasedKeyboardKey(
     modifier: Modifier,
     height: Dp,
     asset: PurchasedUiAsset,
+    overlayColor: Color? = null,
+    overlayAlpha: Float = 0f,
+    textColor: Color = Color.White,
     onClick: () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
@@ -229,9 +247,12 @@ private fun PurchasedKeyboardKey(
         contentAlignment = Alignment.Center,
     ) {
         PurchasedAsset(asset, Modifier.matchParentSize())
+        if (overlayColor != null && overlayAlpha > 0f) {
+            Box(Modifier.matchParentSize().background(overlayColor.copy(alpha = overlayAlpha)))
+        }
         Text(
             text = label,
-            color = Color.White,
+            color = textColor,
             fontSize = if (label.length > 4) 10.sp else 15.sp,
             fontWeight = FontWeight.Black,
             maxLines = 1,
