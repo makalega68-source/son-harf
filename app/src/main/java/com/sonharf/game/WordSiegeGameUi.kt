@@ -9,9 +9,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -21,29 +21,36 @@ import androidx.compose.ui.unit.sp
 
 /** Match-only presentation. Never changes the selected cosmetic theme or game state. */
 internal object WordSiegeGameUi {
-    val Background = Color(0xFFF8FAF4)
-    val Surface = Color(0xFFFFFEF8)
-    val SurfaceSoft = Color(0xFFEEF5EF)
-    val Text = Color(0xFF213C31)
-    val Muted = Color(0xFF52675C)
-    val Border = Color(0xFFD1DDD5)
-    val Blue = Color(0xFF557A87)
-    val Red = Color(0xFF9B4D4A)
-    val Gold = Color(0xFFAB8131)
-    val DisabledBackground = Color(0xFFE4EAE5)
-    val DisabledContent = Color(0xFF667B6F)
+    val Background = Color(0xFFF4F8FC)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceSoft = Color(0xFFEEF4FA)
+    val Text = Color(0xFF102A56)
+    val Muted = Color(0xFF667B9A)
+    val Border = Color(0xFFD5E0ED)
+    val Blue = Color(0xFF4D83DA)
+    val Red = Color(0xFFD95A62)
+    val Gold = Color(0xFFD89A22)
+    val Green = Color(0xFF52AD56)
+    val DisabledBackground = Color(0xFFE8EEF5)
+    val DisabledContent = Color(0xFF8D9CB0)
 }
 
 @Composable
 internal fun WordSiegeGameTheme(content: @Composable () -> Unit) {
     MaterialTheme(
         colorScheme = lightColorScheme(
-            primary = Color(0xFF527867), onPrimary = Color.White,
-            secondary = WordSiegeGameUi.Blue, onSecondary = Color.White,
-            background = WordSiegeGameUi.Background, onBackground = WordSiegeGameUi.Text,
-            surface = WordSiegeGameUi.Surface, onSurface = WordSiegeGameUi.Text,
-            surfaceVariant = WordSiegeGameUi.SurfaceSoft, onSurfaceVariant = WordSiegeGameUi.Muted,
-            outline = WordSiegeGameUi.Border, error = WordSiegeGameUi.Red,
+            primary = WordSiegeGameUi.Green,
+            onPrimary = Color.White,
+            secondary = WordSiegeGameUi.Blue,
+            onSecondary = Color.White,
+            background = WordSiegeGameUi.Background,
+            onBackground = WordSiegeGameUi.Text,
+            surface = WordSiegeGameUi.Surface,
+            onSurface = WordSiegeGameUi.Text,
+            surfaceVariant = WordSiegeGameUi.SurfaceSoft,
+            onSurfaceVariant = WordSiegeGameUi.Muted,
+            outline = WordSiegeGameUi.Border,
+            error = WordSiegeGameUi.Red,
         ),
         typography = MaterialTheme.typography,
         shapes = MaterialTheme.shapes,
@@ -69,34 +76,57 @@ internal fun WordSiegeScoreCard(
 ) {
     Surface(
         modifier = modifier,
-        color = lerp(WordSiegeGameUi.Surface, accent, .04f),
-        shape = RoundedCornerShape(9.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = if (active) .5f else .18f)),
+        color = lerp(WordSiegeGameUi.Surface, accent, .035f),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, accent.copy(alpha = if (active) .52f else .20f)),
+        shadowElevation = if (active) 3.dp else 0.dp,
     ) {
-        Column(Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Column(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ProfilePhotoAvatarWithGender(
-                    avatarPath = avatarPath, gender = gender, name = name,
-                    size = 26.dp, accent = accent, visible = avatarVisible,
+                    avatarPath = avatarPath,
+                    gender = gender,
+                    name = name,
+                    size = 34.dp,
+                    accent = accent,
+                    visible = avatarVisible,
                 )
-                Spacer(Modifier.width(5.dp))
+                Spacer(Modifier.width(7.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(name, color = WordSiegeGameUi.Text, fontSize = 12.sp, lineHeight = 14.sp,
-                        fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                        Text(sh("$area küp", "$area cubes"), color = WordSiegeGameUi.Muted,
-                            fontSize = 10.sp, lineHeight = 12.sp, maxLines = 1)
-                        if (isBot) Text("BOT", color = accent, fontSize = 9.sp, lineHeight = 12.sp)
+                    Text(
+                        name,
+                        color = WordSiegeGameUi.Text,
+                        fontSize = 12.sp,
+                        lineHeight = 14.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            sh("$area küp", "$area cubes"),
+                            color = WordSiegeGameUi.Muted,
+                            fontSize = 9.sp,
+                            lineHeight = 12.sp,
+                            maxLines = 1,
+                        )
+                        if (isBot) Text("BOT", color = accent, fontSize = 9.sp, lineHeight = 12.sp, fontWeight = FontWeight.Black)
                     }
                 }
                 if (leading) {
                     WordSiegeLeaderCrown()
-                    Spacer(Modifier.width(3.dp))
+                    Spacer(Modifier.width(4.dp))
                 }
                 val totalDescription = sh("Toplam $score", "Total $score")
-                Text("$score", Modifier.semantics { contentDescription = totalDescription },
-                    color = accent, fontSize = 22.sp, lineHeight = 26.sp,
-                    fontWeight = FontWeight.Bold, maxLines = 1)
+                Text(
+                    "$score",
+                    Modifier.semantics { contentDescription = totalDescription },
+                    color = accent,
+                    fontSize = 23.sp,
+                    lineHeight = 27.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1,
+                )
             }
             WordSiegeScoreLine(sh("Kelime Puanı", "Word Points"), wordPoints)
             WordSiegeScoreLine(sh("Bölge Puanı", "Territory Points"), territoryPoints)
@@ -107,10 +137,22 @@ internal fun WordSiegeScoreCard(
 @Composable
 private fun WordSiegeScoreLine(label: String, value: Int) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.weight(1f), color = WordSiegeGameUi.Muted,
-            fontSize = 11.sp, lineHeight = 14.sp, maxLines = 1)
-        Text("$value", color = WordSiegeGameUi.Text, fontSize = 11.sp,
-            lineHeight = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(
+            label,
+            Modifier.weight(1f),
+            color = WordSiegeGameUi.Muted,
+            fontSize = 10.sp,
+            lineHeight = 13.sp,
+            maxLines = 1,
+        )
+        Text(
+            "$value",
+            color = WordSiegeGameUi.Text,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+        )
     }
 }
 
@@ -123,14 +165,22 @@ internal fun WordSiegeCompactAction(
     onClick: () -> Unit,
 ) {
     TextButton(
-        onClick = onClick, enabled = enabled, modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(2.dp),
+        onClick = onClick,
+        enabled = enabled,
+        modifier = modifier.height(48.dp),
+        shape = RoundedCornerShape(10.dp),
+        contentPadding = PaddingValues(2.dp),
         colors = ButtonDefaults.textButtonColors(contentColor = WordSiegeGameUi.Muted),
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            Icon(icon, null, Modifier.size(17.dp))
-            Text(label, fontSize = 11.sp, lineHeight = 14.sp,
-                fontWeight = FontWeight.Medium, maxLines = 1)
+            Icon(icon, null, Modifier.size(18.dp))
+            Text(
+                label,
+                fontSize = 10.sp,
+                lineHeight = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+            )
         }
     }
 }
@@ -138,20 +188,20 @@ internal fun WordSiegeCompactAction(
 @Composable
 internal fun WordSiegeOwnershipLegend() {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 5.dp, vertical = 2.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(sh("● Sen", "● You"), color = Color(0xFF3F7C53), fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold)
-        Text(sh("● Rakip", "● Rival"), color = WordSiegeGameUi.Red, fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold)
-        Text(sh("1 küp = 2 puan", "1 cube = 2 points"), color = WordSiegeGameUi.Muted, fontSize = 11.sp, lineHeight = 14.sp)
+        Text(sh("● Sen", "● You"), color = Color(0xFF3F7C53), fontSize = 10.sp, lineHeight = 13.sp, fontWeight = FontWeight.Black)
+        Text(sh("● Rakip", "● Rival"), color = WordSiegeGameUi.Red, fontSize = 10.sp, lineHeight = 13.sp, fontWeight = FontWeight.Black)
+        Text(sh("1 küp = 2 puan", "1 cube = 2 points"), color = WordSiegeGameUi.Muted, fontSize = 10.sp, lineHeight = 13.sp)
     }
 }
 
 @Composable
 private fun WordSiegeLeaderCrown() {
     val description = sh("Lider", "Leader")
-    Canvas(Modifier.size(12.dp).semantics { contentDescription = description }) {
+    Canvas(Modifier.size(13.dp).semantics { contentDescription = description }) {
         val crown = Path().apply {
             moveTo(size.width * .08f, size.height * .28f)
             lineTo(size.width * .3f, size.height * .48f)

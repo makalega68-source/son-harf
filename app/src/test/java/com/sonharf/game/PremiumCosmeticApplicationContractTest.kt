@@ -10,9 +10,14 @@ class PremiumCosmeticApplicationContractTest {
     @Test
     fun premierMatchUsesTheEquippedKeyboardAndNameStyle() {
         val premier = source("PremierWordDuelScreen.kt")
+        val sharedKeyboard = source("AndroidWordKeyboard.kt")
 
-        assertTrue(premier.contains("val palette = SonHarfCosmetics.keyboardPalette"))
-        assertTrue(premier.contains("color = palette.background"))
+        assertTrue(premier.contains("AndroidWordKeyboard("))
+        assertTrue(sharedKeyboard.contains("useEquippedCosmetic: Boolean = true"))
+        assertTrue(sharedKeyboard.contains("SonHarfCosmetics.keyboardPalette.takeIf { useEquippedCosmetic }"))
+        assertTrue(sharedKeyboard.contains("equippedPalette?.background"))
+        assertTrue(sharedKeyboard.contains("equippedPalette?.key"))
+        assertTrue(sharedKeyboard.contains("equippedPalette?.action"))
         assertTrue(premier.contains("nameColor = SonHarfCosmetics.playerNameColor"))
     }
 

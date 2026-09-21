@@ -44,16 +44,20 @@ class LetterLadderUxRegressionTest {
         assertTrue(source.contains("for (move in 1 until LetterLadderEngine.MOVE_COUNT)"))
         assertFalse(source.contains("for (move in 1..LetterLadderEngine.MOVE_COUNT)"))
         assertTrue(source.contains("path.size == LetterLadderEngine.MOVE_COUNT + 1"))
+        assertTrue(source.contains("Text(sh(\"HEDEF\", \"TARGET\")"))
     }
 
     @Test
     fun harfYoluShowsLiveKeyboardInputInTheNextPlayableRow() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
-        val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
+        val wrapper = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
+        val keyboard = projectFile("app/src/main/java/com/sonharf/game/AndroidWordKeyboard.kt").readText()
 
         assertTrue(source.contains("activeInput = input.uppercase(locale).takeIf { isActiveEntry }"))
         assertTrue(source.contains("activeInput?.padEnd(LetterLadderEngine.WORD_LENGTH, ' ')"))
-        assertTrue(keyboard.contains("onValueChange((value + key).take(maxLength))"))
+        assertTrue(source.contains("EmbeddedWordKeyboard("))
+        assertTrue(wrapper.contains("AndroidWordKeyboard("))
+        assertTrue(keyboard.contains("onValueChange((value + label).take(maxLength))"))
     }
 
     @Test
@@ -84,19 +88,19 @@ class LetterLadderUxRegressionTest {
     }
 
     @Test
-    fun harfYoluUsesIsolatedFiveColorKeyboardAndQuietDedicatedFeedback() {
-        val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
+    fun harfYoluUsesSharedMinimalAndroidKeyboardAndQuietDedicatedFeedback() {
+        val wrapper = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
+        val keyboard = projectFile("app/src/main/java/com/sonharf/game/AndroidWordKeyboard.kt").readText()
         val sound = projectFile("app/src/main/java/com/sonharf/game/SonHarfSoundFx.kt").readText()
 
-        assertTrue(keyboard.contains("Harf Yolu'na özel kompakt klavye"))
-        assertTrue(keyboard.contains("HarfYoluKeyboardUi"))
-        assertFalse(keyboard.contains("SonHarfCosmetics.keyboardPalette"))
-        assertTrue(keyboard.contains("0xFF278DC3"))
-        assertTrue(keyboard.contains("0xFF22BFC4"))
-        assertTrue(keyboard.contains("0xFFF2ECFF"))
-        assertTrue(keyboard.contains("keySound()"))
-        assertTrue(keyboard.contains("actionSound()"))
-        assertTrue(keyboard.contains("33.dp"))
+        assertTrue(wrapper.contains("AndroidWordKeyboard("))
+        assertTrue(wrapper.contains("submitLabelTr = \"ONAYLA\""))
+        assertTrue(wrapper.contains("submitLabelEn = \"CONFIRM\""))
+        assertTrue(keyboard.contains("label = \"⌫\""))
+        assertTrue(keyboard.contains("listOf(\"Q\", \"W\", \"E\", \"R\", \"T\", \"Y\", \"U\", \"I\", \"O\", \"P\", \"Ğ\", \"Ü\")"))
+        listOf("?123", "EMOJI", "MICROPHONE", "CLIPBOARD", "GIF", "TEMİZLE", "CLEAR", ",", ".").forEach { forbidden ->
+            assertFalse("Unexpected non-gameplay key $forbidden", keyboard.contains("\"$forbidden\"", ignoreCase = true))
+        }
         assertTrue(sound.contains("fun puzzleKey()"))
         assertTrue(sound.contains("fun puzzleError()"))
         assertTrue(sound.contains("fun puzzleHint()"))
@@ -104,11 +108,13 @@ class LetterLadderUxRegressionTest {
 
     @Test
     fun harfYoluKeyboardActionsFollowSelectedLanguage() {
-        val keyboard = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
+        val wrapper = projectFile("app/src/main/java/com/sonharf/game/HarfYoluKeyboard.kt").readText()
+        val keyboard = projectFile("app/src/main/java/com/sonharf/game/AndroidWordKeyboard.kt").readText()
 
         assertTrue(keyboard.contains("val isEnglish = language.equals(\"en\", ignoreCase = true)"))
-        assertTrue(keyboard.contains("label = if (isEnglish) \"CLEAR\" else \"TEMİZLE\""))
-        assertTrue(keyboard.contains("label = if (isEnglish) \"SUBMIT  ➤\" else \"GÖNDER  ➤\""))
+        assertTrue(keyboard.contains("label = if (isEnglish) submitLabelEn else submitLabelTr"))
+        assertTrue(wrapper.contains("submitLabelTr = \"ONAYLA\""))
+        assertTrue(wrapper.contains("submitLabelEn = \"CONFIRM\""))
     }
 
     private fun projectFile(path: String): File {

@@ -18,7 +18,6 @@ class KelimeKusatmasiPrimaryProductContractTest {
         val homeBadge = File("src/main/res/drawable-nodpi/word_siege_home_badge.webp")
 
         assertTrue(manifest.contains("android:label=\"@string/app_name\""))
-        // Resource/deep-link identifiers remain stable even though the visible product brand changes.
         assertTrue(manifest.contains("@mipmap/ic_kelime_tahti"))
         assertTrue(strings.contains("<string name=\"app_name\">Kelime Kuşatması</string>"))
         assertTrue(logo.contains("R.drawable.kelime_kusatma_logo_hd"))
@@ -30,10 +29,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertFalse(localization.contains("replace(\"Kelime Kuşatması\", \"Kelime Tahtı\")"))
         assertFalse(localization.contains("replace(\"Word Siege\", \"Word Throne\")"))
 
-        assertTrue(
-            home.contains("\"KELİME KUŞATMASI\"") ||
-                home.contains("\"KELİME\\nKUŞATMASI\"")
-        )
+        assertTrue(home.contains("\"KELİME\\nKUŞATMASI\""))
         assertTrue(home.contains("R.drawable.word_siege_home_badge"))
         assertTrue(homeBadge.isFile)
         assertTrue(home.contains("onClick = onSiege"))
@@ -42,11 +38,10 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertTrue(home.contains("getMetaProgressV2().dailyPlayStreak"))
         assertTrue(home.contains("getWeeklyTopV210(limit = 3)"))
         assertTrue(home.contains("sh(\"HAFTANIN İLK 3 OYUNCUSU\", \"WEEKLY TOP 3\")"))
-        assertTrue(home.contains("sh(\"KELİME YOLU\", \"WORD PATH\")"))
         assertTrue(shell.contains("PremiumBottomBar("))
         assertTrue(shell.contains("PremiumOtherGames(onLastLetter = onLastLetter, onLetterPath = onLetterPath)"))
         assertTrue(home.contains("ratingLeagueProgress(it.rating)"))
-        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
+        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(shell.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
 
@@ -59,7 +54,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertFalse(shell.contains("PremiumDestination.COMPETITION"))
         assertTrue(shell.contains("PremiumDestination.SHOP -> EconomyShopScreen"))
 
-        val topLevel = shell.substringAfter("val topLevel =").substringBefore("val scheme =")
+        val topLevel = shell.substringAfter("val topLevel =").substringBefore("val inGameplay =")
         assertTrue(topLevel.contains("PremiumDestination.HOME"))
         assertFalse("Club is retired and must not appear in the top-level bar", topLevel.contains("PremiumDestination.CLUB"))
         assertTrue(topLevel.contains("PremiumDestination.SOCIAL"))
@@ -69,7 +64,7 @@ class KelimeKusatmasiPrimaryProductContractTest {
         assertFalse(topLevel.contains("PremiumDestination.COMPETE"))
         assertTrue(shell.contains("sh(\"ANA SAYFA\", \"HOME\")"))
         assertFalse("Bottom navigation no longer surfaces the club entry", shell.contains("sh(\"KULÜP\", \"CLUB\")"))
-        assertTrue(shell.contains("sh(\"ARKADAŞLAR\", \"FRIENDS\")"))
+        assertTrue(shell.contains("sh(\"SOSYAL\", \"SOCIAL\")"))
         assertTrue(shell.contains("sh(\"MAĞAZA\", \"STORE\")"))
         assertTrue(shell.contains("sh(\"PROFİL\", \"PROFILE\")"))
         assertFalse(shell.contains("PremiumDestination.TASKS"))

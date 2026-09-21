@@ -8,7 +8,7 @@ import org.junit.Test
 
 class CalmLayeredThemeContractTest {
     @Test
-    fun purchasedMonsterThemeDefinesIndependentSemanticLayers() {
+    fun purchasedCasualThemeDefinesIndependentSemanticLayers() {
         val theme = source("SonHarfTheme.kt")
 
         listOf(
@@ -32,18 +32,21 @@ class CalmLayeredThemeContractTest {
             "val TextSecondary: Color get()",
         ).forEach { token -> assertTrue("Missing theme layer: $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("Color(0xFF0D0F12)"))
-        assertTrue(theme.contains("Color(0xFF15171C)"))
-        assertTrue(theme.contains("Color(0xFFEFFF19)"))
-        assertTrue(theme.contains("Color(0xFFFF3B30)"))
-        assertTrue(theme.contains("Color(0xFFFF245C)"))
-        assertTrue(theme.contains("Color(0xFFF7F8FA)"))
-        assertTrue(theme.contains("Color(0xFF9AA0AA)"))
-        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
+        listOf(
+            "Color(0xFF102A56)",
+            "Color(0xFFF5F8FC)",
+            "Color(0xFFFFFFFF)",
+            "Color(0xFF52AD56)",
+            "Color(0xFF4D83DA)",
+            "Color(0xFF8A62D3)",
+            "Color(0xFFF5A623)",
+            "Color(0xFF38B8BD)",
+        ).forEach { token -> assertTrue("Missing purchased-theme palette token $token", theme.contains(token)) }
+        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
     }
 
     @Test
-    fun shellUsesMonsterDarkChromeInsteadOfPreviousBlueLightShell() {
+    fun shellUsesSharedThemePrimitivesAndStableLaunchChrome() {
         val primitives = source("AppUiPrimitives.kt")
         val styles = projectFile("app/src/main/res/values/styles.xml").readText()
 
