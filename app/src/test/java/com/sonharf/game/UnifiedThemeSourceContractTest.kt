@@ -8,7 +8,8 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeUnifiedShellUsesMonsterThemeAndPremierKeepsHighLegibilityArenaPalette() {
+    fun activePremiumShellUsesPurchasedLightThemeAndPremierKeepsHighLegibilityArenaPalette() {
+        val active = source("PremiumUnifiedProApp.kt")
         val unified = source("UnifiedProApp.kt")
         val premier = source("PremierWordDuelScreen.kt")
         val startup = source("StableV1App.kt")
@@ -17,34 +18,32 @@ class UnifiedThemeSourceContractTest {
         assertTrue(unified.contains("val Background: Color get() = SonHarfTheme.Background"))
         assertTrue(unified.contains("val Surface: Color get() = SonHarfTheme.Surface"))
         assertTrue(unified.contains("val Navigation: Color get() = SonHarfTheme.NavigationSurface"))
-        assertTrue(unified.contains("lightColorScheme("))
-        assertTrue(unified.contains("darkColorScheme("))
-        assertFalse(unified.contains("MageCatCompanion("))
-        assertFalse(unified.contains("MageCatDirector.onLobbyGreet()"))
-        assertFalse(unified.contains("com.sonharf.game.mascot"))
+        assertTrue(active.contains("lightColorScheme("))
+        assertTrue(active.contains("darkColorScheme("))
+        assertTrue(active.contains("containerColor = SonHarfTheme.Background"))
+        assertTrue(active.contains("PurchasedGameBackdrop(Modifier.matchParentSize())"))
+        assertFalse(active.contains("MageCatCompanion("))
+        assertFalse(active.contains("com.sonharf.game.mascot"))
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
-        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
         assertTrue(theme.contains("val SecondaryAccent: Color get()"))
         assertTrue(theme.contains("val NavigationSurface: Color get()"))
         assertTrue(theme.contains("val GameSurface: Color get()"))
         assertTrue(theme.contains("val GameTile: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
-        assertTrue(theme.contains("Color(0xFFEFFF19)"))
-        assertTrue(theme.contains("Color(0xFFFF245C)"))
+        assertTrue(theme.contains("Color(0xFF52AD56)"))
+        assertTrue(theme.contains("Color(0xFF4D83DA)"))
+        assertTrue(theme.contains("Color(0xFFF5A623)"))
 
-        // Premier remains a deliberately fixed high-legibility gameplay surface. The application
-        // shell and meta screens use Monster; competitive text entry retains its proven palette.
-        assertTrue(premier.contains("val Background = Color(0xFFF1F5F2)"))
-        assertTrue(premier.contains("val Surface = Color(0xFFFFFDF7)"))
-        assertTrue(premier.contains("val Ocean = Color(0xFF4F725E)"))
-        assertTrue(premier.contains("val Sky = Color(0xFF4A6E83)"))
-        assertTrue(premier.contains("Brush.verticalGradient(listOf(PremierUi.Surface, PremierUi.Background))"))
-        assertFalse(premier.contains("val Ocean = Color(0xFF2563EB)"))
+        assertTrue(premier.contains("val Background = Color(0xFFF4F8FC)"))
+        assertTrue(premier.contains("val Surface = Color(0xFFFFFFFF)"))
+        assertTrue(premier.contains("val Ocean = Color(0xFF52AD56)"))
+        assertTrue(premier.contains("val Sky = Color(0xFF4D83DA)"))
+        assertTrue(premier.contains("val Ink = Color(0xFF102A56)"))
         assertFalse(premier.contains("val Background = Color(0xFF020617)"))
         assertFalse(premier.contains("val Surface = Color(0xFF0F172A)"))
         assertFalse(premier.contains("MageCatCompanion("))
-        assertFalse(unified.contains("MonsterUi"))
-        assertFalse(unified.contains("MonsterExperienceApp"))
+        assertFalse(active.contains("MonsterExperienceApp"))
     }
 
     @Test
