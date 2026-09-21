@@ -117,109 +117,38 @@ internal fun WordSiegePanMatch(
 
     LaunchedEffect(game.id, game.status) {
         if (game.status == "waiting") {
-            delay(WORD_SIEGE_BOT_FALLBACK_DELAY_MS)
-            fallbackPracticeActive = true
-        } else {
-            fallbackPracticeActive = false
-        }
-    }
-
-    if (fallbackPracticeActive && game.status == "waiting") {
-        WordSiegePracticeScreen(
-            onExit = { fallbackPracticeActive = false },
-            matchmakingFallback = true,
-        )
-        return
-    }
-
-    WordSiegeGameTheme {
-    Column(
-        Modifier
-            .fillMaxSize()
-            .background(WordSiegeGameUi.Background)
-            .statusBarsPadding()
-            .navigationBarsPadding()
-            .padding(horizontal = 6.dp, vertical = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Rounded.ArrowBack, sh("Oyunlar", "Games"), tint = WordSiegeGameUi.Text)
-            }
-            Column(Modifier.weight(1f)) {
-                Text(sh("KELİME TAHTI", "KELİME TAHTI"), color = WordSiegeGameUi.Text, fontSize = 16.sp, lineHeight = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text(
-                    if (game.status == "playing") {
-                        if (visualMyTurn) sh("SIRA SENDE", "YOUR TURN") else sh("RAKİPTE", "RIVAL'S TURN")
-                    } else panSiegeStatusLabel(game, me),
-                    color = if (visualMyTurn) PanSiegeMineBorder else PanSiegeRivalBorder,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                )
-            }
-            IconButton(onClick = onForfeit, enabled = game.status == "playing" && !busy, modifier = Modifier.size(40.dp)) {
-                Icon(Icons.Rounded.Flag, sh("Pes et", "Forfeit"), tint = WordSiegeGameUi.Red)
-            }
-        }
-
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            PanSiegePlayerCard(
-                profile = mine,
-                fallbackName = sh("Sen", "You"),
-                score = displayedMyScore,
-                wordPoints = myWordPoints,
-                territoryPoints = myTerritoryPoints,
-                areaCount = myAreaCount,
-                accent = PanSiegeMineBorder,
-                active = displayedCurrentPlayerId == me,
-                leading = myTargetScore > rivalTargetScore,
-                modifier = Modifier.weight(1f),
-            )
-            PanSiegePlayerCard(
-                profile = opponent,
-                fallbackName = if (game.status == "waiting") sh("Rakip aranıyor", "Finding rival") else sh("Rakip", "Rival"),
-                score = displayedRivalScore,
-                wordPoints = rivalWordPoints,
-                territoryPoints = rivalTerritoryPoints,
-                areaCount = rivalAreaCount,
-                accent = PanSiegeRivalBorder,
-                active = displayedCurrentPlayerId == opponentId,
-                leading = rivalTargetScore > myTargetScore,
-                modifier = Modifier.weight(1f),
-            )
-        }
-
-        WordSiegeOwnershipLegend()
-
-        if (game.status == "waiting") {
-            Surface(
+            PurchasedPanel(
                 modifier = Modifier.fillMaxWidth().weight(1f),
-                color = WordSiegeGameUi.Surface,
-                shape = RoundedCornerShape(22.dp),
-                border = BorderStroke(1.dp, WordSiegeGameUi.Border),
+                asset = PurchasedUiAsset.PANEL_LARGE,
+                contentPadding = PaddingValues(24.dp),
             ) {
                 Column(
-                    Modifier.fillMaxSize().padding(24.dp),
+                    Modifier.fillMaxSize(),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
-                    CircularProgressIndicator(color = SiegePurple)
+                    PurchasedAsset(PurchasedUiAsset.ICON_SWORDS, Modifier.size(72.dp))
                     Spacer(Modifier.height(12.dp))
-                    Text(sh("RAKİP ARANIYOR", "FINDING A RIVAL"), color = WordSiegeGameUi.Text, fontWeight = FontWeight.Black)
+                    Text(sh("RAKİP ARANIYOR", "FINDING A RIVAL"), color = Color(0xFF4A2D20), fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         sh(
                             "15 saniye içinde rakip bulunmazsa geçici bot maçı hemen başlayacak. Gerçek rakip araması arka planda sürecek.",
                             "If no rival is found within 15 seconds, a temporary bot match starts immediately while real matchmaking continues in the background.",
                         ),
-                        color = WordSiegeGameUi.Muted,
+                        color = Color(0xFF765746),
                         fontSize = 12.sp,
                         textAlign = TextAlign.Center,
                     )
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedButton(onClick = onCancelWaiting, enabled = !busy, border = BorderStroke(1.dp, WordSiegeGameUi.Red)) {
-                        Text(sh("ARAMAYI İPTAL ET", "CANCEL SEARCH"), color = WordSiegeGameUi.Red, fontWeight = FontWeight.Bold)
-                    }
+                    Spacer(Modifier.height(16.dp))
+                    PurchasedButton(
+                        text = sh("ARAMAYI İPTAL ET", "CANCEL SEARCH"),
+                        onClick = onCancelWaiting,
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = PurchasedButtonStyle.DANGER,
+                        leadingAsset = PurchasedUiAsset.ICON_CLOSE,
+                    )
                 }
             }
             notice?.let { PanSiegeNotice(it) }
@@ -285,25 +214,14 @@ internal fun WordSiegePanMatch(
                 WordSiegeCompactAction(sh("DEĞİŞTİR", "EXCHANGE"), Icons.Rounded.SwapHoriz,
                     canAct && game.bag.isNotEmpty(), Modifier.weight(1f), onExchange)
             }
-            Row(Modifier.fillMaxWidth()) {
-                Button(
-                    onClick = onSubmit,
-                    shape = RoundedCornerShape(12.dp),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-                    enabled = canAct && placements.isNotEmpty(),
-                    modifier = Modifier.weight(1f).height(52.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = PanSiegeMineBorder,
-                        contentColor = Color.White,
-                        disabledContainerColor = WordSiegeGameUi.DisabledBackground,
-                        disabledContentColor = WordSiegeGameUi.DisabledContent,
-                    ),
-                    contentPadding = PaddingValues(horizontal = 5.dp),
-                ) {
-                    if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
-                    else Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 14.sp, fontWeight = FontWeight.Black)
-                }
-            }
+            PurchasedButton(
+                text = if (busy) "…" else sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"),
+                onClick = onSubmit,
+                enabled = canAct && placements.isNotEmpty() && !busy,
+                modifier = Modifier.fillMaxWidth().height(58.dp),
+                style = PurchasedButtonStyle.PRIMARY,
+                leadingAsset = PurchasedUiAsset.ICON_CHECK,
+            )
         } else {
             PanSiegeFinishedCard(game, me)
         }
@@ -513,46 +431,39 @@ private fun PanSiegeBoard(
                 modifier = Modifier.matchParentSize(),
             )
 
-            SmallFloatingActionButton(
+            PurchasedIconButton(
+                asset = PurchasedUiAsset.ICON_GAMES,
                 onClick = {
                     viewportMode = WordSiegeBoardViewportMode.CLOSE
                     closePan = centerCloseOn(WordSiegeBoardSpec.CenterIndex)
                 },
-                modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
-                shape = CircleShape,
-                containerColor = Color.White.copy(alpha = .94f),
-                contentColor = WordSiegeGameUi.Blue,
-            ) {
-                Icon(Icons.Rounded.CenterFocusStrong, sh("Merkeze dön", "Center board"), Modifier.size(19.dp))
-            }
+                modifier = Modifier.align(Alignment.TopEnd).padding(5.dp).size(44.dp),
+                contentDescription = sh("Merkeze dön", "Center board"),
+            )
 
-            SmallFloatingActionButton(
+            PurchasedIconButton(
+                asset = PurchasedUiAsset.ICON_CHAT,
                 onClick = onChat,
-                modifier = Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp),
-                shape = CircleShape,
-                containerColor = Color.White.copy(alpha = .96f),
-                contentColor = WordSiegeGameUi.Muted,
-            ) {
-                Icon(Icons.Rounded.Chat, sh("Oyun içi sohbet", "In-game chat"), Modifier.size(20.dp))
-            }
+                modifier = Modifier.align(Alignment.BottomEnd).padding(5.dp).size(50.dp),
+                contentDescription = sh("Oyun içi sohbet", "In-game chat"),
+            )
         }
     }
 }
 
 @Composable
 private fun PanSiegeLastMoveInfo(move: WordSiegeMoveDto) {
-    Surface(
+    PurchasedPanel(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        color = WordSiegeGameUi.Surface,
-        border = BorderStroke(1.dp, WordSiegeGameUi.Border),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 9.dp, vertical = 5.dp),
     ) {
         Text(
             sh(
                 "Kelime +${move.wordScore}  •  Bölge +${move.areaScore}  •  Toplam +${move.totalScore}",
                 "Word +${move.wordScore}  •  Territory +${move.areaScore}  •  Total +${move.totalScore}",
             ),
-            Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+            Modifier.fillMaxWidth(),
             color = WordSiegeGameUi.Text,
             fontSize = 9.sp,
             fontWeight = FontWeight.Bold,

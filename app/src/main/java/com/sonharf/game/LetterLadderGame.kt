@@ -500,8 +500,20 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                     Spacer(Modifier.height(6.dp))
                     Text(message, color = LetterLadderUi.Muted, textAlign = TextAlign.Center, fontSize = 12.sp)
                     Spacer(Modifier.height(18.dp))
-                    Button(onClick = { puzzleNonce++ }) { Text(sh("TEKRAR DENE", "TRY AGAIN"), fontWeight = FontWeight.Black) }
-                    TextButton(onClick = onExit) { Text(sh("Geri dön", "Go back")) }
+                    PurchasedButton(
+                        text = sh("TEKRAR DENE", "TRY AGAIN"),
+                        onClick = { puzzleNonce++ },
+                        modifier = Modifier.fillMaxWidth(),
+                        style = PurchasedButtonStyle.PRIMARY,
+                        leadingAsset = PurchasedUiAsset.ICON_REPEAT,
+                    )
+                    PurchasedButton(
+                        text = sh("GERİ DÖN", "GO BACK"),
+                        onClick = onExit,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = PurchasedButtonStyle.SECONDARY,
+                        leadingAsset = PurchasedUiAsset.NAV_HOME,
+                    )
                 }
                 return@Column
             }
@@ -543,11 +555,10 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                     }
                 }
 
-                Surface(
+                PurchasedPanel(
                     modifier = Modifier.fillMaxWidth().weight(1f),
-                    shape = RoundedCornerShape(18.dp),
-                    color = LetterLadderUi.SurfaceRaised.copy(alpha = .94f),
-                    border = BorderStroke(1.dp, LetterLadderUi.Border),
+                    asset = PurchasedUiAsset.PANEL_LARGE,
+                    contentPadding = PaddingValues(0.dp),
                 ) {
                     Column(
                         Modifier.fillMaxSize().padding(horizontal = 10.dp, vertical = 7.dp),
@@ -717,19 +728,13 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                         }
                     }
                 } else {
-                    Button(
+                    PurchasedButton(
+                        text = sh("YENİ OYUN", "NEW GAME"),
                         onClick = { puzzleNonce++ },
-                        modifier = Modifier.fillMaxWidth().height(46.dp).sonHarfPressScale(pressedScale = 0.94f),
-                        shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = LetterLadderUi.Purple,
-                            contentColor = Color.White,
-                        ),
-                    ) {
-                        Text(sh("YENİ OYUN", "NEW GAME"), fontWeight = FontWeight.Black)
-                        Spacer(Modifier.width(6.dp))
-                        Icon(Icons.Rounded.ChevronRight, null)
-                    }
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        style = PurchasedButtonStyle.PURPLE,
+                        leadingAsset = PurchasedUiAsset.ICON_REPEAT,
+                    )
                 }
             }
 
