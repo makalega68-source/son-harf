@@ -8,8 +8,8 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeShellUsesPremiumThemeWithOneOptionalBlackCosmetic() {
-        val premium = source("PremiumCanvaAppV2.kt")
+    fun activeShellUsesSiegeRoyaleThemeWithOptionalBlackCosmetic() {
+        val premium = source("PremiumAdultApp.kt")
         val startup = source("StableV1App.kt")
         val theme = source("SonHarfTheme.kt")
         val cosmetics = source("CosmeticRuntime.kt")
@@ -17,27 +17,33 @@ class UnifiedThemeSourceContractTest {
 
         assertTrue(premium.contains("SonHarfTheme.Background"))
         assertTrue(premium.contains("SonHarfTheme.NavigationSurface"))
-        assertTrue(startup.contains("PremiumCanvaAppV2"))
+        assertTrue(startup.contains("PremiumAdultApp"))
+        assertFalse(startup.contains("PremiumCanvaAppV2(onSignedOut"))
         assertFalse(startup.contains("PremiumUnifiedProApp"))
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
 
+        assertTrue(theme.contains("internal object SiegeRoyalePalette"))
         assertTrue(theme.contains("val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive"))
         assertTrue(theme.contains("internal object BlackThemePalette"))
         assertTrue(cosmetics.contains("BLACK_THEME_ID = \"theme_black\""))
-        assertTrue(theme.contains("Color(0xFF2563EB)"))
-        assertTrue(theme.contains("Color(0xFF12B8A6)"))
-        assertTrue(theme.contains("Color(0xFF7C3AED)"))
-        assertTrue(theme.contains("Color(0xFFF97316)"))
+        assertTrue(theme.contains("Color(0xFF246EDB)"))
+        assertTrue(theme.contains("Color(0xFF17A7B8)"))
+        assertTrue(theme.contains("Color(0xFF3AAF50)"))
+        assertTrue(theme.contains("Color(0xFFF0A128)"))
+        assertTrue(theme.contains("Color(0xFFEAF3FF)"))
         assertTrue(theme.contains("val NavigationSurface: Color get()"))
         assertTrue(theme.contains("val GameSurface: Color get()"))
         assertTrue(theme.contains("val GameTile: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
+        assertFalse(theme.contains("Color(0xFF365F53)"))
+        assertFalse(theme.contains("Color(0xFFF4F2EC)"))
         assertFalse(theme.contains("MonsterLime"))
         assertFalse(theme.contains("MonsterPink"))
 
         assertTrue(primitives.contains("PremiumCard"))
         assertTrue(primitives.contains("PremiumPrimaryButton"))
         assertTrue(primitives.contains("PremiumAccentPill"))
+        assertTrue(primitives.contains("SonHarfTheme.PlayGreen"))
         assertFalse(premium.contains("MageCatCompanion("))
         assertFalse(premium.contains("MonsterExperienceApp"))
     }

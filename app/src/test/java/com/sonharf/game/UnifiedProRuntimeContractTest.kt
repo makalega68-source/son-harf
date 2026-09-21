@@ -7,22 +7,32 @@ import org.junit.Test
 
 class UnifiedProRuntimeContractTest {
     @Test
-    fun startupRoutesOnlyToPremiumCanvaShellAndPrimaryKelimeKusatmasi() {
+    fun startupRoutesOnlyToAdultApkV2ShellAndPrimaryKelimeKusatmasi() {
         val startup = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
-        val premium = File("src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt").readText()
+        val active = File("src/main/java/com/sonharf/game/PremiumAdultApp.kt").readText()
+        val legacyV2 = File("src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt").readText()
         val integration = File("src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
 
-        assertTrue(startup.contains("PremiumCanvaAppV2("))
+        assertTrue(startup.contains("PremiumAdultApp("))
+        assertFalse(startup.contains("PremiumCanvaAppV2(onSignedOut"))
         assertFalse(startup.contains("UnifiedProApp("))
         assertFalse(startup.contains("LiveDuelRuntimeShell("))
         assertFalse(startup.contains("MonsterExperienceApp("))
-        assertTrue(premium.contains("KELİME KUŞATMASI"))
-        assertTrue(premium.contains("PremiumV2Destination.SIEGE -> WordSiegeExperienceScreen"))
-        assertTrue(premium.contains("PremiumV2Destination.LAST_LETTER -> OnlineGameScreenV6()"))
-        assertTrue(premium.contains("PremiumV2Destination.LETTER_PATH -> LetterLadderGameScreen"))
-        assertTrue(premium.contains("HARF YOLU"))
-        assertTrue(premium.contains("PremiumStoreScreen("))
-        assertFalse(premium.contains("MageCat"))
+
+        assertTrue(active.contains("AdultDestination.SIEGE -> WordSiegeExperienceScreen"))
+        assertTrue(active.contains("AdultDestination.LAST_LETTER -> OnlineGameScreenV6()"))
+        assertTrue(active.contains("AdultDestination.LETTER_PATH -> LetterLadderGameScreen"))
+        assertTrue(active.contains("AdultDestination.SHOP -> PremiumStoreScreen"))
+        assertTrue(active.contains("Kelime Kuşatması"))
+        assertTrue(active.contains("Harf Yolu"))
+        assertTrue(active.contains("Ana Sayfa"))
+        assertTrue(active.contains("Sosyal"))
+        assertTrue(active.contains("Mağaza"))
+        assertTrue(active.contains("Profil"))
+        assertFalse(active.contains("MageCat"))
+
+        // The user's APK-v2 implementation remains in-repo as a rollback/reference source, but is inactive.
+        assertTrue(legacyV2.contains("PremiumV2Destination.SIEGE -> WordSiegeExperienceScreen"))
 
         assertTrue(integration.contains("PremierWordDuelScreen()"))
         assertFalse(integration.contains("ReactiveMageCatOverlay()"))

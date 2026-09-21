@@ -35,7 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
 
-/** Premium startup shell: language -> auth -> approved Canva product shell. */
+/** Premium startup shell: language -> auth -> restrained APK-v2 product shell. */
 @Composable
 fun StableV1App() {
     val context = LocalContext.current
@@ -75,7 +75,7 @@ fun StableV1App() {
         return
     }
 
-    PremiumCanvaAppV2(onSignedOut = { authenticated = false })
+    PremiumAdultApp(onSignedOut = { authenticated = false })
 }
 
 /** Keeps the existing authentication flow intact while preserving phone-scale ergonomics. */
@@ -111,7 +111,7 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                     modifier = Modifier.fillMaxWidth().widthIn(max = 520.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    PremiumAccentPill(text = "KELİME KUŞATMASI", color = MainUi.Purple)
+                    PremiumAccentPill(text = "KELİME KUŞATMASI", color = MainUi.Blue)
                     Spacer(Modifier.height(18.dp))
                     SonHarfOfficialLogo(modifier = Modifier.fillMaxWidth(.86f).height(150.dp))
                     Spacer(Modifier.height(12.dp))
@@ -159,14 +159,14 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                                 colors = FilterChipDefaults.filterChipColors(
                                     containerColor = MainUi.SurfaceSoft,
                                     labelColor = MainUi.Text,
-                                    selectedContainerColor = MainUi.Purple.copy(alpha = .10f),
-                                    selectedLabelColor = MainUi.Purple,
+                                    selectedContainerColor = MainUi.SurfaceSoft,
+                                    selectedLabelColor = MainUi.GrayBlue,
                                 ),
                                 border = FilterChipDefaults.filterChipBorder(
                                     enabled = true,
                                     selected = selected == "en",
                                     borderColor = MainUi.Border,
-                                    selectedBorderColor = MainUi.Purple,
+                                    selectedBorderColor = MainUi.GrayBlue,
                                 ),
                             )
                         }

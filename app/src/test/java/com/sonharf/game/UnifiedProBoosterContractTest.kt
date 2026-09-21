@@ -64,11 +64,14 @@ class UnifiedProBoosterContractTest {
     @Test
     fun retiredClassicRuntimeCannotReenterStartupPath() {
         val startup = projectFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
-        val premium = projectFile("app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt").readText()
+        val active = projectFile("app/src/main/java/com/sonharf/game/PremiumAdultApp.kt").readText()
+        val rollback = projectFile("app/src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt").readText()
 
-        assertTrue(startup.contains("PremiumCanvaAppV2("))
-        assertTrue(premium.contains("PremiumV2Destination.SHOP -> PremiumStoreScreen"))
-        assertTrue(premium.contains("PremiumV2Destination.LAST_LETTER -> OnlineGameScreenV6()"))
+        assertTrue(startup.contains("PremiumAdultApp("))
+        assertFalse(startup.contains("PremiumCanvaAppV2(onSignedOut"))
+        assertTrue(active.contains("AdultDestination.SHOP -> PremiumStoreScreen"))
+        assertTrue(active.contains("AdultDestination.LAST_LETTER -> OnlineGameScreenV6()"))
+        assertTrue(rollback.contains("PremiumV2Destination.SHOP -> PremiumStoreScreen"))
         assertFalse(startup.contains("UnifiedProApp("))
         assertFalse(projectFileOrNull("app/src/main/java/com/sonharf/game/MonsterExperienceApp.kt")?.exists() == true)
         assertFalse(projectFileOrNull("app/src/main/java/com/sonharf/game/LiveDuelRuntimeShell.kt")?.exists() == true)

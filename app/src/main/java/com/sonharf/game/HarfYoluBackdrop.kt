@@ -1,14 +1,7 @@
 package com.sonharf.game
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -16,73 +9,55 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 
-/** Harf Yolu uses the same premium blue / turquoise / purple / orange / white brand system. */
+/** Harf Yolu now uses the same new Siege Royale family, with a quieter puzzle-specific backdrop. */
 @Composable
 internal fun HarfYoluBackdrop(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "harfYoluBackdrop")
-    val phase by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(6400, easing = LinearEasing), RepeatMode.Reverse),
-        label = "harfYoluBackdropPhase",
-    )
-    val pulse by transition.animateFloat(
-        initialValue = .76f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(2800, easing = LinearEasing), RepeatMode.Reverse),
-        label = "harfYoluBackdropPulse",
-    )
-
     Canvas(modifier = modifier) {
-        val blue = Color(0xFF2563EB)
-        val turquoise = Color(0xFF12B8A6)
-        val orange = Color(0xFFF97316)
-        val purple = Color(0xFF7C3AED)
+        val dark = SonHarfTheme.IsDark
+        val top = if (dark) Color(0xFF101D33) else Color(0xFFE2EEFF)
+        val middle = if (dark) Color(0xFF13243C) else Color(0xFFF9FCFF)
+        val bottom = if (dark) Color(0xFF0D192C) else Color(0xFFEAF3FF)
+        drawRect(brush = Brush.verticalGradient(listOf(top, middle, bottom)))
 
-        drawRect(
-            brush = Brush.verticalGradient(
-                listOf(Color.White, Color(0xFFF8FBFF), Color(0xFFF2F7FF), Color(0xFFF8F5FF), Color.White),
+        val blue = SonHarfTheme.Primary
+        val aqua = SonHarfTheme.Turquoise
+        val violet = SonHarfTheme.Purple
+        val amber = SonHarfTheme.ActionOrange
+
+        drawCircle(
+            brush = Brush.radialGradient(
+                listOf(aqua.copy(alpha = if (dark) .18f else .13f), Color.Transparent),
+                center = Offset(size.width * .92f, size.height * .13f),
+                radius = size.minDimension * .58f,
             ),
+            radius = size.minDimension * .58f,
+            center = Offset(size.width * .92f, size.height * .13f),
+        )
+        drawCircle(
+            brush = Brush.radialGradient(
+                listOf(blue.copy(alpha = if (dark) .15f else .10f), Color.Transparent),
+                center = Offset(size.width * .08f, size.height * .84f),
+                radius = size.minDimension * .60f,
+            ),
+            radius = size.minDimension * .60f,
+            center = Offset(size.width * .08f, size.height * .84f),
         )
 
-        fun glow(color: Color, x: Float, y: Float, radius: Float, alpha: Float) {
-            val center = Offset(size.width * x, size.height * y)
-            drawCircle(
-                brush = Brush.radialGradient(
-                    listOf(color.copy(alpha = alpha * pulse), Color.Transparent),
-                    center = center,
-                    radius = size.minDimension * radius,
-                ),
-                radius = size.minDimension * radius,
-                center = center,
-            )
-        }
-
-        glow(blue, .94f, .13f, .56f, .13f)
-        glow(turquoise, .05f, .75f, .62f, .14f)
-        glow(orange, .04f, .34f, .33f, .07f)
-        glow(purple, .96f, .80f, .40f, .09f)
-
-        data class Tile(val x: Float, val y: Float, val scale: Float, val color: Color)
-        val tiles = listOf(
-            Tile(.03f, .11f, .060f, blue), Tile(.13f, .055f, .035f, purple),
-            Tile(.94f, .09f, .056f, turquoise), Tile(.985f, .25f, .035f, orange),
-            Tile(.02f, .34f, .030f, orange), Tile(.97f, .46f, .034f, purple),
-            Tile(.035f, .67f, .052f, turquoise), Tile(.96f, .72f, .046f, blue),
-            Tile(.10f, .89f, .034f, purple), Tile(.88f, .93f, .040f, orange),
+        data class Marker(val x: Float, val y: Float, val side: Float, val color: Color, val alpha: Float)
+        val markers = listOf(
+            Marker(.035f, .12f, 10f, blue, if (dark) .20f else .14f),
+            Marker(.090f, .21f, 7f, aqua, if (dark) .18f else .11f),
+            Marker(.965f, .10f, 9f, violet, if (dark) .18f else .12f),
+            Marker(.940f, .30f, 6f, amber, if (dark) .16f else .10f),
+            Marker(.030f, .62f, 7f, violet, if (dark) .15f else .09f),
+            Marker(.960f, .74f, 8f, blue, if (dark) .16f else .10f),
         )
-        tiles.forEachIndexed { index, tile ->
-            val side = size.minDimension * tile.scale
-            val motion = if (index % 2 == 0) phase else 1f - phase
-            val center = Offset(
-                size.width * tile.x + (motion - .5f) * side * .30f,
-                size.height * tile.y + (motion - .5f) * side * .38f,
-            )
+        markers.forEach { marker ->
             drawRoundRect(
-                color = tile.color.copy(alpha = (if (index < 4) .15f else .10f) * pulse),
-                topLeft = Offset(center.x - side / 2f, center.y - side / 2f),
-                size = Size(side, side),
-                cornerRadius = CornerRadius(side * .28f, side * .28f),
+                color = marker.color.copy(alpha = marker.alpha),
+                topLeft = Offset(size.width * marker.x - marker.side / 2f, size.height * marker.y - marker.side / 2f),
+                size = Size(marker.side, marker.side),
+                cornerRadius = CornerRadius(marker.side * .28f, marker.side * .28f),
             )
         }
     }

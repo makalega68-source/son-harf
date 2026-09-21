@@ -7,27 +7,33 @@ import org.junit.Test
 
 class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
-    fun canonicalPaletteMatchesApprovedPremiumCanvaDirection() {
+    fun canonicalPaletteMatchesApprovedSiegeRoyaleGameDirection() {
         val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF2563EB",
-            "0xFF12B8A6",
-            "0xFF7C3AED",
-            "0xFFF97316",
-            "0xFFF6F9FF",
-            "0xFFFFFFFF",
-            "0xFF10213D",
-            "0xFF64748B",
-            "0xFFDCE6F3",
-        ).forEach { token -> assertTrue("Missing approved theme palette token $token", theme.contains(token)) }
+            "0xFFEAF3FF",
+            "0xFFD8E9FF",
+            "0xFF246EDB",
+            "0xFF174C9F",
+            "0xFF17A7B8",
+            "0xFF3AAF50",
+            "0xFF765BE5",
+            "0xFFF0A128",
+            "0xFF13223F",
+            "0xFF60718E",
+            "0xFFBCD0EA",
+        ).forEach { token -> assertTrue("Missing approved Siege Royale palette token $token", theme.contains(token)) }
 
+        assertTrue(theme.contains("internal object SiegeRoyalePalette"))
         assertTrue(theme.contains("val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive"))
         assertTrue(theme.contains("internal object BlackThemePalette"))
         assertTrue(theme.contains("val ActionOrange: Color get()"))
+        assertTrue(theme.contains("val PlayGreen: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
         assertTrue(theme.contains("val HeroMiddle: Color get()"))
         assertTrue(theme.contains("val HeroEnd: Color get()"))
+        assertFalse(theme.contains("0xFFF4F2EC"))
+        assertFalse(theme.contains("0xFF365F53"))
         assertFalse(theme.contains("MonsterLime"))
     }
 
@@ -97,6 +103,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
     fun clubChatHasServerAuthoritativeAntiSpamAndAbuseGuard() {
         val migration = File("../supabase/migrations/20260915061500_club_chat_server_guard_v2.sql").readText()
+
         assertTrue(migration.contains("create or replace function private.guard_club_message_insert_v2()"))
         assertTrue(migration.contains("security definer"))
         assertTrue(migration.contains("p.chat_suspended_until > clock_timestamp()"))
@@ -139,6 +146,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     fun normalMatchVictoryDependsOnlyOnCurrentTerritoryControl() {
         val migration = File("../supabase/migrations/20260915060000_word_siege_territory_victory_v10.sql").readText()
         val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt").readText()
+
         assertTrue(migration.contains("when r.player_one_area > r.player_two_area then r.player_one_id"))
         assertTrue(migration.contains("when r.player_two_area > r.player_one_area then r.player_two_id"))
         assertTrue(migration.contains("if p_forfeit_winner is not null then"))
