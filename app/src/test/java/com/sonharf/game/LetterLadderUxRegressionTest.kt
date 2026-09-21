@@ -98,8 +98,8 @@ class LetterLadderUxRegressionTest {
         assertTrue(wrapper.contains("submitLabelEn = \"CONFIRM\""))
         assertTrue(keyboard.contains("label = \"⌫\""))
         assertTrue(keyboard.contains("listOf(\"Q\", \"W\", \"E\", \"R\", \"T\", \"Y\", \"U\", \"I\", \"O\", \"P\", \"Ğ\", \"Ü\")"))
-        listOf("?123", "EMOJI", "MICROPHONE", "CLIPBOARD", "GIF", "TEMİZLE", "CLEAR").forEach { forbidden ->
-            assertFalse("Unexpected non-gameplay key $forbidden", keyboard.contains(forbidden, ignoreCase = true))
+        listOf("?123", "EMOJI", "MICROPHONE", "CLIPBOARD", "GIF", "TEMİZLE", "CLEAR", ",", ".").forEach { forbidden ->
+            assertFalse("Unexpected non-gameplay key $forbidden", keyboard.contains("\"$forbidden\"", ignoreCase = true))
         }
         assertTrue(sound.contains("fun puzzleKey()"))
         assertTrue(sound.contains("fun puzzleError()"))
