@@ -45,6 +45,16 @@ internal object SiegeRoyalePalette {
     val GoldSoft = Color(0xFFFFE9AF)
 }
 
+/**
+ * Source-compatibility bridge only. The former palette and all of its old values are gone.
+ * A legacy Son Harf call-site still asks for BlueDeep; keep that symbol mapped to the NEW theme
+ * until that large screen is migrated completely in the gameplay pass.
+ */
+@Deprecated("Legacy symbol only; use SiegeRoyalePalette/SonHarfTheme")
+internal object KelimeKusatmasiPalette {
+    val BlueDeep: Color get() = SiegeRoyalePalette.RoyalBlueDeep
+}
+
 /** Premium Black Theme remains a cosmetic-only alternative for users who own it. */
 internal object BlackThemePalette {
     val Background = Color(0xFF0B1424)
