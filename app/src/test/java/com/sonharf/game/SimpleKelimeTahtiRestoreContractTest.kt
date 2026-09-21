@@ -15,7 +15,9 @@ class SimpleKelimeKusatmasiRestoreContractTest {
 
         assertFalse(online.contains("PanSiegeMapControl("))
         assertFalse(practice.contains("HARİTA KONTROLÜ"))
-        assertTrue(online.contains("modifier = Modifier.weight(1f).height(52.dp)"))
+        assertTrue(online.contains("PanSiegePlayerCard("))
+        assertTrue(online.contains("PurchasedUiAsset.PANEL_SMALL"))
+        assertTrue(online.contains("PurchasedButton("))
         assertTrue(spec.contains("Harf\\n×2"))
         assertTrue(spec.contains("Kelime\\n×2"))
 
