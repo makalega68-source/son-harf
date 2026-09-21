@@ -1,0 +1,4 @@
+Final purchased UI verification trigger.
+Product code baseline: eb41b9ad28dd52fae247078263db5b7b6a6967fb
+Scope: Home / Store / Profile / Social / Siege / Son Harf / Harf Yolu / retention / PRO / Settings purchased UI overhaul.
+No runtime code or resource changes in this marker.
