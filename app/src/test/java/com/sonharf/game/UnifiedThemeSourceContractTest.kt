@@ -22,8 +22,10 @@ class UnifiedThemeSourceContractTest {
         assertTrue(cosmetics.contains("BLACK_THEME_ID = \"theme_black\""))
 
         assertTrue(purchased.contains("real purchased-asset theme layer", ignoreCase = true))
-        assertTrue(purchased.contains("purchased_ui_atlas_00.b64"))
+        assertTrue(purchased.contains("R.raw.purchased_ui_atlas_00"))
+        assertTrue(purchased.contains("R.raw.purchased_cta_atlas"))
         assertTrue(purchased.contains("drawPurchasedCrop"))
+        assertTrue(purchased.contains("drawPurchasedHorizontalSlice"))
         assertTrue(primitives.contains("PurchasedPanel"))
         assertTrue(primitives.contains("PurchasedButton"))
         assertTrue(premium.contains("PurchasedNavItem"))
@@ -38,6 +40,24 @@ class UnifiedThemeSourceContractTest {
         assertTrue(premium.contains("LetterLadderGameScreen"))
         assertFalse(premium.contains("MageCatCompanion("))
         assertFalse(premium.contains("MonsterExperienceApp"))
+    }
+
+    @Test
+    fun purchasedGraphicsArePresentInAndroidResAndNoPurchasedSourceArchivesArePackaged() {
+        val raw = projectFile("app/src/main/res/raw")
+        listOf(
+            "purchased_ui_atlas_00.b64",
+            "purchased_ui_atlas_01.b64",
+            "purchased_ui_atlas_02.b64",
+            "purchased_ui_atlas_03.b64",
+            "purchased_cta_atlas.b64",
+        ).forEach { name ->
+            val file = File(raw, name)
+            assertTrue("Missing purchased Android resource: $name", file.isFile && file.length() > 100L)
+        }
+        val appMain = projectFile("app/src/main")
+        assertFalse(appMain.walkTopDown().any { it.isFile && it.extension.equals("zip", true) })
+        assertFalse(appMain.walkTopDown().any { it.isFile && it.extension.equals("psd", true) })
     }
 
     @Test
