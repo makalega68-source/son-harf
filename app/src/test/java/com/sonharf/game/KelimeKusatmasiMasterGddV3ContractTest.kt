@@ -7,21 +7,20 @@ import org.junit.Test
 
 class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
-    fun canonicalPaletteMatchesApprovedAdultWordGameDirection() {
+    fun canonicalPaletteMatchesApprovedNativeDarkWordGameDirection() {
+        val colors = File("src/main/java/com/sonharf/game/Color.kt").readText()
         val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF365F53",
-            "0xFF23443B",
-            "0xFF4F7B6E",
-            "0xFF6E7F8C",
-            "0xFFAD6A57",
-            "0xFFF4F2EC",
-            "0xFFFFFEFA",
-            "0xFF202A28",
-            "0xFF69736F",
-            "0xFFD5DAD4",
-        ).forEach { token -> assertTrue("Missing approved adult palette token $token", theme.contains(token)) }
+            "0xFF141923",
+            "0xFF1E2538",
+            "0xFF2ECC71",
+            "0xFF3498DB",
+            "0xFF9B59B6",
+            "0xFFE67E22",
+            "0xFFECF0F1",
+            "0xFF95A5A6",
+        ).forEach { token -> assertTrue("Missing approved native palette token $token", colors.contains(token)) }
 
         assertTrue(theme.contains("val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive"))
         assertTrue(theme.contains("internal object BlackThemePalette"))
@@ -29,8 +28,7 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         assertTrue(theme.contains("val HeroStart: Color get()"))
         assertTrue(theme.contains("val HeroMiddle: Color get()"))
         assertTrue(theme.contains("val HeroEnd: Color get()"))
-        assertFalse(theme.contains("0xFF7C3AED"))
-        assertFalse(theme.contains("0xFFF97316"))
+        assertFalse(colors.contains("0xFFF4F2EC"))
         assertFalse(theme.contains("MonsterLime"))
     }
 
