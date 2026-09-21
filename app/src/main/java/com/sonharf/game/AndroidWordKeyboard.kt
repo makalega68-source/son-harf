@@ -27,6 +27,8 @@ import androidx.compose.ui.unit.sp
  *
  * Deliberately contains only gameplay keys: letters, backspace and submit. There is no emoji,
  * microphone, symbols page, language switcher, suggestion row, punctuation, clipboard or settings.
+ * Son Harf can opt into the player's purchased keyboard skin without changing key layout or game
+ * behavior; Harf Yolu intentionally keeps the neutral game palette.
  */
 @Composable
 internal fun AndroidWordKeyboard(
@@ -42,6 +44,7 @@ internal fun AndroidWordKeyboard(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
     actionColor: Color = PurchasedCasualUi2.Blue,
+    useEquippedCosmetic: Boolean = false,
     keySound: () -> Unit = {},
     actionSound: () -> Unit = {},
 ) {
@@ -65,12 +68,18 @@ internal fun AndroidWordKeyboard(
     val keyGap = if (compact) 2.dp else 3.dp
     val secondInset = if (compact) 6.dp else 8.dp
     val thirdInset = if (compact) 15.dp else 19.dp
-    val shell = Color(0xFFE7ECF2)
-    val key = Color(0xFFFFFFFF)
-    val keyBorder = Color(0xFFD0D8E2)
-    val keyText = Color(0xFF17243B)
-    val disabledKey = Color(0xFFF1F4F7)
-    val disabledText = Color(0xFF9AA6B5)
+    val equippedPalette = SonHarfCosmetics.keyboardPalette.takeIf { useEquippedCosmetic }
+    val shell = equippedPalette?.background ?: Color(0xFFE7ECF2)
+    val key = equippedPalette?.key ?: Color(0xFFFFFFFF)
+    val keyAlt = equippedPalette?.keyAlt ?: Color(0xFFDCE3EB)
+    val keyBorder = equippedPalette?.border ?: Color(0xFFD0D8E2)
+    val altBorder = equippedPalette?.secondaryBorder ?: Color(0xFFC2CBD7)
+    val keyText = equippedPalette?.text ?: Color(0xFF17243B)
+    val resolvedActionColor = equippedPalette?.action ?: actionColor
+    val actionText = equippedPalette?.actionText ?: Color.White
+    val disabledKey = if (equippedPalette == null) Color(0xFFF1F4F7) else key.copy(alpha = .55f)
+    val disabledAlt = if (equippedPalette == null) Color(0xFFF1F4F7) else keyAlt.copy(alpha = .55f)
+    val disabledText = if (equippedPalette == null) Color(0xFF9AA6B5) else keyText.copy(alpha = .42f)
 
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -126,10 +135,10 @@ internal fun AndroidWordKeyboard(
                     enabled = enabled && value.isNotEmpty(),
                     modifier = Modifier.weight(1.1f),
                     height = keyHeight,
-                    containerColor = Color(0xFFDCE3EB),
+                    containerColor = keyAlt,
                     contentColor = keyText,
-                    borderColor = Color(0xFFC2CBD7),
-                    disabledContainerColor = disabledKey,
+                    borderColor = altBorder,
+                    disabledContainerColor = disabledAlt,
                     disabledContentColor = disabledText,
                     onClick = {
                         actionSound()
@@ -141,11 +150,11 @@ internal fun AndroidWordKeyboard(
                     enabled = enabled && submitEnabled,
                     modifier = Modifier.weight(2.9f),
                     height = keyHeight,
-                    containerColor = actionColor,
-                    contentColor = Color.White,
-                    borderColor = actionColor.copy(alpha = .82f),
-                    disabledContainerColor = actionColor.copy(alpha = .18f),
-                    disabledContentColor = actionColor.copy(alpha = .52f),
+                    containerColor = resolvedActionColor,
+                    contentColor = actionText,
+                    borderColor = resolvedActionColor.copy(alpha = .82f),
+                    disabledContainerColor = resolvedActionColor.copy(alpha = .18f),
+                    disabledContentColor = actionText.copy(alpha = .52f),
                     onClick = {
                         actionSound()
                         onSubmit()
