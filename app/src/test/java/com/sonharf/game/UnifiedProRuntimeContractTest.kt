@@ -10,6 +10,8 @@ class UnifiedProRuntimeContractTest {
     fun startupRoutesOnlyToAdultApkV2ShellAndPrimaryKelimeKusatmasi() {
         val startup = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
         val active = File("src/main/java/com/sonharf/game/PremiumAdultApp.kt").readText()
+        val home = File("src/main/java/com/sonharf/game/ModernHomeScreen.kt").readText()
+        val homeNav = File("src/main/java/com/sonharf/game/ModernHomeBottomBar.kt").readText()
         val legacyV2 = File("src/main/java/com/sonharf/game/PremiumCanvaAppV2.kt").readText()
         val integration = File("src/main/java/com/sonharf/game/OnlineGameScreenV6.kt").readText()
 
@@ -23,13 +25,21 @@ class UnifiedProRuntimeContractTest {
         assertTrue(active.contains("AdultDestination.LAST_LETTER -> OnlineGameScreenV6()"))
         assertTrue(active.contains("AdultDestination.LETTER_PATH -> LetterLadderGameScreen"))
         assertTrue(active.contains("AdultDestination.SHOP -> PremiumStoreScreen"))
-        assertTrue(active.contains("Kelime Kuşatması"))
-        assertTrue(active.contains("Harf Yolu"))
-        assertTrue(active.contains("Ana Sayfa"))
-        assertTrue(active.contains("Sosyal"))
-        assertTrue(active.contains("Mağaza"))
-        assertTrue(active.contains("Profil"))
-        assertFalse(active.contains("MageCat"))
+        assertTrue(active.contains("ModernAdultHome("))
+        assertTrue(active.contains("ModernHomeBottomNavigation("))
+
+        assertTrue(home.contains("Kelime Kuşatması"))
+        assertTrue(home.contains("Harf Yolu"))
+        assertTrue(home.contains("ModernSiegeHero("))
+        assertTrue(home.contains("ModernWeeklyBest("))
+        assertTrue(home.contains("ModernQuickAccess("))
+        assertTrue(home.contains("getGrowthDashboard()"))
+        assertTrue(home.contains("getWeeklyTopV210(limit = 3)"))
+        assertFalse(home.contains("PurchasedPanel("))
+        assertFalse(home.contains("PurchasedAsset("))
+        assertFalse(home.contains("PurchasedButton("))
+        assertFalse(homeNav.contains("PurchasedPanel("))
+        assertFalse(homeNav.contains("PurchasedNavItem("))
 
         // The user's APK-v2 implementation remains in-repo as a rollback/reference source, but is inactive.
         assertTrue(legacyV2.contains("PremiumV2Destination.SIEGE -> WordSiegeExperienceScreen"))
