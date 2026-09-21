@@ -53,42 +53,13 @@ jobs:
           profile: pixel_6
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: |
-            set -e
-            mkdir -p qa-screens
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
-            adb shell settings put system font_scale 1.0
-
-            capture() {
-              name="$1"
-              screen="$2"
-              pause="$3"
-              adb shell am force-stop com.sonharf.game
-              adb shell am start -W -n com.sonharf.game/.VisualQaActivity --es screen "$screen"
-              sleep "$pause"
-              adb exec-out screencap -p > "qa-screens/${name}.png"
-              test -s "qa-screens/${name}.png"
-            }
-
-            capture home home 5
-            capture store store 6
-            capture profile profile 6
-            capture social social 6
-            capture siege siege 7
-            capture son-harf sonharf 3
-            capture harf-yolu harfyolu 10
-            capture leaderboard leaderboard 6
-            capture missions retention 6
-            adb shell input swipe 540 1800 540 700 650
-            sleep 1
-            adb exec-out screencap -p > qa-screens/daily-reward.png
-            capture pro-vip pro 6
-            capture settings settings 5
+          script: bash .github/scripts/capture-purchased-ui-qa.sh
 
       - name: Upload visual QA screenshots
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: purchased-ui-final-screenshots
           path: qa-screens/*.png
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 14
