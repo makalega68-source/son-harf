@@ -10,9 +10,16 @@ class PremiumCosmeticApplicationContractTest {
     @Test
     fun premierMatchUsesTheEquippedKeyboardAndNameStyle() {
         val premier = source("PremierWordDuelScreen.kt")
-        assertTrue(premier.contains("val palette = SonHarfCosmetics.keyboardPalette"))
-        assertTrue(premier.contains("color = palette.background"))
+        val keyboard = source("SharedInputPrimitives.kt")
+        assertTrue(premier.contains("EmbeddedWordKeyboard("))
         assertTrue(premier.contains("nameColor = SonHarfCosmetics.playerNameColor"))
+        assertTrue(keyboard.contains("val palette = SonHarfCosmetics.keyboardPalette"))
+        assertTrue(keyboard.contains("SonHarfCosmetics.keyboardThemeId"))
+        assertTrue(keyboard.contains("overlayColor = palette.key"))
+        assertTrue(keyboard.contains("overlayColor = palette.keyAlt"))
+        assertTrue(keyboard.contains("overlayColor = palette.action"))
+        assertTrue(keyboard.contains("PurchasedUiAsset.BUTTON_BLUE"))
+        assertTrue(keyboard.contains("PurchasedUiAsset.BUTTON_GREEN"))
     }
 
     @Test
