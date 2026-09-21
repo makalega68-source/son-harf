@@ -11,18 +11,18 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF0D0F12", // Monster black
-            "0xFF15171C", // Monster surface
-            "0xFF1B1E24", // Secondary surface
-            "0xFFEFFF19", // Neon lime CTA
-            "0xFFFF3B30", // Red accent
-            "0xFFFF245C", // Pink accent
-            "0xFFF7F8FA", // Primary text
-            "0xFF9AA0AA", // Muted text
-            "0xFF2B2F37", // Border
-        ).forEach { token -> assertTrue("Missing current theme palette token $token", theme.contains(token)) }
+            "0xFF102A56", // readable ink
+            "0xFFF5F8FC", // light game background
+            "0xFFFFFFFF", // clean content surface
+            "0xFF52AD56", // primary green
+            "0xFF4D83DA", // action blue
+            "0xFF8A62D3", // reward purple
+            "0xFFF5A623", // reward/action orange
+            "0xFF38B8BD", // turquoise support accent
+            "0xFFD9E4F2", // border
+        ).forEach { token -> assertTrue("Missing current purchased-theme palette token $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
         assertTrue(theme.contains("val ActionOrange: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
         assertTrue(theme.contains("val HeroMiddle: Color get()"))
@@ -32,10 +32,13 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     @Test
     fun modeHierarchyAndLanguageScopeStayFocused() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
+        val home = File("src/main/java/com/sonharf/game/PremiumHomeV3.kt").readText()
         val firstRun = File("src/main/java/com/sonharf/game/StableV1App.kt").readText()
         val localization = File("src/main/java/com/sonharf/game/SonHarfUiState.kt").readText()
 
-        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"KELİME KUŞATMASI\")"))
+        assertTrue(home.contains("\"KELİME\\nKUŞATMASI\""))
+        assertTrue(home.contains("sh(\"HEMEN OYNA\", \"PLAY NOW\")"))
+        assertTrue(shell.contains("title = sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
         assertTrue(shell.contains("title = sh(\"SON HARF\", \"LAST LETTER\")"))
         assertTrue(shell.contains("title = sh(\"HARF YOLU\", \"LETTER PATH\")"))
         assertTrue(firstRun.contains("selected == \"tr\""))
@@ -70,12 +73,10 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val club = File("src/main/java/com/sonharf/game/KelimeKusatmasiClubScreen.kt").readText()
         val social = File("src/main/java/com/sonharf/game/data/CompetitionSocial.kt").readText()
 
-        // Retired: CLUB destination is intercepted and bounced to HOME, never renders CompetitionHubScreen anymore.
         assertFalse(shell.contains("PremiumDestination.CLUB -> CompetitionHubScreen("))
         assertTrue(shell.contains("PremiumDestination.CLUB -> {"))
         assertTrue(shell.contains("destination = PremiumDestination.HOME"))
 
-        // Club source stays for audit but nothing opens it.
         assertTrue(club.contains("Text(sh(\"KULÜP SOHBETİ\", \"CLUB CHAT\")"))
         assertTrue(club.contains("b.getClubMessages(current.clubId)"))
         assertTrue(club.contains("b.sendClubMessage(current.clubId, outgoing)"))
@@ -88,10 +89,15 @@ class KelimeKusatmasiMasterGddV3ContractTest {
     fun gameExitReturnsHomeAndPracticeMoveStatusKeepsFixedHeight() {
         val shell = File("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt").readText()
         val practice = File("src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt").readText()
+        val backHandler = shell.substringAfter("BackHandler(enabled = destination != PremiumDestination.HOME)")
+            .substringBefore("val topLevel =")
 
         assertTrue(shell.contains("fun leaveGame(target: PremiumDestination = PremiumDestination.HOME)"))
-        assertTrue(shell.contains("PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH ->"))
-        assertTrue(shell.contains("PremiumDestination.HOME\n            }"))
+        assertTrue(shell.contains("destination = target"))
+        assertTrue(backHandler.contains("PremiumDestination.LAST_LETTER"))
+        assertTrue(backHandler.contains("PremiumDestination.SIEGE"))
+        assertTrue(backHandler.contains("PremiumDestination.LETTER_PATH"))
+        assertTrue(backHandler.contains("PremiumDestination.HOME"))
         assertTrue(practice.contains("Modifier.fillMaxWidth().height(16.dp)"))
         assertTrue(practice.contains("readyFeedback.message"))
         assertTrue(practice.contains("lineHeight = 12.sp"))
