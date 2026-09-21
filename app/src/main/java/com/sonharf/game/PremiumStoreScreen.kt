@@ -42,10 +42,10 @@ private data class PremiumStoreCategory(
 )
 
 private val premiumStoreCategories = listOf(
-    PremiumStoreCategory("Temalar", "Themes", Icons.Rounded.Palette, Color(0xFF7C3AED), setOf("game_theme")),
-    PremiumStoreCategory("Profil Çerçeveleri", "Profile Frames", Icons.Rounded.AccountCircle, Color(0xFF2563EB), setOf("profile_frame")),
-    PremiumStoreCategory("Tuş Stilleri", "Keyboard Styles", Icons.Rounded.Keyboard, Color(0xFF12B8A6), setOf("keyboard_theme")),
-    PremiumStoreCategory("İsim & Prestij", "Name & Prestige", Icons.Rounded.AutoAwesome, Color(0xFFF97316), setOf("name_style", "victory_effect", "emoji_pack")),
+    PremiumStoreCategory("Temalar", "Themes", Icons.Rounded.Palette, SonHarfTheme.Lavender, setOf("game_theme")),
+    PremiumStoreCategory("Profil Çerçeveleri", "Profile Frames", Icons.Rounded.AccountCircle, SonHarfTheme.SoftBlue, setOf("profile_frame")),
+    PremiumStoreCategory("Tuş Stilleri", "Keyboard Styles", Icons.Rounded.Keyboard, SonHarfTheme.Primary, setOf("keyboard_theme")),
+    PremiumStoreCategory("İsim & Prestij", "Name & Prestige", Icons.Rounded.AutoAwesome, SonHarfTheme.ActionOrange, setOf("name_style", "victory_effect", "emoji_pack")),
 )
 
 @OptIn(ExperimentalMaterial3Api::class)

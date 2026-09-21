@@ -4,6 +4,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -42,6 +44,8 @@ internal fun MainPlayerProfileScreen(
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var entitlements by remember { mutableStateOf<VipEntitlementsDto?>(null) }
     var growth by remember { mutableStateOf<GrowthDashboardDto?>(null) }
+    var records by remember { mutableStateOf<PersonalRecordsDto?>(null) }
+    var milestones by remember { mutableStateOf<List<MasteryMilestoneDto>>(emptyList()) }
     var friendCount by remember { mutableIntStateOf(0) }
     var onlineFriendCount by remember { mutableIntStateOf(0) }
     var loading by remember { mutableStateOf(true) }
@@ -52,6 +56,8 @@ internal fun MainPlayerProfileScreen(
         val profileTask = async { id?.let { runCatching { backend.getProfile(it) }.getOrNull() } }
         val entitlementTask = async { runCatching { backend.getVipEntitlements() }.getOrNull() }
         val growthTask = async { runCatching { backend.getGrowthDashboard() }.getOrNull() }
+        val recordsTask = async { runCatching { backend.getPersonalRecords() }.getOrNull() }
+        val masteryTask = async { runCatching { backend.getMasteryPath() }.getOrDefault(emptyList()) }
         val friendsTask = async { runCatching { backend.getFriends() }.getOrDefault(emptyList()) }
         val cosmeticsTask = async { runCatching { backend.getEquippedCosmetics() }.getOrNull() }
         val inventoryTask = async { runCatching { backend.getInventory() }.getOrDefault(emptySet()) }
@@ -59,6 +65,8 @@ internal fun MainPlayerProfileScreen(
         profile = profileTask.await()
         entitlements = entitlementTask.await()
         growth = growthTask.await()
+        records = recordsTask.await()
+        milestones = masteryTask.await()
         friendsTask.await().let { friends ->
             friendCount = friends.size
             onlineFriendCount = friends.count { (_, friend) -> friend.presenceStatus == "online" }
@@ -86,7 +94,7 @@ internal fun MainPlayerProfileScreen(
     val profileAccent = if (isPro) SonHarfTheme.Purple else SonHarfTheme.Primary
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 18.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         MainScreenHeader(
@@ -219,6 +227,36 @@ internal fun MainPlayerProfileScreen(
                     InlineProfileStat(wins.toString(), sh("Galibiyet", "Wins"))
                     InlineProfileStat(losses.toString(), sh("Mağlubiyet", "Losses"))
                     InlineProfileStat("%$winRate", sh("Kazanma", "Win rate"))
+                    InlineProfileStat((records?.bestStreak ?: 0).toString(), sh("En iyi seri", "Best streak"))
+                }
+            }
+        }
+
+        if (milestones.isNotEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = SonHarfTheme.Surface,
+                border = BorderStroke(1.dp, SonHarfTheme.Border),
+            ) {
+                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.WorkspacePremium, null, tint = SonHarfTheme.Lavender, modifier = Modifier.size(19.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(sh("Başarımlar", "Achievements"), color = SonHarfTheme.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
+                        Text("${milestones.count { it.unlocked }}/${milestones.size}", color = SonHarfTheme.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    }
+                    milestones.take(3).forEach { milestone ->
+                        val target = milestone.target.coerceAtLeast(1)
+                        val ratio = (milestone.progress.toFloat() / target).coerceIn(0f, 1f)
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                Text(if (SonHarfUiState.isEnglish) milestone.titleEn else milestone.titleTr, color = SonHarfTheme.TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                Text(if (milestone.unlocked) sh("TAMAM", "DONE") else "${milestone.progress}/$target", color = if (milestone.unlocked) SonHarfTheme.Primary else SonHarfTheme.TextSecondary, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                            }
+                            LinearProgressIndicator(progress = { ratio }, modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape), color = if (milestone.unlocked) SonHarfTheme.Primary else SonHarfTheme.Lavender, trackColor = SonHarfTheme.SurfaceSecondary)
+                        }
+                    }
                 }
             }
         }
@@ -266,7 +304,7 @@ internal fun MainPlayerProfileScreen(
             Spacer(Modifier.width(8.dp))
             Text(sh("KOLEKSİYONUM", "MY COLLECTION"), fontWeight = FontWeight.Black, fontSize = 11.sp)
         }
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(4.dp))
 
         Text(
             sh("Profil yalnızca gerekli bilgileri gösterir. Ayrıntılar düzenleme ve ayarlar içinde.", "Profile shows only what matters. Details live in edit and settings."),

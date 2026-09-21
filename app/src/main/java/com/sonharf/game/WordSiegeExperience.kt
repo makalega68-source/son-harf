@@ -377,6 +377,23 @@ internal fun WordSiegeExperienceScreen(onExit: () -> Unit) {
             busy = busy,
             onInput = { chatInput = it.take(300) },
             onDismiss = { showChat = false },
+            onReport = { target ->
+                scope.launch {
+                    runCatching { backend.reportPlayer(target, "word_siege_chat_spam_or_abuse") }
+                        .onSuccess { notice = sh("Oyuncu raporlandı.", "Player reported.") }
+                        .onFailure { notice = sh("Rapor gönderilemedi.", "Report could not be sent.") }
+                }
+            },
+            onBlock = { target ->
+                scope.launch {
+                    runCatching { backend.blockPlayer(target) }
+                        .onSuccess {
+                            notice = sh("Oyuncu engellendi.", "Player blocked.")
+                            messages = messages.filterNot { it.senderId == target }
+                        }
+                        .onFailure { notice = sh("Oyuncu engellenemedi.", "Player could not be blocked.") }
+                }
+            },
             onSend = {
                 if (chatInput.isBlank() || busy) return@WordSiegeChatDialog
                 val outgoing = chatInput
@@ -1091,8 +1108,11 @@ private fun WordSiegeChatDialog(
     busy: Boolean,
     onInput: (String) -> Unit,
     onDismiss: () -> Unit,
+    onReport: (String) -> Unit,
+    onBlock: (String) -> Unit,
     onSend: () -> Unit,
 ) {
+    var moderationTarget by remember { mutableStateOf<String?>(null) }
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(sh("SOHBET", "CHAT"), fontWeight = FontWeight.Black) },
@@ -1115,7 +1135,24 @@ private fun WordSiegeChatDialog(
                                 ) {
                                     Text(message.body, Modifier.padding(9.dp), color = MainUi.Text, fontSize = 11.sp)
                                 }
+                                if (message.senderId != me) {
+                                    TextButton(
+                                        onClick = { moderationTarget = message.senderId },
+                                        modifier = Modifier.heightIn(min = 32.dp),
+                                        contentPadding = PaddingValues(horizontal = 7.dp),
+                                    ) { Text("•••", color = MainUi.Muted, fontWeight = FontWeight.Black) }
+                                }
                             }
+                        }
+                    }
+                }
+                moderationTarget?.let { target ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { onReport(target); moderationTarget = null }) {
+                            Text(sh("RAPORLA", "REPORT"), color = SonHarfTheme.Warning, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        }
+                        TextButton(onClick = { onBlock(target); moderationTarget = null }) {
+                            Text(sh("ENGELLE", "BLOCK"), color = SonHarfTheme.Error, fontSize = 9.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
