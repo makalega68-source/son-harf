@@ -1,4 +1,4 @@
-name: Purchased UI Screen Patch Once
+name: Purchased UI Siege Repair Once
 
 on:
   push:
@@ -11,29 +11,31 @@ permissions:
   contents: write
 
 jobs:
-  patch:
+  repair:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ui/real-purchased-pack-full-overhaul-20260921
           fetch-depth: 0
-      - name: Apply exact visual-only patch
+      - name: Repair exact siege composable structure
         run: python scripts/apply_purchased_ui_screen_patch.py
-      - name: Verify protected gameplay contracts were not removed
+      - name: Verify protected gameplay and purchased UI contracts
         run: |
+          grep -F 'delay(WORD_SIEGE_BOT_FALLBACK_DELAY_MS)' app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt
+          grep -F 'WordSiegePracticeScreen(' app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt
           grep -F 'WordSiegeBoardSpec.Size' app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt
           grep -F 'WordSiegeFinalRules.currentTerritoryScore' app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt
-          grep -F 'for (move in 1 until LetterLadderEngine.MOVE_COUNT)' app/src/main/java/com/sonharf/game/LetterLadderGame.kt
-          grep -F 'EmbeddedWordKeyboard(' app/src/main/java/com/sonharf/game/LetterLadderGame.kt
-      - name: Commit screen overhaul
+          grep -F 'PurchasedUiAsset.ICON_SWORDS' app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt
+          grep -F 'HAMLEYİ ONAYLA' app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt
+      - name: Commit repaired siege screen
         run: |
           if git diff --quiet; then
-            echo 'No changes produced' >&2
+            echo 'No repair changes produced' >&2
             exit 1
           fi
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt app/src/main/java/com/sonharf/game/LetterLadderGame.kt
-          git commit -m 'ui: reskin siege and letter path with purchased assets'
+          git add app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt
+          git commit -m 'fix: restore siege composable structure and fallback'
           git push origin HEAD:ui/real-purchased-pack-full-overhaul-20260921
