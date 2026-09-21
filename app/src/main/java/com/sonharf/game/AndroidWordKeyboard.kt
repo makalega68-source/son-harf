@@ -27,8 +27,8 @@ import androidx.compose.ui.unit.sp
  *
  * Deliberately contains only gameplay keys: letters, backspace and submit. There is no emoji,
  * microphone, symbols page, language switcher, suggestion row, punctuation, clipboard or settings.
- * Son Harf can opt into the player's purchased keyboard skin without changing key layout or game
- * behavior; Harf Yolu intentionally keeps the neutral game palette.
+ * Purchased keyboard skins remain cosmetic only: they can recolor the shared keys but never add
+ * controls or alter gameplay behavior.
  */
 @Composable
 internal fun AndroidWordKeyboard(
@@ -44,7 +44,7 @@ internal fun AndroidWordKeyboard(
     modifier: Modifier = Modifier,
     compact: Boolean = false,
     actionColor: Color = PurchasedCasualUi2.Blue,
-    useEquippedCosmetic: Boolean = false,
+    useEquippedCosmetic: Boolean = true,
     keySound: () -> Unit = {},
     actionSound: () -> Unit = {},
 ) {
