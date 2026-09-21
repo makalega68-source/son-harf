@@ -1,0 +1,3 @@
+Real Home verification anchor after backend extension import fix.
+Base: ccdd2cb3e9f17055a8738ca3efa5aa14ecd0b90f
+No runtime source or resource changes.
