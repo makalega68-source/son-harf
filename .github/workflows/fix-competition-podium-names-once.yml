@@ -1,0 +1,56 @@
+name: Fix Competition Podium Names Once
+
+on:
+  push:
+    branches:
+      - ui/real-purchased-pack-full-overhaul-20260921
+    paths:
+      - .github/workflows/fix-competition-podium-names-once.yml
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/real-purchased-pack-full-overhaul-20260921
+          fetch-depth: 0
+      - name: Align generated competition asset names with real atlas enum
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          paths = [
+              Path('app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt'),
+              Path('scripts/apply_purchased_competition_patch.py'),
+          ]
+          replacements = {
+              'PurchasedUiAsset.RANK_ONE': 'PurchasedUiAsset.PODIUM_1',
+              'PurchasedUiAsset.RANK_TWO': 'PurchasedUiAsset.PODIUM_2',
+              'PurchasedUiAsset.RANK_THREE': 'PurchasedUiAsset.PODIUM_3',
+          }
+          for path in paths:
+              text = path.read_text()
+              before = text
+              for old, new in replacements.items():
+                  text = text.replace(old, new)
+              if text == before:
+                  raise SystemExit(f'No rank-name replacements made in {path}')
+              path.write_text(text)
+          PY
+      - name: Verify purchased podium contract
+        run: |
+          grep -F 'PurchasedUiAsset.PODIUM_1' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'PurchasedUiAsset.PODIUM_2' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'PurchasedUiAsset.PODIUM_3' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          ! grep -F 'PurchasedUiAsset.RANK_ONE' app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt
+          grep -F 'PODIUM_1(' app/src/main/java/com/sonharf/game/PurchasedGameTheme.kt
+      - name: Commit compile fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/com/sonharf/game/CompetitionHubScreen.kt scripts/apply_purchased_competition_patch.py
+          git commit -m 'fix: use atlas podium assets in competition UI'
+          git push origin HEAD:ui/real-purchased-pack-full-overhaul-20260921
