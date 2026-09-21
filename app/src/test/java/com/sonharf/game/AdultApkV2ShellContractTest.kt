@@ -23,6 +23,7 @@ class AdultApkV2ShellContractTest {
         assertTrue(bottomBar.contains("Profil"))
         assertFalse(bottomBar.contains("Games"))
         assertFalse(bottomBar.contains("Oyunlar"))
+        assertTrue(bottomBar.contains("height(64.dp)"))
     }
 
     @Test
@@ -36,12 +37,23 @@ class AdultApkV2ShellContractTest {
     }
 
     @Test
-    fun paletteUsesRestrainedWarmNeutralAndForestValues() {
-        val theme = source("SonHarfTheme.kt")
-        assertTrue(theme.contains("0xFFF4F2EC"))
-        assertTrue(theme.contains("0xFF365F53"))
-        assertTrue(theme.contains("0xFFAD6A57"))
-        assertFalse(theme.contains("0xFF7C3AED"))
+    fun paletteUsesApprovedNativeDarkProfessionalValues() {
+        val colors = source("Color.kt")
+        listOf(
+            "0xFF141923",
+            "0xFF1E2538",
+            "0xFF2ECC71",
+            "0xFF3498DB",
+            "0xFF9B59B6",
+            "0xFFE67E22",
+            "0xFFECF0F1",
+            "0xFF95A5A6",
+        ).forEach { token -> assertTrue("Missing native palette token $token", colors.contains(token)) }
+
+        val shell = source("PremiumAdultApp.kt")
+        assertTrue(shell.contains("darkColorScheme("))
+        assertTrue(shell.contains("typography = AppTypography"))
+        assertTrue(shell.contains("imePadding()"))
     }
 
     private fun source(name: String): String = File("src/main/java/com/sonharf/game/$name").readText()
