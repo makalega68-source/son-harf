@@ -1,0 +1,2 @@
+Verify repaired purchased-UI source line at a93d130b0934acc54eb928e64645fc64be62f68b.
+This marker contains no runtime code and exists only to trigger the branch verification workflow after a GitHub Actions bot commit.
