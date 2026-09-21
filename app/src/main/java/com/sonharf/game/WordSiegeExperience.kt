@@ -8,6 +8,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -35,12 +38,12 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 internal val SiegePurple = MainUi.Purple
-internal val SiegePurpleSoft: Color get() = if (SonHarfCosmetics.darkArenaTheme) MainUi.SurfaceSoft else Color(0xFFF0ECFF)
+internal val SiegePurpleSoft: Color get() = MainUi.SurfaceSoft
 internal val SiegeBlueSoft = MainUi.BlueSoft
-private val SiegeTile = Color(0xFFFFE3A5)
-private val SiegeTileBorder = Color(0xFFD99818)
-private val SiegeLightTileText = Color(0xFF2F2A1F)
-private val SiegeLightTileMuted = Color(0xFF5D4B20)
+private val SiegeTile: Color get() = SonHarfTheme.GameTile
+private val SiegeTileBorder: Color get() = SonHarfTheme.GameTileBorder
+private val SiegeLightTileText: Color get() = SonHarfTheme.TextPrimary
+private val SiegeLightTileMuted: Color get() = SonHarfTheme.TextSecondary
 
 private enum class SiegeListSection { WAITING, YOUR_TURN, OPPONENT, SLEEPING, FINISHED }
 
@@ -1000,7 +1003,7 @@ internal fun WordSiegeRackTile(
         color = when {
             used -> MainUi.SurfaceSoft
             selected -> SiegeTile
-            else -> Color(0xFFFFF1C9)
+            else -> MainUi.Tile
         },
         shape = RoundedCornerShape(9.dp),
         border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) MainUi.Blue else SiegeTileBorder.copy(alpha = .7f)),
@@ -1094,7 +1097,7 @@ private fun WordSiegeChatDialog(
         onDismissRequest = onDismiss,
         title = { Text(sh("SOHBET", "CHAT"), fontWeight = FontWeight.Black) },
         text = {
-            Column(Modifier.heightIn(min = 220.dp, max = 430.dp)) {
+            Column(Modifier.heightIn(min = 220.dp, max = 430.dp).imePadding()) {
                 if (messages.isEmpty()) {
                     Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Text(sh("Henüz mesaj yok.", "No messages yet."), color = MainUi.Muted, fontSize = 12.sp)
@@ -1123,6 +1126,8 @@ private fun WordSiegeChatDialog(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     enabled = !busy,
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                    keyboardActions = KeyboardActions(onSend = { if (input.isNotBlank() && !busy) onSend() }),
                     placeholder = { Text(sh("Mesaj yaz…", "Type a message…")) },
                     trailingIcon = {
                         IconButton(onClick = onSend, enabled = input.isNotBlank() && !busy) {

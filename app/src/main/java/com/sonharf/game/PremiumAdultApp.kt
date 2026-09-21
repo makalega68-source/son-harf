@@ -117,7 +117,7 @@ fun PremiumAdultApp(onSignedOut: () -> Unit) {
     val inGame = destination in setOf(AdultDestination.LAST_LETTER, AdultDestination.SIEGE, AdultDestination.LETTER_PATH, AdultDestination.SERIES)
     val topLevel = destination in setOf(AdultDestination.HOME, AdultDestination.SOCIAL, AdultDestination.SHOP, AdultDestination.PROFILE)
 
-    val scheme = lightColorScheme(
+    val scheme = darkColorScheme(
         primary = SonHarfTheme.Primary,
         onPrimary = SonHarfTheme.OnPrimary,
         secondary = SonHarfTheme.SoftBlue,
@@ -134,7 +134,7 @@ fun PremiumAdultApp(onSignedOut: () -> Unit) {
         error = SonHarfTheme.Error,
     )
 
-    MaterialTheme(colorScheme = scheme) {
+    MaterialTheme(colorScheme = scheme, typography = AppTypography) {
         Scaffold(
             containerColor = SonHarfTheme.Background,
             topBar = { if (!inGame) SonHarfTopAdBanner(isPremium = isPro) },
@@ -150,7 +150,7 @@ fun PremiumAdultApp(onSignedOut: () -> Unit) {
                 }
             },
         ) { padding ->
-            Box(Modifier.fillMaxSize().padding(padding)) {
+            Box(Modifier.fillMaxSize().padding(padding).imePadding()) {
                 if (!inGame) PremiumScreenBackground(Modifier.matchParentSize())
                 when (destination) {
                     AdultDestination.HOME -> AdultHome(
@@ -466,7 +466,11 @@ private fun AdultQuickAction(modifier: Modifier, icon: ImageVector, label: Strin
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Icon(icon, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(20.dp))
+            if (label == "Lig" || label == "League") {
+                PackageLeagueBadge(Modifier.size(22.dp))
+            } else {
+                Icon(icon, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(20.dp))
+            }
             Text(label, color = SonHarfTheme.TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
         }
     }
@@ -481,9 +485,10 @@ private fun AdultBottomBar(
     onProfile: () -> Unit,
 ) {
     NavigationBar(
+        modifier = Modifier.height(64.dp),
         containerColor = SonHarfTheme.NavigationSurface,
         tonalElevation = 0.dp,
-        windowInsets = NavigationBarDefaults.windowInsets,
+        windowInsets = WindowInsets(0, 0, 0, 0),
     ) {
         AdultNavItem(destination == AdultDestination.HOME, Icons.Rounded.Home, sh("Ana Sayfa", "Home"), onHome)
         AdultNavItem(destination == AdultDestination.SOCIAL, Icons.Rounded.Groups, sh("Sosyal", "Social"), onSocial)

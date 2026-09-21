@@ -253,8 +253,8 @@ internal fun MainSocialScreen(
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedBorderColor = MainUi.Blue,
                                     unfocusedBorderColor = MainUi.Border,
-                                    focusedContainerColor = Color.White,
-                                    unfocusedContainerColor = Color.White,
+                                    focusedContainerColor = MainUi.SurfaceRaised,
+                                    unfocusedContainerColor = MainUi.SurfaceRaised,
                                 ),
                             )
                             Button(
@@ -352,10 +352,10 @@ internal fun MainSocialScreen(
                 if (siegeInvites.isNotEmpty()) item { MainSectionTitle(sh("KELİME TAHTI DAVETLERİ", "KELİME TAHTI INVITATIONS")) }
                 items(siegeInvites, key = { "siege:${it.id}" }) { invite ->
                     val sender = inviteProfiles[invite.senderId]
-                    Surface(shape = RoundedCornerShape(17.dp), color = Color(0xFFE8F1EB), border = BorderStroke(1.dp, Color(0xFF567A64).copy(alpha = .35f))) {
+                    Surface(shape = RoundedCornerShape(17.dp), color = MainUi.SurfaceRaised, border = BorderStroke(1.dp, SonHarfTheme.Primary.copy(alpha = .35f))) {
                         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = Color(0xFF567A64))
+                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = SonHarfTheme.Primary)
                                 Spacer(Modifier.width(9.dp))
                                 Column(Modifier.weight(1f)) {
                                     Text(sender?.displayName ?: sh("Kuşatma daveti", "Siege invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
@@ -392,7 +392,7 @@ internal fun MainSocialScreen(
                                         }
                                     },
                                     modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF567A64)),
+                                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary),
                                 ) { Text(if (busyKey == "siege:${invite.id}") "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
                             }
                         }

@@ -225,7 +225,7 @@ internal fun PremiumHomeCommandDeckPolished(
                         onClick = onSiege,
                         modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = SonHarfTheme.Primary),
+                        colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary, contentColor = SonHarfTheme.OnPrimary),
                         contentPadding = PaddingValues(horizontal = 18.dp, vertical = 12.dp),
                         elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp, pressedElevation = 1.dp),
                     ) {
@@ -366,9 +366,7 @@ internal fun PremiumWeeklyBestPolished(onClick: () -> Unit) {
         ) {
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(13.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(shape = RoundedCornerShape(12.dp), color = SonHarfTheme.Purple.copy(alpha = .11f)) {
-                        Icon(Icons.Rounded.EmojiEvents, null, tint = SonHarfTheme.Purple, modifier = Modifier.padding(8.dp).size(20.dp))
-                    }
+                    PackageLeagueBadge(Modifier.size(36.dp), tint = SonHarfTheme.Lavender)
                     Spacer(Modifier.width(9.dp))
                     Column(Modifier.weight(1f)) {
                         Text(
