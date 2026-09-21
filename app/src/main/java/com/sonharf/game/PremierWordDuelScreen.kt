@@ -709,8 +709,13 @@ private fun PremierSearching(language: String, onCancel: () -> Unit) {
             Modifier.size((132 * pulse).dp).clip(CircleShape).background(Brush.radialGradient(listOf(PremierUi.Sky.copy(alpha = .45f), PremierUi.Ice, Color.Transparent))),
             contentAlignment = Alignment.Center,
         ) {
-            Surface(shape = CircleShape, color = PremierUi.Surface, border = BorderStroke(2.dp, PremierUi.Ocean)) {
-                Icon(Icons.Rounded.Groups, null, tint = PremierUi.Ocean, modifier = Modifier.padding(27.dp).size(42.dp))
+            PurchasedPanel(
+                modifier = Modifier.size(104.dp),
+                asset = PurchasedUiAsset.PANEL_SMALL,
+                contentPadding = PaddingValues(18.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                PurchasedAsset(PurchasedUiAsset.ICON_GAMES, Modifier.size(64.dp))
             }
         }
         Spacer(Modifier.height(24.dp))
@@ -740,9 +745,16 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
         Spacer(Modifier.weight(1f))
         PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Ocean, nameColor = SonHarfCosmetics.playerNameColor)
         Spacer(Modifier.height(16.dp))
-        Surface(shape = RoundedCornerShape(99.dp), color = Color.Transparent) {
-            Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.Ocean, PremierUi.OceanDeep))).padding(horizontal = 27.dp, vertical = 10.dp)) {
-                Text("VS", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+        PurchasedPanel(
+            modifier = Modifier.width(132.dp),
+            asset = PurchasedUiAsset.PANEL_SMALL,
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                PurchasedAsset(PurchasedUiAsset.ICON_SWORDS, Modifier.size(34.dp))
+                Spacer(Modifier.width(7.dp))
+                Text("VS", color = Color(0xFF4A2D20), fontSize = 22.sp, fontWeight = FontWeight.Black)
             }
         }
         Spacer(Modifier.height(16.dp))
@@ -828,6 +840,7 @@ private fun PremierArena(
     val latestPlayedWord = words.lastOrNull()?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
+        PurchasedGameBackdrop(Modifier.matchParentSize())
         val veryCompact = maxHeight < 610.dp
         val compact = maxHeight < 700.dp
         val tall = maxHeight > 820.dp
@@ -887,8 +900,15 @@ private fun PremierArena(
         }
 
         AnimatedVisibility(visible = floatingMessage != null, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 132.dp, start = 22.dp, end = 22.dp)) {
-            Surface(shape = RoundedCornerShape(16.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Sky.copy(alpha = .45f)), shadowElevation = 9.dp) {
-                Text(floatingMessage?.body.orEmpty(), Modifier.padding(horizontal = 16.dp, vertical = 10.dp), color = PremierUi.OceanDeep, fontWeight = FontWeight.Black, fontSize = 13.sp)
+            PurchasedPanel(
+                asset = PurchasedUiAsset.PANEL_SMALL,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PurchasedAsset(PurchasedUiAsset.ICON_CHAT, Modifier.size(28.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(floatingMessage?.body.orEmpty(), color = Color(0xFF4A2D20), fontWeight = FontWeight.Black, fontSize = 13.sp)
+                }
             }
         }
 
@@ -901,16 +921,17 @@ private fun PremierArena(
             val feedback = moveFeedback
             if (feedback != null) {
                 val accent = if (feedback.accepted) PremierUi.Green else PremierUi.Red
-                Surface(
-                    shape = RoundedCornerShape(18.dp),
-                    color = if (feedback.accepted) PremierUi.GreenSoft else PremierUi.RedSoft,
-                    border = BorderStroke(2.dp, accent),
-                    shadowElevation = 12.dp,
+                PurchasedPanel(
+                    asset = if (feedback.accepted) PurchasedUiAsset.REWARD_PANEL else PurchasedUiAsset.PANEL_SMALL,
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
                 ) {
-                    Row(Modifier.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(if (feedback.accepted) Icons.Rounded.CheckCircle else Icons.Rounded.Close, null, tint = accent, modifier = Modifier.size(24.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PurchasedAsset(
+                            if (feedback.accepted) PurchasedUiAsset.ICON_CHECK else PurchasedUiAsset.ICON_CLOSE,
+                            Modifier.size(30.dp),
+                        )
                         Spacer(Modifier.width(9.dp))
-                        Text(feedback.message, color = accent, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                        Text(feedback.message, color = if (feedback.accepted) Color(0xFF4A2D20) else PremierUi.Red, fontSize = 13.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
@@ -950,33 +971,31 @@ private fun PremierArenaHeader(
         Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
-                    Surface(modifier = Modifier.clickable(onClick = onForfeit), shape = RoundedCornerShape(12.dp), color = PremierUi.RedSoft) {
-                        Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.Flag, null, tint = PremierUi.Red, modifier = Modifier.size(15.dp))
-                            Spacer(Modifier.width(4.dp))
-                            Text(pt(language, "PES ET", "SURRENDER"), color = PremierUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                        }
-                    }
+                    PurchasedButton(
+                        text = pt(language, "PES ET", "SURRENDER"),
+                        onClick = onForfeit,
+                        modifier = Modifier.width(92.dp).height(48.dp),
+                        style = PurchasedButtonStyle.DANGER,
+                    )
                 }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Surface(shape = RoundedCornerShape(13.dp), color = PremierUi.Ice) {
-                        Text("$myScore  —  $rivalScore", Modifier.padding(horizontal = 13.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                    PurchasedPanel(
+                        asset = PurchasedUiAsset.PANEL_SMALL,
+                        contentPadding = PaddingValues(horizontal = 13.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("$myScore  —  $rivalScore", color = Color(0xFF4A2D20), fontSize = 16.sp, fontWeight = FontWeight.Black)
                     }
                 }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
                     Box {
-                        Surface(
-                            modifier = Modifier.clickable(onClick = onQuickChat),
-                            shape = RoundedCornerShape(12.dp),
-                            color = PremierUi.Ice,
-                            border = BorderStroke(1.dp, PremierUi.Border),
-                        ) {
-                            Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.ChatBubbleOutline, pt(language, "Sohbet", "Chat"), tint = PremierUi.Ocean, modifier = Modifier.size(15.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text(pt(language, "SOHBET", "CHAT"), color = PremierUi.OceanDeep, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                            }
-                        }
+                        PurchasedButton(
+                            text = pt(language, "SOHBET", "CHAT"),
+                            onClick = onQuickChat,
+                            modifier = Modifier.width(96.dp).height(48.dp),
+                            style = PurchasedButtonStyle.SECONDARY,
+                            leadingAsset = PurchasedUiAsset.ICON_CHAT,
+                        )
                         if (unreadChat) {
                             Box(Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-3).dp).size(10.dp).clip(CircleShape).background(PremierUi.Red))
                         }
@@ -999,12 +1018,15 @@ private fun PremierArenaHeader(
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor)
-                Surface(shape = CircleShape, color = Color.Transparent) {
-                    Box(Modifier.size(60.dp).background(Brush.radialGradient(listOf(timerStart, if (danger) PremierUi.Red else PremierUi.Ocean, timerEnd)), CircleShape), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(seconds.toString().padStart(2, '0'), color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)
-                            Text("SEC", color = Color.White.copy(alpha = .75f), fontSize = 6.sp, fontWeight = FontWeight.Black)
-                        }
+                PurchasedPanel(
+                    modifier = Modifier.size(66.dp),
+                    asset = PurchasedUiAsset.PANEL_SMALL,
+                    contentPadding = PaddingValues(6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(seconds.toString().padStart(2, '0'), color = if (danger) PremierUi.Red else Color(0xFF4A2D20), fontSize = 19.sp, fontWeight = FontWeight.Black)
+                        Text("SEC", color = Color(0xFF765746), fontSize = 6.sp, fontWeight = FontWeight.Black)
                     }
                 }
                 PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, PremierUi.OceanDeep, room.isBot, Modifier.weight(1f))
@@ -1078,14 +1100,17 @@ private fun PremierBotAvatar(size: Dp, accent: Color) {
 private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String) {
     val active = status in setOf("playing", "final", "sudden_death")
     val accent = if (myTurn) PremierUi.Green else PremierUi.Gold
-    Surface(shape = RoundedCornerShape(99.dp), color = if (myTurn) PremierUi.GreenSoft else PremierUi.GoldSoft, border = BorderStroke(1.dp, accent.copy(alpha = .25f))) {
+    PurchasedPanel(
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 7.dp),
+        contentAlignment = Alignment.Center,
+    ) {
         Text(
             when {
                 !active -> pt(language, "MAÇ SENKRONİZE EDİLİYOR", "SYNCING MATCH")
                 myTurn -> pt(language, "⚡ SENİN SIRAN", "⚡ YOUR TURN")
                 else -> pt(language, "⏳ RAKİP DÜŞÜNÜYOR", "⏳ RIVAL IS THINKING")
             },
-            Modifier.padding(horizontal = 16.dp, vertical = 7.dp),
             color = accent,
             fontSize = 10.sp,
             fontWeight = FontWeight.Black,
@@ -1105,11 +1130,11 @@ private fun PremierTargetCard(language: String, required: String, gameMode: Stri
         else -> "x${round.coerceIn(1, 3)}"
     }
     Box(
-        Modifier.size(size).shadow(16.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp))
-            .background(Brush.radialGradient(listOf(PremierUi.Sky, PremierUi.Ocean, PremierUi.OceanDeep))),
+        Modifier.size(size),
         contentAlignment = Alignment.Center,
     ) {
-        Box(Modifier.matchParentSize().background(Color.White.copy(alpha = glow * .13f)))
+        PurchasedAsset(PurchasedUiAsset.PANEL_SMALL, Modifier.matchParentSize())
+        Box(Modifier.matchParentSize().background(Color.White.copy(alpha = glow * .05f)))
         Surface(modifier = Modifier.align(Alignment.TopEnd).padding(7.dp), shape = RoundedCornerShape(99.dp), color = Color.White.copy(alpha = .20f)) {
             Text(targetBadge, Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
         }
@@ -1339,8 +1364,13 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Surface(shape = CircleShape, color = if (won) PremierUi.GreenSoft else PremierUi.RedSoft) {
-            Icon(if (won) Icons.Rounded.EmojiEvents else Icons.Rounded.SportsEsports, null, tint = if (won) PremierUi.Green else PremierUi.Red, modifier = Modifier.padding(22.dp).size(48.dp))
+        PurchasedPanel(
+            modifier = Modifier.size(104.dp),
+            asset = PurchasedUiAsset.REWARD_PANEL,
+            contentPadding = PaddingValues(18.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            PurchasedAsset(if (won) PurchasedUiAsset.ICON_TROPHY else PurchasedUiAsset.ICON_GAMES, Modifier.size(66.dp))
         }
         Spacer(Modifier.height(18.dp))
         Text(if (won) pt(language, "ZAFER", "VICTORY") else pt(language, "MAÇ BİTTİ", "MATCH OVER"), color = if (won) PremierUi.Ocean else PremierUi.Red, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
@@ -1400,7 +1430,13 @@ private fun PremierCenteredMessage(title: String, detail: String, action: String
         Spacer(Modifier.height(5.dp))
         Text(detail, color = PremierUi.Muted, fontSize = 12.sp, textAlign = TextAlign.Center)
         Spacer(Modifier.height(18.dp))
-        Button(onClick = onAction, colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean)) { Text(action, fontWeight = FontWeight.Black) }
+        PurchasedButton(
+            text = action,
+            onClick = onAction,
+            modifier = Modifier.widthIn(min = 180.dp),
+            style = PurchasedButtonStyle.SECONDARY,
+            leadingAsset = PurchasedUiAsset.NAV_HOME,
+        )
     }
 }
 
