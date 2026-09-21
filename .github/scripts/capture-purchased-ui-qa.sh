@@ -4,24 +4,50 @@ set -euo pipefail
 mkdir -p qa-screens
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 adb shell settings put system font_scale 1.0
-# Headless Pixel images can surface a launcher/Quickstep ANR unrelated to the app.
-# Hide system error dialogs and defensively dismiss only that known system dialog.
+
+# Pixel emulator images can surface a launcher/Quickstep ANR in headless mode.
+# The visual QA activity is started explicitly, so the launcher is not needed for capture.
 adb shell settings put global hide_error_dialogs 1 || true
 adb shell settings put global show_first_crash_dialog 0 || true
 adb shell settings put global show_restart_in_crash_dialog 0 || true
+for launcher in com.google.android.apps.nexuslauncher com.android.launcher3; do
+  adb shell am force-stop "$launcher" >/dev/null 2>&1 || true
+  adb shell pm disable-user --user 0 "$launcher" >/dev/null 2>&1 || true
+done
 
 clear_quickstep_dialog() {
-  local dump
+  local dump line bounds x1 y1 x2 y2
   for _ in 1 2 3; do
+    for launcher in com.google.android.apps.nexuslauncher com.android.launcher3; do
+      adb shell am force-stop "$launcher" >/dev/null 2>&1 || true
+    done
+
     adb shell uiautomator dump /sdcard/qa-window.xml >/dev/null 2>&1 || true
     dump="$(adb shell cat /sdcard/qa-window.xml 2>/dev/null || true)"
-    if printf '%s' "$dump" | grep -qiE "Quickstep.*isn't responding|Quickstep.*not responding"; then
-      adb shell input keyevent KEYCODE_BACK || true
-      sleep 1
-    else
+    if ! printf '%s' "$dump" | grep -qiE "Quickstep.*isn't responding|Quickstep.*not responding"; then
       break
     fi
+
+    # Prefer closing only the known Quickstep process. Resolve the button center from UI bounds
+    # rather than hard-coding coordinates so this survives emulator density changes.
+    line="$(printf '%s' "$dump" | sed 's/></>\n</g' | grep -Ei 'text="Close app"|text="Wait"|text="Uygulamayı kapat"|text="Bekle"' | head -1 || true)"
+    bounds="$(printf '%s' "$line" | sed -n 's/.*bounds="\[\([0-9]*\),\([0-9]*\)\]\[\([0-9]*\),\([0-9]*\)\]".*/\1 \2 \3 \4/p')"
+    if [ -n "$bounds" ]; then
+      read -r x1 y1 x2 y2 <<< "$bounds"
+      adb shell input tap $(((x1 + x2) / 2)) $(((y1 + y2) / 2)) || true
+    else
+      adb shell input keyevent KEYCODE_BACK || true
+    fi
+    sleep 1
   done
+
+  # Fail the capture if the system ANR is still obscuring the app; never accept a dirty screenshot.
+  adb shell uiautomator dump /sdcard/qa-window.xml >/dev/null 2>&1 || true
+  dump="$(adb shell cat /sdcard/qa-window.xml 2>/dev/null || true)"
+  if printf '%s' "$dump" | grep -qiE "Quickstep.*isn't responding|Quickstep.*not responding"; then
+    echo "Quickstep ANR still visible; refusing dirty visual QA capture" >&2
+    exit 1
+  fi
 }
 
 capture() {
