@@ -36,12 +36,15 @@ class AdultApkV2ShellContractTest {
     }
 
     @Test
-    fun paletteUsesRestrainedWarmNeutralAndForestValues() {
+    fun paletteUsesNewRoyalBlueAquaEmeraldGameDirection() {
         val theme = source("SonHarfTheme.kt")
-        assertTrue(theme.contains("0xFFF4F2EC"))
-        assertTrue(theme.contains("0xFF365F53"))
-        assertTrue(theme.contains("0xFFAD6A57"))
-        assertFalse(theme.contains("0xFF7C3AED"))
+        assertTrue(theme.contains("0xFFEAF3FF"))
+        assertTrue(theme.contains("0xFF246EDB"))
+        assertTrue(theme.contains("0xFF17A7B8"))
+        assertTrue(theme.contains("0xFF3AAF50"))
+        assertTrue(theme.contains("internal object SiegeRoyalePalette"))
+        assertFalse(theme.contains("0xFFF4F2EC"))
+        assertFalse(theme.contains("0xFF365F53"))
     }
 
     private fun source(name: String): String = File("src/main/java/com/sonharf/game/$name").readText()
