@@ -40,11 +40,12 @@ class StoreVisualIntegrityContractTest {
     @Test
     fun playProductsNeverPretendAnUnavailablePriceIsARealPurchaseButton() {
         val play = projectFile("app/src/main/java/com/sonharf/game/GooglePlayProductsCard.kt").readText()
-        assertTrue(play.contains("style_icon_coin"))
+        assertTrue(play.contains("PurchasedUiAsset.ICON_COIN"))
         assertTrue(play.contains("oneTimePurchaseOfferDetails"))
         assertTrue(play.contains("realPrice != null"))
         assertTrue(play.contains("enabled = !busy && realPrice != null"))
         assertTrue(play.contains("PLAY'DE YOK"))
+        assertTrue(play.contains("PurchasedButton("))
         assertFalse(play.contains("?: \"PLAY\""))
     }
 
