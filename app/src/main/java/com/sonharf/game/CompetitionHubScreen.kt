@@ -784,9 +784,9 @@ private fun WeeklyTournamentTab() {
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
                         Text(sh("KUPA ÖDÜLLERİ", "CUP REWARDS"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            CompetitionRankReward(PurchasedUiAsset.RANK_ONE, "1.000 SC")
-                            CompetitionRankReward(PurchasedUiAsset.RANK_TWO, "600 SC")
-                            CompetitionRankReward(PurchasedUiAsset.RANK_THREE, "400 SC")
+                            CompetitionRankReward(PurchasedUiAsset.PODIUM_1, "1.000 SC")
+                            CompetitionRankReward(PurchasedUiAsset.PODIUM_2, "600 SC")
+                            CompetitionRankReward(PurchasedUiAsset.PODIUM_3, "400 SC")
                         }
                         Text(
                             sh("4–10: 150 SC • En az 1 maç oynayan diğer oyuncular: 50 SC", "4–10: 150 SC • Other players with at least 1 match: 50 SC"),
@@ -859,9 +859,9 @@ private fun WeeklyTournamentTab() {
             ) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     when (row.rank) {
-                        1L -> PurchasedAsset(PurchasedUiAsset.RANK_ONE, Modifier.size(38.dp))
-                        2L -> PurchasedAsset(PurchasedUiAsset.RANK_TWO, Modifier.size(38.dp))
-                        3L -> PurchasedAsset(PurchasedUiAsset.RANK_THREE, Modifier.size(38.dp))
+                        1L -> PurchasedAsset(PurchasedUiAsset.PODIUM_1, Modifier.size(38.dp))
+                        2L -> PurchasedAsset(PurchasedUiAsset.PODIUM_2, Modifier.size(38.dp))
+                        3L -> PurchasedAsset(PurchasedUiAsset.PODIUM_3, Modifier.size(38.dp))
                         else -> Text("#${row.rank}", Modifier.width(38.dp), color = MainUi.Muted, textAlign = TextAlign.Center, fontWeight = FontWeight.Black)
                     }
                     Spacer(Modifier.width(6.dp))
@@ -904,9 +904,9 @@ private fun WeeklyTournamentTab() {
                     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             val rankAsset = when (h.finalRank) {
-                                1L -> PurchasedUiAsset.RANK_ONE
-                                2L -> PurchasedUiAsset.RANK_TWO
-                                3L -> PurchasedUiAsset.RANK_THREE
+                                1L -> PurchasedUiAsset.PODIUM_1
+                                2L -> PurchasedUiAsset.PODIUM_2
+                                3L -> PurchasedUiAsset.PODIUM_3
                                 else -> PurchasedUiAsset.ICON_TROPHY
                             }
                             PurchasedAsset(rankAsset, Modifier.size(40.dp))
