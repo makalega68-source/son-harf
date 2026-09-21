@@ -1,16 +1,11 @@
 package com.sonharf.game
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -18,7 +13,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Shared application palette. Every mode resolves from the new Siege Royale theme source. */
+/** Shared logical color tokens. Visual chrome is supplied by PurchasedGameTheme assets. */
 internal object MainUi {
     val Background: Color get() = SonHarfTheme.Background
     val Surface: Color get() = SonHarfTheme.Surface
@@ -44,7 +39,6 @@ internal object MainUi {
     val Purple: Color get() = SonHarfTheme.Lavender
 }
 
-/** Larger, game-oriented radius hierarchy. */
 internal object MainUiShape {
     val Control = RoundedCornerShape(14.dp)
     val Card = RoundedCornerShape(20.dp)
@@ -53,7 +47,6 @@ internal object MainUiShape {
     val Pill = RoundedCornerShape(99.dp)
 }
 
-// Legacy tokens intentionally resolve to the same application-wide palette.
 internal val PortalBg: Color get() = SonHarfTheme.Background
 internal val PortalCard: Color get() = SonHarfTheme.Surface
 internal val PortalText: Color get() = SonHarfTheme.TextPrimary
@@ -63,56 +56,27 @@ internal val PortalGold: Color get() = SonHarfTheme.PremiumGold
 internal val PortalGreen: Color get() = SonHarfTheme.Success
 internal val PortalRed: Color get() = SonHarfTheme.Error
 
-/** Text-free background: bright game lobby chrome without fantasy scenery or embedded copy. */
 @Composable
 internal fun PremiumScreenBackground(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier.background(
-            Brush.verticalGradient(
-                listOf(
-                    if (SonHarfTheme.IsDark) Color(0xFF0A1730) else Color(0xFFD8E9FF),
-                    SonHarfTheme.Background,
-                    if (SonHarfTheme.IsDark) Color(0xFF0E1D36) else Color(0xFFF6FAFF),
-                    SonHarfTheme.Background,
-                ),
-            ),
-        ),
-    )
+    PurchasedGameBackdrop(modifier)
 }
 
-/** Glossy game panel inspired by the purchased UI pack, rendered natively so text stays real UI. */
+/** Real purchased panel wrapper; no Material Card/Surface skin is drawn here. */
 @Composable
 internal fun PremiumCard(
     modifier: Modifier = Modifier,
     accent: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val edge = accent ?: SonHarfTheme.Primary
-    Surface(
+    PurchasedPanel(
         modifier = modifier,
-        shape = MainUiShape.Card,
-        color = Color.Transparent,
-        border = BorderStroke(1.dp, edge.copy(alpha = if (SonHarfTheme.IsDark) .34f else .22f)),
-        shadowElevation = 5.dp,
+        asset = PurchasedUiAsset.PANEL_MEDIUM,
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 18.dp),
     ) {
-        Column(
-            Modifier
-                .background(
-                    Brush.verticalGradient(
-                        listOf(
-                            SonHarfTheme.Surface,
-                            SonHarfTheme.SurfaceElevated,
-                            SonHarfTheme.SurfaceSecondary.copy(alpha = if (SonHarfTheme.IsDark) .55f else .68f),
-                        ),
-                    ),
-                )
-                .padding(16.dp),
-            content = content,
-        )
+        Column(Modifier.fillMaxWidth(), content = content)
     }
 }
 
-/** Main CTA uses the new emerald game-action gradient instead of the old flat sage button. */
 @Composable
 internal fun PremiumPrimaryButton(
     text: String,
@@ -120,42 +84,13 @@ internal fun PremiumPrimaryButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
 ) {
-    Surface(
+    PurchasedButton(
+        text = text,
         onClick = onClick,
+        modifier = modifier,
+        style = PurchasedButtonStyle.PRIMARY,
         enabled = enabled,
-        modifier = modifier.heightIn(min = 56.dp),
-        shape = MainUiShape.Control,
-        color = Color.Transparent,
-        border = BorderStroke(
-            1.dp,
-            if (enabled) SonHarfTheme.PlayGreenDeep.copy(alpha = .82f) else SonHarfTheme.Border,
-        ),
-        shadowElevation = if (enabled) 6.dp else 0.dp,
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    if (enabled) {
-                        Brush.verticalGradient(listOf(SonHarfTheme.PlayGreen, SonHarfTheme.PlayGreenDeep))
-                    } else {
-                        Brush.verticalGradient(listOf(SonHarfTheme.DisabledBackground, SonHarfTheme.DisabledBackground))
-                    },
-                    MainUiShape.Control,
-                )
-                .padding(horizontal = 18.dp, vertical = 15.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = text,
-                color = if (enabled) Color.White else SonHarfTheme.DisabledContent,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = .45.sp,
-                textAlign = TextAlign.Center,
-            )
-        }
-    }
+    )
 }
 
 @Composable
@@ -164,70 +99,30 @@ internal fun PremiumAccentPill(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier,
-        color = Color.Transparent,
-        shape = MainUiShape.Pill,
-        border = BorderStroke(1.dp, color.copy(alpha = .34f)),
-        shadowElevation = 2.dp,
+    PurchasedPanel(
+        modifier = modifier.heightIn(min = 34.dp),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 5.dp),
     ) {
-        Box(
-            Modifier.background(
-                Brush.horizontalGradient(
-                    listOf(color.copy(alpha = .18f), color.copy(alpha = .07f)),
-                ),
-                MainUiShape.Pill,
-            ),
-        ) {
-            Text(
-                text = text,
-                color = color,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = .45.sp,
-                modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
-            )
-        }
+        Text(
+            text = text,
+            color = Color(0xFF62442E),
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = .35.sp,
+            textAlign = TextAlign.Center,
+        )
     }
 }
 
 @Composable
 internal fun MainSectionTitle(title: String) {
-    Text(
-        text = title,
-        color = MainUi.Text,
-        fontSize = 15.sp,
-        fontWeight = FontWeight.Black,
-        letterSpacing = .45.sp,
-    )
+    PurchasedSectionHeader(title = title)
 }
 
 @Composable
 internal fun MainSectionTitle(title: String, action: String, onAction: () -> Unit) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = title,
-            color = MainUi.Text,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = .45.sp,
-            modifier = Modifier.weight(1f),
-        )
-        Surface(
-            onClick = onAction,
-            color = SonHarfTheme.PrimarySoft,
-            shape = MainUiShape.Pill,
-            border = BorderStroke(1.dp, SonHarfTheme.Primary.copy(alpha = .22f)),
-        ) {
-            Text(
-                text = action,
-                color = MainUi.Blue,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
-            )
-        }
-    }
+    PurchasedSectionHeader(title = title, action = action, onAction = onAction)
 }
 
 @Composable
@@ -241,65 +136,48 @@ internal fun MainScreenHeader(
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         if (onBack != null) {
-            Surface(
+            PurchasedIconButton(
+                asset = PurchasedUiAsset.ICON_REPEAT,
                 onClick = onBack,
-                shape = MainUiShape.Control,
-                color = SonHarfTheme.PrimarySoft,
-                border = BorderStroke(1.dp, SonHarfTheme.Primary.copy(alpha = .22f)),
-                shadowElevation = 3.dp,
-            ) {
-                Icon(
-                    Icons.Rounded.ArrowBack,
-                    contentDescription = sh("Geri", "Back"),
-                    tint = MainUi.Blue,
-                    modifier = Modifier.padding(14.dp).size(20.dp),
-                )
-            }
-            Spacer(Modifier.width(12.dp))
+                modifier = Modifier.size(54.dp),
+            )
+            Spacer(Modifier.width(8.dp))
         }
-        Column(Modifier.weight(1f)) {
-            Text(title, color = MainUi.Text, fontSize = 25.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(3.dp))
-            Text(subtitle, color = MainUi.Muted, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        PurchasedPanel(
+            modifier = Modifier.weight(1f).heightIn(min = 76.dp),
+            asset = PurchasedUiAsset.BANNER,
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 10.dp),
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(title, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                if (subtitle.isNotBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(subtitle, color = Color.White.copy(alpha = .92f), fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                }
+            }
         }
         if (actionIcon != null && onAction != null) {
-            Surface(
+            Spacer(Modifier.width(8.dp))
+            PurchasedIconButton(
+                asset = PurchasedUiAsset.ICON_SETTINGS,
                 onClick = onAction,
-                shape = MainUiShape.Control,
-                color = SonHarfTheme.Surface,
-                border = BorderStroke(1.dp, SonHarfTheme.Border),
-                shadowElevation = 3.dp,
-            ) {
-                Icon(
-                    actionIcon,
-                    contentDescription = actionDescription,
-                    tint = MainUi.Blue,
-                    modifier = Modifier.padding(14.dp).size(20.dp),
-                )
-            }
+                modifier = Modifier.size(54.dp),
+            )
         }
     }
 }
 
 @Composable
 internal fun MainMetricCard(value: String, label: String, modifier: Modifier = Modifier) {
-    Surface(
-        modifier = modifier,
-        shape = MainUiShape.Card,
-        color = Color.Transparent,
-        border = BorderStroke(1.dp, SonHarfTheme.Primary.copy(alpha = .16f)),
-        shadowElevation = 4.dp,
+    PurchasedPanel(
+        modifier = modifier.heightIn(min = 92.dp),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
     ) {
-        Column(
-            Modifier
-                .background(
-                    Brush.verticalGradient(listOf(SonHarfTheme.Surface, SonHarfTheme.SurfaceElevated)),
-                )
-                .padding(14.dp),
-        ) {
-            Text(value, color = MainUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(value, color = Color(0xFF563A2A), fontSize = 20.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(3.dp))
-            Text(label, color = MainUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text(label, color = Color(0xFF7C5D48), fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
         }
     }
 }
