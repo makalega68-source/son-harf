@@ -298,9 +298,9 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     PurchasedButton(
                                         text = sh("ÜYE OL", "REGISTER"),
-                                        selectedStyle(register, PurchasedButtonStyle.PURPLE, PurchasedButtonStyle.SECONDARY),
                                         onClick = { register = true; notice = "" },
                                         modifier = Modifier.weight(1f).height(46.dp),
+                                        style = selectedStyle(register, PurchasedButtonStyle.PURPLE, PurchasedButtonStyle.SECONDARY),
                                     )
                                     PurchasedButton(
                                         text = sh("GİRİŞ YAP", "SIGN IN"),
