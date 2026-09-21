@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -23,13 +24,14 @@ internal fun gameText(tr: String, en: String): String =
 internal fun GameSurface(
     modifier: Modifier = Modifier,
     elevated: Boolean = false,
+    borderColor: Color = GameColors.Border,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Surface(
         modifier = modifier,
         shape = GameShapes.Large,
         color = if (elevated) GameColors.SecondarySurface else GameColors.PrimarySurface,
-        border = BorderStroke(1.dp, GameColors.Border),
+        border = BorderStroke(1.dp, borderColor),
         shadowElevation = if (elevated) GameElevation.Low else GameElevation.Flat,
     ) {
         Column(Modifier.padding(GameSpacing.Lg), content = content)
@@ -156,3 +158,30 @@ internal fun XPProgress(progress: Float, modifier: Modifier = Modifier) = GamePr
 
 @Composable
 internal fun LeagueProgress(progress: Float, modifier: Modifier = Modifier) = GameProgress(progress, GameColors.PrestigeGold, modifier)
+
+@Composable
+internal fun GameEmptyState(
+    icon: ImageVector,
+    title: String,
+    body: String,
+    actionText: String? = null,
+    onAction: (() -> Unit)? = null,
+    modifier: Modifier = Modifier,
+) {
+    GameSurface(modifier = modifier) {
+        Column(
+            Modifier.fillMaxWidth().padding(vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Surface(shape = CircleShape, color = GameColors.SecondarySurface) {
+                Icon(icon, null, tint = GameColors.TextSecondary, modifier = Modifier.padding(11.dp).size(25.dp))
+            }
+            Text(title, color = GameColors.TextPrimary, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+            Text(body, color = GameColors.TextSecondary, style = MaterialTheme.typography.bodySmall, textAlign = TextAlign.Center)
+            if (actionText != null && onAction != null) {
+                GameSecondaryButton(actionText, onAction, modifier = Modifier.fillMaxWidth())
+            }
+        }
+    }
+}
