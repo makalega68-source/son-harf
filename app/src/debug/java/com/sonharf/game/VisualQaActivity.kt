@@ -28,44 +28,57 @@ class VisualQaActivity : ComponentActivity() {
 }
 
 @Composable
+private fun QaSafeArea(content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize().systemBarsPadding()) {
+        content()
+    }
+}
+
+@Composable
 private fun VisualQaScreen(screen: String) {
     val backend = remember { OnlineGameBackend() }
     when (screen) {
-        "store" -> PremiumStoreScreen(
-            initialTab = 0,
-            onBack = {},
-            onMembershipChanged = {},
-            onCollection = {},
-        )
-        "profile" -> MainPlayerProfileScreen(backend, {}, {}, {}, {}, {})
-        "social" -> MainSocialScreen(backend = backend, onPlay = {}, onSiege = {})
-        "siege" -> Box(Modifier.fillMaxSize().systemBarsPadding()) {
-            WordSiegePracticeScreen(onExit = {}, matchmakingFallback = false)
+        "store" -> QaSafeArea {
+            PremiumStoreScreen(
+                initialTab = 0,
+                onBack = {},
+                onMembershipChanged = {},
+                onCollection = {},
+            )
         }
-        "sonharf" -> PremierLobby(
-            language = "tr",
-            profile = null,
-            notice = "",
-            busy = false,
-            onLanguage = {},
-            onPlay = {},
-            onHome = {},
-        )
-        "harfyolu" -> LetterLadderGameScreen(onExit = {})
-        "leaderboard" -> CompetitionHubScreen(onBack = {})
-        "retention" -> MainRetentionScreen(
-            backend = backend,
-            onBack = {},
-            onPlay = {},
-            onDailyChallenge = {},
-        )
-        "pro" -> PremiumStoreScreen(
-            initialTab = 3,
-            onBack = {},
-            onMembershipChanged = {},
-            onCollection = {},
-        )
-        "settings" -> MainSettingsScreen(backend, {}, {}, {})
+        "profile" -> QaSafeArea { MainPlayerProfileScreen(backend, {}, {}, {}, {}, {}) }
+        "social" -> QaSafeArea { MainSocialScreen(backend = backend, onPlay = {}, onSiege = {}) }
+        "siege" -> QaSafeArea { WordSiegePracticeScreen(onExit = {}, matchmakingFallback = false) }
+        "sonharf" -> QaSafeArea {
+            PremierLobby(
+                language = "tr",
+                profile = null,
+                notice = "",
+                busy = false,
+                onLanguage = {},
+                onPlay = {},
+                onHome = {},
+            )
+        }
+        "harfyolu" -> QaSafeArea { LetterLadderGameScreen(onExit = {}) }
+        "leaderboard" -> QaSafeArea { CompetitionHubScreen(onBack = {}) }
+        "retention" -> QaSafeArea {
+            MainRetentionScreen(
+                backend = backend,
+                onBack = {},
+                onPlay = {},
+                onDailyChallenge = {},
+            )
+        }
+        "pro" -> QaSafeArea {
+            PremiumStoreScreen(
+                initialTab = 3,
+                onBack = {},
+                onMembershipChanged = {},
+                onCollection = {},
+            )
+        }
+        "settings" -> QaSafeArea { MainSettingsScreen(backend, {}, {}, {}) }
         else -> PremiumAdultApp(onSignedOut = {})
     }
 }
