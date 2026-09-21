@@ -42,7 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.SupabaseProvider
 
-/** Unified Pro startup shell: language -> auth -> premium product. */
+/** Unified Pro startup shell: language -> auth -> professional product. */
 @Composable
 fun StableV1App() {
     val context = LocalContext.current
@@ -81,7 +81,7 @@ fun StableV1App() {
         return
     }
 
-    PremiumUnifiedProApp(onSignedOut = { authenticated = false })
+    ProfessionalUnifiedApp(onSignedOut = { authenticated = false })
 }
 
 /**
