@@ -160,13 +160,13 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                         onBack = { destination = ProfessionalDestination.HOME },
                     )
 
-                    ProfessionalDestination.PROFILE -> MainPlayerProfileScreen(
-                        backend,
-                        { destination = ProfessionalDestination.PROFILE_DETAILS },
-                        { destination = ProfessionalDestination.PRO },
-                        { destination = ProfessionalDestination.COLLECTION },
-                        { destination = ProfessionalDestination.SETTINGS },
-                        { destination = ProfessionalDestination.SOCIAL },
+                    ProfessionalDestination.PROFILE -> ProfessionalProfileScreen(
+                        backend = backend,
+                        onEdit = { destination = ProfessionalDestination.PROFILE_DETAILS },
+                        onPro = { destination = ProfessionalDestination.PRO },
+                        onCollection = { destination = ProfessionalDestination.COLLECTION },
+                        onSettings = { destination = ProfessionalDestination.SETTINGS },
+                        onSocial = { destination = ProfessionalDestination.SOCIAL },
                     )
 
                     ProfessionalDestination.COLLECTION -> PlayerCollectionScreen(backend) {
@@ -202,7 +202,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                         leaveGame()
                     }
 
-                    ProfessionalDestination.SOCIAL -> MainSocialScreen(
+                    ProfessionalDestination.SOCIAL -> ProfessionalSocialScreen(
                         backend = backend,
                         onPlay = { openGame(ProfessionalDestination.LAST_LETTER, lastLetterLanguage) },
                         onSiege = { openGame(ProfessionalDestination.SIEGE, siegeLanguage) },
