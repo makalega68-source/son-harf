@@ -17,7 +17,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/** Shared application palette. Every mode resolves from this single premium theme source. */
+/** Shared semantic palette. Both game modes and all shell screens resolve from one source. */
 internal object MainUi {
     val Background: Color get() = SonHarfTheme.Background
     val Surface: Color get() = SonHarfTheme.Surface
@@ -43,16 +43,15 @@ internal object MainUi {
     val Purple: Color get() = SonHarfTheme.Lavender
 }
 
-/** Compact radius hierarchy for a more serious word-game UI. */
 internal object MainUiShape {
-    val Control = RoundedCornerShape(11.dp)
+    val Control = RoundedCornerShape(12.dp)
     val Card = RoundedCornerShape(16.dp)
     val Hero = RoundedCornerShape(20.dp)
     val Tile = RoundedCornerShape(9.dp)
     val Pill = RoundedCornerShape(99.dp)
 }
 
-// Legacy tokens intentionally resolve to the same application-wide palette.
+// Compatibility tokens used by older screens, all bound to the same native theme.
 internal val PortalBg: Color get() = SonHarfTheme.Background
 internal val PortalCard: Color get() = SonHarfTheme.Surface
 internal val PortalText: Color get() = SonHarfTheme.TextPrimary
@@ -69,12 +68,61 @@ internal fun PremiumScreenBackground(modifier: Modifier = Modifier) {
             Brush.verticalGradient(
                 listOf(
                     SonHarfTheme.Background,
-                    SonHarfTheme.Surface,
+                    Color(0xFF171E2B),
                     SonHarfTheme.Background,
                 ),
             ),
         ),
-    )
+    ) {
+        NativePackBackdrop(Modifier.matchParentSize())
+    }
+}
+
+/** Atomic card primitive used by the rebuilt Native Android surfaces. */
+@Composable
+internal fun AppCard(
+    modifier: Modifier = Modifier,
+    accent: Color? = null,
+    contentPadding: PaddingValues = PaddingValues(16.dp),
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        modifier = modifier,
+        shape = MainUiShape.Card,
+        color = MainUi.Surface,
+        border = BorderStroke(1.dp, accent?.copy(alpha = .30f) ?: MainUi.Border),
+        shadowElevation = 1.dp,
+        tonalElevation = 0.dp,
+    ) {
+        Column(Modifier.padding(contentPadding), content = content)
+    }
+}
+
+/** Atomic primary/secondary action primitive; default action is the approved mint green. */
+@Composable
+internal fun AppButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    containerColor: Color = SonHarfTheme.Primary,
+    contentColor: Color = SonHarfTheme.OnPrimary,
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.heightIn(min = 52.dp),
+        enabled = enabled,
+        shape = MainUiShape.Control,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = containerColor,
+            contentColor = contentColor,
+            disabledContainerColor = SonHarfTheme.DisabledBackground,
+            disabledContentColor = SonHarfTheme.DisabledContent,
+        ),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp, pressedElevation = 0.dp),
+    ) {
+        Text(text, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = .25.sp)
+    }
 }
 
 @Composable
@@ -82,17 +130,7 @@ internal fun PremiumCard(
     modifier: Modifier = Modifier,
     accent: Color? = null,
     content: @Composable ColumnScope.() -> Unit,
-) {
-    Surface(
-        modifier = modifier,
-        shape = MainUiShape.Card,
-        color = MainUi.Surface,
-        border = BorderStroke(1.dp, accent?.copy(alpha = .20f) ?: MainUi.Border),
-        shadowElevation = 0.dp,
-    ) {
-        Column(Modifier.padding(16.dp), content = content)
-    }
-}
+) = AppCard(modifier = modifier, accent = accent, content = content)
 
 @Composable
 internal fun PremiumPrimaryButton(
@@ -100,23 +138,7 @@ internal fun PremiumPrimaryButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-) {
-    Button(
-        onClick = onClick,
-        modifier = modifier.heightIn(min = 54.dp),
-        enabled = enabled,
-        shape = MainUiShape.Control,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = MainUi.Blue,
-            contentColor = Color.White,
-            disabledContainerColor = SonHarfTheme.DisabledBackground,
-            disabledContentColor = SonHarfTheme.DisabledContent,
-        ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-    ) {
-        Text(text, fontSize = 14.sp, fontWeight = FontWeight.Black, letterSpacing = .2.sp)
-    }
-}
+) = AppButton(text = text, onClick = onClick, modifier = modifier, enabled = enabled)
 
 @Composable
 internal fun PremiumAccentPill(
@@ -126,9 +148,9 @@ internal fun PremiumAccentPill(
 ) {
     Surface(
         modifier = modifier,
-        color = color.copy(alpha = .08f),
+        color = color.copy(alpha = .14f),
         shape = MainUiShape.Pill,
-        border = BorderStroke(1.dp, color.copy(alpha = .18f)),
+        border = BorderStroke(1.dp, color.copy(alpha = .35f)),
     ) {
         Text(
             text = text,
@@ -145,9 +167,9 @@ internal fun MainSectionTitle(title: String) {
     Text(
         text = title,
         color = MainUi.Text,
-        fontSize = 14.sp,
+        fontSize = 13.sp,
         fontWeight = FontWeight.Black,
-        letterSpacing = .15.sp,
+        letterSpacing = .35.sp,
     )
 }
 
@@ -157,9 +179,9 @@ internal fun MainSectionTitle(title: String, action: String, onAction: () -> Uni
         Text(
             text = title,
             color = MainUi.Text,
-            fontSize = 14.sp,
+            fontSize = 13.sp,
             fontWeight = FontWeight.Black,
-            letterSpacing = .15.sp,
+            letterSpacing = .35.sp,
             modifier = Modifier.weight(1f),
         )
         Surface(
@@ -170,7 +192,7 @@ internal fun MainSectionTitle(title: String, action: String, onAction: () -> Uni
         ) {
             Text(
                 text = action,
-                color = MainUi.Blue,
+                color = SonHarfTheme.SoftBlue,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
@@ -195,19 +217,19 @@ internal fun MainScreenHeader(
                 shape = MainUiShape.Control,
                 color = MainUi.Surface,
                 border = BorderStroke(1.dp, MainUi.Border),
-                shadowElevation = 0.dp,
+                shadowElevation = 1.dp,
             ) {
                 Icon(
                     Icons.Rounded.ArrowBack,
                     contentDescription = sh("Geri", "Back"),
-                    tint = MainUi.Blue,
+                    tint = SonHarfTheme.SoftBlue,
                     modifier = Modifier.padding(14.dp).size(20.dp),
                 )
             }
             Spacer(Modifier.width(12.dp))
         }
         Column(Modifier.weight(1f)) {
-            Text(title, color = MainUi.Text, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            Text(title, color = MainUi.Text, fontSize = 23.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(3.dp))
             Text(subtitle, color = MainUi.Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium)
         }
@@ -217,12 +239,12 @@ internal fun MainScreenHeader(
                 shape = MainUiShape.Control,
                 color = MainUi.Surface,
                 border = BorderStroke(1.dp, MainUi.Border),
-                shadowElevation = 0.dp,
+                shadowElevation = 1.dp,
             ) {
                 Icon(
                     actionIcon,
                     contentDescription = actionDescription,
-                    tint = MainUi.GrayBlue,
+                    tint = SonHarfTheme.SoftBlue,
                     modifier = Modifier.padding(14.dp).size(20.dp),
                 )
             }
@@ -237,10 +259,10 @@ internal fun MainMetricCard(value: String, label: String, modifier: Modifier = M
         shape = MainUiShape.Card,
         color = MainUi.Surface,
         border = BorderStroke(1.dp, MainUi.Border),
-        shadowElevation = 0.dp,
+        shadowElevation = 1.dp,
     ) {
         Column(Modifier.padding(14.dp)) {
-            Text(value, color = MainUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Text(value, color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(3.dp))
             Text(label, color = MainUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
         }
