@@ -74,11 +74,12 @@ internal fun GameBottomNavigation(
 @Composable
 internal fun GameTopBar(
     title: String,
+    subtitle: String? = null,
     onBack: (() -> Unit)? = null,
     trailing: (@Composable RowScope.() -> Unit)? = null,
 ) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 12.dp, vertical = 6.dp),
+        Modifier.fillMaxWidth().heightIn(min = if (subtitle == null) 56.dp else 64.dp).padding(horizontal = 4.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (onBack != null) {
@@ -87,14 +88,25 @@ internal fun GameTopBar(
             }
             Spacer(Modifier.width(2.dp))
         }
-        Text(
-            title,
-            Modifier.weight(1f),
-            color = GameColors.TextPrimary,
-            style = MaterialTheme.typography.headlineSmall,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                color = GameColors.TextPrimary,
+                style = MaterialTheme.typography.headlineSmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (!subtitle.isNullOrBlank()) {
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    subtitle,
+                    color = GameColors.TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
         trailing?.invoke(this)
     }
 }
@@ -108,11 +120,11 @@ internal fun GameTab(text: String, selected: Boolean, onClick: () -> Unit, modif
         color = if (selected) GameColors.PrimaryBlue.copy(alpha = .18f) else GameColors.SecondarySurface,
         border = BorderStroke(1.dp, if (selected) GameColors.PrimaryBlue else GameColors.Border),
     ) {
-        Box(Modifier.padding(horizontal = 14.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.padding(horizontal = 10.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
             Text(
                 text,
                 color = if (selected) GameColors.TextPrimary else GameColors.TextSecondary,
-                style = MaterialTheme.typography.labelMedium,
+                style = MaterialTheme.typography.labelSmall,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -122,7 +134,7 @@ internal fun GameTab(text: String, selected: Boolean, onClick: () -> Unit, modif
 
 @Composable
 internal fun SegmentedGameTabs(labels: List<String>, selectedIndex: Int, onSelected: (Int) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
         labels.forEachIndexed { index, label ->
             GameTab(label, index == selectedIndex, { onSelected(index) }, Modifier.weight(1f))
         }
