@@ -26,7 +26,6 @@ class WordSiegeFriendInviteContractTest {
         assertTrue(migration.contains("private.word_siege_new_board_v1()"))
         assertTrue(migration.contains("'friend_game_started'"))
 
-        // Expiry must commit rather than be rolled back by a PL/pgSQL exception.
         assertTrue(migration.contains("set status = 'expired', responded_at = now()"))
         assertFalse(migration.contains("raise exception 'word_siege_invite_expired'"))
 
@@ -45,7 +44,7 @@ class WordSiegeFriendInviteContractTest {
             "app/src/main/java/com/sonharf/game/MainSocialScreen.kt",
         ).readText()
         val shell = projectFile(
-            "app/src/main/java/com/sonharf/game/UnifiedProApp.kt",
+            "app/src/main/java/com/sonharf/game/PremiumAdultApp.kt",
         ).readText()
 
         assertTrue(backend.contains("getIncomingWordSiegeInvites"))
@@ -54,15 +53,18 @@ class WordSiegeFriendInviteContractTest {
         assertTrue(backend.contains("invite_friend_to_word_siege_v1"))
         assertTrue(backend.contains("respond_word_siege_invite_v1"))
 
-        assertTrue(social.contains("KELİME TAHTI DAVETLERİ"))
+        assertTrue(social.contains("KELİME KUŞATMASI DAVETLERİ"))
         assertTrue(social.contains("SON HARF DAVETLERİ"))
         assertTrue(social.contains("backend.inviteFriendToWordSiege(friend.id"))
         assertTrue(social.contains("backend.inviteFriendToWordSiege(rival.opponentId"))
         assertTrue(social.contains("backend.respondWordSiegeInvite(invite.id, true)"))
         assertTrue(social.contains("backend.respondGameInvite(invite.id, true)"))
+        assertTrue(social.contains("PurchasedPanel("))
+        assertTrue(social.contains("PurchasedButton("))
 
-        assertTrue(shell.contains("onPlay = { destination = UnifiedDestination.GAME }"))
-        assertTrue(shell.contains("onSiege = { destination = UnifiedDestination.SIEGE }"))
+        assertTrue(shell.contains("AdultDestination.LAST_LETTER -> OnlineGameScreenV6()"))
+        assertTrue(shell.contains("AdultDestination.SIEGE -> WordSiegeExperienceScreen"))
+        assertTrue(shell.contains("onSiege = { openGame(AdultDestination.SIEGE"))
     }
 
     private fun projectFile(path: String): File =
