@@ -69,18 +69,22 @@ class LetterLadderUxRegressionTest {
     }
 
     @Test
-    fun harfYoluUsesRestrainedStaticAdultBackdrop() {
+    fun harfYoluUsesStaticSiegeRoyalePuzzleBackdrop() {
         val source = projectFile("app/src/main/java/com/sonharf/game/LetterLadderGame.kt").readText()
         val backdrop = projectFile("app/src/main/java/com/sonharf/game/HarfYoluBackdrop.kt").readText()
         assertTrue(source.contains("HarfYoluBackdrop(Modifier.fillMaxSize())"))
         assertFalse(source.contains("FirstRunLanguageBackdrop(Modifier.fillMaxSize())"))
         assertFalse(backdrop.contains("rememberInfiniteTransition"))
-        assertTrue(backdrop.contains("0xFF365F53"))
-        assertTrue(backdrop.contains("0xFF718693"))
-        assertTrue(backdrop.contains("0xFFAD6A57"))
-        assertTrue(backdrop.contains("0xFFF4F2EC"))
-        assertFalse(backdrop.contains("0xFF7C3AED"))
-        assertFalse(backdrop.contains("0xFFF97316"))
+        assertTrue(backdrop.contains("SonHarfTheme.Primary"))
+        assertTrue(backdrop.contains("SonHarfTheme.Turquoise"))
+        assertTrue(backdrop.contains("SonHarfTheme.Purple"))
+        assertTrue(backdrop.contains("SonHarfTheme.ActionOrange"))
+        assertTrue(backdrop.contains("0xFFE2EEFF"))
+        assertTrue(backdrop.contains("0xFFEAF3FF"))
+        assertFalse(backdrop.contains("0xFF365F53"))
+        assertFalse(backdrop.contains("0xFF718693"))
+        assertFalse(backdrop.contains("0xFFAD6A57"))
+        assertFalse(backdrop.contains("0xFFF4F2EC"))
     }
 
     @Test
