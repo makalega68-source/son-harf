@@ -1,21 +1,14 @@
 package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -36,9 +29,9 @@ private enum class AdultDestination {
 }
 
 /**
- * Active shell for the APK-v2 line. It keeps the original server-authoritative game, economy,
- * profile and social screens, but replaces the casual/rainbow navigation layer with a restrained
- * four-tab word-game shell.
+ * Active shell for the verified APK-v2 source line.
+ * Server-authoritative game, economy, profile and social flows are preserved; only visual chrome
+ * is supplied by the real purchased game-UI asset layer.
  */
 @Composable
 fun PremiumAdultApp(onSignedOut: () -> Unit) {
@@ -295,7 +288,7 @@ private fun AdultModesSection(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         MainSectionTitle(sh("OYUN MODLARI", "GAME MODES"))
         AdultModeRow(
-            icon = Icons.Rounded.GridView,
+            asset = PurchasedUiAsset.ICON_SWORDS,
             title = sh("Kelime Kuşatması", "Word Siege"),
             subtitle = sh("Taktik alan savaşı", "Tactical territory battle"),
             language = siegeLanguage,
@@ -306,7 +299,7 @@ private fun AdultModesSection(
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             AdultModeCompact(
                 modifier = Modifier.weight(1f),
-                icon = Icons.Rounded.Bolt,
+                asset = PurchasedUiAsset.ICON_REPEAT,
                 title = sh("Son Harf", "Last Letter"),
                 subtitle = sh("Hızlı 1v1 düello", "Fast 1v1 duel"),
                 language = lastLetterLanguage,
@@ -315,7 +308,7 @@ private fun AdultModesSection(
             )
             AdultModeCompact(
                 modifier = Modifier.weight(1f),
-                icon = Icons.Rounded.Abc,
+                asset = PurchasedUiAsset.ICON_GAMES,
                 title = sh("Harf Yolu", "Letter Path"),
                 subtitle = sh("5 harfli rota", "Five-letter route"),
                 language = letterPathLanguage,
@@ -325,7 +318,7 @@ private fun AdultModesSection(
         }
         if (seriesAccess) {
             AdultModeRow(
-                icon = Icons.Rounded.MilitaryTech,
+                asset = PurchasedUiAsset.ICON_TROPHY,
                 title = sh("Seri Oyun", "Series"),
                 subtitle = sh("PRO seri karşılaşmaları", "PRO series matches"),
                 language = seriesLanguage,
@@ -339,7 +332,7 @@ private fun AdultModesSection(
 
 @Composable
 private fun AdultModeRow(
-    icon: ImageVector,
+    asset: PurchasedUiAsset,
     title: String,
     subtitle: String,
     language: String,
@@ -347,29 +340,35 @@ private fun AdultModeRow(
     primary: Boolean,
     onClick: () -> Unit,
 ) {
-    val accent = if (primary) SonHarfTheme.Primary else SonHarfTheme.SoftBlue
-    Surface(
-        onClick = onClick,
-        shape = MainUiShape.Card,
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(1.dp, if (primary) accent.copy(alpha = .32f) else SonHarfTheme.Border),
-        shadowElevation = 0.dp,
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth().heightIn(min = if (primary) 150.dp else 126.dp),
+        asset = if (primary) PurchasedUiAsset.PANEL_LARGE else PurchasedUiAsset.PANEL_MEDIUM,
+        contentPadding = PaddingValues(horizontal = 22.dp, vertical = 20.dp),
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Surface(shape = RoundedCornerShape(12.dp), color = accent.copy(alpha = .10f)) {
-                Icon(icon, null, tint = accent, modifier = Modifier.padding(10.dp).size(24.dp))
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PurchasedAsset(asset, Modifier.size(if (primary) 64.dp else 52.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        title,
+                        color = Color(0xFF563A2A),
+                        fontSize = if (primary) 20.sp else 16.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(subtitle, color = Color(0xFF7D5C47), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+                AdultLanguageSwitch(language, onLanguage)
             }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(title, color = SonHarfTheme.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Black)
-                Text(subtitle, color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
-            }
-            AdultLanguageSwitch(language, onLanguage)
-            Spacer(Modifier.width(7.dp))
-            Icon(Icons.Rounded.PlayArrow, null, tint = accent, modifier = Modifier.size(22.dp))
+            PurchasedButton(
+                text = sh("OYNA", "PLAY"),
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth(),
+                style = if (primary) PurchasedButtonStyle.PRIMARY else PurchasedButtonStyle.SECONDARY,
+                leadingAsset = if (primary) PurchasedUiAsset.ICON_SWORDS else null,
+            )
         }
     }
 }
@@ -377,64 +376,63 @@ private fun AdultModeRow(
 @Composable
 private fun AdultModeCompact(
     modifier: Modifier,
-    icon: ImageVector,
+    asset: PurchasedUiAsset,
     title: String,
     subtitle: String,
     language: String,
     onLanguage: (String) -> Unit,
     onClick: () -> Unit,
 ) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier.heightIn(min = 138.dp),
-        shape = MainUiShape.Card,
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(1.dp, SonHarfTheme.Border),
-        shadowElevation = 0.dp,
+    PurchasedPanel(
+        modifier = modifier.heightIn(min = 190.dp),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 15.dp, vertical = 16.dp),
     ) {
         Column(
-            Modifier.fillMaxSize().padding(13.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+            Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = RoundedCornerShape(10.dp), color = SonHarfTheme.SurfaceSecondary) {
-                    Icon(icon, null, tint = SonHarfTheme.SoftBlue, modifier = Modifier.padding(8.dp).size(20.dp))
-                }
-                Spacer(Modifier.weight(1f))
-                AdultLanguageSwitch(language, onLanguage)
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(title, color = SonHarfTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(subtitle, color = SonHarfTheme.TextSecondary, fontSize = 9.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(sh("OYNA", "PLAY"), color = SonHarfTheme.Primary, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.width(3.dp))
-                    Icon(Icons.Rounded.PlayArrow, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(14.dp))
-                }
-            }
+            PurchasedAsset(asset, Modifier.size(48.dp))
+            Text(
+                title,
+                color = Color(0xFF563A2A),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                subtitle,
+                color = Color(0xFF7D5C47),
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+            AdultLanguageSwitch(language, onLanguage)
+            PurchasedButton(
+                text = sh("OYNA", "PLAY"),
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                style = PurchasedButtonStyle.SECONDARY,
+            )
         }
     }
 }
 
 @Composable
 private fun AdultLanguageSwitch(language: String, onLanguage: (String) -> Unit) {
-    Surface(shape = RoundedCornerShape(99.dp), color = SonHarfTheme.SurfaceSecondary) {
-        Row(Modifier.padding(2.dp)) {
-            listOf("tr" to "TR", "en" to "EN").forEach { (code, label) ->
-                Surface(
-                    onClick = { onLanguage(code) },
-                    shape = RoundedCornerShape(99.dp),
-                    color = if (language == code) SonHarfTheme.Primary else Color.Transparent,
-                ) {
-                    Text(
-                        label,
-                        Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                        color = if (language == code) Color.White else SonHarfTheme.TextSecondary,
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                }
-            }
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        listOf("tr" to "TR", "en" to "EN").forEach { (code, label) ->
+            PurchasedButton(
+                text = label,
+                onClick = { onLanguage(code) },
+                modifier = Modifier.width(48.dp).height(38.dp),
+                style = if (language == code) PurchasedButtonStyle.PURPLE else PurchasedButtonStyle.SECONDARY,
+            )
         }
     }
 }
@@ -444,30 +442,38 @@ private fun AdultQuickActions(onCompete: () -> Unit, onPro: () -> Unit, onCollec
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         MainSectionTitle(sh("HIZLI ERİŞİM", "QUICK ACCESS"))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            AdultQuickAction(Modifier.weight(1f), Icons.Rounded.EmojiEvents, sh("Lig", "League"), onCompete)
-            AdultQuickAction(Modifier.weight(1f), Icons.Rounded.WorkspacePremium, "PRO", onPro)
-            AdultQuickAction(Modifier.weight(1f), Icons.Rounded.CollectionsBookmark, sh("Koleksiyon", "Collection"), onCollection)
+            AdultQuickAction(Modifier.weight(1f), PurchasedUiAsset.ICON_RANKING, sh("Lig", "League"), onCompete)
+            AdultQuickAction(Modifier.weight(1f), PurchasedUiAsset.ICON_CROWN, "PRO", onPro)
+            AdultQuickAction(Modifier.weight(1f), PurchasedUiAsset.ICON_GIFT, sh("Koleksiyon", "Collection"), onCollection)
         }
     }
 }
 
 @Composable
-private fun AdultQuickAction(modifier: Modifier, icon: ImageVector, label: String, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        modifier = modifier,
-        shape = RoundedCornerShape(13.dp),
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(1.dp, SonHarfTheme.Border),
-        shadowElevation = 0.dp,
+private fun AdultQuickAction(
+    modifier: Modifier,
+    asset: PurchasedUiAsset,
+    label: String,
+    onClick: () -> Unit,
+) {
+    PurchasedPanel(
+        modifier = modifier.heightIn(min = 116.dp),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 9.dp, vertical = 12.dp),
     ) {
         Column(
-            Modifier.padding(horizontal = 8.dp, vertical = 11.dp),
+            Modifier.fillMaxWidth(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
         ) {
-            Icon(icon, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(20.dp))
-            Text(label, color = SonHarfTheme.TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
+            PurchasedAsset(asset, Modifier.size(44.dp))
+            Text(label, color = Color(0xFF563A2A), fontSize = 10.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center, maxLines = 1)
+            PurchasedButton(
+                text = sh("AÇ", "OPEN"),
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth().height(42.dp),
+                style = PurchasedButtonStyle.PURPLE,
+            )
         }
     }
 }
@@ -480,31 +486,44 @@ private fun AdultBottomBar(
     onShop: () -> Unit,
     onProfile: () -> Unit,
 ) {
-    NavigationBar(
-        containerColor = SonHarfTheme.NavigationSurface,
-        tonalElevation = 0.dp,
-        windowInsets = NavigationBarDefaults.windowInsets,
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
+        asset = PurchasedUiAsset.PANEL_MEDIUM,
+        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
     ) {
-        AdultNavItem(destination == AdultDestination.HOME, Icons.Rounded.Home, sh("Ana Sayfa", "Home"), onHome)
-        AdultNavItem(destination == AdultDestination.SOCIAL, Icons.Rounded.Groups, sh("Sosyal", "Social"), onSocial)
-        AdultNavItem(destination == AdultDestination.SHOP, Icons.Rounded.Storefront, sh("Mağaza", "Shop"), onShop)
-        AdultNavItem(destination == AdultDestination.PROFILE, Icons.Rounded.Person, sh("Profil", "Profile"), onProfile)
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PurchasedNavItem(
+                label = sh("Ana Sayfa", "Home"),
+                icon = PurchasedUiAsset.NAV_HOME,
+                selected = destination == AdultDestination.HOME,
+                onClick = onHome,
+                modifier = Modifier.weight(1f),
+            )
+            PurchasedNavItem(
+                label = sh("Sosyal", "Social"),
+                icon = PurchasedUiAsset.NAV_SOCIAL,
+                selected = destination == AdultDestination.SOCIAL,
+                onClick = onSocial,
+                modifier = Modifier.weight(1f),
+            )
+            PurchasedNavItem(
+                label = sh("Mağaza", "Shop"),
+                icon = PurchasedUiAsset.NAV_SHOP,
+                selected = destination == AdultDestination.SHOP,
+                onClick = onShop,
+                modifier = Modifier.weight(1f),
+            )
+            PurchasedNavItem(
+                label = sh("Profil", "Profile"),
+                icon = PurchasedUiAsset.NAV_PROFILE,
+                selected = destination == AdultDestination.PROFILE,
+                onClick = onProfile,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
-}
-
-@Composable
-private fun RowScope.AdultNavItem(selected: Boolean, icon: ImageVector, label: String, onClick: () -> Unit) {
-    NavigationBarItem(
-        selected = selected,
-        onClick = onClick,
-        icon = { Icon(icon, null, modifier = Modifier.size(21.dp)) },
-        label = { Text(label, fontSize = 9.sp, fontWeight = if (selected) FontWeight.Black else FontWeight.SemiBold) },
-        colors = NavigationBarItemDefaults.colors(
-            selectedIconColor = SonHarfTheme.Primary,
-            selectedTextColor = SonHarfTheme.Primary,
-            indicatorColor = SonHarfTheme.PrimarySoft,
-            unselectedIconColor = SonHarfTheme.TextSecondary,
-            unselectedTextColor = SonHarfTheme.TextSecondary,
-        ),
-    )
 }
