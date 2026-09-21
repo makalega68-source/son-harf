@@ -301,7 +301,8 @@ private fun WordSiegePracticeContent(
         }
     }
 
-    Surface(Modifier.fillMaxSize(), color = WordSiegeGameUi.Background) {
+    Box(Modifier.fillMaxSize()) {
+        PurchasedGameBackdrop(Modifier.matchParentSize())
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize().padding(horizontal = 4.dp, vertical = 2.dp),
         ) {
@@ -323,7 +324,7 @@ private fun WordSiegePracticeContent(
                         verticalArrangement = Arrangement.Center,
                     ) {
                         Text(
-                            sh("KELİME TAHTI", "WORD THRONE"),
+                            sh("KELİME KUŞATMASI", "WORD SIEGE"),
                             color = WordSiegeGameUi.Text,
                             fontSize = if (compact) 16.sp else 18.sp,
                             lineHeight = if (compact) 18.sp else 21.sp,
@@ -560,24 +561,14 @@ private fun WordSiegePracticeContent(
                             exchangeSelection = emptySet(); showExchange = true
                         }
                     }
-                    Row(Modifier.fillMaxWidth()) {
-                        Button(
-                            onClick = ::applyPlayerMove,
-                            shape = RoundedCornerShape(12.dp),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
-                            enabled = canPlayerAct && placements.isNotEmpty(),
-                            modifier = Modifier.weight(1f).height(52.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = PracticePlayerAccent,
-                                contentColor = Color.White,
-                                disabledContainerColor = WordSiegeGameUi.DisabledBackground,
-                                disabledContentColor = WordSiegeGameUi.DisabledContent,
-                            ),
-                            contentPadding = PaddingValues(horizontal = 4.dp),
-                        ) {
-                            Text(sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"), fontSize = 14.sp, fontWeight = FontWeight.Black)
-                        }
-                    }
+                    PurchasedButton(
+              text = sh("HAMLEYİ ONAYLA", "CONFIRM MOVE"),
+              onClick = ::applyPlayerMove,
+              enabled = canPlayerAct && placements.isNotEmpty(),
+              modifier = Modifier.fillMaxWidth().height(56.dp),
+              style = PurchasedButtonStyle.PRIMARY,
+              leadingAsset = PurchasedUiAsset.ICON_CHECK,
+          )
                 } else {
                     val won = state.winnerOwner == 1
                     val draw = state.winnerOwner == null
@@ -594,7 +585,7 @@ private fun WordSiegePracticeContent(
                         ) {
                             Column(Modifier.weight(1f)) {
                                 Text(
-                                    if (won) sh("TAHT SENİN!", "THE THRONE IS YOURS!")
+                                    if (won) sh("KUŞATMA ZAFERİ!", "SIEGE VICTORY!")
                                     else if (draw) sh("BERABERE", "DRAW")
                                     else sh("${botProfile.name.uppercase()} KAZANDI", "${botProfile.name.uppercase()} WON"),
                                     color = color,
