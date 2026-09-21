@@ -8,51 +8,52 @@ import org.junit.Test
 
 class CalmLayeredThemeContractTest {
     @Test
-    fun premiumSystemDefinesSiegeRoyaleAndBlackSemanticLayers() {
-        val theme = source("SonHarfTheme.kt")
-        listOf(
-            "val Background: Color get()",
-            "val Surface: Color get()",
-            "val SurfaceSecondary: Color get()",
-            "val SurfaceElevated: Color get()",
-            "val NavigationSurface: Color get()",
-            "val ModalSurface: Color get()",
-            "val GameSurface: Color get()",
-            "val GameTile: Color get()",
-            "val GameTileBorder: Color get()",
-            "val Primary: Color get()",
-            "val Turquoise: Color get()",
-            "val ActionOrange: Color get()",
-            "val PlayGreen: Color get()",
-            "val HeroStart: Color get()",
-            "val TextPrimary: Color get()",
-            "val TextSecondary: Color get()",
-        ).forEach { token -> assertTrue("Missing theme layer: $token", theme.contains(token)) }
+    fun purchasedThemeUsesRealAssetAtlasAndReusableGameComponents() {
+        val purchased = source("PurchasedGameTheme.kt")
+        val primitives = source("AppUiPrimitives.kt")
 
-        assertTrue(theme.contains("internal object SiegeRoyalePalette"))
-        assertTrue(theme.contains("Color(0xFF246EDB)"))
-        assertTrue(theme.contains("Color(0xFF17A7B8)"))
-        assertTrue(theme.contains("Color(0xFF3AAF50)"))
-        assertTrue(theme.contains("Color(0xFFF0A128)"))
-        assertTrue(theme.contains("Color(0xFFEAF3FF)"))
-        assertTrue(theme.contains("internal object BlackThemePalette"))
-        assertTrue(theme.contains("val IsDark: Boolean get() = SonHarfCosmetics.blackThemeActive"))
-        assertFalse(theme.contains("Color(0xFF365F53)"))
-        assertFalse(theme.contains("Color(0xFFF4F2EC)"))
+        listOf(
+            "PANEL_LARGE",
+            "PANEL_MEDIUM",
+            "PANEL_SMALL",
+            "BUTTON_GREEN",
+            "BUTTON_BLUE",
+            "NAV_HOME",
+            "NAV_SOCIAL",
+            "NAV_SHOP",
+            "NAV_PROFILE",
+            "LEADERBOARD_ROW",
+            "OLD_MISSION_ROW",
+            "OLD_DAILY_REWARD",
+            "SHOP_SHELVES",
+            "SEASON_BANNER",
+        ).forEach { asset -> assertTrue("Missing purchased asset crop: $asset", purchased.contains(asset)) }
+
+        listOf(
+            "PurchasedPanel",
+            "PurchasedButton",
+            "PurchasedIconButton",
+            "PurchasedSectionHeader",
+            "PurchasedCurrencyBar",
+            "PurchasedAvatarFrame",
+            "PurchasedProgress",
+            "PurchasedNavItem",
+        ).forEach { component -> assertTrue("Missing purchased UI component: $component", purchased.contains("fun $component")) }
+
+        assertTrue(primitives.contains("PurchasedGameBackdrop"))
+        assertTrue(primitives.contains("PurchasedPanel"))
+        assertTrue(primitives.contains("PurchasedButton"))
+        assertFalse(primitives.contains("Surface(onClick"))
     }
 
     @Test
-    fun launchChromeMatchesNewGameTheme() {
-        val primitives = source("AppUiPrimitives.kt")
-        val styles = projectFile("app/src/main/res/values/styles.xml").readText()
-        assertTrue(primitives.contains("internal val PortalCard: Color get() = SonHarfTheme.Surface"))
-        assertTrue(primitives.contains("internal val PortalBlue: Color get() = SonHarfTheme.Primary"))
-        assertTrue(primitives.contains("PremiumPrimaryButton"))
-        assertTrue(primitives.contains("SonHarfTheme.PlayGreen"))
-        assertTrue(styles.contains("<item name=\"android:windowBackground\">#EAF3FF</item>"))
-        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#F9FCFF</item>"))
-        assertFalse(styles.contains("#F4F2EC"))
-        assertFalse(styles.contains("#0D0F12"))
+    fun atlasIsSelectedProductionAssetSetNotWholePurchasedPacks() {
+        val assetsDir = projectFile("app/src/main/assets")
+        val atlasParts = assetsDir.listFiles().orEmpty().filter { it.name.startsWith("purchased_ui_atlas_") && it.extension == "b64" }
+        assertTrue("Purchased atlas chunks missing", atlasParts.size == 4)
+        assertTrue("Atlas chunks unexpectedly empty", atlasParts.all { it.length() > 100L })
+        assertFalse("Purchased ZIP must not be packaged", assetsDir.walkTopDown().any { it.extension.equals("zip", true) })
+        assertFalse("PSD sources must not be packaged", assetsDir.walkTopDown().any { it.extension.equals("psd", true) })
     }
 
     private fun source(name: String) = projectFile("app/src/main/java/com/sonharf/game/$name").readText()
