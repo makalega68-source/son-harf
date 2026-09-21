@@ -2,25 +2,20 @@ package com.sonharf.game
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.setAvatarVisibility
@@ -56,7 +51,7 @@ internal fun MainSettingsScreen(
     }
 
     LazyColumn(
-        Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -71,7 +66,6 @@ internal fun MainSettingsScreen(
         item {
             MainSettingsGroup(sh("SES VE DOKUNUŞ", "AUDIO & HAPTICS")) {
                 MainToggleSetting(
-                    icon = Icons.Rounded.MusicNote,
                     title = sh("Müzik", "Music"),
                     subtitle = "Warm Beginnings",
                     checked = music,
@@ -79,9 +73,7 @@ internal fun MainSettingsScreen(
                     music = it
                     SonHarfPreferences.setMusicEnabled(context, it)
                 }
-                HorizontalDivider(color = MainUi.Border)
                 MainToggleSetting(
-                    icon = Icons.Rounded.VolumeUp,
                     title = sh("Ses efektleri", "Sound effects"),
                     subtitle = sh("Butonlar ve oyun geri bildirimleri", "Buttons and game feedback"),
                     checked = sound,
@@ -90,9 +82,7 @@ internal fun MainSettingsScreen(
                     SonHarfPreferences.setSoundEnabled(context, it)
                     if (it) SonHarfSoundFx.tap()
                 }
-                HorizontalDivider(color = MainUi.Border)
                 MainToggleSetting(
-                    icon = Icons.Rounded.Vibration,
                     title = sh("Titreşim", "Vibration"),
                     subtitle = sh("Kısa ve hafif dokunsal geri bildirim", "Short and light haptic feedback"),
                     checked = vibration,
@@ -104,23 +94,19 @@ internal fun MainSettingsScreen(
             }
         }
 
-        item {
-            ProfileOwnedThemesSection(backend)
-        }
+        item { ProfileOwnedThemesSection(backend) }
 
         item {
             MainSettingsGroup(sh("BİLDİRİMLER", "NOTIFICATIONS")) {
-                MainToggleSetting(Icons.Rounded.SportsEsports, sh("Oyun davetleri", "Game invitations"), sh("Arkadaşların düelloya çağırdığında", "When friends invite you to a duel"), gameInvites) {
+                MainToggleSetting(sh("Oyun davetleri", "Game invitations"), sh("Arkadaşların düelloya çağırdığında", "When friends invite you to a duel"), gameInvites) {
                     gameInvites = it
                     SonHarfPreferences.setGameInviteNotificationsEnabled(context, it)
                 }
-                HorizontalDivider(color = MainUi.Border)
-                MainToggleSetting(Icons.Rounded.GroupAdd, sh("Arkadaşlık istekleri", "Friend requests"), sh("Yeni arkadaşlık isteği geldiğinde", "When a new friend request arrives"), friendRequests) {
+                MainToggleSetting(sh("Arkadaşlık istekleri", "Friend requests"), sh("Yeni arkadaşlık isteği geldiğinde", "When a new friend request arrives"), friendRequests) {
                     friendRequests = it
                     SonHarfPreferences.setFriendRequestNotificationsEnabled(context, it)
                 }
-                HorizontalDivider(color = MainUi.Border)
-                MainToggleSetting(Icons.Rounded.Notifications, sh("Sistem duyuruları", "System announcements"), sh("Ödül, bakım ve önemli haberler", "Rewards, maintenance and important news"), systemNotifications) {
+                MainToggleSetting(sh("Sistem duyuruları", "System announcements"), sh("Ödül, bakım ve önemli haberler", "Rewards, maintenance and important news"), systemNotifications) {
                     systemNotifications = it
                     SonHarfPreferences.setSystemNotificationsEnabled(context, it)
                 }
@@ -130,23 +116,23 @@ internal fun MainSettingsScreen(
         item {
             MainSettingsGroup(sh("PROFİL GÖRÜNÜRLÜĞÜ", "PROFILE VISIBILITY")) {
                 MainToggleSetting(
-                    Icons.Rounded.Visibility,
-                    sh("Profil fotoğrafını göster", "Show profile photo"),
-                    sh("Arkadaşlar, lig ve maç yüzeylerinde", "On friends, league and match surfaces"),
-                    profileVisible,
+                    title = sh("Profil fotoğrafını göster", "Show profile photo"),
+                    subtitle = sh("Arkadaşlar, lig ve maç yüzeylerinde", "On friends, league and match surfaces"),
+                    checked = profileVisible,
                     enabled = !visibilityBusy,
                 ) { visible ->
-                    if (visibilityBusy) return@MainToggleSetting
-                    scope.launch {
-                        visibilityBusy = true
-                        runCatching { backend.setAvatarVisibility(hidden = !visible) }
-                            .onSuccess {
-                                profile = it
-                                profileVisible = it.avatarVisibility != "hidden"
-                                notice = sh("Profil görünürlüğü güncellendi.", "Profile visibility updated.")
-                            }
-                            .onFailure { notice = sh("Görünürlük güncellenemedi.", "Visibility could not be updated.") }
-                        visibilityBusy = false
+                    if (!visibilityBusy) {
+                        scope.launch {
+                            visibilityBusy = true
+                            runCatching { backend.setAvatarVisibility(hidden = !visible) }
+                                .onSuccess {
+                                    profile = it
+                                    profileVisible = it.avatarVisibility != "hidden"
+                                    notice = sh("Profil görünürlüğü güncellendi.", "Profile visibility updated.")
+                                }
+                                .onFailure { notice = sh("Görünürlük güncellenemedi.", "Visibility could not be updated.") }
+                            visibilityBusy = false
+                        }
                     }
                 }
                 Text(
@@ -159,7 +145,11 @@ internal fun MainSettingsScreen(
 
         item {
             MainSettingsGroup(sh("GİZLİLİK VE DESTEK", "PRIVACY & SUPPORT")) {
-                MainSettingsLink(Icons.Rounded.PrivacyTip, sh("Reklam gizlilik seçenekleri", "Ad privacy options"), sh("Google UMP tercihlerini yönet", "Manage Google UMP choices")) {
+                MainSettingsLink(
+                    asset = PurchasedUiAsset.ICON_SETTINGS,
+                    title = sh("Reklam gizlilik seçenekleri", "Ad privacy options"),
+                    subtitle = sh("Google UMP tercihlerini yönet", "Manage Google UMP choices"),
+                ) {
                     val activity = AdPrivacyManager.findActivity(context)
                     if (activity == null || !AdPrivacyManager.privacyOptionsRequired) {
                         notice = sh("Bölgen için ayrıca bir reklam gizlilik formu gerekmiyor.", "No additional ad privacy form is required for your region.")
@@ -170,8 +160,11 @@ internal fun MainSettingsScreen(
                         }
                     }
                 }
-                HorizontalDivider(color = MainUi.Border)
-                MainSettingsLink(Icons.Rounded.Help, sh("Yardım", "Help"), sh("Oyun ve hesap yardımı", "Game and account help")) { helpDialog = true }
+                MainSettingsLink(
+                    asset = PurchasedUiAsset.ICON_CHAT,
+                    title = sh("Yardım", "Help"),
+                    subtitle = sh("Oyun ve hesap yardımı", "Game and account help"),
+                ) { helpDialog = true }
             }
         }
 
@@ -182,23 +175,39 @@ internal fun MainSettingsScreen(
                     Text(email, color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.height(3.dp))
                 }
-                MainSettingsLink(Icons.Rounded.ManageAccounts, sh("Hesap ve gizlilik", "Account & privacy"), sh("Engellenenler ve hesap silme", "Blocked users and account deletion"), onAccount)
-                HorizontalDivider(color = MainUi.Border)
-                MainSettingsLink(Icons.Rounded.Logout, sh("Çıkış yap", "Sign out"), sh("Bu cihazdaki oturumu kapat", "End the session on this device")) { logoutDialog = true }
+                MainSettingsLink(
+                    asset = PurchasedUiAsset.NAV_PROFILE,
+                    title = sh("Hesap ve gizlilik", "Account & privacy"),
+                    subtitle = sh("Engellenenler ve hesap silme", "Blocked users and account deletion"),
+                    onClick = onAccount,
+                )
+                MainSettingsLink(
+                    asset = PurchasedUiAsset.ICON_CLOSE,
+                    title = sh("Çıkış yap", "Sign out"),
+                    subtitle = sh("Bu cihazdaki oturumu kapat", "End the session on this device"),
+                ) { logoutDialog = true }
             }
         }
 
         notice?.let { message ->
             item {
-                Surface(shape = RoundedCornerShape(14.dp), color = MainUi.BlueSoft) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                PurchasedPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    asset = PurchasedUiAsset.REWARD_PANEL,
+                    contentPadding = PaddingValues(13.dp),
+                ) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        PurchasedAsset(PurchasedUiAsset.ICON_CHECK, Modifier.size(32.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(message, Modifier.weight(1f), color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    }
                 }
             }
         }
 
         item {
             Text(
-                "Son Harf ${BuildConfig.VERSION_NAME} • Android",
+                "Kelime Kuşatması ${BuildConfig.VERSION_NAME} • Android",
                 Modifier.fillMaxWidth().padding(vertical = 8.dp),
                 color = MainUi.Muted,
                 fontSize = 9.sp,
@@ -208,43 +217,52 @@ internal fun MainSettingsScreen(
     }
 
     if (helpDialog) {
-        AlertDialog(
-            onDismissRequest = { helpDialog = false },
-            title = { Text(sh("Yardım", "Help"), fontWeight = FontWeight.Black) },
-            text = {
-                Text(
-                    sh(
-                        "Bağlantı veya ödeme sorunu yaşarsan önce internet bağlantını ve Google Play hesabını kontrol et. Satın almalar sunucuda doğrulanır ve aynı işlem ikinci kez ödül vermez. Hesap ve gizlilik bölümünden profil verilerini yönetebilirsin.",
-                        "For connection or payment issues, first check your internet connection and Google Play account. Purchases are verified on the server and the same transaction cannot grant twice. Manage profile data from Account & privacy.",
-                    ),
-                    color = MainUi.Muted,
-                )
-            },
-            confirmButton = { TextButton(onClick = { helpDialog = false }) { Text(sh("TAMAM", "OK")) } },
+        PurchasedMessageDialog(
+            title = sh("Yardım", "Help"),
+            message = sh(
+                "Bağlantı veya ödeme sorunu yaşarsan önce internet bağlantını ve Google Play hesabını kontrol et. Satın almalar sunucuda doğrulanır ve aynı işlem ikinci kez ödül vermez. Hesap ve gizlilik bölümünden profil verilerini yönetebilirsin.",
+                "For connection or payment issues, first check your internet connection and Google Play account. Purchases are verified on the server and the same transaction cannot grant twice. Manage profile data from Account & privacy.",
+            ),
+            confirmText = sh("TAMAM", "OK"),
+            onConfirm = { helpDialog = false },
+            onDismiss = { helpDialog = false },
         )
     }
 
     if (logoutDialog) {
-        AlertDialog(
-            onDismissRequest = { logoutDialog = false },
-            title = { Text(sh("Çıkış yapılsın mı?", "Sign out?"), fontWeight = FontWeight.Black) },
-            text = { Text(sh("Bu cihazdaki Son Harf oturumu kapatılacak.", "Your Son Harf session on this device will end.")) },
-            dismissButton = { TextButton(onClick = { logoutDialog = false }) { Text(sh("VAZGEÇ", "CANCEL")) } },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        scope.launch {
-                            runCatching { backend.setPresence("offline") }
-                            runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.signOut() }
-                            SonHarfPreferences.setRememberLogin(context, false)
-                            logoutDialog = false
-                            onSignedOut()
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Red),
-                ) { Text(sh("ÇIKIŞ YAP", "SIGN OUT"), fontWeight = FontWeight.Black) }
-            },
-        )
+        Dialog(onDismissRequest = { logoutDialog = false }) {
+            PurchasedPanel(
+                modifier = Modifier.fillMaxWidth(),
+                asset = PurchasedUiAsset.PANEL_MEDIUM,
+                contentPadding = PaddingValues(20.dp),
+            ) {
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    PurchasedAsset(PurchasedUiAsset.ICON_CLOSE, Modifier.size(48.dp))
+                    Text(sh("Çıkış yapılsın mı?", "Sign out?"), color = MainUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                    Text(sh("Bu cihazdaki Kelime Kuşatması oturumu kapatılacak.", "Your Kelime Kuşatması session on this device will end."), color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+                    PurchasedButton(
+                        text = sh("ÇIKIŞ YAP", "SIGN OUT"),
+                        onClick = {
+                            scope.launch {
+                                runCatching { backend.setPresence("offline") }
+                                runCatching { com.sonharf.game.data.SupabaseProvider.client.auth.signOut() }
+                                SonHarfPreferences.setRememberLogin(context, false)
+                                logoutDialog = false
+                                onSignedOut()
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        style = PurchasedButtonStyle.DANGER,
+                    )
+                    PurchasedButton(
+                        text = sh("VAZGEÇ", "CANCEL"),
+                        onClick = { logoutDialog = false },
+                        modifier = Modifier.fillMaxWidth(),
+                        style = PurchasedButtonStyle.SECONDARY,
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -270,44 +288,46 @@ internal fun MainVipScreen(
     val active = profile?.isVip == true
 
     LazyColumn(
-        Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
             MainScreenHeader(
-                title = "Son Harf VIP",
+                title = "Kelime Kuşatması VIP",
                 subtitle = sh("Reklamsız deneyim, PRO hakları ve kişiselleştirme", "Ad-free experience, PRO benefits and personalization"),
                 onBack = onBack,
             )
         }
 
-        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = MainUi.Blue, trackColor = MainUi.BlueSoft) }
+        if (loading) {
+            item {
+                PurchasedPanel(modifier = Modifier.fillMaxWidth(), asset = PurchasedUiAsset.PANEL_SMALL) {
+                    Text(sh("VIP durumu kontrol ediliyor…", "Checking VIP status…"), color = MainUi.Text, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
 
         item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                color = MainUi.Blue,
-            ) {
+            Box(Modifier.fillMaxWidth().heightIn(min = 190.dp), contentAlignment = Alignment.Center) {
+                PurchasedAsset(PurchasedUiAsset.SEASON_BANNER, Modifier.matchParentSize())
                 Column(
-                    Modifier.fillMaxWidth().padding(20.dp),
+                    Modifier.fillMaxWidth().padding(horizontal = 28.dp, vertical = 22.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(9.dp),
+                    verticalArrangement = Arrangement.spacedBy(7.dp),
                 ) {
-                    Surface(shape = CircleShape, color = Color.White.copy(alpha = .14f)) {
-                        Icon(Icons.Rounded.WorkspacePremium, null, tint = Color.White, modifier = Modifier.padding(13.dp).size(34.dp))
-                    }
+                    PurchasedAsset(PurchasedUiAsset.ICON_CROWN, Modifier.size(58.dp))
                     Text("VIP", color = Color.White, fontSize = 31.sp, fontWeight = FontWeight.Black)
                     Text(
-                        if (active) sh("Üyeliğin aktif", "Your membership is active") else sh("Son Harf deneyimini kişiselleştir", "Personalize your Son Harf experience"),
+                        if (active) sh("Üyeliğin aktif", "Your membership is active") else sh("Kelime Kuşatması deneyimini kişiselleştir", "Personalize your Kelime Kuşatması experience"),
                         color = Color.White,
-                        fontSize = 15.sp,
+                        fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
                     )
                     Text(
                         if (active) profile?.displayName.orEmpty() else sh("Google Play ile güvenli üyelik", "Secure membership through Google Play"),
-                        color = Color.White.copy(alpha = .75f),
+                        color = Color.White.copy(alpha = .82f),
                         fontSize = 10.sp,
                     )
                 }
@@ -317,62 +337,68 @@ internal fun MainVipScreen(
         item { MainSectionTitle(sh("VIP AYRICALIKLARI", "VIP BENEFITS")) }
 
         item {
-            Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                    MainVipBenefit(Icons.Rounded.Block, sh("Reklamsız deneyim", "Ad-free experience"), sh("Maç dışında da sade ve kesintisiz", "Clean and uninterrupted outside matches"))
-                    MainVipBenefit(Icons.Rounded.Verified, sh("VIP profil rozeti", "VIP profile badge"), sh("Profil ve sosyal alanlarda görünür", "Visible on profile and social surfaces"))
-                    MainVipBenefit(Icons.Rounded.Checkroom, sh("Özel Style içerikleri", "Exclusive Style content"), sh("Profil çerçevesi ve kişiselleştirme", "Profile frames and personalization"))
-                    MainVipBenefit(Icons.Rounded.History, sh("Kelime geçmişi", "Word history"), sh("Düelloda son kelimeleri gör", "See recent words during a duel"))
-                    MainVipBenefit(Icons.Rounded.Insights, sh("Gelişmiş istatistikler", "Advanced statistics"), sh("Performansını daha ayrıntılı incele", "Review performance in more detail"))
-                    MainVipBenefit(Icons.Rounded.Lock, sh("Özel oda oluşturma", "Create private rooms"), sh("Arkadaşlarınla kodlu oda aç", "Open coded rooms with friends"))
-                    MainVipBenefit(Icons.Rounded.Storefront, sh("VIP Style görünümü", "VIP Style view"), sh("Üyelere özel ürünleri keşfet", "Discover member-only items"))
+            PurchasedPanel(
+                modifier = Modifier.fillMaxWidth(),
+                asset = PurchasedUiAsset.PANEL_LARGE,
+                contentPadding = PaddingValues(16.dp),
+            ) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(13.dp)) {
+                    MainVipBenefit(PurchasedUiAsset.ICON_CLOSE, sh("Reklamsız deneyim", "Ad-free experience"), sh("Maç dışında da sade ve kesintisiz", "Clean and uninterrupted outside matches"))
+                    MainVipBenefit(PurchasedUiAsset.ICON_CROWN, sh("VIP profil rozeti", "VIP profile badge"), sh("Profil ve sosyal alanlarda görünür", "Visible on profile and social surfaces"))
+                    MainVipBenefit(PurchasedUiAsset.NAV_PROFILE, sh("Özel Style içerikleri", "Exclusive Style content"), sh("Profil çerçevesi ve kişiselleştirme", "Profile frames and personalization"))
+                    MainVipBenefit(PurchasedUiAsset.ICON_REPEAT, sh("Kelime geçmişi", "Word history"), sh("Düelloda son kelimeleri gör", "See recent words during a duel"))
+                    MainVipBenefit(PurchasedUiAsset.ICON_RANKING, sh("Gelişmiş istatistikler", "Advanced statistics"), sh("Performansını daha ayrıntılı incele", "Review performance in more detail"))
+                    MainVipBenefit(PurchasedUiAsset.ICON_GAMES, sh("Özel oda oluşturma", "Create private rooms"), sh("Arkadaşlarınla kodlu oda aç", "Open coded rooms with friends"))
+                    MainVipBenefit(PurchasedUiAsset.NAV_SHOP, sh("VIP Style görünümü", "VIP Style view"), sh("Üyelere özel ürünleri keşfet", "Discover member-only items"))
                 }
             }
         }
 
         item {
-            Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Green.copy(alpha = .08f), border = BorderStroke(1.dp, MainUi.Green.copy(alpha = .30f))) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(sh("PRO OYUN YARDIMLARI", "PRO GAME HELPERS"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                    Text(
-                        sh(
-                            "PRO; İpucu, Harf Değiştirici ve 2x Skor dahil sunucu doğrulamalı oyun yardımcıları sunar.",
-                            "PRO includes server-validated gameplay helpers such as Hint, Letter Swap and 2x Score.",
-                        ),
-                        color = MainUi.Text,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
+            PurchasedPanel(
+                modifier = Modifier.fillMaxWidth(),
+                asset = PurchasedUiAsset.PANEL_SMALL,
+                contentPadding = PaddingValues(15.dp),
+            ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    PurchasedAsset(PurchasedUiAsset.ICON_GAMES, Modifier.size(46.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Text(sh("PRO OYUN YARDIMLARI", "PRO GAME HELPERS"), color = MainUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                        Text(
+                            sh(
+                                "PRO; İpucu, Harf Değiştirici ve 2x Skor dahil sunucu doğrulamalı oyun yardımcıları sunar.",
+                                "PRO includes server-validated gameplay helpers such as Hint, Letter Swap and 2x Score.",
+                            ),
+                            color = MainUi.Text,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
         }
 
         item {
             if (active) {
-                OutlinedButton(
+                PurchasedButton(
+                    text = sh("GOOGLE PLAY'DE YÖNET", "MANAGE ON GOOGLE PLAY"),
                     onClick = {
                         val url = "https://play.google.com/store/account/subscriptions?package=${BuildConfig.APPLICATION_ID}"
                         runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
                     },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .40f)),
-                ) {
-                    Icon(Icons.Rounded.OpenInNew, null, tint = MainUi.Blue)
-                    Spacer(Modifier.width(7.dp))
-                    Text(sh("GOOGLE PLAY'DE YÖNET", "MANAGE ON GOOGLE PLAY"), color = MainUi.Blue, fontWeight = FontWeight.Black)
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    style = PurchasedButtonStyle.SECONDARY,
+                    leadingAsset = PurchasedUiAsset.ICON_SETTINGS,
+                )
             } else {
-                Button(
+                PurchasedButton(
+                    text = sh("VIP PLANLARINI GÖR", "VIEW VIP PLANS"),
                     onClick = { showPurchase = true },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(17.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                ) {
-                    Text(sh("VIP PLANLARINI GÖR", "VIEW VIP PLANS"), fontWeight = FontWeight.Black)
-                    Spacer(Modifier.width(7.dp))
-                    Icon(Icons.Rounded.ArrowForward, null)
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    style = PurchasedButtonStyle.PRIMARY,
+                    leadingAsset = PurchasedUiAsset.ICON_CROWN,
+                )
             }
         }
 
@@ -398,9 +424,13 @@ internal fun MainVipScreen(
 
 @Composable
 private fun MainSettingsGroup(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text(title, color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.OLD_SETTINGS_PANEL,
+        contentPadding = PaddingValues(horizontal = 15.dp, vertical = 16.dp),
+    ) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            PurchasedSectionHeader(title = title)
             content()
         }
     }
@@ -408,57 +438,89 @@ private fun MainSettingsGroup(title: String, content: @Composable ColumnScope.()
 
 @Composable
 private fun MainToggleSetting(
-    icon: ImageVector,
     title: String,
     subtitle: String,
     checked: Boolean,
     enabled: Boolean = true,
     onChange: (Boolean) -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(12.dp), color = MainUi.BlueSoft) {
-            Icon(icon, null, tint = MainUi.Blue, modifier = Modifier.padding(8.dp).size(19.dp))
-        }
-        Spacer(Modifier.width(10.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(enabled = enabled) { onChange(!checked) }.padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PurchasedAsset(PurchasedUiAsset.ICON_SETTINGS, Modifier.size(38.dp), alpha = if (enabled) 1f else .45f)
+        Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Text(subtitle, color = MainUi.Muted, fontSize = 8.5.sp)
         }
-        Switch(checked = checked, onCheckedChange = onChange, enabled = enabled)
+        PurchasedAsset(
+            if (checked) PurchasedUiAsset.TOGGLE_ON else PurchasedUiAsset.TOGGLE_OFF,
+            Modifier.size(width = 68.dp, height = 28.dp),
+            alpha = if (enabled) 1f else .45f,
+        )
     }
 }
 
 @Composable
 private fun MainSettingsLink(
-    icon: ImageVector,
+    asset: PurchasedUiAsset,
     title: String,
     subtitle: String,
     onClick: () -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(12.dp), color = MainUi.BlueSoft) {
-            Icon(icon, null, tint = MainUi.Blue, modifier = Modifier.padding(8.dp).size(19.dp))
-        }
-        Spacer(Modifier.width(10.dp))
+    Row(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PurchasedAsset(asset, Modifier.size(38.dp))
+        Spacer(Modifier.width(9.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Text(subtitle, color = MainUi.Muted, fontSize = 8.5.sp)
         }
-        Icon(Icons.Rounded.ChevronRight, null, tint = MainUi.Muted)
+        PurchasedAsset(PurchasedUiAsset.BUTTON_BLUE, Modifier.size(24.dp), alpha = .65f)
     }
 }
 
 @Composable
-private fun MainVipBenefit(icon: ImageVector, title: String, subtitle: String) {
+private fun MainVipBenefit(asset: PurchasedUiAsset, title: String, subtitle: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(12.dp), color = MainUi.BlueSoft) {
-            Icon(icon, null, tint = MainUi.Blue, modifier = Modifier.padding(9.dp).size(20.dp))
-        }
+        PurchasedAsset(asset, Modifier.size(38.dp))
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text(title, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
             Text(subtitle, color = MainUi.Muted, fontSize = 9.sp)
         }
-        Icon(Icons.Rounded.CheckCircle, null, tint = MainUi.Green, modifier = Modifier.size(18.dp))
+        PurchasedAsset(PurchasedUiAsset.ICON_CHECK, Modifier.size(28.dp))
+    }
+}
+
+@Composable
+private fun PurchasedMessageDialog(
+    title: String,
+    message: String,
+    confirmText: String,
+    onConfirm: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        PurchasedPanel(
+            modifier = Modifier.fillMaxWidth(),
+            asset = PurchasedUiAsset.PANEL_MEDIUM,
+            contentPadding = PaddingValues(20.dp),
+        ) {
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                PurchasedAsset(PurchasedUiAsset.ICON_CHAT, Modifier.size(48.dp))
+                Text(title, color = MainUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                Text(message, color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+                PurchasedButton(
+                    text = confirmText,
+                    onClick = onConfirm,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = PurchasedButtonStyle.PRIMARY,
+                )
+            }
+        }
     }
 }
