@@ -1,20 +1,16 @@
 package com.sonharf.game
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -79,9 +75,7 @@ internal fun MainSocialScreen(
     }
 
     LaunchedEffect(Unit) {
-        isPro = runCatching {
-            backend.currentUserId()?.let { backend.getProfile(it).isVip } ?: false
-        }.getOrDefault(false)
+        isPro = runCatching { backend.currentUserId()?.let { backend.getProfile(it).isVip } ?: false }.getOrDefault(false)
         proChecked = true
         reload()
     }
@@ -91,81 +85,53 @@ internal fun MainSocialScreen(
 
     LazyColumn(
         Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(11.dp),
     ) {
-        item {
-            MainScreenHeader(
-                title = sh("Sosyal", "Social"),
-                subtitle = sh("Arkadaşların, Kuşatma davetlerin ve ezeli rakiplerin", "Friends, Siege invitations and rivals"),
-            )
-        }
+        item { PurchasedSectionHeader(sh("SOSYAL MERKEZ", "SOCIAL HUB")) }
 
         if (loading) {
-            item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = MainUi.Blue, trackColor = MainUi.BlueSoft) }
+            item {
+                LinearProgressIndicator(
+                    Modifier.fillMaxWidth().height(5.dp),
+                    color = Color(0xFF58B957),
+                    trackColor = Color(0xFFDEC59B),
+                )
+            }
+        }
+
+        item {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                SocialMetric(friends.size.toString(), sh("Arkadaş", "Friends"), PurchasedUiAsset.NAV_SOCIAL, Modifier.weight(1f))
+                SocialMetric(onlineCount.toString(), sh("Çevrimiçi", "Online"), PurchasedUiAsset.ICON_CHAT, Modifier.weight(1f))
+                SocialMetric(incomingCount.toString(), sh("Yeni", "New"), PurchasedUiAsset.ICON_GIFT, Modifier.weight(1f))
+            }
         }
 
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                MainMetricCard(friends.size.toString(), sh("Arkadaş", "Friends"), Modifier.weight(1f))
-                MainMetricCard(onlineCount.toString(), sh("Çevrimiçi", "Online"), Modifier.weight(1f))
-                MainMetricCard(incomingCount.toString(), sh("Yeni istek", "New requests"), Modifier.weight(1f))
-            }
-        }
-
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                Button(
+                PurchasedButton(
+                    text = sh("KUŞATMA OYNA", "PLAY SIEGE"),
                     onClick = onSiege,
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(15.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                ) {
-                    Icon(Icons.Rounded.Shield, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(sh("KUŞATMA OYNA", "PLAY SIEGE"), fontWeight = FontWeight.Black, fontSize = 10.sp)
-                }
-                OutlinedButton(
-                    onClick = { tab = 0 },
-                    modifier = Modifier.weight(1f).height(48.dp),
-                    shape = RoundedCornerShape(15.dp),
-                    border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f)),
-                ) {
-                    Icon(Icons.Rounded.GroupAdd, null, tint = MainUi.Gold, modifier = Modifier.size(17.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(sh("ARKADAŞ DAVETİ", "FRIEND INVITE"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 9.sp)
-                }
+                    modifier = Modifier.weight(1f),
+                    style = PurchasedButtonStyle.PRIMARY,
+                    leadingAsset = PurchasedUiAsset.ICON_SWORDS,
+                )
+                PurchasedButton(
+                    text = sh("OYUNCU BUL", "FIND PLAYER"),
+                    onClick = { tab = 1 },
+                    modifier = Modifier.weight(1f),
+                    style = PurchasedButtonStyle.SECONDARY,
+                    leadingAsset = PurchasedUiAsset.NAV_SOCIAL,
+                )
             }
         }
 
         item {
-            ScrollableTabRow(
-                selectedTabIndex = tab,
-                edgePadding = 0.dp,
-                containerColor = Color.Transparent,
-                divider = {},
-            ) {
-                listOf(
-                    sh("ARKADAŞLAR", "FRIENDS"),
-                    sh("İSTEKLER", "REQUESTS"),
-                    sh("RAKİPLER", "RIVALS"),
-                ).forEachIndexed { index, label ->
-                    Tab(
-                        selected = tab == index,
-                        onClick = { tab = index },
-                        text = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(label, color = if (tab == index) MainUi.Blue else MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                                if (index == 1 && incomingCount > 0) {
-                                    Spacer(Modifier.width(5.dp))
-                                    Surface(shape = CircleShape, color = MainUi.Red) {
-                                        Text(incomingCount.toString(), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Black)
-                                    }
-                                }
-                            }
-                        },
-                    )
-                }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                SocialTab(sh("ARKADAŞLAR", "FRIENDS"), PurchasedUiAsset.NAV_SOCIAL, tab == 0, Modifier.weight(1f)) { tab = 0 }
+                SocialTab(sh("İSTEKLER", "REQUESTS"), PurchasedUiAsset.ICON_GIFT, tab == 1, Modifier.weight(1f), incomingCount) { tab = 1 }
+                SocialTab(sh("RAKİPLER", "RIVALS"), PurchasedUiAsset.ICON_SWORDS, tab == 2, Modifier.weight(1f)) { tab = 2 }
             }
         }
 
@@ -174,74 +140,79 @@ internal fun MainSocialScreen(
                 if (proChecked && !isPro) {
                     item { ProFriendListLock(onUpgrade = { vipDialog = true }) }
                 } else {
-                if (friends.isEmpty() && !loading) {
-                    item {
-                        MainSocialEmpty(
-                            icon = Icons.Rounded.GroupAdd,
-                            title = sh("Henüz arkadaşın yok", "No friends yet"),
-                            body = sh("İstekler sekmesinden oyuncu adıyla arama yapabilirsin.", "Search by player name in the Requests tab."),
-                            action = sh("OYUNCU BUL", "FIND PLAYERS"),
-                        ) { tab = 1 }
+                    if (friends.isEmpty() && !loading) {
+                        item {
+                            MainSocialEmpty(
+                                asset = PurchasedUiAsset.NAV_SOCIAL,
+                                title = sh("Henüz arkadaşın yok", "No friends yet"),
+                                body = sh("İstekler sekmesinden oyuncu adıyla arama yapabilirsin.", "Search by player name in the Requests tab."),
+                                action = sh("OYUNCU BUL", "FIND PLAYERS"),
+                            ) { tab = 1 }
+                        }
                     }
-                }
 
-                items(friends, key = { it.second.id }) { (_, friend) ->
-                    MainFriendCard(
-                        friend = friend,
-                        busy = busyKey == friend.id,
-                        onInvite = {
-                            if (busyKey != null) return@MainFriendCard
-                            scope.launch {
-                                busyKey = friend.id
-                                runCatching { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
-                                    .onSuccess {
-                                        notice = sh("${friend.displayName} Kelime Tahtı'na davet edildi.", "${friend.displayName} was invited to Kelime Tahtı.")
-                                        SonHarfSoundFx.softNotify()
-                                    }
-                                    .onFailure { notice = sh("Kuşatma daveti gönderilemedi veya bekleyen bir davet var.", "Siege invite could not be sent or one is already pending.") }
-                                busyKey = null
-                            }
-                        },
-                        onRemove = {
-                            if (busyKey != null) return@MainFriendCard
-                            scope.launch {
-                                busyKey = friend.id
-                                runCatching { backend.removeFriend(friend.id) }
-                                    .onSuccess { notice = sh("Arkadaş listesi güncellendi.", "Friend list updated."); reload() }
-                                    .onFailure { notice = sh("Arkadaş kaldırılamadı.", "Friend could not be removed.") }
-                                busyKey = null
-                            }
-                        },
-                    )
-                }
+                    items(friends, key = { it.second.id }) { (_, friend) ->
+                        MainFriendCard(
+                            friend = friend,
+                            busy = busyKey == friend.id,
+                            onInvite = {
+                                if (busyKey != null) return@MainFriendCard
+                                scope.launch {
+                                    busyKey = friend.id
+                                    runCatching { backend.inviteFriendToWordSiege(friend.id, SonHarfUiState.language) }
+                                        .onSuccess {
+                                            notice = sh("${friend.displayName} Kelime Kuşatması'na davet edildi.", "${friend.displayName} was invited to Word Siege.")
+                                            SonHarfSoundFx.softNotify()
+                                        }
+                                        .onFailure { notice = sh("Kuşatma daveti gönderilemedi veya bekleyen bir davet var.", "Siege invite could not be sent or one is already pending.") }
+                                    busyKey = null
+                                }
+                            },
+                            onRemove = {
+                                if (busyKey != null) return@MainFriendCard
+                                scope.launch {
+                                    busyKey = friend.id
+                                    runCatching { backend.removeFriend(friend.id) }
+                                        .onSuccess { notice = sh("Arkadaş listesi güncellendi.", "Friend list updated."); reload() }
+                                        .onFailure { notice = sh("Arkadaş kaldırılamadı.", "Friend could not be removed.") }
+                                    busyKey = null
+                                }
+                            },
+                        )
+                    }
 
-                if (friends.isNotEmpty()) {
-                    item {
-                        MainSectionTitle(sh("ARKADAŞ SIRALAMASI", "FRIEND RANKING"))
-                        Spacer(Modifier.height(7.dp))
-                        Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-                            Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                friends.map { it.second }.sortedByDescending { it.rating }.take(8).forEachIndexed { index, friend ->
-                                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                        Text("${index + 1}", color = MainUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(22.dp))
-                                        ProfilePhotoAvatar(friend.avatarPath, friend.displayName, 30.dp, visible = friend.avatarVisibility != "hidden", accent = if (friend.isVip) MainUi.Gold else MainUi.Blue)
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(friend.displayName, color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
-                                        Text(friend.rating.toString(), color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    if (friends.isNotEmpty()) {
+                        item { PurchasedSectionHeader(sh("ARKADAŞ SIRALAMASI", "FRIEND RANKING")) }
+                        item {
+                            PurchasedPanel(
+                                modifier = Modifier.fillMaxWidth(),
+                                asset = PurchasedUiAsset.PANEL_LARGE,
+                                contentPadding = PaddingValues(13.dp),
+                            ) {
+                                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                                    friends.map { it.second }.sortedByDescending { it.rating }.take(8).forEachIndexed { index, friend ->
+                                        PurchasedLeaderboardFriendRow(index, friend)
                                     }
                                 }
                             }
                         }
                     }
                 }
-                }
             }
 
             1 -> {
                 item {
-                    Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-                        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                            Text(sh("OYUNCU BUL", "FIND PLAYER"), color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
+                    PurchasedPanel(
+                        modifier = Modifier.fillMaxWidth(),
+                        asset = PurchasedUiAsset.PANEL_MEDIUM,
+                        contentPadding = PaddingValues(14.dp),
+                    ) {
+                        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                PurchasedAsset(PurchasedUiAsset.NAV_SOCIAL, Modifier.size(40.dp))
+                                Spacer(Modifier.width(7.dp))
+                                Text(sh("OYUNCU BUL", "FIND PLAYER"), color = Color(0xFF4A2D20), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                            }
                             OutlinedTextField(
                                 value = query,
                                 onValueChange = { query = it.take(24) },
@@ -251,15 +222,16 @@ internal fun MainSocialScreen(
                                 leadingIcon = { Icon(Icons.Rounded.Search, null) },
                                 shape = RoundedCornerShape(14.dp),
                                 colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MainUi.Blue,
-                                    unfocusedBorderColor = MainUi.Border,
-                                    focusedContainerColor = Color.White,
-                                    unfocusedContainerColor = Color.White,
+                                    focusedBorderColor = Color(0xFF6B3CA6),
+                                    unfocusedBorderColor = Color(0xFF9A7352),
+                                    focusedContainerColor = Color(0xFFFFF1CF),
+                                    unfocusedContainerColor = Color(0xFFFFF1CF),
                                 ),
                             )
-                            Button(
+                            PurchasedButton(
+                                text = if (busyKey == "search") "…" else sh("ARA", "SEARCH"),
                                 onClick = {
-                                    if (query.trim().length < 2 || busyKey != null) return@Button
+                                    if (query.trim().length < 2 || busyKey != null) return@PurchasedButton
                                     scope.launch {
                                         busyKey = "search"
                                         results = runCatching { backend.searchPlayers(query, 20) }.getOrDefault(emptyList())
@@ -269,184 +241,145 @@ internal fun MainSocialScreen(
                                 },
                                 enabled = query.trim().length >= 2 && busyKey == null,
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(13.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                            ) { Text(if (busyKey == "search") "…" else sh("ARA", "SEARCH"), fontWeight = FontWeight.Black) }
+                                style = PurchasedButtonStyle.SECONDARY,
+                            )
                         }
                     }
                 }
 
                 items(results, key = { it.id }) { player ->
                     val relation = friendships.firstOrNull { it.userId == player.id || it.friendId == player.id }
-                    Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-                        Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = if (player.isVip) MainUi.Gold else MainUi.Blue, visible = player.avatarVisibility != "hidden")
-                            Spacer(Modifier.width(9.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(player.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("${ratingLeagueProgress(player.rating).leagueName} • ${player.rating}", color = MainUi.Muted, fontSize = 9.sp)
+                    SocialPlayerRow(
+                        player = player,
+                        actionText = when (relation?.status) {
+                            "accepted" -> sh("ARKADAŞ", "FRIEND")
+                            "pending" -> sh("BEKLİYOR", "PENDING")
+                            else -> if (busyKey == player.id) "…" else sh("EKLE", "ADD")
+                        },
+                        actionEnabled = relation == null && busyKey == null,
+                        onAction = {
+                            if (relation != null || busyKey != null) return@SocialPlayerRow
+                            scope.launch {
+                                busyKey = player.id
+                                runCatching { backend.sendFriendRequest(player.id) }
+                                    .onSuccess { notice = sh("Arkadaşlık isteği gönderildi.", "Friend request sent."); reload() }
+                                    .onFailure { notice = sh("İstek gönderilemedi.", "Request could not be sent.") }
+                                busyKey = null
                             }
-                            Button(
-                                onClick = {
-                                    if (relation != null || busyKey != null) return@Button
-                                    scope.launch {
-                                        busyKey = player.id
-                                        runCatching { backend.sendFriendRequest(player.id) }
-                                            .onSuccess { notice = sh("Arkadaşlık isteği gönderildi.", "Friend request sent."); reload() }
-                                            .onFailure { notice = sh("İstek gönderilemedi.", "Request could not be sent.") }
-                                        busyKey = null
-                                    }
-                                },
-                                enabled = relation == null && busyKey == null,
-                                shape = RoundedCornerShape(12.dp),
-                                contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp),
-                            ) {
-                                Text(
-                                    when (relation?.status) {
-                                        "accepted" -> sh("ARKADAŞ", "FRIEND")
-                                        "pending" -> sh("BEKLİYOR", "PENDING")
-                                        else -> if (busyKey == player.id) "…" else sh("EKLE", "ADD")
-                                    },
-                                    fontSize = 8.sp,
-                                    fontWeight = FontWeight.Black,
-                                )
-                            }
-                        }
-                    }
+                        },
+                    )
                 }
 
-                if (requests.isNotEmpty()) item { MainSectionTitle(sh("ARKADAŞLIK İSTEKLERİ", "FRIEND REQUESTS")) }
+                if (requests.isNotEmpty()) item { PurchasedSectionHeader(sh("ARKADAŞLIK İSTEKLERİ", "FRIEND REQUESTS")) }
                 items(requests, key = { it.second.id }) { (_, player) ->
-                    Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .28f))) {
-                        Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 44.dp, accent = MainUi.Blue, visible = player.avatarVisibility != "hidden")
+                    PurchasedPanel(
+                        modifier = Modifier.fillMaxWidth(),
+                        asset = PurchasedUiAsset.PANEL_SMALL,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                    ) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            PurchasedAvatarFrame(Modifier.size(54.dp)) {
+                                ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 43.dp, accent = MainUi.Blue, visible = player.avatarVisibility != "hidden")
+                            }
                             Spacer(Modifier.width(9.dp))
-                            Text(player.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f), maxLines = 1)
-                            IconButton(
-                                onClick = {
-                                    if (busyKey != null) return@IconButton
-                                    scope.launch {
-                                        busyKey = player.id
-                                        runCatching { backend.respondFriendRequest(player.id, false) }
-                                        reload()
-                                        busyKey = null
-                                    }
-                                },
-                            ) { Icon(Icons.Rounded.Close, sh("Reddet", "Decline"), tint = MainUi.Red) }
-                            IconButton(
-                                onClick = {
-                                    if (busyKey != null) return@IconButton
-                                    scope.launch {
-                                        busyKey = player.id
-                                        runCatching { backend.respondFriendRequest(player.id, true) }
-                                            .onSuccess { notice = sh("Arkadaşlık isteği kabul edildi.", "Friend request accepted.") }
-                                        reload()
-                                        busyKey = null
-                                    }
-                                },
-                            ) { Icon(Icons.Rounded.Check, sh("Kabul et", "Accept"), tint = MainUi.Green) }
+                            Text(player.displayName, color = Color(0xFF4A2D20), fontWeight = FontWeight.Black, modifier = Modifier.weight(1f), maxLines = 1)
+                            PurchasedIconButton(PurchasedUiAsset.ICON_CLOSE, onClick = {
+                                if (busyKey != null) return@PurchasedIconButton
+                                scope.launch {
+                                    busyKey = player.id
+                                    runCatching { backend.respondFriendRequest(player.id, false) }
+                                    reload()
+                                    busyKey = null
+                                }
+                            })
+                            PurchasedIconButton(PurchasedUiAsset.ICON_CHECK, onClick = {
+                                if (busyKey != null) return@PurchasedIconButton
+                                scope.launch {
+                                    busyKey = player.id
+                                    runCatching { backend.respondFriendRequest(player.id, true) }
+                                        .onSuccess { notice = sh("Arkadaşlık isteği kabul edildi.", "Friend request accepted.") }
+                                    reload()
+                                    busyKey = null
+                                }
+                            })
                         }
                     }
                 }
 
-                if (siegeInvites.isNotEmpty()) item { MainSectionTitle(sh("KELİME TAHTI DAVETLERİ", "KELİME TAHTI INVITATIONS")) }
+                if (siegeInvites.isNotEmpty()) item { PurchasedSectionHeader(sh("KELİME KUŞATMASI DAVETLERİ", "WORD SIEGE INVITATIONS")) }
                 items(siegeInvites, key = { "siege:${it.id}" }) { invite ->
                     val sender = inviteProfiles[invite.senderId]
-                    Surface(shape = RoundedCornerShape(17.dp), color = Color(0xFFE8F1EB), border = BorderStroke(1.dp, Color(0xFF567A64).copy(alpha = .35f))) {
-                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = Color(0xFF567A64))
-                                Spacer(Modifier.width(9.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(sender?.displayName ?: sh("Kuşatma daveti", "Siege invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                                    Text(sh("Kelime Tahtı • ", "Kelime Tahtı • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
-                                }
+                    SocialInviteCard(
+                        sender = sender,
+                        modeTitle = sh("Kelime Kuşatması", "Word Siege"),
+                        language = invite.language,
+                        busy = busyKey == "siege:${invite.id}",
+                        onDecline = {
+                            if (busyKey != null) return@SocialInviteCard
+                            scope.launch {
+                                busyKey = "siege:${invite.id}"
+                                runCatching { backend.respondWordSiegeInvite(invite.id, false) }
+                                reload()
+                                busyKey = null
                             }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        if (busyKey != null) return@OutlinedButton
-                                        scope.launch {
-                                            busyKey = "siege:${invite.id}"
-                                            runCatching { backend.respondWordSiegeInvite(invite.id, false) }
-                                            reload()
-                                            busyKey = null
+                        },
+                        onAccept = {
+                            if (busyKey != null) return@SocialInviteCard
+                            scope.launch {
+                                busyKey = "siege:${invite.id}"
+                                runCatching { backend.respondWordSiegeInvite(invite.id, true) }
+                                    .onSuccess { game ->
+                                        if (game != null) {
+                                            notice = sh("Kuşatma maçı hazır.", "Siege match is ready.")
+                                            onSiege()
                                         }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                ) { Text(sh("REDDET", "DECLINE"), color = MainUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                                Button(
-                                    onClick = {
-                                        if (busyKey != null) return@Button
-                                        scope.launch {
-                                            busyKey = "siege:${invite.id}"
-                                            runCatching { backend.respondWordSiegeInvite(invite.id, true) }
-                                                .onSuccess { game ->
-                                                    if (game != null) {
-                                                        notice = sh("Kuşatma maçı hazır.", "Siege match is ready.")
-                                                        onSiege()
-                                                    }
-                                                }
-                                                .onFailure { notice = sh("Kuşatma daveti artık kullanılamıyor.", "The Siege invite is no longer available."); reload() }
-                                            busyKey = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF567A64)),
-                                ) { Text(if (busyKey == "siege:${invite.id}") "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                                    }
+                                    .onFailure { notice = sh("Kuşatma daveti artık kullanılamıyor.", "The Siege invite is no longer available."); reload() }
+                                busyKey = null
                             }
-                        }
-                    }
+                        },
+                    )
                 }
 
-                if (invites.isNotEmpty()) item { MainSectionTitle(sh("SON HARF DAVETLERİ", "LAST LETTER INVITATIONS")) }
+                if (invites.isNotEmpty()) item { PurchasedSectionHeader(sh("SON HARF DAVETLERİ", "LAST LETTER INVITATIONS")) }
                 items(invites, key = { "legacy:${it.id}" }) { invite ->
                     val sender = inviteProfiles[invite.senderId]
-                    Surface(shape = RoundedCornerShape(17.dp), color = MainUi.BlueSoft, border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .25f))) {
-                        Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 42.dp, visible = sender?.avatarVisibility != "hidden", accent = MainUi.Blue)
-                                Spacer(Modifier.width(9.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text(sender?.displayName ?: sh("Son Harf daveti", "Last Letter invite"), color = MainUi.Text, fontWeight = FontWeight.Black)
-                                    Text(sh("Son Harf • ", "Last Letter • ") + if (invite.language == "en") "English" else "Türkçe", color = MainUi.Muted, fontSize = 9.sp)
-                                }
+                    SocialInviteCard(
+                        sender = sender,
+                        modeTitle = sh("Son Harf", "Last Letter"),
+                        language = invite.language,
+                        busy = busyKey == "legacy:${invite.id}",
+                        onDecline = {
+                            if (busyKey != null) return@SocialInviteCard
+                            scope.launch {
+                                busyKey = "legacy:${invite.id}"
+                                runCatching { backend.respondGameInvite(invite.id, false) }
+                                reload()
+                                busyKey = null
                             }
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                OutlinedButton(
-                                    onClick = {
-                                        if (busyKey != null) return@OutlinedButton
-                                        scope.launch {
-                                            busyKey = "legacy:${invite.id}"
-                                            runCatching { backend.respondGameInvite(invite.id, false) }
-                                            reload()
-                                            busyKey = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                ) { Text(sh("REDDET", "DECLINE"), color = MainUi.Red, fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                                Button(
-                                    onClick = {
-                                        if (busyKey != null) return@Button
-                                        scope.launch {
-                                            busyKey = "legacy:${invite.id}"
-                                            runCatching { backend.respondGameInvite(invite.id, true) }
-                                                .onSuccess { room -> if (room != null) onPlay() }
-                                                .onFailure { notice = sh("Son Harf daveti artık kullanılamıyor.", "The Last Letter invite is no longer available."); reload() }
-                                            busyKey = null
-                                        }
-                                    },
-                                    modifier = Modifier.weight(1f),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-                                ) { Text(if (busyKey == "legacy:${invite.id}") "…" else sh("KABUL ET", "ACCEPT"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                        },
+                        onAccept = {
+                            if (busyKey != null) return@SocialInviteCard
+                            scope.launch {
+                                busyKey = "legacy:${invite.id}"
+                                runCatching { backend.respondGameInvite(invite.id, true) }
+                                    .onSuccess { room -> if (room != null) onPlay() }
+                                    .onFailure { notice = sh("Son Harf daveti artık kullanılamıyor.", "The Last Letter invite is no longer available."); reload() }
+                                busyKey = null
                             }
-                        }
-                    }
+                        },
+                    )
                 }
 
                 if (requests.isEmpty() && invites.isEmpty() && siegeInvites.isEmpty() && results.isEmpty() && !loading) {
                     item {
-                        Text(sh("Bekleyen istek veya davet yok.", "There are no pending requests or invitations."), Modifier.fillMaxWidth().padding(vertical = 12.dp), color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
+                        MainSocialEmpty(
+                            asset = PurchasedUiAsset.ICON_GIFT,
+                            title = sh("Bekleyen istek yok", "No pending requests"),
+                            body = sh("Yeni davetler ve arkadaşlık istekleri burada görünür.", "New invitations and friend requests appear here."),
+                            action = sh("OYUNCU ARA", "SEARCH PLAYERS"),
+                            onAction = {},
+                        )
                     }
                 }
             }
@@ -454,45 +387,50 @@ internal fun MainSocialScreen(
             else -> {
                 archRival?.let { rival ->
                     item {
-                        Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .48f))) {
-                            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                                Text(sh("EZELİ RAKİP", "ARCH RIVAL"), color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        PurchasedPanel(
+                            modifier = Modifier.fillMaxWidth(),
+                            asset = PurchasedUiAsset.PANEL_LARGE,
+                            contentPadding = PaddingValues(16.dp),
+                        ) {
+                            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Surface(shape = CircleShape, color = MainUi.Gold.copy(alpha = .12f)) {
-                                        Text("⚔", Modifier.padding(10.dp), fontSize = 23.sp)
-                                    }
+                                    PurchasedAsset(PurchasedUiAsset.ICON_SWORDS, Modifier.size(56.dp))
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
-                                        Text(rival.displayName, color = MainUi.Text, fontSize = 17.sp, fontWeight = FontWeight.Black)
-                                        Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L", color = MainUi.Muted, fontSize = 9.sp)
+                                        Text(sh("EZELİ RAKİP", "ARCH RIVAL"), color = Color(0xFF6B3CA6), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                        Text(rival.displayName, color = Color(0xFF4A2D20), fontSize = 17.sp, fontWeight = FontWeight.Black)
+                                        Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}-${rival.losses}", color = Color(0xFF765746), fontSize = 9.sp)
                                     }
-                                    Text("${rival.myPoints}:${rival.theirPoints}", color = MainUi.Text, fontSize = 22.sp, fontWeight = FontWeight.Black)
+                                    Text("${rival.myPoints}:${rival.theirPoints}", color = Color(0xFF4A2D20), fontSize = 22.sp, fontWeight = FontWeight.Black)
                                 }
                             }
                         }
                     }
                 }
 
-                if (rivals.isNotEmpty()) item { MainSectionTitle(sh("RAKİP GEÇMİŞİ", "RIVAL HISTORY")) }
+                if (rivals.isNotEmpty()) item { PurchasedSectionHeader(sh("RAKİP GEÇMİŞİ", "RIVAL HISTORY")) }
                 items(rivals, key = { it.opponentId }) { rival ->
-                    Surface(shape = RoundedCornerShape(17.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-                        Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(shape = CircleShape, color = if (rival.presenceStatus == "online") MainUi.Green.copy(alpha = .10f) else MainUi.SurfaceSoft) {
-                                Icon(Icons.Rounded.Person, null, tint = if (rival.presenceStatus == "online") MainUi.Green else MainUi.Muted, modifier = Modifier.padding(8.dp).size(20.dp))
-                            }
-                            Spacer(Modifier.width(9.dp))
+                    PurchasedPanel(
+                        modifier = Modifier.fillMaxWidth(),
+                        asset = PurchasedUiAsset.PANEL_SMALL,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                    ) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            PurchasedAsset(PurchasedUiAsset.NAV_PROFILE, Modifier.size(46.dp))
+                            Spacer(Modifier.width(8.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(rival.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1)
-                                Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}W ${rival.losses}L • ${rival.myPoints}:${rival.theirPoints}", color = MainUi.Muted, fontSize = 8.5.sp)
+                                Text(rival.displayName, color = Color(0xFF4A2D20), fontWeight = FontWeight.Black, maxLines = 1)
+                                Text("${rival.matches} ${sh("maç", "matches")} • ${rival.wins}-${rival.losses} • ${rival.myPoints}:${rival.theirPoints}", color = Color(0xFF765746), fontSize = 8.5.sp)
                             }
-                            Button(
+                            PurchasedButton(
+                                text = if (busyKey == rival.opponentId) "…" else sh("RÖVANŞ", "REMATCH"),
                                 onClick = {
-                                    if (busyKey != null) return@Button
+                                    if (busyKey != null) return@PurchasedButton
                                     scope.launch {
                                         busyKey = rival.opponentId
                                         if (rival.isFriend) {
                                             runCatching { backend.inviteFriendToWordSiege(rival.opponentId, SonHarfUiState.language) }
-                                                .onSuccess { notice = sh("Kelime Tahtı rövanş daveti gönderildi.", "Kelime Tahtı rematch invite sent.") }
+                                                .onSuccess { notice = sh("Kelime Kuşatması rövanş daveti gönderildi.", "Word Siege rematch invite sent.") }
                                                 .onFailure { notice = sh("Rövanş daveti gönderilemedi veya bekleyen bir davet var.", "Rematch invite could not be sent or one is already pending.") }
                                         } else {
                                             runCatching { backend.sendFriendRequest(rival.opponentId) }
@@ -503,36 +441,33 @@ internal fun MainSocialScreen(
                                     }
                                 },
                                 enabled = busyKey == null,
-                                shape = RoundedCornerShape(11.dp),
-                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp),
-                            ) {
-                                Text(if (busyKey == rival.opponentId) "…" else sh("RÖVANŞ", "REMATCH"), fontSize = 8.sp, fontWeight = FontWeight.Black)
-                            }
+                                modifier = Modifier.width(104.dp),
+                                style = PurchasedButtonStyle.WARNING,
+                            )
                         }
                     }
                 }
 
-                if (matchHistory.isNotEmpty()) item { MainSectionTitle(sh("SON MAÇLAR", "RECENT MATCHES")) }
+                if (matchHistory.isNotEmpty()) item { PurchasedSectionHeader(sh("SON MAÇLAR", "RECENT MATCHES")) }
                 items(matchHistory.take(12), key = { it.matchId }) { match ->
                     val won = match.result == "win"
                     val draw = match.result == "draw"
-                    Surface(shape = RoundedCornerShape(16.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-                        Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Surface(shape = RoundedCornerShape(10.dp), color = when { won -> MainUi.Green.copy(alpha = .11f); draw -> MainUi.Gold.copy(alpha = .11f); else -> MainUi.Red.copy(alpha = .09f) }) {
-                                Text(
-                                    when { won -> "G"; draw -> "B"; else -> "M" },
-                                    Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
-                                    color = when { won -> MainUi.Green; draw -> MainUi.Gold; else -> MainUi.Red },
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                )
-                            }
-                            Spacer(Modifier.width(9.dp))
+                    PurchasedPanel(
+                        modifier = Modifier.fillMaxWidth(),
+                        asset = PurchasedUiAsset.PANEL_SMALL,
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+                    ) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            PurchasedAsset(
+                                when { won -> PurchasedUiAsset.ICON_CHECK; draw -> PurchasedUiAsset.ICON_TROPHY; else -> PurchasedUiAsset.ICON_CLOSE },
+                                Modifier.size(38.dp),
+                            )
+                            Spacer(Modifier.width(8.dp))
                             Column(Modifier.weight(1f)) {
-                                Text(match.displayName, color = MainUi.Text, fontWeight = FontWeight.Black, maxLines = 1)
-                                Text("${match.myScore}-${match.theirScore} • ${if (match.ratingDelta >= 0) "+" else ""}${match.ratingDelta} rating", color = MainUi.Muted, fontSize = 8.5.sp)
+                                Text(match.displayName, color = Color(0xFF4A2D20), fontWeight = FontWeight.Black, maxLines = 1)
+                                Text("${match.myScore}-${match.theirScore} • ${if (match.ratingDelta >= 0) "+" else ""}${match.ratingDelta} rating", color = Color(0xFF765746), fontSize = 8.5.sp)
                             }
-                            if (match.isFriend) Icon(Icons.Rounded.People, null, tint = MainUi.Blue, modifier = Modifier.size(17.dp))
+                            if (match.isFriend) PurchasedAsset(PurchasedUiAsset.NAV_SOCIAL, Modifier.size(30.dp))
                         }
                     }
                 }
@@ -540,7 +475,7 @@ internal fun MainSocialScreen(
                 if (rivals.isEmpty() && matchHistory.isEmpty() && !loading) {
                     item {
                         MainSocialEmpty(
-                            icon = Icons.Rounded.SportsKabaddi,
+                            asset = PurchasedUiAsset.ICON_SWORDS,
                             title = sh("Rakip geçmişin henüz yok", "No rival history yet"),
                             body = sh("İlk gerçek oyuncu maçından sonra rakiplerin burada görünür.", "Rivals appear here after your first real-player match."),
                             action = sh("KUŞATMA OYNA", "PLAY SIEGE"),
@@ -553,134 +488,235 @@ internal fun MainSocialScreen(
 
         notice?.let { message ->
             item {
-                Surface(shape = RoundedCornerShape(14.dp), color = MainUi.BlueSoft) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = MainUi.Text, fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                PurchasedPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    asset = PurchasedUiAsset.PANEL_SMALL,
+                    contentPadding = PaddingValues(12.dp),
+                ) {
+                    Text(message, Modifier.fillMaxWidth(), color = Color(0xFF4A2D20), fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
                 }
             }
         }
-        item { Spacer(Modifier.height(6.dp)) }
+        item { Spacer(Modifier.height(8.dp)) }
     }
 
     if (vipDialog) {
         VipPurchaseDialog(
-            onVerified = {
-                isPro = true
-                vipDialog = false
-            },
+            onVerified = { isPro = true; vipDialog = false },
             onDismiss = { vipDialog = false },
         )
     }
 }
 
 @Composable
-private fun ProFriendListLock(onUpgrade: () -> Unit) {
-    Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Gold.copy(alpha = .55f))) {
-        Column(
-            Modifier.fillMaxWidth().padding(22.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            Surface(shape = CircleShape, color = MainUi.Gold.copy(alpha = .18f)) {
-                Icon(Icons.Rounded.Lock, null, tint = MainUi.Gold, modifier = Modifier.padding(14.dp).size(32.dp))
-            }
-            Text(
-                sh("Arkadaş listesi Pro'ya özel", "Friend list is Pro-only"),
-                color = MainUi.Text,
-                fontWeight = FontWeight.Black,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                sh(
-                    "Pro üyelikle arkadaşlarını kaydet, davet et ve haftalık sıralamada rakip ol.",
-                    "Save friends, invite them and race in the weekly ranking with Pro.",
-                ),
-                color = MainUi.Muted,
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
-            )
-            Button(
-                onClick = onUpgrade,
-                modifier = Modifier.fillMaxWidth().height(46.dp),
-                shape = RoundedCornerShape(15.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold),
-            ) {
-                Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(18.dp), tint = Color.White)
-                Spacer(Modifier.width(8.dp))
-                Text(sh("PRO'YA GEÇ", "GO PRO"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
-            }
+private fun SocialMetric(value: String, label: String, asset: PurchasedUiAsset, modifier: Modifier = Modifier) {
+    PurchasedPanel(
+        modifier = modifier.heightIn(min = 96.dp),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(8.dp),
+    ) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            PurchasedAsset(asset, Modifier.size(30.dp))
+            Text(value, color = Color(0xFF4A2D20), fontSize = 16.sp, fontWeight = FontWeight.Black)
+            Text(label, color = Color(0xFF765746), fontSize = 8.sp, maxLines = 1)
         }
     }
 }
 
 @Composable
-private fun MainFriendCard(
-    friend: ProfileDto,
-    busy: Boolean,
-    onInvite: () -> Unit,
-    onRemove: () -> Unit,
+private fun SocialTab(
+    text: String,
+    asset: PurchasedUiAsset,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    badge: Int = 0,
+    onClick: () -> Unit,
 ) {
-    var menu by remember { mutableStateOf(false) }
-    val online = friend.presenceStatus == "online"
-    Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, if (online) MainUi.Green.copy(alpha = .28f) else MainUi.Border)) {
-        Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
+    PurchasedPanel(
+        modifier = modifier.clickable(onClick = onClick),
+        asset = if (selected) PurchasedUiAsset.PANEL_LARGE else PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 5.dp, vertical = 7.dp),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box {
-                ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 48.dp, accent = if (friend.isVip) MainUi.Gold else MainUi.Blue, visible = friend.avatarVisibility != "hidden")
-                Box(
-                    Modifier.align(Alignment.BottomEnd).size(12.dp).clip(CircleShape).background(if (online) MainUi.Green else MainUi.Muted),
-                )
-            }
-            Spacer(Modifier.width(10.dp))
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(friend.displayName, color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    if (friend.isVip) {
-                        Spacer(Modifier.width(5.dp))
-                        Text("VIP", color = MainUi.Gold, fontSize = 7.sp, fontWeight = FontWeight.Black)
-                    }
-                }
-                Text(
-                    if (online) sh("Çevrimiçi", "Online") else sh("Çevrimdışı", "Offline"),
-                    color = if (online) MainUi.Green else MainUi.Muted,
-                    fontSize = 9.sp,
-                )
-                Text("${ratingLeagueProgress(friend.rating).leagueName} • ${friend.rating}", color = MainUi.Muted, fontSize = 8.sp)
-            }
-            Button(
-                onClick = onInvite,
-                enabled = !busy,
-                shape = RoundedCornerShape(12.dp),
-                contentPadding = PaddingValues(horizontal = 11.dp, vertical = 7.dp),
-            ) { Text(if (busy) "…" else sh("KUŞAT", "SIEGE"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
-            Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Rounded.MoreVert, sh("Daha fazla", "More"), tint = MainUi.Muted) }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(
-                        text = { Text(sh("Arkadaşlıktan çıkar", "Remove friend"), color = MainUi.Red) },
-                        onClick = { menu = false; onRemove() },
-                        leadingIcon = { Icon(Icons.Rounded.PersonRemove, null, tint = MainUi.Red) },
+                PurchasedAsset(asset, Modifier.size(30.dp))
+                if (badge > 0) {
+                    Text(
+                        badge.toString(),
+                        modifier = Modifier.align(Alignment.TopEnd),
+                        color = Color(0xFFB4433E),
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Black,
                     )
                 }
             }
+            Text(text, color = if (selected) Color(0xFF6B3CA6) else Color(0xFF654A3D), fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
 }
 
 @Composable
-private fun MainSocialEmpty(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    title: String,
-    body: String,
-    action: String,
-    onAction: () -> Unit,
-) {
-    Surface(shape = RoundedCornerShape(20.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-        Column(Modifier.fillMaxWidth().padding(22.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Surface(shape = CircleShape, color = MainUi.BlueSoft) {
-                Icon(icon, null, tint = MainUi.Blue, modifier = Modifier.padding(12.dp).size(28.dp))
+private fun PurchasedLeaderboardFriendRow(index: Int, friend: ProfileDto) {
+    Box(Modifier.fillMaxWidth().heightIn(min = 49.dp)) {
+        PurchasedAsset(PurchasedUiAsset.LEADERBOARD_ROW, Modifier.matchParentSize())
+        Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("${index + 1}", color = Color(0xFF654A3D), fontSize = 10.sp, fontWeight = FontWeight.Black, modifier = Modifier.width(22.dp))
+            PurchasedAvatarFrame(Modifier.size(38.dp)) {
+                ProfilePhotoAvatar(friend.avatarPath, friend.displayName, 29.dp, visible = friend.avatarVisibility != "hidden", accent = if (friend.isVip) MainUi.Gold else MainUi.Blue)
             }
-            Text(title, color = MainUi.Text, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-            Text(body, color = MainUi.Muted, fontSize = 10.sp, textAlign = TextAlign.Center)
-            TextButton(onClick = onAction) { Text(action, color = MainUi.Blue, fontWeight = FontWeight.Black) }
+            Spacer(Modifier.width(7.dp))
+            Text(friend.displayName, color = Color(0xFF4A2D20), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), maxLines = 1)
+            Text(friend.rating.toString(), color = Color(0xFF6B3CA6), fontSize = 10.sp, fontWeight = FontWeight.Black)
+        }
+    }
+}
+
+@Composable
+private fun SocialPlayerRow(player: ProfileDto, actionText: String, actionEnabled: Boolean, onAction: () -> Unit) {
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            PurchasedAvatarFrame(Modifier.size(56.dp)) {
+                ProfilePhotoAvatarWithGender(player.avatarPath, player.gender, player.displayName, 43.dp, accent = if (player.isVip) MainUi.Gold else MainUi.Blue, visible = player.avatarVisibility != "hidden")
+            }
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f)) {
+                Text(player.displayName, color = Color(0xFF4A2D20), fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${ratingLeagueProgress(player.rating).leagueName} • ${player.rating}", color = Color(0xFF765746), fontSize = 9.sp)
+            }
+            PurchasedButton(
+                text = actionText,
+                onClick = onAction,
+                enabled = actionEnabled,
+                modifier = Modifier.width(96.dp),
+                style = PurchasedButtonStyle.SECONDARY,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SocialInviteCard(
+    sender: ProfileDto?,
+    modeTitle: String,
+    language: String,
+    busy: Boolean,
+    onDecline: () -> Unit,
+    onAccept: () -> Unit,
+) {
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_LARGE,
+        contentPadding = PaddingValues(13.dp),
+    ) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PurchasedAvatarFrame(Modifier.size(56.dp)) {
+                    ProfilePhotoAvatar(sender?.avatarPath, sender?.displayName ?: sh("Oyuncu", "Player"), 43.dp, visible = sender?.avatarVisibility != "hidden", accent = Color(0xFF567A64))
+                }
+                Spacer(Modifier.width(9.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(sender?.displayName ?: sh("Oyun daveti", "Game invite"), color = Color(0xFF4A2D20), fontWeight = FontWeight.Black)
+                    Text("$modeTitle • ${if (language == "en") "English" else "Türkçe"}", color = Color(0xFF765746), fontSize = 9.sp)
+                }
+                PurchasedAsset(PurchasedUiAsset.ICON_GAMES, Modifier.size(40.dp))
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PurchasedButton(
+                    text = sh("REDDET", "DECLINE"),
+                    onClick = onDecline,
+                    enabled = !busy,
+                    modifier = Modifier.weight(1f),
+                    style = PurchasedButtonStyle.DANGER,
+                )
+                PurchasedButton(
+                    text = if (busy) "…" else sh("KABUL ET", "ACCEPT"),
+                    onClick = onAccept,
+                    enabled = !busy,
+                    modifier = Modifier.weight(1f),
+                    style = PurchasedButtonStyle.PRIMARY,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProFriendListLock(onUpgrade: () -> Unit) {
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_LARGE,
+        contentPadding = PaddingValues(20.dp),
+    ) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(9.dp)) {
+            PurchasedAsset(PurchasedUiAsset.ICON_CROWN, Modifier.size(64.dp))
+            Text(sh("Arkadaş listesi Pro'ya özel", "Friend list is Pro-only"), color = Color(0xFF4A2D20), fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+            Text(sh("Pro üyelikle arkadaşlarını kaydet, davet et ve haftalık sıralamada rakip ol.", "Save friends, invite them and race in the weekly ranking with Pro."), color = Color(0xFF765746), fontSize = 10.sp, textAlign = TextAlign.Center)
+            PurchasedButton(
+                text = sh("PRO'YA GEÇ", "GO PRO"),
+                onClick = onUpgrade,
+                modifier = Modifier.fillMaxWidth(),
+                style = PurchasedButtonStyle.PURPLE,
+                leadingAsset = PurchasedUiAsset.ICON_CROWN,
+            )
+        }
+    }
+}
+
+@Composable
+private fun MainFriendCard(friend: ProfileDto, busy: Boolean, onInvite: () -> Unit, onRemove: () -> Unit) {
+    val online = friend.presenceStatus == "online"
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            PurchasedAvatarFrame(Modifier.size(60.dp)) {
+                ProfilePhotoAvatarWithGender(friend.avatarPath, friend.gender, friend.displayName, 47.dp, accent = if (friend.isVip) MainUi.Gold else MainUi.Blue, visible = friend.avatarVisibility != "hidden")
+            }
+            Spacer(Modifier.width(9.dp))
+            Column(Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(friend.displayName, color = Color(0xFF4A2D20), fontSize = 13.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (friend.isVip) {
+                        Spacer(Modifier.width(4.dp))
+                        PurchasedAsset(PurchasedUiAsset.ICON_CROWN, Modifier.size(22.dp))
+                    }
+                }
+                Text(if (online) sh("● Çevrimiçi", "● Online") else sh("○ Çevrimdışı", "○ Offline"), color = if (online) Color(0xFF4D9A4D) else Color(0xFF765746), fontSize = 9.sp)
+                Text("${ratingLeagueProgress(friend.rating).leagueName} • ${friend.rating}", color = Color(0xFF765746), fontSize = 8.sp)
+            }
+            Column(horizontalAlignment = Alignment.End) {
+                PurchasedButton(
+                    text = if (busy) "…" else sh("KUŞAT", "SIEGE"),
+                    onClick = onInvite,
+                    enabled = !busy,
+                    modifier = Modifier.width(94.dp),
+                    style = PurchasedButtonStyle.WARNING,
+                    leadingAsset = PurchasedUiAsset.ICON_SWORDS,
+                )
+                PurchasedIconButton(PurchasedUiAsset.ICON_CLOSE, onClick = onRemove, modifier = Modifier.size(42.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun MainSocialEmpty(asset: PurchasedUiAsset, title: String, body: String, action: String, onAction: () -> Unit) {
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_MEDIUM,
+        contentPadding = PaddingValues(20.dp),
+    ) {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            PurchasedAsset(asset, Modifier.size(56.dp))
+            Text(title, color = Color(0xFF4A2D20), fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+            Text(body, color = Color(0xFF765746), fontSize = 10.sp, textAlign = TextAlign.Center)
+            PurchasedButton(text = action, onClick = onAction, modifier = Modifier.fillMaxWidth(), style = PurchasedButtonStyle.SECONDARY)
         }
     }
 }
