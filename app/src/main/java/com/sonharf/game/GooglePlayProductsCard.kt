@@ -2,16 +2,12 @@ package com.sonharf.game
 
 import android.app.Activity
 import androidx.annotation.DrawableRes
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -96,7 +92,6 @@ fun GooglePlayProductsCard(
     DisposableEffect(manager) {
         manager.connect {
             manager.queryOneTimeProducts(ProductCatalog.oneTimeProducts) { products = it }
-            // Silent recovery only; there is intentionally no Restore Purchases button.
             manager.restorePurchases(ProductCatalog.permanentPremiumProducts.toSet())
         }
         onDispose { manager.close() }
@@ -116,21 +111,21 @@ fun GooglePlayProductsCard(
         }
     }
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfTheme.Surface),
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .28f)),
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_LARGE,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 16.dp),
     ) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (showPremiumProducts) {
-                Text(sh("PREMİUM ÖZELLİKLER", "PREMIUM FEATURES"), color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
+                PurchasedSectionHeader(sh("PREMİUM ÖZELLİKLER", "PREMIUM FEATURES"))
                 Text(
                     sh("Tek ödeme ile kalıcı kullanım. PRO; premium araçları, reklamsız kullanımı, arkadaş listesini, Son Harf tam geçmişini, 50 aktif oyun limitini, PRO çerçevesini ve ilk grant'te bir kez 100 Son Coin'i açar.", "One payment, permanent access. PRO unlocks premium tools, ad-free play, the friends list, full Son Harf history, a 50 active-game limit, the PRO frame and a one-time 100 Son Coins on the first grant."),
-                    color = SonHarfMuted,
+                    color = Color(0xFF765746),
                     fontSize = 9.sp,
                 )
 
-                PremiumProductRow(
+                PurchasedPremiumProductRow(
                     title = sh("Seri Oyun", "Series Game"),
                     subtitle = sh("3/5/10 dk • ayrı hızlı oyun modu", "3/5/10 min • separate fast game mode"),
                     imageRes = R.drawable.premium_series_game_canva,
@@ -141,7 +136,7 @@ fun GooglePlayProductsCard(
                     proAccess = entitlements.isPro,
                     onOpen = { showSeriesGame = true },
                 ) { buy(ProductCatalog.SERIES_GAME) }
-                PremiumProductRow(
+                PurchasedPremiumProductRow(
                     title = sh("Harf Tablosu", "Letter Table"),
                     subtitle = sh("Kalan harfleri rakip elini açmadan gör", "See remaining letters without exposing the opponent rack"),
                     imageRes = R.drawable.premium_letter_table_canva,
@@ -151,7 +146,7 @@ fun GooglePlayProductsCard(
                     directOwned = entitlements.letterTableDirectOwned,
                     proAccess = entitlements.isPro,
                 ) { buy(ProductCatalog.LETTER_TABLE) }
-                PremiumProductRow(
+                PurchasedPremiumProductRow(
                     title = sh("Puan Hesaplayıcı", "Score Calculator"),
                     subtitle = sh("Hamle puanını gerçek sunucu motoruyla önceden gör", "Preview move score with the real server engine"),
                     imageRes = R.drawable.premium_score_calculator_canva,
@@ -161,7 +156,7 @@ fun GooglePlayProductsCard(
                     directOwned = entitlements.scoreCalculatorDirectOwned,
                     proAccess = entitlements.isPro,
                 ) { buy(ProductCatalog.SCORE_CALCULATOR) }
-                PremiumProductRow(
+                PurchasedPremiumProductRow(
                     title = "PRO",
                     subtitle = sh("Premium paket • tek ödeme • kalıcı erişim", "Premium bundle • one payment • lifetime access"),
                     imageRes = R.drawable.premium_pro_canva,
@@ -173,30 +168,46 @@ fun GooglePlayProductsCard(
                 ) { buy(ProductCatalog.PRO_LIFETIME) }
             }
 
-            if (showPremiumProducts && showCoinPacks) HorizontalDivider(color = SonHarfTheme.Border)
-
             if (showCoinPacks) {
-                Text("SON COIN", color = SonHarfGold, fontWeight = FontWeight.Black, fontSize = 14.sp)
-                Text(sh("Coin yalnızca kozmetik ve mağaza ürünlerinde kullanılır; maç gücü satılmaz.", "Coins are only for cosmetics and store items; match power is never sold."), color = SonHarfMuted, fontSize = 9.sp)
-                CoinProductRow(500, sh("Mini paket", "Mini pack"), products[ProductCatalog.COINS_500], busy != null) { buy(ProductCatalog.COINS_500) }
-                CoinProductRow(1500, sh("Standart paket", "Standard pack"), products[ProductCatalog.COINS_1500], busy != null) { buy(ProductCatalog.COINS_1500) }
-                CoinProductRow(3500, sh("Popüler paket", "Popular pack"), products[ProductCatalog.COINS_3500], busy != null) { buy(ProductCatalog.COINS_3500) }
-                CoinProductRow(8000, sh("Mega paket", "Mega pack"), products[ProductCatalog.COINS_8000], busy != null) { buy(ProductCatalog.COINS_8000) }
+                PurchasedSectionHeader("SON COIN")
+                Text(
+                    sh("Coin yalnızca kozmetik ve mağaza ürünlerinde kullanılır; maç gücü satılmaz.", "Coins are only for cosmetics and store items; match power is never sold."),
+                    color = Color(0xFF765746),
+                    fontSize = 9.sp,
+                )
+                PurchasedCoinProductRow(500, sh("Mini paket", "Mini pack"), products[ProductCatalog.COINS_500], busy != null) { buy(ProductCatalog.COINS_500) }
+                PurchasedCoinProductRow(1500, sh("Standart paket", "Standard pack"), products[ProductCatalog.COINS_1500], busy != null) { buy(ProductCatalog.COINS_1500) }
+                PurchasedCoinProductRow(3500, sh("Popüler paket", "Popular pack"), products[ProductCatalog.COINS_3500], busy != null) { buy(ProductCatalog.COINS_3500) }
+                PurchasedCoinProductRow(8000, sh("Mega paket", "Mega pack"), products[ProductCatalog.COINS_8000], busy != null) { buy(ProductCatalog.COINS_8000) }
             }
 
-            if (notice.isNotBlank()) Text(notice, color = SonHarfMuted, fontSize = 9.sp)
+            if (notice.isNotBlank()) {
+                PurchasedPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    asset = PurchasedUiAsset.PANEL_SMALL,
+                    contentPadding = PaddingValues(12.dp),
+                ) {
+                    Text(notice, color = Color(0xFF654A3D), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                }
+            }
         }
     }
 
     if (showSeriesGame) {
-        Dialog(onDismissRequest = { showSeriesGame = false }, properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-            Surface(Modifier.fillMaxSize(), color = SonHarfTheme.Background) { WordSiegeSeriesScreen(onExit = { showSeriesGame = false }) }
+        Dialog(
+            onDismissRequest = { showSeriesGame = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+        ) {
+            Box(Modifier.fillMaxSize()) {
+                PurchasedGameBackdrop(Modifier.matchParentSize())
+                WordSiegeSeriesScreen(onExit = { showSeriesGame = false })
+            }
         }
     }
 }
 
 @Composable
-private fun PremiumProductRow(
+private fun PurchasedPremiumProductRow(
     title: String,
     subtitle: String,
     @DrawableRes imageRes: Int,
@@ -209,41 +220,45 @@ private fun PremiumProductRow(
     onBuy: () -> Unit,
 ) {
     val effectiveAccess = directOwned || proAccess
-    Surface(color = SonHarfTheme.SurfaceSecondary, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, SonHarfTheme.Border)) {
-        Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Surface(shape = RoundedCornerShape(14.dp), color = SonHarfTheme.Primary.copy(alpha = .06f)) {
-                Image(painter = painterResource(imageRes), contentDescription = null, modifier = Modifier.padding(5.dp).size(64.dp), contentScale = ContentScale.Fit)
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 11.dp, vertical = 11.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+            Box(Modifier.size(66.dp), contentAlignment = Alignment.Center) {
+                PurchasedAsset(PurchasedUiAsset.REWARD_PANEL, Modifier.matchParentSize())
+                Image(painter = painterResource(imageRes), contentDescription = null, modifier = Modifier.padding(7.dp).fillMaxSize(), contentScale = ContentScale.Fit)
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, fontWeight = FontWeight.Black, color = SonHarfText, fontSize = 14.sp)
-                Text(subtitle, color = SonHarfMuted, fontSize = 9.sp)
+                Text(title, fontWeight = FontWeight.Black, color = Color(0xFF4A2D20), fontSize = 13.sp)
+                Text(subtitle, color = Color(0xFF765746), fontSize = 9.sp)
                 when {
-                    directOwned -> Text(sh("SATIN ALINDI", "OWNED"), color = SonHarfTheme.Success, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                    proAccess -> Text(sh("PRO İLE AÇIK", "UNLOCKED WITH PRO"), color = SonHarfTheme.Primary, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                    product?.oneTimePurchaseOfferDetails != null -> Text(product.oneTimePurchaseOfferDetails!!.formattedPrice, color = SonHarfTheme.TextSecondary, fontSize = 8.sp, fontWeight = FontWeight.Bold)
-                    else -> Text(sh("Hedef fiyat: $fallbackPrice • Google Play fiyatı bekleniyor", "Target price: $fallbackPrice • waiting for Google Play price"), color = SonHarfMuted, fontSize = 8.sp)
+                    directOwned -> Text(sh("SATIN ALINDI", "OWNED"), color = Color(0xFF4D9A4D), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    proAccess -> Text(sh("PRO İLE AÇIK", "UNLOCKED WITH PRO"), color = Color(0xFF6B3CA6), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    product?.oneTimePurchaseOfferDetails != null -> Text(product.oneTimePurchaseOfferDetails!!.formattedPrice, color = Color(0xFF654A3D), fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    else -> Text(sh("Hedef fiyat: $fallbackPrice • Google Play fiyatı bekleniyor", "Target price: $fallbackPrice • waiting for Google Play price"), color = Color(0xFF765746), fontSize = 8.sp)
                 }
             }
-            if (effectiveAccess && onOpen != null) {
-                Button(onClick = onOpen, enabled = !busy, colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary), shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
-                    Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(3.dp))
-                    Text(sh("AÇ", "OPEN"), fontWeight = FontWeight.Black, fontSize = 10.sp)
-                }
-            } else if (effectiveAccess) {
-                Surface(shape = RoundedCornerShape(12.dp), color = SonHarfTheme.Success.copy(alpha = .12f)) {
-                    Text("✓", Modifier.padding(horizontal = 13.dp, vertical = 7.dp), color = SonHarfTheme.Success, fontWeight = FontWeight.Black)
-                }
-            } else {
-                val realPrice = product?.oneTimePurchaseOfferDetails?.formattedPrice
-                Button(
-                    onClick = onBuy,
-                    enabled = !busy && realPrice != null,
-                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary, disabledContainerColor = SonHarfTheme.DisabledBackground, disabledContentColor = SonHarfTheme.DisabledContent),
-                    shape = RoundedCornerShape(12.dp),
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                ) {
-                    Text(if (realPrice != null) sh("$realPrice • SATIN AL", "$realPrice • BUY") else sh("SATIN AL", "BUY"), fontWeight = FontWeight.Black, fontSize = 9.sp)
+            when {
+                effectiveAccess && onOpen != null -> PurchasedButton(
+                    text = sh("AÇ", "OPEN"),
+                    onClick = onOpen,
+                    enabled = !busy,
+                    modifier = Modifier.width(96.dp),
+                    style = PurchasedButtonStyle.SECONDARY,
+                    leadingAsset = PurchasedUiAsset.ICON_GAMES,
+                )
+                effectiveAccess -> PurchasedAsset(PurchasedUiAsset.ICON_CHECK, Modifier.size(39.dp))
+                else -> {
+                    val realPrice = product?.oneTimePurchaseOfferDetails?.formattedPrice
+                    PurchasedButton(
+                        text = realPrice ?: sh("SATIN AL", "BUY"),
+                        onClick = onBuy,
+                        enabled = !busy && realPrice != null,
+                        modifier = Modifier.widthIn(min = 94.dp, max = 130.dp),
+                        style = PurchasedButtonStyle.PRIMARY,
+                    )
                 }
             }
         }
@@ -251,21 +266,36 @@ private fun PremiumProductRow(
 }
 
 @Composable
-private fun CoinProductRow(amount: Int, subtitle: String, product: ProductDetails?, busy: Boolean, onBuy: () -> Unit) {
-    Surface(color = SonHarfTheme.SurfaceSecondary, shape = RoundedCornerShape(16.dp), border = BorderStroke(1.dp, SonHarfTheme.Border)) {
-        Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
-                Image(painter = painterResource(R.drawable.style_icon_coin), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
-                Text(if (amount >= 1000) "${amount / 1000}K" else amount.toString(), color = SonHarfText, fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.BottomEnd))
+private fun PurchasedCoinProductRow(
+    amount: Int,
+    subtitle: String,
+    product: ProductDetails?,
+    busy: Boolean,
+    onBuy: () -> Unit,
+) {
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+                PurchasedAsset(PurchasedUiAsset.ICON_COIN, Modifier.fillMaxSize())
+                Text(if (amount >= 1000) "${amount / 1000}K" else amount.toString(), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.BottomEnd))
             }
             Column(Modifier.weight(1f)) {
-                Text("$amount Son Coin", fontWeight = FontWeight.Black, color = SonHarfText, fontSize = 14.sp)
-                Text(subtitle, color = SonHarfMuted, fontSize = 9.sp)
+                Text("$amount Son Coin", fontWeight = FontWeight.Black, color = Color(0xFF4A2D20), fontSize = 13.sp)
+                Text(subtitle, color = Color(0xFF765746), fontSize = 9.sp)
             }
             val realPrice = product?.oneTimePurchaseOfferDetails?.formattedPrice
-            Button(onClick = onBuy, enabled = !busy && realPrice != null, colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Primary, disabledContainerColor = SonHarfTheme.DisabledBackground, disabledContentColor = SonHarfTheme.DisabledContent), shape = RoundedCornerShape(12.dp), contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)) {
-                Text(when { busy -> "…"; realPrice != null -> realPrice; else -> sh("PLAY'DE YOK", "NOT ON PLAY") }, fontWeight = FontWeight.Black, fontSize = 10.sp)
-            }
+            PurchasedButton(
+                text = when { busy -> "…"; realPrice != null -> realPrice; else -> sh("PLAY'DE YOK", "NOT ON PLAY") },
+                onClick = onBuy,
+                enabled = !busy && realPrice != null,
+                modifier = Modifier.widthIn(min = 100.dp, max = 136.dp),
+                style = PurchasedButtonStyle.PRIMARY,
+                leadingAsset = PurchasedUiAsset.ICON_COIN,
+            )
         }
     }
 }
