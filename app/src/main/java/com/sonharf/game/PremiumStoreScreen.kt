@@ -1,20 +1,17 @@
 package com.sonharf.game
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -36,19 +33,17 @@ private val PremiumStoreKinds = setOf(
 private data class PremiumStoreCategory(
     val titleTr: String,
     val titleEn: String,
-    val icon: ImageVector,
-    val accent: Color,
+    val asset: PurchasedUiAsset,
     val kinds: Set<String>,
 )
 
 private val premiumStoreCategories = listOf(
-    PremiumStoreCategory("Temalar", "Themes", Icons.Rounded.Palette, Color(0xFF7C3AED), setOf("game_theme")),
-    PremiumStoreCategory("Profil Çerçeveleri", "Profile Frames", Icons.Rounded.AccountCircle, Color(0xFF2563EB), setOf("profile_frame")),
-    PremiumStoreCategory("Tuş Stilleri", "Keyboard Styles", Icons.Rounded.Keyboard, Color(0xFF12B8A6), setOf("keyboard_theme")),
-    PremiumStoreCategory("İsim & Prestij", "Name & Prestige", Icons.Rounded.AutoAwesome, Color(0xFFF97316), setOf("name_style", "victory_effect", "emoji_pack")),
+    PremiumStoreCategory("Temalar", "Themes", PurchasedUiAsset.ICON_GAMES, setOf("game_theme")),
+    PremiumStoreCategory("Profil Çerçeveleri", "Profile Frames", PurchasedUiAsset.NAV_PROFILE, setOf("profile_frame")),
+    PremiumStoreCategory("Tuş Stilleri", "Keyboard Styles", PurchasedUiAsset.ICON_SWORDS, setOf("keyboard_theme")),
+    PremiumStoreCategory("İsim & Prestij", "Name & Prestige", PurchasedUiAsset.ICON_CROWN, setOf("name_style", "victory_effect", "emoji_pack")),
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PremiumStoreScreen(
     initialTab: Int = 0,
@@ -100,73 +95,46 @@ internal fun PremiumStoreScreen(
 
     LaunchedEffect(Unit) { reload() }
 
-    Column(Modifier.fillMaxSize().background(Color.Transparent)) {
+    Column(Modifier.fillMaxSize()) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 9.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Surface(
+            PurchasedIconButton(
+                asset = PurchasedUiAsset.ICON_CLOSE,
                 onClick = onBack,
-                shape = CircleShape,
-                color = SonHarfTheme.Surface,
-                border = BorderStroke(1.dp, SonHarfTheme.Border),
-                shadowElevation = 2.dp,
-            ) {
-                Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = SonHarfTheme.TextPrimary, modifier = Modifier.padding(10.dp).size(20.dp))
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(sh("Mağaza", "Shop"), color = SonHarfTheme.TextPrimary, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                Text(sh("Tarzını seç, koleksiyonunu oluştur", "Choose your style and build your collection"), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
-            }
-            Surface(
+                contentDescription = sh("Geri", "Back"),
+            )
+            Spacer(Modifier.width(8.dp))
+            PurchasedSectionHeader(
+                title = sh("MAĞAZA", "SHOP"),
+                modifier = Modifier.weight(1f),
+            )
+            Spacer(Modifier.width(8.dp))
+            PurchasedCurrencyBar(
+                amount = "${profile?.diamonds ?: 0}",
                 onClick = { showCoins = true },
-                shape = RoundedCornerShape(99.dp),
-                color = SonHarfTheme.ActionOrange.copy(alpha = .11f),
-                border = BorderStroke(1.dp, SonHarfTheme.ActionOrange.copy(alpha = .20f)),
-            ) {
-                Row(Modifier.padding(horizontal = 10.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Toll, null, tint = SonHarfTheme.ActionOrange, modifier = Modifier.size(15.dp))
-                    Spacer(Modifier.width(5.dp))
-                    Text("${profile?.diamonds ?: 0}", color = SonHarfTheme.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                }
-            }
+            )
         }
 
-        ScrollableTabRow(
-            selectedTabIndex = tab,
-            edgePadding = 12.dp,
-            containerColor = Color.Transparent,
-            divider = {},
-            indicator = { positions ->
-                if (tab < positions.size) {
-                    TabRowDefaults.SecondaryIndicator(
-                        Modifier.tabIndicatorOffset(positions[tab]),
-                        color = when (tab) {
-                            0 -> SonHarfTheme.Primary
-                            1 -> SonHarfTheme.Turquoise
-                            2 -> SonHarfTheme.ActionOrange
-                            else -> SonHarfTheme.Purple
-                        },
-                    )
-                }
-            },
+        Row(
+            Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.spacedBy(7.dp),
         ) {
-            listOf(sh("Öne Çıkan", "Featured"), sh("Sezon", "Season"), sh("Görünümler", "Styles"), "PRO")
-                .forEachIndexed { index, label ->
-                    Tab(
-                        selected = tab == index,
-                        onClick = { tab = index },
-                        text = {
-                            Text(
-                                label,
-                                color = if (tab == index) SonHarfTheme.TextPrimary else SonHarfTheme.TextSecondary,
-                                fontSize = 11.sp,
-                                fontWeight = if (tab == index) FontWeight.Black else FontWeight.Medium,
-                            )
-                        },
-                    )
-                }
+            val tabs = listOf(
+                Triple(sh("ÖNE ÇIKAN", "FEATURED"), PurchasedUiAsset.ICON_GIFT, 0),
+                Triple(sh("SEZON", "SEASON"), PurchasedUiAsset.ICON_TROPHY, 1),
+                Triple(sh("GÖRÜNÜMLER", "STYLES"), PurchasedUiAsset.NAV_PROFILE, 2),
+                Triple("PRO", PurchasedUiAsset.ICON_CROWN, 3),
+            )
+            tabs.forEach { (label, asset, index) ->
+                PremiumStoreAssetTab(
+                    text = label,
+                    asset = asset,
+                    selected = tab == index,
+                    onClick = { tab = index },
+                )
+            }
         }
 
         when (tab) {
@@ -179,43 +147,61 @@ internal fun PremiumStoreScreen(
             else -> LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(13.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (loading) {
-                    item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = SonHarfTheme.Turquoise, trackColor = SonHarfTheme.SurfaceSecondary) }
+                    item {
+                        LinearProgressIndicator(
+                            Modifier.fillMaxWidth().height(5.dp),
+                            color = Color(0xFF58B957),
+                            trackColor = Color(0xFFDEC59B),
+                        )
+                    }
                 }
 
                 if (tab == 0 || tab == 2) {
                     item {
-                        ProfileFramesV2StoreRow(
-                            backend = backend,
-                            onChanged = { scope.launch { reload() } },
-                        )
+                        PurchasedPanel(
+                            modifier = Modifier.fillMaxWidth(),
+                            asset = PurchasedUiAsset.PANEL_MEDIUM,
+                            contentPadding = PaddingValues(12.dp),
+                        ) {
+                            ProfileFramesV2StoreRow(
+                                backend = backend,
+                                onChanged = { scope.launch { reload() } },
+                            )
+                        }
                     }
                 }
 
                 if (tab == 0) {
                     item {
-                        StoreDailyRewardCard(storefront, busyId != null || loading) {
-                            val b = backend ?: return@StoreDailyRewardCard
-                            if (busyId != null || storefront?.dailyClaimed == true) return@StoreDailyRewardCard
-                            scope.launch {
-                                busyId = "daily"
-                                runCatching { b.claimDailyCheckin() }
-                                    .onSuccess { amount ->
-                                        notice = if (amount > 0) sh("+$amount Son Coin hesabına eklendi.", "+$amount Son Coin added to your account.")
-                                        else sh("Bugünkü hediyeni aldın.", "Today's gift was claimed.")
-                                        reload()
-                                    }
-                                    .onFailure { notice = sh("Günlük hediye alınamadı.", "Daily gift could not be claimed.") }
-                                busyId = null
+                        PurchasedPanel(
+                            modifier = Modifier.fillMaxWidth(),
+                            asset = PurchasedUiAsset.PANEL_MEDIUM,
+                            contentPadding = PaddingValues(12.dp),
+                        ) {
+                            StoreDailyRewardCard(storefront, busyId != null || loading) {
+                                val b = backend ?: return@StoreDailyRewardCard
+                                if (busyId != null || storefront?.dailyClaimed == true) return@StoreDailyRewardCard
+                                scope.launch {
+                                    busyId = "daily"
+                                    runCatching { b.claimDailyCheckin() }
+                                        .onSuccess { amount ->
+                                            notice = if (amount > 0) sh("+$amount Son Coin hesabına eklendi.", "+$amount Son Coin added to your account.")
+                                            else sh("Bugünkü hediyeni aldın.", "Today's gift was claimed.")
+                                            reload()
+                                        }
+                                        .onFailure { notice = sh("Günlük hediye alınamadı.", "Daily gift could not be claimed.") }
+                                    busyId = null
+                                }
                             }
                         }
                     }
+                    item { PremiumStoreProHero(entitlements?.isPro == true) { tab = 3 } }
                     item {
-                        PremiumStoreProHero(entitlements?.isPro == true) { tab = 3 }
-                    }
-                    item {
+                        PurchasedSectionHeader(sh("GOOGLE PLAY", "GOOGLE PLAY"))
+                        Spacer(Modifier.height(7.dp))
                         GooglePlayProductsCard(
                             onPurchased = { scope.launch { reload() } },
                             showPremiumProducts = true,
@@ -243,10 +229,11 @@ internal fun PremiumStoreScreen(
                         }
                     }
                     item {
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Text(sh("Seçili Görünümler", "Selected Styles"), Modifier.weight(1f), color = SonHarfTheme.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Black)
-                            TextButton(onClick = { tab = 2 }) { Text(sh("TÜMÜ", "ALL"), color = SonHarfTheme.Primary, fontSize = 10.sp, fontWeight = FontWeight.Black) }
-                        }
+                        PurchasedSectionHeader(
+                            title = sh("SEÇİLİ GÖRÜNÜMLER", "SELECTED STYLES"),
+                            action = sh("TÜMÜ", "ALL"),
+                            onAction = { tab = 2 },
+                        )
                     }
                     val highlights = products.filter { it.id != PremiumStoreBlackThemeId }.take(4)
                     highlights.chunked(2).forEach { rowItems ->
@@ -272,8 +259,7 @@ internal fun PremiumStoreScreen(
                                 PremiumStoreCategoryHeader(
                                     title = sh(category.titleTr, category.titleEn),
                                     count = categoryProducts.size,
-                                    icon = category.icon,
-                                    accent = category.accent,
+                                    asset = category.asset,
                                 )
                             }
                             categoryProducts.chunked(2).forEach { rowItems ->
@@ -293,31 +279,67 @@ internal fun PremiumStoreScreen(
                             }
                         }
                     }
-                    if (!loading && products.isEmpty()) {
-                        item { PremiumStoreOfflineCard() }
-                    }
+                    if (!loading && products.isEmpty()) item { PremiumStoreOfflineCard() }
                 }
 
                 notice?.let { message ->
                     item {
-                        Surface(shape = RoundedCornerShape(15.dp), color = SonHarfTheme.PrimarySoft) {
-                            Text(message, Modifier.fillMaxWidth().padding(12.dp), color = SonHarfTheme.TextPrimary, fontSize = 10.sp, textAlign = TextAlign.Center)
+                        PurchasedPanel(
+                            modifier = Modifier.fillMaxWidth(),
+                            asset = PurchasedUiAsset.PANEL_SMALL,
+                            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 13.dp),
+                        ) {
+                            Text(message, Modifier.fillMaxWidth(), color = Color(0xFF4A2D20), fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                         }
                     }
                 }
-                item { Spacer(Modifier.height(12.dp)) }
+                item { Spacer(Modifier.height(14.dp)) }
             }
         }
     }
 
     if (showCoins) {
-        ModalBottomSheet(onDismissRequest = { showCoins = false }, containerColor = SonHarfTheme.Surface) {
-            GooglePlayProductsCard(
-                onPurchased = { scope.launch { reload() } },
-                showPremiumProducts = false,
-                showCoinPacks = true,
-            )
+        ModalBottomSheet(
+            onDismissRequest = { showCoins = false },
+            containerColor = Color.Transparent,
+            dragHandle = null,
+        ) {
+            PurchasedPanel(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
+                asset = PurchasedUiAsset.PANEL_LARGE,
+                contentPadding = PaddingValues(14.dp),
+            ) {
+                Column(Modifier.fillMaxWidth()) {
+                    PurchasedSectionHeader("SON COIN")
+                    Spacer(Modifier.height(8.dp))
+                    GooglePlayProductsCard(
+                        onPurchased = { scope.launch { reload() } },
+                        showPremiumProducts = false,
+                        showCoinPacks = true,
+                    )
+                }
+            }
             Spacer(Modifier.navigationBarsPadding().height(12.dp))
+        }
+    }
+}
+
+@Composable
+private fun PremiumStoreAssetTab(
+    text: String,
+    asset: PurchasedUiAsset,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    PurchasedPanel(
+        modifier = Modifier.widthIn(min = 102.dp).clickable(onClick = onClick),
+        asset = if (selected) PurchasedUiAsset.PANEL_SMALL else PurchasedUiAsset.PANEL_MEDIUM,
+        contentPadding = PaddingValues(horizontal = 11.dp, vertical = 8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PurchasedAsset(asset, Modifier.size(28.dp))
+            Spacer(Modifier.width(5.dp))
+            Text(text, color = if (selected) Color(0xFF6B3CA6) else Color(0xFF654A3D), fontSize = 9.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
 }
@@ -333,7 +355,7 @@ private fun premiumStoreKindOrder(kind: String): Int = when (kind) {
 }
 
 private fun ShopItemDto.premiumStoreName(): String = when (id) {
-    PremiumStoreBlackThemeId -> "Black Theme"
+    PremiumStoreBlackThemeId -> sh("Siyah Tema", "Black Theme")
     else -> if (SonHarfUiState.isEnglish) nameEn else nameTr
 }
 
@@ -388,89 +410,81 @@ private fun premiumStorePurchase(
 
 @Composable
 private fun PremiumStoreProHero(active: Boolean, onClick: () -> Unit) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(22.dp),
-        color = Color.Transparent,
-        shadowElevation = 4.dp,
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
+        asset = PurchasedUiAsset.PANEL_LARGE,
+        contentPadding = PaddingValues(horizontal = 18.dp, vertical = 16.dp),
     ) {
-        Box(
-            Modifier.fillMaxWidth().background(
-                Brush.linearGradient(listOf(SonHarfTheme.Primary, SonHarfTheme.Purple, SonHarfTheme.Turquoise)),
-                RoundedCornerShape(22.dp),
-            ).padding(16.dp)
-        ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Surface(shape = CircleShape, color = Color.White.copy(alpha = .16f)) {
-                    Icon(Icons.Rounded.WorkspacePremium, null, tint = Color.White, modifier = Modifier.padding(11.dp).size(24.dp))
-                }
-                Spacer(Modifier.width(11.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("PRO", color = Color.White, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                    Text(
-                        if (active) sh("Üyeliğin aktif · Ayrıcalıklarını gör", "Membership active · View your benefits")
-                        else sh("Reklamsız kullanım · premium stil · analiz", "Ad-free · premium style · analysis"),
-                        color = Color.White.copy(alpha = .84f),
-                        fontSize = 9.sp,
-                    )
-                }
-                Text(if (active) sh("AÇ", "OPEN") else sh("KEŞFET", "EXPLORE"), color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                Spacer(Modifier.width(3.dp))
-                Icon(Icons.Rounded.ChevronRight, null, tint = Color.White, modifier = Modifier.size(20.dp))
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            PurchasedAsset(PurchasedUiAsset.ICON_CROWN, Modifier.size(62.dp))
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text("PRO", color = Color(0xFF6B3CA6), fontSize = 22.sp, fontWeight = FontWeight.Black)
+                Text(
+                    if (active) sh("Üyeliğin aktif • ayrıcalıklarını gör", "Membership active • view your benefits")
+                    else sh("Reklamsız kullanım • premium stil • analiz", "Ad-free • premium style • analysis"),
+                    color = Color(0xFF654A3D),
+                    fontSize = 9.sp,
+                )
             }
+            PurchasedAsset(PurchasedUiAsset.ICON_GIFT, Modifier.size(43.dp))
         }
     }
 }
 
 @Composable
 private fun PremiumStoreFeaturedTheme(item: ShopItemDto, owned: Boolean, busy: Boolean, onAction: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(24.dp),
-        color = Color(0xFF0B0E14),
-        border = BorderStroke(1.dp, Color(0xFF3B82F6).copy(alpha = .45f)),
-        shadowElevation = 5.dp,
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_LARGE,
+        contentPadding = PaddingValues(horizontal = 17.dp, vertical = 17.dp),
     ) {
-        Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                PurchasedAsset(PurchasedUiAsset.SHOP_SHELVES, Modifier.size(width = 92.dp, height = 132.dp))
+                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(sh("ÖNE ÇIKAN TEMA", "FEATURED THEME"), color = Color(0xFF1FD1C2), fontSize = 8.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
-                    Text("Black Theme", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(item.premiumStoreDescription(), color = Color.White.copy(alpha = .68f), fontSize = 9.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(sh("ÖNE ÇIKAN TEMA", "FEATURED THEME"), color = Color(0xFF6B3CA6), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(item.premiumStoreName(), color = Color(0xFF4A2D20), fontSize = 18.sp, fontWeight = FontWeight.Black)
+                    Text(item.premiumStoreDescription(), color = Color(0xFF765746), fontSize = 9.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(7.dp))
+                    StoreProductPreview(item, Modifier.fillMaxWidth().height(72.dp))
                 }
-                Spacer(Modifier.width(12.dp))
-                StoreProductPreview(item, Modifier.size(width = 118.dp, height = 88.dp))
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
+                PurchasedAsset(PurchasedUiAsset.ICON_COIN, Modifier.size(30.dp))
+                Spacer(Modifier.width(5.dp))
                 Text(
                     if (owned) sh("KOLEKSİYONUNDA", "IN COLLECTION") else "${item.diamondPrice} Son Coin",
-                    color = if (owned) Color(0xFF1FD1C2) else Color(0xFFF59E0B),
-                    fontSize = 11.sp,
+                    color = Color(0xFF654A3D),
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Black,
                 )
-                Spacer(Modifier.weight(1f))
-                Button(
-                    onClick = onAction,
-                    enabled = !busy,
-                    shape = RoundedCornerShape(13.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = if (owned) Color(0xFF7C3AED) else Color(0xFF2563EB), contentColor = Color.White),
-                ) {
-                    Text(if (owned) sh("KOLEKSİYONA GİT", "OPEN COLLECTION") else sh("SATIN AL", "BUY"), fontSize = 9.sp, fontWeight = FontWeight.Black)
-                }
             }
+            PurchasedButton(
+                text = if (owned) sh("KOLEKSİYONA GİT", "OPEN COLLECTION") else sh("SATIN AL", "BUY"),
+                onClick = onAction,
+                enabled = !busy,
+                modifier = Modifier.fillMaxWidth(),
+                style = if (owned) PurchasedButtonStyle.PURPLE else PurchasedButtonStyle.PRIMARY,
+                leadingAsset = if (owned) PurchasedUiAsset.NAV_PROFILE else PurchasedUiAsset.NAV_SHOP,
+            )
         }
     }
 }
 
 @Composable
-private fun PremiumStoreCategoryHeader(title: String, count: Int, icon: ImageVector, accent: Color) {
-    Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(11.dp), color = accent.copy(alpha = .10f)) {
-            Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(18.dp))
-        }
-        Spacer(Modifier.width(9.dp))
-        Text(title, Modifier.weight(1f), color = SonHarfTheme.TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
-        Surface(shape = RoundedCornerShape(99.dp), color = accent.copy(alpha = .09f)) {
-            Text(count.toString(), Modifier.padding(horizontal = 8.dp, vertical = 4.dp), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black)
+private fun PremiumStoreCategoryHeader(title: String, count: Int, asset: PurchasedUiAsset) {
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 9.dp),
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            PurchasedAsset(asset, Modifier.size(38.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(title, Modifier.weight(1f), color = Color(0xFF4A2D20), fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(count.toString(), color = Color(0xFF6B3CA6), fontSize = 11.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -485,7 +499,7 @@ private fun PremiumStoreProductRow(
     onOwned: () -> Unit,
     onBuy: (ShopItemDto) -> Unit,
 ) {
-    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         items.forEach { item ->
             PremiumStoreProductTile(
                 item = item,
@@ -509,43 +523,39 @@ private fun PremiumStoreProductTile(
     modifier: Modifier,
     onAction: () -> Unit,
 ) {
-    Surface(
+    PurchasedPanel(
         modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(if (equipped) 1.5.dp else 1.dp, if (equipped) SonHarfTheme.Turquoise else SonHarfTheme.Border),
-        shadowElevation = 2.dp,
+        asset = if (equipped) PurchasedUiAsset.PANEL_LARGE else PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 12.dp),
     ) {
-        Column(Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-            StoreProductPreview(item, Modifier.fillMaxWidth().height(92.dp))
-            Text(item.premiumStoreName(), color = SonHarfTheme.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(item.premiumStoreDescription(), color = SonHarfTheme.TextSecondary, fontSize = 8.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, minLines = 2)
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            StoreProductPreview(item, Modifier.fillMaxWidth().height(88.dp))
+            Text(item.premiumStoreName(), color = Color(0xFF4A2D20), fontSize = 11.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(item.premiumStoreDescription(), color = Color(0xFF765746), fontSize = 8.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, minLines = 2)
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!owned) PurchasedAsset(PurchasedUiAsset.ICON_COIN, Modifier.size(24.dp))
                 Text(
                     when {
                         equipped -> sh("AKTİF", "ACTIVE")
                         owned -> sh("SAHİPSİN", "OWNED")
                         else -> "${item.diamondPrice} SC"
                     },
-                    color = when {
-                        equipped -> SonHarfTheme.Turquoise
-                        owned -> SonHarfTheme.Success
-                        else -> SonHarfTheme.ActionOrange
-                    },
+                    color = if (equipped) Color(0xFF58A957) else Color(0xFF654A3D),
                     fontSize = 8.sp,
                     fontWeight = FontWeight.Black,
                 )
-                Spacer(Modifier.weight(1f))
-                FilledIconButton(
+            }
+            if (!equipped) {
+                PurchasedButton(
+                    text = if (owned) sh("AÇ", "OPEN") else sh("AL", "BUY"),
                     onClick = onAction,
-                    enabled = !busy && !equipped,
-                    modifier = Modifier.size(32.dp),
-                    colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = if (owned) SonHarfTheme.Purple else SonHarfTheme.Primary,
-                        contentColor = Color.White,
-                    ),
-                ) {
-                    Icon(if (owned) Icons.Rounded.Palette else Icons.Rounded.ShoppingBag, null, modifier = Modifier.size(15.dp))
+                    enabled = !busy,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = if (owned) PurchasedButtonStyle.PURPLE else PurchasedButtonStyle.PRIMARY,
+                )
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    PurchasedAsset(PurchasedUiAsset.ICON_CHECK, Modifier.size(31.dp))
                 }
             }
         }
@@ -554,12 +564,17 @@ private fun PremiumStoreProductTile(
 
 @Composable
 private fun PremiumStoreOfflineCard(modifier: Modifier = Modifier) {
-    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
+    PurchasedPanel(
+        modifier = modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_MEDIUM,
+        contentPadding = PaddingValues(18.dp),
+    ) {
         Text(
             sh("Mağaza verisi şu anda kullanılamıyor.", "Shop data is currently unavailable."),
-            Modifier.fillMaxWidth().padding(18.dp),
-            color = SonHarfTheme.TextSecondary,
+            Modifier.fillMaxWidth(),
+            color = Color(0xFF765746),
             fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
         )
     }
