@@ -24,7 +24,7 @@ jobs:
         run: |
           grep -F 'EmbeddedWordKeyboard(' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
           ! grep -F 'TEMİZLE' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
-          grep -F 'backend.submitWord' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt || grep -F 'submitWord' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          grep -F 'backend.submitPremierWord(active.id, candidate)' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
           grep -F 'PurchasedButton(' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
           grep -F 'PurchasedPanel(' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
       - name: Commit Son Harf overhaul
