@@ -1,5 +1,6 @@
 name: APK V2 Purchased UI Verify
 
+# Final full-overhaul verification anchor after Siege + Son Harf purchased-shell completion.
 on:
   push:
     branches:
