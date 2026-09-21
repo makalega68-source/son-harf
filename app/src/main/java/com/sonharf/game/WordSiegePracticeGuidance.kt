@@ -13,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 
 internal object WordSiegePracticeTutorialPrefs {
     private const val PREFS = "word_siege_practice_tutorial"
@@ -69,26 +70,39 @@ internal fun WordSiegePracticeZoneInfoDialog(
     onDismiss: () -> Unit,
 ) {
     val turkish = !SonHarfUiState.isEnglish
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                WordSiegeBoardSpec.bonusLongName(code, turkish),
-                fontWeight = FontWeight.Black,
-            )
-        },
-        text = {
-            Text(
-                wordSiegePracticeZoneExplanation(code, turkish),
-                color = MainUi.Text,
-            )
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text(if (turkish) "ANLADIM" else "GOT IT", fontWeight = FontWeight.Black)
+    Dialog(onDismissRequest = onDismiss) {
+        PurchasedPanel(
+            modifier = Modifier.fillMaxWidth(),
+            asset = PurchasedUiAsset.PANEL_MEDIUM,
+            contentPadding = PaddingValues(horizontal = 18.dp, vertical = 18.dp),
+        ) {
+            Column(
+                Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                PurchasedSectionHeader(
+                    title = WordSiegeBoardSpec.bonusLongName(code, turkish),
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                Text(
+                    wordSiegePracticeZoneExplanation(code, turkish),
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF654A3D),
+                    fontSize = 12.sp,
+                    lineHeight = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+                PurchasedButton(
+                    text = if (turkish) "ANLADIM" else "GOT IT",
+                    onClick = onDismiss,
+                    modifier = Modifier.fillMaxWidth(),
+                    style = PurchasedButtonStyle.PRIMARY,
+                )
             }
-        },
-    )
+        }
+    }
 }
 
 @Composable
@@ -101,7 +115,7 @@ internal fun WordSiegePracticeTutorialCard(
 ) {
     val turkish = !SonHarfUiState.isEnglish
     val title = when (step) {
-        0 -> if (turkish) "KELİME TAHTI NASIL OYNANIR?" else "HOW TO PLAY WORD THRONE"
+        0 -> if (turkish) "KELİME KUŞATMASI NASIL OYNANIR?" else "HOW TO PLAY WORD SIEGE"
         1 -> if (turkish) "1/4 • BİR HARF SEÇ" else "1/4 • PICK A TILE"
         2 -> if (turkish) "2/4 • TAHTAYA YERLEŞTİR" else "2/4 • PLACE IT"
         3 -> if (turkish) "3/4 • KELİMEYİ TAMAMLA" else "3/4 • COMPLETE THE WORD"
@@ -135,53 +149,68 @@ internal fun WordSiegePracticeTutorialCard(
         }
     }
 
-    Surface(
+    PurchasedPanel(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 8.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(14.dp),
-        color = Color(0xFFF8F4E8).copy(alpha = .98f),
-        border = BorderStroke(1.5.dp, Color(0xFF567A64)),
-        shadowElevation = 8.dp,
+        asset = PurchasedUiAsset.PANEL_MEDIUM,
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = if (compact) 10.dp else 12.dp),
     ) {
         Column(
-            Modifier.padding(horizontal = 12.dp, vertical = if (compact) 8.dp else 10.dp),
-            verticalArrangement = Arrangement.spacedBy(5.dp),
+            Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                title,
-                color = Color(0xFF17372C),
-                fontSize = if (compact) 10.sp else 11.sp,
-                fontWeight = FontWeight.Black,
+            PurchasedSectionHeader(
+                title = title,
+                modifier = Modifier.fillMaxWidth(),
             )
             Text(
                 body,
-                color = Color(0xFF3F554A),
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFF654A3D),
                 fontSize = if (compact) 9.sp else 10.sp,
-                lineHeight = if (compact) 12.sp else 14.sp,
+                lineHeight = if (compact) 13.sp else 15.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
             )
             Row(
                 Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                TextButton(onClick = onSkip, contentPadding = PaddingValues(horizontal = 4.dp)) {
-                    Text(if (turkish) "ATLA" else "SKIP", fontSize = 8.sp, color = MainUi.Muted, fontWeight = FontWeight.Bold)
-                }
-                Spacer(Modifier.weight(1f))
+                PurchasedButton(
+                    text = if (turkish) "ATLA" else "SKIP",
+                    onClick = onSkip,
+                    modifier = Modifier.weight(1f),
+                    style = PurchasedButtonStyle.SECONDARY,
+                )
                 when (step) {
-                    0 -> Button(onClick = onStart, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp)) {
-                        Text(if (turkish) "BAŞLA" else "START", fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    }
-                    4 -> Button(onClick = onFinish, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 2.dp)) {
-                        Text(if (turkish) "ANLADIM" else "GOT IT", fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    }
-                    else -> Text(
-                        if (turkish) "Ekrandaki adımı yap" else "Complete the step on screen",
-                        color = MainUi.Muted,
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Bold,
-                        textAlign = TextAlign.End,
+                    0 -> PurchasedButton(
+                        text = if (turkish) "BAŞLA" else "START",
+                        onClick = onStart,
+                        modifier = Modifier.weight(1f),
+                        style = PurchasedButtonStyle.PRIMARY,
                     )
+                    4 -> PurchasedButton(
+                        text = if (turkish) "ANLADIM" else "GOT IT",
+                        onClick = onFinish,
+                        modifier = Modifier.weight(1f),
+                        style = PurchasedButtonStyle.PRIMARY,
+                    )
+                    else -> PurchasedPanel(
+                        modifier = Modifier.weight(1f),
+                        asset = PurchasedUiAsset.PANEL_SMALL,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
+                    ) {
+                        Text(
+                            if (turkish) "Ekrandaki adımı yap" else "Complete the step on screen",
+                            modifier = Modifier.fillMaxWidth(),
+                            color = Color(0xFF765746),
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Black,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
                 }
             }
         }
@@ -193,16 +222,15 @@ internal fun WordSiegePracticeStatusBar(
     message: String,
     compact: Boolean,
 ) {
-    Surface(
+    PurchasedPanel(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = Color(0xFFF4F1E8),
-        border = BorderStroke(1.dp, Color(0xFFB6C4BB)),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = if (compact) 6.dp else 8.dp),
     ) {
         Text(
             message,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = if (compact) 6.dp else 8.dp),
-            color = Color(0xFF29483B),
+            modifier = Modifier.fillMaxWidth(),
+            color = Color(0xFF654A3D),
             fontSize = if (compact) 8.sp else 9.sp,
             lineHeight = if (compact) 10.sp else 12.sp,
             fontWeight = FontWeight.Bold,

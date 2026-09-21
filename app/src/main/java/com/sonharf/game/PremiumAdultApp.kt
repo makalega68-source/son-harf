@@ -487,7 +487,10 @@ private fun AdultBottomBar(
     onProfile: () -> Unit,
 ) {
     PurchasedPanel(
-        modifier = Modifier.fillMaxWidth().heightIn(min = 88.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .heightIn(min = 88.dp),
         asset = PurchasedUiAsset.PANEL_MEDIUM,
         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
     ) {
