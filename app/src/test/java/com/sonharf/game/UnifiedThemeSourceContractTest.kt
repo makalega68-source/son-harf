@@ -8,9 +8,11 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeApkV2ShellUsesPurchasedGameUiWithoutChangingAuthoritativeFlows() {
+    fun activeApkV2ShellUsesCleanRealHomeWithoutChangingAuthoritativeFlows() {
         val premium = source("PremiumAdultApp.kt")
         val startup = source("StableV1App.kt")
+        val modernHome = source("ModernHomeScreen.kt")
+        val modernHomeNav = source("ModernHomeBottomBar.kt")
         val purchased = source("PurchasedGameTheme.kt")
         val primitives = source("AppUiPrimitives.kt")
         val cosmetics = source("CosmeticRuntime.kt")
@@ -21,6 +23,8 @@ class UnifiedThemeSourceContractTest {
         assertTrue(startup.contains("SonHarfCosmetics.restore(context)"))
         assertTrue(cosmetics.contains("BLACK_THEME_ID = \"theme_black\""))
 
+        // Purchased resources still exist for screens that have not yet been redesigned,
+        // but the user-approved Home work must not depend on the rejected purchased atlas shell.
         assertTrue(purchased.contains("real purchased-asset theme layer", ignoreCase = true))
         assertTrue(purchased.contains("R.raw.purchased_ui_atlas_00"))
         assertTrue(purchased.contains("R.raw.purchased_cta_atlas"))
@@ -28,9 +32,21 @@ class UnifiedThemeSourceContractTest {
         assertTrue(purchased.contains("drawPurchasedHorizontalSlice"))
         assertTrue(primitives.contains("PurchasedPanel"))
         assertTrue(primitives.contains("PurchasedButton"))
-        assertTrue(premium.contains("PurchasedNavItem"))
-        assertTrue(premium.contains("PurchasedUiAsset.NAV_SHOP"))
-        assertTrue(premium.contains("PurchasedUiAsset.ICON_SWORDS"))
+
+        assertTrue(premium.contains("ModernAdultHome("))
+        assertTrue(premium.contains("ModernHomeBottomNavigation("))
+        assertFalse(premium.contains("PremiumHomeCommandDeckPolished"))
+        assertTrue(modernHome.contains("ModernSiegeHero("))
+        assertTrue(modernHome.contains("ModernWeeklyBest("))
+        assertTrue(modernHome.contains("ModernDailyProgress("))
+        assertTrue(modernHome.contains("getGrowthDashboard()"))
+        assertTrue(modernHome.contains("getWeeklyTopV210(limit = 3)"))
+        assertFalse(modernHome.contains("PurchasedPanel("))
+        assertFalse(modernHome.contains("PurchasedAsset("))
+        assertFalse(modernHome.contains("PurchasedButton("))
+        assertFalse(modernHomeNav.contains("PurchasedPanel("))
+        assertFalse(modernHomeNav.contains("PurchasedAsset("))
+        assertFalse(modernHomeNav.contains("PurchasedNavItem("))
 
         assertTrue(premium.contains("OnlineGameBackend()"))
         assertTrue(premium.contains("getInventory()"))
@@ -43,7 +59,7 @@ class UnifiedThemeSourceContractTest {
     }
 
     @Test
-    fun purchasedGraphicsArePresentInAndroidResAndNoPurchasedSourceArchivesArePackaged() {
+    fun purchasedGraphicsRemainAvailableForUnredesignedScreensAndNoSourceArchivesArePackaged() {
         val raw = projectFile("app/src/main/res/raw")
         listOf(
             "purchased_ui_atlas_00.b64",
