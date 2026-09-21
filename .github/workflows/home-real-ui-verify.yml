@@ -1,0 +1,75 @@
+name: Home Real UI Verify
+
+on:
+  push:
+    branches:
+      - ui/purchased-pack-quality-repair-20260921
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: home-real-ui-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GRADLE_OPTS: -Dorg.gradle.daemon=false
+
+jobs:
+  verify-home:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+
+      - name: Verify active APK-v2 and clean Home contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          git merge-base --is-ancestor e66eec3b0d33e7419aa46686490a04dac57b680b HEAD
+          grep -q 'PremiumAdultApp(onSignedOut' app/src/main/java/com/sonharf/game/StableV1App.kt
+          grep -q 'ModernAdultHome(' app/src/main/java/com/sonharf/game/PremiumAdultApp.kt
+          grep -q 'ModernHomeBottomNavigation(' app/src/main/java/com/sonharf/game/PremiumAdultApp.kt
+          ! grep -q 'PremiumHomeCommandDeckPolished' app/src/main/java/com/sonharf/game/PremiumAdultApp.kt
+          ! grep -q 'PurchasedPanel' app/src/main/java/com/sonharf/game/ModernHomeScreen.kt
+          ! grep -q 'PurchasedAsset' app/src/main/java/com/sonharf/game/ModernHomeScreen.kt
+          ! grep -q 'PurchasedButton' app/src/main/java/com/sonharf/game/ModernHomeScreen.kt
+
+      - name: Unit tests and debug APK
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace
+
+      - name: Verify and upload debug APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -1)"
+          "$APKSIGNER" verify --verbose "$APK"
+          sha256sum "$APK" > home-apk-sha256.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kelime-Kusatmasi-Home-Real-UI
+          path: |
+            app/build/outputs/apk/debug/app-debug.apk
+            home-apk-sha256.txt
+          retention-days: 7
