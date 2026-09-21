@@ -65,7 +65,9 @@ class LetterLadderUxRegressionTest {
         assertTrue(source.contains("YENİ OYUN"))
         assertTrue(source.contains("NEW GAME"))
         assertTrue(source.contains("if (!completed)"))
-        assertTrue(source.contains("} else {\n                    Button("))
+        assertTrue(source.contains("} else {\n                    PurchasedButton("))
+        assertTrue(source.contains("style = PurchasedButtonStyle.PURPLE"))
+        assertTrue(source.contains("leadingAsset = PurchasedUiAsset.ICON_REPEAT"))
     }
 
     @Test
@@ -99,8 +101,9 @@ class LetterLadderUxRegressionTest {
         assertTrue(keyboard.contains("actionSound = actionSound"))
         assertTrue(shared.contains("PurchasedPanel("))
         assertTrue(shared.contains("PurchasedUiAsset.BUTTON_BLUE"))
-        assertTrue(shared.contains("PurchasedButton("))
-        assertFalse(shared.contains("val palette = SonHarfCosmetics.keyboardPalette"))
+        assertTrue(shared.contains("PurchasedUiAsset.BUTTON_GREEN"))
+        assertTrue(shared.contains("val palette = SonHarfCosmetics.keyboardPalette"))
+        assertTrue(shared.contains("overlayColor = palette.key"))
         assertTrue(shared.contains("keySound()"))
         assertTrue(shared.contains("actionSound()"))
         assertFalse(shared.contains("TEMİZLE"))
