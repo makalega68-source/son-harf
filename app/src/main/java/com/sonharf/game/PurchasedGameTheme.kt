@@ -86,23 +86,42 @@ internal enum class PurchasedUiAsset(val x: Int, val y: Int, val w: Int, val h: 
     LOGIN_KEY(214, 1078, 41, 48),
 }
 
-private val atlasParts = listOf(
-    "purchased_ui_atlas_00.b64",
-    "purchased_ui_atlas_01.b64",
-    "purchased_ui_atlas_02.b64",
-    "purchased_ui_atlas_03.b64",
-)
-
 @Composable
 private fun rememberPurchasedAtlas(): ImageBitmap? {
     val context = LocalContext.current
     return remember(context) {
         runCatching {
+            val ids = intArrayOf(
+                R.raw.purchased_ui_atlas_00,
+                R.raw.purchased_ui_atlas_01,
+                R.raw.purchased_ui_atlas_02,
+                R.raw.purchased_ui_atlas_03,
+            )
             val encoded = buildString(46_000) {
-                atlasParts.forEach { name ->
-                    context.assets.open(name).bufferedReader().use { append(it.readText()) }
+                ids.forEach { id ->
+                    context.resources.openRawResource(id).bufferedReader().use { append(it.readText()) }
                 }
             }
+            val bytes = Base64.decode(encoded, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }.getOrNull()
+    }
+}
+
+internal enum class PurchasedCtaAsset(val x: Int, val y: Int, val w: Int, val h: Int) {
+    BLUE(9, 13, 238, 70),
+    RED(265, 13, 238, 70),
+    ORANGE(9, 109, 238, 70),
+    PURPLE(265, 109, 238, 70),
+    GREEN(9, 199, 238, 81),
+}
+
+@Composable
+private fun rememberPurchasedCtaAtlas(): ImageBitmap? {
+    val context = LocalContext.current
+    return remember(context) {
+        runCatching {
+            val encoded = context.resources.openRawResource(R.raw.purchased_cta_atlas).bufferedReader().use { it.readText() }
             val bytes = Base64.decode(encoded, Base64.DEFAULT)
             BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
         }.getOrNull()
@@ -118,6 +137,20 @@ private fun DrawScope.drawPurchasedCrop(image: ImageBitmap, asset: PurchasedUiAs
         dstSize = IntSize(size.width.roundToInt().coerceAtLeast(1), size.height.roundToInt().coerceAtLeast(1)),
         alpha = alpha,
     )
+}
+
+/** Three-slice renderer keeps the purchased CTA's rounded/bevelled ends undistorted on wide phones. */
+private fun DrawScope.drawPurchasedHorizontalSlice(image: ImageBitmap, asset: PurchasedCtaAsset, alpha: Float = 1f) {
+    val dstW = size.width.roundToInt().coerceAtLeast(1)
+    val dstH = size.height.roundToInt().coerceAtLeast(1)
+    val srcCap = (asset.h * .48f).roundToInt().coerceIn(12, asset.w / 3)
+    val dstCap = (dstH * .48f).roundToInt().coerceAtMost(dstW / 2)
+    val srcMidW = (asset.w - srcCap * 2).coerceAtLeast(1)
+    val dstMidW = (dstW - dstCap * 2).coerceAtLeast(1)
+
+    drawImage(image, IntOffset(asset.x, asset.y), IntSize(srcCap, asset.h), IntOffset.Zero, IntSize(dstCap, dstH), alpha = alpha)
+    drawImage(image, IntOffset(asset.x + srcCap, asset.y), IntSize(srcMidW, asset.h), IntOffset(dstCap, 0), IntSize(dstMidW, dstH), alpha = alpha)
+    drawImage(image, IntOffset(asset.x + asset.w - srcCap, asset.y), IntSize(srcCap, asset.h), IntOffset(dstW - dstCap, 0), IntSize(dstCap, dstH), alpha = alpha)
 }
 
 @Composable
@@ -151,12 +184,12 @@ internal fun PurchasedPanel(
 
 internal enum class PurchasedButtonStyle { PRIMARY, SECONDARY, PURPLE, WARNING, DANGER }
 
-private fun PurchasedButtonStyle.asset(): PurchasedUiAsset = when (this) {
-    PurchasedButtonStyle.PRIMARY -> PurchasedUiAsset.BUTTON_GREEN
-    PurchasedButtonStyle.SECONDARY -> PurchasedUiAsset.BUTTON_BLUE
-    PurchasedButtonStyle.PURPLE -> PurchasedUiAsset.BUTTON_PURPLE
-    PurchasedButtonStyle.WARNING -> PurchasedUiAsset.BUTTON_ORANGE
-    PurchasedButtonStyle.DANGER -> PurchasedUiAsset.BUTTON_RED
+private fun PurchasedButtonStyle.asset(): PurchasedCtaAsset = when (this) {
+    PurchasedButtonStyle.PRIMARY -> PurchasedCtaAsset.GREEN
+    PurchasedButtonStyle.SECONDARY -> PurchasedCtaAsset.BLUE
+    PurchasedButtonStyle.PURPLE -> PurchasedCtaAsset.PURPLE
+    PurchasedButtonStyle.WARNING -> PurchasedCtaAsset.ORANGE
+    PurchasedButtonStyle.DANGER -> PurchasedCtaAsset.RED
 }
 
 @Composable
@@ -177,7 +210,8 @@ internal fun PurchasedButton(
             .clickable(enabled = enabled, interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
-        PurchasedAsset(style.asset(), Modifier.matchParentSize())
+        val atlas = rememberPurchasedCtaAtlas()
+        Canvas(Modifier.matchParentSize()) { atlas?.let { drawPurchasedHorizontalSlice(it, style.asset()) } }
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 11.dp),
             horizontalArrangement = Arrangement.Center,
@@ -206,6 +240,7 @@ internal fun PurchasedIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     selected: Boolean = false,
+    contentDescription: String = "",
 ) {
     val interaction = remember { MutableInteractionSource() }
     Box(
@@ -331,5 +366,5 @@ internal fun PurchasedNavItem(
 
 @Composable
 internal fun PurchasedGameBackdrop(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.background(Color(0xFFF7F1E7)))
+    Box(modifier = modifier.background(Color(0xFFF4E3BD)))
 }
