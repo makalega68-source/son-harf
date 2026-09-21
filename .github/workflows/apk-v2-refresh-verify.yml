@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - ui/user-apk-v2-refresh-20260921
+      - ui/native-dark-professional-20260921
   workflow_dispatch:
 
 permissions:
@@ -53,6 +54,31 @@ jobs:
           ! grep -q 'TEMİZLE' app/src/main/java/com/sonharf/game/SharedInputPrimitives.kt
           ! grep -q 'CLEAR' app/src/main/java/com/sonharf/game/SharedInputPrimitives.kt
 
+      - name: Verify native professional UI contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          COLOR=app/src/main/java/com/sonharf/game/Color.kt
+          SHELL=app/src/main/java/com/sonharf/game/PremiumAdultApp.kt
+          SIEGE=app/src/main/java/com/sonharf/game/WordSiegeExperience.kt
+          PACK=app/src/main/java/com/sonharf/game/NativePackVisuals.kt
+          for token in 141923 1E2538 2ECC71 3498DB 9B59B6 E67E22 ECF0F1 95A5A6; do
+            grep -q "$token" "$COLOR"
+          done
+          grep -q 'darkColorScheme' "$SHELL"
+          grep -q 'typography = AppTypography' "$SHELL"
+          grep -q 'height(64.dp)' "$SHELL"
+          grep -q 'imePadding()' "$SHELL"
+          grep -q 'ImeAction.Send' "$SIEGE"
+          ! grep -q '0xFFFFE3A5' "$SIEGE"
+          ! grep -q '0xFFD99818' "$SIEGE"
+          grep -q 'ui_ranking_icon' "$PACK"
+          grep -q 'ui_legacy_rank_frame' "$PACK"
+          grep -q 'vfx_twinkle' "$PACK"
+          test -f app/src/main/res/drawable-nodpi/ui_ranking_icon.webp
+          test -f app/src/main/res/drawable-nodpi/ui_legacy_rank_frame.webp
+          test -f app/src/main/res/drawable-nodpi/vfx_twinkle.webp
+
       - name: Unit tests and debug APK
         run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
@@ -69,7 +95,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: Kelime-Kusatmasi-APK-v2-Yenilenmis
+          name: Kelime-Kusatmasi-Native-Dark-Professional
           path: |
             app/build/outputs/apk/debug/app-debug.apk
             apk-sha256.txt
