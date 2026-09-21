@@ -37,22 +37,23 @@ class AdBannerPolicyContractTest {
     }
 
     @Test
-    fun productionStartupUsesOnlyThePremiumShell() {
+    fun productionStartupUsesOnlyTheProfessionalShell() {
         val startup = source("src/main/java/com/sonharf/game/StableV1App.kt")
-        assertTrue(startup.contains("PremiumUnifiedProApp(onSignedOut = { authenticated = false })"))
+        assertTrue(startup.contains("ProfessionalUnifiedApp(onSignedOut = { authenticated = false })"))
         assertFalse(startup.contains("\n    UnifiedProApp(onSignedOut"))
+        assertFalse(startup.contains("\n    PremiumUnifiedProApp(onSignedOut"))
     }
 
     @Test
-    fun premiumShellNeverMountsBannerOnGameplayRoutes() {
-        val app = source("src/main/java/com/sonharf/game/PremiumUnifiedProApp.kt")
-        val bannerGuard =
-            "if (destination !in setOf(PremiumDestination.LAST_LETTER, PremiumDestination.SIEGE, PremiumDestination.LETTER_PATH)) SonHarfTopAdBanner(isPremium = isPro)"
-
-        assertTrue(app.contains(bannerGuard))
-        assertTrue(app.contains("PremiumDestination.LAST_LETTER -> OnlineGameScreenV6()"))
-        assertTrue(app.contains("PremiumDestination.SIEGE -> WordSiegeEntryScreen("))
-        assertTrue(app.contains("PremiumDestination.LETTER_PATH -> LetterLadderGameScreen"))
+    fun professionalShellNeverMountsBannerOnGameplayRoutes() {
+        val app = source("src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt")
+        assertTrue(app.contains("ProfessionalDestination.LAST_LETTER"))
+        assertTrue(app.contains("ProfessionalDestination.SIEGE"))
+        assertTrue(app.contains("ProfessionalDestination.LETTER_PATH"))
+        assertTrue(app.contains("if (!gameplay) SonHarfTopAdBanner(isPremium = isPro)"))
+        assertTrue(app.contains("ProfessionalDestination.LAST_LETTER -> OnlineGameScreenV6()"))
+        assertTrue(app.contains("ProfessionalDestination.SIEGE -> WordSiegeEntryScreen("))
+        assertTrue(app.contains("ProfessionalDestination.LETTER_PATH -> LetterLadderGameScreen"))
     }
 
     @Test
