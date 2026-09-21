@@ -28,7 +28,7 @@ class BrandStartupRegressionTest {
         assertTrue(launcherBadge.isFile)
 
         assertTrue(officialLogo.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
-        assertTrue(authGate.contains("painterResource(R.drawable.son_harf_gold_teal_logo)"))
+        assertTrue(authGate.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(siegeHub.contains("painterResource(R.drawable.kelime_kusatma_logo_hd)"))
         assertTrue(home.contains("R.drawable.son_harf_app_icon_master"))
         listOf(launcherVector, homeVector, authVector, gameVector).forEach {
