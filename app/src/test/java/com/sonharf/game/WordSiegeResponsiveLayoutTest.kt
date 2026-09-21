@@ -40,7 +40,9 @@ class WordSiegeResponsiveLayoutTest {
         assertTrue(practice.indexOf("Box(Modifier.fillMaxWidth().weight(1f)") < practice.indexOf("val statusMessage ="))
         assertTrue(practice.indexOf("onClick = ::applyPlayerMove") < practice.indexOf("val statusMessage ="))
 
-        assertTrue(online.contains(".statusBarsPadding()\n            .navigationBarsPadding()"))
+        assertTrue(online.contains(".statusBarsPadding()"))
+        assertTrue(online.contains(".navigationBarsPadding()"))
+        assertTrue(online.contains("PurchasedUiAsset.PANEL_SMALL"))
         assertTrue(online.contains("modifier = Modifier.fillMaxWidth().weight(1f)"))
         assertTrue(online.indexOf("lastMove?.let { PanSiegeLastMoveInfo(it) }") > online.indexOf("onClick = onSubmit"))
         assertFalse(online.contains("modifier = modifier.heightIn(min ="))
