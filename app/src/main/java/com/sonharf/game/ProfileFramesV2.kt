@@ -318,16 +318,13 @@ internal fun ProfileFramesV2StoreRow(
     LaunchedEffect(backend) { runCatching { refresh() } }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            sh("PREMIUM PROFİL ÇERÇEVELERİ", "PREMIUM PROFILE FRAMES"),
-            color = SonHarfText,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Black,
-        )
+        PurchasedSectionHeader(sh("PREMIUM PROFİL ÇERÇEVELERİ", "PREMIUM PROFILE FRAMES"))
         Text(
             sh("Her biri 150 TL • tek ödeme • kalıcı • yalnızca kozmetik", "150 TL each • one-time purchase • permanent • cosmetic only"),
-            color = SonHarfMuted,
+            modifier = Modifier.fillMaxWidth(),
+            color = Color(0xFF765746),
             fontSize = 9.sp,
+            textAlign = TextAlign.Center,
         )
         LazyRow(
             contentPadding = PaddingValues(horizontal = 1.dp),
@@ -339,60 +336,58 @@ internal fun ProfileFramesV2StoreRow(
                 val product = products[spec.productId]
                 val realPrice = product?.oneTimePurchaseOfferDetails?.formattedPrice
                 val previewVisual = remember(spec.productId) { ProfileFrameV2Catalog.visual(spec.productId, false) }
-                Surface(
-                    modifier = Modifier.width(170.dp),
-                    shape = RoundedCornerShape(18.dp),
-                    color = SonHarfSurface,
-                    border = BorderStroke(if (active) 2.dp else 1.dp, if (active) spec.accent else SonHarfTheme.Border),
+                PurchasedPanel(
+                    modifier = Modifier.width(184.dp),
+                    asset = PurchasedUiAsset.PANEL_MEDIUM,
+                    contentPadding = PaddingValues(12.dp),
                 ) {
-                    Column(Modifier.padding(11.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Box(
-                            modifier = Modifier.fillMaxWidth().height(112.dp).clip(RoundedCornerShape(14.dp)).background(spec.accent.copy(alpha = .08f)),
+                    Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        PurchasedPanel(
+                            modifier = Modifier.fillMaxWidth().height(116.dp),
+                            asset = if (active) PurchasedUiAsset.REWARD_PANEL else PurchasedUiAsset.PANEL_SMALL,
+                            contentPadding = PaddingValues(6.dp),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Surface(
-                                modifier = Modifier.size(104.dp * previewVisual.photoRatio),
-                                shape = CircleShape,
-                                color = spec.accent.copy(alpha = .14f),
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        "A",
-                                        color = spec.accent,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Black,
-                                    )
+                            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                                Surface(
+                                    modifier = Modifier.size(104.dp * previewVisual.photoRatio),
+                                    shape = CircleShape,
+                                    color = spec.accent.copy(alpha = .14f),
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text("A", color = spec.accent, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                                    }
                                 }
+                                Image(
+                                    painter = painterResource(previewVisual.drawable),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(104.dp),
+                                    contentScale = ContentScale.Fit,
+                                )
+                                if (active) PurchasedAsset(PurchasedUiAsset.ICON_CHECK, Modifier.align(Alignment.TopEnd).size(28.dp))
                             }
-                            Image(
-                                painter = painterResource(previewVisual.drawable),
-                                contentDescription = null,
-                                modifier = Modifier.size(104.dp),
-                                contentScale = ContentScale.Fit,
-                            )
-                            if (active) Icon(
-                                Icons.Rounded.CheckCircle,
-                                contentDescription = null,
-                                tint = Color(0xFF2FAE68),
-                                modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(22.dp),
+                        }
+                        Text(sh(spec.titleTr, spec.titleEn), color = Color(0xFF4A2D20), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        Text(sh(spec.subtitleTr, spec.subtitleEn), color = Color(0xFF765746), fontSize = 8.sp, minLines = 2)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            PurchasedAsset(if (mine) PurchasedUiAsset.ICON_CHECK else PurchasedUiAsset.ICON_COIN, Modifier.size(25.dp))
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                when {
+                                    active -> sh("KULLANILIYOR", "EQUIPPED")
+                                    mine -> sh("SATIN ALINDI", "OWNED")
+                                    realPrice != null -> realPrice
+                                    else -> ProductCatalog.PROFILE_FRAME_FALLBACK_PRICE_TRY
+                                },
+                                color = if (mine) Color(0xFF2FAE68) else Color(0xFF6B3CA6),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
                             )
                         }
-                        Text(sh(spec.titleTr, spec.titleEn), color = SonHarfText, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                        Text(sh(spec.subtitleTr, spec.subtitleEn), color = SonHarfMuted, fontSize = 8.sp, minLines = 2)
-                        Text(
-                            when {
-                                active -> sh("KULLANILIYOR", "EQUIPPED")
-                                mine -> sh("SATIN ALINDI", "OWNED")
-                                realPrice != null -> realPrice
-                                else -> ProductCatalog.PROFILE_FRAME_FALLBACK_PRICE_TRY
-                            },
-                            color = if (mine) Color(0xFF2FAE68) else spec.accent,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black,
-                        )
-                        Button(
-                            onClick = {
-                                val b = backend ?: return@Button
+                        PurchasedButton(
+                            text = if (busy == spec.productId) "…" else if (mine) sh("KULLAN", "EQUIP") else sh("SATIN AL", "BUY"),
+                            onClick = action@ {
+                                val b = backend ?: return@action
                                 scope.launch {
                                     busy = spec.productId
                                     if (mine) {
@@ -418,22 +413,21 @@ internal fun ProfileFramesV2StoreRow(
                             },
                             enabled = backend != null && !active && busy == null && (mine || realPrice != null),
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = spec.accent),
-                            contentPadding = PaddingValues(vertical = 7.dp),
-                        ) {
-                            Text(
-                                if (busy == spec.productId) "…" else if (mine) sh("KULLAN", "EQUIP") else sh("SATIN AL", "BUY"),
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                        }
+                            style = if (mine) PurchasedButtonStyle.SECONDARY else PurchasedButtonStyle.PRIMARY,
+                            leadingAsset = if (mine) PurchasedUiAsset.ICON_CHECK else PurchasedUiAsset.ICON_COIN,
+                        )
                     }
                 }
             }
         }
         notice?.let {
-            Text(it, modifier = Modifier.fillMaxWidth(), color = SonHarfMuted, fontSize = 9.sp, textAlign = TextAlign.Center)
+            PurchasedPanel(
+                modifier = Modifier.fillMaxWidth(),
+                asset = PurchasedUiAsset.PANEL_SMALL,
+                contentPadding = PaddingValues(9.dp),
+            ) {
+                Text(it, modifier = Modifier.fillMaxWidth(), color = Color(0xFF765746), fontSize = 9.sp, textAlign = TextAlign.Center)
+            }
         }
         Spacer(Modifier.height(2.dp))
     }

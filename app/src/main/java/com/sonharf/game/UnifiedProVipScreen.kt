@@ -52,180 +52,99 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
     ) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    onClick = onBack,
-                    shape = CircleShape,
-                    color = SonHarfTheme.Surface,
-                    border = BorderStroke(1.dp, SonHarfTheme.Border),
-                ) {
-                    Icon(Icons.Rounded.ArrowBack, null, tint = SonHarfTheme.TextPrimary, modifier = Modifier.padding(10.dp).size(20.dp))
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("KELİME KUŞATMASI PRO", color = SonHarfTheme.TextPrimary, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Tek ödeme • kalıcı PRO", "One payment • lifetime PRO"), color = SonHarfTheme.Purple, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-                Icon(Icons.Rounded.WorkspacePremium, null, tint = SonHarfTheme.Purple, modifier = Modifier.size(30.dp))
+                PurchasedIconButton(PurchasedUiAsset.ICON_CLOSE, onBack, contentDescription = sh("Geri", "Back"))
+                Spacer(Modifier.width(8.dp))
+                PurchasedSectionHeader("KELİME KUŞATMASI PRO", Modifier.weight(1f))
             }
         }
 
         if (loading) item {
-            LinearProgressIndicator(
-                Modifier.fillMaxWidth(),
-                color = SonHarfTheme.Turquoise,
-                trackColor = SonHarfTheme.SurfaceSecondary,
-            )
+            PurchasedPanel(modifier = Modifier.fillMaxWidth(), asset = PurchasedUiAsset.PANEL_SMALL, contentPadding = PaddingValues(12.dp)) { Text(sh("PRO bilgileri yükleniyor…", "Loading PRO details…"), modifier = Modifier.fillMaxWidth(), color = Color(0xFF765746), fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center) }
         }
 
         item {
-            Surface(
+            PurchasedPanel(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(28.dp),
-                color = Color.Transparent,
-                shadowElevation = 6.dp,
+                asset = PurchasedUiAsset.PANEL_LARGE,
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 20.dp),
             ) {
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    SonHarfTheme.Primary,
-                                    SonHarfTheme.Purple,
-                                    SonHarfTheme.Turquoise,
-                                )
-                            ),
-                            RoundedCornerShape(28.dp),
-                        )
-                        .padding(horizontal = 20.dp, vertical = 22.dp)
-                ) {
-                    Column(
-                        Modifier.fillMaxWidth(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Surface(shape = CircleShape, color = Color.White.copy(alpha = .16f)) {
-                            Icon(
-                                Icons.Rounded.WorkspacePremium,
-                                null,
-                                tint = Color.White,
-                                modifier = Modifier.padding(14.dp).size(32.dp),
-                            )
-                        }
-                        Text(
-                            if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("PRO'YA GEÇ", "GO PRO"),
-                            color = Color.White,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black,
-                        )
-                        Text(
-                            profile?.displayName ?: sh("Oyuncu", "Player"),
-                            color = Color.White.copy(alpha = .92f),
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                        )
-                        Text(
-                            if (active) sh(
-                                "Reklamsız kullanım ve PRO erişimleri aktif. Ücretli kozmetikler ayrıca satın alınır.",
-                                "Ad-free use and PRO access are active. Paid cosmetics remain separate purchases.",
-                            ) else sh(
-                                "Daha temiz, daha kişisel ve daha premium bir oyun deneyimi.",
-                                "A cleaner, more personal and more premium game experience.",
-                            ),
-                            color = Color.White.copy(alpha = .82f),
-                            fontSize = 10.sp,
-                            lineHeight = 14.sp,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
+                Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PurchasedAsset(PurchasedUiAsset.SEASON_BANNER, Modifier.fillMaxWidth().height(86.dp))
+                    PurchasedAsset(PurchasedUiAsset.ICON_CROWN, Modifier.size(58.dp))
+                    Text(if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("PRO'YA GEÇ", "GO PRO"), color = Color(0xFF4A2D20), fontSize = 23.sp, fontWeight = FontWeight.Black)
+                    Text(profile?.displayName ?: sh("Oyuncu", "Player"), color = Color(0xFF6B3CA6), fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        if (active) sh(
+                            "Reklamsız kullanım ve PRO erişimleri aktif. Ücretli kozmetikler ayrıca satın alınır.",
+                            "Ad-free use and PRO access are active. Paid cosmetics remain separate purchases.",
+                        ) else sh(
+                            "Tek ödeme ile kalıcı PRO: kozmetik, konfor ve prestij. Rekabet avantajı vermez.",
+                            "Lifetime PRO with one payment: cosmetics, convenience and prestige. No competitive advantage.",
+                        ),
+                        color = Color(0xFF765746),
+                        fontSize = 10.sp,
+                        lineHeight = 14.sp,
+                        textAlign = TextAlign.Center,
+                    )
                 }
             }
         }
 
         item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                ProAccessCard(
-                    icon = Icons.Rounded.Block,
-                    label = sh("REKLAMSIZ", "AD-FREE"),
-                    enabled = active,
-                    accent = SonHarfTheme.Primary,
-                    modifier = Modifier.weight(1f),
-                )
-                ProAccessCard(
-                    icon = Icons.Rounded.Bolt,
-                    label = sh("SERİ OYUN", "SERIES GAME"),
-                    enabled = active && e?.seriesGameAccess == true,
-                    accent = SonHarfTheme.Turquoise,
-                    modifier = Modifier.weight(1f),
-                )
-                ProAccessCard(
-                    icon = Icons.Rounded.ViewAgenda,
-                    label = sh("50 OYUN", "50 GAMES"),
-                    enabled = active && (e?.activeGameLimit ?: 10) >= 50,
-                    accent = SonHarfTheme.Purple,
-                    modifier = Modifier.weight(1f),
-                )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                ProAccessCard(PurchasedUiAsset.ICON_CLOSE, sh("REKLAMSIZ", "AD-FREE"), active, Modifier.weight(1f))
+                ProAccessCard(PurchasedUiAsset.ICON_SWORDS, sh("SERİ OYUN", "SERIES GAME"), active && e?.seriesGameAccess == true, Modifier.weight(1f))
+                ProAccessCard(PurchasedUiAsset.ICON_GAMES, sh("50 OYUN", "50 GAMES"), active && (e?.activeGameLimit ?: 10) >= 50, Modifier.weight(1f))
             }
         }
 
         item {
-            Surface(
+            PurchasedPanel(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = SonHarfTheme.Surface,
-                border = BorderStroke(1.dp, SonHarfTheme.Border),
-                shadowElevation = 2.dp,
+                asset = PurchasedUiAsset.PANEL_LARGE,
+                contentPadding = PaddingValues(17.dp),
             ) {
-                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-                    Text(
-                        sh("PRO AYRICALIKLARI", "PRO BENEFITS"),
-                        color = SonHarfTheme.TextPrimary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                    ProBenefitRow(Icons.Rounded.Block, sh("Reklamsız kullanım", "Ad-free use"), SonHarfTheme.Primary)
-                    ProBenefitRow(Icons.Rounded.Calculate, sh("Puan Hesaplayıcı", "Score Calculator"), SonHarfTheme.Turquoise)
-                    ProBenefitRow(Icons.Rounded.GridView, sh("Harf Tablosu", "Letter Table"), SonHarfTheme.Turquoise)
-                    ProBenefitRow(Icons.Rounded.Bolt, sh("Seri Oyun", "Series Game"), SonHarfTheme.ActionOrange)
-                    ProBenefitRow(Icons.Rounded.Groups, sh("Arkadaş Listesi", "Friends List"), SonHarfTheme.Primary)
-                    ProBenefitRow(Icons.Rounded.History, sh("Son Harf tam kelime geçmişi", "Full Son Harf word history"), SonHarfTheme.Purple)
-                    ProBenefitRow(Icons.Rounded.ViewAgenda, sh("Aynı anda 50 aktif oyun", "Up to 50 active games"), SonHarfTheme.ActionOrange)
-                    ProBenefitRow(Icons.Rounded.AccountCircle, sh("PRO profil çerçevesi", "PRO profile frame"), SonHarfTheme.Purple)
-                    ProBenefitRow(Icons.Rounded.WorkspacePremium, sh("PRO rozeti ve prestij", "PRO badge and prestige"), SonHarfTheme.Purple)
-                    ProBenefitRow(Icons.Rounded.Toll, sh("İlk başarılı PRO aktivasyonunda bir kez 100 Son Coin", "100 Son Coins once on the first successful PRO activation"), SonHarfTheme.ActionOrange)
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PurchasedAsset(PurchasedUiAsset.ICON_CROWN, Modifier.size(38.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(sh("PRO AYRICALIKLARI", "PRO BENEFITS"), color = Color(0xFF4A2D20), fontSize = 12.sp, fontWeight = FontWeight.Black)
+                    }
+                    ProBenefitRow(PurchasedUiAsset.ICON_CLOSE, sh("Reklamsız kullanım", "Ad-free use"))
+                    ProBenefitRow(PurchasedUiAsset.ICON_RANKING, sh("Puan Hesaplayıcı", "Score Calculator"))
+                    ProBenefitRow(PurchasedUiAsset.ICON_GAMES, sh("Harf Tablosu", "Letter Table"))
+                    ProBenefitRow(PurchasedUiAsset.ICON_SWORDS, sh("Seri Oyun", "Series Game"))
+                    ProBenefitRow(PurchasedUiAsset.NAV_SOCIAL, sh("Arkadaş Listesi", "Friends List"))
+                    ProBenefitRow(PurchasedUiAsset.ICON_REPEAT, sh("Son Harf tam kelime geçmişi", "Full Son Harf word history"))
+                    ProBenefitRow(PurchasedUiAsset.ICON_TROPHY, sh("Aynı anda 50 aktif oyun", "Up to 50 active games"))
+                    ProBenefitRow(PurchasedUiAsset.NAV_PROFILE, sh("PRO profil çerçevesi", "PRO profile frame"))
+                    ProBenefitRow(PurchasedUiAsset.ICON_CROWN, sh("PRO rozeti ve prestij", "PRO badge and prestige"))
+                    ProBenefitRow(PurchasedUiAsset.ICON_COIN, sh("İlk başarılı PRO aktivasyonunda bir kez 100 Son Coin", "100 Son Coins once on the first successful PRO activation"))
                 }
             }
         }
 
         if (!active) {
             item {
-                Button(
+                PurchasedButton(
+                    text = sh("PRO LIFETIME’I GÖR", "VIEW PRO LIFETIME"),
                     onClick = { showPurchase = true },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(17.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfTheme.Purple, contentColor = Color.White),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp),
-                ) {
-                    Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(20.dp))
-                    Spacer(Modifier.width(7.dp))
-                    Text(sh("PRO LIFETIME’I GÖR", "VIEW PRO LIFETIME"), fontWeight = FontWeight.Black)
-                }
+                    modifier = Modifier.fillMaxWidth(),
+                    style = PurchasedButtonStyle.PURPLE,
+                    leadingAsset = PurchasedUiAsset.ICON_CROWN,
+                )
             }
         } else {
             item {
-                Surface(
+                PurchasedPanel(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(17.dp),
-                    color = SonHarfTheme.Turquoise.copy(alpha = .10f),
+                    asset = PurchasedUiAsset.REWARD_PANEL,
+                    contentPadding = PaddingValues(14.dp),
                 ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(14.dp),
-                        horizontalArrangement = Arrangement.Center,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Icon(Icons.Rounded.CheckCircle, null, tint = SonHarfTheme.Turquoise, modifier = Modifier.size(20.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                        PurchasedAsset(PurchasedUiAsset.ICON_CHECK, Modifier.size(30.dp))
                         Spacer(Modifier.width(7.dp))
-                        Text(sh("PRO ERİŞİMİN AKTİF", "YOUR PRO ACCESS IS ACTIVE"), color = SonHarfTheme.Turquoise, fontWeight = FontWeight.Black, fontSize = 11.sp)
+                        Text(sh("PRO ERİŞİMİN AKTİF", "YOUR PRO ACCESS IS ACTIVE"), color = Color(0xFF4A2D20), fontWeight = FontWeight.Black, fontSize = 11.sp)
                     }
                 }
             }
@@ -233,8 +152,12 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
 
         notice?.let { message ->
             item {
-                Surface(shape = RoundedCornerShape(14.dp), color = SonHarfTheme.PrimarySoft) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = SonHarfTheme.TextPrimary, fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                PurchasedPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    asset = PurchasedUiAsset.PANEL_SMALL,
+                    contentPadding = PaddingValues(11.dp),
+                ) {
+                    Text(message, Modifier.fillMaxWidth(), color = Color(0xFF4A2D20), fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -255,46 +178,37 @@ internal fun UnifiedProVipScreen(backend: OnlineGameBackend, onBack: () -> Unit)
 
 @Composable
 private fun ProAccessCard(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    asset: PurchasedUiAsset,
     label: String,
     enabled: Boolean,
-    accent: Color,
     modifier: Modifier,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(18.dp),
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(1.dp, accent.copy(alpha = .24f)),
-        shadowElevation = 2.dp,
+    PurchasedPanel(
+        modifier = modifier.heightIn(min = 112.dp),
+        asset = if (enabled) PurchasedUiAsset.REWARD_PANEL else PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 7.dp, vertical = 11.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Column(
-            Modifier.padding(horizontal = 7.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(5.dp),
-        ) {
-            Surface(shape = CircleShape, color = accent.copy(alpha = .10f)) {
-                Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(19.dp))
-            }
-            Text(label, color = SonHarfTheme.TextPrimary, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
-            Text(
-                if (enabled) sh("AKTİF", "ACTIVE") else sh("PRO", "PRO"),
-                color = if (enabled) SonHarfTheme.Turquoise else SonHarfTheme.TextSecondary,
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Black,
-            )
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+            PurchasedAsset(asset, Modifier.size(38.dp))
+            Text(label, color = Color(0xFF4A2D20), fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
+            Text(if (enabled) sh("AKTİF", "ACTIVE") else "PRO", color = if (enabled) Color(0xFF2FAE68) else Color(0xFF6B3CA6), fontSize = 8.sp, fontWeight = FontWeight.Black)
         }
     }
 }
 
 @Composable
-private fun ProBenefitRow(icon: androidx.compose.ui.graphics.vector.ImageVector, text: String, accent: Color) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Surface(shape = RoundedCornerShape(11.dp), color = accent.copy(alpha = .10f)) {
-            Icon(icon, null, tint = accent, modifier = Modifier.padding(8.dp).size(18.dp))
+private fun ProBenefitRow(asset: PurchasedUiAsset, text: String) {
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 7.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PurchasedAsset(asset, Modifier.size(30.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(text, Modifier.weight(1f), color = Color(0xFF4A2D20), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            PurchasedAsset(PurchasedUiAsset.ICON_CHECK, Modifier.size(25.dp))
         }
-        Spacer(Modifier.width(10.dp))
-        Text(text, Modifier.weight(1f), color = SonHarfTheme.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        Icon(Icons.Rounded.Check, null, tint = SonHarfTheme.Turquoise, modifier = Modifier.size(17.dp))
     }
 }
