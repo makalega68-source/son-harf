@@ -19,10 +19,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.sonharf.game.data.GrowthDashboardDto
-import com.sonharf.game.data.OnlineGameBackend
-import com.sonharf.game.data.ProfileDto
-import com.sonharf.game.data.WeeklyTopPlayerV210
+import com.sonharf.game.data.*
 
 private val ModernHomeBg = Color(0xFFF4F7F6)
 private val ModernHomeCard = Color(0xFFFFFFFF)
