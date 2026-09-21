@@ -1,0 +1,242 @@
+name: One-shot purchased premier polish
+
+on:
+  push:
+    branches:
+      - ui/real-purchased-pack-full-overhaul-20260921
+
+permissions:
+  contents: write
+
+jobs:
+  patch-premier:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ui/real-purchased-pack-full-overhaul-20260921
+          fetch-depth: 0
+      - name: Patch remaining Son Harf visual shell
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          p = Path('app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt')
+          s = p.read_text()
+          before = s
+
+          old_search_disc = '''            Surface(shape = CircleShape, color = PremierUi.Surface, border = BorderStroke(2.dp, PremierUi.Ocean)) {
+                Icon(Icons.Rounded.Groups, null, tint = PremierUi.Ocean, modifier = Modifier.padding(27.dp).size(42.dp))
+            }'''
+          new_search_disc = '''            PurchasedPanel(
+                modifier = Modifier.size(104.dp),
+                asset = PurchasedUiAsset.PANEL_SMALL,
+                contentPadding = PaddingValues(18.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                PurchasedAsset(PurchasedUiAsset.ICON_GAMES, Modifier.size(64.dp))
+            }'''
+          if old_search_disc not in s: raise SystemExit('Searching center block missing')
+          s = s.replace(old_search_disc, new_search_disc, 1)
+
+          old_vs = '''        Surface(shape = RoundedCornerShape(99.dp), color = Color.Transparent) {
+            Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.Ocean, PremierUi.OceanDeep))).padding(horizontal = 27.dp, vertical = 10.dp)) {
+                Text("VS", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
+            }
+        }'''
+          new_vs = '''        PurchasedPanel(
+            modifier = Modifier.width(132.dp),
+            asset = PurchasedUiAsset.PANEL_SMALL,
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                PurchasedAsset(PurchasedUiAsset.ICON_SWORDS, Modifier.size(34.dp))
+                Spacer(Modifier.width(7.dp))
+                Text("VS", color = Color(0xFF4A2D20), fontSize = 22.sp, fontWeight = FontWeight.Black)
+            }
+        }'''
+          if old_vs not in s: raise SystemExit('VS block missing')
+          s = s.replace(old_vs, new_vs, 1)
+
+          arena_anchor = '''    val latestPlayedWord = words.lastOrNull()?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
+
+    BoxWithConstraints(Modifier.fillMaxSize()) {'''
+          arena_new = '''    val latestPlayedWord = words.lastOrNull()?.let { premierUpper(it.normalizedWord.ifBlank { it.word }, language) }.orEmpty()
+
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        PurchasedGameBackdrop(Modifier.matchParentSize())'''
+          if arena_anchor not in s: raise SystemExit('Premier arena anchor missing')
+          s = s.replace(arena_anchor, arena_new, 1)
+
+          old_float = '''            Surface(shape = RoundedCornerShape(16.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Sky.copy(alpha = .45f)), shadowElevation = 9.dp) {
+                Text(floatingMessage?.body.orEmpty(), Modifier.padding(horizontal = 16.dp, vertical = 10.dp), color = PremierUi.OceanDeep, fontWeight = FontWeight.Black, fontSize = 13.sp)
+            }'''
+          new_float = '''            PurchasedPanel(
+                asset = PurchasedUiAsset.PANEL_SMALL,
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PurchasedAsset(PurchasedUiAsset.ICON_CHAT, Modifier.size(28.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text(floatingMessage?.body.orEmpty(), color = Color(0xFF4A2D20), fontWeight = FontWeight.Black, fontSize = 13.sp)
+                }
+            }'''
+          if old_float not in s: raise SystemExit('Floating chat block missing')
+          s = s.replace(old_float, new_float, 1)
+
+          feedback_pattern = re.compile(r'''(?ms)^\s{16}Surface\(\n\s+shape = RoundedCornerShape\(18\.dp\),\n\s+color = if \(feedback\.accepted\).*?^\s{16}\}''')
+          feedback_new = '''                PurchasedPanel(
+                    asset = if (feedback.accepted) PurchasedUiAsset.REWARD_PANEL else PurchasedUiAsset.PANEL_SMALL,
+                    contentPadding = PaddingValues(horizontal = 18.dp, vertical = 14.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PurchasedAsset(if (feedback.accepted) PurchasedUiAsset.ICON_CHECK else PurchasedUiAsset.ICON_CLOSE, Modifier.size(30.dp))
+                        Spacer(Modifier.width(9.dp))
+                        Text(feedback.message, color = if (feedback.accepted) Color(0xFF4A2D20) else PremierUi.Red, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                    }
+                }'''
+          s, count = feedback_pattern.subn(feedback_new, s, count=1)
+          if count != 1: raise SystemExit(f'Expected one move feedback surface, found {count}')
+
+          forfeit_pattern = re.compile(r'''(?ms)^\s{20}Surface\(modifier = Modifier\.clickable\(onClick = onForfeit\).*?^\s{20}\}''')
+          forfeit_new = '''                    PurchasedButton(
+                        text = pt(language, "PES ET", "SURRENDER"),
+                        onClick = onForfeit,
+                        modifier = Modifier.width(92.dp).height(48.dp),
+                        style = PurchasedButtonStyle.DANGER,
+                    )'''
+          s, count = forfeit_pattern.subn(forfeit_new, s, count=1)
+          if count != 1: raise SystemExit(f'Expected one forfeit control, found {count}')
+
+          chat_pattern = re.compile(r'''(?ms)^\s{24}Surface\(\n\s+modifier = Modifier\.clickable\(onClick = onQuickChat\),.*?^\s{24}\}''')
+          chat_new = '''                        PurchasedButton(
+                            text = pt(language, "SOHBET", "CHAT"),
+                            onClick = onQuickChat,
+                            modifier = Modifier.width(92.dp).height(48.dp),
+                            style = PurchasedButtonStyle.SECONDARY,
+                            leadingAsset = PurchasedUiAsset.ICON_CHAT,
+                        )'''
+          s, count = chat_pattern.subn(chat_new, s, count=1)
+          if count != 1: raise SystemExit(f'Expected one chat control, found {count}')
+
+          old_score = '''                    Surface(shape = RoundedCornerShape(13.dp), color = PremierUi.Ice) {
+                        Text("$myScore  —  $rivalScore", Modifier.padding(horizontal = 13.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                    }'''
+          new_score = '''                    PurchasedPanel(
+                        asset = PurchasedUiAsset.PANEL_SMALL,
+                        contentPadding = PaddingValues(horizontal = 13.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("$myScore  —  $rivalScore", color = Color(0xFF4A2D20), fontSize = 16.sp, fontWeight = FontWeight.Black)
+                    }'''
+          if old_score not in s: raise SystemExit('Arena score pill missing')
+          s = s.replace(old_score, new_score, 1)
+
+          timer_pattern = re.compile(r'''(?ms)^\s{16}Surface\(shape = CircleShape, color = Color\.Transparent\) \{\n\s{20}Box\(Modifier\.size\(60\.dp\).*?^\s{16}\}''')
+          timer_new = '''                PurchasedPanel(
+                    modifier = Modifier.size(66.dp),
+                    asset = PurchasedUiAsset.PANEL_SMALL,
+                    contentPadding = PaddingValues(6.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(seconds.toString().padStart(2, '0'), color = if (danger) PremierUi.Red else Color(0xFF4A2D20), fontSize = 19.sp, fontWeight = FontWeight.Black)
+                        Text("SEC", color = Color(0xFF765746), fontSize = 6.sp, fontWeight = FontWeight.Black)
+                    }
+                }'''
+          s, count = timer_pattern.subn(timer_new, s, count=1)
+          if count != 1: raise SystemExit(f'Expected one arena timer, found {count}')
+
+          turn_pattern = re.compile(r'''(?ms)^\s{4}Surface\(shape = RoundedCornerShape\(99\.dp\), color = if \(myTurn\).*?^\s{4}\}''')
+          turn_new = '''    PurchasedPanel(
+        asset = PurchasedUiAsset.PANEL_SMALL,
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 7.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            when {
+                !active -> pt(language, "MAÇ SENKRONİZE EDİLİYOR", "SYNCING MATCH")
+                myTurn -> pt(language, "⚡ SENİN SIRAN", "⚡ YOUR TURN")
+                else -> pt(language, "⏳ RAKİP DÜŞÜNÜYOR", "⏳ RIVAL IS THINKING")
+            },
+            color = accent,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Black,
+            letterSpacing = .4.sp,
+        )
+    }'''
+          s, count = turn_pattern.subn(turn_new, s, count=1)
+          if count != 1: raise SystemExit(f'Expected one turn badge, found {count}')
+
+          target_anchor = '''        contentAlignment = Alignment.Center,
+    ) {
+        Box(Modifier.matchParentSize().background(Color.White.copy(alpha = glow * .13f)))'''
+          target_new = '''        contentAlignment = Alignment.Center,
+    ) {
+        PurchasedAsset(PurchasedUiAsset.PANEL_SMALL, Modifier.matchParentSize())
+        Box(Modifier.matchParentSize().background(Color.White.copy(alpha = glow * .05f)))'''
+          if target_anchor not in s: raise SystemExit('Target card anchor missing')
+          s = s.replace(target_anchor, target_new, 1)
+
+          old_result_emblem = '''        Surface(shape = CircleShape, color = if (won) PremierUi.GreenSoft else PremierUi.RedSoft) {
+            Icon(if (won) Icons.Rounded.EmojiEvents else Icons.Rounded.SportsEsports, null, tint = if (won) PremierUi.Green else PremierUi.Red, modifier = Modifier.padding(22.dp).size(48.dp))
+        }'''
+          new_result_emblem = '''        PurchasedPanel(
+            modifier = Modifier.size(104.dp),
+            asset = PurchasedUiAsset.REWARD_PANEL,
+            contentPadding = PaddingValues(18.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            PurchasedAsset(if (won) PurchasedUiAsset.ICON_TROPHY else PurchasedUiAsset.ICON_GAMES, Modifier.size(66.dp))
+        }'''
+          if old_result_emblem not in s: raise SystemExit('Result emblem missing')
+          s = s.replace(old_result_emblem, new_result_emblem, 1)
+
+          old_center_button = 'Button(onClick = onAction, colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean)) { Text(action, fontWeight = FontWeight.Black) }'
+          new_center_button = '''PurchasedButton(
+            text = action,
+            onClick = onAction,
+            modifier = Modifier.widthIn(min = 180.dp),
+            style = PurchasedButtonStyle.SECONDARY,
+            leadingAsset = PurchasedUiAsset.NAV_HOME,
+        )'''
+          if old_center_button not in s: raise SystemExit('Centered message action missing')
+          s = s.replace(old_center_button, new_center_button, 1)
+
+          required = [
+              'backend.submitPremierWord(active.id, candidate)',
+              'backend.requestRematch(active.id)',
+              'backend.sendChat(active.id, message)',
+              'backend.botTakeTurn(active.id)',
+              'EmbeddedWordKeyboard(',
+              'PurchasedUiAsset.ICON_SWORDS',
+              'PurchasedGameBackdrop(Modifier.matchParentSize())',
+          ]
+          for token in required:
+              if token not in s: raise SystemExit('Premier behavior/UI contract missing: ' + token)
+          if s == before: raise SystemExit('No Premier changes produced')
+          p.write_text(s)
+
+          # The only affected regression token is the chat label renderer; keep all behavior assertions intact.
+          tp = Path('app/src/test/java/com/sonharf/game/PremierDuelUxRegressionTest.kt')
+          ts = tp.read_text()
+          old_test = 'assertTrue(screen.contains("Text(pt(language, \\\"SOHBET\\\", \\\"CHAT\\\")"))'
+          new_test = 'assertTrue(screen.contains("text = pt(language, \\\"SOHBET\\\", \\\"CHAT\\\")"))'
+          if old_test not in ts: raise SystemExit('Premier chat regression assertion missing')
+          tp.write_text(ts.replace(old_test, new_test, 1))
+          PY
+      - name: Run focused regression tests and assemble
+        run: ./gradlew --no-daemon :app:testDebugUnitTest :app:assembleDebug
+      - name: Commit patch and remove one-shot workflow
+        shell: bash
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git rm .github/workflows/one-shot-purchased-premier.yml
+          git add app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt app/src/test/java/com/sonharf/game/PremierDuelUxRegressionTest.kt
+          git commit -m "ui: finish purchased Son Harf arena shell"
+          git push origin HEAD:ui/real-purchased-pack-full-overhaul-20260921
