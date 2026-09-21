@@ -1,19 +1,13 @@
 package com.sonharf.game
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.*
-import androidx.compose.material3.*
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -76,7 +70,7 @@ internal fun MainRetentionScreen(
     } ?: 0f
 
     LazyColumn(
-        Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -89,33 +83,50 @@ internal fun MainRetentionScreen(
         }
 
         if (loading) {
-            item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = MainUi.Blue, trackColor = MainUi.BlueSoft) }
+            item {
+                PurchasedPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    asset = PurchasedUiAsset.PANEL_SMALL,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        PurchasedAsset(PurchasedUiAsset.ICON_GAMES, Modifier.size(30.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Text(sh("İlerleme yükleniyor…", "Loading progress…"), color = MainUi.Text, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
         }
 
         item {
-            Surface(
+            PurchasedPanel(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = MainUi.BlueSoft,
+                asset = PurchasedUiAsset.PANEL_LARGE,
+                contentPadding = PaddingValues(18.dp),
             ) {
-                Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = Color.White) {
-                            Icon(Icons.Rounded.Bolt, null, tint = MainUi.Blue, modifier = Modifier.padding(9.dp).size(23.dp))
-                        }
+                        PurchasedAsset(PurchasedUiAsset.ICON_TROPHY, Modifier.size(46.dp))
                         Spacer(Modifier.width(10.dp))
                         Column(Modifier.weight(1f)) {
-                            Text("${sh("SEVİYE", "LEVEL")} ${g?.level ?: 1}", color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                            Text("${g?.xp ?: 0} XP • ${m?.selectedTitle ?: g?.nextTitle.orEmpty()}", color = MainUi.Muted, fontSize = 9.sp)
+                            Text(
+                                "${sh("SEVİYE", "LEVEL")} ${g?.level ?: 1}",
+                                color = MainUi.Text,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                            Text(
+                                "${g?.xp ?: 0} XP • ${m?.selectedTitle ?: g?.nextTitle.orEmpty()}",
+                                color = MainUi.Muted,
+                                fontSize = 9.sp,
+                            )
                         }
-                        Text("${m?.dailyPlayStreak ?: 0} 🔥", color = MainUi.Text, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        Column(horizontalAlignment = Alignment.End) {
+                            PurchasedAsset(PurchasedUiAsset.ICON_CROWN, Modifier.size(32.dp))
+                            Text("${m?.dailyPlayStreak ?: 0} 🔥", color = MainUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black)
+                        }
                     }
-                    LinearProgressIndicator(
-                        progress = { xpProgress },
-                        modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape),
-                        color = MainUi.Blue,
-                        trackColor = Color.White,
-                    )
+                    PurchasedProgress(progress = xpProgress, modifier = Modifier.fillMaxWidth())
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text("${g?.levelProgress ?: 0}/${g?.levelTarget ?: 500}", color = MainUi.Muted, fontSize = 9.sp)
                         Text(
@@ -137,58 +148,67 @@ internal fun MainRetentionScreen(
         }
 
         item {
-            Surface(
+            MainSectionTitle(sh("BUGÜN", "TODAY"))
+            Spacer(Modifier.height(7.dp))
+            PurchasedPanel(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = MainUi.Surface,
-                border = BorderStroke(1.dp, MainUi.Border),
+                asset = PurchasedUiAsset.PANEL_MEDIUM,
+                contentPadding = PaddingValues(16.dp),
             ) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    MainSectionTitle(sh("BUGÜN", "TODAY"))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                        Button(
-                            onClick = {
-                                if (busyKey != null || g?.dailyClaimed == true) return@Button
-                                scope.launch {
-                                    busyKey = "checkin"
-                                    val reward = runCatching { backend.claimDailyCheckin() }.getOrDefault(0)
-                                    notice = if (reward > 0) sh("+$reward Son Coin kazandın.", "You earned +$reward Son Coins.")
-                                    else sh("Günlük ödül daha önce alındı.", "Daily reward was already claimed.")
-                                    reload()
-                                    busyKey = null
-                                }
-                            },
-                            modifier = Modifier.weight(1f),
-                            enabled = busyKey == null && g?.dailyClaimed != true,
-                            colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold, contentColor = Color(0xFF3C2700)),
-                            shape = RoundedCornerShape(14.dp),
-                        ) {
-                            Text(if (g?.dailyClaimed == true) "✓ ${sh("ALINDI", "CLAIMED")}" else "🎁 +${g?.dailyReward ?: 40} SC", fontWeight = FontWeight.Black, fontSize = 10.sp)
-                        }
-                        OutlinedButton(
-                            onClick = onDailyChallenge,
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(14.dp),
-                            border = BorderStroke(1.dp, MainUi.Blue.copy(alpha = .38f)),
-                        ) {
-                            Text(sh("GÜNÜN KELİMESİ", "DAILY WORD"), color = MainUi.Blue, fontWeight = FontWeight.Black, fontSize = 9.sp)
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        PurchasedAsset(PurchasedUiAsset.OLD_DAILY_REWARD, Modifier.size(width = 62.dp, height = 78.dp))
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(sh("Günlük ödül", "Daily reward"), color = MainUi.Text, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                            Text(
+                                if (g?.dailyClaimed == true) sh("Bugünün ödülü alındı", "Today's reward claimed")
+                                else sh("Bugünkü Son Coin ödülünü al", "Claim today's Son Coin reward"),
+                                color = MainUi.Muted,
+                                fontSize = 9.sp,
+                            )
+                            PurchasedButton(
+                                text = if (g?.dailyClaimed == true) "✓ ${sh("ALINDI", "CLAIMED")}" else "+${g?.dailyReward ?: 40} SC",
+                                onClick = {
+                                    if (busyKey == null && g?.dailyClaimed != true) {
+                                        scope.launch {
+                                            busyKey = "checkin"
+                                            val reward = runCatching { backend.claimDailyCheckin() }.getOrDefault(0)
+                                            notice = if (reward > 0) sh("+$reward Son Coin kazandın.", "You earned +$reward Son Coins.")
+                                            else sh("Günlük ödül daha önce alındı.", "Daily reward was already claimed.")
+                                            reload()
+                                            busyKey = null
+                                        }
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                style = PurchasedButtonStyle.WARNING,
+                                enabled = busyKey == null && g?.dailyClaimed != true,
+                                leadingAsset = PurchasedUiAsset.ICON_GIFT,
+                            )
                         }
                     }
 
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(sh("3 düello tamamla", "Complete 3 duels"), color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            Text("${(g?.matchesToday ?: 0).coerceAtMost(3)}/3", color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                        }
-                        LinearProgressIndicator(
-                            progress = { ((g?.matchesToday ?: 0).coerceAtMost(3) / 3f) },
-                            modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape),
-                            color = MainUi.Green,
-                            trackColor = MainUi.SurfaceSoft,
-                        )
-                        Button(
-                            onClick = {
-                                if (busyKey != null) return@Button
+                    PurchasedButton(
+                        text = sh("GÜNÜN KELİMESİ", "DAILY WORD"),
+                        onClick = onDailyChallenge,
+                        modifier = Modifier.fillMaxWidth(),
+                        style = PurchasedButtonStyle.SECONDARY,
+                        leadingAsset = PurchasedUiAsset.ICON_GAMES,
+                    )
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text(sh("3 düello tamamla", "Complete 3 duels"), color = MainUi.Text, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("${(g?.matchesToday ?: 0).coerceAtMost(3)}/3", color = MainUi.Blue, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    }
+                    PurchasedProgress(
+                        progress = ((g?.matchesToday ?: 0).coerceAtMost(3) / 3f),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    PurchasedButton(
+                        text = if (g?.dailyChallengeClaimed == true) sh("ALINDI", "CLAIMED") else "+30 SC",
+                        onClick = {
+                            if (busyKey == null) {
                                 scope.launch {
                                     busyKey = "daily_challenge"
                                     val reward = runCatching { backend.claimDailyChallenge() }.getOrDefault(0)
@@ -197,42 +217,38 @@ internal fun MainRetentionScreen(
                                     reload()
                                     busyKey = null
                                 }
-                            },
-                            enabled = busyKey == null && (g?.matchesToday ?: 0) >= 3 && g?.dailyChallengeClaimed != true,
-                            modifier = Modifier.align(Alignment.End),
-                            colors = ButtonDefaults.buttonColors(containerColor = MainUi.Green),
-                            shape = RoundedCornerShape(12.dp),
-                            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 7.dp),
-                        ) {
-                            Text(if (g?.dailyChallengeClaimed == true) sh("ALINDI", "CLAIMED") else "+30 SC", fontSize = 9.sp, fontWeight = FontWeight.Black)
-                        }
-                    }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = busyKey == null && (g?.matchesToday ?: 0) >= 3 && g?.dailyChallengeClaimed != true,
+                        style = PurchasedButtonStyle.PRIMARY,
+                        leadingAsset = PurchasedUiAsset.ICON_CHECK,
+                    )
                 }
             }
         }
 
         item {
-            Surface(
+            PurchasedPanel(
                 modifier = Modifier.fillMaxWidth().clickable(onClick = onPlay),
-                shape = RoundedCornerShape(20.dp),
-                color = MainUi.BlueSoft,
+                asset = PurchasedUiAsset.PANEL_SMALL,
+                contentPadding = PaddingValues(15.dp),
             ) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                    Text(sh("YAKIN HEDEF", "NEARBY GOAL"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    Text(
-                        if (league.nextAt == null) sh("En üst ligdesin", "You are in the top league")
-                        else sh("${league.nextLeagueName} için ${league.pointsToNext} puan", "${league.pointsToNext} points to ${league.nextLeagueName}"),
-                        color = MainUi.Text,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                    LinearProgressIndicator(
-                        progress = { league.progress },
-                        modifier = Modifier.fillMaxWidth().height(7.dp).clip(CircleShape),
-                        color = MainUi.Blue,
-                        trackColor = Color.White,
-                    )
-                    Text(sh("Bir maç daha oynayarak hedefe yaklaş", "Play one more match to move closer"), color = MainUi.Muted, fontSize = 9.sp)
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    PurchasedAsset(PurchasedUiAsset.ICON_RANKING, Modifier.size(46.dp))
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(sh("YAKIN HEDEF", "NEARBY GOAL"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        Text(
+                            if (league.nextAt == null) sh("En üst ligdesin", "You are in the top league")
+                            else sh("${league.nextLeagueName} için ${league.pointsToNext} puan", "${league.pointsToNext} points to ${league.nextLeagueName}"),
+                            color = MainUi.Text,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        PurchasedProgress(progress = league.progress, modifier = Modifier.fillMaxWidth())
+                        Text(sh("Bir maç daha oynayarak hedefe yaklaş", "Play one more match to move closer"), color = MainUi.Muted, fontSize = 9.sp)
+                    }
                 }
             }
         }
@@ -241,13 +257,18 @@ internal fun MainRetentionScreen(
 
         if (missions.isEmpty() && goals.isEmpty() && !loading) {
             item {
-                Text(
-                    sh("Yeni görevler sunucuda hazırlanıyor.", "New missions are being prepared on the server."),
-                    Modifier.fillMaxWidth().padding(vertical = 18.dp),
-                    color = MainUi.Muted,
-                    fontSize = 11.sp,
-                    textAlign = TextAlign.Center,
-                )
+                PurchasedPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    asset = PurchasedUiAsset.OLD_MISSION_ROW,
+                    contentPadding = PaddingValues(14.dp),
+                ) {
+                    Text(
+                        sh("Yeni görevler sunucuda hazırlanıyor.", "New missions are being prepared on the server."),
+                        color = MainUi.Muted,
+                        fontSize = 10.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                }
             }
         }
 
@@ -257,17 +278,18 @@ internal fun MainRetentionScreen(
                 busy = busyKey == mission.missionId,
                 onPlay = onPlay,
                 onClaim = {
-                    if (busyKey != null) return@MainUnifiedMissionCard
-                    scope.launch {
-                        busyKey = mission.missionId
-                        runCatching { backend.claimUnifiedMission(mission.missionId) }
-                            .onSuccess {
-                                notice = sh("+${it.rewardCoins} Son Coin alındı.", "+${it.rewardCoins} Son Coins claimed.")
-                                SonHarfSoundFx.missionComplete()
-                                reload()
-                            }
-                            .onFailure { notice = sh("Görev ödülü alınamadı.", "Mission reward could not be claimed.") }
-                        busyKey = null
+                    if (busyKey == null) {
+                        scope.launch {
+                            busyKey = mission.missionId
+                            runCatching { backend.claimUnifiedMission(mission.missionId) }
+                                .onSuccess {
+                                    notice = sh("+${it.rewardCoins} Son Coin alındı.", "+${it.rewardCoins} Son Coins claimed.")
+                                    SonHarfSoundFx.missionComplete()
+                                    reload()
+                                }
+                                .onFailure { notice = sh("Görev ödülü alınamadı.", "Mission reward could not be claimed.") }
+                            busyKey = null
+                        }
                     }
                 },
             )
@@ -280,14 +302,15 @@ internal fun MainRetentionScreen(
                     busy = busyKey == goal.id,
                     onPlay = onPlay,
                     onClaim = {
-                        if (busyKey != null) return@MainLegacyGoalCard
-                        scope.launch {
-                            busyKey = goal.id
-                            val reward = runCatching { backend.claimGoal(goal.id) }.getOrDefault(0)
-                            notice = if (reward > 0) sh("+$reward Son Coin alındı.", "+$reward Son Coins claimed.")
-                            else sh("Görev ödülü alınamadı.", "Mission reward could not be claimed.")
-                            reload()
-                            busyKey = null
+                        if (busyKey == null) {
+                            scope.launch {
+                                busyKey = goal.id
+                                val reward = runCatching { backend.claimGoal(goal.id) }.getOrDefault(0)
+                                notice = if (reward > 0) sh("+$reward Son Coin alındı.", "+$reward Son Coins claimed.")
+                                else sh("Görev ödülü alınamadı.", "Mission reward could not be claimed.")
+                                reload()
+                                busyKey = null
+                            }
                         }
                     },
                 )
@@ -297,20 +320,30 @@ internal fun MainRetentionScreen(
         item { MainSectionTitle(sh("KELİME USTALIĞI", "WORD MASTERY")) }
 
         if (mastery.isEmpty() && !loading) {
-            item { Text(sh("Ustalık yolu ilk maçlarınla açılır.", "The mastery path unlocks with your first matches."), color = MainUi.Muted, fontSize = 10.sp) }
+            item {
+                Text(
+                    sh("Ustalık yolu ilk maçlarınla açılır.", "The mastery path unlocks with your first matches."),
+                    color = MainUi.Muted,
+                    fontSize = 10.sp,
+                    modifier = Modifier.fillMaxWidth(),
+                    textAlign = TextAlign.Center,
+                )
+            }
         }
 
         items(mastery.take(6), key = { it.id }) { milestone ->
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MainUi.Surface,
-                border = BorderStroke(1.dp, if (milestone.unlocked) MainUi.Gold.copy(alpha = .45f) else MainUi.Border),
+            PurchasedPanel(
+                modifier = Modifier.fillMaxWidth(),
+                asset = PurchasedUiAsset.PANEL_SMALL,
+                contentPadding = PaddingValues(14.dp),
             ) {
-                Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Surface(shape = CircleShape, color = if (milestone.unlocked) MainUi.Gold.copy(alpha = .12f) else MainUi.SurfaceSoft) {
-                            Icon(Icons.Rounded.AutoAwesome, null, tint = if (milestone.unlocked) MainUi.Gold else MainUi.Muted, modifier = Modifier.padding(8.dp).size(19.dp))
-                        }
+                        PurchasedAsset(
+                            if (milestone.unlocked) PurchasedUiAsset.ICON_TROPHY else PurchasedUiAsset.ICON_RANKING,
+                            Modifier.size(38.dp),
+                            alpha = if (milestone.unlocked) 1f else .55f,
+                        )
                         Spacer(Modifier.width(9.dp))
                         Column(Modifier.weight(1f)) {
                             Text(if (SonHarfUiState.isEnglish) milestone.titleEn else milestone.titleTr, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
@@ -318,26 +351,30 @@ internal fun MainRetentionScreen(
                         }
                         Text("+${milestone.rewardCoins} SC", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
                     }
-                    LinearProgressIndicator(
-                        progress = { (milestone.progress.toFloat() / milestone.target.coerceAtLeast(1)).coerceIn(0f, 1f) },
-                        modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
-                        color = if (milestone.unlocked) MainUi.Gold else MainUi.Blue,
-                        trackColor = MainUi.SurfaceSoft,
+                    PurchasedProgress(
+                        progress = (milestone.progress.toFloat() / milestone.target.coerceAtLeast(1)).coerceIn(0f, 1f),
+                        modifier = Modifier.fillMaxWidth(),
                     )
                     if (milestone.unlocked && !milestone.claimed) {
-                        TextButton(
+                        PurchasedButton(
+                            text = sh("ÖDÜLÜ AL", "CLAIM"),
                             onClick = {
-                                if (busyKey != null) return@TextButton
-                                scope.launch {
-                                    busyKey = milestone.id
-                                    val reward = runCatching { backend.claimMasteryReward(milestone.id) }.getOrDefault(0)
-                                    notice = if (reward > 0) sh("+$reward Son Coin alındı.", "+$reward Son Coins claimed.") else sh("Ödül alınamadı.", "Reward could not be claimed.")
-                                    reload()
-                                    busyKey = null
+                                if (busyKey == null) {
+                                    scope.launch {
+                                        busyKey = milestone.id
+                                        val reward = runCatching { backend.claimMasteryReward(milestone.id) }.getOrDefault(0)
+                                        notice = if (reward > 0) sh("+$reward Son Coin alındı.", "+$reward Son Coins claimed.")
+                                        else sh("Ödül alınamadı.", "Reward could not be claimed.")
+                                        reload()
+                                        busyKey = null
+                                    }
                                 }
                             },
-                            modifier = Modifier.align(Alignment.End),
-                        ) { Text(sh("ÖDÜLÜ AL", "CLAIM"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = busyKey == null,
+                            style = PurchasedButtonStyle.WARNING,
+                            leadingAsset = PurchasedUiAsset.ICON_GIFT,
+                        )
                     }
                 }
             }
@@ -347,14 +384,16 @@ internal fun MainRetentionScreen(
             MainSectionTitle(sh("BAŞARIMLAR", "ACHIEVEMENTS"))
             Spacer(Modifier.height(8.dp))
             val unlocked = achievements.count { it.unlocked }
-            Surface(
-                shape = RoundedCornerShape(18.dp),
-                color = MainUi.Surface,
-                border = BorderStroke(1.dp, MainUi.Border),
+            PurchasedPanel(
+                modifier = Modifier.fillMaxWidth(),
+                asset = PurchasedUiAsset.PANEL_MEDIUM,
+                contentPadding = PaddingValues(14.dp),
             ) {
-                Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(sh("Açılan başarımlar", "Unlocked achievements"), color = MainUi.Text, fontWeight = FontWeight.Bold)
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        PurchasedAsset(PurchasedUiAsset.ICON_TROPHY, Modifier.size(42.dp))
+                        Spacer(Modifier.width(9.dp))
+                        Text(sh("Açılan başarımlar", "Unlocked achievements"), color = MainUi.Text, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                         Text("$unlocked/${achievements.size}", color = MainUi.Blue, fontWeight = FontWeight.Black)
                     }
                     achievements.take(5).forEach { achievement ->
@@ -368,7 +407,11 @@ internal fun MainRetentionScreen(
                                 fontWeight = FontWeight.Bold,
                                 modifier = Modifier.weight(1f),
                             )
-                            Text(if (achievement.unlocked) "✓" else "${achievement.currentValue}/${achievement.target}", color = if (achievement.unlocked) MainUi.Green else MainUi.Muted, fontSize = 9.sp)
+                            Text(
+                                if (achievement.unlocked) "✓" else "${achievement.currentValue}/${achievement.target}",
+                                color = if (achievement.unlocked) MainUi.Green else MainUi.Muted,
+                                fontSize = 9.sp,
+                            )
                         }
                     }
                 }
@@ -389,23 +432,28 @@ internal fun MainRetentionScreen(
 
         notice?.let { message ->
             item {
-                Surface(shape = RoundedCornerShape(14.dp), color = MainUi.BlueSoft) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                PurchasedPanel(
+                    modifier = Modifier.fillMaxWidth(),
+                    asset = PurchasedUiAsset.REWARD_PANEL,
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 13.dp),
+                ) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        PurchasedAsset(PurchasedUiAsset.ICON_GIFT, Modifier.size(32.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(message, modifier = Modifier.weight(1f), color = MainUi.Text, fontSize = 10.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    }
                 }
             }
         }
 
         item {
-            Button(
+            PurchasedButton(
+                text = sh("BİR MAÇ DAHA OYNA", "PLAY ONE MORE MATCH"),
                 onClick = onPlay,
-                modifier = Modifier.fillMaxWidth().height(54.dp),
-                shape = RoundedCornerShape(17.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = MainUi.Blue),
-            ) {
-                Text(sh("BİR MAÇ DAHA OYNA", "PLAY ONE MORE MATCH"), fontWeight = FontWeight.Black)
-                Spacer(Modifier.width(7.dp))
-                Icon(Icons.Rounded.ArrowForward, null)
-            }
+                modifier = Modifier.fillMaxWidth(),
+                style = PurchasedButtonStyle.PRIMARY,
+                leadingAsset = PurchasedUiAsset.ICON_SWORDS,
+            )
         }
         item { Spacer(Modifier.height(8.dp)) }
     }
@@ -419,33 +467,47 @@ private fun MainUnifiedMissionCard(
     onClaim: () -> Unit,
 ) {
     val complete = mission.completed || mission.progress >= mission.target
-    Surface(
-        shape = RoundedCornerShape(18.dp),
-        color = MainUi.Surface,
-        border = BorderStroke(1.dp, if (complete) MainUi.Green.copy(alpha = .42f) else MainUi.Border),
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.OLD_MISSION_ROW,
+        contentPadding = PaddingValues(horizontal = 15.dp, vertical = 13.dp),
     ) {
-        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(if (complete) Icons.Rounded.CheckCircle else Icons.Rounded.TrackChanges, null, tint = if (complete) MainUi.Green else MainUi.Blue)
+                PurchasedAsset(
+                    if (complete) PurchasedUiAsset.ICON_CHECK else PurchasedUiAsset.ICON_GAMES,
+                    Modifier.size(36.dp),
+                    alpha = if (complete) 1f else .9f,
+                )
                 Spacer(Modifier.width(9.dp))
                 Column(Modifier.weight(1f)) {
                     Text(if (SonHarfUiState.isEnglish) mission.titleEn else mission.titleTr, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black)
                     Text(mission.scope.uppercase(), color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
-                Text("+${mission.rewardCoins} SC", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                PurchasedCurrencyBar(amount = "+${mission.rewardCoins}", modifier = Modifier.widthIn(min = 92.dp))
             }
-            LinearProgressIndicator(
-                progress = { (mission.progress.toFloat() / mission.target.coerceAtLeast(1)).coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
-                color = if (complete) MainUi.Green else MainUi.Blue,
-                trackColor = MainUi.SurfaceSoft,
+            PurchasedProgress(
+                progress = (mission.progress.toFloat() / mission.target.coerceAtLeast(1)).coerceIn(0f, 1f),
+                modifier = Modifier.fillMaxWidth(),
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("${mission.progress.coerceAtMost(mission.target)}/${mission.target}", color = MainUi.Muted, fontSize = 9.sp)
                 when {
                     mission.claimed -> Text(sh("ALINDI", "CLAIMED"), color = MainUi.Green, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    complete -> Button(onClick = onClaim, enabled = !busy, contentPadding = PaddingValues(horizontal = 13.dp, vertical = 6.dp), shape = RoundedCornerShape(11.dp)) { Text(if (busy) "…" else sh("ÖDÜLÜ AL", "CLAIM"), fontSize = 8.sp, fontWeight = FontWeight.Black) }
-                    else -> TextButton(onClick = onPlay, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) { Text(sh("OYNA", "PLAY"), color = MainUi.Blue, fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                    complete -> PurchasedButton(
+                        text = if (busy) "…" else sh("ÖDÜLÜ AL", "CLAIM"),
+                        onClick = onClaim,
+                        modifier = Modifier.widthIn(min = 120.dp),
+                        enabled = !busy,
+                        style = PurchasedButtonStyle.WARNING,
+                        leadingAsset = PurchasedUiAsset.ICON_GIFT,
+                    )
+                    else -> PurchasedButton(
+                        text = sh("OYNA", "PLAY"),
+                        onClick = onPlay,
+                        modifier = Modifier.widthIn(min = 104.dp),
+                        style = PurchasedButtonStyle.SECONDARY,
+                    )
                 }
             }
         }
@@ -460,25 +522,40 @@ private fun MainLegacyGoalCard(
     onClaim: () -> Unit,
 ) {
     val complete = goal.progress >= goal.target
-    Surface(shape = RoundedCornerShape(18.dp), color = MainUi.Surface, border = BorderStroke(1.dp, MainUi.Border)) {
-        Column(Modifier.fillMaxWidth().padding(13.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+    PurchasedPanel(
+        modifier = Modifier.fillMaxWidth(),
+        asset = PurchasedUiAsset.OLD_MISSION_ROW,
+        contentPadding = PaddingValues(horizontal = 15.dp, vertical = 13.dp),
+    ) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                PurchasedAsset(PurchasedUiAsset.ICON_GAMES, Modifier.size(34.dp))
+                Spacer(Modifier.width(8.dp))
                 Text(if (SonHarfUiState.isEnglish) goal.titleEn else goal.titleTr, color = MainUi.Text, fontSize = 12.sp, fontWeight = FontWeight.Black, modifier = Modifier.weight(1f))
-                Text("+${goal.rewardDiamonds} SC", color = MainUi.Gold, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                PurchasedCurrencyBar(amount = "+${goal.rewardDiamonds}", modifier = Modifier.widthIn(min = 92.dp))
             }
             Text(if (SonHarfUiState.isEnglish) goal.descriptionEn else goal.descriptionTr, color = MainUi.Muted, fontSize = 9.sp)
-            LinearProgressIndicator(
-                progress = { (goal.progress.toFloat() / goal.target.coerceAtLeast(1)).coerceIn(0f, 1f) },
-                modifier = Modifier.fillMaxWidth().height(5.dp).clip(CircleShape),
-                color = if (complete) MainUi.Green else MainUi.Blue,
-                trackColor = MainUi.SurfaceSoft,
+            PurchasedProgress(
+                progress = (goal.progress.toFloat() / goal.target.coerceAtLeast(1)).coerceIn(0f, 1f),
+                modifier = Modifier.fillMaxWidth(),
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Text("${goal.progress.coerceAtMost(goal.target)}/${goal.target}", color = MainUi.Muted, fontSize = 9.sp)
                 when {
                     goal.claimed -> Text(sh("ALINDI", "CLAIMED"), color = MainUi.Green, fontSize = 9.sp, fontWeight = FontWeight.Black)
-                    complete -> TextButton(onClick = onClaim, enabled = !busy) { Text(if (busy) "…" else sh("ÖDÜLÜ AL", "CLAIM"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
-                    else -> TextButton(onClick = onPlay) { Text(sh("OYNA", "PLAY"), fontSize = 9.sp, fontWeight = FontWeight.Black) }
+                    complete -> PurchasedButton(
+                        text = if (busy) "…" else sh("ÖDÜLÜ AL", "CLAIM"),
+                        onClick = onClaim,
+                        modifier = Modifier.widthIn(min = 120.dp),
+                        enabled = !busy,
+                        style = PurchasedButtonStyle.WARNING,
+                    )
+                    else -> PurchasedButton(
+                        text = sh("OYNA", "PLAY"),
+                        onClick = onPlay,
+                        modifier = Modifier.widthIn(min = 104.dp),
+                        style = PurchasedButtonStyle.SECONDARY,
+                    )
                 }
             }
         }
