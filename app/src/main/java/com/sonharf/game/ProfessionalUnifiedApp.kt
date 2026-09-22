@@ -169,7 +169,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                         onSocial = { destination = ProfessionalDestination.SOCIAL },
                     )
 
-                    ProfessionalDestination.COLLECTION -> PlayerCollectionScreen(backend) {
+                    ProfessionalDestination.COLLECTION -> ProfessionalCollectionScreen(backend) {
                         destination = ProfessionalDestination.PROFILE
                     }
 
