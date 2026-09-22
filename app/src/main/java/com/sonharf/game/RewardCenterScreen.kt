@@ -136,11 +136,7 @@ fun RewardCenterScreen() {
                 onEarned = { responseId ->
                     scope.launch {
                         runCatching {
-                            b.awaitVerifiedStoreReward(
-                                rewardType,
-                                responseId,
-                                trialItemId,
-                            )
+                            b.awaitVerifiedStoreReward(rewardType, responseId, trialItemId)
                         }
                             .onSuccess { claim ->
                                 notice = when (rewardType) {
