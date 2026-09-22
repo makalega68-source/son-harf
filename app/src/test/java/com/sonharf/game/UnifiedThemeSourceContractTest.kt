@@ -50,6 +50,32 @@ class UnifiedThemeSourceContractTest {
     }
 
     @Test
+    fun legacyThemeFacadeCannotReintroduceRetiredNeonPalette() {
+        val legacy = source("SonHarfTheme.kt")
+
+        listOf(
+            "val Background: Color get() = if (alternateDark)",
+            "else GameColors.AppBackground",
+            "val Surface: Color get() = if (alternateDark)",
+            "else GameColors.PrimarySurface",
+            "val Primary: Color get() = GameColors.PrimaryBlue",
+            "val Turquoise: Color get() = GameColors.TacticalTurquoise",
+            "val Success: Color get() = GameColors.PlayGreen",
+            "val Error: Color get() = GameColors.Danger",
+            "val PremiumGold: Color get() = GameColors.PrestigeGold",
+            "val HeroStart: Color get() = GameColors.HeroStart",
+        ).forEach { token -> assertTrue("Missing professional legacy-theme mapping: $token", legacy.contains(token)) }
+
+        listOf(
+            "0xFFEFFF19",
+            "0xFFFF245C",
+            "0xFFFF3B30",
+            "Monster UI kit'ten türetilen",
+            "Signature Monster red",
+        ).forEach { retired -> assertFalse("Retired theme token remains: $retired", legacy.contains(retired)) }
+    }
+
+    @Test
     fun buildWorkflowsNeverMutateSourcesWithLegacyThemeScripts() {
         val workflows = projectFile(".github/workflows").walkTopDown()
             .filter { it.isFile && it.extension in setOf("yml", "yaml") }
