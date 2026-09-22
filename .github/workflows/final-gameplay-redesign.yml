@@ -49,6 +49,21 @@ jobs:
       - name: Unit tests and debug APK
         run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
 
+      - name: Prepare final APK
+        shell: bash
+        run: |
+          mkdir -p final-apk
+          cp app/build/outputs/apk/debug/app-debug.apk final-apk/Kelime-Tahti-Final-Redesign.apk
+          sha256sum final-apk/Kelime-Tahti-Final-Redesign.apk > final-apk/SHA256.txt
+
+      - name: Upload final APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kelime-tahti-final-redesign-apk
+          path: final-apk/
+          if-no-files-found: error
+          retention-days: 7
+
       - name: Commit verified redesign
         shell: bash
         run: |
@@ -67,20 +82,12 @@ jobs:
                   app/src/test/java/com/sonharf/game/WordSiegePanAreaContractTest.kt
           if ! git diff --cached --quiet; then
             git commit -m "Complete premium gameplay visual redesign"
-            git push origin HEAD:claude/kelime-tahti-home-redesign-7ojb7d
+            for attempt in 1 2 3 4 5; do
+              if git push origin HEAD:claude/kelime-tahti-home-redesign-7ojb7d; then
+                exit 0
+              fi
+              echo "Push attempt ${attempt} failed; retrying..."
+              sleep 5
+            done
+            exit 1
           fi
-
-      - name: Prepare final APK
-        shell: bash
-        run: |
-          mkdir -p final-apk
-          cp app/build/outputs/apk/debug/app-debug.apk final-apk/Kelime-Tahti-Final-Redesign.apk
-          sha256sum final-apk/Kelime-Tahti-Final-Redesign.apk > final-apk/SHA256.txt
-
-      - name: Upload final APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: kelime-tahti-final-redesign-apk
-          path: final-apk/
-          if-no-files-found: error
-          retention-days: 7
