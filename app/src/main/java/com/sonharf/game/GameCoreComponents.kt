@@ -9,8 +9,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.paint
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -27,11 +30,11 @@ internal fun GameSurface(
     borderColor: Color = GameColors.Border,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val surfacePainter = painterResource(R.drawable.theme_pack_new_surface)
     Surface(
-        modifier = modifier,
+        modifier = modifier.paint(surfacePainter, sizeToIntrinsics = false, contentScale = ContentScale.FillBounds),
         shape = GameShapes.Large,
-        color = if (elevated) GameColors.SecondarySurface else GameColors.PrimarySurface,
-        border = BorderStroke(1.dp, borderColor),
+        color = Color.Transparent,
         shadowElevation = if (elevated) GameElevation.Low else GameElevation.Flat,
     ) {
         Column(Modifier.padding(GameSpacing.Lg), content = content)
@@ -55,19 +58,22 @@ private fun GameActionButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier,
-    container: Color,
+    backgroundRes: Int,
     enabled: Boolean,
     icon: ImageVector?,
 ) {
+    val resolvedBackground = if (enabled) backgroundRes else R.drawable.theme_pack_old_button_dark
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.heightIn(min = 48.dp),
+        modifier = modifier
+            .heightIn(min = 48.dp)
+            .paint(painterResource(resolvedBackground), sizeToIntrinsics = false, contentScale = ContentScale.FillBounds),
         shape = GameShapes.Medium,
         colors = ButtonDefaults.buttonColors(
-            containerColor = container,
+            containerColor = Color.Transparent,
             contentColor = Color.White,
-            disabledContainerColor = GameColors.Disabled,
+            disabledContainerColor = Color.Transparent,
             disabledContentColor = GameColors.DisabledContent,
         ),
         elevation = ButtonDefaults.buttonElevation(0.dp, 0.dp),
@@ -83,19 +89,19 @@ private fun GameActionButton(
 
 @Composable
 internal fun GamePrimaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null) =
-    GameActionButton(text, onClick, modifier, GameColors.PlayGreen, enabled, icon)
+    GameActionButton(text, onClick, modifier, R.drawable.theme_pack_old_button_green, enabled, icon)
 
 @Composable
 internal fun GameSecondaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null) =
-    GameActionButton(text, onClick, modifier, GameColors.PrimaryBlue, enabled, icon)
+    GameActionButton(text, onClick, modifier, R.drawable.theme_pack_old_button_blue, enabled, icon)
 
 @Composable
 internal fun GameTertiaryButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null) =
-    GameActionButton(text, onClick, modifier, GameColors.SecondarySurface, enabled, icon)
+    GameActionButton(text, onClick, modifier, R.drawable.theme_pack_old_button_dark, enabled, icon)
 
 @Composable
 internal fun GameDangerButton(text: String, onClick: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true, icon: ImageVector? = null) =
-    GameActionButton(text, onClick, modifier, GameColors.Danger, enabled, icon)
+    GameActionButton(text, onClick, modifier, R.drawable.theme_pack_old_button_red, enabled, icon)
 
 @Composable
 internal fun GameIconButton(
