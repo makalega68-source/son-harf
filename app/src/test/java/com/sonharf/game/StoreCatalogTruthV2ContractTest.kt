@@ -11,7 +11,8 @@ class StoreCatalogTruthV2ContractTest {
         val shop = projectFile("app/src/main/java/com/sonharf/game/EconomyShopScreen.kt").readText()
 
         assertTrue(shop.contains("initialTab.coerceIn(0, 3)"))
-        assertTrue(shop.contains("Kelime Kuşatması · Tarzını seç"))
+        assertTrue(shop.contains("title = gameText(\"Mağaza\", \"Shop\")"))
+        assertTrue(shop.contains("Görünüm, konfor ve prestij"))
         assertTrue(shop.contains("onSection(3)"))
         assertTrue(shop.contains("if (section == 3)"))
         assertFalse(shop.contains("Kelime Tahtı"))
