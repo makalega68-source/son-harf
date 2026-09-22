@@ -12,6 +12,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -26,10 +28,12 @@ import com.sonharf.game.data.*
 
 internal data class HomePodiumEntry(val row: LeaderboardV2Row, val profile: ProfileDto?)
 
-private val HomeHeroShape = RoundedCornerShape(26.dp)
-private val HomeCardShape = RoundedCornerShape(20.dp)
-private val HomeControlShape = RoundedCornerShape(14.dp)
+private val HomeHeroShape = RoundedCornerShape(18.dp)
+private val HomeCardShape = RoundedCornerShape(16.dp)
+private val HomeControlShape = RoundedCornerShape(12.dp)
+private val HomeMicroShape = RoundedCornerShape(10.dp)
 private val HomeDarkText = Color(0xFF0B1B33)
+private val HomeHairline = Color(0xFFD8E4EC)
 
 @Composable
 internal fun PremiumHomeCommandDeck(
@@ -54,204 +58,10 @@ internal fun PremiumHomeCommandDeck(
         dailyLoading = false
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        // Marka başlığı: gerçek merkezde, bildirim düğmesi sağda sabit.
-        Box(Modifier.fillMaxWidth().height(48.dp), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    "KELİME TAHTI",
-                    color = SonHarfTheme.TextPrimary,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.2.sp,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                )
-                Box(
-                    Modifier
-                        .padding(top = 3.dp)
-                        .size(width = 36.dp, height = 3.dp)
-                        .background(SonHarfTheme.ActionOrange, RoundedCornerShape(99.dp)),
-                )
-            }
-            Surface(
-                onClick = onSocial,
-                modifier = Modifier.align(Alignment.CenterEnd).size(44.dp),
-                shape = CircleShape,
-                color = SonHarfTheme.Surface,
-                border = BorderStroke(1.dp, SonHarfTheme.Border),
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Rounded.Notifications,
-                        sh("Bildirimler ve davetler", "Notifications and invites"),
-                        tint = SonHarfTheme.TextPrimary,
-                        modifier = Modifier.size(22.dp),
-                    )
-                }
-            }
-        }
-
-        // Kompakt profil: avatar + ad, altında üç eşit sayaç.
-        Surface(
-            onClick = onProfile,
-            shape = HomeCardShape,
-            color = SonHarfTheme.Surface,
-            border = BorderStroke(1.dp, SonHarfTheme.Border),
-            shadowElevation = 1.dp,
-        ) {
-            Column(
-                Modifier.fillMaxWidth().padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    FramedProfilePhotoAvatar(
-                        avatarPath = profile?.avatarPath,
-                        gender = profile?.gender,
-                        name = profile?.displayName ?: sh("Oyuncu", "Player"),
-                        size = 46.dp,
-                        frameId = SonHarfCosmetics.profileFrameId,
-                        accent = if (profile?.isVip == true) SonHarfTheme.Lavender else SonHarfTheme.Primary,
-                        visible = profile?.avatarVisibility != "hidden",
-                        isPro = profile?.isVip == true,
-                    )
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        profile?.displayName ?: sh("Profilin", "Your profile"),
-                        modifier = Modifier.weight(1f),
-                        color = SonHarfTheme.TextPrimary,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 17.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    if (profile?.isVip == true) {
-                        Spacer(Modifier.width(8.dp))
-                        Surface(shape = RoundedCornerShape(8.dp), color = SonHarfTheme.PremiumGoldLight) {
-                            Text(
-                                "PRO",
-                                Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                                color = HomeDarkText,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                        }
-                    }
-                    Spacer(Modifier.width(6.dp))
-                    Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(22.dp))
-                }
-                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    HomeCounter(
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        icon = Icons.Rounded.MilitaryTech,
-                        value = profile?.let { "${it.rating} RP" } ?: "— RP",
-                        label = sh("PUAN", "RATING"),
-                        background = Color(0xFFFFEBDA),
-                        accent = Color(0xFFD9620F),
-                    )
-                    HomeCounter(
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        icon = Icons.Rounded.EmojiEvents,
-                        value = profile?.let { homeLeagueName(ratingLeagueProgress(it.rating).leagueName) } ?: "—",
-                        label = sh("LİG", "LEAGUE"),
-                        background = Color(0xFFEEE9FF),
-                        accent = Color(0xFF6A4BD6),
-                    )
-                    HomeCounter(
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        icon = Icons.Rounded.Toll,
-                        value = "${profile?.diamonds?.toString() ?: "—"} Coin",
-                        label = "COIN",
-                        background = Color(0xFFDDF5F4),
-                        accent = Color(0xFF0E8F89),
-                    )
-                }
-            }
-        }
-
-        // Ana oyun: koyu lacivert-mavi sahne, ortalanmış başlık ve güçlü turuncu buton.
-        Surface(
-            shape = HomeHeroShape,
-            color = Color.Transparent,
-            shadowElevation = 4.dp,
-        ) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.linearGradient(
-                            listOf(SonHarfTheme.HeroStart, SonHarfTheme.HeroMiddle, SonHarfTheme.HeroEnd),
-                        ),
-                        HomeHeroShape,
-                    ),
-            ) {
-                Column(
-                    Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    Surface(shape = RoundedCornerShape(99.dp), color = SonHarfTheme.Turquoise) {
-                        Text(
-                            sh("ANA OYUN", "MAIN GAME"),
-                            Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                            color = HomeDarkText,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = .8.sp,
-                        )
-                    }
-                    Image(
-                        painter = painterResource(R.drawable.word_siege_home_badge),
-                        contentDescription = sh("Kelime Kuşatması", "Kelime Kuşatması"),
-                        modifier = Modifier.size(width = 150.dp, height = 104.dp),
-                        contentScale = ContentScale.Fit,
-                    )
-                    Text(
-                        "KELİME KUŞATMASI",
-                        color = Color.White,
-                        fontSize = 26.sp,
-                        lineHeight = 30.sp,
-                        fontWeight = FontWeight.Black,
-                        textAlign = TextAlign.Center,
-                        maxLines = 2,
-                    )
-                    Text(
-                        sh(
-                            "Kelimeyi kur. Alanı ele geçir. Rakibini geç.",
-                            "Build your word. Claim territory. Outplay your rival.",
-                        ),
-                        color = Color.White,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Button(
-                        onClick = onSiege,
-                        modifier = Modifier.fillMaxWidth().height(58.dp),
-                        shape = HomeControlShape,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = SonHarfTheme.ActionOrange,
-                            contentColor = HomeDarkText,
-                        ),
-                        contentPadding = PaddingValues(horizontal = 18.dp),
-                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp, pressedElevation = 0.dp),
-                    ) {
-                        Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(26.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            sh("HEMEN OYNA", "PLAY NOW"),
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = .8.sp,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
-                }
-            }
-        }
-
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        HomeBrandHeader(onSocial = onSocial)
+        HomePlayerCommandStrip(profile = profile, onProfile = onProfile)
+        HomeSiegeHero(onSiege = onSiege)
         PremiumDailyTasksStrip(
             dashboard = dailyDashboard,
             streakDays = dailyPlayStreak,
@@ -261,39 +71,321 @@ internal fun PremiumHomeCommandDeck(
 }
 
 @Composable
+private fun HomeBrandHeader(onSocial: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                "KELİME TAHTI",
+                color = SonHarfTheme.TextPrimary,
+                fontSize = 21.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.1.sp,
+                maxLines = 1,
+            )
+            Spacer(Modifier.height(4.dp))
+            Box(
+                Modifier
+                    .size(width = 42.dp, height = 3.dp)
+                    .background(SonHarfTheme.ActionOrange, RoundedCornerShape(99.dp)),
+            )
+        }
+        Surface(
+            onClick = onSocial,
+            modifier = Modifier.size(42.dp),
+            shape = HomeControlShape,
+            color = SonHarfTheme.Surface,
+            border = BorderStroke(1.dp, SonHarfTheme.Border),
+            shadowElevation = 1.dp,
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    Icons.Rounded.Notifications,
+                    sh("Bildirimler ve davetler", "Notifications and invites"),
+                    tint = SonHarfTheme.TextPrimary,
+                    modifier = Modifier.size(21.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomePlayerCommandStrip(profile: ProfileDto?, onProfile: () -> Unit) {
+    Surface(
+        onClick = onProfile,
+        shape = HomeCardShape,
+        color = SonHarfTheme.Surface,
+        border = BorderStroke(1.dp, SonHarfTheme.Border),
+        shadowElevation = 1.dp,
+    ) {
+        Column(Modifier.fillMaxWidth()) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                FramedProfilePhotoAvatar(
+                    avatarPath = profile?.avatarPath,
+                    gender = profile?.gender,
+                    name = profile?.displayName ?: sh("Oyuncu", "Player"),
+                    size = 44.dp,
+                    frameId = SonHarfCosmetics.profileFrameId,
+                    accent = if (profile?.isVip == true) SonHarfTheme.Lavender else SonHarfTheme.Primary,
+                    visible = profile?.avatarVisibility != "hidden",
+                    isPro = profile?.isVip == true,
+                )
+                Spacer(Modifier.width(11.dp))
+                Column(Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            profile?.displayName ?: sh("Profilin", "Your profile"),
+                            modifier = Modifier.weight(1f, fill = false),
+                            color = SonHarfTheme.TextPrimary,
+                            fontWeight = FontWeight.Black,
+                            fontSize = 16.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (profile?.isVip == true) {
+                            Spacer(Modifier.width(7.dp))
+                            Surface(shape = HomeMicroShape, color = SonHarfTheme.SurfaceElevated) {
+                                Text(
+                                    "PRO",
+                                    Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                    color = SonHarfTheme.Lavender,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black,
+                                    letterSpacing = .5.sp,
+                                )
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        sh("Oyuncu profili ve ilerleme", "Player profile and progress"),
+                        color = SonHarfTheme.TextSecondary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                    )
+                }
+                Icon(
+                    Icons.Rounded.ChevronRight,
+                    null,
+                    tint = SonHarfTheme.TextSecondary,
+                    modifier = Modifier.size(21.dp),
+                )
+            }
+
+            HorizontalDivider(color = HomeHairline)
+
+            Row(
+                Modifier.fillMaxWidth().height(IntrinsicSize.Min).padding(vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                HomeCounter(
+                    modifier = Modifier.weight(1f),
+                    iconRes = R.drawable.style_icon_trophy,
+                    fallbackIcon = Icons.Rounded.MilitaryTech,
+                    value = profile?.let { "${it.rating} RP" } ?: "— RP",
+                    label = sh("PUAN", "RATING"),
+                    accent = SonHarfTheme.ActionOrange,
+                )
+                HomeMetricDivider()
+                HomeCounter(
+                    modifier = Modifier.weight(1f),
+                    iconRes = R.drawable.style_icon_trophy,
+                    fallbackIcon = Icons.Rounded.EmojiEvents,
+                    value = profile?.let { homeLeagueName(ratingLeagueProgress(it.rating).leagueName) } ?: "—",
+                    label = sh("LİG", "LEAGUE"),
+                    accent = SonHarfTheme.Lavender,
+                )
+                HomeMetricDivider()
+                HomeCounter(
+                    modifier = Modifier.weight(1f),
+                    iconRes = R.drawable.style_icon_coin,
+                    fallbackIcon = Icons.Rounded.Toll,
+                    value = "${profile?.diamonds?.toString() ?: "—"} Coin",
+                    label = "COIN",
+                    accent = SonHarfTheme.Primary,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeMetricDivider() {
+    Box(
+        Modifier
+            .fillMaxHeight()
+            .width(1.dp)
+            .padding(vertical = 2.dp)
+            .background(HomeHairline),
+    )
+}
+
+@Composable
 private fun HomeCounter(
     modifier: Modifier,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconRes: Int,
+    fallbackIcon: androidx.compose.ui.graphics.vector.ImageVector,
     value: String,
     label: String,
-    background: Color,
     accent: Color,
 ) {
-    Surface(modifier = modifier, shape = HomeControlShape, color = background) {
-        Column(
-            Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp),
+    Row(
+        modifier.padding(horizontal = 9.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Surface(
+            modifier = Modifier.size(30.dp),
+            shape = HomeMicroShape,
+            color = accent.copy(alpha = .10f),
         ) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
+            Box(contentAlignment = Alignment.Center) {
+                val painter = runCatching { painterResource(iconRes) }.getOrNull()
+                if (painter != null) {
+                    Image(
+                        painter = painter,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                } else {
+                    Icon(fallbackIcon, null, tint = accent, modifier = Modifier.size(18.dp))
+                }
+            }
+        }
+        Spacer(Modifier.width(7.dp))
+        Column(Modifier.weight(1f)) {
             Text(
                 value,
                 color = HomeDarkText,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
+                lineHeight = 14.sp,
                 fontWeight = FontWeight.Black,
-                textAlign = TextAlign.Center,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 label,
                 color = SonHarfTheme.TextSecondary,
-                fontSize = 9.sp,
+                fontSize = 8.sp,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = .6.sp,
-                textAlign = TextAlign.Center,
+                letterSpacing = .5.sp,
                 maxLines = 1,
             )
+        }
+    }
+}
+
+@Composable
+private fun HomeSiegeHero(onSiege: () -> Unit) {
+    Surface(
+        shape = HomeHeroShape,
+        color = Color.Transparent,
+        shadowElevation = 4.dp,
+    ) {
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .background(
+                    Brush.linearGradient(
+                        listOf(SonHarfTheme.HeroStart, SonHarfTheme.HeroMiddle, SonHarfTheme.HeroEnd),
+                    ),
+                    HomeHeroShape,
+                )
+                .drawBehind {
+                    val gridColor = Color.White.copy(alpha = .055f)
+                    val step = size.minDimension / 7f
+                    var x = size.width * .50f
+                    while (x < size.width) {
+                        drawLine(gridColor, Offset(x, 0f), Offset(x, size.height), strokeWidth = 1f)
+                        x += step
+                    }
+                    var y = 0f
+                    while (y < size.height) {
+                        drawLine(gridColor, Offset(size.width * .50f, y), Offset(size.width, y), strokeWidth = 1f)
+                        y += step
+                    }
+                },
+        ) {
+            Column(
+                Modifier.fillMaxWidth().padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(
+                    Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                        Surface(shape = HomeMicroShape, color = SonHarfTheme.Turquoise) {
+                            Text(
+                                sh("ANA OYUN", "MAIN GAME"),
+                                Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                color = HomeDarkText,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = .8.sp,
+                            )
+                        }
+                        Text(
+                            "KELİME KUŞATMASI",
+                            color = Color.White,
+                            fontSize = 24.sp,
+                            lineHeight = 27.sp,
+                            fontWeight = FontWeight.Black,
+                            textAlign = TextAlign.Start,
+                            maxLines = 2,
+                        )
+                        Text(
+                            sh(
+                                "Kelimeyi kur. Alanı ele geçir. Rakibini geç.",
+                                "Build your word. Claim territory. Outplay your rival.",
+                            ),
+                            color = Color.White.copy(alpha = .88f),
+                            fontSize = 12.sp,
+                            lineHeight = 17.sp,
+                            fontWeight = FontWeight.Medium,
+                            textAlign = TextAlign.Start,
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Image(
+                        painter = painterResource(R.drawable.word_siege_home_badge),
+                        contentDescription = sh("Kelime Kuşatması", "Kelime Kuşatması"),
+                        modifier = Modifier.size(width = 112.dp, height = 98.dp),
+                        contentScale = ContentScale.Fit,
+                    )
+                }
+
+                Button(
+                    onClick = onSiege,
+                    modifier = Modifier.fillMaxWidth().height(54.dp),
+                    shape = HomeControlShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = SonHarfTheme.ActionOrange,
+                        contentColor = HomeDarkText,
+                    ),
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp, pressedElevation = 0.dp),
+                ) {
+                    Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(24.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        sh("HEMEN OYNA", "PLAY NOW"),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = .7.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.weight(1f))
+                    Icon(Icons.Rounded.ArrowForward, null, modifier = Modifier.size(19.dp))
+                }
+            }
         }
     }
 }
@@ -318,15 +410,19 @@ private fun PremiumDailyTasksStrip(
         border = BorderStroke(1.dp, SonHarfTheme.Border),
     ) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                Icons.Rounded.CheckCircle,
-                null,
-                tint = SonHarfTheme.Primary,
-                modifier = Modifier.size(22.dp),
-            )
+            Surface(shape = HomeMicroShape, color = SonHarfTheme.Primary.copy(alpha = .10f), modifier = Modifier.size(34.dp)) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Rounded.CheckCircle,
+                        null,
+                        tint = SonHarfTheme.Primary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -334,50 +430,45 @@ private fun PremiumDailyTasksStrip(
                         sh("GÜNLÜK GÖREVLER", "DAILY TASKS"),
                         modifier = Modifier.weight(1f),
                         color = SonHarfTheme.TextPrimary,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
+                        letterSpacing = .4.sp,
                         maxLines = 1,
                     )
                     Text(
                         if (loading) "…" else "$completedTasks / 2",
                         color = SonHarfTheme.TextPrimary,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                     )
                 }
                 LinearProgressIndicator(
                     progress = { progress },
-                    modifier = Modifier.fillMaxWidth().height(6.dp),
+                    modifier = Modifier.fillMaxWidth().height(5.dp),
                     color = SonHarfTheme.Primary,
                     trackColor = SonHarfTheme.SurfaceSecondary,
                 )
             }
-            Spacer(Modifier.width(12.dp))
-            Surface(shape = RoundedCornerShape(99.dp), color = Color(0xFFFFEBDA)) {
-                Row(
-                    Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(
-                        Icons.Rounded.LocalFireDepartment,
-                        null,
-                        tint = Color(0xFFD9620F),
-                        modifier = Modifier.size(16.dp),
-                    )
-                    Spacer(Modifier.width(3.dp))
-                    Text(
-                        sh("$streakDays gün", "$streakDays days"),
-                        color = HomeDarkText,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        maxLines = 1,
-                    )
-                }
+            Spacer(Modifier.width(11.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Rounded.LocalFireDepartment,
+                    null,
+                    tint = SonHarfTheme.ActionOrange,
+                    modifier = Modifier.size(17.dp),
+                )
+                Spacer(Modifier.width(3.dp))
+                Text(
+                    sh("$streakDays gün", "$streakDays days"),
+                    color = HomeDarkText,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    maxLines = 1,
+                )
             }
         }
     }
 }
-
 
 @Composable
 internal fun PremiumWeeklyPodium(
@@ -414,30 +505,41 @@ internal fun PremiumWeeklyPodium(
                     Text(sh("Sıralama yenilenemedi", "Ranking could not refresh"), Modifier.weight(1f), color = SonHarfTheme.TextSecondary, fontSize = 11.sp)
                     TextButton(onClick = onRetry) { Text(sh("YENİLE", "RETRY"), color = SonHarfTheme.Primary) }
                 }
-                else -> Row(Modifier.fillMaxWidth().semantics { isTraversalGroup = true }, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                else -> Column(Modifier.fillMaxWidth().semantics { isTraversalGroup = true }) {
                     players.take(3).forEachIndexed { index, item ->
-                        Surface(
-                            modifier = Modifier.weight(1f).clearAndSetSemantics {
+                        if (index > 0) HorizontalDivider(color = HomeHairline)
+                        Row(
+                            Modifier.fillMaxWidth().clearAndSetSemantics {
                                 contentDescription = sh("${index + 1}. sıra, ${item.row.displayName}, ${item.row.rating} RP", "Rank ${index + 1}, ${item.row.displayName}, ${item.row.rating} RP")
-                            },
-                            shape = RoundedCornerShape(13.dp),
-                            color = if (index == 0) SonHarfTheme.ActionOrange.copy(alpha = .16f) else SonHarfTheme.SurfaceElevated,
+                            }.padding(vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Column(Modifier.padding(9.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("${index + 1}.", color = if (index == 0) SonHarfTheme.Primary else SonHarfTheme.TextSecondary, fontWeight = FontWeight.Black)
-                                Spacer(Modifier.height(4.dp))
-                                ProfilePhotoAvatarWithGender(
-                                    avatarPath = if (item.profile?.avatarVisibility == "hidden") null else item.profile?.avatarPath,
-                                    gender = item.profile?.gender,
-                                    name = item.row.displayName,
-                                    size = 38.dp,
-                                    accent = if (index == 0) SonHarfTheme.Primary else SonHarfTheme.ActionOrange,
-                                    visible = item.profile?.avatarVisibility != "hidden",
-                                )
-                                Spacer(Modifier.height(4.dp))
-                                Text(item.row.displayName, color = SonHarfTheme.TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text("${item.row.rating} RP", color = SonHarfTheme.TextSecondary, fontSize = 8.sp)
-                            }
+                            Text(
+                                "${index + 1}",
+                                modifier = Modifier.width(24.dp),
+                                color = if (index == 0) SonHarfTheme.ActionOrange else SonHarfTheme.TextSecondary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                            ProfilePhotoAvatarWithGender(
+                                avatarPath = if (item.profile?.avatarVisibility == "hidden") null else item.profile?.avatarPath,
+                                gender = item.profile?.gender,
+                                name = item.row.displayName,
+                                size = 34.dp,
+                                accent = if (index == 0) SonHarfTheme.ActionOrange else SonHarfTheme.Primary,
+                                visible = item.profile?.avatarVisibility != "hidden",
+                            )
+                            Spacer(Modifier.width(9.dp))
+                            Text(
+                                item.row.displayName,
+                                modifier = Modifier.weight(1f),
+                                color = SonHarfTheme.TextPrimary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text("${item.row.rating} RP", color = SonHarfTheme.TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -455,20 +557,25 @@ internal fun PremiumLeagueProgress(profile: ProfileDto?, onLeague: () -> Unit) {
         color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
     ) {
-        Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.EmojiEvents, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(26.dp))
-                Spacer(Modifier.width(11.dp))
+                Image(
+                    painter = painterResource(R.drawable.style_icon_trophy),
+                    contentDescription = null,
+                    modifier = Modifier.size(28.dp),
+                    contentScale = ContentScale.Fit,
+                )
+                Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
                         progress?.let { homeLeagueName(it.leagueName) } ?: sh("Lig durumun", "Your league"),
                         color = SonHarfTheme.TextPrimary,
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Black,
                     )
-                    Text(profile?.let { "${it.rating} RP" } ?: "— RP", color = SonHarfTheme.TextSecondary, fontSize = 12.sp)
+                    Text(profile?.let { "${it.rating} RP" } ?: "— RP", color = SonHarfTheme.TextSecondary, fontSize = 11.sp)
                 }
-                Icon(Icons.Rounded.ChevronRight, sh("Lige Git", "Go to League"), tint = SonHarfTheme.Primary)
+                Icon(Icons.Rounded.ChevronRight, sh("Lige Git", "Go to League"), tint = SonHarfTheme.TextSecondary)
             }
             if (progress != null) {
                 LinearProgressIndicator(
@@ -484,27 +591,34 @@ internal fun PremiumLeagueProgress(profile: ProfileDto?, onLeague: () -> Unit) {
 
 @Composable
 internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Unit) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Text(
-            sh("DİĞER OYUNLAR", "MORE GAMES"),
-            modifier = Modifier.fillMaxWidth(),
-            color = SonHarfTheme.TextPrimary,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = .8.sp,
-            textAlign = TextAlign.Center,
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                sh("DİĞER OYUNLAR", "MORE GAMES"),
+                modifier = Modifier.weight(1f),
+                color = SonHarfTheme.TextPrimary,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = .7.sp,
+            )
+            Text(
+                sh("HIZLI MODLAR", "QUICK MODES"),
+                color = SonHarfTheme.TextSecondary,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = .6.sp,
+            )
+        }
         Row(
             Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             PremiumHomeModeCard(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 logo = R.drawable.son_harf_app_icon_master,
                 title = sh("SON HARF", "LAST LETTER"),
                 subtitle = sh("Hızlı kelime düellosu", "A quick word duel"),
-                container = Color(0xFFDDF5F4),
-                button = SonHarfTheme.Turquoise,
+                accent = SonHarfTheme.Turquoise,
                 onPlay = onLastLetter,
             )
             PremiumHomeModeCard(
@@ -512,8 +626,7 @@ internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Uni
                 logo = R.drawable.harf_yolu_logo,
                 title = sh("KELİME YOLU", "WORD PATH"),
                 subtitle = sh("Kelime rotanı tamamla", "Complete your word path"),
-                container = Color(0xFFEEE9FF),
-                button = SonHarfTheme.PremiumGoldLight,
+                accent = SonHarfTheme.Lavender,
                 onPlay = onLetterPath,
             )
         }
@@ -526,61 +639,67 @@ private fun PremiumHomeModeCard(
     logo: Int,
     title: String,
     subtitle: String,
-    container: Color,
-    button: Color,
+    accent: Color,
     onPlay: () -> Unit,
 ) {
     Surface(
-        modifier = modifier.heightIn(min = 196.dp),
+        modifier = modifier.heightIn(min = 168.dp),
         shape = HomeCardShape,
-        color = container,
+        color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
+        shadowElevation = 1.dp,
     ) {
-        Column(
-            Modifier.fillMaxSize().padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Surface(shape = CircleShape, color = SonHarfTheme.Surface, modifier = Modifier.size(60.dp)) {
-                Box(contentAlignment = Alignment.Center) {
-                    Image(
-                        painter = painterResource(logo),
-                        contentDescription = null,
-                        modifier = Modifier.size(44.dp),
-                        contentScale = ContentScale.Fit,
-                    )
-                }
-            }
-            Text(
-                title,
-                color = HomeDarkText,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Black,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Text(
-                subtitle,
-                modifier = Modifier.weight(1f),
-                color = SonHarfTheme.TextSecondary,
-                fontSize = 11.sp,
-                lineHeight = 14.sp,
-                textAlign = TextAlign.Center,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Button(
-                onClick = onPlay,
-                modifier = Modifier.fillMaxWidth().height(42.dp),
-                shape = HomeControlShape,
-                colors = ButtonDefaults.buttonColors(containerColor = button, contentColor = HomeDarkText),
-                contentPadding = PaddingValues(horizontal = 8.dp),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.fillMaxWidth().height(4.dp).background(accent))
+            Column(
+                Modifier.fillMaxSize().padding(12.dp),
+                horizontalAlignment = Alignment.Start,
+                verticalArrangement = Arrangement.spacedBy(7.dp),
             ) {
-                Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(sh("OYNA", "PLAY"), fontSize = 13.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                Surface(shape = HomeMicroShape, color = accent.copy(alpha = .10f), modifier = Modifier.size(46.dp)) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Image(
+                            painter = painterResource(logo),
+                            contentDescription = null,
+                            modifier = Modifier.size(34.dp),
+                            contentScale = ContentScale.Fit,
+                        )
+                    }
+                }
+                Text(
+                    title,
+                    color = HomeDarkText,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Start,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    subtitle,
+                    modifier = Modifier.weight(1f),
+                    color = SonHarfTheme.TextSecondary,
+                    fontSize = 10.sp,
+                    lineHeight = 13.sp,
+                    textAlign = TextAlign.Start,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Button(
+                    onClick = onPlay,
+                    modifier = Modifier.fillMaxWidth().height(40.dp),
+                    shape = HomeControlShape,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = accent.copy(alpha = .14f),
+                        contentColor = HomeDarkText,
+                    ),
+                    contentPadding = PaddingValues(horizontal = 9.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
+                ) {
+                    Text(sh("OYNA", "PLAY"), fontSize = 11.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                    Spacer(Modifier.weight(1f))
+                    Icon(Icons.Rounded.ArrowForward, null, modifier = Modifier.size(16.dp), tint = accent)
+                }
             }
         }
     }
@@ -614,56 +733,94 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
         color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
     ) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(11.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.EmojiEvents, null, tint = SonHarfTheme.ActionOrange, modifier = Modifier.size(21.dp))
-                Spacer(Modifier.width(7.dp))
-                Text(
-                    sh("HAFTANIN İLK 3 OYUNCUSU", "WEEKLY TOP 3"),
-                    Modifier.weight(1f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    color = SonHarfTheme.TextPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Black,
+                Image(
+                    painter = painterResource(R.drawable.style_icon_trophy),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    contentScale = ContentScale.Fit,
                 )
-                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary)
+                Spacer(Modifier.width(8.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        sh("HAFTANIN İLK 3 OYUNCUSU", "WEEKLY TOP 3"),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        color = SonHarfTheme.TextPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = .3.sp,
+                    )
+                    Text(
+                        sh("Haftalık rekabet sıralaması", "Weekly competitive ranking"),
+                        color = SonHarfTheme.TextSecondary,
+                        fontSize = 9.sp,
+                        maxLines = 1,
+                    )
+                }
+                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(20.dp))
             }
             when {
-                loading -> Box(Modifier.fillMaxWidth().height(84.dp), contentAlignment = Alignment.Center) {
+                loading -> Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator(Modifier.size(22.dp), color = SonHarfTheme.Primary, strokeWidth = 2.dp)
                 }
-                failed -> Row(Modifier.fillMaxWidth().heightIn(min = 64.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(sh("Haftalık sıralama yenilenemedi.", "Weekly ranking could not refresh."), Modifier.weight(1f), color = SonHarfTheme.TextSecondary, fontSize = 11.sp)
-                    TextButton(onClick = { reloadKey += 1 }) { Text(sh("YENİLE", "RETRY"), color = SonHarfTheme.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black) }
+                failed -> Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(sh("Haftalık sıralama yenilenemedi.", "Weekly ranking could not refresh."), Modifier.weight(1f), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
+                    TextButton(onClick = { reloadKey += 1 }) {
+                        Text(sh("YENİLE", "RETRY"), color = SonHarfTheme.TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    }
                 }
-                else -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Bottom) {
-                    listOf(2 to players.getOrNull(1), 1 to players.getOrNull(0), 3 to players.getOrNull(2)).forEach { (place, player) ->
-                        val first = place == 1
-                        Surface(
-                            modifier = Modifier.weight(1f).then(if (first) Modifier.padding(bottom = 6.dp) else Modifier),
-                            shape = RoundedCornerShape(13.dp),
-                            color = if (first) Color(0xFFFFEBDA) else SonHarfTheme.SurfaceSecondary,
+                else -> Column(Modifier.fillMaxWidth()) {
+                    listOf(1 to players.getOrNull(0), 2 to players.getOrNull(1), 3 to players.getOrNull(2)).forEachIndexed { index, (place, player) ->
+                        if (index > 0) HorizontalDivider(color = HomeHairline)
+                        Row(
+                            Modifier.fillMaxWidth().padding(vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Column(Modifier.padding(horizontal = 6.dp, vertical = if (first) 11.dp else 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("$place.", color = SonHarfTheme.TextPrimary, fontSize = if (first) 13.sp else 10.sp, fontWeight = FontWeight.Black)
-                                Spacer(Modifier.height(4.dp))
-                                if (player != null) {
-                                    ProfilePhotoAvatarWithGender(
-                                        avatarPath = player.avatarUrl,
-                                        gender = null,
-                                        name = player.username,
-                                        size = if (first) 50.dp else 42.dp,
-                                        accent = if (first) SonHarfTheme.ActionOrange else SonHarfTheme.Primary,
-                                        visible = true,
+                            Surface(
+                                modifier = Modifier.size(26.dp),
+                                shape = HomeMicroShape,
+                                color = if (place == 1) SonHarfTheme.ActionOrange.copy(alpha = .12f) else SonHarfTheme.SurfaceSecondary,
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        "$place",
+                                        color = if (place == 1) SonHarfTheme.ActionOrange else SonHarfTheme.TextSecondary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
                                     )
-                                } else {
-                                    Surface(Modifier.size(if (first) 50.dp else 42.dp), shape = CircleShape, color = SonHarfTheme.SurfaceSecondary) {}
                                 }
-                                Spacer(Modifier.height(5.dp))
-                                Text(player?.username?.ifBlank { sh("Oyuncu", "Player") } ?: "—", color = SonHarfTheme.TextPrimary, fontSize = if (first) 10.sp else 9.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                Text(player?.let { "${it.rp} RP" } ?: "— RP", color = SonHarfTheme.TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.Black)
                             }
+                            Spacer(Modifier.width(9.dp))
+                            if (player != null) {
+                                ProfilePhotoAvatarWithGender(
+                                    avatarPath = player.avatarUrl,
+                                    gender = null,
+                                    name = player.username,
+                                    size = 34.dp,
+                                    accent = if (place == 1) SonHarfTheme.ActionOrange else SonHarfTheme.Primary,
+                                    visible = true,
+                                )
+                            } else {
+                                Surface(Modifier.size(34.dp), shape = CircleShape, color = SonHarfTheme.SurfaceSecondary) {}
+                            }
+                            Spacer(Modifier.width(9.dp))
+                            Text(
+                                player?.username?.ifBlank { sh("Oyuncu", "Player") } ?: "—",
+                                modifier = Modifier.weight(1f),
+                                color = SonHarfTheme.TextPrimary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                player?.let { "${it.rp} RP" } ?: "— RP",
+                                color = SonHarfTheme.TextSecondary,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                            )
                         }
                     }
                 }
@@ -683,12 +840,12 @@ internal fun PremiumHomeExtras(profile: ProfileDto?, onShop: () -> Unit, onSocia
                     Text(sh("Günlük ücretsiz hediye", "Daily free gift"), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = SonHarfTheme.TextPrimary)
                     Text(sh("Bugünkü ödülünü mağazada kontrol et.", "Check today's reward in the shop."), fontSize = 11.sp, color = SonHarfTheme.TextSecondary)
                 }
-                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.Primary)
+                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary)
             }
         }
         Surface(onClick = onShop, shape = HomeCardShape, color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
             Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.WorkspacePremium, null, tint = SonHarfTheme.ActionOrange)
+                Icon(Icons.Rounded.WorkspacePremium, null, tint = SonHarfTheme.Lavender)
                 Spacer(Modifier.width(11.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
@@ -699,7 +856,7 @@ internal fun PremiumHomeExtras(profile: ProfileDto?, onShop: () -> Unit, onSocia
                     )
                     Text(sh("Reklamsız kullanım · Kozmetik · Konfor", "Ad-free · Cosmetics · Comfort"), color = SonHarfTheme.TextSecondary, fontSize = 11.sp)
                 }
-                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.Primary)
+                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary)
             }
         }
         TextButton(onClick = onSocial, modifier = Modifier.fillMaxWidth().heightIn(min = 46.dp)) {
