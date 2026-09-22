@@ -8,6 +8,39 @@ import org.junit.Test
 
 class HarfYoluProfessionalUiContractTest {
     @Test
+    fun `Harf Yolu game surface uses professional palette`() {
+        val game = source("LetterLadderGame.kt")
+
+        listOf(
+            "val Background = GameColors.AppBackground",
+            "val Surface = GameColors.PrimarySurface",
+            "val SurfaceRaised = GameColors.PrimarySurface",
+            "val SurfaceSoft = GameColors.SecondarySurface",
+            "val Text = GameColors.TextPrimary",
+            "val Muted = GameColors.TextSecondary",
+            "val Border = GameColors.Border",
+            "val Accent = GameColors.PrimaryBlue",
+            "val AccentStrong = GameColors.DeepBlue",
+            "val Turquoise = GameColors.TacticalTurquoise",
+            "val Orange = GameColors.RewardAmber",
+            "val Purple = GameColors.Lavender",
+            "val Green = GameColors.PlayGreen",
+        ).forEach { token -> assertTrue("Missing professional Harf Yolu game token: $token", game.contains(token)) }
+
+        listOf(
+            "Color(0xFFF5FCFF)",
+            "Color(0xFFFCFEFF)",
+            "Color(0xFFEAF8FC)",
+            "Color(0xFF123A4A)",
+            "Color(0xFFA9DCE7)",
+            "Color(0xFF278DC3)",
+            "Color(0xFF22BFC4)",
+            "Color(0xFFFF9F43)",
+            "Color(0xFF8B5CF6)",
+        ).forEach { legacy -> assertFalse("Legacy Harf Yolu game color remains: $legacy", game.contains(legacy)) }
+    }
+
+    @Test
     fun `Harf Yolu keyboard uses professional palette and exact Turkish rows`() {
         val keyboard = source("HarfYoluKeyboard.kt")
 
