@@ -38,6 +38,7 @@ internal fun ProfessionalHomeScreen(
     onLeague: () -> Unit,
     onPro: () -> Unit,
     onCollection: () -> Unit,
+    onRetention: () -> Unit,
 ) {
     var profile by remember { mutableStateOf<ProfileDto?>(null) }
     var weekly by remember { mutableStateOf<List<HomeRankItem>>(emptyList()) }
@@ -97,7 +98,12 @@ internal fun ProfessionalHomeScreen(
                 SecondaryModes(onLastLetter = onLastLetter, onLetterPath = onLetterPath)
             }
             item(key = "daily") {
-                DailyProgressStrip(progress = dailyProgress, label = dailyLabel, streakDays = streakDays)
+                DailyProgressStrip(
+                    progress = dailyProgress,
+                    label = dailyLabel,
+                    streakDays = streakDays,
+                    onClick = onRetention,
+                )
             }
             item(key = "weekly") {
                 WeeklyTopThree(players = weekly, loading = weeklyLoading, onLeague = onLeague)
@@ -311,8 +317,14 @@ private fun ModeCard(
 }
 
 @Composable
-private fun DailyProgressStrip(progress: Float, label: String, streakDays: Int) {
+private fun DailyProgressStrip(
+    progress: Float,
+    label: String,
+    streakDays: Int,
+    onClick: () -> Unit,
+) {
     Surface(
+        onClick = onClick,
         modifier = Modifier.fillMaxWidth(),
         shape = GameShapes.Large,
         color = GameColors.PrimarySurface,
@@ -331,11 +343,13 @@ private fun DailyProgressStrip(progress: Float, label: String, streakDays: Int) 
                 MissionProgress(progress)
                 Text(label, color = GameColors.TextSecondary, style = MaterialTheme.typography.bodySmall)
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(10.dp))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Icon(Icons.Rounded.LocalFireDepartment, null, tint = GameColors.RewardAmber, modifier = Modifier.size(22.dp))
                 Text(gameText("$streakDays gün", "$streakDays days"), color = GameColors.TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
+            Spacer(Modifier.width(4.dp))
+            Icon(Icons.Rounded.ChevronRight, null, tint = GameColors.TextTertiary, modifier = Modifier.size(20.dp))
         }
     }
 }
