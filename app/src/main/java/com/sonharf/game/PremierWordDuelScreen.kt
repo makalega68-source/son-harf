@@ -50,23 +50,23 @@ private data class PremierMoveFeedback(val accepted: Boolean, val message: Strin
 private const val PREMIER_TURN_SECONDS = 15
 private const val PREMIER_RECONNECT_SECONDS = 60
 
-/** Fixed high-legibility gameplay palette from the same calm Son Harf color family. */
+/** Son Harf now uses the same professional dark production palette as the main product. */
 private object PremierUi {
-    val Background = Color(0xFFF1F5F2)
-    val Surface = Color(0xFFFFFDF7)
-    val Ink = Color(0xFF26382F)
-    val Muted = Color(0xFF65766D)
-    val Ocean = Color(0xFF4F725E)
-    val OceanDeep = Color(0xFF3F614E)
-    val Sky = Color(0xFF4A6E83)
-    val Ice = Color(0xFFEAF2EE)
-    val Border = Color(0xFFCCD8D1)
-    val Green = Color(0xFF4B765D)
-    val GreenSoft = Color(0xFFDDE9E1)
-    val Red = Color(0xFFA84F59)
-    val RedSoft = Color(0xFFF4E4E5)
-    val Gold = Color(0xFF8A6538)
-    val GoldSoft = Color(0xFFF1E7D3)
+    val Background = GameColors.AppBackground
+    val Surface = GameColors.PrimarySurface
+    val Ink = GameColors.TextPrimary
+    val Muted = GameColors.TextSecondary
+    val Ocean = GameColors.PrimaryBlue
+    val OceanDeep = Color(0xFF77AFFF)
+    val Sky = GameColors.TacticalTurquoise
+    val Ice = GameColors.SecondarySurface
+    val Border = GameColors.Border
+    val Green = GameColors.PlayGreen
+    val GreenSoft = Color(0xFF173A2A)
+    val Red = GameColors.Danger
+    val RedSoft = Color(0xFF3A1E25)
+    val Gold = GameColors.RewardAmber
+    val GoldSoft = Color(0xFF3B2C17)
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr
@@ -669,7 +669,7 @@ private fun PremierLobby(
         ) {
             Column(
                 Modifier.background(
-                    Brush.linearGradient(listOf(PremierUi.OceanDeep, PremierUi.Ocean, PremierUi.Sky))
+                    Brush.linearGradient(listOf(GameColors.DeepBlue, PremierUi.Ocean, PremierUi.Sky))
                 ).padding(22.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
@@ -813,15 +813,15 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
         PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Ocean, nameColor = SonHarfCosmetics.playerNameColor)
         Spacer(Modifier.height(16.dp))
         Surface(shape = RoundedCornerShape(99.dp), color = Color.Transparent) {
-            Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.Ocean, PremierUi.OceanDeep))).padding(horizontal = 27.dp, vertical = 10.dp)) {
+            Box(Modifier.background(Brush.horizontalGradient(listOf(GameColors.DeepBlue, PremierUi.Ocean))).padding(horizontal = 27.dp, vertical = 10.dp)) {
                 Text("VS", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
             }
         }
         Spacer(Modifier.height(16.dp))
         if (room.isBot) {
-            PremierVsPlayerCard(language, room.botName ?: pt(language, "KelimeBot", "WordBot"), null, null, true, (me?.rating ?: 1000), 50, PremierUi.OceanDeep, bot = true)
+            PremierVsPlayerCard(language, room.botName ?: pt(language, "KelimeBot", "WordBot"), null, null, true, (me?.rating ?: 1000), 50, PremierUi.Sky, bot = true)
         } else {
-            PremierVsPlayerCard(language, opponent?.displayName ?: pt(language, "Rakip", "Rival"), opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", opponent?.rating ?: 1000, profileWinRate(opponent), PremierUi.OceanDeep)
+            PremierVsPlayerCard(language, opponent?.displayName ?: pt(language, "Rakip", "Rival"), opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", opponent?.rating ?: 1000, profileWinRate(opponent), PremierUi.Sky)
         }
         Spacer(Modifier.weight(1f))
         Text(pt(language, "Sunucu kilidi aktif • Adil oyun", "Server lock active • Fair play"), color = PremierUi.Muted, fontSize = 10.sp)
@@ -1020,7 +1020,7 @@ private fun PremierArenaHeader(
     val myFraction = if (totalScore <= 0) 0.5f else myScore.toFloat() / totalScore.toFloat()
     val danger = seconds in 1..5
     val timerStart = if (danger) PremierUi.RedSoft else PremierUi.Sky
-    val timerEnd = if (danger) PremierUi.Red else PremierUi.OceanDeep
+    val timerEnd = if (danger) PremierUi.Red else GameColors.DeepBlue
 
     Surface(shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp), color = PremierUi.Surface, shadowElevation = 8.dp, border = BorderStroke(1.dp, PremierUi.Border)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1036,7 +1036,7 @@ private fun PremierArenaHeader(
                 }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     Surface(shape = RoundedCornerShape(13.dp), color = PremierUi.Ice) {
-                        Text("$myScore  —  $rivalScore", Modifier.padding(horizontal = 13.dp, vertical = 6.dp), color = PremierUi.OceanDeep, fontSize = 16.sp, fontWeight = FontWeight.Black)
+                        Text("$myScore  —  $rivalScore", Modifier.padding(horizontal = 13.dp, vertical = 6.dp), color = PremierUi.Ink, fontSize = 16.sp, fontWeight = FontWeight.Black)
                     }
                 }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
@@ -1050,7 +1050,7 @@ private fun PremierArenaHeader(
                             Row(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Rounded.ChatBubbleOutline, pt(language, "Sohbet", "Chat"), tint = PremierUi.Ocean, modifier = Modifier.size(15.dp))
                                 Spacer(Modifier.width(4.dp))
-                                Text(pt(language, "SOHBET", "CHAT"), color = PremierUi.OceanDeep, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                                Text(pt(language, "SOHBET", "CHAT"), color = PremierUi.Ink, fontSize = 9.sp, fontWeight = FontWeight.Black)
                             }
                         }
                         if (unreadChat) {
@@ -1083,7 +1083,7 @@ private fun PremierArenaHeader(
                         }
                     }
                 }
-                PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, PremierUi.OceanDeep, room.isBot, Modifier.weight(1f))
+                PremierMiniPlayer(rivalName, opponent?.avatarPath, opponent?.gender, opponent?.avatarVisibility != "hidden", rivalRounds, rivalStreak, PremierUi.Sky, room.isBot, Modifier.weight(1f))
             }
         }
     }
@@ -1212,7 +1212,7 @@ private fun PremierTargetCard(language: String, required: String, gameMode: Stri
     }
     Box(
         Modifier.size(size).shadow(16.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp))
-            .background(Brush.radialGradient(listOf(PremierUi.Sky, PremierUi.Ocean, PremierUi.OceanDeep))),
+            .background(Brush.radialGradient(listOf(PremierUi.Sky, PremierUi.Ocean, GameColors.DeepBlue))),
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.matchParentSize().background(Color.White.copy(alpha = glow * .13f)))
@@ -1433,10 +1433,13 @@ private fun PremierChatSheet(
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                     colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = PremierUi.Ink,
+                        unfocusedTextColor = PremierUi.Ink,
                         focusedBorderColor = PremierUi.Ocean,
                         unfocusedBorderColor = PremierUi.Border,
                         focusedContainerColor = PremierUi.Surface,
                         unfocusedContainerColor = PremierUi.Surface,
+                        cursorColor = PremierUi.Ocean,
                     ),
                 )
                 Spacer(Modifier.width(8.dp))
@@ -1477,7 +1480,7 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
             Icon(if (won) Icons.Rounded.EmojiEvents else Icons.Rounded.SportsEsports, null, tint = if (won) PremierUi.Green else PremierUi.Red, modifier = Modifier.padding(22.dp).size(48.dp))
         }
         Spacer(Modifier.height(18.dp))
-        Text(if (won) pt(language, "ZAFER", "VICTORY") else pt(language, "MAÇ BİTTİ", "MATCH OVER"), color = if (won) PremierUi.Ocean else PremierUi.Red, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+        Text(if (won) pt(language, "ZAFER", "VICTORY") else pt(language, "MAÇ BİTTİ", "MATCH OVER"), color = if (won) PremierUi.Green else PremierUi.Red, fontSize = 30.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
         Text(if (won) pt(language, "Rakibini geride bıraktın.", "You outplayed your rival.") else pt(language, "Yeni maçta geri dön.", "Come back stronger next match."), color = PremierUi.Muted, fontSize = 12.sp)
         Spacer(Modifier.height(22.dp))
         Surface(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(23.dp), color = PremierUi.Surface, border = BorderStroke(1.dp, PremierUi.Border)) {
