@@ -73,6 +73,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
             }
         } catch (error: Exception) {
             if (error is CancellationException && error !is TimeoutCancellationException) throw error
+            // A failed request must not erase cached UI.
             notice = sh(
                 "Koleksiyon yenilenemedi. Mevcut görünümün korundu; tekrar deneyebilirsin.",
                 "Could not refresh your collection. Your current style is unchanged; you can retry.",
@@ -203,9 +204,7 @@ internal fun ProfileOwnedThemesSection(backend: OnlineGameBackend) {
             }
         }
 
-        val styles = collection.filter {
-            it.id !in DarkThemeIds && it.isSupportedOwnedStyle()
-        }
+        val styles = collection.filter { it.id !in DarkThemeIds && it.isSupportedOwnedStyle() }
 
         Text(
             sh("STYLE KOLEKSİYONUM", "MY STYLE COLLECTION"),
@@ -377,10 +376,7 @@ private fun OwnedStyleCard(
                                 modifier = Modifier.size(36.dp),
                                 tint = GameColors.PrimaryBlue,
                             )
-                            PurchasedProfileFrameOverlay(
-                                frameId = item.id,
-                                modifier = Modifier.size(76.dp),
-                            )
+                            PurchasedProfileFrameOverlay(frameId = item.id, modifier = Modifier.size(76.dp))
                         } else {
                             Icon(
                                 Icons.Rounded.Palette,
