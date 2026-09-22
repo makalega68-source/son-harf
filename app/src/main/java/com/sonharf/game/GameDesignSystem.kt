@@ -36,6 +36,7 @@ internal object GameColors {
 
     val TextPrimary = Color(0xFFF4F7FB)
     val TextSecondary = Color(0xFFA8B5C6)
+    val TextTertiary = Color(0xFF728197)
     val TextDark = Color(0xFF17202D)
     val Border = Color(0xFF34475E)
     val Divider = Color(0xFF29394C)
