@@ -59,14 +59,10 @@ internal fun PremiumHomeCommandDeck(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        HomeBrandHeader(onSocial = onSocial)
-        HomePlayerCommandStrip(profile = profile, onProfile = onProfile)
-        HomeSiegeHero(onSiege = onSiege)
-        PremiumDailyTasksStrip(
-            dashboard = dailyDashboard,
-            streakDays = dailyPlayStreak,
-            loading = dailyLoading,
-        )
+        HomeBrandHeader(onSocial)
+        HomePlayerCommandStrip(profile, onProfile)
+        HomeSiegeHero(onSiege)
+        PremiumDailyTasksStrip(dailyDashboard, dailyPlayStreak, dailyLoading)
     }
 }
 
@@ -87,8 +83,7 @@ private fun HomeBrandHeader(onSocial: () -> Unit) {
             )
             Spacer(Modifier.height(4.dp))
             Box(
-                Modifier
-                    .size(width = 42.dp, height = 3.dp)
+                Modifier.size(width = 42.dp, height = 3.dp)
                     .background(SonHarfTheme.ActionOrange, RoundedCornerShape(99.dp)),
             )
         }
@@ -171,12 +166,7 @@ private fun HomePlayerCommandStrip(profile: ProfileDto?, onProfile: () -> Unit) 
                         maxLines = 1,
                     )
                 }
-                Icon(
-                    Icons.Rounded.ChevronRight,
-                    null,
-                    tint = SonHarfTheme.TextSecondary,
-                    modifier = Modifier.size(21.dp),
-                )
+                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(21.dp))
             }
 
             HorizontalDivider(color = HomeHairline)
@@ -188,7 +178,6 @@ private fun HomePlayerCommandStrip(profile: ProfileDto?, onProfile: () -> Unit) 
                 HomeCounter(
                     modifier = Modifier.weight(1f),
                     iconRes = R.drawable.style_icon_trophy,
-                    fallbackIcon = Icons.Rounded.MilitaryTech,
                     value = profile?.let { "${it.rating} RP" } ?: "— RP",
                     label = sh("PUAN", "RATING"),
                     accent = SonHarfTheme.ActionOrange,
@@ -197,7 +186,6 @@ private fun HomePlayerCommandStrip(profile: ProfileDto?, onProfile: () -> Unit) 
                 HomeCounter(
                     modifier = Modifier.weight(1f),
                     iconRes = R.drawable.style_icon_trophy,
-                    fallbackIcon = Icons.Rounded.EmojiEvents,
                     value = profile?.let { homeLeagueName(ratingLeagueProgress(it.rating).leagueName) } ?: "—",
                     label = sh("LİG", "LEAGUE"),
                     accent = SonHarfTheme.Lavender,
@@ -206,7 +194,6 @@ private fun HomePlayerCommandStrip(profile: ProfileDto?, onProfile: () -> Unit) 
                 HomeCounter(
                     modifier = Modifier.weight(1f),
                     iconRes = R.drawable.style_icon_coin,
-                    fallbackIcon = Icons.Rounded.Toll,
                     value = "${profile?.diamonds?.toString() ?: "—"} Coin",
                     label = "COIN",
                     accent = SonHarfTheme.Primary,
@@ -218,45 +205,26 @@ private fun HomePlayerCommandStrip(profile: ProfileDto?, onProfile: () -> Unit) 
 
 @Composable
 private fun HomeMetricDivider() {
-    Box(
-        Modifier
-            .fillMaxHeight()
-            .width(1.dp)
-            .padding(vertical = 2.dp)
-            .background(HomeHairline),
-    )
+    Box(Modifier.fillMaxHeight().width(1.dp).padding(vertical = 2.dp).background(HomeHairline))
 }
 
 @Composable
 private fun HomeCounter(
     modifier: Modifier,
     iconRes: Int,
-    fallbackIcon: androidx.compose.ui.graphics.vector.ImageVector,
     value: String,
     label: String,
     accent: Color,
 ) {
-    Row(
-        modifier.padding(horizontal = 9.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Surface(
-            modifier = Modifier.size(30.dp),
-            shape = HomeMicroShape,
-            color = accent.copy(alpha = .10f),
-        ) {
+    Row(modifier.padding(horizontal = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+        Surface(modifier = Modifier.size(30.dp), shape = HomeMicroShape, color = accent.copy(alpha = .10f)) {
             Box(contentAlignment = Alignment.Center) {
-                val painter = runCatching { painterResource(iconRes) }.getOrNull()
-                if (painter != null) {
-                    Image(
-                        painter = painter,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp),
-                        contentScale = ContentScale.Fit,
-                    )
-                } else {
-                    Icon(fallbackIcon, null, tint = accent, modifier = Modifier.size(18.dp))
-                }
+                Image(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp),
+                    contentScale = ContentScale.Fit,
+                )
             }
         }
         Spacer(Modifier.width(7.dp))
@@ -284,18 +252,11 @@ private fun HomeCounter(
 
 @Composable
 private fun HomeSiegeHero(onSiege: () -> Unit) {
-    Surface(
-        shape = HomeHeroShape,
-        color = Color.Transparent,
-        shadowElevation = 4.dp,
-    ) {
+    Surface(shape = HomeHeroShape, color = Color.Transparent, shadowElevation = 4.dp) {
         Box(
-            Modifier
-                .fillMaxWidth()
+            Modifier.fillMaxWidth()
                 .background(
-                    Brush.linearGradient(
-                        listOf(SonHarfTheme.HeroStart, SonHarfTheme.HeroMiddle, SonHarfTheme.HeroEnd),
-                    ),
+                    Brush.linearGradient(listOf(SonHarfTheme.HeroStart, SonHarfTheme.HeroMiddle, SonHarfTheme.HeroEnd)),
                     HomeHeroShape,
                 )
                 .drawBehind {
@@ -313,14 +274,8 @@ private fun HomeSiegeHero(onSiege: () -> Unit) {
                     }
                 },
         ) {
-            Column(
-                Modifier.fillMaxWidth().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-            ) {
-                Row(
-                    Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+            Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
                         Surface(shape = HomeMicroShape, color = SonHarfTheme.Turquoise) {
                             Text(
@@ -380,7 +335,6 @@ private fun HomeSiegeHero(onSiege: () -> Unit) {
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = .7.sp,
-                        textAlign = TextAlign.Center,
                     )
                     Spacer(Modifier.weight(1f))
                     Icon(Icons.Rounded.ArrowForward, null, modifier = Modifier.size(19.dp))
@@ -404,23 +358,14 @@ private fun PremiumDailyTasksStrip(
     val challengeProgress = matches / 3f
     val progress = if (dashboard == null) 0f else ((checkInProgress + challengeProgress) / 2f).coerceIn(0f, 1f)
 
-    Surface(
-        shape = HomeCardShape,
-        color = SonHarfTheme.Surface,
-        border = BorderStroke(1.dp, SonHarfTheme.Border),
-    ) {
+    Surface(shape = HomeCardShape, color = SonHarfTheme.Surface, border = BorderStroke(1.dp, SonHarfTheme.Border)) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Surface(shape = HomeMicroShape, color = SonHarfTheme.Primary.copy(alpha = .10f), modifier = Modifier.size(34.dp)) {
                 Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        Icons.Rounded.CheckCircle,
-                        null,
-                        tint = SonHarfTheme.Primary,
-                        modifier = Modifier.size(20.dp),
-                    )
+                    Icon(Icons.Rounded.CheckCircle, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(20.dp))
                 }
             }
             Spacer(Modifier.width(10.dp))
@@ -450,22 +395,15 @@ private fun PremiumDailyTasksStrip(
                 )
             }
             Spacer(Modifier.width(11.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    Icons.Rounded.LocalFireDepartment,
-                    null,
-                    tint = SonHarfTheme.ActionOrange,
-                    modifier = Modifier.size(17.dp),
-                )
-                Spacer(Modifier.width(3.dp))
-                Text(
-                    sh("$streakDays gün", "$streakDays days"),
-                    color = HomeDarkText,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    maxLines = 1,
-                )
-            }
+            Icon(Icons.Rounded.LocalFireDepartment, null, tint = SonHarfTheme.ActionOrange, modifier = Modifier.size(17.dp))
+            Spacer(Modifier.width(3.dp))
+            Text(
+                sh("$streakDays gün", "$streakDays days"),
+                color = HomeDarkText,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                maxLines = 1,
+            )
         }
     }
 }
@@ -484,25 +422,12 @@ internal fun PremiumWeeklyPodium(
         color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
     ) {
-        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.EmojiEvents, null, tint = SonHarfTheme.Primary, modifier = Modifier.size(20.dp))
-                Spacer(Modifier.width(7.dp))
-                Text(
-                    sh("HAFTANIN ZİRVESİ", "WEEKLY ELITE"),
-                    Modifier.weight(1f),
-                    color = SonHarfTheme.TextPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Black,
-                )
-                Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(18.dp))
-            }
+        Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            HomeSectionHeader(sh("HAFTANIN ZİRVESİ", "WEEKLY ELITE"))
             when {
-                loading -> Box(Modifier.fillMaxWidth().height(68.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(20.dp), color = SonHarfTheme.Primary, strokeWidth = 2.dp)
-                }
-                failed -> Row(Modifier.fillMaxWidth().heightIn(min = 60.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(sh("Sıralama yenilenemedi", "Ranking could not refresh"), Modifier.weight(1f), color = SonHarfTheme.TextSecondary, fontSize = 11.sp)
+                loading -> HomeLoadingRow()
+                failed -> Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(sh("Sıralama yenilenemedi", "Ranking could not refresh"), Modifier.weight(1f), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
                     TextButton(onClick = onRetry) { Text(sh("YENİLE", "RETRY"), color = SonHarfTheme.Primary) }
                 }
                 else -> Column(Modifier.fillMaxWidth().semantics { isTraversalGroup = true }) {
@@ -510,7 +435,10 @@ internal fun PremiumWeeklyPodium(
                         if (index > 0) HorizontalDivider(color = HomeHairline)
                         Row(
                             Modifier.fillMaxWidth().clearAndSetSemantics {
-                                contentDescription = sh("${index + 1}. sıra, ${item.row.displayName}, ${item.row.rating} RP", "Rank ${index + 1}, ${item.row.displayName}, ${item.row.rating} RP")
+                                contentDescription = sh(
+                                    "${index + 1}. sıra, ${item.row.displayName}, ${item.row.rating} RP",
+                                    "Rank ${index + 1}, ${item.row.displayName}, ${item.row.rating} RP",
+                                )
                             }.padding(vertical = 7.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
@@ -532,7 +460,7 @@ internal fun PremiumWeeklyPodium(
                             Spacer(Modifier.width(9.dp))
                             Text(
                                 item.row.displayName,
-                                modifier = Modifier.weight(1f),
+                                Modifier.weight(1f),
                                 color = SonHarfTheme.TextPrimary,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
@@ -609,10 +537,7 @@ internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Uni
                 letterSpacing = .6.sp,
             )
         }
-        Row(
-            Modifier.fillMaxWidth().height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
+        Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PremiumHomeModeCard(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 logo = R.drawable.son_harf_app_icon_master,
@@ -671,7 +596,6 @@ private fun PremiumHomeModeCard(
                     color = HomeDarkText,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Black,
-                    textAlign = TextAlign.Start,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -681,7 +605,6 @@ private fun PremiumHomeModeCard(
                     color = SonHarfTheme.TextSecondary,
                     fontSize = 10.sp,
                     lineHeight = 13.sp,
-                    textAlign = TextAlign.Start,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -696,7 +619,7 @@ private fun PremiumHomeModeCard(
                     contentPadding = PaddingValues(horizontal = 9.dp),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp),
                 ) {
-                    Text(sh("OYNA", "PLAY"), fontSize = 11.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+                    Text(sh("OYNA", "PLAY"), fontSize = 11.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.weight(1f))
                     Icon(Icons.Rounded.ArrowForward, null, modifier = Modifier.size(16.dp), tint = accent)
                 }
@@ -762,9 +685,7 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
                 Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(20.dp))
             }
             when {
-                loading -> Box(Modifier.fillMaxWidth().height(72.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(22.dp), color = SonHarfTheme.Primary, strokeWidth = 2.dp)
-                }
+                loading -> HomeLoadingRow()
                 failed -> Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(sh("Haftalık sıralama yenilenemedi.", "Weekly ranking could not refresh."), Modifier.weight(1f), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
                     TextButton(onClick = { reloadKey += 1 }) {
@@ -774,10 +695,7 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
                 else -> Column(Modifier.fillMaxWidth()) {
                     listOf(1 to players.getOrNull(0), 2 to players.getOrNull(1), 3 to players.getOrNull(2)).forEachIndexed { index, (place, player) ->
                         if (index > 0) HorizontalDivider(color = HomeHairline)
-                        Row(
-                            Modifier.fillMaxWidth().padding(vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
+                        Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                             Surface(
                                 modifier = Modifier.size(26.dp),
                                 shape = HomeMicroShape,
@@ -826,6 +744,28 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HomeLoadingRow() {
+    Box(Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(Modifier.size(20.dp), color = SonHarfTheme.Primary, strokeWidth = 2.dp)
+    }
+}
+
+@Composable
+private fun HomeSectionHeader(title: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Image(
+            painter = painterResource(R.drawable.style_icon_trophy),
+            contentDescription = null,
+            modifier = Modifier.size(22.dp),
+            contentScale = ContentScale.Fit,
+        )
+        Spacer(Modifier.width(7.dp))
+        Text(title, Modifier.weight(1f), color = SonHarfTheme.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        Icon(Icons.Rounded.ChevronRight, null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(18.dp))
     }
 }
 
