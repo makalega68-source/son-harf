@@ -23,6 +23,7 @@ import kotlinx.coroutines.coroutineScope
 internal fun ProfessionalProfileScreen(
     backend: OnlineGameBackend,
     onEdit: () -> Unit,
+    onProgress: () -> Unit,
     onPro: () -> Unit,
     onCollection: () -> Unit,
     onSettings: () -> Unit,
@@ -169,7 +170,7 @@ internal fun ProfessionalProfileScreen(
                         title = gameText("Başarımlar ve Lig", "Achievements & League"),
                         subtitle = gameText("Prestijini ve ilerleme durumunu takip et", "Track prestige and competitive progress"),
                         accent = GameColors.RewardAmber,
-                        onClick = onEdit,
+                        onClick = onProgress,
                     )
                 }
             }
