@@ -15,6 +15,7 @@ import kotlinx.coroutines.delay
 private enum class ProfessionalDestination {
     HOME,
     COMPETE,
+    RETENTION,
     PROFILE,
     COLLECTION,
     LAST_LETTER,
@@ -91,7 +92,8 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
             ProfessionalDestination.PRIVATE_ROOM -> ProfessionalDestination.PRO
             ProfessionalDestination.SOCIAL,
             ProfessionalDestination.SHOP,
-            ProfessionalDestination.COMPETE -> ProfessionalDestination.HOME
+            ProfessionalDestination.COMPETE,
+            ProfessionalDestination.RETENTION -> ProfessionalDestination.HOME
             ProfessionalDestination.ACCOUNT -> ProfessionalDestination.SETTINGS
             ProfessionalDestination.LAST_LETTER,
             ProfessionalDestination.SIEGE,
@@ -154,10 +156,17 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                         onLeague = { destination = ProfessionalDestination.COMPETE },
                         onPro = { destination = ProfessionalDestination.PRO },
                         onCollection = { destination = ProfessionalDestination.COLLECTION },
+                        onRetention = { destination = ProfessionalDestination.RETENTION },
                     )
 
                     ProfessionalDestination.COMPETE -> ProfessionalCompetitionHubScreen(
                         onBack = { destination = ProfessionalDestination.HOME },
+                    )
+
+                    ProfessionalDestination.RETENTION -> ProfessionalRetentionScreen(
+                        backend = backend,
+                        onBack = { destination = ProfessionalDestination.HOME },
+                        onPlay = { openGame(ProfessionalDestination.SIEGE, siegeLanguage) },
                     )
 
                     ProfessionalDestination.PROFILE -> ProfessionalProfileScreen(
