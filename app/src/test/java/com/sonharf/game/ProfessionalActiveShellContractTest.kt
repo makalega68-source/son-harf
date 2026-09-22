@@ -14,6 +14,8 @@ class ProfessionalActiveShellContractTest {
             "ProfessionalCompetitionHubScreen.kt",
             "ProfessionalRetentionScreen.kt",
             "ProfessionalProfileScreen.kt",
+            "ProfessionalProfileIdentityScreen.kt",
+            "ProfessionalProfileProgressScreen.kt",
             "ProfessionalCollectionScreen.kt",
             "ProfileOwnedThemesSection.kt",
             "EconomyShopScreen.kt",
@@ -37,6 +39,7 @@ class ProfessionalActiveShellContractTest {
     @Test
     fun `production shell routes only to the professional menu surfaces`() {
         val shell = repoFile("app/src/main/java/com/sonharf/game/ProfessionalUnifiedApp.kt").readText()
+        val profileEditor = repoFile("app/src/main/java/com/sonharf/game/CompleteProfileScreen.kt").readText()
 
         listOf(
             "ProfessionalHomeScreen(",
@@ -44,6 +47,7 @@ class ProfessionalActiveShellContractTest {
             "ProfessionalCompetitionHubScreen(",
             "ProfessionalRetentionScreen(",
             "ProfessionalProfileScreen(",
+            "ProfessionalProfileProgressScreen(",
             "ProfessionalCollectionScreen(",
             "EconomyShopScreen(",
             "UnifiedProVipScreen(",
@@ -53,6 +57,8 @@ class ProfessionalActiveShellContractTest {
             "CompleteProfileScreen(",
         ).forEach { expected -> assertTrue("Missing active route: $expected", shell.contains(expected)) }
 
+        assertTrue(profileEditor.contains("ProfessionalProfileIdentityScreen()"))
+        assertFalse(profileEditor.contains("ProfileExperienceV2Screen()"))
         assertFalse(shell.contains("PremiumHomeV3("))
         assertFalse(shell.contains("PremiumUnifiedProApp("))
         assertFalse(shell.contains("MainRetentionScreen("))
