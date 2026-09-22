@@ -8,31 +8,36 @@ import org.junit.Test
 
 class AuthCalmThemeContractTest {
     @Test
-    fun requiredAuthGateUsesCalmLayeredPaletteWithoutLegacyBrightBlueLilac() {
+    fun requiredAuthGateUsesProfessionalDarkGamePalette() {
         val auth = source("RequiredAuthGate.kt")
 
         listOf(
             "private object AuthUi",
-            "val Background = Color(0xFFF4F7F2)",
-            "val Surface = Color(0xFFFFFDF7)",
-            "val SurfaceSoft = Color(0xFFEAF2EE)",
-            "val Primary = Color(0xFF4F725E)",
-            "val SoftBlue = Color(0xFF4A6E83)",
-            "val Turquoise = Color(0xFF477B78)",
-            "val Lavender = Color(0xFF7B6B95)",
-            "val Sand = Color(0xFFD7C49F)",
-            "val Border = Color(0xFFCCD8D1)",
+            "val Background = GameColors.AppBackground",
+            "val Surface = GameColors.PrimarySurface",
+            "val SurfaceSoft = GameColors.SecondarySurface",
+            "val Primary = GameColors.PrimaryBlue",
+            "val Turquoise = GameColors.TacticalTurquoise",
+            "val Lavender = GameColors.Lavender",
+            "val Sand = GameColors.PrestigeGold",
+            "val Text = GameColors.TextPrimary",
+            "val Muted = GameColors.TextSecondary",
+            "val Border = GameColors.Border",
+            "val Success = GameColors.PlayGreen",
+            "val Warning = GameColors.RewardAmber",
+            "val Error = GameColors.Danger",
+            "darkColorScheme(",
             "selectedContainerColor = AuthUi.PrimarySoft",
             "containerColor = if (register) AuthUi.Turquoise else AuthUi.Primary",
-        ).forEach { token -> assertTrue("Missing calm auth theme token: $token", auth.contains(token)) }
+        ).forEach { token -> assertTrue("Missing professional auth theme token: $token", auth.contains(token)) }
 
         listOf(
-            "Color(0xFF1769E0)",
-            "Color(0xFF6A4FD8)",
-            "Color(0xFF8CB8F3)",
-            "Color(0xFFB8D4F7)",
-            "Color(0xFF173B77)",
-        ).forEach { legacy -> assertFalse("Legacy auth color still present: $legacy", auth.contains(legacy)) }
+            "Color(0xFFF4F7F2)",
+            "Color(0xFFFFFDF7)",
+            "Color(0xFFEAF2EE)",
+            "Color(0xFF4F725E)",
+            "lightColorScheme(",
+        ).forEach { legacy -> assertFalse("Legacy light auth color still present: $legacy", auth.contains(legacy)) }
     }
 
     @Test
