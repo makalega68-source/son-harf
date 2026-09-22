@@ -1,4 +1,4 @@
-name: UI Screenshot
+name: Branch APK CI
 
 on:
   workflow_dispatch:
@@ -10,17 +10,18 @@ on:
       - 'app/src/main/res/**'
       - 'app/src/debug/**'
       - 'app/src/test/**'
+      - 'supabase/migrations/**'
       - '.github/workflows/ui-screenshot.yml'
 
 permissions:
   contents: read
 
 concurrency:
-  group: ui-screenshot-${{ github.ref }}
+  group: branch-apk-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  screenshot:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -36,41 +37,17 @@ jobs:
         with:
           validate-wrappers: false
       - name: Unit tests and debug APK
-        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
-      - name: Enable KVM access when available
+        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+      - name: Prepare APK
         run: |
-          if [ -e /dev/kvm ]; then
-            sudo chmod 666 /dev/kvm
-            ls -l /dev/kvm
-          fi
-      - name: Render real Compose home screen
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
-          script: |
-            set -eu
-            adb shell settings put global hide_error_dialogs 1 || true
-            adb shell settings put global anr_show_background 0 || true
-            adb shell am force-stop com.google.android.apps.nexuslauncher || true
-            adb install -r app/build/outputs/apk/debug/app-debug.apk
-            adb shell am force-stop com.sonharf.game
-            adb shell am start -W -n com.sonharf.game/.UiScreenshotActivity
-            sleep 10
-            adb shell am broadcast -a android.intent.action.CLOSE_SYSTEM_DIALOGS >/dev/null 2>&1 || true
-            mkdir -p screenshots
-            adb exec-out screencap -p > screenshots/home-top.png
-            adb shell input swipe 540 1850 540 780 650
-            sleep 2
-            adb exec-out screencap -p > screenshots/home-scroll.png
-      - name: Upload UI screenshots
+          cp app/build/outputs/apk/debug/app-debug.apk Kelime-Tahti-Final-Test.apk
+          sha256sum Kelime-Tahti-Final-Test.apk > Kelime-Tahti-Final-Test.sha256
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: kelime-tahti-ui-screenshots
-          path: screenshots/*.png
+          name: kelime-tahti-final-apk
+          path: |
+            Kelime-Tahti-Final-Test.apk
+            Kelime-Tahti-Final-Test.sha256
           if-no-files-found: error
           retention-days: 7
