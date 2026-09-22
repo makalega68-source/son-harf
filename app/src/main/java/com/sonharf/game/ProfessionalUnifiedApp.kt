@@ -21,6 +21,7 @@ private enum class ProfessionalDestination {
     COLLECTION,
     LAST_LETTER,
     SIEGE,
+    SERIES,
     LETTER_PATH,
     SOCIAL,
     SETTINGS,
@@ -74,6 +75,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
         if (destination !in setOf(
                 ProfessionalDestination.LAST_LETTER,
                 ProfessionalDestination.SIEGE,
+                ProfessionalDestination.SERIES,
                 ProfessionalDestination.LETTER_PATH,
             )
         ) {
@@ -97,6 +99,11 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
             ProfessionalDestination.COMPETE,
             ProfessionalDestination.RETENTION -> ProfessionalDestination.HOME
             ProfessionalDestination.ACCOUNT -> ProfessionalDestination.SETTINGS
+            ProfessionalDestination.SERIES -> {
+                uiLanguageBeforeGame?.let { SonHarfUiState.language = it }
+                uiLanguageBeforeGame = null
+                ProfessionalDestination.PRO
+            }
             ProfessionalDestination.LAST_LETTER,
             ProfessionalDestination.SIEGE,
             ProfessionalDestination.LETTER_PATH -> {
@@ -118,6 +125,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
     val gameplay = destination in setOf(
         ProfessionalDestination.LAST_LETTER,
         ProfessionalDestination.SIEGE,
+        ProfessionalDestination.SERIES,
         ProfessionalDestination.LETTER_PATH,
     )
 
@@ -201,6 +209,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                         backend = backend,
                         onBack = { destination = ProfessionalDestination.PROFILE },
                         onPrivateRoom = { destination = ProfessionalDestination.PRIVATE_ROOM },
+                        onSeries = { openGame(ProfessionalDestination.SERIES, siegeLanguage) },
                     )
 
                     ProfessionalDestination.PRIVATE_ROOM -> PrivateRoomCenterScreen(
@@ -213,6 +222,11 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                     ProfessionalDestination.SIEGE -> WordSiegeEntryScreen(
                         onExit = { leaveGame() },
                         onOpenStore = { leaveGame(ProfessionalDestination.SHOP) },
+                    )
+
+                    ProfessionalDestination.SERIES -> WordSiegeSeriesScreen(
+                        verifiedAccess = true,
+                        onExit = { leaveGame(ProfessionalDestination.PRO) },
                     )
 
                     ProfessionalDestination.LETTER_PATH -> LetterLadderGameScreen {
