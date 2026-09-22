@@ -2,44 +2,22 @@ package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.MeetingRoom
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.GameRoomDto
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.PrivateRoomBackend
@@ -60,7 +38,10 @@ internal fun PrivateRoomCenterScreen(
     if (!SupabaseProvider.configured) {
         CenteredMessage(
             title = sh("Sunucu bağlantısı yok", "Server unavailable"),
-            detail = sh("Özel oda için sunucu bağlantısı gerekir.", "Private rooms require a server connection."),
+            detail = sh(
+                "Özel oda için sunucu bağlantısı gerekir.",
+                "Private rooms require a server connection.",
+            ),
             onBack = onBack,
         )
         return
@@ -96,7 +77,10 @@ internal fun PrivateRoomCenterScreen(
             delay(1_250)
             val latest = runCatching { backend.getRoom(waiting.id) }.getOrNull() ?: break
             room = latest
-            if (latest.status in setOf("playing", "quiz", "final", "sudden_death") && latest.guestId != null) {
+            if (
+                latest.status in setOf("playing", "quiz", "final", "sudden_death") &&
+                latest.guestId != null
+            ) {
                 onRoomReady(latest.language)
                 break
             }
@@ -105,31 +89,64 @@ internal fun PrivateRoomCenterScreen(
     }
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .imePadding(),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = ::leave) { Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back")) }
-            Column(Modifier.weight(1f)) {
-                Text(sh("PRO ÖZEL ODA", "PRO PRIVATE ROOM"), fontSize = 22.sp, fontWeight = FontWeight.Black, color = SonHarfText)
-                Text(sh("Son Harf için davet kodlu özel düello", "Invite-code private duel for Last Letter"), fontSize = 10.sp, color = SonHarfMuted)
-            }
-            Icon(Icons.Rounded.Lock, null, tint = SonHarfGold)
-        }
+        GameTopBar(
+            title = sh("PRO Özel Oda", "PRO Private Room"),
+            subtitle = sh(
+                "Son Harf için davet kodlu özel düello",
+                "Invite-code private duel for Last Letter",
+            ),
+            onBack = ::leave,
+        )
 
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            color = SonHarfSurface,
-            border = BorderStroke(1.dp, SonHarfTheme.Border),
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = GameSpacing.ScreenHorizontal, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(sh("ODA OLUŞTUR", "CREATE ROOM"), fontWeight = FontWeight.Black, color = SonHarfText)
-                Text(
-                    sh("PRO sahibi oda oluşturur. Rakibin aşağıdaki kodla katılabilir.", "A PRO member creates the room. Your rival can join with its code."),
-                    fontSize = 10.sp,
-                    color = SonHarfMuted,
-                )
+            GameSurface(
+                elevated = true,
+                borderColor = GameColors.RewardAmber.copy(alpha = .36f),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = GameShapes.Medium,
+                        color = GameColors.RewardAmber.copy(alpha = .12f),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Lock,
+                            contentDescription = null,
+                            tint = GameColors.RewardAmber,
+                            modifier = Modifier.padding(9.dp).size(22.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            sh("ODA OLUŞTUR", "CREATE ROOM"),
+                            color = GameColors.TextPrimary,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            sh(
+                                "PRO sahibi oda oluşturur. Rakibin aşağıdaki kodla katılabilir.",
+                                "A PRO member creates the room. Your rival can join with its code.",
+                            ),
+                            color = GameColors.TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
                 Button(
                     onClick = {
                         if (busy || room != null) return@Button
@@ -140,9 +157,18 @@ internal fun PrivateRoomCenterScreen(
                                 .onSuccess { room = it }
                                 .onFailure { error ->
                                     notice = when {
-                                        "vip_required" in error.message.orEmpty() -> sh("Özel oda PRO üyeliği gerektirir.", "Private rooms require PRO.")
-                                        "player_already_in_game" in error.message.orEmpty() -> sh("Önce aktif maçını tamamla.", "Finish your active match first.")
-                                        else -> sh("Özel oda oluşturulamadı.", "Private room could not be created.")
+                                        "vip_required" in error.message.orEmpty() -> sh(
+                                            "Özel oda PRO üyeliği gerektirir.",
+                                            "Private rooms require PRO.",
+                                        )
+                                        "player_already_in_game" in error.message.orEmpty() -> sh(
+                                            "Önce aktif maçını tamamla.",
+                                            "Finish your active match first.",
+                                        )
+                                        else -> sh(
+                                            "Özel oda oluşturulamadı.",
+                                            "Private room could not be created.",
+                                        )
                                     }
                                 }
                             busy = false
@@ -150,32 +176,66 @@ internal fun PrivateRoomCenterScreen(
                     },
                     enabled = !busy && room == null,
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
+                    shape = GameShapes.Medium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GameColors.PrimaryBlue,
+                        contentColor = GameColors.TextPrimary,
+                    ),
                 ) {
-                    Icon(Icons.Rounded.MeetingRoom, null)
+                    Icon(Icons.Rounded.MeetingRoom, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text(sh("ÖZEL ODA OLUŞTUR", "CREATE PRIVATE ROOM"), fontWeight = FontWeight.Black)
+                    Text(
+                        sh("ÖZEL ODA OLUŞTUR", "CREATE PRIVATE ROOM"),
+                        fontWeight = FontWeight.Black,
+                    )
                 }
 
                 room?.let { active ->
+                    Spacer(Modifier.height(12.dp))
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(14.dp),
-                        color = SonHarfSurface2,
-                        border = BorderStroke(1.dp, SonHarfGold.copy(alpha = .45f)),
+                        shape = GameShapes.Medium,
+                        color = GameColors.ElevatedBackground,
+                        border = BorderStroke(
+                            1.dp,
+                            GameColors.RewardAmber.copy(alpha = .42f),
+                        ),
                     ) {
-                        Column(Modifier.padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(sh("ODA KODU", "ROOM CODE"), color = SonHarfMuted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                            Text(active.code, color = SonHarfGold, fontSize = 28.sp, fontWeight = FontWeight.Black, letterSpacing = 3.sp)
-                            Spacer(Modifier.height(6.dp))
+                        Column(
+                            modifier = Modifier.padding(14.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                sh("ODA KODU", "ROOM CODE"),
+                                color = GameColors.TextTertiary,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.Bold,
+                            )
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                active.code,
+                                color = GameColors.RewardAmber,
+                                style = MaterialTheme.typography.headlineMedium,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = MaterialTheme.typography.headlineMedium.letterSpacing,
+                            )
+                            Spacer(Modifier.height(8.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                CircularProgressIndicator(modifier = Modifier.width(16.dp).height(16.dp), strokeWidth = 2.dp)
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(16.dp),
+                                    strokeWidth = 2.dp,
+                                    color = GameColors.PrimaryBlue,
+                                )
                                 Spacer(Modifier.width(7.dp))
-                                Text(sh("Rakip bekleniyor…", "Waiting for rival…"), color = SonHarfMuted, fontSize = 10.sp)
+                                Text(
+                                    sh("Rakip bekleniyor…", "Waiting for rival…"),
+                                    color = GameColors.TextSecondary,
+                                    style = MaterialTheme.typography.bodySmall,
+                                )
                             }
                         }
                     }
+                    Spacer(Modifier.height(8.dp))
                     OutlinedButton(
                         onClick = {
                             if (busy) return@OutlinedButton
@@ -188,33 +248,87 @@ internal fun PrivateRoomCenterScreen(
                         },
                         enabled = !busy,
                         modifier = Modifier.fillMaxWidth(),
-                    ) { Text(sh("ODAYI İPTAL ET", "CANCEL ROOM"), fontWeight = FontWeight.Bold) }
+                        shape = GameShapes.Medium,
+                        border = BorderStroke(1.dp, GameColors.Border),
+                    ) {
+                        Text(
+                            sh("ODAYI İPTAL ET", "CANCEL ROOM"),
+                            color = GameColors.TextSecondary,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
             }
-        }
 
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(20.dp),
-            color = SonHarfSurface,
-            border = BorderStroke(1.dp, SonHarfTheme.Border),
-        ) {
-            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(sh("KODLA KATIL", "JOIN WITH CODE"), fontWeight = FontWeight.Black, color = SonHarfText)
-                Text(
-                    sh("Oda sahibinin verdiği 6 karakterli kodu gir.", "Enter the 6-character code from the room host."),
-                    fontSize = 10.sp,
-                    color = SonHarfMuted,
-                )
+            GameSurface(
+                borderColor = GameColors.TacticalTurquoise.copy(alpha = .34f),
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = GameShapes.Medium,
+                        color = GameColors.TacticalTurquoise.copy(alpha = .11f),
+                    ) {
+                        Icon(
+                            Icons.Rounded.Key,
+                            contentDescription = null,
+                            tint = GameColors.TacticalTurquoise,
+                            modifier = Modifier.padding(9.dp).size(22.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(
+                            sh("KODLA KATIL", "JOIN WITH CODE"),
+                            color = GameColors.TextPrimary,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            sh(
+                                "Oda sahibinin verdiği 6 karakterli kodu gir.",
+                                "Enter the 6-character code from the room host.",
+                            ),
+                            color = GameColors.TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+
                 OutlinedTextField(
                     value = code,
-                    onValueChange = { code = it.filter(Char::isLetterOrDigit).take(6).uppercase() },
+                    onValueChange = {
+                        code = it.filter(Char::isLetterOrDigit).take(6).uppercase()
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true,
                     label = { Text(sh("Oda kodu", "Room code")) },
-                    leadingIcon = { Icon(Icons.Rounded.Key, null) },
-                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
+                    leadingIcon = {
+                        Icon(
+                            Icons.Rounded.Key,
+                            contentDescription = null,
+                            tint = GameColors.TacticalTurquoise,
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(
+                        capitalization = KeyboardCapitalization.Characters,
+                        imeAction = ImeAction.Done,
+                    ),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = GameColors.TextPrimary,
+                        unfocusedTextColor = GameColors.TextPrimary,
+                        focusedBorderColor = GameColors.TacticalTurquoise,
+                        unfocusedBorderColor = GameColors.Border,
+                        focusedLabelColor = GameColors.TacticalTurquoise,
+                        unfocusedLabelColor = GameColors.TextTertiary,
+                        cursorColor = GameColors.TacticalTurquoise,
+                    ),
                 )
+
+                Spacer(Modifier.height(10.dp))
+
                 Button(
                     onClick = {
                         if (busy || code.length != 6) return@Button
@@ -228,9 +342,18 @@ internal fun PrivateRoomCenterScreen(
                                 }
                                 .onFailure { error ->
                                     notice = when {
-                                        "room_not_available" in error.message.orEmpty() -> sh("Bu oda bulunamadı veya artık açık değil.", "This room was not found or is no longer open.")
-                                        "player_already_in_game" in error.message.orEmpty() -> sh("Önce aktif maçını tamamla.", "Finish your active match first.")
-                                        else -> sh("Odaya katılınamadı.", "Could not join the room.")
+                                        "room_not_available" in error.message.orEmpty() -> sh(
+                                            "Bu oda bulunamadı veya artık açık değil.",
+                                            "This room was not found or is no longer open.",
+                                        )
+                                        "player_already_in_game" in error.message.orEmpty() -> sh(
+                                            "Önce aktif maçını tamamla.",
+                                            "Finish your active match first.",
+                                        )
+                                        else -> sh(
+                                            "Odaya katılınamadı.",
+                                            "Could not join the room.",
+                                        )
                                     }
                                 }
                             busy = false
@@ -238,30 +361,83 @@ internal fun PrivateRoomCenterScreen(
                     },
                     enabled = !busy && code.length == 6,
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape = RoundedCornerShape(14.dp),
-                ) { Text(sh("ODAYA KATIL", "JOIN ROOM"), fontWeight = FontWeight.Black) }
+                    shape = GameShapes.Medium,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = GameColors.TacticalTurquoise,
+                        contentColor = GameColors.AppBackground,
+                    ),
+                ) {
+                    Text(
+                        sh("ODAYA KATIL", "JOIN ROOM"),
+                        fontWeight = FontWeight.Black,
+                    )
+                }
             }
-        }
 
-        notice?.let {
-            Surface(shape = RoundedCornerShape(14.dp), color = SonHarfSurface2) {
-                Text(it, modifier = Modifier.fillMaxWidth().padding(12.dp), color = SonHarfText, fontSize = 10.sp)
+            notice?.let {
+                Surface(
+                    shape = GameShapes.Medium,
+                    color = GameColors.PrimaryBlue.copy(alpha = .10f),
+                    border = BorderStroke(
+                        1.dp,
+                        GameColors.PrimaryBlue.copy(alpha = .22f),
+                    ),
+                ) {
+                    Text(
+                        it,
+                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                        color = GameColors.TextPrimary,
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
             }
+
+            Spacer(Modifier.height(8.dp))
         }
     }
 }
 
 @Composable
-private fun CenteredMessage(title: String, detail: String, onBack: () -> Unit) {
+private fun CenteredMessage(
+    title: String,
+    detail: String,
+    onBack: () -> Unit,
+) {
     Column(
         modifier = Modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text(title, fontSize = 20.sp, fontWeight = FontWeight.Black, color = SonHarfText)
-        Spacer(Modifier.height(8.dp))
-        Text(detail, color = SonHarfMuted, fontSize = 11.sp)
-        Spacer(Modifier.height(18.dp))
-        OutlinedButton(onClick = onBack) { Text(sh("GERİ", "BACK")) }
+        GameSurface(
+            modifier = Modifier.fillMaxWidth(),
+            borderColor = GameColors.PrimaryBlue.copy(alpha = .30f),
+            elevated = true,
+        ) {
+            Text(
+                title,
+                color = GameColors.TextPrimary,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black,
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                detail,
+                color = GameColors.TextSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+            )
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(
+                onClick = onBack,
+                modifier = Modifier.fillMaxWidth(),
+                shape = GameShapes.Medium,
+                border = BorderStroke(1.dp, GameColors.PrimaryBlue),
+            ) {
+                Text(
+                    sh("GERİ", "BACK"),
+                    color = GameColors.PrimaryBlue,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
     }
 }
