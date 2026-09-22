@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/final-gameplay-redesign.yml'
       - 'tools/final_gameplay_visual_pass.py'
+      - 'tools/final_gameplay_contract_fix.py'
   workflow_dispatch:
 
 permissions:
@@ -41,7 +42,9 @@ jobs:
           validate-wrappers: false
 
       - name: Apply gameplay visual redesign
-        run: python3 tools/final_gameplay_visual_pass.py
+        run: |
+          python3 tools/final_gameplay_visual_pass.py
+          python3 tools/final_gameplay_contract_fix.py
 
       - name: Unit tests and debug APK
         run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
@@ -56,7 +59,12 @@ jobs:
                   app/src/main/java/com/sonharf/game/WordSiegePremiumPanel.kt \
                   app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt \
                   app/src/main/java/com/sonharf/game/LetterLadderGame.kt \
-                  app/src/main/java/com/sonharf/game/HarfYoluBackdrop.kt
+                  app/src/main/java/com/sonharf/game/HarfYoluBackdrop.kt \
+                  app/src/test/java/com/sonharf/game/LetterLadderEngineTest.kt \
+                  app/src/test/java/com/sonharf/game/PremierDuelUxRegressionTest.kt \
+                  app/src/test/java/com/sonharf/game/UnifiedThemeSourceContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeEntryModesContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePanAreaContractTest.kt
           if ! git diff --cached --quiet; then
             git commit -m "Complete premium gameplay visual redesign"
             git push origin HEAD:claude/kelime-tahti-home-redesign-7ojb7d
