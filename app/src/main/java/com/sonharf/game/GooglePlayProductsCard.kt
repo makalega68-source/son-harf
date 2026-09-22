@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.android.billingclient.api.BillingClient
@@ -352,10 +353,7 @@ fun GooglePlayProductsCard(onPurchased: () -> Unit = {}) {
                 modifier = Modifier.fillMaxSize(),
                 color = GameColors.AppBackground,
             ) {
-                WordSiegeSeriesScreen(
-                    verifiedAccess = true,
-                    onExit = { showSeriesGame = false },
-                )
+                WordSiegeSeriesScreen(verifiedAccess = true, onExit = { showSeriesGame = false })
             }
         }
     }
@@ -413,11 +411,13 @@ private fun PremiumProductRow(
                     fontWeight = FontWeight.Black,
                     color = GameColors.TextPrimary,
                     style = MaterialTheme.typography.titleSmall,
+                    fontSize = 16.sp, lineHeight = 19.sp,
                 )
                 Text(
                     subtitle,
                     color = GameColors.TextSecondary,
                     style = MaterialTheme.typography.bodySmall,
+                    fontSize = 11.sp, lineHeight = 15.sp,
                 )
                 when {
                     owned -> Text(
