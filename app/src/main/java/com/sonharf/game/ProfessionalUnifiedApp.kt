@@ -208,7 +208,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                         onSiege = { openGame(ProfessionalDestination.SIEGE, siegeLanguage) },
                     )
 
-                    ProfessionalDestination.SETTINGS -> MainSettingsScreen(
+                    ProfessionalDestination.SETTINGS -> ProfessionalSettingsScreen(
                         backend,
                         { destination = ProfessionalDestination.PROFILE },
                         { destination = ProfessionalDestination.ACCOUNT },
