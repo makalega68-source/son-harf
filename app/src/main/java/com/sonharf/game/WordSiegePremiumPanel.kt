@@ -15,6 +15,7 @@ import androidx.compose.material.icons.rounded.Calculate
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
@@ -30,6 +31,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -116,16 +118,16 @@ internal fun WordSiegePremiumPanel(
     if (access == null || entitlementError) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(10.dp),
-            color = WordSiegeGameUi.SurfaceSoft,
-            border = BorderStroke(1.dp, WordSiegeGameUi.Border),
+            shape = RoundedCornerShape(14.dp),
+            color = WordSiegeGameUi.PremiumSurface,
+            border = BorderStroke(1.dp, WordSiegeGameUi.PremiumBorder.copy(alpha = .55f)),
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 11.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                Icon(Icons.Rounded.Refresh, null, tint = WordSiegeGameUi.Blue)
+                Icon(Icons.Rounded.Refresh, null, tint = WordSiegeGameUi.Gold)
                 Text(
                     if (access == null && !entitlementError) {
                         sh("Premium araçlar kontrol ediliyor…", "Checking premium tools…")
@@ -151,74 +153,126 @@ internal fun WordSiegePremiumPanel(
     }
 
     val resolvedAccess = access ?: return
+    val hasAnyPremiumTool = resolvedAccess.scoreCalculatorAccess || resolvedAccess.letterTableAccess
 
-    Row(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = if (hasAnyPremiumTool) WordSiegeGameUi.PremiumSurface else WordSiegeGameUi.Surface,
+        border = BorderStroke(
+            1.dp,
+            if (hasAnyPremiumTool) WordSiegeGameUi.PremiumBorder.copy(alpha = .60f) else WordSiegeGameUi.Border,
+        ),
+        shadowElevation = if (hasAnyPremiumTool) 2.dp else 0.dp,
     ) {
-        Surface(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(10.dp),
-            color = WordSiegeGameUi.SurfaceSoft,
-            border = BorderStroke(1.dp, WordSiegeGameUi.Border),
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(
-                    if (resolvedAccess.scoreCalculatorAccess) Icons.Rounded.Calculate else Icons.Rounded.Lock,
-                    contentDescription = null,
-                    tint = if (resolvedAccess.scoreCalculatorAccess) WordSiegeGameUi.Blue else WordSiegeGameUi.Muted,
-                )
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    when {
-                        !resolvedAccess.scoreCalculatorAccess -> sh("Puan Hesaplayıcı • Kilitli", "Score Calculator • Locked")
-                        placements.isEmpty() -> sh("Puan Hesaplayıcı • Harf yerleştir", "Score Calculator • Place tiles")
-                        preview != null -> sh(
-                            "Kelime +${preview!!.wordScore} • Bölge +${preview!!.areaScore} • Toplam +${preview!!.totalScore}",
-                            "Word +${preview!!.wordScore} • Territory +${preview!!.areaScore} • Total +${preview!!.totalScore}",
+        Column(Modifier.fillMaxWidth().padding(8.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    shape = RoundedCornerShape(99.dp),
+                    color = if (hasAnyPremiumTool) WordSiegeGameUi.Gold else WordSiegeGameUi.Navy,
+                ) {
+                    Row(Modifier.padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            if (hasAnyPremiumTool) Icons.Rounded.Verified else Icons.Rounded.Lock,
+                            null,
+                            modifier = Modifier.padding(end = 4.dp),
+                            tint = Color.White,
                         )
-                        previewError -> sh("Önizleme alınamadı • hamleyi kontrol et", "Preview unavailable • check the move")
-                        else -> sh("Hesaplanıyor…", "Calculating…")
-                    },
+                        Text("PRO", color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                    }
+                }
+                Spacer(Modifier.width(7.dp))
+                Text(
+                    sh("KUŞATMA ARAÇLARI", "SIEGE TOOLS"),
                     color = WordSiegeGameUi.Text,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 2,
-                    lineHeight = 12.sp,
-                    modifier = Modifier.weight(1f),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = .4.sp,
                 )
             }
-        }
 
-        OutlinedButton(
-            onClick = { if (resolvedAccess.letterTableAccess) showLetterTable = true },
-            enabled = resolvedAccess.letterTableAccess,
-            shape = RoundedCornerShape(10.dp),
-            border = BorderStroke(1.dp, WordSiegeGameUi.Border),
-            contentPadding = PaddingValues(horizontal = 9.dp, vertical = 6.dp),
-        ) {
-            Icon(
-                if (resolvedAccess.letterTableAccess) Icons.Rounded.GridView else Icons.Rounded.Lock,
-                contentDescription = null,
-                modifier = Modifier.padding(end = 4.dp),
-            )
-            Text(sh("HARFLER", "LETTERS"), fontSize = 9.sp, fontWeight = FontWeight.Black)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Surface(
+                    modifier = Modifier.weight(1f),
+                    shape = RoundedCornerShape(12.dp),
+                    color = WordSiegeGameUi.Surface,
+                    border = BorderStroke(1.dp, WordSiegeGameUi.Border.copy(alpha = .85f)),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(
+                            if (resolvedAccess.scoreCalculatorAccess) Icons.Rounded.Calculate else Icons.Rounded.Lock,
+                            contentDescription = null,
+                            tint = if (resolvedAccess.scoreCalculatorAccess) WordSiegeGameUi.Gold else WordSiegeGameUi.Muted,
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                sh("PUAN HESAPLAMA", "SCORE PREVIEW"),
+                                color = WordSiegeGameUi.Text,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                            Text(
+                                when {
+                                    !resolvedAccess.scoreCalculatorAccess -> sh("PRO ile açılır", "Unlocks with PRO")
+                                    placements.isEmpty() -> sh("Harf yerleştir", "Place tiles")
+                                    preview != null -> sh(
+                                        "Kelime +${preview!!.wordScore} • Bölge +${preview!!.areaScore} • Toplam +${preview!!.totalScore}",
+                                        "Word +${preview!!.wordScore} • Territory +${preview!!.areaScore} • Total +${preview!!.totalScore}",
+                                    )
+                                    previewError -> sh("Önizleme alınamadı", "Preview unavailable")
+                                    else -> sh("Hesaplanıyor…", "Calculating…")
+                                },
+                                color = WordSiegeGameUi.Muted,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 2,
+                                lineHeight = 12.sp,
+                            )
+                        }
+                    }
+                }
+
+                OutlinedButton(
+                    onClick = { if (resolvedAccess.letterTableAccess) showLetterTable = true },
+                    enabled = resolvedAccess.letterTableAccess,
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(
+                        1.dp,
+                        if (resolvedAccess.letterTableAccess) WordSiegeGameUi.PremiumBorder else WordSiegeGameUi.Border,
+                    ),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                ) {
+                    Icon(
+                        if (resolvedAccess.letterTableAccess) Icons.Rounded.GridView else Icons.Rounded.Lock,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 4.dp),
+                    )
+                    Text(sh("HARFLER", "LETTERS"), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                }
+            }
         }
     }
 
     if (showLetterTable) {
         AlertDialog(
             onDismissRequest = { showLetterTable = false },
-            icon = { Icon(Icons.Rounded.GridView, null, tint = WordSiegeGameUi.Blue) },
-            title = { Text(sh("Harf Tablosu", "Letter Table"), fontWeight = FontWeight.Black) },
+            icon = { Icon(Icons.Rounded.GridView, null, tint = WordSiegeGameUi.Gold) },
+            title = { Text(sh("Kalan Harfler", "Remaining Letters"), fontWeight = FontWeight.Black) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        sh("Tahtadaki harfler ve kendi elin çıkarıldıktan sonra oyunda görünmeyen harf adetleri.", "Unseen letter counts after subtracting the board and your own rack."),
+                        sh(
+                            "Tahtadaki harfler ve kendi elin çıkarıldıktan sonra oyunda görünmeyen harf adetleri.",
+                            "Unseen letter counts after subtracting the board and your own rack.",
+                        ),
                         color = WordSiegeGameUi.Muted,
                         fontSize = 11.sp,
                     )
@@ -240,7 +294,7 @@ internal fun WordSiegePremiumPanel(
                                 group.forEach { item ->
                                     Surface(
                                         modifier = Modifier.weight(1f),
-                                        shape = RoundedCornerShape(8.dp),
+                                        shape = RoundedCornerShape(9.dp),
                                         color = WordSiegeGameUi.SurfaceSoft,
                                         border = BorderStroke(1.dp, WordSiegeGameUi.Border),
                                     ) {
@@ -260,7 +314,9 @@ internal fun WordSiegePremiumPanel(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showLetterTable = false }) { Text(sh("KAPAT", "CLOSE"), fontWeight = FontWeight.Black) }
+                TextButton(onClick = { showLetterTable = false }) {
+                    Text(sh("KAPAT", "CLOSE"), fontWeight = FontWeight.Black)
+                }
             },
         )
     }
