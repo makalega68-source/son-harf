@@ -98,7 +98,13 @@ internal fun GameDangerButton(text: String, onClick: () -> Unit, modifier: Modif
     GameActionButton(text, onClick, modifier, GameColors.Danger, enabled, icon)
 
 @Composable
-internal fun GameIconButton(icon: ImageVector, description: String, onClick: () -> Unit, tint: Color = GameColors.TextPrimary) {
+internal fun GameIconButton(
+    icon: ImageVector,
+    description: String = "",
+    onClick: () -> Unit,
+    tint: Color = GameColors.TextPrimary,
+    contentDescription: String? = null,
+) {
     Surface(
         onClick = onClick,
         modifier = Modifier.size(48.dp),
@@ -107,7 +113,7 @@ internal fun GameIconButton(icon: ImageVector, description: String, onClick: () 
         border = BorderStroke(1.dp, GameColors.Border),
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(icon, description, tint = tint, modifier = Modifier.size(23.dp))
+            Icon(icon, contentDescription ?: description, tint = tint, modifier = Modifier.size(23.dp))
         }
     }
 }
