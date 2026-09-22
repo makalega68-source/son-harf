@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Person
@@ -25,8 +24,8 @@ import com.sonharf.game.data.ShopItemDto
 
 /**
  * Product art is intentionally text-free and transparent. Product names, prices and ownership
- * states remain real Compose UI text outside the artwork. The vectors mirror the approved Canva
- * product-library language while profile frames keep using their actual packaged runtime assets.
+ * states remain real Compose UI text outside the artwork. Profile frames keep using their actual
+ * packaged runtime assets.
  */
 @Composable
 internal fun StoreProductPreview(
@@ -34,7 +33,7 @@ internal fun StoreProductPreview(
     modifier: Modifier = Modifier,
     expanded: Boolean = false,
 ) {
-    val shape = RoundedCornerShape(if (expanded) 20.dp else 16.dp)
+    val shape = if (expanded) GameShapes.Large else GameShapes.Medium
     Box(
         modifier = modifier.clip(shape),
         contentAlignment = Alignment.Center,
@@ -45,7 +44,9 @@ internal fun StoreProductPreview(
                 Image(
                     painter = painterResource(storeArtworkRes(item.id)!!),
                     contentDescription = null,
-                    modifier = Modifier.fillMaxSize().padding(if (expanded) 7.dp else 3.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(if (expanded) 7.dp else 3.dp),
                     contentScale = ContentScale.Fit,
                 )
             }
@@ -72,23 +73,28 @@ private fun storeArtworkRes(itemId: String): Int? = when (itemId) {
 }
 
 @Composable
-private fun RealFramePreview(frameId: String, expanded: Boolean) {
+private fun RealFramePreview(
+    frameId: String,
+    expanded: Boolean,
+) {
     val frameSize = if (expanded) 108.dp else 66.dp
     Box(
-        Modifier.fillMaxSize().padding(if (expanded) 8.dp else 2.dp),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(if (expanded) 8.dp else 2.dp),
         contentAlignment = Alignment.Center,
     ) {
         Surface(
             modifier = Modifier.size(frameSize * .72f),
             shape = CircleShape,
-            color = SonHarfTheme.Surface,
+            color = GameColors.ElevatedBackground,
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.Rounded.Person,
                     contentDescription = null,
                     modifier = Modifier.size(frameSize * .40f),
-                    tint = SonHarfTheme.TextSecondary,
+                    tint = GameColors.TextTertiary,
                 )
             }
         }
@@ -111,7 +117,7 @@ private fun PremiumArtworkFallback(expanded: Boolean) {
                 Icons.Rounded.AutoAwesome,
                 contentDescription = null,
                 modifier = Modifier.size(if (expanded) 38.dp else 26.dp),
-                tint = SonHarfTheme.Primary,
+                tint = GameColors.Lavender,
             )
         }
     }
