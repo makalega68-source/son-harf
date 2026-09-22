@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,9 +16,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -290,20 +287,23 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Spacer(Modifier.weight(.42f))
-                    Image(
-                        painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
-                        contentDescription = sh("Kelime Kuşatması logosu", "Word Siege logo"),
-                        modifier = Modifier.fillMaxWidth(.72f).heightIn(max = 150.dp),
-                        contentScale = ContentScale.Fit,
-                    )
                     Text(
-                        sh("KELİME KUŞATMASI", "WORD SIEGE"),
+                        "KELİME TAHTI",
                         color = AuthUi.Text,
                         fontSize = 27.sp,
                         fontWeight = FontWeight.Black,
                         textAlign = TextAlign.Center,
                     )
-                    Spacer(Modifier.height(7.dp))
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        "WORD BOARD",
+                        color = AuthUi.Sand,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 2.5.sp,
+                        textAlign = TextAlign.Center,
+                    )
+                    Spacer(Modifier.height(14.dp))
                     Text(
                         sh("Kelime oyunu • taktik alan savaşı • sosyal rekabet", "Word game • tactical territory battle • social competition"),
                         color = AuthUi.Primary,

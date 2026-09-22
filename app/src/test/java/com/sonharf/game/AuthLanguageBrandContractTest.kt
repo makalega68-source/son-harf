@@ -11,8 +11,8 @@ class AuthLanguageBrandContractTest {
         val auth = projectFile("app/src/main/java/com/sonharf/game/RequiredAuthGate.kt").readText()
         val startup = projectFile("app/src/main/java/com/sonharf/game/StableV1App.kt").readText()
 
-        assertTrue(auth.contains("R.drawable.kelime_kusatma_logo_hd"))
-        assertTrue(auth.contains("sh(\"KELİME KUŞATMASI\", \"WORD SIEGE\")"))
+        assertTrue(auth.contains("\"KELİME TAHTI\""))
+        assertTrue(auth.contains("\"WORD BOARD\""))
         assertTrue(auth.contains("tactical territory battle"))
         assertFalse(auth.contains("R.drawable.son_harf_gold_teal_logo"))
         assertFalse(auth.contains("Continue the Word, Beat Your Rival"))
@@ -36,8 +36,8 @@ class AuthLanguageBrandContractTest {
         assertTrue(auth.contains("sh(\"E-POSTA ADRESİNİ DEĞİŞTİR\", \"CHANGE EMAIL ADDRESS\")"))
         assertFalse(auth.contains("Son Harf otomatik açılır"))
 
-        assertTrue(startup.contains("R.drawable.kelime_kusatma_logo_hd"))
-        assertTrue(startup.contains("KELİME KUŞATMASI / WORD SIEGE"))
+        assertTrue(startup.contains("text = \"KELİME TAHTI\""))
+        assertTrue(startup.contains("text = \"WORD BOARD\""))
         assertFalse(startup.contains("SonHarfOfficialLogo(modifier"))
     }
 
