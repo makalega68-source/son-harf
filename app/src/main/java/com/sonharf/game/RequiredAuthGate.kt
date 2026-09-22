@@ -52,32 +52,31 @@ private data class AuthIdentityProfile(
 /**
  * Pre-authentication palette.
  *
- * Authentication is intentionally kept on a fixed calm light palette because no
- * authenticated profile theme is authoritative yet. Each visual layer has its
- * own semantic token so the login flow cannot drift back to the legacy blue/lilac UI.
+ * Kimlik ekranı da uygulamanın yetişkin zümrüt-altın sistemiyle aynı görünür.
+ * Profil teması yüklenmeden önce sabit token kullanılması ilk karede renk sıçramasını önler.
  */
 private object AuthUi {
-    val Background = Color(0xFFF4F7F2)
-    val BackgroundTop = Color(0xFFF8FAF7)
-    val Surface = Color(0xFFFFFDF7)
-    val SurfaceSoft = Color(0xFFEAF2EE)
-    val SurfaceRaised = Color(0xFFEFF4F6)
-    val Modal = Color(0xFFFAF7F0)
-    val Primary = Color(0xFF4F725E)
-    val PrimarySoft = Color(0xFFDDE9E1)
-    val SoftBlue = Color(0xFF4A6E83)
-    val Turquoise = Color(0xFF477B78)
-    val Lavender = Color(0xFF7B6B95)
-    val Sand = Color(0xFFD7C49F)
-    val Text = Color(0xFF26382F)
-    val Muted = Color(0xFF65766D)
-    val Border = Color(0xFFCCD8D1)
-    val BorderSoft = Color(0xFFDDE5E0)
-    val Success = Color(0xFF4B765D)
-    val SuccessSoft = Color(0xFFE4F0E8)
-    val Warning = Color(0xFF8A6538)
-    val WarningSoft = Color(0xFFF5EEE1)
-    val Error = Color(0xFFA84F59)
+    val Background = Color(0xFF071714)
+    val BackgroundTop = Color(0xFF0B211C)
+    val Surface = Color(0xFF0E2521)
+    val SurfaceSoft = Color(0xFF14312B)
+    val SurfaceRaised = Color(0xFF1B3B33)
+    val Modal = Color(0xFF102923)
+    val Primary = Color(0xFF3FC486)
+    val PrimarySoft = Color(0xFF173C31)
+    val SoftBlue = Color(0xFFC9A552)
+    val Turquoise = Color(0xFF55CC91)
+    val Lavender = Color(0xFFB99445)
+    val Sand = Color(0xFFD1AD58)
+    val Text = Color(0xFFF4F7F4)
+    val Muted = Color(0xFF9DB0A9)
+    val Border = Color(0xFF315148)
+    val BorderSoft = Color(0xFF29473F)
+    val Success = Color(0xFF45C98B)
+    val SuccessSoft = Color(0xFF173C31)
+    val Warning = Color(0xFFD5A34F)
+    val WarningSoft = Color(0xFF3A321F)
+    val Error = Color(0xFFC94C4C)
 }
 
 private suspend fun currentIdentityProfile(): AuthIdentityProfile? {

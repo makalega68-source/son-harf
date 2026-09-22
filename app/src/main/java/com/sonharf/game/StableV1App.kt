@@ -1,7 +1,6 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -31,9 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -113,20 +109,23 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center,
             ) {
-                Image(
-                    painter = painterResource(R.drawable.kelime_kusatma_logo_hd),
-                    contentDescription = "Kelime Kuşatması / Word Siege",
-                    modifier = Modifier.fillMaxWidth(.72f).height(132.dp),
-                    contentScale = ContentScale.Fit,
-                )
                 Text(
-                    text = "KELİME KUŞATMASI / WORD SIEGE",
+                    text = "KELİME TAHTI",
                     color = MainUi.Text,
-                    fontSize = 22.sp,
+                    fontSize = 29.sp,
                     fontWeight = FontWeight.Black,
                     textAlign = TextAlign.Center,
                 )
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "WORD BOARD",
+                    color = MainUi.Gold,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 3.sp,
+                    textAlign = TextAlign.Center,
+                )
+                Spacer(Modifier.height(22.dp))
                 Text(
                     text = "Dilini seç / Choose your language",
                     color = MainUi.Muted,
@@ -174,7 +173,7 @@ private fun FirstRunLanguageScreen(onContinue: (String) -> Unit) {
                     enabled = selected != null,
                     onClick = { selected?.let(onContinue) },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(15.dp),
+                    shape = MainUiShape.Control,
                     contentPadding = PaddingValues(horizontal = 18.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MainUi.Blue,

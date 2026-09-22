@@ -37,18 +37,12 @@ fun CompetitionHubScreen(onBack: () -> Unit, clubEntry: Boolean = false) {
             Brush.verticalGradient(listOf(SonHarfBg, SonHarfSurface2, SonHarfBg))
         )
     ) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 7.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = SonHarfText)
-            }
-            Column(Modifier.weight(1f)) {
-                Text(sh("REKABET MERKEZİ", "COMPETITION HUB"), color = SonHarfText, fontSize = 21.sp, fontWeight = FontWeight.Black)
-                Text(sh("Haftalık Kupa • Rakipler", "Weekly Cup • Rivals"), color = SonHarfMuted, fontSize = 9.sp)
-            }
-            Text("⚔", fontSize = 25.sp)
+        Box(Modifier.padding(horizontal = 10.dp, vertical = 7.dp)) {
+            MainScreenHeader(
+                title = sh("REKABET MERKEZİ", "COMPETITION HUB"),
+                subtitle = sh("Haftalık Kupa • Rakipler", "Weekly Cup • Rivals"),
+                onBack = onBack,
+            )
         }
 
         Row(

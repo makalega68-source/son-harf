@@ -126,7 +126,11 @@ fun PremiumUnifiedProApp(onSignedOut: () -> Unit) {
         )
     }
 
-    MaterialTheme(colorScheme = scheme) {
+    MaterialTheme(
+        colorScheme = scheme,
+        typography = SonHarfTypography,
+        shapes = SonHarfShapes,
+    ) {
         Scaffold(
             containerColor = SonHarfTheme.Background,
             topBar = {
@@ -283,20 +287,27 @@ private fun PremiumGameCenter(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Text(
-                sh("OYUN MODLARI", "GAME MODES"),
-                color = SonHarfTheme.TextPrimary,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Black,
-            )
-            Text(
-                sh(
-                    "Modunu seç, dilini ayarla ve doğrudan arenaya gir.",
-                    "Pick a mode, set your language, and enter the arena.",
-                ),
-                color = SonHarfTheme.TextSecondary,
-                fontSize = 12.sp,
-            )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(
+                    sh("OYUN MODLARI", "GAME MODES"),
+                    color = SonHarfTheme.TextPrimary,
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Black,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+                Text(
+                    sh(
+                        "Modunu seç, dilini ayarla ve doğrudan arenaya gir.",
+                        "Pick a mode, set your language, and enter the arena.",
+                    ),
+                    color = SonHarfTheme.TextSecondary,
+                    fontSize = 12.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                )
+            }
             Spacer(Modifier.height(8.dp))
         }
         item {

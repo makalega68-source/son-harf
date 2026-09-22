@@ -21,25 +21,25 @@ import androidx.compose.ui.unit.sp
 
 /** Match-only presentation. Never changes the selected cosmetic theme or game state. */
 internal object WordSiegeGameUi {
-    val Background = Color(0xFFF8FAF4)
-    val Surface = Color(0xFFFFFEF8)
-    val SurfaceSoft = Color(0xFFEEF5EF)
-    val Text = Color(0xFF213C31)
-    val Muted = Color(0xFF52675C)
-    val Border = Color(0xFFD1DDD5)
-    val Blue = Color(0xFF557A87)
-    val Red = Color(0xFF9B4D4A)
-    val Gold = Color(0xFFAB8131)
-    val DisabledBackground = Color(0xFFE4EAE5)
-    val DisabledContent = Color(0xFF667B6F)
+    val Background = Color(0xFF071714)
+    val Surface = Color(0xFF0E2521)
+    val SurfaceSoft = Color(0xFF14312B)
+    val Text = Color(0xFFF4F7F4)
+    val Muted = Color(0xFF9DB0A9)
+    val Border = Color(0xFF315148)
+    val Blue = Color(0xFF3FC486)
+    val Red = Color(0xFFC94C4C)
+    val Gold = Color(0xFFC9A552)
+    val DisabledBackground = Color(0xFF263833)
+    val DisabledContent = Color(0xFF71847D)
 }
 
 @Composable
 internal fun WordSiegeGameTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Color(0xFF527867), onPrimary = Color.White,
-            secondary = WordSiegeGameUi.Blue, onSecondary = Color.White,
+        colorScheme = darkColorScheme(
+            primary = WordSiegeGameUi.Blue, onPrimary = Color(0xFF071714),
+            secondary = WordSiegeGameUi.Gold, onSecondary = Color(0xFF071714),
             background = WordSiegeGameUi.Background, onBackground = WordSiegeGameUi.Text,
             surface = WordSiegeGameUi.Surface, onSurface = WordSiegeGameUi.Text,
             surfaceVariant = WordSiegeGameUi.SurfaceSoft, onSurfaceVariant = WordSiegeGameUi.Muted,
@@ -70,7 +70,7 @@ internal fun WordSiegeScoreCard(
     Surface(
         modifier = modifier,
         color = lerp(WordSiegeGameUi.Surface, accent, .04f),
-        shape = RoundedCornerShape(9.dp),
+        shape = MainUiShape.Control,
         border = BorderStroke(1.dp, accent.copy(alpha = if (active) .5f else .18f)),
     ) {
         Column(Modifier.padding(horizontal = 7.dp, vertical = 5.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -124,7 +124,7 @@ internal fun WordSiegeCompactAction(
 ) {
     TextButton(
         onClick = onClick, enabled = enabled, modifier = modifier.height(48.dp),
-        shape = RoundedCornerShape(8.dp), contentPadding = PaddingValues(2.dp),
+        shape = MainUiShape.Control, contentPadding = PaddingValues(2.dp),
         colors = ButtonDefaults.textButtonColors(contentColor = WordSiegeGameUi.Muted),
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(2.dp)) {
@@ -142,9 +142,31 @@ internal fun WordSiegeOwnershipLegend() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
-        Text(sh("● Sen", "● You"), color = Color(0xFF3F7C53), fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold)
-        Text(sh("● Rakip", "● Rival"), color = WordSiegeGameUi.Red, fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Bold)
-        Text(sh("1 küp = 2 puan", "1 cube = 2 points"), color = WordSiegeGameUi.Muted, fontSize = 11.sp, lineHeight = 14.sp)
+        Text(
+            sh("● Sen", "● You"),
+            modifier = Modifier.weight(1f),
+            color = WordSiegeGameUi.Blue,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            fontWeight = FontWeight.Bold,
+        )
+        Text(
+            sh("1 küp = 2 puan", "1 cube = 2 points"),
+            modifier = Modifier.weight(1f),
+            color = WordSiegeGameUi.Muted,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+        )
+        Text(
+            sh("Rakip ●", "Rival ●"),
+            modifier = Modifier.weight(1f),
+            color = WordSiegeGameUi.Red,
+            fontSize = 11.sp,
+            lineHeight = 14.sp,
+            fontWeight = FontWeight.Bold,
+            textAlign = androidx.compose.ui.text.style.TextAlign.End,
+        )
     }
 }
 

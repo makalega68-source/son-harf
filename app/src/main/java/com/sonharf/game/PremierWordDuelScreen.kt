@@ -50,23 +50,23 @@ private data class PremierMoveFeedback(val accepted: Boolean, val message: Strin
 private const val PREMIER_TURN_SECONDS = 15
 private const val PREMIER_RECONNECT_SECONDS = 60
 
-/** Fixed high-legibility gameplay palette from the same calm Son Harf color family. */
+/** Yetişkin, yüksek okunabilirlikli Son Harf oyun paleti. */
 private object PremierUi {
-    val Background = Color(0xFFF1F5F2)
-    val Surface = Color(0xFFFFFDF7)
-    val Ink = Color(0xFF26382F)
-    val Muted = Color(0xFF65766D)
-    val Ocean = Color(0xFF4F725E)
-    val OceanDeep = Color(0xFF3F614E)
-    val Sky = Color(0xFF4A6E83)
-    val Ice = Color(0xFFEAF2EE)
-    val Border = Color(0xFFCCD8D1)
-    val Green = Color(0xFF4B765D)
-    val GreenSoft = Color(0xFFDDE9E1)
-    val Red = Color(0xFFA84F59)
-    val RedSoft = Color(0xFFF4E4E5)
-    val Gold = Color(0xFF8A6538)
-    val GoldSoft = Color(0xFFF1E7D3)
+    val Background = Color(0xFF071714)
+    val Surface = Color(0xFF0E2521)
+    val Ink = Color(0xFFF4F7F4)
+    val Muted = Color(0xFF9DB0A9)
+    val Ocean = Color(0xFF3FC486)
+    val OceanDeep = Color(0xFF1E6C4C)
+    val Sky = Color(0xFFC9A552)
+    val Ice = Color(0xFF14312B)
+    val Border = Color(0xFF315148)
+    val Green = Color(0xFF45C98B)
+    val GreenSoft = Color(0xFF173C31)
+    val Red = Color(0xFFC94C4C)
+    val RedSoft = Color(0xFF3A2022)
+    val Gold = Color(0xFFC9A552)
+    val GoldSoft = Color(0xFF3A321F)
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr

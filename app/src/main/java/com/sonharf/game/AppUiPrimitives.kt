@@ -43,11 +43,11 @@ internal object MainUi {
     val Purple: Color get() = SonHarfTheme.Lavender
 }
 
-/** Compact radii mirror the purchased sports-dashboard kit while remaining touch-friendly. */
+/** Bütün ekranlarda aynı simetrik köşe ve kontrol ölçüleri kullanılır. */
 internal object MainUiShape {
-    val Control = RoundedCornerShape(12.dp)
-    val Card = RoundedCornerShape(18.dp)
-    val Hero = RoundedCornerShape(24.dp)
+    val Control = RoundedCornerShape(14.dp)
+    val Card = RoundedCornerShape(20.dp)
+    val Hero = RoundedCornerShape(28.dp)
     val Pill = RoundedCornerShape(99.dp)
 }
 
@@ -108,10 +108,14 @@ internal fun MainScreenHeader(
     actionDescription: String = "",
     onAction: (() -> Unit)? = null,
 ) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+    Box(
+        modifier = Modifier.fillMaxWidth().heightIn(min = 58.dp),
+        contentAlignment = Alignment.Center,
+    ) {
         if (onBack != null) {
             Surface(
                 onClick = onBack,
+                modifier = Modifier.align(Alignment.CenterStart),
                 shape = MainUiShape.Control,
                 color = MainUi.Surface,
                 border = BorderStroke(1.dp, MainUi.Border),
@@ -124,16 +128,30 @@ internal fun MainScreenHeader(
                     modifier = Modifier.padding(14.dp).size(20.dp),
                 )
             }
-            Spacer(Modifier.width(12.dp))
         }
-        Column(Modifier.weight(1f)) {
-            Text(title, color = MainUi.Text, fontSize = 22.sp, fontWeight = FontWeight.Black)
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 64.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = title,
+                color = MainUi.Text,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
             Spacer(Modifier.height(2.dp))
-            Text(subtitle, color = MainUi.Muted, fontSize = 10.sp)
+            Text(
+                text = subtitle,
+                color = MainUi.Muted,
+                fontSize = 10.sp,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
         }
         if (actionIcon != null && onAction != null) {
             Surface(
                 onClick = onAction,
+                modifier = Modifier.align(Alignment.CenterEnd),
                 shape = MainUiShape.Control,
                 color = MainUi.SurfaceSoft,
                 border = BorderStroke(1.dp, MainUi.Border),
@@ -159,10 +177,25 @@ internal fun MainMetricCard(value: String, label: String, modifier: Modifier = M
         border = BorderStroke(1.dp, MainUi.Border),
         shadowElevation = 1.dp,
     ) {
-        Column(Modifier.padding(12.dp)) {
-            Text(value, color = MainUi.Text, fontSize = 19.sp, fontWeight = FontWeight.Black)
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = value,
+                color = MainUi.Text,
+                fontSize = 19.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
             Spacer(Modifier.height(3.dp))
-            Text(label, color = MainUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+            Text(
+                text = label,
+                color = MainUi.Muted,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
         }
     }
 }
