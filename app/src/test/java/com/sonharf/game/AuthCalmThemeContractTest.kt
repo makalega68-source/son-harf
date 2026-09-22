@@ -41,6 +41,42 @@ class AuthCalmThemeContractTest {
     }
 
     @Test
+    fun passwordRecoveryUsesProfessionalResponsiveShellWithoutWeakeningSecurityFlow() {
+        val recovery = source("PasswordRecoveryScreen.kt")
+
+        listOf(
+            "GameTheme {",
+            "color = GameColors.AppBackground",
+            "GameTopBar(",
+            "GameSurface(",
+            "GamePrimaryButton(",
+            "GameTertiaryButton(",
+            "verticalScroll(rememberScrollState())",
+            ".imePadding()",
+            "GameColors.PrimaryBlue",
+            "GameColors.PlayGreen",
+            "GameColors.Danger",
+        ).forEach { token -> assertTrue("Missing professional recovery token: $token", recovery.contains(token)) }
+
+        listOf(
+            "Color(0xFFF4F7F2)",
+            "Color(0xFFFFFDF7)",
+            "Color(0xFF26382F)",
+            "Color(0xFF65766D)",
+            "SonHarfBrandLogo(",
+        ).forEach { legacy -> assertFalse("Legacy recovery UI still present: $legacy", recovery.contains(legacy)) }
+
+        listOf(
+            "SupabaseProvider.client.auth.updateUser",
+            "RememberedCredentialVault.clear(context)",
+            "SonHarfPreferences.setRememberLogin(context, false)",
+            "SupabaseProvider.client.auth.signOut()",
+            "password.length < 6",
+            "password != confirmPassword",
+        ).forEach { token -> assertTrue("Recovery security behavior missing: $token", recovery.contains(token)) }
+    }
+
+    @Test
     fun authBehaviorContractsRemainPresentDuringVisualRetheme() {
         val auth = source("RequiredAuthGate.kt")
 
