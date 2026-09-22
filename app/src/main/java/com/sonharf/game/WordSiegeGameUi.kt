@@ -136,8 +136,8 @@ internal fun WordSiegeScoreCard(
                 }
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                WordSiegeScoreMetric(sh("Kelime", "Word"), wordPoints, accent, Modifier.weight(1f))
-                WordSiegeScoreMetric(sh("Bölge", "Territory"), territoryPoints, accent, Modifier.weight(1f))
+                WordSiegeScoreMetric(sh("Kelime Puanı", "Word Points"), wordPoints, accent, Modifier.weight(1f))
+                WordSiegeScoreMetric(sh("Bölge Puanı", "Territory Points"), territoryPoints, accent, Modifier.weight(1f))
             }
         }
     }
@@ -152,7 +152,7 @@ private fun WordSiegeScoreMetric(label: String, value: Int, accent: Color, modif
         border = BorderStroke(1.dp, accent.copy(alpha = .10f)),
     ) {
         Row(Modifier.padding(horizontal = 6.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(label, Modifier.weight(1f), color = WordSiegeGameUi.Muted, fontSize = 9.sp, lineHeight = 11.sp, maxLines = 1)
+            Text(label, Modifier.weight(1f), color = WordSiegeGameUi.Muted, fontSize = 8.sp, lineHeight = 10.sp, maxLines = 1)
             Text("$value", color = WordSiegeGameUi.Text, fontSize = 10.sp, lineHeight = 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
         }
     }
