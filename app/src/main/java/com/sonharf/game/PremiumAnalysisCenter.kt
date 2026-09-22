@@ -71,7 +71,7 @@ internal fun PremiumAnalysisCenterLauncher(modifier: Modifier = Modifier) {
 
     Button(
         onClick = { openCenter() },
-        modifier = modifier.height(50.dp),
+        modifier = modifier.height(48.dp),
         shape = GameShapes.Medium,
         colors = ButtonDefaults.buttonColors(
             containerColor = GameColors.Lavender,
