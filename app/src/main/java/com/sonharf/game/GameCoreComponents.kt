@@ -104,16 +104,23 @@ internal fun GameIconButton(
     onClick: () -> Unit,
     tint: Color = GameColors.TextPrimary,
     contentDescription: String? = null,
+    enabled: Boolean = true,
 ) {
     Surface(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier.size(48.dp),
         shape = CircleShape,
         color = GameColors.SecondarySurface,
-        border = BorderStroke(1.dp, GameColors.Border),
+        border = BorderStroke(1.dp, if (enabled) GameColors.Border else GameColors.Divider),
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Icon(icon, contentDescription ?: description, tint = tint, modifier = Modifier.size(23.dp))
+            Icon(
+                icon,
+                contentDescription ?: description,
+                tint = if (enabled) tint else GameColors.DisabledContent,
+                modifier = Modifier.size(23.dp),
+            )
         }
     }
 }
