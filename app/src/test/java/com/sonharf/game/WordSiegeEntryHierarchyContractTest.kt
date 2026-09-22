@@ -20,6 +20,8 @@ class WordSiegeEntryHierarchyContractTest {
         assertTrue(source.contains("each cube is worth 2 points"))
         assertTrue(source.contains("ADİL REKABET"))
         assertTrue(source.contains("Purchased options never provide match power"))
+        assertTrue(source.contains(".verticalScroll(rememberScrollState())"))
+        assertTrue(source.contains(".weight(1f)"))
     }
 
     private fun repoFile(path: String): File = sequenceOf(File(path), File("../$path"))
