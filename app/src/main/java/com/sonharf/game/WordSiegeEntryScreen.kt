@@ -35,7 +35,7 @@ internal fun WordSiegeEntryScreen(
 
     when (mode) {
         WordSiegeEntryMode.STANDARD -> {
-            WordSiegeExperienceScreen { mode = null }
+            ProfessionalWordSiegeExperienceScreen { mode = null }
             return
         }
         WordSiegeEntryMode.SERIES -> {
