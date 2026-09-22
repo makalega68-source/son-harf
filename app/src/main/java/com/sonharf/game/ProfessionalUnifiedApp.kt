@@ -156,7 +156,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                         onCollection = { destination = ProfessionalDestination.COLLECTION },
                     )
 
-                    ProfessionalDestination.COMPETE -> CompetitionHubScreen(
+                    ProfessionalDestination.COMPETE -> ProfessionalCompetitionHubScreen(
                         onBack = { destination = ProfessionalDestination.HOME },
                     )
 
