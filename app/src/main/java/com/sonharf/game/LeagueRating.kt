@@ -9,8 +9,8 @@ data class RatingLeagueProgress(
     val pointsToNext: Int,
 ) {
     // Compatibility aliases used by the professional profile progress surface.
-    val nextLeague: String get() = nextLeagueName
-    val nextThreshold: Int? get() = nextAt
+    val nextLeague: String = nextLeagueName
+    val nextThreshold: Int? = nextAt
 }
 
 fun ratingLeagueProgress(rating: Int): RatingLeagueProgress {
