@@ -64,7 +64,7 @@ class SeasonCenterLiveRpcContractTest {
         val pass = repoFile("app/src/main/java/com/sonharf/game/SeasonPassPurchaseCard.kt").readText()
 
         assertTrue(shop.contains("initialTab.coerceIn(0, 3)"))
-        assertTrue(shop.contains("sh(\"Sezon\", \"Season\")"))
+        assertTrue(shop.contains("gameText(\"Sezon\", \"Season\")"))
         assertTrue(shop.contains("if (tab == 1) SeasonCenterContent()"))
         assertTrue(screen.contains("SeasonPassPurchaseCard"))
         assertTrue(screen.contains("heightIn(min = 48.dp)"))
