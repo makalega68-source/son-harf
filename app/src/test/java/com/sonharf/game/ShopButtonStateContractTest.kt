@@ -16,8 +16,8 @@ class ShopButtonStateContractTest {
         assertTrue(source.contains("busy = item.id"))
         assertTrue(source.contains("busy = null"))
         assertTrue(source.contains("enabled = !busy && !equipped && !lockedByPro"))
-        assertTrue(source.contains("equipped -> sh(\"AKTİF\", \"ACTIVE\")"))
-        assertTrue(source.contains("owned -> sh(\"SAHİPSİN\", \"OWNED\")"))
+        assertTrue(source.contains("equipped -> gameText(\"AKTİF\", \"ACTIVE\")"))
+        assertTrue(source.contains("owned -> gameText(\"SAHİPSİN\", \"OWNED\")"))
     }
 
     private fun projectFile(path: String): File {
