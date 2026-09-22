@@ -61,8 +61,8 @@ internal fun WordSiegeEntryScreen(
         GameTopBar(
             title = sh("Kelime Kuşatması", "Word Siege"),
             subtitle = sh(
-                "Oyun türünü seç ve arenaya gir",
-                "Choose a battle type and enter the arena",
+                "Ana rekabet modunu veya seri formatı seç",
+                "Choose the main competitive mode or Series format",
             ),
             onBack = onExit,
         )
@@ -75,13 +75,15 @@ internal fun WordSiegeEntryScreen(
         ) {
             WordSiegeEntryCard(
                 iconLocked = false,
+                badge = sh("ANA REKABET MODU", "MAIN COMPETITIVE MODE"),
+                featured = true,
                 title = sh("STANDART KUŞATMA", "STANDARD SIEGE"),
                 subtitle = sh(
-                    "Klasik Kelime Kuşatması • normal hamle süresi • rakip veya bot",
-                    "Classic Word Siege • standard turns • rival or practice bot",
+                    "Klasik Kelime Kuşatması • çevrimiçi 1v1 veya alıştırma botu",
+                    "Classic Word Siege • online 1v1 or practice bot",
                 ),
-                action = sh("OYNA", "PLAY"),
-                accent = GameColors.PrimaryBlue,
+                action = sh("KUŞATMAYA GİR", "ENTER SIEGE"),
+                accent = GameColors.PlayGreen,
                 onClick = { mode = WordSiegeEntryMode.STANDARD },
             )
 
@@ -89,6 +91,8 @@ internal fun WordSiegeEntryScreen(
             val seriesOwned = access?.seriesGameAccess == true
             WordSiegeEntryCard(
                 iconLocked = access != null && !seriesOwned,
+                badge = sh("SERİ FORMAT", "SERIES FORMAT"),
+                featured = false,
                 title = sh("SERİ / HIZLI OYUN", "SERIES / QUICK GAME"),
                 subtitle = when {
                     entitlementError -> sh(
@@ -127,6 +131,26 @@ internal fun WordSiegeEntryScreen(
             )
 
             GameSurface(
+                borderColor = GameColors.PrimaryBlue.copy(alpha = .28f),
+            ) {
+                Text(
+                    sh("PUAN MANTIĞI", "SCORING"),
+                    color = GameColors.PrimaryBlue,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Black,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    sh(
+                        "Kelime puanın kalıcıdır. Bölge puanı sahip olduğun küplere bağlıdır; her küp 2 puandır.",
+                        "Word points stay earned. Territory points depend on cubes you currently own; each cube is worth 2 points.",
+                    ),
+                    color = GameColors.TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+
+            GameSurface(
                 borderColor = GameColors.PlayGreen.copy(alpha = .30f),
             ) {
                 Text(
@@ -152,6 +176,8 @@ internal fun WordSiegeEntryScreen(
 @Composable
 private fun WordSiegeEntryCard(
     iconLocked: Boolean,
+    badge: String,
+    featured: Boolean,
     title: String,
     subtitle: String,
     action: String,
@@ -161,8 +187,23 @@ private fun WordSiegeEntryCard(
 ) {
     GameSurface(
         elevated = true,
-        borderColor = accent.copy(alpha = .32f),
+        borderColor = accent.copy(alpha = if (featured) .62f else .32f),
     ) {
+        Surface(
+            shape = GameShapes.Pill,
+            color = accent.copy(alpha = if (featured) .18f else .11f),
+        ) {
+            Text(
+                badge,
+                Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                color = accent,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Black,
+            )
+        }
+
+        Spacer(Modifier.height(10.dp))
+
         Row(verticalAlignment = Alignment.CenterVertically) {
             Surface(
                 shape = GameShapes.Medium,
@@ -178,7 +219,7 @@ private fun WordSiegeEntryCard(
                     },
                     contentDescription = null,
                     tint = accent,
-                    modifier = Modifier.padding(11.dp).size(24.dp),
+                    modifier = Modifier.padding(11.dp).size(if (featured) 27.dp else 24.dp),
                 )
             }
             Spacer(Modifier.width(12.dp))
@@ -186,7 +227,7 @@ private fun WordSiegeEntryCard(
                 Text(
                     title,
                     color = GameColors.TextPrimary,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = if (featured) MaterialTheme.typography.titleLarge else MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Black,
                 )
                 Spacer(Modifier.height(4.dp))
@@ -229,7 +270,7 @@ private fun WordSiegeEntryCard(
         } else {
             Button(
                 onClick = onClick,
-                modifier = Modifier.fillMaxWidth().height(48.dp),
+                modifier = Modifier.fillMaxWidth().height(if (featured) 52.dp else 48.dp),
                 shape = GameShapes.Medium,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = accent,
