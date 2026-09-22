@@ -2,6 +2,8 @@ package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Bolt
@@ -69,7 +71,9 @@ internal fun WordSiegeEntryScreen(
 
         Column(
             modifier = Modifier
+                .weight(1f)
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = GameSpacing.ScreenHorizontal, vertical = 12.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
@@ -169,6 +173,8 @@ internal fun WordSiegeEntryScreen(
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
+
+            Spacer(Modifier.height(4.dp))
         }
     }
 }
