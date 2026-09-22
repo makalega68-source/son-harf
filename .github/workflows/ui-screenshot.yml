@@ -7,7 +7,9 @@ on:
       - 'claude/kelime-tahti-home-redesign-7ojb7d'
     paths:
       - 'app/src/main/java/com/sonharf/game/**'
+      - 'app/src/main/res/**'
       - 'app/src/debug/**'
+      - 'app/src/test/**'
       - '.github/workflows/ui-screenshot.yml'
 
 permissions:
@@ -33,8 +35,8 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           validate-wrappers: false
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --stacktrace --warning-mode all
+      - name: Unit tests and debug APK
+        run: ./gradlew :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
       - name: Enable KVM access when available
         run: |
           if [ -e /dev/kvm ]; then
