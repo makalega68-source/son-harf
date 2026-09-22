@@ -127,6 +127,17 @@ private data class WordSiegeMessageWrite(
     val body: String,
 )
 
+/**
+ * Short-lived launch preference used by the active Compose entry screen.
+ * It is intentionally not persisted: each fresh visit defaults to the standard 12-hour pool.
+ */
+object WordSiegeLaunchConfig {
+    var classicTurnHours: Int = 12
+        set(value) {
+            field = if (value == 24) 24 else 12
+        }
+}
+
 suspend fun OnlineGameBackend.getWordSiegeGames(): List<WordSiegeGameDto> =
     SupabaseProvider.client.from("word_siege_games")
         .select { filter { eq("game_mode", "classic") } }
@@ -162,10 +173,21 @@ suspend fun OnlineGameBackend.refreshWordSiegeGame(gameId: String): WordSiegeGam
     ).decodeSingle()
 
 suspend fun OnlineGameBackend.findOrCreateWordSiegeGame(language: String): WordSiegeGameDto =
-    SupabaseProvider.client.postgrest.rpc(
-        "find_or_create_word_siege_game_v1",
-        buildJsonObject { put("p_language", if (language.lowercase() == "en") "en" else "tr") },
+    findOrCreateWordSiegeGame(language, WordSiegeLaunchConfig.classicTurnHours)
+
+suspend fun OnlineGameBackend.findOrCreateWordSiegeGame(
+    language: String,
+    turnDurationHours: Int,
+): WordSiegeGameDto {
+    require(turnDurationHours == 12 || turnDurationHours == 24) { "word_siege_invalid_turn_duration" }
+    return SupabaseProvider.client.postgrest.rpc(
+        "find_or_create_word_siege_game_v2",
+        buildJsonObject {
+            put("p_language", if (language.lowercase() == "en") "en" else "tr")
+            put("p_turn_duration_hours", turnDurationHours)
+        },
     ).decodeSingle()
+}
 
 suspend fun OnlineGameBackend.findOrCreateWordSiegeSeriesGame(
     language: String,
