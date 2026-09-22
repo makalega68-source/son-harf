@@ -50,7 +50,7 @@ fun CompleteProfileScreen(
 
         Box(Modifier.weight(1f)) {
             when (tab) {
-                0 -> ProfileExperienceV2Screen()
+                0 -> ProfessionalProfileIdentityScreen()
                 1 -> FinalProfileScreen()
                 else -> DetailedPreferencesSettings()
             }
