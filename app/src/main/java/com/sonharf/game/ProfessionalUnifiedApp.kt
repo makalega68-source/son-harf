@@ -18,6 +18,7 @@ private enum class ProfessionalDestination {
     COMPETE,
     RETENTION,
     PROFILE,
+    PROFILE_PROGRESS,
     COLLECTION,
     LAST_LETTER,
     SIEGE,
@@ -90,6 +91,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
         destination = when (destination) {
             ProfessionalDestination.SETTINGS,
             ProfessionalDestination.PROFILE_DETAILS,
+            ProfessionalDestination.PROFILE_PROGRESS,
             ProfessionalDestination.COLLECTION,
             ProfessionalDestination.PRO -> ProfessionalDestination.PROFILE
             ProfessionalDestination.PRIVATE_ROOM -> ProfessionalDestination.PRO
@@ -188,10 +190,16 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                     ProfessionalDestination.PROFILE -> ProfessionalProfileScreen(
                         backend = backend,
                         onEdit = { destination = ProfessionalDestination.PROFILE_DETAILS },
+                        onProgress = { destination = ProfessionalDestination.PROFILE_PROGRESS },
                         onPro = { destination = ProfessionalDestination.PRO },
                         onCollection = { destination = ProfessionalDestination.COLLECTION },
                         onSettings = { destination = ProfessionalDestination.SETTINGS },
                         onSocial = { destination = ProfessionalDestination.SOCIAL },
+                    )
+
+                    ProfessionalDestination.PROFILE_PROGRESS -> ProfessionalProfileProgressScreen(
+                        backend = backend,
+                        onBack = { destination = ProfessionalDestination.PROFILE },
                     )
 
                     ProfessionalDestination.COLLECTION -> ProfessionalCollectionScreen(backend) {
