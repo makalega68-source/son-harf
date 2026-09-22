@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.EmojiEvents
 import androidx.compose.material.icons.rounded.Leaderboard
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -23,6 +24,7 @@ import com.sonharf.game.data.*
 internal fun ProfessionalLeaderboardScreen(
     backend: OnlineGameBackend,
     onBack: () -> Unit,
+    onCompetition: (() -> Unit)? = null,
 ) {
     var season by remember { mutableStateOf<CompetitiveSeasonDto?>(null) }
     var rows by remember { mutableStateOf<List<SeasonLeaderboardRowDto>>(emptyList()) }
@@ -121,6 +123,17 @@ internal fun ProfessionalLeaderboardScreen(
                             LeaderboardMetric(Modifier.weight(1f), current.matches.toString(), gameText("Maç", "Matches"), GameColors.Lavender)
                         }
                     }
+                }
+            }
+
+            if (onCompetition != null) {
+                item {
+                    GameSecondaryButton(
+                        text = gameText("HAFTALIK KUPA VE RAKİPLER", "WEEKLY CUP & RIVALS"),
+                        onClick = onCompetition,
+                        modifier = Modifier.fillMaxWidth(),
+                        icon = Icons.Rounded.SportsEsports,
+                    )
                 }
             }
 
