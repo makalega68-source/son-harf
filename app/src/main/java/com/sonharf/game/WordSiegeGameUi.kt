@@ -21,34 +21,22 @@ import androidx.compose.ui.unit.sp
 
 /** Match-only presentation. Never changes the selected cosmetic theme or game state. */
 internal object WordSiegeGameUi {
-    val Background = Color(0xFFF8FAF4)
-    val Surface = Color(0xFFFFFEF8)
-    val SurfaceSoft = Color(0xFFEEF5EF)
-    val Text = Color(0xFF213C31)
-    val Muted = Color(0xFF52675C)
-    val Border = Color(0xFFD1DDD5)
-    val Blue = Color(0xFF557A87)
-    val Red = Color(0xFF9B4D4A)
-    val Gold = Color(0xFFAB8131)
-    val DisabledBackground = Color(0xFFE4EAE5)
-    val DisabledContent = Color(0xFF667B6F)
+    val Background = GameColors.AppBackground
+    val Surface = GameColors.PrimarySurface
+    val SurfaceSoft = GameColors.SecondarySurface
+    val Text = GameColors.TextPrimary
+    val Muted = GameColors.TextSecondary
+    val Border = GameColors.Border
+    val Blue = GameColors.TacticalTurquoise
+    val Red = GameColors.Danger
+    val Gold = GameColors.RewardAmber
+    val DisabledBackground = GameColors.Disabled
+    val DisabledContent = GameColors.DisabledContent
 }
 
 @Composable
 internal fun WordSiegeGameTheme(content: @Composable () -> Unit) {
-    MaterialTheme(
-        colorScheme = lightColorScheme(
-            primary = Color(0xFF527867), onPrimary = Color.White,
-            secondary = WordSiegeGameUi.Blue, onSecondary = Color.White,
-            background = WordSiegeGameUi.Background, onBackground = WordSiegeGameUi.Text,
-            surface = WordSiegeGameUi.Surface, onSurface = WordSiegeGameUi.Text,
-            surfaceVariant = WordSiegeGameUi.SurfaceSoft, onSurfaceVariant = WordSiegeGameUi.Muted,
-            outline = WordSiegeGameUi.Border, error = WordSiegeGameUi.Red,
-        ),
-        typography = MaterialTheme.typography,
-        shapes = MaterialTheme.shapes,
-        content = content,
-    )
+    GameTheme(content)
 }
 
 @Composable
@@ -73,9 +61,9 @@ internal fun WordSiegeScoreCard(
 
     Surface(
         modifier = modifier,
-        color = lerp(WordSiegeGameUi.Surface, accent, .04f),
+        color = lerp(WordSiegeGameUi.Surface, accent, .06f),
         shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(1.dp, accent.copy(alpha = if (active) .5f else .18f)),
+        border = BorderStroke(1.dp, accent.copy(alpha = if (active) .58f else .22f)),
     ) {
         Column(
             Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
@@ -212,7 +200,7 @@ internal fun WordSiegeOwnershipLegend() {
     ) {
         Text(
             sh("● Sen", "● You"),
-            color = Color(0xFF3F7C53),
+            color = Color(0xFF64C987),
             fontSize = 11.sp,
             lineHeight = 14.sp,
             fontWeight = FontWeight.Bold,
