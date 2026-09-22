@@ -14,6 +14,7 @@ import kotlinx.coroutines.delay
 
 private enum class ProfessionalDestination {
     HOME,
+    LEADERBOARD,
     COMPETE,
     RETENTION,
     PROFILE,
@@ -92,6 +93,7 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
             ProfessionalDestination.PRIVATE_ROOM -> ProfessionalDestination.PRO
             ProfessionalDestination.SOCIAL,
             ProfessionalDestination.SHOP,
+            ProfessionalDestination.LEADERBOARD,
             ProfessionalDestination.COMPETE,
             ProfessionalDestination.RETENTION -> ProfessionalDestination.HOME
             ProfessionalDestination.ACCOUNT -> ProfessionalDestination.SETTINGS
@@ -153,14 +155,20 @@ internal fun ProfessionalUnifiedApp(onSignedOut: () -> Unit) {
                         onLetterPath = { openGame(ProfessionalDestination.LETTER_PATH, letterPathLanguage) },
                         onProfile = { destination = ProfessionalDestination.PROFILE },
                         onSocial = { destination = ProfessionalDestination.SOCIAL },
-                        onLeague = { destination = ProfessionalDestination.COMPETE },
+                        onLeague = { destination = ProfessionalDestination.LEADERBOARD },
                         onPro = { destination = ProfessionalDestination.PRO },
                         onCollection = { destination = ProfessionalDestination.COLLECTION },
                         onRetention = { destination = ProfessionalDestination.RETENTION },
                     )
 
-                    ProfessionalDestination.COMPETE -> ProfessionalCompetitionHubScreen(
+                    ProfessionalDestination.LEADERBOARD -> ProfessionalLeaderboardScreen(
+                        backend = backend,
                         onBack = { destination = ProfessionalDestination.HOME },
+                        onCompetition = { destination = ProfessionalDestination.COMPETE },
+                    )
+
+                    ProfessionalDestination.COMPETE -> ProfessionalCompetitionHubScreen(
+                        onBack = { destination = ProfessionalDestination.LEADERBOARD },
                     )
 
                     ProfessionalDestination.RETENTION -> ProfessionalRetentionScreen(
