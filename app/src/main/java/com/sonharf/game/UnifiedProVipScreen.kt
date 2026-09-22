@@ -5,9 +5,8 @@ import android.net.Uri
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.MeetingRoom
 import androidx.compose.material.icons.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Refresh
@@ -21,21 +20,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.ProfileDto
 import com.sonharf.game.data.VipEntitlementsDto
 import com.sonharf.game.data.getVipEntitlements
 import kotlinx.coroutines.launch
-
-private val UProBg = Color(0xFF020617)
-private val UProSurface = Color(0xFF0F172A)
-private val UProBorder = Color(0xFF334155)
-private val UProText = Color(0xFFF8FAFC)
-private val UProMuted = Color(0xFF94A3B8)
-private val UProBlue = Color(0xFF3B82F6)
-private val UProGold = Color(0xFFF59E0B)
-private val UProGreen = Color(0xFF10B981)
 
 @Composable
 internal fun UnifiedProVipScreen(
@@ -61,7 +50,10 @@ internal fun UnifiedProVipScreen(
             .onSuccess { entitlements = it }
             .onFailure {
                 entitlementError = true
-                notice = sh("PRO hakları şu anda doğrulanamadı. Satın alımın silinmedi; yeniden deneyebilirsin.", "PRO benefits could not be verified. Your purchase was not removed; you can retry.")
+                notice = sh(
+                    "PRO hakları şu anda doğrulanamadı. Satın alımın silinmedi; yeniden deneyebilirsin.",
+                    "PRO benefits could not be verified. Your purchase was not removed; you can retry.",
+                )
             }
         loading = false
     }
@@ -70,145 +62,293 @@ internal fun UnifiedProVipScreen(
     val e = entitlements
     val active = e?.isPro == true || profile?.isVip == true
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        item {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onBack) { Icon(Icons.Rounded.ArrowBack, null, tint = UProText) }
-                Column(Modifier.weight(1f)) {
-                    Text("KELİME KUŞATMASI PRO", color = UProText, fontSize = 23.sp, fontWeight = FontWeight.Black)
-                    Text(sh("Premier üyelik ve fair-play ayrıcalıkları", "Premier membership and fair-play benefits"), color = UProBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                }
-                Icon(Icons.Rounded.WorkspacePremium, null, tint = UProGold, modifier = Modifier.size(30.dp))
-            }
-        }
+    Column(Modifier.fillMaxSize()) {
+        GameTopBar(
+            title = "KELİME KUŞATMASI PRO",
+            subtitle = sh(
+                "Premium görünüm, konfor ve sosyal ayrıcalıklar",
+                "Premium appearance, comfort and social benefits",
+            ),
+            onBack = onBack,
+        )
 
-        if (loading) item { LinearProgressIndicator(Modifier.fillMaxWidth(), color = UProBlue, trackColor = UProBorder) }
-
-        item {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(24.dp),
-                color = UProSurface,
-                border = BorderStroke(1.dp, if (active) UProGold else UProBorder),
-            ) {
-                Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                    Text(if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("FREE PLAN", "FREE PLAN"), color = if (active) UProGold else UProMuted, fontWeight = FontWeight.Black)
-                    Text(profile?.displayName ?: sh("Oyuncu", "Player"), color = UProText, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                    Text(
-                        if (active) sh("Reklamsız deneyim + PRO profil + özel oda + maç-sonu analiz", "Ad-free experience + PRO profile + private rooms + post-match analysis")
-                        else sh("PRO ile sosyal, profil ve analiz özelliklerini aç.", "Unlock social, profile, and analysis features with PRO."),
-                        color = UProMuted,
-                        fontSize = 10.sp,
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(
+                horizontal = GameSpacing.ScreenHorizontal,
+                vertical = 12.dp,
+            ),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            if (loading) {
+                item {
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth().height(5.dp),
+                        color = GameColors.PrimaryBlue,
+                        trackColor = GameColors.SecondarySurface,
                     )
                 }
             }
-        }
 
-        item {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                ProAccessCard("🚫", sh("REKLAMSIZ", "AD-FREE"), active && e?.rewardedAdBypass == true, UProBlue, Modifier.weight(1f))
-                ProAccessCard("📊", sh("ANALİZ", "ANALYSIS"), active && e?.postMatchAnalysis == true, UProGreen, Modifier.weight(1f))
-                ProAccessCard("♛", sh("ÖZEL ODA", "PRIVATE ROOM"), active && e?.privateRooms == true, UProGold, Modifier.weight(1f))
-            }
-        }
-
-        if (active) {
             item {
-                Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
-                    Column(Modifier.fillMaxWidth().padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(sh("PRO ARAÇLARI", "PRO TOOLS"), color = UProText, fontWeight = FontWeight.Black)
+                GameSurface(
+                    elevated = true,
+                    borderColor = if (active) {
+                        GameColors.RewardAmber.copy(alpha = .58f)
+                    } else {
+                        GameColors.PrimaryBlue.copy(alpha = .32f)
+                    },
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = if (active) {
+                                GameColors.RewardAmber.copy(alpha = .15f)
+                            } else {
+                                GameColors.PrimaryBlue.copy(alpha = .12f)
+                            },
+                        ) {
+                            Icon(
+                                Icons.Rounded.WorkspacePremium,
+                                contentDescription = null,
+                                tint = if (active) GameColors.RewardAmber else GameColors.PrimaryBlue,
+                                modifier = Modifier.padding(12.dp).size(30.dp),
+                            )
+                        }
+                        Column(Modifier.weight(1f)) {
+                            Text(
+                                if (active) sh("PRO AKTİF", "PRO ACTIVE") else sh("ÜCRETSİZ PLAN", "FREE PLAN"),
+                                color = if (active) GameColors.RewardAmber else GameColors.TextTertiary,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Black,
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                profile?.displayName ?: sh("Oyuncu", "Player"),
+                                color = GameColors.TextPrimary,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Black,
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                if (active) {
+                                    sh(
+                                        "Reklamsız deneyim, PRO profil, özel oda ve maç sonu analiz hakların açık.",
+                                        "Ad-free experience, PRO profile, private rooms and post-match analysis are unlocked.",
+                                    )
+                                } else {
+                                    sh(
+                                        "PRO; oyun gücü vermeden sosyal, profil ve analiz özelliklerini genişletir.",
+                                        "PRO expands social, profile and analysis features without gameplay power.",
+                                    )
+                                },
+                                color = GameColors.TextSecondary,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                        }
+                    }
+                }
+            }
+
+            item {
+                GameSectionHeader(sh("PRO Ayrıcalıkları", "PRO Benefits"))
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    ProAccessCard(
+                        label = sh("Reklamsız", "Ad-free"),
+                        enabled = active && e?.rewardedAdBypass == true,
+                        accent = GameColors.PrimaryBlue,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ProAccessCard(
+                        label = sh("Analiz", "Analysis"),
+                        enabled = active && e?.postMatchAnalysis == true,
+                        accent = GameColors.PlayGreen,
+                        modifier = Modifier.weight(1f),
+                    )
+                    ProAccessCard(
+                        label = sh("Özel Oda", "Private Room"),
+                        enabled = active && e?.privateRooms == true,
+                        accent = GameColors.RewardAmber,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            if (active) {
+                item {
+                    GameSurface(
+                        borderColor = GameColors.Lavender.copy(alpha = .34f),
+                        elevated = true,
+                    ) {
                         Text(
-                            sh("Satın aldığın özellikleri buradan doğrudan kullanabilirsin.", "Use your purchased benefits directly from here."),
-                            color = UProMuted,
-                            fontSize = 10.sp,
+                            sh("PRO ARAÇLARI", "PRO TOOLS"),
+                            color = GameColors.TextPrimary,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Black,
                         )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            sh(
+                                "Satın aldığın özellikleri doğrudan kullan.",
+                                "Use your purchased benefits directly.",
+                            ),
+                            color = GameColors.TextSecondary,
+                            style = MaterialTheme.typography.bodySmall,
+                        )
+                        Spacer(Modifier.height(12.dp))
+
                         if (e?.postMatchAnalysis == true) {
                             PremiumAnalysisCenterLauncher(Modifier.fillMaxWidth())
+                            Spacer(Modifier.height(8.dp))
                         }
+
                         if (e?.privateRooms == true) {
                             Button(
                                 onClick = onPrivateRoom,
-                                modifier = Modifier.fillMaxWidth().height(48.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = UProGold, contentColor = UProBg),
+                                modifier = Modifier.fillMaxWidth().height(50.dp),
+                                shape = GameShapes.Medium,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = GameColors.RewardAmber,
+                                    contentColor = GameColors.AppBackground,
+                                ),
                             ) {
-                                Icon(Icons.Rounded.MeetingRoom, null)
+                                Icon(Icons.Rounded.MeetingRoom, contentDescription = null)
                                 Spacer(Modifier.width(8.dp))
-                                Text(sh("ÖZEL ODA AÇ / KATIL", "CREATE / JOIN PRIVATE ROOM"), fontWeight = FontWeight.Black)
+                                Text(
+                                    sh("ÖZEL ODA AÇ / KATIL", "CREATE / JOIN PRIVATE ROOM"),
+                                    fontWeight = FontWeight.Black,
+                                )
                             }
                         }
+
                         if (entitlementError || e == null) {
+                            Spacer(Modifier.height(8.dp))
                             OutlinedButton(
                                 onClick = { scope.launch { reload() } },
                                 modifier = Modifier.fillMaxWidth(),
-                                border = BorderStroke(1.dp, UProBlue),
+                                shape = GameShapes.Medium,
+                                border = BorderStroke(1.dp, GameColors.PrimaryBlue),
                             ) {
-                                Icon(Icons.Rounded.Refresh, null, tint = UProBlue)
+                                Icon(
+                                    Icons.Rounded.Refresh,
+                                    contentDescription = null,
+                                    tint = GameColors.PrimaryBlue,
+                                )
                                 Spacer(Modifier.width(7.dp))
-                                Text(sh("PRO HAKLARINI YENİLE", "REFRESH PRO BENEFITS"), color = UProBlue, fontWeight = FontWeight.Black)
+                                Text(
+                                    sh("PRO HAKLARINI YENİLE", "REFRESH PRO BENEFITS"),
+                                    color = GameColors.PrimaryBlue,
+                                    fontWeight = FontWeight.Black,
+                                )
                             }
                         }
                     }
                 }
             }
-        }
 
-        item {
-            Surface(shape = RoundedCornerShape(20.dp), color = UProSurface, border = BorderStroke(1.dp, UProBorder)) {
-                Column(Modifier.padding(15.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    ProLine("🚫", sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
-                    ProLine("🏷️", sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
-                    ProLine("📊", sh("Tamamlanmış maçlar için gelişmiş analiz", "Advanced analysis for completed matches"))
-                    ProLine("♛", sh("Son Harf davet kodlu özel oda", "Last Letter invite-code private room"))
-                    ProLine("👥", sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))
-                    Surface(shape = RoundedCornerShape(12.dp), color = UProGreen.copy(alpha = .10f), border = BorderStroke(1.dp, UProGreen.copy(alpha = .35f))) {
+            item {
+                GameSurface(borderColor = GameColors.Border) {
+                    Text(
+                        sh("ÜYELİĞE DAHİL", "INCLUDED WITH MEMBERSHIP"),
+                        color = GameColors.TextPrimary,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Spacer(Modifier.height(10.dp))
+                    ProLine(sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
+                    ProLine(sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
+                    ProLine(sh("Tamamlanmış maçlar için gelişmiş analiz", "Advanced analysis for completed matches"))
+                    ProLine(sh("Son Harf davet kodlu özel oda", "Last Letter invite-code private room"))
+                    ProLine(sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))
+                    Spacer(Modifier.height(8.dp))
+                    Surface(
+                        shape = GameShapes.Medium,
+                        color = GameColors.PlayGreen.copy(alpha = .09f),
+                        border = BorderStroke(1.dp, GameColors.PlayGreen.copy(alpha = .30f)),
+                    ) {
                         Text(
                             sh(
-                                "ADİL REKABET: PRO, dereceli maçlarda skor, hedef harf, kelime ipucu, ek süre veya rating avantajı vermez.",
+                                "ADİL REKABET: PRO; dereceli maçlarda skor, hedef harf, kelime ipucu, ek süre veya rating avantajı vermez.",
                                 "FAIR PLAY: PRO gives no score, target-letter, word-hint, extra-time, or rating advantage in ranked matches.",
                             ),
-                            Modifier.fillMaxWidth().padding(10.dp), color = UProGreen, fontSize = 9.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold,
+                            modifier = Modifier.fillMaxWidth().padding(11.dp),
+                            color = GameColors.PlayGreen,
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.Bold,
                         )
                     }
                 }
             }
-        }
 
-        item {
-            if (active) {
-                OutlinedButton(
-                    onClick = {
-                        val url = "https://play.google.com/store/account/subscriptions?package=${BuildConfig.APPLICATION_ID}"
-                        runCatching { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(52.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, UProBlue),
-                ) {
-                    Icon(Icons.Rounded.OpenInNew, null, tint = UProBlue)
-                    Spacer(Modifier.width(7.dp))
-                    Text(sh("GOOGLE PLAY'DE YÖNET", "MANAGE ON GOOGLE PLAY"), color = UProBlue, fontWeight = FontWeight.Black)
-                }
-            } else {
-                Button(
-                    onClick = { showPurchase = true },
-                    modifier = Modifier.fillMaxWidth().height(56.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = UProBlue),
-                ) { Text(sh("PRO PLANLARINI GÖR", "VIEW PRO PLANS"), fontWeight = FontWeight.Black) }
-            }
-        }
-
-        notice?.let { message ->
             item {
-                Surface(shape = RoundedCornerShape(14.dp), color = UProBlue.copy(alpha = .12f)) {
-                    Text(message, Modifier.fillMaxWidth().padding(11.dp), color = UProText, fontSize = 10.sp, textAlign = TextAlign.Center, fontWeight = FontWeight.Bold)
+                if (active) {
+                    OutlinedButton(
+                        onClick = {
+                            val url = "https://play.google.com/store/account/subscriptions?package=${BuildConfig.APPLICATION_ID}"
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth().height(52.dp),
+                        shape = GameShapes.Medium,
+                        border = BorderStroke(1.dp, GameColors.PrimaryBlue),
+                    ) {
+                        Icon(
+                            Icons.Rounded.OpenInNew,
+                            contentDescription = null,
+                            tint = GameColors.PrimaryBlue,
+                        )
+                        Spacer(Modifier.width(7.dp))
+                        Text(
+                            sh("GOOGLE PLAY'DE YÖNET", "MANAGE ON GOOGLE PLAY"),
+                            color = GameColors.PrimaryBlue,
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
+                } else {
+                    Button(
+                        onClick = { showPurchase = true },
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = GameShapes.Medium,
+                        colors = ButtonDefaults.buttonColors(containerColor = GameColors.PrimaryBlue),
+                    ) {
+                        Text(
+                            sh("PRO PLANLARINI GÖR", "VIEW PRO PLANS"),
+                            fontWeight = FontWeight.Black,
+                        )
+                    }
                 }
             }
+
+            notice?.let { message ->
+                item {
+                    Surface(
+                        shape = GameShapes.Medium,
+                        color = GameColors.PrimaryBlue.copy(alpha = .10f),
+                        border = BorderStroke(1.dp, GameColors.PrimaryBlue.copy(alpha = .22f)),
+                    ) {
+                        Text(
+                            message,
+                            modifier = Modifier.fillMaxWidth().padding(11.dp),
+                            color = GameColors.TextPrimary,
+                            style = MaterialTheme.typography.bodySmall,
+                            textAlign = TextAlign.Center,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+
+            item { Spacer(Modifier.height(8.dp)) }
         }
     }
 
@@ -224,21 +364,70 @@ internal fun UnifiedProVipScreen(
 }
 
 @Composable
-private fun ProAccessCard(icon: String, label: String, enabled: Boolean, accent: Color, modifier: Modifier) {
-    Surface(modifier = modifier, shape = RoundedCornerShape(16.dp), color = UProSurface, border = BorderStroke(1.dp, accent.copy(alpha = .45f))) {
-        Column(Modifier.padding(11.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(icon, color = accent, fontSize = 20.sp, fontWeight = FontWeight.Black)
-            Text(if (enabled) "✓" else "—", color = if (enabled) UProGreen else UProMuted, fontSize = 18.sp, fontWeight = FontWeight.Black)
-            Text(label, color = UProMuted, fontSize = 7.sp, fontWeight = FontWeight.Black, maxLines = 1)
+private fun ProAccessCard(
+    label: String,
+    enabled: Boolean,
+    accent: Color,
+    modifier: Modifier,
+) {
+    GameSurface(
+        modifier = modifier,
+        borderColor = accent.copy(alpha = .34f),
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Surface(
+                shape = CircleShape,
+                color = accent.copy(alpha = .12f),
+            ) {
+                Icon(
+                    Icons.Rounded.WorkspacePremium,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.padding(8.dp).size(20.dp),
+                )
+            }
+            Spacer(Modifier.height(7.dp))
+            Text(
+                if (enabled) sh("AKTİF", "ACTIVE") else sh("KAPALI", "LOCKED"),
+                color = if (enabled) GameColors.PlayGreen else GameColors.TextTertiary,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Black,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                label,
+                color = GameColors.TextSecondary,
+                style = MaterialTheme.typography.labelSmall,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+            )
         }
     }
 }
 
 @Composable
-private fun ProLine(icon: String, text: String) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(icon, fontSize = 16.sp)
-        Spacer(Modifier.width(9.dp))
-        Text(text, color = UProText, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+private fun ProLine(text: String) {
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(9.dp),
+    ) {
+        Surface(
+            shape = CircleShape,
+            color = GameColors.Lavender.copy(alpha = .12f),
+        ) {
+            Icon(
+                Icons.Rounded.WorkspacePremium,
+                contentDescription = null,
+                tint = GameColors.Lavender,
+                modifier = Modifier.padding(6.dp).size(16.dp),
+            )
+        }
+        Text(
+            text,
+            color = GameColors.TextPrimary,
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
     }
 }
