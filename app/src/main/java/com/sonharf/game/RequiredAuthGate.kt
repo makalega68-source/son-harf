@@ -49,35 +49,29 @@ private data class AuthIdentityProfile(
     @SerialName("identity_locked") val identityLocked: Boolean = false,
 )
 
-/**
- * Pre-authentication palette.
- *
- * Authentication is intentionally kept on a fixed calm light palette because no
- * authenticated profile theme is authoritative yet. Each visual layer has its
- * own semantic token so the login flow cannot drift back to the legacy blue/lilac UI.
- */
+/** Professional pre-authentication palette aligned with the production game shell. */
 private object AuthUi {
-    val Background = Color(0xFFF4F7F2)
-    val BackgroundTop = Color(0xFFF8FAF7)
-    val Surface = Color(0xFFFFFDF7)
-    val SurfaceSoft = Color(0xFFEAF2EE)
-    val SurfaceRaised = Color(0xFFEFF4F6)
-    val Modal = Color(0xFFFAF7F0)
-    val Primary = Color(0xFF4F725E)
-    val PrimarySoft = Color(0xFFDDE9E1)
-    val SoftBlue = Color(0xFF4A6E83)
-    val Turquoise = Color(0xFF477B78)
-    val Lavender = Color(0xFF7B6B95)
-    val Sand = Color(0xFFD7C49F)
-    val Text = Color(0xFF26382F)
-    val Muted = Color(0xFF65766D)
-    val Border = Color(0xFFCCD8D1)
-    val BorderSoft = Color(0xFFDDE5E0)
-    val Success = Color(0xFF4B765D)
-    val SuccessSoft = Color(0xFFE4F0E8)
-    val Warning = Color(0xFF8A6538)
-    val WarningSoft = Color(0xFFF5EEE1)
-    val Error = Color(0xFFA84F59)
+    val Background = GameColors.AppBackground
+    val BackgroundTop = Color(0xFF0C1420)
+    val Surface = GameColors.PrimarySurface
+    val SurfaceSoft = GameColors.SecondarySurface
+    val SurfaceRaised = Color(0xFF213246)
+    val Modal = GameColors.ElevatedBackground
+    val Primary = GameColors.PrimaryBlue
+    val PrimarySoft = GameColors.PrimaryBlue.copy(alpha = .18f)
+    val SoftBlue = Color(0xFF77AFFF)
+    val Turquoise = GameColors.TacticalTurquoise
+    val Lavender = GameColors.Lavender
+    val Sand = GameColors.PrestigeGold
+    val Text = GameColors.TextPrimary
+    val Muted = GameColors.TextSecondary
+    val Border = GameColors.Border
+    val BorderSoft = GameColors.Divider
+    val Success = GameColors.PlayGreen
+    val SuccessSoft = Color(0xFF173A2A)
+    val Warning = GameColors.RewardAmber
+    val WarningSoft = Color(0xFF3B2C17)
+    val Error = GameColors.Danger
 }
 
 private suspend fun currentIdentityProfile(): AuthIdentityProfile? {
@@ -195,7 +189,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         }
     }
 
-    val authColors = lightColorScheme(
+    val authColors = darkColorScheme(
         primary = AuthUi.Primary,
         onPrimary = Color.White,
         primaryContainer = AuthUi.PrimarySoft,
@@ -203,7 +197,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
         secondary = AuthUi.Turquoise,
         onSecondary = Color.White,
         secondaryContainer = AuthUi.SurfaceSoft,
-        onSecondaryContainer = AuthUi.Primary,
+        onSecondaryContainer = AuthUi.Text,
         tertiary = AuthUi.Lavender,
         onTertiary = Color.White,
         background = AuthUi.Background,
@@ -227,7 +221,6 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                 .imePadding(),
         ) {
             SonHarfLeafBackdrop(Modifier.matchParentSize())
-            // Generated directly in Compose so no stale bitmap can survive an app update.
             Box(
                 Modifier.matchParentSize().background(
                     Brush.verticalGradient(
@@ -247,7 +240,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     .background(
                         Brush.radialGradient(
                             listOf(
-                                AuthUi.Primary.copy(alpha = .13f),
+                                AuthUi.Primary.copy(alpha = .16f),
                                 Color.Transparent,
                             )
                         ),
@@ -261,7 +254,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     .background(
                         Brush.radialGradient(
                             listOf(
-                                AuthUi.Lavender.copy(alpha = .09f),
+                                AuthUi.Lavender.copy(alpha = .10f),
                                 Color.Transparent,
                             )
                         ),
@@ -277,8 +270,8 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     .background(
                         Brush.horizontalGradient(
                             listOf(
-                                AuthUi.SoftBlue.copy(alpha = .045f),
-                                AuthUi.Lavender.copy(alpha = .035f),
+                                AuthUi.SoftBlue.copy(alpha = .055f),
+                                AuthUi.Lavender.copy(alpha = .045f),
                                 Color.Transparent,
                             )
                         ),
@@ -307,7 +300,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                     Spacer(Modifier.height(7.dp))
                     Text(
                         sh("Kelime oyunu • taktik alan savaşı • sosyal rekabet", "Word game • tactical territory battle • social competition"),
-                        color = AuthUi.Primary,
+                        color = AuthUi.Turquoise,
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         textAlign = TextAlign.Center,
@@ -336,7 +329,7 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                         border = BorderStroke(1.dp, AuthUi.Border),
                         colors = ButtonDefaults.outlinedButtonColors(
                             containerColor = AuthUi.Surface.copy(alpha = .94f),
-                            contentColor = AuthUi.SoftBlue,
+                            contentColor = AuthUi.Turquoise,
                         ),
                     ) {
                         Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -540,9 +533,6 @@ fun RequiredAuthGate(onAuthenticated: () -> Unit) {
                                             if (register) {
                                                 val targetEmail = email.trim()
 
-                                                // First try the credentials. This prevents Supabase's
-                                                // repeated-signup privacy response from being mistaken
-                                                // for a newly sent verification email.
                                                 val existingLogin = runCatching {
                                                     SupabaseProvider.client.auth.signOut()
                                                     SupabaseProvider.client.auth.signInWith(Email) {
