@@ -24,10 +24,9 @@ internal fun FirstRunLanguageBackdrop(modifier: Modifier = Modifier) {
         drawRect(
             brush = Brush.verticalGradient(
                 colorStops = arrayOf(
-                    0.00f to Color(0xFFFFFEFB),
-                    0.34f to Color(0xFFF9F8F6),
-                    0.72f to Color(0xFFF4F7F4),
-                    1.00f to Color(0xFFEEF5F2),
+                    0.00f to Color(0xFF071714),
+                    0.50f to Color(0xFF0B201C),
+                    1.00f to Color(0xFF071714),
                 ),
             ),
         )
@@ -35,7 +34,7 @@ internal fun FirstRunLanguageBackdrop(modifier: Modifier = Modifier) {
         // Very soft colour atmosphere is kept outside the interaction column.
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0x287A9AEE), Color.Transparent),
+                colors = listOf(Color(0x243FC486), Color.Transparent),
                 center = Offset(size.width * 1.02f, size.height * .16f),
                 radius = size.minDimension * .62f,
             ),
@@ -44,7 +43,7 @@ internal fun FirstRunLanguageBackdrop(modifier: Modifier = Modifier) {
         )
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0x248A9A86), Color.Transparent),
+                colors = listOf(Color(0x243FC486), Color.Transparent),
                 center = Offset(size.width * -.04f, size.height * .80f),
                 radius = size.minDimension * .68f,
             ),
@@ -53,7 +52,7 @@ internal fun FirstRunLanguageBackdrop(modifier: Modifier = Modifier) {
         )
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(Color(0x16B5A2FF), Color.Transparent),
+                colors = listOf(Color(0x20C9A552), Color.Transparent),
                 center = Offset(size.width * .96f, size.height * .86f),
                 radius = size.minDimension * .46f,
             ),
@@ -70,11 +69,11 @@ internal fun FirstRunLanguageBackdrop(modifier: Modifier = Modifier) {
             val alpha: Float,
         )
 
-        val sage = Color(0xFF8A9A86)
-        val blue = Color(0xFF7A9AEE)
-        val turquoise = Color(0xFF40BFB3)
-        val warm = Color(0xFFE07A5F)
-        val lavender = Color(0xFFB5A2FF)
+        val sage = Color(0xFF3FC486)
+        val blue = Color(0xFFC9A552)
+        val turquoise = Color(0xFF55CC91)
+        val warm = Color(0xFFC9A552)
+        val lavender = Color(0xFF9DB0A9)
 
         // Edge-only tactical tiles: small, quiet and deliberately absent from the central UI zone.
         listOf(
@@ -105,7 +104,7 @@ internal fun FirstRunLanguageBackdrop(modifier: Modifier = Modifier) {
         ).forEachIndexed { index, (x, y) ->
             val side = size.minDimension * if (index % 2 == 0) .018f else .014f
             drawRoundRect(
-                color = Color(0xFF5C6F84).copy(alpha = if (index % 2 == 0) .10f else .07f),
+                color = Color(0xFFC9A552).copy(alpha = if (index % 2 == 0) .10f else .07f),
                 topLeft = Offset(size.width * x - side / 2f, size.height * y - side / 2f),
                 size = Size(side, side),
                 cornerRadius = CornerRadius(side * .28f, side * .28f),
@@ -133,7 +132,7 @@ private fun DrawScope.drawBackdropTile(
         )
         val inset = side * .19f
         drawRoundRect(
-            color = Color.White.copy(alpha = alpha * .55f),
+            color = Color(0xFFF4F7F4).copy(alpha = alpha * .28f),
             topLeft = Offset(center.x - side / 2f + inset, center.y - side / 2f + inset),
             size = Size(side - inset * 2f, side - inset * 2f),
             cornerRadius = CornerRadius(side * .12f, side * .12f),

@@ -25,15 +25,15 @@ internal val SonHarfBg: Color get() = SonHarfTheme.Background
 internal val SonHarfSurface: Color get() = SonHarfTheme.Surface
 internal val SonHarfSurface2: Color get() = SonHarfTheme.SurfaceSecondary
 internal val SonHarfPurple: Color get() = SonHarfTheme.Purple
-internal val SonHarfCyan: Color get() = if (SonHarfCosmetics.darkArenaTheme) Color(0xFFFFD36A) else Color(0xFF1687F8)
+internal val SonHarfCyan: Color get() = SonHarfTheme.Turquoise
 internal val SonHarfBlue: Color get() = SonHarfTheme.PrimaryBlue
-internal val SonHarfGold = Color(0xFFF6C453)
-internal val SonHarfGreen = Color(0xFF35C878)
+internal val SonHarfGold: Color get() = SonHarfTheme.PremiumGold
+internal val SonHarfGreen: Color get() = SonHarfTheme.Success
 internal val SonHarfText: Color get() = SonHarfTheme.TextPrimary
 internal val SonHarfMuted: Color get() = SonHarfTheme.TextSecondary
-internal val SonHarfPink = Color(0xFFFF5F57)
+internal val SonHarfPink: Color get() = SonHarfTheme.Error
 
-private val SonHarfTypography = Typography(
+internal val SonHarfTypography = Typography(
     bodyLarge = TextStyle(fontSize = 18.sp, lineHeight = 25.sp),
     bodyMedium = TextStyle(fontSize = 16.sp, lineHeight = 23.sp),
     bodySmall = TextStyle(fontSize = 14.sp, lineHeight = 20.sp),
@@ -43,6 +43,14 @@ private val SonHarfTypography = Typography(
     titleLarge = TextStyle(fontSize = 24.sp, lineHeight = 31.sp, fontWeight = FontWeight.Bold),
     titleMedium = TextStyle(fontSize = 20.sp, lineHeight = 27.sp, fontWeight = FontWeight.Bold),
     titleSmall = TextStyle(fontSize = 17.sp, lineHeight = 23.sp, fontWeight = FontWeight.SemiBold),
+)
+
+internal val SonHarfShapes = Shapes(
+    extraSmall = MainUiShape.Control,
+    small = MainUiShape.Control,
+    medium = MainUiShape.Card,
+    large = MainUiShape.Hero,
+    extraLarge = MainUiShape.Hero,
 )
 
 enum class AppScreen { HOME, GAME, SHOP, PROFILE, MORE, LEADERBOARD }
@@ -153,7 +161,7 @@ class MainActivity : ComponentActivity() {
         val clearUnrememberedSession = SupabaseProvider.configured && applySessionPolicy && !rememberLogin && !authDeepLink
 
         setContent {
-            val appColors = if (SonHarfCosmetics.darkArenaTheme) {
+            val appColors = if (SonHarfTheme.IsDark) {
                 darkColorScheme(
                     primary = SonHarfBlue,
                     secondary = SonHarfCyan,
@@ -161,9 +169,9 @@ class MainActivity : ComponentActivity() {
                     background = SonHarfBg,
                     surface = SonHarfSurface,
                     surfaceVariant = SonHarfSurface2,
-                    onPrimary = Color(0xFF201600),
-                    onSecondary = Color(0xFF201600),
-                    onTertiary = Color(0xFF07140D),
+                    onPrimary = SonHarfTheme.OnPrimary,
+                    onSecondary = SonHarfTheme.OnSecondary,
+                    onTertiary = SonHarfTheme.OnTertiary,
                     onBackground = SonHarfText,
                     onSurface = SonHarfText,
                     onSurfaceVariant = SonHarfText,
@@ -189,6 +197,7 @@ class MainActivity : ComponentActivity() {
             MaterialTheme(
                 colorScheme = appColors,
                 typography = SonHarfTypography,
+                shapes = SonHarfShapes,
             ) {
                 AppStartupGate(
                     clearUnrememberedSession = clearUnrememberedSession,

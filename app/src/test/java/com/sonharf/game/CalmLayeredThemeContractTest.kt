@@ -32,13 +32,13 @@ class CalmLayeredThemeContractTest {
             "val TextSecondary: Color get()",
         ).forEach { token -> assertTrue("Missing theme layer: $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("Color(0xFF0D0F12)"))
-        assertTrue(theme.contains("Color(0xFF15171C)"))
-        assertTrue(theme.contains("Color(0xFFEFFF19)"))
-        assertTrue(theme.contains("Color(0xFFFF3B30)"))
-        assertTrue(theme.contains("Color(0xFFFF245C)"))
-        assertTrue(theme.contains("Color(0xFFF7F8FA)"))
-        assertTrue(theme.contains("Color(0xFF9AA0AA)"))
+        assertTrue(theme.contains("Color(0xFF071714)"))
+        assertTrue(theme.contains("Color(0xFF0E2521)"))
+        assertTrue(theme.contains("Color(0xFF3FC486)"))
+        assertTrue(theme.contains("Color(0xFFC94C4C)"))
+        assertTrue(theme.contains("Color(0xFFC9A552)"))
+        assertTrue(theme.contains("Color(0xFFF4F7F4)"))
+        assertTrue(theme.contains("Color(0xFF9DB0A9)"))
         assertTrue(theme.contains("val IsDark: Boolean get() = true"))
     }
 
@@ -53,9 +53,9 @@ class CalmLayeredThemeContractTest {
         assertTrue(primitives.contains("internal object MainUiShape"))
         assertFalse(primitives.contains("internal val PortalBlue = Color(0xFF1769E0)"))
 
-        assertTrue(styles.contains("<item name=\"android:windowBackground\">#0D0F12</item>"))
-        assertTrue(styles.contains("<item name=\"android:statusBarColor\">#0D0F12</item>"))
-        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#111318</item>"))
+        assertTrue(styles.contains("<item name=\"android:windowBackground\">#071714</item>"))
+        assertTrue(styles.contains("<item name=\"android:statusBarColor\">#071714</item>"))
+        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#091A17</item>"))
         assertTrue(styles.contains("<item name=\"android:windowLightStatusBar\">false</item>"))
         assertTrue(styles.contains("<item name=\"android:windowLightNavigationBar\">false</item>"))
     }

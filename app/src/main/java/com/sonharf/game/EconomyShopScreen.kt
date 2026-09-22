@@ -41,15 +41,11 @@ fun EconomyShopScreen(
         return
     }
     Column(Modifier.fillMaxSize().background(SonHarfBg)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (onBack != null) IconButton(onClick = onBack) {
-                Icon(Icons.Rounded.ArrowBack, sh("Geri", "Back"), tint = SonHarfText)
-            }
-            Column(Modifier.padding(horizontal = 8.dp)) {
-                Text(sh("Mağaza", "Shop"), color = SonHarfText, fontSize = 22.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold)
-                Text(sh("Kelime Kuşatması · Tarzını seç", "Kelime Kuşatması · Make it yours"), color = SonHarfMuted, fontSize = 11.sp, lineHeight = 16.sp)
-            }
-        }
+        MainScreenHeader(
+            title = sh("MAĞAZA", "SHOP"),
+            subtitle = sh("Kelime Tahtı · Tarzını seç", "Kelime Tahtı · Make it yours"),
+            onBack = onBack,
+        )
         ScrollableTabRow(selectedTabIndex = tab, edgePadding = 12.dp, containerColor = Color.Transparent, divider = {}) {
             listOf(sh("Öne Çıkan", "Featured"), sh("Sezon", "Season"), sh("Görünümler", "Styles"), "PRO")
                 .forEachIndexed { index, label ->

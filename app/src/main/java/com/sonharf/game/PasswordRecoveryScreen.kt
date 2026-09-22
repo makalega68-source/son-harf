@@ -48,15 +48,15 @@ internal fun PasswordRecoveryScreen(onFinished: () -> Unit) {
 
     BackHandler(enabled = true) { leaveRecovery() }
 
-    Surface(Modifier.fillMaxSize(), color = Color(0xFFF4F7F2)) {
+    Surface(Modifier.fillMaxSize(), color = SonHarfTheme.Background) {
         Box(
             modifier = Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding(),
             contentAlignment = Alignment.Center,
         ) {
             Card(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 22.dp),
-                shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFDF7)),
+                shape = MainUiShape.Hero,
+                colors = CardDefaults.cardColors(containerColor = SonHarfTheme.Surface),
             ) {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(20.dp),
@@ -68,7 +68,7 @@ internal fun PasswordRecoveryScreen(onFinished: () -> Unit) {
                         sh("Yeni şifre belirle", "Set a new password"),
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF26382F),
+                        color = SonHarfTheme.TextPrimary,
                     )
                     Text(
                         if (updated) {
@@ -82,7 +82,7 @@ internal fun PasswordRecoveryScreen(onFinished: () -> Unit) {
                                 "Your reset link was verified. Choose a new password for your account.",
                             )
                         },
-                        color = Color(0xFF65766D),
+                        color = SonHarfTheme.TextSecondary,
                         fontSize = 13.sp,
                         textAlign = TextAlign.Center,
                     )
