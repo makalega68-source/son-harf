@@ -44,6 +44,9 @@ import kotlinx.coroutines.launch
 private val PanSiegeTile = Color(0xFFF4F7F5)
 private val PanSiegeTileBorder = Color(0xFF8EA697)
 private val PanSiegeBoardSurface = Color(0xFFE8ECE8)
+private val PanSiegeFrameNavy = Color(0xFF102C4C)
+private val PanSiegeFrameEdge = Color(0xFF9EC7D8)
+private val PanSiegeFrameInner = Color(0xFFD7E7ED)
 private val PanSiegeNeutral = Color(0xFFFAF7EF)
 private val PanSiegeMine = Color(0xFFA8D5B5)
 private val PanSiegeRival = Color(0xFFE4AEAA)
@@ -447,14 +450,18 @@ private fun PanSiegeBoard(
 
     Surface(
         modifier = modifier,
-        color = PanSiegeBoardSurface,
-        shape = RoundedCornerShape(14.dp),
-        border = BorderStroke(1.dp, WordSiegeGameUi.Border.copy(alpha = .75f)),
+        color = PanSiegeFrameNavy,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(2.dp, PanSiegeFrameEdge),
+        shadowElevation = 8.dp,
     ) {
         Box(
             Modifier
                 .fillMaxSize()
-                .clip(RoundedCornerShape(14.dp))
+                .padding(5.dp)
+                .clip(RoundedCornerShape(15.dp))
+                .background(PanSiegeBoardSurface)
+                .border(1.dp, PanSiegeFrameInner, RoundedCornerShape(15.dp))
                 .clipToBounds()
                 .onGloballyPositioned { viewport = it.size }
                 .pointerInput(gameId, viewportMode, viewport, boardPx, closeScale) {
@@ -521,7 +528,7 @@ private fun PanSiegeBoard(
                 modifier = Modifier.align(Alignment.TopEnd).padding(7.dp).size(36.dp),
                 shape = CircleShape,
                 containerColor = Color.White.copy(alpha = .94f),
-                contentColor = WordSiegeGameUi.Blue,
+                contentColor = PanSiegeFrameNavy,
             ) {
                 Icon(Icons.Rounded.CenterFocusStrong, sh("Merkeze dön", "Center board"), Modifier.size(19.dp))
             }
@@ -531,7 +538,7 @@ private fun PanSiegeBoard(
                 modifier = Modifier.align(Alignment.BottomEnd).padding(7.dp).size(42.dp),
                 shape = CircleShape,
                 containerColor = Color.White.copy(alpha = .96f),
-                contentColor = WordSiegeGameUi.Muted,
+                contentColor = PanSiegeFrameNavy,
             ) {
                 Icon(Icons.Rounded.Chat, sh("Oyun içi sohbet", "In-game chat"), Modifier.size(20.dp))
             }
