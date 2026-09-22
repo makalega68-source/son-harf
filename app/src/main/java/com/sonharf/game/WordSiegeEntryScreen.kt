@@ -2,44 +2,18 @@ package com.sonharf.game
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.OnlineGameBackend
 import com.sonharf.game.data.VipEntitlementsDto
 import com.sonharf.game.data.getVipEntitlements
@@ -83,33 +57,22 @@ internal fun WordSiegeEntryScreen(
             .onFailure { entitlementError = true }
     }
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.TopCenter,
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton(onClick = onExit) {
-                    Icon(Icons.Rounded.ArrowBack, contentDescription = sh("Geri", "Back"))
-                }
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        sh("KELİME KUŞATMASI", "WORD SIEGE"),
-                        color = SonHarfTheme.TextPrimary,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                    Text(
-                        sh("Oyun türünü seç ve arenaya gir.", "Choose a battle type and enter the arena."),
-                        color = SonHarfTheme.TextSecondary,
-                        fontSize = 11.sp,
-                    )
-                }
-            }
+    Column(Modifier.fillMaxSize()) {
+        GameTopBar(
+            title = sh("Kelime Kuşatması", "Word Siege"),
+            subtitle = sh(
+                "Oyun türünü seç ve arenaya gir",
+                "Choose a battle type and enter the arena",
+            ),
+            onBack = onExit,
+        )
 
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = GameSpacing.ScreenHorizontal, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             WordSiegeEntryCard(
                 iconLocked = false,
                 title = sh("STANDART KUŞATMA", "STANDARD SIEGE"),
@@ -118,6 +81,7 @@ internal fun WordSiegeEntryScreen(
                     "Classic Word Siege • standard turns • rival or practice bot",
                 ),
                 action = sh("OYNA", "PLAY"),
+                accent = GameColors.PrimaryBlue,
                 onClick = { mode = WordSiegeEntryMode.STANDARD },
             )
 
@@ -131,7 +95,10 @@ internal fun WordSiegeEntryScreen(
                         "Satın alma erişimi şu anda doğrulanamadı. Yeniden deneyebilirsin.",
                         "Purchase access could not be verified. You can retry.",
                     )
-                    access == null -> sh("Satın alma durumu kontrol ediliyor…", "Checking purchase access…")
+                    access == null -> sh(
+                        "Satın alma durumu kontrol ediliyor…",
+                        "Checking purchase access…",
+                    )
                     seriesOwned -> sh(
                         "3 / 5 / 10 dakikalık hamleler • otomatik pas • 3 kaçırılan turda mağlubiyet",
                         "3 / 5 / 10 minute turns • auto-pass • 3 missed turns lose",
@@ -148,6 +115,7 @@ internal fun WordSiegeEntryScreen(
                     else -> sh("MAĞAZAYA GİT", "OPEN STORE")
                 },
                 loading = access == null && !entitlementError,
+                accent = GameColors.TacticalTurquoise,
                 onClick = {
                     when {
                         entitlementError -> retry++
@@ -157,6 +125,26 @@ internal fun WordSiegeEntryScreen(
                     }
                 },
             )
+
+            GameSurface(
+                borderColor = GameColors.PlayGreen.copy(alpha = .30f),
+            ) {
+                Text(
+                    sh("ADİL REKABET", "FAIR PLAY"),
+                    color = GameColors.PlayGreen,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Black,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    sh(
+                        "Satın alınan seçenekler maç gücü, skor veya rating avantajı sağlamaz.",
+                        "Purchased options never provide match power, score, or rating advantages.",
+                    ),
+                    color = GameColors.TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
         }
     }
 }
@@ -168,64 +156,91 @@ private fun WordSiegeEntryCard(
     subtitle: String,
     action: String,
     loading: Boolean = false,
+    accent: androidx.compose.ui.graphics.Color,
     onClick: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        color = WordSiegeGameUi.SurfaceSoft,
-        border = BorderStroke(1.dp, WordSiegeGameUi.Border),
-        shadowElevation = 2.dp,
+    GameSurface(
+        elevated = true,
+        borderColor = accent.copy(alpha = .32f),
     ) {
-        Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(13.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = WordSiegeGameUi.Blue.copy(alpha = .12f),
-                ) {
-                    Icon(
-                        if (iconLocked) Icons.Rounded.Lock else if (title.contains("SERİ") || title.contains("SERIES")) Icons.Rounded.Bolt else Icons.Rounded.GridView,
-                        contentDescription = null,
-                        tint = WordSiegeGameUi.Blue,
-                        modifier = Modifier.padding(11.dp).size(24.dp),
-                    )
-                }
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(title, color = WordSiegeGameUi.Text, fontSize = 14.sp, fontWeight = FontWeight.Black)
-                    Spacer(Modifier.height(4.dp))
-                    Text(subtitle, color = WordSiegeGameUi.Muted, fontSize = 10.sp, lineHeight = 14.sp)
-                }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Surface(
+                shape = GameShapes.Medium,
+                color = accent.copy(alpha = .12f),
+            ) {
+                Icon(
+                    if (iconLocked) {
+                        Icons.Rounded.Lock
+                    } else if (title.contains("SERİ") || title.contains("SERIES")) {
+                        Icons.Rounded.Bolt
+                    } else {
+                        Icons.Rounded.GridView
+                    },
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.padding(11.dp).size(24.dp),
+                )
             }
-            if (loading) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(action, color = WordSiegeGameUi.Muted, fontSize = 9.sp, fontWeight = FontWeight.Bold)
-                }
-            } else if (iconLocked) {
-                OutlinedButton(
-                    onClick = onClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                ) {
-                    Icon(Icons.Rounded.Lock, null)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    title,
+                    color = GameColors.TextPrimary,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Black,
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    subtitle,
+                    color = GameColors.TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
+                )
+            }
+        }
+
+        Spacer(Modifier.height(13.dp))
+
+        if (loading) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(18.dp),
+                    strokeWidth = 2.dp,
+                    color = accent,
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    action,
+                    color = GameColors.TextSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        } else if (iconLocked) {
+            OutlinedButton(
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth(),
+                shape = GameShapes.Medium,
+                border = BorderStroke(1.dp, accent.copy(alpha = .55f)),
+            ) {
+                Icon(Icons.Rounded.Lock, contentDescription = null, tint = accent)
+                Spacer(Modifier.width(7.dp))
+                Text(action, color = accent, fontWeight = FontWeight.Black)
+            }
+        } else {
+            Button(
+                onClick = onClick,
+                modifier = Modifier.fillMaxWidth().height(48.dp),
+                shape = GameShapes.Medium,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = accent,
+                    contentColor = GameColors.TextPrimary,
+                ),
+            ) {
+                if (action.contains("YENİLE") || action.contains("RETRY")) {
+                    Icon(Icons.Rounded.Refresh, contentDescription = null)
                     Spacer(Modifier.width(7.dp))
-                    Text(action, fontWeight = FontWeight.Black)
                 }
-            } else {
-                Button(
-                    onClick = onClick,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = WordSiegeGameUi.Blue),
-                ) {
-                    if (action.contains("YENİLE") || action.contains("RETRY")) {
-                        Icon(Icons.Rounded.Refresh, null)
-                        Spacer(Modifier.width(7.dp))
-                    }
-                    Text(action, fontWeight = FontWeight.Black)
-                }
+                Text(action, fontWeight = FontWeight.Black)
             }
         }
     }
