@@ -32,14 +32,14 @@ class UnifiedThemeSourceContractTest {
         assertTrue(theme.contains("Color(0xFF14B8B0)"))
         assertTrue(theme.contains("Color(0xFF8B6CF0)"))
 
-        // Premier remains a deliberately fixed high-legibility gameplay surface. The application
-        // shell and meta screens use Monster; competitive text entry retains its proven palette.
-        assertTrue(premier.contains("val Background = Color(0xFFEAF6F8)"))
-        assertTrue(premier.contains("val Surface = Color(0xFFFFFFFF)"))
-        assertTrue(premier.contains("val Ocean = Color(0xFF14B8B0)"))
-        assertTrue(premier.contains("val Sky = Color(0xFF8B6CF0)"))
-        assertTrue(premier.contains("Brush.verticalGradient(listOf(PremierUi.Surface, PremierUi.Background))"))
-        assertFalse(premier.contains("val Ocean = Color(0xFF2563EB)"))
+        // The approved meta shell stays light; Son Harf intentionally switches to a high-contrast
+        // competitive night arena while retaining readable cyan, red and gold action states.
+        assertTrue(premier.contains("val Background = Color(0xFF06101D)"))
+        assertTrue(premier.contains("val Surface = Color(0xFF0D1B2A)"))
+        assertTrue(premier.contains("val Ocean = Color(0xFF00D6C9)"))
+        assertTrue(premier.contains("val Sky = Color(0xFF8B5CF6)"))
+        assertTrue(premier.contains("Brush.verticalGradient("))
+        assertTrue(premier.contains("Color(0xFF050B14)"))
         assertFalse(premier.contains("MageCatCompanion("))
         assertFalse(unified.contains("MonsterUi"))
         assertFalse(unified.contains("MonsterExperienceApp"))

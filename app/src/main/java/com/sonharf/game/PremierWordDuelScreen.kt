@@ -52,21 +52,21 @@ private const val PREMIER_RECONNECT_SECONDS = 60
 
 /** Yetişkin, yüksek okunabilirlikli Son Harf oyun paleti. */
 private object PremierUi {
-    val Background = Color(0xFFEAF6F8)
-    val Surface = Color(0xFFFFFFFF)
-    val Ink = Color(0xFF0B1B33)
-    val Muted = Color(0xFF3B4B66)
-    val Ocean = Color(0xFF14B8B0)
-    val OceanDeep = Color(0xFF1D4FB0)
-    val Sky = Color(0xFF8B6CF0)
-    val Ice = Color(0xFFE0F3F5)
-    val Border = Color(0xFFC3D6E4)
-    val Green = Color(0xFF12A89F)
-    val GreenSoft = Color(0xFFD2F2F0)
-    val Red = Color(0xFFE8622C)
-    val RedSoft = Color(0xFFFFE3D6)
-    val Gold = Color(0xFF8B6CF0)
-    val GoldSoft = Color(0xFFFFEBDA)
+    val Background = Color(0xFF06101D)
+    val Surface = Color(0xFF0D1B2A)
+    val Ink = Color(0xFFF4F7FB)
+    val Muted = Color(0xFF9AAFC4)
+    val Ocean = Color(0xFF00D6C9)
+    val OceanDeep = Color(0xFF2F6BFF)
+    val Sky = Color(0xFF8B5CF6)
+    val Ice = Color(0xFF13273A)
+    val Border = Color(0xFF27445E)
+    val Green = Color(0xFF24D6A3)
+    val GreenSoft = Color(0xFF0D3A32)
+    val Red = Color(0xFFFF5C5C)
+    val RedSoft = Color(0xFF3A1A23)
+    val Gold = Color(0xFFFFB64A)
+    val GoldSoft = Color(0xFF3A2A13)
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr
@@ -909,7 +909,16 @@ private fun PremierArena(
         val keyHeight = if (veryCompact) 38.dp else if (compact) 41.dp else if (tall) 50.dp else 46.dp
         val primaryGap = if (veryCompact) 3.dp else if (compact) 5.dp else 9.dp
 
-        Column(Modifier.fillMaxSize().statusBarsPadding()) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(Color(0xFF050B14), Color(0xFF0A1930), Color(0xFF07111F))
+                    )
+                )
+                .statusBarsPadding()
+        ) {
             PremierArenaHeader(language, room, me, opponent, rivalName, myScore, rivalScore, myRounds, rivalRounds, myStreak, rivalStreak, turnSeconds, unreadChat, onForfeit, onQuickChat)
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 Spacer(Modifier.height(primaryGap))
@@ -917,6 +926,10 @@ private fun PremierArena(
                     PremierReconnectBanner(language, reconnectingMe, turnSeconds)
                 } else {
                     PremierTurnBadge(language, myTurn, room.status)
+                }
+                if (!veryCompact) {
+                    Spacer(Modifier.height(4.dp))
+                    PremierPressureStrip(language, myScore, rivalScore, myStreak, rivalStreak, turnSeconds)
                 }
                 Spacer(Modifier.height(primaryGap))
                 PremierTargetCard(language, required, room.gameMode, room.roundNo, targetSize)
@@ -1019,6 +1032,13 @@ private fun PremierArenaHeader(
     val totalScore = myScore + rivalScore
     val myFraction = if (totalScore <= 0) 0.5f else myScore.toFloat() / totalScore.toFloat()
     val danger = seconds in 1..5
+    val urgencyTransition = rememberInfiniteTransition(label = "duel-urgency")
+    val urgencyPulse by urgencyTransition.animateFloat(
+        initialValue = 0.94f,
+        targetValue = 1.06f,
+        animationSpec = infiniteRepeatable(tween(360), RepeatMode.Reverse),
+        label = "duel-urgency-pulse",
+    )
     val timerStart = if (danger) PremierUi.Red else Color(0xFF2A63D0)
     val timerEnd = if (danger) Color(0xFFB8430F) else Color(0xFF0C2250)
 
@@ -1076,7 +1096,12 @@ private fun PremierArenaHeader(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor)
                 Surface(shape = CircleShape, color = Color.Transparent) {
-                    Box(Modifier.size(60.dp).background(Brush.radialGradient(listOf(timerStart, if (danger) PremierUi.Red else PremierUi.OceanDeep, timerEnd)), CircleShape), contentAlignment = Alignment.Center) {
+                    Box(
+                        Modifier
+                            .size(if (danger) (68f * urgencyPulse).dp else 68.dp)
+                            .background(Brush.radialGradient(listOf(timerStart, if (danger) PremierUi.Red else PremierUi.OceanDeep, timerEnd)), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(seconds.toString().padStart(2, '0'), color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)
                             Text("SEC", color = Color.White.copy(alpha = .75f), fontSize = 6.sp, fontWeight = FontWeight.Black)
@@ -1153,19 +1178,25 @@ private fun PremierBotAvatar(size: Dp, accent: Color) {
 @Composable
 private fun PremierTurnBadge(language: String, myTurn: Boolean, status: String) {
     val active = status in setOf("playing", "final", "sudden_death")
-    val accent = if (myTurn) PremierUi.Green else PremierUi.Gold
-    Surface(shape = RoundedCornerShape(99.dp), color = if (myTurn) PremierUi.GreenSoft else PremierUi.GoldSoft, border = BorderStroke(1.dp, accent.copy(alpha = .25f))) {
+    val accent = if (myTurn) PremierUi.Ocean else PremierUi.Gold
+    val label = when {
+        !active -> pt(language, "ARENA SENKRONİZE EDİLİYOR", "SYNCING ARENA")
+        myTurn -> pt(language, "⚡ HAMLE SENDE • SALDIR", "⚡ YOUR MOVE • STRIKE")
+        else -> pt(language, "◉ RAKİP HAMLESİ • HAZIR OL", "◉ RIVAL MOVE • STAY READY")
+    }
+    Surface(
+        shape = RoundedCornerShape(10.dp),
+        color = accent.copy(alpha = .12f),
+        border = BorderStroke(1.dp, accent.copy(alpha = .55f)),
+        shadowElevation = if (myTurn) 5.dp else 0.dp,
+    ) {
         Text(
-            when {
-                !active -> pt(language, "MAÇ SENKRONİZE EDİLİYOR", "SYNCING MATCH")
-                myTurn -> pt(language, "⚡ SENİN SIRAN", "⚡ YOUR TURN")
-                else -> pt(language, "⏳ RAKİP DÜŞÜNÜYOR", "⏳ RIVAL IS THINKING")
-            },
-            Modifier.padding(horizontal = 16.dp, vertical = 7.dp),
+            label,
+            Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
             color = accent,
             fontSize = 10.sp,
             fontWeight = FontWeight.Black,
-            letterSpacing = .4.sp,
+            letterSpacing = .7.sp,
         )
     }
 }
@@ -1201,27 +1232,120 @@ private fun PremierReconnectBanner(language: String, reconnectingMe: Boolean, se
 }
 
 @Composable
+private fun PremierPressureStrip(
+    language: String,
+    myScore: Int,
+    rivalScore: Int,
+    myStreak: Int,
+    rivalStreak: Int,
+    seconds: Int,
+) {
+    val lead = myScore - rivalScore
+    val danger = seconds in 1..5
+    val accent = when {
+        danger -> PremierUi.Red
+        lead > 0 -> PremierUi.Green
+        lead < 0 -> PremierUi.Gold
+        else -> PremierUi.Ocean
+    }
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = Color(0xFF081624),
+        border = BorderStroke(1.dp, accent.copy(alpha = .42f)),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                when {
+                    danger -> pt(language, "KRİTİK 5 SANİYE", "CRITICAL 5 SECONDS")
+                    lead > 0 -> pt(language, "BASKI SENDE +$lead", "YOUR PRESSURE +$lead")
+                    lead < 0 -> pt(language, "GERİ DÖNÜŞ FIRSATI ${-lead}", "COMEBACK WINDOW ${-lead}")
+                    else -> pt(language, "DENGE NOKTASI", "DEAD EVEN")
+                },
+                color = accent,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = .5.sp,
+            )
+            Text(
+                pt(language, "SERİ $myStreak : $rivalStreak", "STREAK $myStreak : $rivalStreak"),
+                color = PremierUi.Muted,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Bold,
+            )
+        }
+    }
+}
+
+@Composable
 private fun PremierTargetCard(language: String, required: String, gameMode: String, round: Int, size: Dp) {
-    val transition = rememberInfiniteTransition(label = "letter")
-    val glow by transition.animateFloat(.25f, .55f, infiniteRepeatable(tween(1050), RepeatMode.Reverse), label = "glow")
+    val transition = rememberInfiniteTransition(label = "target-reactor")
+    val glow by transition.animateFloat(.72f, 1f, infiniteRepeatable(tween(620), RepeatMode.Reverse), label = "reactor-glow")
     val targetBadge = when {
-        required == "★" -> "—"
+        required == "★" -> "FREE"
         gameMode == "expert" -> "x${round.coerceIn(1, 3)}"
         required.length == 1 -> "${com.sonharf.game.data.DictionaryEngine.getLetterPoint(required.first(), language)}P"
         else -> "x${round.coerceIn(1, 3)}"
     }
     Box(
-        Modifier.size(size).shadow(16.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp))
-            .background(Brush.radialGradient(listOf(Color(0xFF2A63D0), PremierUi.OceanDeep, Color(0xFF0C2250)))),
+        Modifier
+            .size(size)
+            .shadow(22.dp, CircleShape)
+            .clip(CircleShape)
+            .background(
+                Brush.radialGradient(
+                    listOf(
+                        PremierUi.Ocean.copy(alpha = .35f * glow),
+                        Color(0xFF17487C),
+                        Color(0xFF08111F),
+                    )
+                )
+            ),
         contentAlignment = Alignment.Center,
     ) {
-        Box(Modifier.matchParentSize().background(Color.White.copy(alpha = glow * .13f)))
-        Surface(modifier = Modifier.align(Alignment.TopEnd).padding(7.dp), shape = RoundedCornerShape(99.dp), color = Color.White.copy(alpha = .20f)) {
-            Text(targetBadge, Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = Color.White, fontSize = 8.sp, fontWeight = FontWeight.Black)
+        Box(
+            Modifier
+                .fillMaxSize(.88f)
+                .clip(CircleShape)
+                .background(Color(0xFF07111F).copy(alpha = .74f))
+                .padding(3.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .clip(CircleShape)
+                    .background(Brush.radialGradient(listOf(Color(0xFF245EA8), Color(0xFF0A203A), Color(0xFF050B14)))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        required,
+                        color = Color.White,
+                        fontSize = (size.value * if (required.length > 1) .28f else .41f).sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp,
+                    )
+                    Text(
+                        if (required == "★") pt(language, "SERBEST VURUŞ", "FREE STRIKE") else pt(language, "HEDEF HARF", "TARGET LETTER"),
+                        color = PremierUi.Ocean,
+                        fontSize = 7.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.2.sp,
+                    )
+                }
+            }
         }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(required, color = Color.White, fontSize = (size.value * if (required.length > 1) .32f else .42f).sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
-            Text(if (required == "★") pt(language, "SERBEST", "FREE") else pt(language, "HEDEF", "TARGET"), color = Color.White.copy(alpha = .78f), fontSize = 7.sp, fontWeight = FontWeight.Black, letterSpacing = 1.1.sp)
+        Surface(
+            modifier = Modifier.align(Alignment.TopEnd).padding(5.dp),
+            shape = RoundedCornerShape(7.dp),
+            color = PremierUi.Gold,
+        ) {
+            Text(targetBadge, Modifier.padding(horizontal = 7.dp, vertical = 3.dp), color = Color(0xFF171006), fontSize = 8.sp, fontWeight = FontWeight.Black)
         }
     }
 }
@@ -1268,35 +1392,37 @@ private fun PremierWordTrail(words: List<GameWordDto>, language: String, isPro: 
 @Composable
 private fun PremierInputBar(language: String, input: String, required: String, myTurn: Boolean, busy: Boolean, modifier: Modifier = Modifier) {
     val requiredLetterBadge = myTurn && input.isBlank() && required.isNotBlank() && required != "★"
-    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp), color = PremierUi.Surface, border = BorderStroke(2.dp, if (myTurn) PremierUi.Ocean else PremierUi.Border), shadowElevation = if (myTurn) 5.dp else 0.dp) {
-        Row(Modifier.padding(horizontal = 14.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Rounded.AutoAwesome, null, tint = if (myTurn) PremierUi.Ocean else PremierUi.Muted, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(9.dp))
+    val accent = if (myTurn) PremierUi.Ocean else PremierUi.Border
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = Color(0xFF091725),
+        border = BorderStroke(if (myTurn) 2.dp else 1.dp, accent),
+        shadowElevation = if (myTurn) 9.dp else 1.dp,
+    ) {
+        Row(Modifier.padding(horizontal = 13.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.Bolt, null, tint = if (myTurn) PremierUi.Ocean else PremierUi.Muted, modifier = Modifier.size(19.dp))
+            Spacer(Modifier.width(8.dp))
             if (requiredLetterBadge) {
-                Surface(shape = RoundedCornerShape(9.dp), color = PremierUi.Gold.copy(alpha = .18f), border = BorderStroke(1.5.dp, PremierUi.Gold)) {
-                    Text(
-                        required.uppercase(),
-                        Modifier.padding(horizontal = 9.dp, vertical = 3.dp),
-                        color = PremierUi.Gold,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                    )
+                Surface(shape = RoundedCornerShape(7.dp), color = PremierUi.Gold.copy(alpha = .18f), border = BorderStroke(1.5.dp, PremierUi.Gold)) {
+                    Text(required.uppercase(), Modifier.padding(horizontal = 9.dp, vertical = 3.dp), color = PremierUi.Gold, fontSize = 22.sp, fontWeight = FontWeight.Black)
                 }
                 Spacer(Modifier.width(8.dp))
             }
             Text(
                 when {
-                    busy -> pt(language, "Kontrol ediliyor…", "Checking…")
+                    busy -> pt(language, "DOĞRULANIYOR…", "VERIFYING…")
                     input.isNotBlank() -> input
-                    required == "★" -> pt(language, "Kelimeyi yaz…", "Type a word…")
-                    else -> pt(language, "harfi ile başla…", "letter to begin…")
+                    required == "★" -> pt(language, "KELİMENİ ATEŞLE…", "FIRE YOUR WORD…")
+                    else -> pt(language, "HEDEF HARFLE KELİME KUR…", "BUILD FROM THE TARGET…")
                 },
                 color = if (input.isBlank()) PremierUi.Muted else PremierUi.Ink,
-                fontSize = 18.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Black,
                 modifier = Modifier.weight(1f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                letterSpacing = .3.sp,
             )
         }
     }
@@ -1314,7 +1440,12 @@ private fun PremierKeyboard(language: String, value: String, enabled: Boolean, k
         listOf("A","S","D","F","G","H","J","K","L","Ş","İ"),
         listOf("Z","X","C","V","B","N","M","Ö","Ç"),
     )
-    Surface(color = palette.background, shape = RoundedCornerShape(topStart = 22.dp, topEnd = 22.dp), border = BorderStroke(1.dp, palette.border), shadowElevation = 10.dp) {
+    Surface(
+        color = palette.background,
+        shape = RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp),
+        border = BorderStroke(1.dp, PremierUi.Border),
+        shadowElevation = 14.dp,
+    ) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             rows.forEachIndexed { index, row ->
                 Row(Modifier.fillMaxWidth().padding(horizontal = if (index == 1) 7.dp else if (index == 2) 16.dp else 0.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -1343,14 +1474,14 @@ private fun PremierKey(label: String, enabled: Boolean, modifier: Modifier, keyH
         enabled = enabled,
         modifier = modifier.height(keyHeight),
         contentPadding = PaddingValues(0.dp),
-        shape = RoundedCornerShape(9.dp),
+        shape = RoundedCornerShape(6.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = when { action -> palette.action; alt -> palette.keyAlt; else -> palette.key },
             contentColor = if (action) palette.actionText else palette.text,
             disabledContainerColor = if (alt) palette.keyAlt.copy(alpha = .55f) else palette.key.copy(alpha = .55f),
             disabledContentColor = palette.text.copy(alpha = .42f),
         ),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = if (action) 4.dp else 1.dp),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = if (action) 7.dp else 2.dp),
         border = BorderStroke(1.dp, when { action -> palette.action.copy(alpha = .82f); alt -> palette.secondaryBorder.copy(alpha = .55f); else -> palette.border }),
     ) {
         Text(label, fontSize = if (label.length > 5) 9.sp else 13.sp, fontWeight = FontWeight.Bold, maxLines = 1)

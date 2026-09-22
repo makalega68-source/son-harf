@@ -20,12 +20,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -450,18 +452,22 @@ private fun PanSiegeBoard(
 
     Surface(
         modifier = modifier,
-        color = PanSiegeFrameNavy,
-        shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(2.dp, PanSiegeFrameEdge),
-        shadowElevation = 8.dp,
+        color = Color(0xFF2F1D13),
+        shape = RoundedCornerShape(18.dp),
+        border = BorderStroke(2.dp, Color(0xFFC6A56B)),
+        shadowElevation = 14.dp,
     ) {
         Box(
             Modifier
                 .fillMaxSize()
                 .padding(5.dp)
-                .clip(RoundedCornerShape(15.dp))
-                .background(PanSiegeBoardSurface)
-                .border(1.dp, PanSiegeFrameInner, RoundedCornerShape(15.dp))
+                .clip(RoundedCornerShape(14.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(Color(0xFF3B2518), Color(0xFF6A452B), Color(0xFF4A2F1E), Color(0xFF785238))
+                    )
+                )
+                .border(1.dp, Color(0xFFB88C55), RoundedCornerShape(14.dp))
                 .clipToBounds()
                 .onGloballyPositioned { viewport = it.size }
                 .pointerInput(gameId, viewportMode, viewport, boardPx, closeScale) {
@@ -606,6 +612,7 @@ private fun PanSiegeBoardCell(
         bonusSurface != null -> bonusSurface
         else -> PanSiegeNeutral
     }
+    val displayBase = if (pending) Color(0xFFF2DFC0) else baseColor
     val border = when {
         pending -> PanSiegeTileBorder
         letter != null && owner == myOwner -> PanSiegeMineBorder
@@ -621,7 +628,15 @@ private fun PanSiegeBoardCell(
             .size(size)
             .padding(regionGap)
             .clip(RoundedCornerShape(7.dp))
-            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.lerp(baseColor, Color.White, .12f), baseColor)))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        androidx.compose.ui.graphics.lerp(displayBase, Color.White, .18f),
+                        displayBase,
+                        androidx.compose.ui.graphics.lerp(displayBase, Color.Black, .07f),
+                    )
+                )
+            )
             .border(
                 width = if (lastMoveHighlight > 0f) 1.75.dp else 0.dp,
                 color = PanSiegeLastMove.copy(alpha = .45f + .45f * lastMoveHighlight),
@@ -656,7 +671,14 @@ private fun PanSiegeBoardCell(
             Box(contentAlignment = Alignment.Center) {
                 if (lastMoveHighlight > 0f) Box(Modifier.matchParentSize().background(PanSiegeLastMove.copy(alpha = .045f * lastMoveHighlight)))
                 if (letter != null) {
-                    Text(letter, color = Color(0xFF17372C), fontSize = 21.sp, fontWeight = FontWeight.Black)
+                    Text(
+                        letter,
+                        color = Color(0xFF2A1B13),
+                        fontSize = 22.sp,
+                        fontFamily = FontFamily.Serif,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = .35.sp,
+                    )
                     Text(
                         panSiegeLetterValue(letter),
                         color = Color(0xFF17372C).copy(alpha = .78f),
@@ -704,15 +726,22 @@ private fun PanSiegeRackTile(
         modifier = modifier.height(48.dp).combinedClickable(enabled = enabled, onClick = onClick),
         color = when {
             used -> WordSiegeGameUi.SurfaceSoft
-            selected -> Color(0xFFE1ECE4)
-            else -> PanSiegeTile
+            selected -> Color(0xFFEBCB92)
+            else -> Color(0xFFF2DFC0)
         },
-        shape = RoundedCornerShape(11.dp),
-        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PanSiegeMineBorder else PanSiegeTileBorder.copy(alpha = .7f)),
-        shadowElevation = if (selected) 3.dp else 2.dp,
+        shape = RoundedCornerShape(9.dp),
+        border = BorderStroke(if (selected) 2.dp else 1.dp, if (selected) PanSiegeMineBorder else Color(0xFF8A6841)),
+        shadowElevation = if (selected) 7.dp else 4.dp,
     ) {
         Box(contentAlignment = Alignment.Center) {
-            Text(letter.toString(), color = if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else WordSiegeGameUi.Text, fontSize = 20.sp, fontWeight = FontWeight.Black)
+            Text(
+                letter.toString(),
+                color = if (used) WordSiegeGameUi.Muted.copy(alpha = .45f) else Color(0xFF2A1B13),
+                fontSize = 22.sp,
+                fontFamily = FontFamily.Serif,
+                fontWeight = FontWeight.Black,
+                letterSpacing = .35.sp,
+            )
             Text(
                 panSiegeLetterValue(letter.toString()),
                 color = WordSiegeGameUi.Muted,

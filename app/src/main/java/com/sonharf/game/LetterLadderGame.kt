@@ -101,14 +101,14 @@ internal data class LetterLadderMoveCheck(
 /**
  * HARF YOLU rule engine.
  *
- * In a five-move puzzle each of the five positions is changed exactly once.
+ * In a four-move puzzle four of the five positions are changed exactly once.
  * A position that has changed is permanently locked. Because it cannot be
  * changed again, the new letter must already be the target letter for that
  * position; otherwise the target would become mathematically unreachable.
  */
 internal object LetterLadderEngine {
     const val WORD_LENGTH = 5
-    const val MOVE_COUNT = 5
+    const val MOVE_COUNT = 4
 
     private val tr = Locale.forLanguageTag("tr-TR")
 
@@ -150,7 +150,7 @@ internal object LetterLadderEngine {
 
     /**
      * Finds a complete route from the current state to the target using only
-     * unused positions. This is deliberately tiny (maximum depth five), so it
+     * unused positions. This is deliberately tiny (maximum depth four), so it
      * can be used for hints and dead-end prevention without a background job.
      */
     fun completionPath(
@@ -287,10 +287,10 @@ internal object LetterLadderEngine {
             val changed = changedIndex(path[index - 1], path[index]) ?: return null
             if (!used.add(changed)) return null
         }
-        if (used.size != WORD_LENGTH) return null
+        if (used.size != MOVE_COUNT) return null
         val start = path.first()
         val target = path.last()
-        if ((0 until WORD_LENGTH).any { start[it] == target[it] }) return null
+        if ((0 until WORD_LENGTH).count { start[it] == target[it] } != WORD_LENGTH - MOVE_COUNT) return null
         val routeEndpoints = listOf(start, target).sorted().joinToString("-")
         return LetterLadderPuzzle(
             // The id represents puzzle content, not the random attempt. This makes recent-history
@@ -464,7 +464,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
         val solved = path.size == LetterLadderEngine.MOVE_COUNT + 1 && normalized == currentPuzzle.target
         if (solved) {
             completed = true
-            message = sh("Hedefe ulaştın! Beş harfin tamamı kilitlendi.", "Target reached! All five positions are locked.")
+            message = sh("Hedefe ulaştın! Dört değişim tamamlandı.", "Target reached! All four changes are complete.")
             SonHarfSoundFx.victory()
         } else {
             message = sh("Doğru hamle. Devam et.", "Valid move. Keep going.")
@@ -517,15 +517,15 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                     }
                     Spacer(Modifier.width(2.dp))
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.Start) {
-                        androidx.compose.foundation.Image(
-                            painter = androidx.compose.ui.res.painterResource(R.drawable.harf_yolu_logo),
-                            contentDescription = sh("Harf Yolu logosu", "Letter Path logo"),
-                            modifier = Modifier.width(116.dp).height(54.dp),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-                            colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(LetterLadderUi.AccentStrong),
+                        Text(
+                            sh("KELİME YOLU", "WORD PATH"),
+                            color = LetterLadderUi.Text,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = .6.sp,
                         )
                         Text(
-                            sh("5 hamle • Her kutu yalnızca 1 kez değişir", "5 moves • Each position changes only once"),
+                            sh("4 hamle • Her değişim hedefe yaklaşır", "4 moves • Every change closes the gap"),
                             color = LetterLadderUi.Muted,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
@@ -534,7 +534,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                     }
                     Surface(shape = RoundedCornerShape(99.dp), color = LetterLadderUi.Gold.copy(alpha = .16f)) {
                         Text(
-                            "${usedPositions.size}/5",
+                            "${usedPositions.size}/${LetterLadderEngine.MOVE_COUNT}",
                             Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                             color = LetterLadderUi.Gold,
                             fontSize = 13.sp,
@@ -620,24 +620,21 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                             modifier = Modifier.weight(1f),
                         )
                         Spacer(Modifier.width(8.dp))
-                        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            repeat(5) { index ->
-                                val locked = index in usedPositions
+                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                            val progressCount = usedPositions.size.coerceIn(0, LetterLadderEngine.MOVE_COUNT)
+                            repeat(LetterLadderEngine.MOVE_COUNT) { index ->
+                                val reached = index < progressCount
                                 Surface(
-                                    modifier = Modifier.size(19.dp),
+                                    modifier = Modifier.size(20.dp),
                                     shape = CircleShape,
-                                    color = if (locked) LetterLadderUi.Green else LetterLadderUi.SurfaceSoft,
-                                    border = BorderStroke(1.dp, if (locked) LetterLadderUi.Green else LetterLadderUi.Border),
+                                    color = if (reached) LetterLadderUi.Green else LetterLadderUi.SurfaceSoft,
+                                    border = BorderStroke(1.dp, if (reached) LetterLadderUi.Green else LetterLadderUi.Border),
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
-                                        if (locked) {
+                                        if (reached) {
                                             Icon(Icons.Rounded.Check, null, tint = LetterLadderUi.AccentText, modifier = Modifier.size(11.dp))
                                         } else {
-                                            Surface(
-                                                modifier = Modifier.size(4.dp),
-                                                shape = CircleShape,
-                                                color = LetterLadderUi.Muted.copy(alpha = .45f),
-                                            ) {}
+                                            Surface(modifier = Modifier.size(4.dp), shape = CircleShape, color = LetterLadderUi.Muted.copy(alpha = .45f)) {}
                                         }
                                     }
                                 }
@@ -649,20 +646,8 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                 if (!completed) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(
-                            enabled = path.size > 1,
-                            onClick = {
-                                if (path.size <= 1) return@OutlinedButton
-                                val removed = path.last()
-                                val previous = path[path.lastIndex - 1]
-                                val index = LetterLadderEngine.changedIndex(previous, removed)
-                                path = path.dropLast(1)
-                                if (index != null) usedPositions = usedPositions - index
-                                input = ""
-                                hintText = null
-                                hintedIndex = null
-                                message = sh("Son hamle geri alındı.", "Last move undone.")
-                                SonHarfSoundFx.puzzleTap()
-                            },
+                            enabled = false,
+                            onClick = {},
                             modifier = Modifier.weight(1f).height(40.dp).sonHarfPressScale(pressedScale = 0.94f),
                             contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
                             shape = RoundedCornerShape(13.dp),
@@ -672,7 +657,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                                 disabledContentColor = LetterLadderUi.Muted.copy(alpha = .34f),
                             ),
                         ) {
-                            Text(sh("GERİ AL", "UNDO"), fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
+                            Text(sh("YENİ OYUN", "NEW GAME"), fontWeight = FontWeight.Black, fontSize = 10.sp, maxLines = 1)
                         }
 
                         OutlinedButton(
@@ -688,7 +673,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                                 hintUsed = true
                                 hintedIndex = hintIndex
                                 hintText = if (hintIndex == null) {
-                                    sh("Son hamleyi geri al ve farklı bir yol dene.", "Undo the last move and try a different route.")
+                                    sh("Bu rota kapanmış görünüyor. Oyunu tamamlayıp yeni oyuna geç.", "This route is closed. Finish the puzzle, then start a new game.")
                                 } else {
                                     sh(
                                         "İpucu kullanıldı: turuncu işaretli kutudaki harfi değiştir. Harfi kendin bul.",
@@ -846,7 +831,7 @@ internal fun MonsterLetterLadderQuickCard(modifier: Modifier, onClick: () -> Uni
                 Text(sh("3. OYUN", "GAME 3"), color = LetterLadderUi.Accent, fontSize = 9.sp, fontWeight = FontWeight.Black)
                 Text(sh("HARF YOLU", "LETTER PATH"), color = LetterLadderUi.Text, fontSize = 18.sp, fontWeight = FontWeight.Black)
                 Spacer(Modifier.height(4.dp))
-                Text(sh("5 hamlede hedef kelimeye ulaş", "Reach the target in 5 moves"), color = LetterLadderUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(sh("4 hamlede hedef kelimeye ulaş", "Reach the target in 4 moves"), color = LetterLadderUi.Muted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Text(sh("Değişen kutu kilitlenir", "Changed positions lock"), color = LetterLadderUi.Green, fontSize = 10.sp, fontWeight = FontWeight.Bold)
             }
             Icon(Icons.Rounded.ChevronRight, null, tint = LetterLadderUi.Muted, modifier = Modifier.size(22.dp))

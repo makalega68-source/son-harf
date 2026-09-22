@@ -86,7 +86,10 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("if (compact) 88.dp"))
         assertTrue(screen.contains("if (tall) 118.dp"))
         assertTrue(screen.contains("else 104.dp"))
-        assertTrue(screen.contains("if (required.length > 1) .32f else .42f"))
+        assertTrue(screen.contains("if (required.length > 1) .28f else .41f"))
+        assertTrue(screen.contains("PremierPressureStrip("))
+        assertTrue(screen.contains("KRİTİK 5 SANİYE"))
+        assertTrue(screen.contains("HAMLE SENDE • SALDIR"))
         assertFalse(screen.contains("if (tall) 164.dp"))
 
         // Send consumes the visible attempt immediately, then the authoritative server result arrives.

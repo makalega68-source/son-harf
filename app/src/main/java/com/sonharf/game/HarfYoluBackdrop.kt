@@ -74,7 +74,6 @@ internal fun HarfYoluBackdrop(modifier: Modifier = Modifier) {
             )
         }
 
-        glow(blue, .93f + .015f * phase, .14f + .010f * phase, .58f, .17f)
         glow(turquoise, .05f - .012f * phase, .74f - .010f * phase, .64f, .18f)
         glow(orange, .04f + .010f * phase, .34f, .34f, .10f)
         glow(purple, .96f - .010f * phase, .80f, .40f, .12f)
@@ -82,10 +81,6 @@ internal fun HarfYoluBackdrop(modifier: Modifier = Modifier) {
 
         data class Tile(val x: Float, val y: Float, val scale: Float, val color: Color)
         val tiles = listOf(
-            Tile(.03f, .11f, .060f, blue),
-            Tile(.13f, .055f, .035f, purple),
-            Tile(.94f, .09f, .056f, turquoise),
-            Tile(.985f, .25f, .035f, orange),
             Tile(.02f, .34f, .030f, orange),
             Tile(.97f, .46f, .034f, purple),
             Tile(.035f, .67f, .052f, turquoise),

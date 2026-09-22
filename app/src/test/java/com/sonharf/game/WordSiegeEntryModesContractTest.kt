@@ -41,9 +41,10 @@ class WordSiegeEntryModesContractTest {
 
         assertTrue(board.contains("PanSiegeMine = Color(0xFFA8D5B5)"))
         assertTrue(board.contains("PanSiegeRival = Color(0xFFE4AEAA)"))
-        assertTrue(board.contains("PanSiegeFrameNavy"))
-        assertTrue(board.contains("shadowElevation = 8.dp"))
-        assertTrue(board.contains("border = BorderStroke(2.dp, PanSiegeFrameEdge)"))
+        assertTrue(board.contains("color = Color(0xFF2F1D13)"))
+        assertTrue(board.contains("shadowElevation = 14.dp"))
+        assertTrue(board.contains("border = BorderStroke(2.dp, Color(0xFFC6A56B))"))
+        assertTrue(board.contains("Color(0xFFF2DFC0)"))
         assertTrue(board.contains("WordSiegePremiumPanel("))
     }
 

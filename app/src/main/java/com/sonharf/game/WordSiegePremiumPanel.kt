@@ -214,25 +214,25 @@ internal fun WordSiegePremiumPanel(
                         Spacer(Modifier.width(6.dp))
                         Column(Modifier.weight(1f)) {
                             Text(
-                                sh("PUAN HESAPLAMA", "SCORE PREVIEW"),
+                                sh("TOPLAM PUAN", "TOTAL SCORE"),
                                 color = WordSiegeGameUi.Text,
                                 fontSize = 8.sp,
                                 fontWeight = FontWeight.Black,
                             )
                             Text(
                                 when {
-                                    !resolvedAccess.scoreCalculatorAccess -> sh("PRO ile açılır", "Unlocks with PRO")
+                                    !resolvedAccess.scoreCalculatorAccess -> sh("PRO özelliği", "PRO feature")
                                     placements.isEmpty() -> sh("Harf yerleştir", "Place tiles")
                                     preview != null -> sh(
-                                        "Kelime +${preview!!.wordScore} • Bölge +${preview!!.areaScore} • Toplam +${preview!!.totalScore}",
-                                        "Word +${preview!!.wordScore} • Territory +${preview!!.areaScore} • Total +${preview!!.totalScore}",
+                                        "Toplam ${preview!!.totalScore} • Kelime ${preview!!.wordScore} • Bölge ${preview!!.areaScore}",
+                                        "Total ${preview!!.totalScore} • Word ${preview!!.wordScore} • Territory ${preview!!.areaScore}",
                                     )
                                     previewError -> sh("Önizleme alınamadı", "Preview unavailable")
                                     else -> sh("Hesaplanıyor…", "Calculating…")
                                 },
                                 color = WordSiegeGameUi.Muted,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
                                 maxLines = 2,
                                 lineHeight = 12.sp,
                             )
@@ -255,7 +255,7 @@ internal fun WordSiegePremiumPanel(
                         contentDescription = null,
                         modifier = Modifier.padding(end = 4.dp),
                     )
-                    Text(sh("HARFLER", "LETTERS"), fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Text(sh("KALAN HARFLER", "REMAINING"), fontSize = 9.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
