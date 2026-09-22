@@ -16,6 +16,7 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
@@ -426,9 +427,13 @@ internal fun PremiumWeeklyPodium(
             HomeSectionHeader(sh("HAFTANIN ZİRVESİ", "WEEKLY ELITE"))
             when {
                 loading -> HomeLoadingRow()
-                failed -> Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+                failed -> Row(Modifier.fillMaxWidth().heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Rounded.Refresh, null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(17.dp))
+                    Spacer(Modifier.width(8.dp))
                     Text(sh("Sıralama yenilenemedi", "Ranking could not refresh"), Modifier.weight(1f), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
-                    TextButton(onClick = onRetry) { Text(sh("YENİLE", "RETRY"), color = SonHarfTheme.Primary) }
+                    TextButton(onClick = onRetry, modifier = Modifier.height(34.dp), contentPadding = PaddingValues(horizontal = 8.dp)) {
+                        Text(sh("YENİLE", "RETRY"), color = SonHarfTheme.Primary, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    }
                 }
                 else -> Column(Modifier.fillMaxWidth().semantics { isTraversalGroup = true }) {
                     players.take(3).forEachIndexed { index, item ->
@@ -549,6 +554,7 @@ internal fun PremiumOtherGames(onLastLetter: () -> Unit, onLetterPath: () -> Uni
             PremiumHomeModeCard(
                 modifier = Modifier.weight(1f).fillMaxHeight(),
                 logo = R.drawable.harf_yolu_logo,
+                logoTint = SonHarfTheme.Lavender,
                 title = sh("KELİME YOLU", "WORD PATH"),
                 subtitle = sh("Kelime rotanı tamamla", "Complete your word path"),
                 accent = SonHarfTheme.Lavender,
@@ -565,29 +571,31 @@ private fun PremiumHomeModeCard(
     title: String,
     subtitle: String,
     accent: Color,
+    logoTint: Color? = null,
     onPlay: () -> Unit,
 ) {
     Surface(
-        modifier = modifier.heightIn(min = 168.dp),
+        modifier = modifier.heightIn(min = 162.dp),
         shape = HomeCardShape,
         color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
         shadowElevation = 1.dp,
     ) {
         Column(Modifier.fillMaxSize()) {
-            Box(Modifier.fillMaxWidth().height(4.dp).background(accent))
+            Box(Modifier.fillMaxWidth().height(3.dp).background(accent))
             Column(
                 Modifier.fillMaxSize().padding(12.dp),
                 horizontalAlignment = Alignment.Start,
                 verticalArrangement = Arrangement.spacedBy(7.dp),
             ) {
-                Surface(shape = HomeMicroShape, color = accent.copy(alpha = .10f), modifier = Modifier.size(46.dp)) {
+                Surface(shape = HomeMicroShape, color = accent.copy(alpha = .09f), modifier = Modifier.size(44.dp)) {
                     Box(contentAlignment = Alignment.Center) {
                         Image(
                             painter = painterResource(logo),
                             contentDescription = null,
-                            modifier = Modifier.size(34.dp),
+                            modifier = Modifier.size(31.dp),
                             contentScale = ContentScale.Fit,
+                            colorFilter = logoTint?.let { ColorFilter.tint(it) },
                         )
                     }
                 }
@@ -610,10 +618,10 @@ private fun PremiumHomeModeCard(
                 )
                 Button(
                     onClick = onPlay,
-                    modifier = Modifier.fillMaxWidth().height(40.dp),
+                    modifier = Modifier.fillMaxWidth().height(39.dp),
                     shape = HomeControlShape,
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = accent.copy(alpha = .14f),
+                        containerColor = accent.copy(alpha = .12f),
                         contentColor = HomeDarkText,
                     ),
                     contentPadding = PaddingValues(horizontal = 9.dp),
@@ -656,7 +664,7 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
         color = SonHarfTheme.Surface,
         border = BorderStroke(1.dp, SonHarfTheme.Border),
     ) {
-        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Image(
                     painter = painterResource(R.drawable.style_icon_trophy),
@@ -686,10 +694,32 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
             }
             when {
                 loading -> HomeLoadingRow()
-                failed -> Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(sh("Haftalık sıralama yenilenemedi.", "Weekly ranking could not refresh."), Modifier.weight(1f), color = SonHarfTheme.TextSecondary, fontSize = 10.sp)
-                    TextButton(onClick = { reloadKey += 1 }) {
-                        Text(sh("YENİLE", "RETRY"), color = SonHarfTheme.TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                failed -> Surface(
+                    shape = HomeControlShape,
+                    color = SonHarfTheme.SurfaceSecondary.copy(alpha = .72f),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 10.dp, end = 5.dp, top = 5.dp, bottom = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Rounded.Refresh, null, tint = SonHarfTheme.TextSecondary, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(7.dp))
+                        Text(
+                            sh("Sıralama şu an güncellenemiyor", "Ranking is temporarily unavailable"),
+                            Modifier.weight(1f),
+                            color = SonHarfTheme.TextSecondary,
+                            fontSize = 9.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        TextButton(
+                            onClick = { reloadKey += 1 },
+                            modifier = Modifier.height(32.dp),
+                            contentPadding = PaddingValues(horizontal = 7.dp),
+                        ) {
+                            Text(sh("YENİLE", "RETRY"), color = SonHarfTheme.TextPrimary, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
                 else -> Column(Modifier.fillMaxWidth()) {
@@ -749,8 +779,8 @@ internal fun PremiumDailyObjective(onClick: () -> Unit) {
 
 @Composable
 private fun HomeLoadingRow() {
-    Box(Modifier.fillMaxWidth().height(64.dp), contentAlignment = Alignment.Center) {
-        CircularProgressIndicator(Modifier.size(20.dp), color = SonHarfTheme.Primary, strokeWidth = 2.dp)
+    Box(Modifier.fillMaxWidth().height(44.dp), contentAlignment = Alignment.Center) {
+        CircularProgressIndicator(Modifier.size(18.dp), color = SonHarfTheme.Primary, strokeWidth = 2.dp)
     }
 }
 
