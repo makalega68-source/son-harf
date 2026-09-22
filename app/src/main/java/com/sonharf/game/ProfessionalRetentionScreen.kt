@@ -516,6 +516,13 @@ private fun ProfessionalDailyRewardTab(
         }
 
         item {
+            DailyStreakWeekStrip(
+                streak = streak,
+                claimedToday = claimed,
+            )
+        }
+
+        item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 RetentionMetric(
                     modifier = Modifier.weight(1f),
@@ -554,6 +561,107 @@ private fun ProfessionalDailyRewardTab(
 
         notice?.let { item { ProfessionalRetentionNotice(it) } }
         item { Spacer(Modifier.height(6.dp)) }
+    }
+}
+
+@Composable
+private fun DailyStreakWeekStrip(
+    streak: Int,
+    claimedToday: Boolean,
+) {
+    val cycleDay = if (streak <= 0) 1 else ((streak - 1) % 7) + 1
+
+    GameSurface(
+        borderColor = GameColors.RewardAmber.copy(alpha = .28f),
+    ) {
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    gameText("7 Günlük Seri", "7-Day Streak"),
+                    color = GameColors.TextPrimary,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Black,
+                )
+                Text(
+                    gameText("Bugün: Gün $cycleDay", "Today: Day $cycleDay"),
+                    color = GameColors.TextSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            Icon(
+                Icons.Rounded.LocalFireDepartment,
+                contentDescription = null,
+                tint = GameColors.RewardAmber,
+                modifier = Modifier.size(22.dp),
+            )
+        }
+
+        Spacer(Modifier.height(11.dp))
+
+        Row(
+            Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            (1..7).forEach { day ->
+                val isCurrent = day == cycleDay
+                val isPast = day < cycleDay
+                val isDone = isPast || (isCurrent && claimedToday)
+                val accent = when {
+                    isCurrent -> GameColors.RewardAmber
+                    isDone -> GameColors.PlayGreen
+                    else -> GameColors.Border
+                }
+                val background = when {
+                    isCurrent -> GameColors.RewardAmber.copy(alpha = .14f)
+                    isDone -> GameColors.PlayGreen.copy(alpha = .10f)
+                    else -> GameColors.ElevatedBackground
+                }
+
+                Surface(
+                    modifier = Modifier.weight(1f).heightIn(min = 52.dp),
+                    shape = GameShapes.Medium,
+                    color = background,
+                    border = BorderStroke(
+                        if (isCurrent) 1.5.dp else 1.dp,
+                        accent.copy(alpha = if (isCurrent) .90f else .55f),
+                    ),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 2.dp, vertical = 7.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                    ) {
+                        if (isDone) {
+                            Icon(
+                                Icons.Rounded.Check,
+                                contentDescription = null,
+                                tint = if (isCurrent) GameColors.RewardAmber else GameColors.PlayGreen,
+                                modifier = Modifier.size(15.dp),
+                            )
+                        } else {
+                            Text(
+                                day.toString(),
+                                color = if (isCurrent) GameColors.RewardAmber else GameColors.TextSecondary,
+                                fontSize = 13.sp,
+                                lineHeight = 15.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                        }
+                        Text(
+                            gameText("G$day", "D$day"),
+                            color = if (isCurrent) GameColors.RewardAmber else GameColors.TextTertiary,
+                            fontSize = 9.sp,
+                            lineHeight = 11.sp,
+                            fontWeight = if (isCurrent) FontWeight.Black else FontWeight.Medium,
+                            maxLines = 1,
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
