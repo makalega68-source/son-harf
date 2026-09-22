@@ -31,6 +31,7 @@ internal fun UnifiedProVipScreen(
     backend: OnlineGameBackend,
     onBack: () -> Unit = {},
     onPrivateRoom: () -> Unit = {},
+    onSeries: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -137,8 +138,8 @@ internal fun UnifiedProVipScreen(
                             Text(
                                 if (active) {
                                     sh(
-                                        "Reklamsız deneyim, PRO profil, özel oda ve maç sonu analiz hakların açık.",
-                                        "Ad-free experience, PRO profile, private rooms and post-match analysis are unlocked.",
+                                        "Reklamsız deneyim, PRO profil, seri oyunlar, özel oda ve maç sonu analiz hakların açık.",
+                                        "Ad-free experience, PRO profile, series games, private rooms and post-match analysis are unlocked.",
                                     )
                                 } else {
                                     sh(
@@ -210,6 +211,26 @@ internal fun UnifiedProVipScreen(
                             Spacer(Modifier.height(8.dp))
                         }
 
+                        if (e?.seriesGameAccess == true) {
+                            Button(
+                                onClick = onSeries,
+                                modifier = Modifier.fillMaxWidth().height(50.dp),
+                                shape = GameShapes.Medium,
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = GameColors.PrimaryBlue,
+                                    contentColor = Color.White,
+                                ),
+                            ) {
+                                Icon(Icons.Rounded.WorkspacePremium, contentDescription = null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    sh("SERİ OYUNLARI", "SERIES GAMES"),
+                                    fontWeight = FontWeight.Black,
+                                )
+                            }
+                            Spacer(Modifier.height(8.dp))
+                        }
+
                         if (e?.privateRooms == true) {
                             Button(
                                 onClick = onPrivateRoom,
@@ -266,6 +287,7 @@ internal fun UnifiedProVipScreen(
                     ProLine(sh("Reklamsız menü, profil ve mağaza", "Ad-free menus, profile and shop"))
                     ProLine(sh("PRO rozeti ve profil ayrıcalıkları", "PRO badge and profile benefits"))
                     ProLine(sh("Tamamlanmış maçlar için gelişmiş analiz", "Advanced analysis for completed matches"))
+                    ProLine(sh("Kelime Kuşatması seri oyun erişimi", "Word Siege series game access"))
                     ProLine(sh("Son Harf davet kodlu özel oda", "Last Letter invite-code private room"))
                     ProLine(sh("Kaydedilmiş arkadaş listesi", "Saved friend list"))
                     Spacer(Modifier.height(8.dp))
