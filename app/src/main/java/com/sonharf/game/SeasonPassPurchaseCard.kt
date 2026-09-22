@@ -3,25 +3,11 @@ package com.sonharf.game
 import android.app.Activity
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.WorkspacePremium
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
@@ -29,7 +15,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.android.billingclient.api.BillingClient
 import com.android.billingclient.api.ProductDetails
 import com.sonharf.game.billing.BillingManager
@@ -52,28 +37,44 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
             onPurchase = { purchase ->
                 val productId = purchase.products.firstOrNull()
                 if (productId != ProductCatalog.SEASON_PASS_MONTHLY) {
-                    notice = sh("Sezon bileti ürün bilgisi alınamadı.", "Season pass product information is missing.")
+                    notice = sh(
+                        "Sezon bileti ürün bilgisi alınamadı.",
+                        "Season pass product information is missing.",
+                    )
                     busy = false
                 } else {
                     scope.launch {
                         busy = true
-                        runCatching { PlayPurchaseVerification.verify(productId, purchase.purchaseToken) }
+                        runCatching {
+                            PlayPurchaseVerification.verify(productId, purchase.purchaseToken)
+                        }
                             .onSuccess {
-                                notice = sh("Sezon Bileti etkinleştirildi.", "Season Pass activated.")
+                                notice = sh(
+                                    "Sezon Bileti etkinleştirildi.",
+                                    "Season Pass activated.",
+                                )
                                 onPurchased()
                             }
                             .onFailure { error ->
                                 notice = when {
-                                    "google_play_not_configured" in error.message.orEmpty() ->
-                                        sh("Google Play sunucu doğrulaması production hesabıyla yapılandırılmalı.", "Google Play server verification must be configured with the production account.")
-                                    else -> sh("Sezon Bileti doğrulanamadı. Tekrar deneyebilirsin.", "Season Pass verification failed. You can retry.")
+                                    "google_play_not_configured" in error.message.orEmpty() -> sh(
+                                        "Google Play sunucu doğrulaması production hesabıyla yapılandırılmalı.",
+                                        "Google Play server verification must be configured with the production account.",
+                                    )
+                                    else -> sh(
+                                        "Sezon Bileti doğrulanamadı. Tekrar deneyebilirsin.",
+                                        "Season Pass verification failed. You can retry.",
+                                    )
                                 }
                             }
                         busy = false
                     }
                 }
             },
-            onMessage = { message -> notice = message; busy = false },
+            onMessage = { message ->
+                notice = message
+                busy = false
+            },
         )
     }
 
@@ -86,90 +87,187 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
         onDispose { manager.close() }
     }
 
-    Card(
-        colors = CardDefaults.cardColors(containerColor = SonHarfSurface.copy(alpha = .96f)),
-        shape = RoundedCornerShape(22.dp),
-        border = BorderStroke(1.2.dp, SonHarfPurple.copy(alpha = .55f)),
+    GameSurface(
+        elevated = true,
+        borderColor = GameColors.Lavender.copy(alpha = .42f),
     ) {
-        Column(
-            Modifier.fillMaxWidth().padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(9.dp),
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Surface(
+                shape = GameShapes.Medium,
+                color = GameColors.Lavender.copy(alpha = .10f),
+                border = BorderStroke(
+                    1.dp,
+                    GameColors.Lavender.copy(alpha = .20f),
+                ),
             ) {
                 Image(
                     painter = painterResource(R.drawable.premium_season_pass),
                     contentDescription = null,
-                    modifier = Modifier.size(74.dp),
+                    modifier = Modifier.padding(8.dp).size(66.dp),
                     contentScale = ContentScale.Fit,
                 )
-                Column(Modifier.weight(1f)) {
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(sh("SEZON BİLETİ", "SEASON PASS"), color = SonHarfPurple, fontSize = 16.sp, fontWeight = FontWeight.Black)
-                        Text(sh("AYLIK", "MONTHLY"), color = SonHarfMuted, fontSize = 11.sp)
-                    }
-                    Text(
-                        sh(
-                            "Premium ödül yolu • daha fazla Son Coin • ilerleme ödülleri",
-                            "Premium reward track • more Son Coins • progression rewards",
-                        ),
-                        color = SonHarfMuted,
-                        fontSize = 9.sp,
-                    )
-                }
             }
 
-            Text(
-                sh(
-                    "Sezon Bileti yalnızca ilerleme ve ekonomi ödülleri verir; rating, süre, joker gücü veya maç avantajı vermez.",
-                    "Season Pass only grants progression and economy rewards; it never grants rating, time, joker power or match advantages.",
-                ),
-                color = SonHarfGreen,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Bold,
-            )
-
-            Button(
-                onClick = {
-                    val details = product
-                    if (activity == null || !BillingManager.hasPurchasableOffer(details)) {
-                        notice = sh("Sezon Bileti Google Play'de henüz satın alınabilir değil.", "Season Pass is not yet purchasable on Google Play.")
-                        return@Button
+            Column(Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        sh("SEZON BİLETİ", "SEASON PASS"),
+                        color = GameColors.TextPrimary,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Surface(
+                        shape = GameShapes.Pill,
+                        color = GameColors.Lavender.copy(alpha = .12f),
+                    ) {
+                        Text(
+                            sh("AYLIK", "MONTHLY"),
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            color = GameColors.Lavender,
+                            style = MaterialTheme.typography.labelSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
-                    busy = true
-                    val result = manager.launchProduct(activity, requireNotNull(details))
-                    if (result.responseCode != BillingClient.BillingResponseCode.OK) {
-                        busy = false
-                        notice = sh("Google Play ödeme ekranı açılamadı.", "Google Play billing could not open.")
-                    }
-                },
-                enabled = !busy && BillingManager.hasPurchasableOffer(product),
-                modifier = Modifier.fillMaxWidth(),
-                colors = ButtonDefaults.buttonColors(containerColor = SonHarfPurple),
-                shape = RoundedCornerShape(14.dp),
-            ) {
+                }
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    if (busy) "…" else seasonPassPrice(product) ?: sh("PLAY'DE YOK", "NOT ON PLAY"),
-                    fontWeight = FontWeight.Black,
+                    sh(
+                        "Premium ödül yolu • daha fazla Son Coin • ilerleme ödülleri",
+                        "Premium reward track • more Son Coins • progression rewards",
+                    ),
+                    color = GameColors.TextSecondary,
+                    style = MaterialTheme.typography.bodySmall,
                 )
             }
+        }
 
-            Text(sh("Aylık abonelik · Google Play üzerinden iptal edilebilir.", "Monthly subscription · Cancel through Google Play."), color = SonHarfMuted, fontSize = 11.sp)
-            androidx.compose.material3.TextButton(enabled = !busy, onClick = { manager.restorePurchases(setOf(ProductCatalog.SEASON_PASS_MONTHLY)) }) {
-                Text(sh("Satın almayı geri yükle", "Restore purchase"))
+        Spacer(Modifier.height(10.dp))
+
+        Surface(
+            shape = GameShapes.Small,
+            color = GameColors.PlayGreen.copy(alpha = .08f),
+            border = BorderStroke(
+                1.dp,
+                GameColors.PlayGreen.copy(alpha = .25f),
+            ),
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    Icons.Rounded.WorkspacePremium,
+                    contentDescription = null,
+                    tint = GameColors.PlayGreen,
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    sh(
+                        "Yalnız ilerleme ve ekonomi ödülleri verir; rating, süre veya maç avantajı vermez.",
+                        "Grants progression and economy rewards only; never rating, time, or match advantages.",
+                    ),
+                    modifier = Modifier.weight(1f),
+                    color = GameColors.PlayGreen,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                )
             }
-            if (notice.isNotBlank()) {
-                Text(notice, color = SonHarfMuted, fontSize = 9.sp)
+        }
+
+        Spacer(Modifier.height(10.dp))
+
+        Button(
+            onClick = {
+                val details = product
+                if (activity == null || !BillingManager.hasPurchasableOffer(details)) {
+                    notice = sh(
+                        "Sezon Bileti Google Play'de henüz satın alınabilir değil.",
+                        "Season Pass is not yet purchasable on Google Play.",
+                    )
+                    return@Button
+                }
+                busy = true
+                val result = manager.launchProduct(activity, requireNotNull(details))
+                if (result.responseCode != BillingClient.BillingResponseCode.OK) {
+                    busy = false
+                    notice = sh(
+                        "Google Play ödeme ekranı açılamadı.",
+                        "Google Play billing could not open.",
+                    )
+                }
+            },
+            enabled = !busy && BillingManager.hasPurchasableOffer(product),
+            modifier = Modifier.fillMaxWidth().height(50.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = GameColors.Lavender,
+                contentColor = GameColors.TextPrimary,
+                disabledContainerColor = GameColors.Disabled,
+                disabledContentColor = GameColors.DisabledContent,
+            ),
+            shape = GameShapes.Medium,
+        ) {
+            Text(
+                if (busy) {
+                    "…"
+                } else {
+                    seasonPassPrice(product) ?: sh("PLAY'DE YOK", "NOT ON PLAY")
+                },
+                fontWeight = FontWeight.Black,
+            )
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        Text(
+            sh(
+                "Aylık abonelik · Google Play üzerinden iptal edilebilir.",
+                "Monthly subscription · Cancel through Google Play.",
+            ),
+            color = GameColors.TextTertiary,
+            style = MaterialTheme.typography.labelSmall,
+        )
+
+        TextButton(
+            enabled = !busy,
+            onClick = {
+                manager.restorePurchases(setOf(ProductCatalog.SEASON_PASS_MONTHLY))
+            },
+        ) {
+            Text(
+                sh("Satın almayı geri yükle", "Restore purchase"),
+                color = GameColors.PrimaryBlue,
+            )
+        }
+
+        if (notice.isNotBlank()) {
+            Surface(
+                shape = GameShapes.Small,
+                color = GameColors.SecondarySurface,
+                border = BorderStroke(1.dp, GameColors.Border),
+            ) {
+                Text(
+                    notice,
+                    modifier = Modifier.fillMaxWidth().padding(9.dp),
+                    color = GameColors.TextSecondary,
+                    style = MaterialTheme.typography.labelSmall,
+                )
             }
         }
     }
 }
 
 private fun seasonPassPrice(details: ProductDetails?): String? =
-    details?.subscriptionOfferDetails
+    details
+        ?.subscriptionOfferDetails
         ?.firstOrNull()
         ?.pricingPhases
         ?.pricingPhaseList
