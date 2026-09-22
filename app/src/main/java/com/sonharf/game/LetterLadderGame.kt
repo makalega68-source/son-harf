@@ -54,23 +54,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 private object LetterLadderUi {
-    val Background = Color(0xFF071714)
-    val Surface = Color(0xFF0E2521)
-    val SurfaceRaised = Color(0xFF14312B)
-    val SurfaceSoft = Color(0xFF193A32)
-    val Text = Color(0xFFF4F7F4)
-    val Muted = Color(0xFF9DB0A9)
-    val Border = Color(0xFF315148)
-    val Accent = Color(0xFF3FC486)
-    val AccentStrong = Color(0xFF2FA873)
-    val Turquoise = Color(0xFF55CC91)
-    val TurquoiseStrong = Color(0xFF34AD76)
-    val TurquoiseSoft = Color(0xFF173C31)
-    val Orange = Color(0xFFC9A552)
-    val OrangeSoft = Color(0xFF3A321F)
-    val Purple = Color(0xFFD1AD58)
-    val PurpleSoft = Color(0xFF342D1E)
-    val AccentText = Color(0xFF071714)
+    val Background = Color(0xFFEAF6F8)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceRaised = Color(0xFFE0F3F5)
+    val SurfaceSoft = Color(0xFFEEEBFC)
+    val Text = Color(0xFF0B1B33)
+    val Muted = Color(0xFF3B4B66)
+    val Border = Color(0xFFC3D6E4)
+    val Accent = Color(0xFF14B8B0)
+    val AccentStrong = Color(0xFF0E9A93)
+    val Turquoise = Color(0xFF22C3C9)
+    val TurquoiseStrong = Color(0xFF0E9A93)
+    val TurquoiseSoft = Color(0xFFD2F2F0)
+    val Orange = Color(0xFF8B6CF0)
+    val OrangeSoft = Color(0xFFFFEBDA)
+    val Purple = Color(0xFFFF8A2A)
+    val PurpleSoft = Color(0xFFEEE9FF)
+    val AccentText = Color(0xFF0B1B33)
     val Live = Accent
     val Coral = Orange
     val Green = Accent
@@ -631,7 +631,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         if (locked) {
-                                            Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(11.dp))
+                                            Icon(Icons.Rounded.Check, null, tint = LetterLadderUi.AccentText, modifier = Modifier.size(11.dp))
                                         } else {
                                             Surface(
                                                 modifier = Modifier.size(4.dp),
@@ -723,7 +723,7 @@ internal fun LetterLadderGameScreen(onExit: () -> Unit) {
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = LetterLadderUi.Purple,
-                            contentColor = Color.White,
+                            contentColor = LetterLadderUi.AccentText,
                         ),
                     ) {
                         Text(sh("YENİ OYUN", "NEW GAME"), fontWeight = FontWeight.Black)

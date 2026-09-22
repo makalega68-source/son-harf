@@ -32,14 +32,14 @@ class CalmLayeredThemeContractTest {
             "val TextSecondary: Color get()",
         ).forEach { token -> assertTrue("Missing theme layer: $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("Color(0xFF071714)"))
-        assertTrue(theme.contains("Color(0xFF0E2521)"))
-        assertTrue(theme.contains("Color(0xFF3FC486)"))
-        assertTrue(theme.contains("Color(0xFFC94C4C)"))
-        assertTrue(theme.contains("Color(0xFFC9A552)"))
-        assertTrue(theme.contains("Color(0xFFF4F7F4)"))
-        assertTrue(theme.contains("Color(0xFF9DB0A9)"))
-        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
+        assertTrue(theme.contains("Color(0xFFEAF6F8)"))
+        assertTrue(theme.contains("Color(0xFFFFFFFF)"))
+        assertTrue(theme.contains("Color(0xFF14B8B0)"))
+        assertTrue(theme.contains("Color(0xFFE8622C)"))
+        assertTrue(theme.contains("Color(0xFF8B6CF0)"))
+        assertTrue(theme.contains("Color(0xFF0B1B33)"))
+        assertTrue(theme.contains("Color(0xFF3B4B66)"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
     }
 
     @Test

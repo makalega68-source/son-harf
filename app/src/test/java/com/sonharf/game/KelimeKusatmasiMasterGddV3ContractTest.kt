@@ -11,18 +11,18 @@ class KelimeKusatmasiMasterGddV3ContractTest {
         val theme = File("src/main/java/com/sonharf/game/SonHarfTheme.kt").readText()
 
         listOf(
-            "0xFF071714", // Deep emerald black
-            "0xFF0E2521", // Emerald surface
-            "0xFF14312B", // Secondary surface
-            "0xFF3FC486", // Player/action green
-            "0xFFC94C4C", // Rival red
-            "0xFFC9A552", // Premium gold
-            "0xFFF4F7F4", // Primary text
-            "0xFF9DB0A9", // Muted text
-            "0xFF315148", // Border
+            "0xFFEAF6F8", // Deep emerald black
+            "0xFFFFFFFF", // Emerald surface
+            "0xFFE0F3F5", // Secondary surface
+            "0xFF14B8B0", // Player/action green
+            "0xFFE8622C", // Rival red
+            "0xFF8B6CF0", // Premium gold
+            "0xFF0B1B33", // Primary text
+            "0xFF3B4B66", // Muted text
+            "0xFFC3D6E4", // Border
         ).forEach { token -> assertTrue("Missing current theme palette token $token", theme.contains(token)) }
 
-        assertTrue(theme.contains("val IsDark: Boolean get() = true"))
+        assertTrue(theme.contains("val IsDark: Boolean get() = false"))
         assertTrue(theme.contains("val ActionOrange: Color get()"))
         assertTrue(theme.contains("val HeroStart: Color get()"))
         assertTrue(theme.contains("val HeroMiddle: Color get()"))

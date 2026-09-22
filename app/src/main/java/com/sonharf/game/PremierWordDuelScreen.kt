@@ -52,21 +52,21 @@ private const val PREMIER_RECONNECT_SECONDS = 60
 
 /** Yetişkin, yüksek okunabilirlikli Son Harf oyun paleti. */
 private object PremierUi {
-    val Background = Color(0xFF071714)
-    val Surface = Color(0xFF0E2521)
-    val Ink = Color(0xFFF4F7F4)
-    val Muted = Color(0xFF9DB0A9)
-    val Ocean = Color(0xFF3FC486)
-    val OceanDeep = Color(0xFF1E6C4C)
-    val Sky = Color(0xFFC9A552)
-    val Ice = Color(0xFF14312B)
-    val Border = Color(0xFF315148)
-    val Green = Color(0xFF45C98B)
-    val GreenSoft = Color(0xFF173C31)
-    val Red = Color(0xFFC94C4C)
-    val RedSoft = Color(0xFF3A2022)
-    val Gold = Color(0xFFC9A552)
-    val GoldSoft = Color(0xFF3A321F)
+    val Background = Color(0xFFEAF6F8)
+    val Surface = Color(0xFFFFFFFF)
+    val Ink = Color(0xFF0B1B33)
+    val Muted = Color(0xFF3B4B66)
+    val Ocean = Color(0xFF14B8B0)
+    val OceanDeep = Color(0xFF1D4FB0)
+    val Sky = Color(0xFF8B6CF0)
+    val Ice = Color(0xFFE0F3F5)
+    val Border = Color(0xFFC3D6E4)
+    val Green = Color(0xFF12A89F)
+    val GreenSoft = Color(0xFFD2F2F0)
+    val Red = Color(0xFFE8622C)
+    val RedSoft = Color(0xFFFFE3D6)
+    val Gold = Color(0xFF8B6CF0)
+    val GoldSoft = Color(0xFFFFEBDA)
 }
 
 private fun pt(language: String, tr: String, en: String): String = if (language == "en") en else tr
@@ -669,7 +669,7 @@ private fun PremierLobby(
         ) {
             Column(
                 Modifier.background(
-                    Brush.linearGradient(listOf(PremierUi.OceanDeep, PremierUi.Ocean, PremierUi.Sky))
+                    Brush.linearGradient(listOf(Color(0xFF0C2250), PremierUi.OceanDeep))
                 ).padding(22.dp),
                 verticalArrangement = Arrangement.spacedBy(18.dp),
             ) {
@@ -723,7 +723,7 @@ private fun PremierLobby(
             enabled = !busy,
             modifier = Modifier.fillMaxWidth().height(68.dp),
             shape = RoundedCornerShape(21.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean, contentColor = Color.White),
+            colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean, contentColor = PremierUi.Ink),
             elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp),
         ) {
             Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(28.dp))
@@ -756,7 +756,7 @@ private fun PremierLanguageSwitch(language: String, onLanguage: (String) -> Unit
                     shape = RoundedCornerShape(99.dp),
                     color = if (language == code) PremierUi.Ocean else Color.Transparent,
                 ) {
-                    Text(label, Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = if (language == code) Color.White else PremierUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(label, Modifier.padding(horizontal = 11.dp, vertical = 7.dp), color = if (language == code) PremierUi.Ink else PremierUi.Muted, fontSize = 10.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
@@ -813,7 +813,7 @@ private fun PremierVsScreen(language: String, me: ProfileDto?, opponent: Profile
         PremierVsPlayerCard(language, me?.displayName ?: pt(language, "Oyuncu", "Player"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", me?.rating ?: 1000, profileWinRate(me), PremierUi.Ocean, nameColor = SonHarfCosmetics.playerNameColor)
         Spacer(Modifier.height(16.dp))
         Surface(shape = RoundedCornerShape(99.dp), color = Color.Transparent) {
-            Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.Ocean, PremierUi.OceanDeep))).padding(horizontal = 27.dp, vertical = 10.dp)) {
+            Box(Modifier.background(Brush.horizontalGradient(listOf(PremierUi.OceanDeep, Color(0xFF0C2250)))).padding(horizontal = 27.dp, vertical = 10.dp)) {
                 Text("VS", color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Black)
             }
         }
@@ -1019,8 +1019,8 @@ private fun PremierArenaHeader(
     val totalScore = myScore + rivalScore
     val myFraction = if (totalScore <= 0) 0.5f else myScore.toFloat() / totalScore.toFloat()
     val danger = seconds in 1..5
-    val timerStart = if (danger) PremierUi.RedSoft else PremierUi.Sky
-    val timerEnd = if (danger) PremierUi.Red else PremierUi.OceanDeep
+    val timerStart = if (danger) PremierUi.Red else Color(0xFF2A63D0)
+    val timerEnd = if (danger) Color(0xFFB8430F) else Color(0xFF0C2250)
 
     Surface(shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp), color = PremierUi.Surface, shadowElevation = 8.dp, border = BorderStroke(1.dp, PremierUi.Border)) {
         Column(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1076,7 +1076,7 @@ private fun PremierArenaHeader(
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 PremierMiniPlayer(me?.displayName ?: pt(language, "Sen", "You"), me?.avatarPath, me?.gender, me?.avatarVisibility != "hidden", myRounds, myStreak, PremierUi.Ocean, false, Modifier.weight(1f), nameColor = SonHarfCosmetics.playerNameColor)
                 Surface(shape = CircleShape, color = Color.Transparent) {
-                    Box(Modifier.size(60.dp).background(Brush.radialGradient(listOf(timerStart, if (danger) PremierUi.Red else PremierUi.Ocean, timerEnd)), CircleShape), contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(60.dp).background(Brush.radialGradient(listOf(timerStart, if (danger) PremierUi.Red else PremierUi.OceanDeep, timerEnd)), CircleShape), contentAlignment = Alignment.Center) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(seconds.toString().padStart(2, '0'), color = Color.White, fontSize = 19.sp, fontWeight = FontWeight.Black)
                             Text("SEC", color = Color.White.copy(alpha = .75f), fontSize = 6.sp, fontWeight = FontWeight.Black)
@@ -1212,7 +1212,7 @@ private fun PremierTargetCard(language: String, required: String, gameMode: Stri
     }
     Box(
         Modifier.size(size).shadow(16.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp))
-            .background(Brush.radialGradient(listOf(PremierUi.Sky, PremierUi.Ocean, PremierUi.OceanDeep))),
+            .background(Brush.radialGradient(listOf(Color(0xFF2A63D0), PremierUi.OceanDeep, Color(0xFF0C2250)))),
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.matchParentSize().background(Color.White.copy(alpha = glow * .13f)))

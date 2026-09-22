@@ -159,7 +159,7 @@ internal fun MainSocialScreen(
                                 if (index == 1 && incomingCount > 0) {
                                     Spacer(Modifier.width(5.dp))
                                     Surface(shape = CircleShape, color = MainUi.Red) {
-                                        Text(incomingCount.toString(), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = Color.White, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                                        Text(incomingCount.toString(), Modifier.padding(horizontal = 5.dp, vertical = 2.dp), color = MainUi.Text, fontSize = 7.sp, fontWeight = FontWeight.Black)
                                     }
                                 }
                             }
@@ -604,9 +604,9 @@ private fun ProFriendListLock(onUpgrade: () -> Unit) {
                 shape = RoundedCornerShape(15.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = MainUi.Gold),
             ) {
-                Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(18.dp), tint = Color.White)
+                Icon(Icons.Rounded.WorkspacePremium, null, modifier = Modifier.size(18.dp), tint = MainUi.Text)
                 Spacer(Modifier.width(8.dp))
-                Text(sh("PRO'YA GEÇ", "GO PRO"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Text(sh("PRO'YA GEÇ", "GO PRO"), color = MainUi.Text, fontWeight = FontWeight.Black, fontSize = 12.sp)
             }
         }
     }

@@ -21,25 +21,25 @@ import androidx.compose.ui.unit.sp
 
 /** Match-only presentation. Never changes the selected cosmetic theme or game state. */
 internal object WordSiegeGameUi {
-    val Background = Color(0xFF071714)
-    val Surface = Color(0xFF0E2521)
-    val SurfaceSoft = Color(0xFF14312B)
-    val Text = Color(0xFFF4F7F4)
-    val Muted = Color(0xFF9DB0A9)
-    val Border = Color(0xFF315148)
-    val Blue = Color(0xFF3FC486)
-    val Red = Color(0xFFC94C4C)
-    val Gold = Color(0xFFC9A552)
-    val DisabledBackground = Color(0xFF263833)
-    val DisabledContent = Color(0xFF71847D)
+    val Background = Color(0xFFEAF6F8)
+    val Surface = Color(0xFFFFFFFF)
+    val SurfaceSoft = Color(0xFFE0F3F5)
+    val Text = Color(0xFF0B1B33)
+    val Muted = Color(0xFF3B4B66)
+    val Border = Color(0xFFC3D6E4)
+    val Blue = Color(0xFF14B8B0)
+    val Red = Color(0xFFE8622C)
+    val Gold = Color(0xFF8B6CF0)
+    val DisabledBackground = Color(0xFFDDE5EE)
+    val DisabledContent = Color(0xFF5E6D84)
 }
 
 @Composable
 internal fun WordSiegeGameTheme(content: @Composable () -> Unit) {
     MaterialTheme(
-        colorScheme = darkColorScheme(
-            primary = WordSiegeGameUi.Blue, onPrimary = Color(0xFF071714),
-            secondary = WordSiegeGameUi.Gold, onSecondary = Color(0xFF071714),
+        colorScheme = lightColorScheme(
+            primary = WordSiegeGameUi.Blue, onPrimary = Color(0xFF0B1B33),
+            secondary = WordSiegeGameUi.Gold, onSecondary = Color(0xFF0B1B33),
             background = WordSiegeGameUi.Background, onBackground = WordSiegeGameUi.Text,
             surface = WordSiegeGameUi.Surface, onSurface = WordSiegeGameUi.Text,
             surfaceVariant = WordSiegeGameUi.SurfaceSoft, onSurfaceVariant = WordSiegeGameUi.Muted,

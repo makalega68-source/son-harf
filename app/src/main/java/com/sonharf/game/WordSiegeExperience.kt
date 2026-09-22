@@ -545,13 +545,13 @@ private fun WordSiegeModeCard(
     ) {
         Column(Modifier.fillMaxSize().padding(13.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                val contentColor = if (color == MainUi.BlueSoft) MainUi.Blue else Color.White
+                val contentColor = if (color == MainUi.BlueSoft) MainUi.Blue else MainUi.Text
                 Icon(icon, null, tint = contentColor, modifier = Modifier.size(24.dp))
                 if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = contentColor, strokeWidth = 2.dp)
                 else Icon(Icons.Rounded.ArrowForward, null, tint = contentColor.copy(alpha = .82f), modifier = Modifier.size(18.dp))
             }
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                val contentColor = if (color == MainUi.BlueSoft) MainUi.Text else Color.White
+                val contentColor = MainUi.Text
                 Text(title, color = contentColor, fontWeight = FontWeight.Black, fontSize = 13.sp, lineHeight = 15.sp)
                 Text(subtitle, color = contentColor.copy(alpha = .72f), fontWeight = FontWeight.SemiBold, fontSize = 9.sp)
             }
@@ -800,13 +800,13 @@ private fun WordSiegeMatch(
                         modifier = Modifier.weight(1.45f).height(46.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = MainUi.Blue,
-                            contentColor = Color.White,
+                            contentColor = MainUi.Text,
                             disabledContainerColor = SonHarfTheme.DisabledBackground,
                             disabledContentColor = SonHarfTheme.DisabledContent,
                         ),
                         contentPadding = PaddingValues(horizontal = 5.dp),
                     ) {
-                        if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        if (busy) CircularProgressIndicator(Modifier.size(16.dp), color = MainUi.Text, strokeWidth = 2.dp)
                         else Text(sh("OYNA", "PLAY"), fontSize = 12.sp, fontWeight = FontWeight.Black)
                     }
                 }

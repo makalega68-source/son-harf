@@ -253,8 +253,8 @@ private fun PremiumHomeScreen(
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.TopCenter) {
         LazyColumn(
             modifier = Modifier.widthIn(max = 600.dp).fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             item(key = "home_hero") {
                 PremiumHomeCommandDeck(profile, onProfile, onPrimary, onSocial)
@@ -370,7 +370,7 @@ private fun PremiumGameCard(
                     Text(
                         sh("ANA ARENA", "MAIN ARENA"),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                        color = SonHarfTheme.PremiumGold,
+                        color = SonHarfTheme.TextPrimary,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Black,
                     )
@@ -460,27 +460,36 @@ private fun PremiumBottomBar(
         Triple(PremiumDestination.SHOP, Icons.Rounded.Storefront, sh("MAĞAZA", "STORE")) to onShop,
         Triple(PremiumDestination.PROFILE, Icons.Rounded.Person, sh("PROFİL", "PROFILE")) to onProfile,
     )
-    NavigationBar(containerColor = SonHarfTheme.NavigationSurface, tonalElevation = 0.dp) {
-        items.forEach { (item, onClick) ->
-            NavigationBarItem(
-                selected = destination == item.first,
-                onClick = onClick,
-                icon = { Icon(item.second, null) },
-                label = {
-                    Text(
-                        item.third,
-                        fontSize = 8.sp,
-                        fontWeight = if (destination == item.first) FontWeight.Bold else FontWeight.Normal,
+    Surface(color = SonHarfTheme.NavigationSurface, shadowElevation = 8.dp) {
+        Column {
+            HorizontalDivider(thickness = 1.dp, color = SonHarfTheme.Border)
+            NavigationBar(containerColor = SonHarfTheme.NavigationSurface, tonalElevation = 0.dp) {
+                items.forEach { (item, onClick) ->
+                    val selected = destination == item.first
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = onClick,
+                        icon = { Icon(item.second, null, modifier = Modifier.size(24.dp)) },
+                        label = {
+                            Text(
+                                item.third,
+                                fontSize = 10.sp,
+                                fontWeight = if (selected) FontWeight.Black else FontWeight.SemiBold,
+                                maxLines = 1,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            )
+                        },
+                        alwaysShowLabel = true,
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = SonHarfTheme.TextPrimary,
+                            selectedTextColor = SonHarfTheme.TextPrimary,
+                            indicatorColor = SonHarfTheme.PrimarySoft,
+                            unselectedIconColor = SonHarfTheme.TextSecondary,
+                            unselectedTextColor = SonHarfTheme.TextSecondary,
+                        ),
                     )
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = SonHarfTheme.Primary,
-                    selectedTextColor = SonHarfTheme.Primary,
-                    indicatorColor = SonHarfTheme.Primary.copy(alpha = .12f),
-                    unselectedIconColor = SonHarfTheme.TextSecondary,
-                    unselectedTextColor = SonHarfTheme.TextSecondary,
-                ),
-            )
+                }
+            }
         }
     }
 }
