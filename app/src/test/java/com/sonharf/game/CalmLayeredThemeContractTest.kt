@@ -43,7 +43,7 @@ class CalmLayeredThemeContractTest {
     }
 
     @Test
-    fun shellUsesMonsterDarkChromeInsteadOfPreviousBlueLightShell() {
+    fun shellUsesLightSystemChromeWithReadableDarkIcons() {
         val primitives = source("AppUiPrimitives.kt")
         val styles = projectFile("app/src/main/res/values/styles.xml").readText()
 
@@ -53,11 +53,11 @@ class CalmLayeredThemeContractTest {
         assertTrue(primitives.contains("internal object MainUiShape"))
         assertFalse(primitives.contains("internal val PortalBlue = Color(0xFF1769E0)"))
 
-        assertTrue(styles.contains("<item name=\"android:windowBackground\">#071714</item>"))
-        assertTrue(styles.contains("<item name=\"android:statusBarColor\">#071714</item>"))
-        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#091A17</item>"))
-        assertTrue(styles.contains("<item name=\"android:windowLightStatusBar\">false</item>"))
-        assertTrue(styles.contains("<item name=\"android:windowLightNavigationBar\">false</item>"))
+        assertTrue(styles.contains("<item name=\"android:windowBackground\">#EAF6F8</item>"))
+        assertTrue(styles.contains("<item name=\"android:statusBarColor\">#EAF6F8</item>"))
+        assertTrue(styles.contains("<item name=\"android:navigationBarColor\">#FFFFFF</item>"))
+        assertTrue(styles.contains("<item name=\"android:windowLightStatusBar\">true</item>"))
+        assertTrue(styles.contains("<item name=\"android:windowLightNavigationBar\">true</item>"))
     }
 
     private fun source(name: String) = projectFile("app/src/main/java/com/sonharf/game/$name").readText()
