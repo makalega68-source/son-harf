@@ -1,7 +1,9 @@
 package com.sonharf.game
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -133,10 +135,33 @@ internal fun GameTab(text: String, selected: Boolean, onClick: () -> Unit, modif
 }
 
 @Composable
-internal fun SegmentedGameTabs(labels: List<String>, selectedIndex: Int, onSelected: (Int) -> Unit, modifier: Modifier = Modifier) {
-    Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
-        labels.forEachIndexed { index, label ->
-            GameTab(label, index == selectedIndex, { onSelected(index) }, Modifier.weight(1f))
+internal fun SegmentedGameTabs(
+    labels: List<String>,
+    selectedIndex: Int,
+    onSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    if (labels.size <= 3) {
+        Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            labels.forEachIndexed { index, label ->
+                GameTab(label, index == selectedIndex, { onSelected(index) }, Modifier.weight(1f))
+            }
+        }
+    } else {
+        Row(
+            modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            labels.forEachIndexed { index, label ->
+                GameTab(
+                    text = label,
+                    selected = index == selectedIndex,
+                    onClick = { onSelected(index) },
+                    modifier = Modifier.widthIn(min = 92.dp),
+                )
+            }
         }
     }
 }
