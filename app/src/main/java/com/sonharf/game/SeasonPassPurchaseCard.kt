@@ -172,8 +172,8 @@ fun SeasonPassPurchaseCard(onPurchased: () -> Unit = {}) {
                 )
                 Text(
                     sh(
-                        "Yalnız ilerleme ve ekonomi ödülleri verir; rating, süre veya maç avantajı vermez.",
-                        "Grants progression and economy rewards only; never rating, time, or match advantages.",
+                        "Yalnız ilerleme ve ekonomi ödülleri verir; rating, süre, joker gücü veya maç avantajı vermez.",
+                        "Grants progression and economy rewards only; no rating, time, joker power or match advantages.",
                     ),
                     modifier = Modifier.weight(1f),
                     color = GameColors.PlayGreen,
