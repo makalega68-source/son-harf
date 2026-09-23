@@ -36,6 +36,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.sonharf.game.data.DictionaryReleaseCacheCoordinator
 import com.sonharf.game.data.SupabaseProvider
 
 /** Unified Pro startup shell: language -> auth -> premium product. */
@@ -63,6 +64,16 @@ fun StableV1App() {
         if (!languageChosen) return@LaunchedEffect
         authenticated = SupabaseProvider.configured && hasVerifiedMembershipSession()
         authChecked = true
+    }
+
+    // Dictionary release checks are best-effort and never delay the first authenticated frame.
+    // With no active immutable release the coordinator falls back to the existing V4 cache path.
+    LaunchedEffect(authenticated, SonHarfUiState.language) {
+        if (authenticated) {
+            runCatching {
+                DictionaryReleaseCacheCoordinator.refreshIfNeeded(context, SonHarfUiState.language)
+            }
+        }
     }
 
     if (!authChecked) {
