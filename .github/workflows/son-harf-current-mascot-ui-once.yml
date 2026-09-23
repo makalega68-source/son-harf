@@ -53,6 +53,16 @@ jobs:
           p = Path('.github/scripts/apply_son_harf_current_mascot_ui_once.py')
           text = p.read_text(encoding='utf-8')
           text = text.replace('    "room.roundWordCount",\n', '', 1)
+          text = text.replace(
+              'pt(language, "2 raund kazanan\\nmaçı kazanır", "First to 2 rounds\\nwins"),',
+              'pt(language, "2 raund kazanan\\\\nmaçı kazanır", "First to 2 rounds\\\\nwins"),',
+              1,
+          )
+          text = text.replace(
+              'Text(premierLeagueLabel(rating, language), color = accent, fontSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1)',
+              'Text(pt(language, "LİG PUANI", "LEAGUE RATING"), color = accent, fontSize = 7.sp, fontWeight = FontWeight.Bold, maxLines = 1)',
+              1,
+          )
           obsolete = '''replace_once(
           ''' + "'''            .background(Brush.radialGradient(listOf(Color(0xFF15355F), Color(0xFF07111F))))''',\n'''            .background(Brush.radialGradient(listOf(Color(0xFFF8FDFF), PremierArenaSky.SurfaceBlue)))''',\n\"target card sky surface\",\n)\n"
           if obsolete not in text:
