@@ -6,6 +6,7 @@ on:
       - claude/kelime-tahti-home-redesign-7ojb7d
     paths:
       - 'tools/polish_siege_bottom_controls.py'
+      - 'tools/align_siege_bottom_controls_tests.py'
       - '.github/workflows/siege-bottom-controls-polish.yml'
   workflow_dispatch:
 
@@ -41,7 +42,9 @@ jobs:
           validate-wrappers: false
 
       - name: Apply siege control polish
-        run: python3 tools/polish_siege_bottom_controls.py
+        run: |
+          python3 tools/polish_siege_bottom_controls.py
+          python3 tools/align_siege_bottom_controls_tests.py
 
       - name: Unit tests and debug APK
         run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
@@ -57,8 +60,13 @@ jobs:
                   app/src/main/java/com/sonharf/game/WordSiegeCaptureMotion.kt \
                   app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt \
                   app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt \
-                  app/src/main/java/com/sonharf/game/WordSiegePremiumPanel.kt
-          git rm tools/polish_siege_bottom_controls.py
+                  app/src/main/java/com/sonharf/game/WordSiegePremiumPanel.kt \
+                  app/src/test/java/com/sonharf/game/SimpleKelimeTahtiRestoreContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeCaptureMotionTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeFinalRulesTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePremiumScorePenaltyContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeStableRegressionTest.kt
+          git rm tools/polish_siege_bottom_controls.py tools/align_siege_bottom_controls_tests.py
           git diff --cached --check
           git commit -m "Polish siege controls and PRO bag access"
           git push origin HEAD:claude/kelime-tahti-home-redesign-7ojb7d
