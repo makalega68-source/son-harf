@@ -58,6 +58,7 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 import kotlin.math.sign
 import kotlin.random.Random
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -402,7 +403,7 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
 
     fun chance(probability: Float): Boolean = random.nextFloat() < probability
 
-    fun nextIdleDelay(): Long = 4_500L + random.nextLong(7_500L)
+    fun nextIdleDelay(): Long = 8_000L + random.nextLong(10_000L)
 
     fun pickIdle(
         now: Long,
@@ -457,16 +458,16 @@ internal class WordSiegeMascotMind(private val random: Random = Random.Default) 
 
     private fun cooldown(idle: WordSiegeMascotIdle): Long = when (idle) {
         WordSiegeMascotIdle.WATCH -> 0L
-        WordSiegeMascotIdle.LOOK_AROUND -> 15_000L
-        WordSiegeMascotIdle.NOD -> 20_000L
-        WordSiegeMascotIdle.HOP -> 30_000L
-        WordSiegeMascotIdle.SPARKLE -> 25_000L
-        WordSiegeMascotIdle.TWIRL -> 75_000L
-        WordSiegeMascotIdle.FLIP -> 140_000L
-        WordSiegeMascotIdle.CHAT -> 50_000L
-        WordSiegeMascotIdle.WANDER -> 120_000L
-        WordSiegeMascotIdle.PEEK -> 20_000L
-        WordSiegeMascotIdle.CHASE -> 240_000L
+        WordSiegeMascotIdle.LOOK_AROUND -> 25_000L
+        WordSiegeMascotIdle.NOD -> 30_000L
+        WordSiegeMascotIdle.HOP -> 50_000L
+        WordSiegeMascotIdle.SPARKLE -> 40_000L
+        WordSiegeMascotIdle.TWIRL -> 200_000L
+        WordSiegeMascotIdle.FLIP -> 360_000L
+        WordSiegeMascotIdle.CHAT -> 60_000L
+        WordSiegeMascotIdle.WANDER -> 240_000L
+        WordSiegeMascotIdle.PEEK -> 40_000L
+        WordSiegeMascotIdle.CHASE -> 420_000L
     }
 
     /** Picks a line it has not said recently. */
@@ -540,11 +541,14 @@ internal fun WordSiegeMascotCompanion(
     var fromPosition by remember { mutableStateOf(Offset.Unspecified) }
     val flight = remember { Animatable(0f) }
     var flying by remember { mutableStateOf(false) }
+    var flightId by remember { mutableIntStateOf(0) }
     val scale = remember { Animatable(1f) }
     var speech by remember { mutableStateOf<String?>(null) }
     var speechId by remember { mutableIntStateOf(0) }
     var talking by remember { mutableStateOf(false) }
     var speechJob by remember { mutableStateOf<Job?>(null) }
+    // The current multi-step trip (visit, celebration, escape); a new one replaces the old.
+    var tripJob by remember { mutableStateOf<Job?>(null) }
     var actionKey by remember { mutableLongStateOf(0L) }
     var action by remember { mutableStateOf<WordSiegeMascotAction?>(null) }
     var watching by remember { mutableStateOf(true) }
@@ -554,7 +558,7 @@ internal fun WordSiegeMascotCompanion(
     var lastInteractionAt by remember { mutableLongStateOf(SystemClock.uptimeMillis()) }
     var glanceKey by remember { mutableIntStateOf(0) }
     var glance by remember { mutableStateOf(Offset.Zero) }
-    var lastFlinchAt by remember { mutableLongStateOf(0L) }
+    var lastEscapeAt by remember { mutableLongStateOf(0L) }
     var chase by remember { mutableStateOf<WordSiegeMascotChase?>(null) }
     val chaseProgress = remember { Animatable(0f) }
     val tapTimes = remember { ArrayDeque<Long>() }
@@ -614,12 +618,16 @@ internal fun WordSiegeMascotCompanion(
             val t = flight.value
             if (t >= 1f) return target
             // A curved flight path that rises above both ends, like a real hop through the air.
-            val lift = max(abs(target.x - start.x) * .35f, baseSizePx * .9f)
+            val lift = max(abs(target.x - start.x) * .25f, baseSizePx * .6f)
             val control = Offset((start.x + target.x) / 2f, min(start.y, target.y) - lift)
             val u = 1f - t
-            return Offset(
-                u * u * start.x + 2f * u * t * control.x + t * t * target.x,
-                u * u * start.y + 2f * u * t * control.y + t * t * target.y,
+            val half = baseSizePx * scale.value / 2f
+            val x = u * u * start.x + 2f * u * t * control.x + t * t * target.x
+            val y = u * u * start.y + 2f * u * t * control.y + t * t * target.y
+            // Only the entrance may start outside; once inside, the flight stays within the area.
+            return if (!fromPosition.isSpecified) Offset(x, y) else Offset(
+                x.coerceIn(half, max(half, area.width - half)),
+                y.coerceIn(half, max(half, area.height - half)),
             )
         }
 
@@ -655,11 +663,25 @@ internal fun WordSiegeMascotCompanion(
             fromPosition = currentCenter()
             anchorIndex = index
             if (index >= 0) homeIndex = index
+            val id = ++flightId
             flying = true
-            flight.snapTo(0f)
-            flight.animateTo(1f, tween(durationMillis, easing = FastOutSlowInEasing))
-            flying = false
-            perform(WordSiegeMascotAction.LAND)
+            try {
+                flight.snapTo(0f)
+                flight.animateTo(1f, tween(durationMillis, easing = FastOutSlowInEasing))
+                perform(WordSiegeMascotAction.LAND)
+            } finally {
+                // A newer flight may have taken over; otherwise never stay stuck "in the air".
+                if (id == flightId) flying = false
+            }
+        }
+
+        /**
+         * Starts a multi-step trip in the companion scope, replacing any trip in progress. Game
+         * events (a new move, the result) never cut a trip short halfway and strand the mascot.
+         */
+        fun startTrip(block: suspend CoroutineScope.() -> Unit): Job {
+            tripJob?.cancel()
+            return scope.launch(block = block).also { tripJob = it }
         }
 
         /** Flies beside [point] (area fraction) so it does not hide what it is showing. */
@@ -685,6 +707,39 @@ internal fun WordSiegeMascotCompanion(
             return sorted[Random.nextInt(min(2, sorted.size))]
         }
 
+        /** Flies to another perch because a finger came close. */
+        fun moveOutOfTheWay(now: Long) {
+            if (busy || flying || chase != null || now - lastEscapeAt < 1_500L) return
+            lastEscapeAt = now
+            startTrip { flyTo(otherAnchor(), 750) }
+        }
+
+        /** The player touched the mascot: a little reaction, then it flies to another perch. */
+        fun touchedMascot(now: Long) {
+            lastInteractionAt = now
+            // The press and the click of one tap arrive separately; count them once.
+            if (tapTimes.lastOrNull()?.let { now - it < 350L } != true) tapTimes.addLast(now)
+            while (tapTimes.size > 4) tapTimes.removeFirst()
+            if (busy || flying || chase != null || now - lastEscapeAt < 400L) return
+            lastEscapeAt = now
+            if (tapBond < 5) {
+                tapBond += 1
+                bond.add(1)
+            }
+            val poked = tapTimes.size >= 3 && now - tapTimes[tapTimes.size - 3] < 2_500L
+            startTrip {
+                when {
+                    poked && mind.chance(.8f) -> say(mind.line(WordSiegeMascotLines.poked, currentName))
+                    mind.ready("talk:tap", 12_000L, now) && mind.chance(.35f) -> {
+                        mind.mark("talk:tap", now)
+                        say(mind.line(WordSiegeMascotLines.tap, currentName))
+                    }
+                }
+                delay(150L)
+                flyTo(otherAnchor(), 800)
+            }
+        }
+
         fun memoryLine(): String? {
             val options = buildList {
                 if (bond.longestWord.length >= 5) add(mind.line(WordSiegeMascotLines.memoryLongest, currentName, word = bond.longestWord))
@@ -699,7 +754,7 @@ internal fun WordSiegeMascotCompanion(
         // Life loop: arrive, greet, then mostly watch with an occasional, never-repeating gesture.
         LaunchedEffect(Unit) {
             delay(250L)
-            if (initialOutcome == null) flyTo(0, 1_000)
+            if (initialOutcome == null) startTrip { flyTo(0, 1_000) }.join()
             if (greet && initialOutcome == null) {
                 val (meetings, daysAway) = bond.meet()
                 delay(350L)
@@ -776,7 +831,7 @@ internal fun WordSiegeMascotCompanion(
                     }
                     WordSiegeMascotIdle.WANDER -> {
                         watching = false
-                        if (currentAnchors.size > 1) flyTo(otherAnchor(), 1_100)
+                        if (currentAnchors.size > 1) startTrip { flyTo(otherAnchor(), 1_100) }.join()
                     }
                     WordSiegeMascotIdle.PEEK -> {
                         watching = false
@@ -793,20 +848,26 @@ internal fun WordSiegeMascotCompanion(
                             start = Offset(if (fromLeft) -.05f else 1.05f, .15f + Random.nextFloat() * .35f),
                             end = Offset(if (fromLeft) .7f else .3f, .2f + Random.nextFloat() * .4f),
                         )
-                        chase = next
-                        chaseProgress.snapTo(0f)
-                        launch { chaseProgress.animateTo(1f, tween(2_700, easing = LinearEasing)) }
-                        repeat(9) {
-                            lookAt(chasePosition(next, chaseProgress.value, area))
-                            delay(180L)
-                        }
-                        val home = homeIndex
-                        flyBeside(next.end, 1_000, onTop = true)
-                        chase = null
-                        perform(WordSiegeMascotAction.SPARKLE)
-                        if (mind.chance(.6f)) say(mind.line(WordSiegeMascotLines.chaseCatch, currentName))
-                        delay(1_100L)
-                        flyTo(home, 1_000)
+                        startTrip {
+                            try {
+                                chase = next
+                                chaseProgress.snapTo(0f)
+                                launch { chaseProgress.animateTo(1f, tween(2_700, easing = LinearEasing)) }
+                                repeat(9) {
+                                    lookAt(chasePosition(next, chaseProgress.value, area))
+                                    delay(180L)
+                                }
+                                val home = homeIndex
+                                flyBeside(next.end, 1_000, onTop = true)
+                                chase = null
+                                perform(WordSiegeMascotAction.SPARKLE)
+                                if (mind.chance(.6f)) say(mind.line(WordSiegeMascotLines.chaseCatch, currentName))
+                                delay(1_100L)
+                                flyTo(home, 1_000)
+                            } finally {
+                                chase = null
+                            }
+                        }.join()
                     }
                 }
                 if (choice != WordSiegeMascotIdle.WATCH) {
@@ -833,12 +894,7 @@ internal fun WordSiegeMascotCompanion(
                 WordSiegeMascotEvent.PRAISE -> speakIf("praise", 18_000L, .35f, WordSiegeMascotLines.praise)
                 WordSiegeMascotEvent.BIG_PRAISE -> {
                     delay(700L)
-                    if (mind.ready("act:praise-twirl", 40_000L, now) && mind.chance(.4f)) {
-                        mind.mark("act:praise-twirl", now)
-                        perform(WordSiegeMascotAction.TWIRL)
-                    } else {
-                        perform(WordSiegeMascotAction.SPARKLE)
-                    }
+                    perform(WordSiegeMascotAction.SPARKLE)
                     speakIf("praise", 10_000L, .75f, WordSiegeMascotLines.bigPraise)
                 }
                 WordSiegeMascotEvent.RARE_WORD -> {
@@ -864,7 +920,7 @@ internal fun WordSiegeMascotCompanion(
                 WordSiegeMascotEvent.STREAK -> {
                     // Each step of a streak is celebrated a little bigger.
                     delay(600L)
-                    perform(if (current.count >= 5) WordSiegeMascotAction.TWIRL else WordSiegeMascotAction.CHEER)
+                    perform(if (current.count >= 5) WordSiegeMascotAction.CHEER else WordSiegeMascotAction.HOP)
                     speakIf("streak", 8_000L, if (current.count >= 5) 1f else .7f, WordSiegeMascotLines.streak)
                 }
                 WordSiegeMascotEvent.STREAK_LOST -> {
@@ -875,6 +931,7 @@ internal fun WordSiegeMascotCompanion(
         }
 
         // Places worth a visit: freshly won territory, or (practice) a bonus square as a hint.
+        // The trip runs in the companion's own scope so a new move cannot cut it short midway.
         LaunchedEffect(visit?.key) {
             val current = visit ?: return@LaunchedEffect
             if (current.key == initialVisitKey) return@LaunchedEffect
@@ -882,14 +939,16 @@ internal fun WordSiegeMascotCompanion(
                 WordSiegeMascotVisitKind.CAPTURE -> {
                     delay(900L)
                     val now = SystemClock.uptimeMillis()
-                    if (busy || flying || !mind.ready("visit:capture", 25_000L, now) || !mind.chance(.6f)) return@LaunchedEffect
+                    if (busy || flying || !mind.ready("visit:capture", 60_000L, now) || !mind.chance(.4f)) return@LaunchedEffect
                     mind.mark("visit:capture", now)
-                    val home = homeIndex
-                    flyBeside(current.point, 900)
-                    perform(WordSiegeMascotAction.TWIRL)
-                    if (mind.chance(.5f)) say(mind.line(WordSiegeMascotLines.capture, currentName))
-                    delay(1_600L)
-                    flyTo(home, 900)
+                    startTrip {
+                        val home = homeIndex
+                        flyBeside(current.point, 1_000)
+                        perform(WordSiegeMascotAction.NOD)
+                        if (mind.chance(.5f)) say(mind.line(WordSiegeMascotLines.capture, currentName))
+                        delay(1_200L)
+                        flyTo(home, 1_000)
+                    }
                 }
                 WordSiegeMascotVisitKind.HINT -> {
                     // Only when the player seems stuck: their turn, nothing placed, no touches for a while.
@@ -898,111 +957,117 @@ internal fun WordSiegeMascotCompanion(
                     if (busy || flying || !currentPlayerTurn || currentPendingCount > 0) return@LaunchedEffect
                     if (now - lastInteractionAt < 10_000L || !mind.ready("visit:hint", 45_000L, now)) return@LaunchedEffect
                     mind.mark("visit:hint", now)
-                    val home = homeIndex
-                    flyBeside(current.point, 900)
-                    perform(WordSiegeMascotAction.NOD)
-                    say(mind.line(WordSiegeMascotLines.hint, currentName), holdExtraMillis = 1_000L)
-                    delay(3_200L)
-                    flyTo(home, 900)
+                    startTrip {
+                        val home = homeIndex
+                        flyBeside(current.point, 1_000)
+                        perform(WordSiegeMascotAction.NOD)
+                        say(mind.line(WordSiegeMascotLines.hint, currentName), holdExtraMillis = 1_000L)
+                        delay(2_500L)
+                        flyTo(home, 1_000)
+                    }
                 }
             }
         }
 
-        // Touches on the game: glance at them; flinch if a finger comes too close.
+        // Touches on the game: glance at them. A finger on or near the mascot sends it flying
+        // to another perch so it never stays in the player's way.
         LaunchedEffect(touches?.tick) {
             val touch = touches?.position ?: return@LaunchedEffect
-            if (!touch.isSpecified || flying || busy) return@LaunchedEffect
+            if (!touch.isSpecified) return@LaunchedEffect
             val now = SystemClock.uptimeMillis()
             lastInteractionAt = now
+            if (busy) return@LaunchedEffect
             val here = currentCenter()
             val radius = baseSizePx * scale.value / 2f
             val distance = (touch - here).getDistance()
             when {
-                distance <= radius -> Unit // A tap on the mascot itself is handled by onTap.
-                distance < radius * 2.1f && now - lastFlinchAt > 4_000L -> {
-                    lastFlinchAt = now
-                    perform(WordSiegeMascotAction.FLINCH)
-                }
-                else -> lookAt(touch)
+                distance <= radius -> touchedMascot(now)
+                distance < radius * 1.9f -> moveOutOfTheWay(now)
+                !flying -> lookAt(touch)
             }
         }
         LaunchedEffect(touches?.dragTick) {
             val drag = touches?.dragPosition ?: return@LaunchedEffect
-            if (!drag.isSpecified || flying || busy) return@LaunchedEffect
+            if (!drag.isSpecified || busy) return@LaunchedEffect
             val now = SystemClock.uptimeMillis()
             lastInteractionAt = now
             val here = currentCenter()
             val radius = baseSizePx * scale.value / 2f
-            val distance = (drag - here).getDistance()
-            if (distance > radius && distance < radius * 1.8f && now - lastFlinchAt > 4_000L) {
-                lastFlinchAt = now
-                perform(WordSiegeMascotAction.FLINCH)
-            }
+            if ((drag - here).getDistance() < radius * 1.7f) moveOutOfTheWay(now)
         }
 
         // Match result: fly to centre stage, celebrate or grieve, then return to a perch.
         LaunchedEffect(outcome) {
             val result = outcome ?: return@LaunchedEffect
-            busy = true
-            watching = false
-            chase = null
-            speechJob?.cancel()
-            speech = null
-            when (result) {
-                WordSiegeMascotOutcome.WIN -> {
-                    bond.recordWin()
-                    stageEmotion = WordSiegeMascotEmotion.EXCITED
-                    launch { scale.animateTo(celebrationScale, tween(900)) }
-                    flyTo(STAGE, 950)
-                    perform(WordSiegeMascotAction.CHEER)
-                    val line = if (bond.winStreak >= 2 && mind.chance(.6f)) {
-                        mind.line(WordSiegeMascotLines.memoryStreak, currentName, number = bond.winStreak)
-                    } else {
-                        mind.line(WordSiegeMascotLines.win, currentName)
+            // Runs in the companion scope so the celebration always finishes and lands on a perch.
+            startTrip {
+                busy = true
+                try {
+                    watching = false
+                    chase = null
+                    speechJob?.cancel()
+                    speech = null
+                    when (result) {
+                        WordSiegeMascotOutcome.WIN -> {
+                            bond.recordWin()
+                            stageEmotion = WordSiegeMascotEmotion.EXCITED
+                            launch { scale.animateTo(celebrationScale, tween(900)) }
+                            flyTo(STAGE, 950)
+                            perform(WordSiegeMascotAction.CHEER)
+                            val line = if (bond.winStreak >= 2 && mind.chance(.6f)) {
+                                mind.line(WordSiegeMascotLines.memoryStreak, currentName, number = bond.winStreak)
+                            } else {
+                                mind.line(WordSiegeMascotLines.win, currentName)
+                            }
+                            say(line, holdExtraMillis = 1_200L)
+                            delay(1_700L)
+                            perform(WordSiegeMascotAction.TWIRL)
+                            delay(2_000L)
+                            perform(WordSiegeMascotAction.HOP)
+                            delay(1_000L)
+                            if (mind.chance(.3f)) {
+                                perform(WordSiegeMascotAction.FLIP)
+                                delay(3_100L)
+                            } else {
+                                perform(WordSiegeMascotAction.SPARKLE)
+                                delay(1_400L)
+                            }
+                        }
+                        WordSiegeMascotOutcome.LOSS -> {
+                            bond.recordLoss()
+                            stageEmotion = WordSiegeMascotEmotion.TEARY
+                            launch { scale.animateTo(1.3f, tween(900)) }
+                            flyTo(STAGE, 1_100)
+                            delay(700L)
+                            say(mind.line(WordSiegeMascotLines.loss, currentName), holdExtraMillis = 1_500L)
+                            delay(3_400L)
+                            // After the tears, a brave little smile for the player.
+                            stageEmotion = WordSiegeMascotEmotion.CALM
+                            perform(WordSiegeMascotAction.NOD)
+                            delay(1_300L)
+                        }
+                        WordSiegeMascotOutcome.DRAW -> {
+                            stageEmotion = WordSiegeMascotEmotion.SURPRISED
+                            launch { scale.animateTo(1.4f, tween(900)) }
+                            flyTo(STAGE, 1_000)
+                            say(mind.line(WordSiegeMascotLines.draw, currentName))
+                            delay(1_200L)
+                            stageEmotion = WordSiegeMascotEmotion.HAPPY
+                            perform(WordSiegeMascotAction.HOP)
+                            delay(2_000L)
+                        }
                     }
-                    say(line, holdExtraMillis = 1_200L)
-                    delay(1_500L)
-                    perform(WordSiegeMascotAction.TWIRL)
-                    delay(1_300L)
-                    perform(WordSiegeMascotAction.HOP)
-                    delay(1_000L)
-                    if (mind.chance(.5f)) {
-                        perform(WordSiegeMascotAction.FLIP)
-                        delay(2_300L)
-                    } else {
-                        perform(WordSiegeMascotAction.SPARKLE)
-                        delay(1_400L)
-                    }
-                }
-                WordSiegeMascotOutcome.LOSS -> {
-                    bond.recordLoss()
-                    stageEmotion = WordSiegeMascotEmotion.TEARY
-                    launch { scale.animateTo(1.3f, tween(900)) }
-                    flyTo(STAGE, 1_100)
-                    delay(700L)
-                    say(mind.line(WordSiegeMascotLines.loss, currentName), holdExtraMillis = 1_500L)
-                    delay(3_400L)
-                    // After the tears, a brave little smile for the player.
-                    stageEmotion = WordSiegeMascotEmotion.CALM
-                    perform(WordSiegeMascotAction.NOD)
-                    delay(1_300L)
-                }
-                WordSiegeMascotOutcome.DRAW -> {
-                    stageEmotion = WordSiegeMascotEmotion.SURPRISED
-                    launch { scale.animateTo(1.4f, tween(900)) }
-                    flyTo(STAGE, 1_000)
-                    say(mind.line(WordSiegeMascotLines.draw, currentName))
-                    delay(1_200L)
-                    stageEmotion = WordSiegeMascotEmotion.HAPPY
-                    perform(WordSiegeMascotAction.HOP)
-                    delay(2_000L)
+                    stageEmotion = null
+                    launch { scale.animateTo(1f, tween(800)) }
+                    flyTo(0, 1_000)
+                } finally {
+                    stageEmotion = null
+                    busy = false
+                    watching = true
+                    // If the celebration was cut short, still shrink back to normal size.
+                    if (scale.targetValue != 1f) scope.launch { scale.animateTo(1f, tween(600)) }
                 }
             }
-            stageEmotion = null
-            launch { scale.animateTo(1f, tween(800)) }
-            flyTo(0, 1_000)
-            busy = false
-            watching = true
         }
 
         val sizePx = baseSizePx * scale.value
@@ -1069,35 +1134,9 @@ internal fun WordSiegeMascotCompanion(
                 glanceX = glance.x,
                 glanceY = glance.y,
                 hat = hat,
-                onTap = {
-                    val now = SystemClock.uptimeMillis()
-                    lastInteractionAt = now
-                    tapTimes.addLast(now)
-                    while (tapTimes.size > 4) tapTimes.removeFirst()
-                    if (!busy && !flying && chase == null) {
-                        if (tapBond < 5) {
-                            tapBond += 1
-                            bond.add(1)
-                        }
-                        val poked = tapTimes.size >= 3 && now - tapTimes[tapTimes.size - 3] < 2_500L
-                        scope.launch {
-                            when {
-                                poked && mind.chance(.8f) -> say(mind.line(WordSiegeMascotLines.poked, currentName))
-                                mind.ready("talk:tap", 12_000L, now) && mind.chance(.35f) -> {
-                                    mind.mark("talk:tap", now)
-                                    say(mind.line(WordSiegeMascotLines.tap, currentName))
-                                }
-                            }
-                            delay(260L)
-                            flyTo(otherAnchor(), 850)
-                            if (mind.ready("act:tap-twirl", 45_000L, now) && mind.chance(.15f)) {
-                                mind.mark("act:tap-twirl", now)
-                                delay(200L)
-                                perform(WordSiegeMascotAction.TWIRL)
-                            }
-                        }
-                    }
-                },
+                // Fallback for screens without a touch watcher; with one, the press already
+                // started the flight and this is ignored.
+                onTap = { touchedMascot(SystemClock.uptimeMillis()) },
             )
         }
 

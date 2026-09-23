@@ -336,14 +336,14 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
 
     private fun perform(action: WordSiegeMascotAction, now: Long) {
         val duration = when (action) {
-            WordSiegeMascotAction.HOP -> 720L
-            WordSiegeMascotAction.TWIRL -> 1_050L
-            WordSiegeMascotAction.FLIP -> 2_200L
+            WordSiegeMascotAction.HOP -> 850L
+            WordSiegeMascotAction.TWIRL -> 1_800L
+            WordSiegeMascotAction.FLIP -> 3_000L
             WordSiegeMascotAction.LOOK_AROUND -> 2_100L
             WordSiegeMascotAction.NOD -> 800L
             WordSiegeMascotAction.SPARKLE -> 1_300L
-            WordSiegeMascotAction.CHEER -> 1_300L
-            WordSiegeMascotAction.LAND -> 460L
+            WordSiegeMascotAction.CHEER -> 1_500L
+            WordSiegeMascotAction.LAND -> 520L
             WordSiegeMascotAction.SHRUG -> 950L
             WordSiegeMascotAction.PEEK -> 1_600L
             WordSiegeMascotAction.FLINCH -> 520L
@@ -396,9 +396,10 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             tapCount = 0
             startReaction(WordSiegeMascotEmotion.ANGRY, now)
         } else {
-            startReaction(WordSiegeMascotEmotion.LAUGH, now)
-            reactionUntil = now + 700L
-            motionUntil = reactionUntil
+            // Just a happy face; the companion flies it away, so no extra body motion here.
+            reaction = WordSiegeMascotEmotion.HAPPY
+            reactionStartedAt = now
+            reactionUntil = now + 900L
         }
         markActive(now)
         invalidate()
@@ -628,8 +629,8 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         wingVelocity += (wingK * ((if (flying) 1f else 0f) - wing) - 2f * sqrt(wingK) * .7f * wingVelocity) * dt
         wing = (wing + wingVelocity * dt).coerceIn(0f, 1.15f)
         if (wing > .01f) {
-            rotation += flightDirection * 13f * min(1f, wing)
-            dy += sin(now / 105f) * 12f * min(1f, wing)
+            rotation += flightDirection * 7f * min(1f, wing)
+            dy += sin(now / 140f) * 9f * min(1f, wing)
             // The body draws in a little while airborne so the wings fit inside the view.
             sx *= 1f - .19f * min(1f, wing)
             sy *= 1f - .13f * min(1f, wing)
@@ -647,7 +648,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             dx += m[0]; dy += m[1]; sx *= m[2]; sy *= m[3]; rotation += m[4]; spin += m[5]
         }
         if (mood == WordSiegeMascotEmotion.STRESSED || urgency > .3f) {
-            dx += sin(now / 26f) * 1.8f * max(urgency, .4f)
+            dx += sin(now / 40f) * 1.1f * max(urgency, .4f)
         }
 
         // ---- Draw -------------------------------------------------------------------------------
@@ -786,17 +787,18 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private fun bodyMotion(emotion: WordSiegeMascotEmotion, t: Float): FloatArray {
         resetMotion()
         when (emotion) {
-            WordSiegeMascotEmotion.JUMP -> jump(t, height = 112f, crouch = .15f, spin = 7f)
+            WordSiegeMascotEmotion.JUMP -> jump(t, height = 105f, crouch = .13f, spin = 3f)
             WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.EXCITED -> {
-                jump(t, height = 62f, crouch = .09f, spin = 0f)
-                motion[4] += 6f * sin(t * 4f * PI.toFloat()) * (1f - t)
+                jump(t, height = 56f, crouch = .08f, spin = 0f)
+                motion[4] += 3f * sin(t * 2f * PI.toFloat()) * (1f - t)
             }
             WordSiegeMascotEmotion.LAUGH -> {
-                val shake = abs(sin(t * 7f * PI.toFloat()))
-                motion[1] = -shake * 16f * (1f - t * .5f)
-                motion[3] = 1f - shake * .045f
-                motion[2] = 1f + shake * .03f
-                motion[4] = 3.2f * sin(t * 7f * PI.toFloat()) * (1f - t)
+                // A few relaxed giggle bounces, not a frantic shake.
+                val shake = abs(sin(t * 3f * PI.toFloat()))
+                motion[1] = -shake * 12f * (1f - t * .5f)
+                motion[3] = 1f - shake * .035f
+                motion[2] = 1f + shake * .025f
+                motion[4] = 1.5f * sin(t * 3f * PI.toFloat()) * (1f - t)
             }
             WordSiegeMascotEmotion.PROUD -> {
                 val rise = easeOut(min(1f, t * 3f)) * (1f - easeIn(max(0f, t - .75f) / .25f))
@@ -817,7 +819,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
                 motion[3] = 1f - .04f * sigh
             }
             WordSiegeMascotEmotion.ANGRY -> {
-                motion[0] = 7f * sin(t * 12f * PI.toFloat()) * (1f - t)
+                motion[0] = 4f * sin(t * 6f * PI.toFloat()) * (1f - t)
                 motion[3] = 1f - .03f * (1f - t)
             }
             else -> Unit
@@ -832,14 +834,14 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         when (action) {
             WordSiegeMascotAction.HOP -> jump(t, height = 58f, crouch = .09f, spin = 0f)
             WordSiegeMascotAction.CHEER -> {
-                jump(t, height = 96f, crouch = .14f, spin = 0f)
-                motion[4] += 7f * sin(t * 4f * pi) * (1f - t)
+                jump(t, height = 88f, crouch = .12f, spin = 0f)
+                motion[4] += 3f * sin(t * 2f * pi) * (1f - t)
             }
             WordSiegeMascotAction.TWIRL -> {
                 // A playful pirouette around its own centre with a little lift and a landing squash.
                 val e = easeInOut(t)
                 motion[5] = 360f * e
-                motion[1] = -44f * sin(t * pi)
+                motion[1] = -36f * sin(t * pi)
                 val land = if (t > .82f) sin((t - .82f) / .18f * pi) else 0f
                 motion[2] = 1f + .07f * land
                 motion[3] = 1f - .08f * land
@@ -856,17 +858,17 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
                     t < .3f -> {
                         val u = (t - .1f) / .2f
                         motion[5] = 180f * easeInOut(u)
-                        motion[1] = -70f * easeOut(u)
+                        motion[1] = -60f * easeOut(u)
                     }
                     t < .72f -> {
                         val u = (t - .3f) / .42f
-                        motion[5] = 180f + 9f * sin(u * 5f * pi) * (1f - u * .5f)
-                        motion[1] = -70f + 8f * sin(u * 3f * pi)
+                        motion[5] = 180f + 5f * sin(u * 2f * pi) * (1f - u * .5f)
+                        motion[1] = -60f + 6f * sin(u * 2f * pi)
                     }
                     t < .9f -> {
                         val u = (t - .72f) / .18f
                         motion[5] = 180f + 180f * easeInOut(u)
-                        motion[1] = -70f * (1f - easeIn(u))
+                        motion[1] = -60f * (1f - easeIn(u))
                     }
                     else -> {
                         val e = sin((t - .9f) / .1f * pi)
@@ -898,7 +900,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
                 val bump = sin(t * pi)
                 motion[1] = -16f * bump
                 motion[3] = 1f + .05f * bump
-                motion[4] = 5f * sin(t * 2f * pi)
+                motion[4] = 3f * sin(t * 2f * pi)
             }
             WordSiegeMascotAction.PEEK -> {
                 // Stretches up on tiptoe and leans toward whatever it is curious about.
@@ -1148,7 +1150,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private fun drawWings(canvas: Canvas, now: Long) {
         // Fast flaps in flight; the wings spread as they unfold.
         val open = min(1f, wing)
-        val flap = (sin(now / 52f) * 32f + 8f) * open
+        val flap = (sin(now / 75f) * 26f + 8f) * open
         val alpha = (open * 255f).toInt().coerceIn(0, 255)
         wingPaint.alpha = alpha
         wingLinePaint.alpha = (alpha * .7f).toInt()

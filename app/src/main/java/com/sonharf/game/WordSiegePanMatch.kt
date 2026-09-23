@@ -725,7 +725,7 @@ private fun PanSiegeBoard(
             // for the centre and chat buttons.
             WordSiegeMascotCompanion(
                 anchors = WordSiegeBoardMascotPerches,
-                mascotSize = 94.dp,
+                mascotSize = 76.dp,
                 moveId = lastMove?.id,
                 lastMoveMine = lastMoveMine,
                 playerTurn = playerTurn,
@@ -1078,13 +1078,16 @@ private fun panSiegeLetterValue(letter: String): String = when (letter) {
     else -> "1"
 }
 
-/** Perches for the board mascot (fractions of the board viewport). */
+/**
+ * Perches for the board mascot (fractions of the board viewport). All sit on the outer edge,
+ * where cells are rarely played; the right-hand corners stay free for the board buttons.
+ */
 internal val WordSiegeBoardMascotPerches = listOf(
     Offset(0f, 0f),
-    Offset(0f, .5f),
     Offset(0f, 1f),
+    Offset(.5f, 0f),
     Offset(.5f, 1f),
-    Offset(1f, .5f),
+    Offset(0f, .5f),
 )
 
 /** Converts board cells into a mascot visit point (viewport fraction); null when off-screen. */

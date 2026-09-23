@@ -266,7 +266,7 @@ internal fun WordSiegePracticeBoard(
             }
             WordSiegeMascotCompanion(
                 anchors = WordSiegeBoardMascotPerches,
-                mascotSize = 94.dp,
+                mascotSize = 76.dp,
                 moveId = moveEventKey?.toLong(),
                 lastMoveMine = lastMoveMine,
                 playerTurn = enabled,
