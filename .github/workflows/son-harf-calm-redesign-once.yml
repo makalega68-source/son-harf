@@ -26,16 +26,26 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Apply scoped UI patch
+      - name: Apply scoped UI patch and contracts
         run: |
           python3 .github/scripts/apply_son_harf_calm_redesign.py
           python3 .github/scripts/fix_son_harf_redesign_compile.py
+          python3 .github/scripts/apply_son_harf_calm_contracts.py
 
-      - name: Verify only intended Kotlin file changed
+      - name: Verify only intended files changed
         shell: bash
         run: |
-          changed="$(git diff --name-only)"
-          test "$changed" = "app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt"
+          git diff --name-only | sort > /tmp/actual.txt
+          cat > /tmp/expected.txt <<'EOF'
+          app/src/main/java/com/sonharf/game/GameDesignSystem.kt
+          app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          app/src/test/java/com/sonharf/game/PremiumCosmeticApplicationContractTest.kt
+          app/src/test/java/com/sonharf/game/PremiumStoreProContractTest.kt
+          app/src/test/java/com/sonharf/game/PremierDuelUxRegressionTest.kt
+          app/src/test/java/com/sonharf/game/UnifiedThemeSourceContractTest.kt
+          EOF
+          sort -o /tmp/expected.txt /tmp/expected.txt
+          diff -u /tmp/expected.txt /tmp/actual.txt
 
       - name: Compile Son Harf production code
         run: |
@@ -45,11 +55,28 @@ jobs:
       - name: Run unit tests
         run: ./gradlew :app:testDebugUnitTest --no-daemon --stacktrace
 
+      - name: Build installable debug APK
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+
       - name: Commit verified redesign
         shell: bash
         run: |
           git config user.name "openai-ui-bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          git add \
+            app/src/main/java/com/sonharf/game/GameDesignSystem.kt \
+            app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt \
+            app/src/test/java/com/sonharf/game/PremiumCosmeticApplicationContractTest.kt \
+            app/src/test/java/com/sonharf/game/PremiumStoreProContractTest.kt \
+            app/src/test/java/com/sonharf/game/PremierDuelUxRegressionTest.kt \
+            app/src/test/java/com/sonharf/game/UnifiedThemeSourceContractTest.kt
           git commit -m "feat: redesign Son Harf match arena"
           git push origin HEAD:ui/professional-full-redesign-20260921
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: son-harf-calm-redesign-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 3
