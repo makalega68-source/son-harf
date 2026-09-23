@@ -1,0 +1,133 @@
+name: Son Harf V35 UI Verify Once
+
+on:
+  push:
+    branches:
+      - fix/son-harf-v35-ui-20260923
+    paths:
+      - '.github/workflows/son-harf-v35-ui-verify-once.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-smoke-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact v35-derived branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/son-harf-v35-ui-20260923
+          fetch-depth: 0
+
+      - name: Confirm canonical v35 ancestry
+        shell: bash
+        run: |
+          git merge-base --is-ancestor a6dbc509a8bc9f0405773ea90fe22610e058f2cd HEAD
+          git log --oneline --decorate -5
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+
+      - name: Apply scoped Son Harf UI patch
+        run: python3 .github/scripts/apply_son_harf_v35_ui.py
+
+      - name: Verify scope and diff hygiene
+        shell: bash
+        run: |
+          git diff --check
+          git diff --name-only | sort > /tmp/actual.txt
+          cat > /tmp/expected.txt <<'EOF'
+          app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          app/src/test/java/com/sonharf/game/PremiumCosmeticApplicationContractTest.kt
+          app/src/test/java/com/sonharf/game/PremiumStoreProContractTest.kt
+          app/src/test/java/com/sonharf/game/PremierDuelUxRegressionTest.kt
+          app/src/test/java/com/sonharf/game/UnifiedThemeSourceContractTest.kt
+          EOF
+          sed -i 's/^          //' /tmp/expected.txt
+          sort -o /tmp/expected.txt /tmp/expected.txt
+          diff -u /tmp/expected.txt /tmp/actual.txt
+
+      - name: Compile, unit test and build APK
+        run: ./gradlew clean :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Verify APK manifest identity
+        shell: bash
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          APKA="${ANDROID_HOME}/cmdline-tools/latest/bin/apkanalyzer"
+          if [ -x "$APKA" ]; then
+            test "$($APKA manifest application-id "$APK")" = "com.sonharf.game"
+            test "$($APKA manifest version-code "$APK")" = "35"
+          fi
+          unzip -t "$APK" >/dev/null
+
+      - name: Emulator cold-start smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            set -euo pipefail
+            APK=app/build/outputs/apk/debug/app-debug.apk
+            adb install -r "$APK"
+            adb logcat -c
+            adb shell am force-stop com.sonharf.game
+            adb shell am start -W -n com.sonharf.game/.MainActivity
+            sleep 10
+            PID="$(adb shell pidof com.sonharf.game | tr -d '\r')"
+            test -n "$PID"
+            if adb logcat -d | grep -E "FATAL EXCEPTION|Process: com\.sonharf\.game"; then
+              echo "Fatal startup crash detected"
+              exit 1
+            fi
+            adb shell dumpsys activity activities | grep -q "com.sonharf.game/.MainActivity"
+
+      - name: Commit only verified production changes
+        shell: bash
+        run: |
+          git config user.name "openai-v35-ui-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt \
+            app/src/test/java/com/sonharf/game/PremiumCosmeticApplicationContractTest.kt \
+            app/src/test/java/com/sonharf/game/PremiumStoreProContractTest.kt \
+            app/src/test/java/com/sonharf/game/PremierDuelUxRegressionTest.kt \
+            app/src/test/java/com/sonharf/game/UnifiedThemeSourceContractTest.kt
+          git commit -m "feat: apply calm Son Harf arena on v35 baseline"
+          git push origin HEAD:fix/son-harf-v35-ui-20260923
+
+      - name: Prepare direct APK artifact
+        shell: bash
+        run: |
+          mkdir -p final-apk
+          cp app/build/outputs/apk/debug/app-debug.apk final-apk/Kelime-Tahti-Guncel-v36-Son-Harf.apk
+          sha256sum final-apk/Kelime-Tahti-Guncel-v36-Son-Harf.apk > final-apk/SHA256.txt
+
+      - name: Upload verified APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kelime-tahti-v36-son-harf-v35-baseline
+          path: final-apk/
+          if-no-files-found: error
+          retention-days: 7
