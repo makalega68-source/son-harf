@@ -35,7 +35,7 @@ internal data class WordSiegeCaptureEffect(
     val batch: WordSiegeCaptureBatch,
     val targetInWindow: Offset,
     val accent: Color,
-    val onCubeArrived: () -> Unit,
+    val onCubeArrived: (Int) -> Unit,
     val onFinished: () -> Unit,
 )
 
@@ -113,7 +113,7 @@ internal fun WordSiegeCaptureFlightOverlay(
                             easing = FastOutSlowInEasing,
                         ),
                     )
-                    onCubeArrived()
+                    onCubeArrived(effect.batch.indices[ordinal])
                 }
             }
         }

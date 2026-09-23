@@ -28,7 +28,7 @@ class WordSiegeReadabilityContractTest {
             assertTrue(board.contains("SpanStyle(fontSize = 20.sp)"))
             assertTrue(board.contains("SpanStyle(fontSize = 10.sp)"))
             assertTrue(board.contains("lineHeight = 17.sp"))
-            assertTrue(board.contains("fontWeight = FontWeight.Light"))
+            assertTrue(board.contains("fontWeight = if (overview) FontWeight.SemiBold else FontWeight.Medium"))
         }
     }
 }

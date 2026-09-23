@@ -355,14 +355,10 @@ private fun WordSiegePracticeBoardCell(
                 )
             )
             .border(
-                width = when {
-                    lastMoveHighlight > 0f -> 1.7.dp
-                    threatened && owner != 0 -> 1.5.dp
-                    else -> .55.dp
-                },
+                width = if (lastMoveHighlight > 0f) 1.7.dp else .45.dp,
                 color = if (lastMoveHighlight > 0f) {
                     PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
-                } else borderColor,
+                } else Color.Black.copy(alpha = .52f),
                 shape = RoundedCornerShape(8.dp),
             ),
         contentAlignment = Alignment.Center,
@@ -386,10 +382,10 @@ private fun WordSiegePracticeBoardCell(
             Text(
                 letter,
                 color = Color(0xFF2A1B13),
-                fontSize = 22.sp,
+                fontSize = if (overview) 24.sp else 22.sp,
                 fontFamily = FontFamily.Serif,
                 fontWeight = FontWeight.Black,
-                letterSpacing = .35.sp,
+                letterSpacing = if (overview) .10.sp else .25.sp,
             )
             Text(
                 practiceLetterValue(letter),
@@ -430,7 +426,7 @@ private fun WordSiegePracticeBoardCell(
                 fontSize = WordSiegeBoardAccessibility.BoardBonus,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 lineHeight = 17.sp,
-                fontWeight = FontWeight.Light,
+                fontWeight = if (overview) FontWeight.SemiBold else FontWeight.Medium,
             )
         }
     }

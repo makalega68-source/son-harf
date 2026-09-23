@@ -1,11 +1,13 @@
 package com.sonharf.game
 
 internal const val WORD_SIEGE_CAPTURE_POINTS_PER_CUBE = 2
+internal const val WORD_SIEGE_OPPONENT_LOSS_PER_CUBE = 1
 
 internal data class WordSiegeCaptureBatch(
     val updateKey: String,
     val owner: Int,
     val indices: List<Int>,
+    val opponentIndices: Set<Int> = emptySet(),
 ) {
     init {
         require(owner == 1 || owner == 2) { "capture owner must be 1 or 2" }
@@ -13,6 +15,9 @@ internal data class WordSiegeCaptureBatch(
 
     val points: Int
         get() = indices.size * WORD_SIEGE_CAPTURE_POINTS_PER_CUBE
+
+    val opponentLossPoints: Int
+        get() = opponentIndices.size * WORD_SIEGE_OPPONENT_LOSS_PER_CUBE
 }
 
 internal fun wordSiegeCaptureBatch(
@@ -32,13 +37,24 @@ internal fun wordSiegeCaptureBatch(
         }
         .toList()
 
-    return captured.takeIf { it.isNotEmpty() }?.let {
-        WordSiegeCaptureBatch(updateKey = updateKey, owner = capturingOwner, indices = it)
+    return captured.takeIf { it.isNotEmpty() }?.let { indices ->
+        val opponentIndices = indices
+            .filter { index -> previousOwners[index] != 0 && previousOwners[index] != capturingOwner }
+            .toSet()
+        WordSiegeCaptureBatch(
+            updateKey = updateKey,
+            owner = capturingOwner,
+            indices = indices,
+            opponentIndices = opponentIndices,
+        )
     }
 }
 
-internal fun wordSiegeDisplayedScore(actualScore: Int, pendingCapturePoints: Int): Int =
-    (actualScore - pendingCapturePoints.coerceAtLeast(0)).coerceAtLeast(0)
+internal fun wordSiegeDisplayedScore(
+    actualScore: Int,
+    pendingCapturePoints: Int,
+    pendingLossPoints: Int = 0,
+): Int = (actualScore - pendingCapturePoints.coerceAtLeast(0) + pendingLossPoints.coerceAtLeast(0)).coerceAtLeast(0)
 
 /**
  * Keeps the last consumed server board as a visual baseline.

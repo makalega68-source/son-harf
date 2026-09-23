@@ -81,11 +81,13 @@ internal fun WordSiegeScoreCard(
     isBot: Boolean,
     modifier: Modifier = Modifier,
     scoreArrivalTick: Int = 0,
+    scoreLossTick: Int = 0,
     onScoreCenterChanged: (Offset) -> Unit = {},
 ) {
-    val edge = if (active) accent else WordSiegeGameUi.Border
     val scoreScale = remember { Animatable(1f) }
     val scoreGlow = remember { Animatable(0f) }
+    val lossScale = remember { Animatable(1f) }
+    val lossGlow = remember { Animatable(0f) }
 
     LaunchedEffect(scoreArrivalTick) {
         if (scoreArrivalTick <= 0) return@LaunchedEffect
@@ -102,28 +104,41 @@ internal fun WordSiegeScoreCard(
             }
         }
     }
+    LaunchedEffect(scoreLossTick) {
+        if (scoreLossTick <= 0) return@LaunchedEffect
+        lossScale.snapTo(1f)
+        lossGlow.snapTo(0f)
+        coroutineScope {
+            launch {
+                lossScale.animateTo(.91f, tween(70))
+                lossScale.animateTo(1f, tween(130))
+            }
+            launch {
+                lossGlow.animateTo(1f, tween(55))
+                lossGlow.animateTo(0f, tween(210))
+            }
+        }
+    }
     Surface(
-        modifier = modifier,
-        color = lerp(WordSiegeGameUi.Surface, accent, if (active) .065f else .025f),
-        shape = RoundedCornerShape(16.dp),
-        border = BorderStroke(if (active) 1.5.dp else 1.dp, edge.copy(alpha = if (active) .72f else .72f)),
-        shadowElevation = if (active) 4.dp else 1.dp,
+        modifier = modifier.height(96.dp),
+        color = lerp(WordSiegeGameUi.Surface, accent, if (active) .055f else .018f),
+        shape = RoundedCornerShape(18.dp),
+        shadowElevation = if (active) 3.dp else 1.dp,
     ) {
-        Column(Modifier.padding(horizontal = 9.dp, vertical = 7.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Column(Modifier.padding(horizontal = 8.dp, vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Surface(
-                    shape = RoundedCornerShape(13.dp),
-                    color = accent.copy(alpha = .09f),
-                    border = BorderStroke(1.dp, accent.copy(alpha = .22f)),
+                    shape = RoundedCornerShape(15.dp),
+                    color = accent.copy(alpha = .075f),
                 ) {
                     Box(Modifier.padding(2.dp)) {
                         ProfilePhotoAvatarWithGender(
                             avatarPath = avatarPath, gender = gender, name = name,
-                            size = 42.dp, accent = accent, visible = avatarVisible,
+                            size = 50.dp, accent = accent, visible = avatarVisible,
                         )
                     }
                 }
-                Spacer(Modifier.width(7.dp))
+                Spacer(Modifier.width(6.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
                         name,
@@ -135,10 +150,10 @@ internal fun WordSiegeScoreCard(
                         overflow = TextOverflow.Ellipsis,
                     )
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(sh("$area küp", "$area cubes"), color = WordSiegeGameUi.Muted, fontSize = 9.sp, lineHeight = 11.sp)
+                        Text(sh("$area küp", "$area cubes"), color = WordSiegeGameUi.Muted, fontSize = 9.sp, lineHeight = 11.sp, maxLines = 1)
                         if (isBot) {
                             Surface(shape = RoundedCornerShape(99.dp), color = accent.copy(alpha = .12f)) {
-                                Text("BOT", Modifier.padding(horizontal = 5.dp, vertical = 1.dp), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black)
+                                Text("BOT", Modifier.padding(horizontal = 5.dp, vertical = 1.dp), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Black, maxLines = 1)
                             }
                         }
                     }
@@ -150,15 +165,25 @@ internal fun WordSiegeScoreCard(
                 val totalDescription = sh("Toplam $score", "Total $score")
                 Box(
                     modifier = Modifier
+                        .width(58.dp)
+                        .height(48.dp)
                         .graphicsLayer {
-                            scaleX = scoreScale.value
-                            scaleY = scoreScale.value
+                            val combinedScale = scoreScale.value * lossScale.value
+                            scaleX = combinedScale
+                            scaleY = combinedScale
                         }
                         .drawBehind {
                             if (scoreGlow.value > 0f) {
                                 drawCircle(
                                     color = accent.copy(alpha = .55f * scoreGlow.value),
                                     radius = size.maxDimension * (.58f + .10f * scoreGlow.value),
+                                    style = Stroke(width = 2.dp.toPx()),
+                                )
+                            }
+                            if (lossGlow.value > 0f) {
+                                drawCircle(
+                                    color = Color(0xFFB94B4B).copy(alpha = .62f * lossGlow.value),
+                                    radius = size.maxDimension * (.58f + .08f * lossGlow.value),
                                     style = Stroke(width = 2.dp.toPx()),
                                 )
                             }
@@ -172,20 +197,27 @@ internal fun WordSiegeScoreCard(
                         },
                     contentAlignment = Alignment.Center,
                 ) {
+                    val scoreFontSize = when {
+                        score >= 10_000 -> 14.sp
+                        score >= 1_000 -> 17.sp
+                        else -> 21.sp
+                    }
                     Surface(
-                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxSize(),
+                        shape = RoundedCornerShape(13.dp),
                         color = accent.copy(alpha = .10f),
-                        border = BorderStroke(1.dp, accent.copy(alpha = .18f)),
                     ) {
-                        Text(
-                            "$score",
-                            Modifier.padding(horizontal = 8.dp, vertical = 4.dp).semantics { contentDescription = totalDescription },
-                            color = accent,
-                            fontSize = 21.sp,
-                            lineHeight = 24.sp,
-                            fontWeight = FontWeight.Black,
-                            maxLines = 1,
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                "$score",
+                                Modifier.semantics { contentDescription = totalDescription },
+                                color = if (lossGlow.value > 0f) lerp(accent, Color(0xFFB94B4B), lossGlow.value) else accent,
+                                fontSize = scoreFontSize,
+                                lineHeight = 24.sp,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                            )
+                        }
                     }
                 }
             }

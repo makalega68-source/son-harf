@@ -35,6 +35,7 @@ internal data class WordSiegePracticeMove(
     val formedWords: List<String>,
     val wordScore: Int,
     val capturedCells: Int,
+    val opponentCaptured: Int = 0,
 )
 
 internal class WordSiegePracticeError(val code: String) : IllegalArgumentException(code)
@@ -167,8 +168,13 @@ internal object WordSiegePracticeEngine {
         val nextRack = remainingRack + draw
         val nextBag = state.bag.drop(draw.length)
         val gainedCells = board.indices.count { index -> state.board[index].owner != owner && board[index].owner == owner }
+        val opponentCaptured = board.indices.count { index ->
+            state.board[index].owner == other(owner) && board[index].owner == owner
+        }
         val playerArea = board.count { it.owner == 1 }
         val botArea = board.count { it.owner == 2 }
+        val gainedPoints = WordSiegeFinalRules.cubeTransfer(gainedCells)
+        val rivalLoss = WordSiegeFinalRules.opponentCaptureLoss(opponentCaptured)
         val next = state.copy(
             board = board,
             bag = nextBag,
@@ -177,8 +183,16 @@ internal object WordSiegePracticeEngine {
             currentOwner = other(owner),
             playerWordScore = state.playerWordScore + if (owner == 1) score else 0,
             botWordScore = state.botWordScore + if (owner == 2) score else 0,
-            playerAreaScore = WordSiegeFinalRules.cubeTransfer(playerArea),
-            botAreaScore = WordSiegeFinalRules.cubeTransfer(botArea),
+            playerAreaScore = if (owner == 1) {
+                state.playerAreaScore + gainedPoints
+            } else {
+                (state.playerAreaScore - rivalLoss).coerceAtLeast(0)
+            },
+            botAreaScore = if (owner == 2) {
+                state.botAreaScore + gainedPoints
+            } else {
+                (state.botAreaScore - rivalLoss).coerceAtLeast(0)
+            },
             playerArea = playerArea,
             botArea = botArea,
             consecutivePasses = 0,
@@ -186,7 +200,9 @@ internal object WordSiegePracticeEngine {
             lastAction = "word:${primary.orEmpty()}",
         )
         val finished = if (nextBag.isEmpty() && nextRack.isEmpty()) finish(next, "rack_empty") else next
-        return finished to WordSiegePracticeMove(placements, horizontal, primary.orEmpty(), words, score, gainedCells)
+        return finished to WordSiegePracticeMove(
+            placements, horizontal, primary.orEmpty(), words, score, gainedCells, opponentCaptured,
+        )
     }
 
     fun pass(state: WordSiegePracticeState, owner: Int): WordSiegePracticeState {
@@ -328,7 +344,7 @@ internal object WordSiegePracticeEngine {
         val crownControl = if (WordSiegeBoardSpec.CenterIndex in move.placements.keys) 4 else 0
         return move.wordScore +
             WordSiegeFinalRules.cubeTransfer(move.capturedCells) +
-            opponentTakeovers * WordSiegeFinalRules.CUBE_TRANSFER_POINTS +
+            opponentTakeovers * WordSiegeFinalRules.OPPONENT_CAPTURE_LOSS_POINTS +
             crownControl
     }
 
@@ -420,9 +436,9 @@ internal object WordSiegePracticeEngine {
     }
 
     fun totalScore(state: WordSiegePracticeState, owner: Int): Int = if (owner == 1) {
-        WordSiegeFinalRules.currentTerritoryScore(state.playerWordScore, state.playerArea)
+        WordSiegeFinalRules.scoreWithTerritoryLedger(state.playerWordScore, state.playerAreaScore)
     } else {
-        WordSiegeFinalRules.currentTerritoryScore(state.botWordScore, state.botArea)
+        WordSiegeFinalRules.scoreWithTerritoryLedger(state.botWordScore, state.botAreaScore)
     }
 
     private fun requireActiveTurn(state: WordSiegePracticeState, owner: Int) {

@@ -129,9 +129,9 @@ internal fun WordSiegePracticeTutorialCard(
             "Complete a word in one row or column, then tap CONFIRM MOVE."
         }
         else -> if (turkish) {
-            "Harf bonusu yalnız harfi, kelime bonusu tüm kelimeyi çarpar. +25 ödülü hamlene eklenir. Skordaki bölge puanı mevcut maç kuralıdır: sahip olduğun hücre başına 2 puan; kelime puanı kalıcıdır."
+            "Harf bonusu yalnız harfi, kelime bonusu tüm kelimeyi çarpar. +25 ödülü hamlene eklenir. Kazandığın her küp +2 bölge puanı getirir; rakipten aldığın her küp rakibin bölge puanından -1 düşürür. Kelime puanı kalıcıdır."
         } else {
-            "Letter bonuses multiply one letter; word bonuses multiply the word. +25 adds to the move. Existing matches also award 2 points per owned cell; word points are permanent."
+            "Letter bonuses multiply one letter; word bonuses multiply the word. +25 adds to the move. Every cube you win adds +2 territory points; every rival cube you take removes -1 territory point from the rival. Word points are permanent."
         }
     }
 

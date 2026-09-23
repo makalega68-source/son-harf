@@ -40,8 +40,9 @@ class KelimeKusatmasiFinalBrandingContractTest {
         assertFalse(state.contains(".replace(\"SIEGE WON!\", \"THE THRONE IS YOURS!\")"))
         assertTrue(online.contains("KUŞATMA SENİN!"))
         assertTrue(online.contains("SIEGE WON!"))
-        assertTrue(online.contains("WordSiegeFinalRules.currentTerritoryScore"))
-        assertTrue(online.contains("WordSiegeFinalRules.cubeTransfer"))
+        assertTrue(online.contains("WordSiegeFinalRules.scoreWithTerritoryLedger"))
+        assertTrue(online.contains("playerOneAreaScore"))
+        assertTrue(online.contains("playerTwoAreaScore"))
     }
 
     @Test fun onlineBoardKeepsTerritoryOwnershipAndStrategicZonePresentation() {

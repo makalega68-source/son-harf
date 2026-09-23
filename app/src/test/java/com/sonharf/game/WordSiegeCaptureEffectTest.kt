@@ -19,7 +19,9 @@ class WordSiegeCaptureEffectTest {
 
         assertNotNull(batch)
         assertEquals(listOf(0, 1), batch!!.indices)
+        assertEquals(setOf(1), batch.opponentIndices)
         assertEquals(4, batch.points)
+        assertEquals(1, batch.opponentLossPoints)
     }
 
     @Test fun initialAndRepeatedServerUpdateNeverReplay() {
@@ -66,6 +68,7 @@ class WordSiegeCaptureEffectTest {
         assertEquals(38, wordSiegeDisplayedScore(actualScore = 42, pendingCapturePoints = 4))
         assertEquals(42, wordSiegeDisplayedScore(actualScore = 42, pendingCapturePoints = 0))
         assertEquals(0, wordSiegeDisplayedScore(actualScore = 0, pendingCapturePoints = 4))
+        assertEquals(43, wordSiegeDisplayedScore(actualScore = 42, pendingCapturePoints = 0, pendingLossPoints = 1))
     }
 
     private fun owners(vararg changes: Pair<Int, Int>): List<Int> =

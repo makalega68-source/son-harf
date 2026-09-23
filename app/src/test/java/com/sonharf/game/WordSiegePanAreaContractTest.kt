@@ -65,19 +65,22 @@ class WordSiegePanAreaContractTest {
         assertTrue(experience.contains("0xFFFF5F57"))
     }
 
-    @Test fun areaPointsAreServerCalculatedAsTwoPointsPerGainedCubeAndCurrentTerritoryDrivesVisibleScore() {
+    @Test fun areaPointsUseAuthoritativePlusTwoGainAndMinusOneRivalLossLedger() {
         val backend = projectFile("app/src/main/java/com/sonharf/game/data/WordSiegeBackend.kt").readText()
         val pan = projectFile("app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt").readText()
         val baseMigration = projectFile("supabase/migrations/20260901060000_word_siege_area_score_v1.sql").readText()
         val finalMigration = projectFile("supabase/migrations/20260902090000_word_siege_final_transfer_v2.sql").readText()
         val currentTerritoryMigration = projectFile("supabase/migrations/20260909090000_word_siege_current_territory_score_v5.sql").readText()
+        val captureLossMigration = projectFile("supabase/migrations/20260923131500_word_siege_capture_loss_penalty_v8.sql").readText()
 
         assertTrue(backend.contains("player_one_area_score"))
         assertTrue(backend.contains("neutral_captured"))
         assertTrue(backend.contains("opponent_captured"))
         assertTrue(backend.contains("area_score"))
         assertTrue(backend.contains("total_score"))
-        assertTrue(pan.contains("WordSiegeFinalRules.currentTerritoryScore"))
+        assertTrue(pan.contains("WordSiegeFinalRules.scoreWithTerritoryLedger"))
+        assertTrue(pan.contains("playerOneAreaScore"))
+        assertTrue(pan.contains("playerTwoAreaScore"))
         assertTrue(pan.contains("val myAreaCount = panSiegeAreaCount(game, myOwner)"))
 
         // Preserve the original transactional/ownership pipeline.
@@ -88,13 +91,14 @@ class WordSiegePanAreaContractTest {
         assertTrue(baseMigration.contains("player_one_area = v_one_area"))
         assertTrue(baseMigration.contains("player_two_area = v_two_area"))
 
-        // Historical migrations remain immutable for provenance. v5 overrides final winner scoring
-        // with permanent word points + cubes currently owned * 2.
+        // Historical migrations remain immutable for provenance. v8 changes only the
+        // territory score ledger: +2 per newly won cube, -1 per rival-owned cube lost.
         assertTrue(finalMigration.contains("(neutral_count + opponent_count) * 2"))
         assertTrue(currentTerritoryMigration.contains("r.player_one_word_score + (r.player_one_area * 2)"))
         assertTrue(currentTerritoryMigration.contains("r.player_two_word_score + (r.player_two_area * 2)"))
-        assertFalse(currentTerritoryMigration.contains("player_one_area_score -"))
-        assertFalse(currentTerritoryMigration.contains("player_two_area_score -"))
+        assertTrue(captureLossMigration.contains("-v_opponent_captured"))
+        assertTrue(captureLossMigration.contains("greatest(0, player_one_area_score"))
+        assertTrue(captureLossMigration.contains("greatest(0, player_two_area_score"))
     }
 
     @Test fun duplicateProtectionAndExistingValidationPipelineStayIntact() {

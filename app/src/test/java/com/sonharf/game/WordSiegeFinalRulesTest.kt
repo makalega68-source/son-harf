@@ -125,7 +125,7 @@ class WordSiegeFinalRulesTest {
 
         assertEquals(6, WordSiegeFinalRules.earnedCubePoints(listOf(first), "me"))
         assertEquals(6, WordSiegeFinalRules.earnedCubePoints(listOf(first, rivalNeutral), "me"))
-        assertEquals(4, WordSiegeFinalRules.earnedCubePoints(listOf(first, rivalNeutral, rivalTakesMine), "me"))
+        assertEquals(5, WordSiegeFinalRules.earnedCubePoints(listOf(first, rivalNeutral, rivalTakesMine), "me"))
         assertEquals(36, WordSiegeFinalRules.netScore(30, 6, 8))
         assertEquals(34, WordSiegeFinalRules.netScore(30, 4, 10))
     }
@@ -179,9 +179,9 @@ class WordSiegeFinalRulesTest {
         assertTrue(submitMigration.contains("jsonb_array_length(p_placements) not between 1 and 7"))
         assertTrue(submitMigration.contains("player_one_area = v_one_area"))
         assertTrue(submitMigration.contains("player_two_area = v_two_area"))
-        assertTrue(pan.contains("WordSiegeFinalRules.currentTerritoryScore"))
-        assertFalse(pan.contains("playerOneAreaScore"))
-        assertFalse(pan.contains("playerTwoAreaScore"))
+        assertTrue(pan.contains("WordSiegeFinalRules.scoreWithTerritoryLedger"))
+        assertTrue(pan.contains("playerOneAreaScore"))
+        assertTrue(pan.contains("playerTwoAreaScore"))
     }
 
     private fun state(board: List<WordSiegeCellDto>, rack: String) = WordSiegePracticeState(

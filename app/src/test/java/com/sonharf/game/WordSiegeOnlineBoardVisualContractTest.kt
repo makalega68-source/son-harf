@@ -23,7 +23,7 @@ class WordSiegeOnlineBoardVisualContractTest {
         assertTrue(source.contains("PanSiegeBonusLabel = Color(0xFF68716D)"))
         assertTrue(source.contains("SpanStyle(fontSize = 20.sp)"))
         assertTrue(source.contains("SpanStyle(fontSize = 10.sp)"))
-        assertTrue(source.contains("fontWeight = FontWeight.Light"))
+        assertTrue(source.contains("fontWeight = if (overview) FontWeight.SemiBold else FontWeight.Medium"))
     }
 
     private fun projectFile(path: String): File {
