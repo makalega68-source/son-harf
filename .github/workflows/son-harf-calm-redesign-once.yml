@@ -27,7 +27,9 @@ jobs:
           java-version: '17'
 
       - name: Apply scoped UI patch
-        run: python3 .github/scripts/apply_son_harf_calm_redesign.py
+        run: |
+          python3 .github/scripts/apply_son_harf_calm_redesign.py
+          python3 .github/scripts/fix_son_harf_redesign_compile.py
 
       - name: Verify only intended Kotlin file changed
         shell: bash
