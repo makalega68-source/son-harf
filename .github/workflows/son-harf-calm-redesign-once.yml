@@ -21,7 +21,7 @@ jobs:
           fetch-depth: 0
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -31,6 +31,7 @@ jobs:
           python3 .github/scripts/apply_son_harf_calm_redesign.py
           python3 .github/scripts/fix_son_harf_redesign_compile.py
           python3 .github/scripts/apply_son_harf_calm_contracts.py
+          python3 .github/scripts/fix_son_harf_contract_literals.py
 
       - name: Verify only intended files changed
         shell: bash
