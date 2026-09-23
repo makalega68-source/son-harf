@@ -75,8 +75,12 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("Kelime Geçmişi"))
         assertTrue(screen.contains("Sadece PRO üyeler görebilir"))
 
-        // Target card has no previous/next arrow controls and remains compact on real devices.
-        assertTrue(screen.contains("val targetSize = if (compact) 94.dp else 116.dp"))
+        // Target card has no previous/next arrow controls and scales down only for compact/narrow devices.
+        assertTrue(screen.contains("val compactHeight = maxHeight < 650.dp"))
+        assertTrue(screen.contains("val narrowWidth = maxWidth < 390.dp"))
+        assertTrue(screen.contains("compactHeight && narrowWidth -> 82.dp"))
+        assertTrue(screen.contains("compact -> 94.dp"))
+        assertTrue(screen.contains("else -> 116.dp"))
         val targetStart = screen.indexOf("private fun PremierTargetCard(")
         val targetEnd = screen.indexOf("private fun PremierProWordPanel(", targetStart)
         assertTrue(targetStart >= 0 && targetEnd > targetStart)
