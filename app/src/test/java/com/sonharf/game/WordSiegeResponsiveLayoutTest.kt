@@ -20,7 +20,8 @@ class WordSiegeResponsiveLayoutTest {
         assertTrue(source.contains("showExchange = true"))
         assertTrue(source.contains("onClick = ::applyPlayerMove"))
         assertTrue(source.contains("HAMLEYİ ONAYLA"))
-        assertFalse("Main match surface must not scroll", source.contains("LazyColumn"))
+        assertFalse("Main match surface must not use vertical scrolling", source.contains(".verticalScroll("))
+        assertTrue("Chat history is intentionally scrollable", source.contains("itemsIndexed(chatMessages)"))
     }
 
     @Test
