@@ -96,6 +96,7 @@ private fun WordSiegePracticeContent(
     var showExchange by remember { mutableStateOf(false) }
     var exchangeSelection by remember { mutableStateOf<Set<Int>>(emptySet()) }
     var shuffleSeed by remember { mutableIntStateOf(0) }
+    var boardViewportMode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     var actionVfxEvent by remember { mutableIntStateOf(0) }
     var showSiegePulse by remember { mutableStateOf(false) }
     var zoneInfoCode by remember { mutableStateOf<String?>(null) }
@@ -193,6 +194,7 @@ private fun WordSiegePracticeContent(
         botDecisionSalt = kotlin.random.Random.nextLong()
         lastMove = null
         shuffleSeed = 0
+        boardViewportMode = WordSiegeBoardViewportMode.FIT
         actionVfxEvent = 0
         notice = if (matchmakingFallback) {
             sh(
@@ -301,6 +303,7 @@ private fun WordSiegePracticeContent(
                 modifier = Modifier.fillMaxSize(),
                 verticalArrangement = Arrangement.spacedBy(if (compact) 2.dp else 4.dp),
             ) {
+                if (boardViewportMode == WordSiegeBoardViewportMode.FIT) {
                 Row(
                     modifier = Modifier.fillMaxWidth().height(if (compact) 46.dp else 52.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -354,6 +357,7 @@ private fun WordSiegePracticeContent(
                         Icon(Icons.Rounded.Refresh, sh("Yeni oyun", "New game"), tint = WordSiegeGameUi.Blue)
                     }
                 }
+                }
 
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                     WordSiegePracticeScoreCard(
@@ -390,7 +394,7 @@ private fun WordSiegePracticeContent(
                     )
                 }
 
-                WordSiegeOwnershipLegend()
+                if (boardViewportMode == WordSiegeBoardViewportMode.FIT) WordSiegeOwnershipLegend()
 
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -437,7 +441,8 @@ private fun WordSiegePracticeContent(
                         enabled = canPlayerAct,
                         moveEventKey = actionVfxEvent.takeIf { it > 0 },
                         resolvedIndices = lastMove?.placements?.keys ?: emptySet(),
-                        modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+                        modifier = if (boardViewportMode == WordSiegeBoardViewportMode.CLOSE) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(1f),
+                        onViewportModeChange = { boardViewportMode = it },
                         onCell = { boardIndex ->
                             if (!canPlayerAct) return@WordSiegePracticeBoard
                             if (placements.containsKey(boardIndex)) {
@@ -470,7 +475,7 @@ private fun WordSiegePracticeContent(
                 }
 
                 if (state.status == "playing") {
-                    Row(
+                    if (boardViewportMode == WordSiegeBoardViewportMode.FIT) Row(
                         Modifier.fillMaxWidth().height(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
@@ -611,7 +616,7 @@ private fun WordSiegePracticeContent(
                     "Harf seç → boş hücreye yerleştir → kelimeyi tamamla → HAMLEYİ ONAYLA",
                     "Pick a tile → place it → complete a word → CONFIRM MOVE",
                 )
-                WordSiegePracticeStatusBar(statusMessage, compact)
+                if (boardViewportMode == WordSiegeBoardViewportMode.FIT) WordSiegePracticeStatusBar(statusMessage, compact)
             }
         }
     }

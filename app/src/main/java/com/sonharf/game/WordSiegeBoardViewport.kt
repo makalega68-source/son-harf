@@ -18,6 +18,7 @@ internal const val WORD_SIEGE_MIN_SCREEN_BORDER_DP = 1f
 internal const val WORD_SIEGE_ONLINE_ZOOM_FACTOR = 2.00f
 internal const val WORD_SIEGE_ONLINE_MAX_CLOSE_SCALE = 1.12f
 internal const val WORD_SIEGE_PRACTICE_CLOSE_SCALE = 0.68f
+internal const val WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE = 1.0f
 internal const val WORD_SIEGE_PRACTICE_MIN_SCALE = 0.62f
 internal const val WORD_SIEGE_PRACTICE_MAX_SCALE = 1.24f
 internal const val WORD_SIEGE_LAST_MOVE_ENTER_MS = 180

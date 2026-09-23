@@ -90,7 +90,7 @@ internal fun WordSiegeScoreCard(
                     Box(Modifier.padding(2.dp)) {
                         ProfilePhotoAvatarWithGender(
                             avatarPath = avatarPath, gender = gender, name = name,
-                            size = 38.dp, accent = accent, visible = avatarVisible,
+                            size = 42.dp, accent = accent, visible = avatarVisible,
                         )
                     }
                 }

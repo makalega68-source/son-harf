@@ -73,6 +73,7 @@ internal fun WordSiegePracticeBoard(
     resolvedIndices: Set<Int> = emptySet(),
     language: String = SonHarfUiState.language,
     modifier: Modifier = Modifier,
+    onViewportModeChange: (WordSiegeBoardViewportMode) -> Unit = {},
     onCell: (Int) -> Unit,
 ) {
     val density = LocalDensity.current
@@ -80,7 +81,7 @@ internal fun WordSiegePracticeBoard(
     val boardPx = tilePx * WordSiegeBoardSpec.Size
     var viewport by remember { mutableStateOf(IntSize.Zero) }
     var closePan by remember { mutableStateOf(Offset.Zero) }
-    var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_CLOSE_SCALE) }
+    var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE) }
     var initialized by remember { mutableStateOf(false) }
     var mode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     val transform by remember(mode, viewport, boardPx, closePan, closeScale) {
@@ -138,8 +139,12 @@ internal fun WordSiegePracticeBoard(
 
     fun toggleMode() {
         val nextMode = mode.toggle()
-        if (nextMode == WordSiegeBoardViewportMode.CLOSE) closePan = centerClose()
+        if (nextMode == WordSiegeBoardViewportMode.CLOSE) {
+            closeScale = WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE
+            closePan = centerClose()
+        }
         mode = nextMode
+        onViewportModeChange(nextMode)
     }
 
     LaunchedEffect(viewport, boardPx) {
@@ -163,7 +168,7 @@ internal fun WordSiegePracticeBoard(
                 .fillMaxSize()
                 .padding(4.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFF3B2518), Color(0xFF6A452B), Color(0xFF4A2F1E), Color(0xFF785238))))
+                .background(Brush.linearGradient(listOf(Color(0xFFF0E6D7), Color(0xFFE5D2B7), Color(0xFFF7F1E8), Color(0xFFD9BE98))))
                 .clipToBounds()
                 .onGloballyPositioned { viewport = it.size }
                 .pointerInput(mode, viewport, boardPx, closeScale) {
@@ -292,10 +297,31 @@ private fun WordSiegePracticeBoardCell(
         else -> WordSiegeGameUi.Border.copy(alpha = .45f)
     }
     val regionGap = 1.25.dp
+    val cellInteraction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
 
     Box(
         Modifier
             .size(PracticeSiegeCellSize)
+            .combinedClickable(
+                interactionSource = cellInteraction,
+                indication = null,
+                onClick = {
+                    dispatchWordSiegeBoardTap(
+                        WordSiegeBoardTapAction.PLACE,
+                        canPlace,
+                        onClick,
+                        onDoubleClick,
+                    )
+                },
+                onDoubleClick = {
+                    dispatchWordSiegeBoardTap(
+                        WordSiegeBoardTapAction.TOGGLE_VIEWPORT,
+                        canPlace,
+                        onClick,
+                        onDoubleClick,
+                    )
+                },
+            )
             .padding(regionGap)
             .clip(RoundedCornerShape(8.dp))
             .background(
@@ -317,24 +343,6 @@ private fun WordSiegePracticeBoardCell(
                     PracticeLastMove.copy(alpha = 0.45f + .45f * lastMoveHighlight)
                 } else borderColor,
                 shape = RoundedCornerShape(8.dp),
-            )
-            .combinedClickable(
-                onClick = {
-                    dispatchWordSiegeBoardTap(
-                        WordSiegeBoardTapAction.PLACE,
-                        canPlace,
-                        onClick,
-                        onDoubleClick,
-                    )
-                },
-                onDoubleClick = {
-                    dispatchWordSiegeBoardTap(
-                        WordSiegeBoardTapAction.TOGGLE_VIEWPORT,
-                        canPlace,
-                        onClick,
-                        onDoubleClick,
-                    )
-                },
             ),
         contentAlignment = Alignment.Center,
     ) {
