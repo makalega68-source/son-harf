@@ -920,8 +920,16 @@ private fun PremierArena(
             .background(Brush.verticalGradient(listOf(PremierUi.Surface, PremierUi.Background)))
             .imePadding()
     ) {
-        val compact = maxHeight < 650.dp
-        val targetSize = if (compact) 94.dp else 116.dp
+        val compactHeight = maxHeight < 650.dp
+        val narrowWidth = maxWidth < 390.dp
+        val compact = compactHeight || narrowWidth
+        val horizontalPadding = if (narrowWidth) 8.dp else 12.dp
+        val panelMinHeight = if (compact) 118.dp else 150.dp
+        val targetSize = when {
+            compactHeight && narrowWidth -> 82.dp
+            compact -> 94.dp
+            else -> 116.dp
+        }
 
         Column(Modifier.fillMaxSize().statusBarsPadding()) {
             PremierArenaHeader(
@@ -940,12 +948,14 @@ private fun PremierArena(
                 unreadChat = unreadChat,
                 onForfeit = onForfeit,
                 onQuickChat = onQuickChat,
+                compact = compact,
+                narrow = narrowWidth,
             )
 
             LazyColumn(
                 modifier = Modifier.weight(1f).fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 7.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = horizontalPadding, vertical = if (compact) 5.dp else 7.dp),
+                verticalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 8.dp),
             ) {
                 item {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -966,9 +976,10 @@ private fun PremierArena(
                             isPro = isPro,
                             entries = words.filter { it.playerId == meId }.takeLast(if (compact) 3 else 5).reversed(),
                             modifier = Modifier.weight(1f),
+                            minHeight = panelMinHeight,
                         )
                         Column(
-                            modifier = Modifier.width(targetSize + 16.dp),
+                            modifier = Modifier.width(targetSize + if (narrowWidth) 8.dp else 16.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
                             verticalArrangement = Arrangement.spacedBy(5.dp),
                         ) {
@@ -982,6 +993,7 @@ private fun PremierArena(
                             isPro = isPro,
                             entries = words.takeLast(if (compact) 3 else 5).reversed(),
                             modifier = Modifier.weight(1f),
+                            minHeight = panelMinHeight,
                         )
                     }
                 }
@@ -1011,17 +1023,17 @@ private fun PremierArena(
                 onInput = onInput,
                 onSubmit = onSubmit,
                 modifier = Modifier
-                    .padding(horizontal = 12.dp, vertical = 5.dp)
+                    .padding(horizontal = horizontalPadding, vertical = if (compact) 4.dp else 5.dp)
                     .focusRequester(focusRequester),
             )
 
             Row(
-                Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                Modifier.fillMaxWidth().padding(start = horizontalPadding, end = horizontalPadding, bottom = if (compact) 6.dp else 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(if (narrowWidth) 8.dp else 10.dp),
             ) {
                 Button(
                     onClick = onForfeit,
-                    modifier = Modifier.weight(1f).height(50.dp),
+                    modifier = Modifier.weight(1f).height(if (compact) 46.dp else 50.dp),
                     shape = RoundedCornerShape(18.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = PremierUi.RedSoft, contentColor = PremierUi.Red),
                     border = BorderStroke(1.dp, PremierUi.Red.copy(alpha = .32f)),
@@ -1033,7 +1045,7 @@ private fun PremierArena(
                 Box(Modifier.weight(1f)) {
                     Button(
                         onClick = onQuickChat,
-                        modifier = Modifier.fillMaxWidth().height(50.dp),
+                        modifier = Modifier.fillMaxWidth().height(if (compact) 46.dp else 50.dp),
                         shape = RoundedCornerShape(18.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = PremierUi.Ocean, contentColor = Color.White),
                     ) {
@@ -1115,6 +1127,8 @@ private fun PremierArenaHeader(
     unreadChat: Boolean,
     onForfeit: () -> Unit,
     onQuickChat: () -> Unit,
+    compact: Boolean,
+    narrow: Boolean,
 ) {
     val myRating = me?.rating ?: 1000
     val rivalRating = if (room.isBot) myRating else opponent?.rating ?: 1000
@@ -1122,12 +1136,12 @@ private fun PremierArenaHeader(
     val progress = (room.roundWordCount.coerceIn(0, 10) / 10f)
 
     Column(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        Modifier.fillMaxWidth().padding(horizontal = if (narrow) 8.dp else 12.dp, vertical = if (compact) 6.dp else 8.dp),
+        verticalArrangement = Arrangement.spacedBy(if (compact) 6.dp else 8.dp),
     ) {
         Row(
             Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(7.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (narrow) 5.dp else 7.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             PremierCalmPlayerCard(
@@ -1143,22 +1157,23 @@ private fun PremierArenaHeader(
                 modifier = Modifier.weight(1f),
                 language = language,
                 nameColor = SonHarfCosmetics.playerNameColor,
+                compact = compact,
             )
             Surface(
-                modifier = Modifier.width(108.dp),
+                modifier = Modifier.width(if (narrow) 88.dp else 108.dp),
                 shape = RoundedCornerShape(18.dp),
                 color = PremierUi.Surface,
                 border = BorderStroke(1.dp, PremierUi.Border),
                 shadowElevation = 3.dp,
             ) {
                 Column(
-                    Modifier.padding(horizontal = 7.dp, vertical = 8.dp),
+                    Modifier.padding(horizontal = if (narrow) 5.dp else 7.dp, vertical = if (compact) 6.dp else 8.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Text(pt(language, "Raund ${room.roundNo} / 3", "Round ${room.roundNo} / 3"), color = PremierUi.Ink, fontSize = 12.sp, fontWeight = FontWeight.Black)
-                    Text("$myRounds - $rivalRounds", color = PremierUi.Ink, fontSize = 27.sp, fontWeight = FontWeight.Black)
-                    Text(pt(language, "2 raund kazanan\nmaçı kazanır", "First to 2 rounds\nwins the match"), color = PremierUi.Muted, fontSize = 7.sp, lineHeight = 9.sp, textAlign = TextAlign.Center)
+                    Text(pt(language, "Raund ${room.roundNo} / 3", "Round ${room.roundNo} / 3"), color = PremierUi.Ink, fontSize = if (narrow) 10.sp else 12.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                    Text("$myRounds - $rivalRounds", color = PremierUi.Ink, fontSize = if (narrow) 23.sp else 27.sp, fontWeight = FontWeight.Black)
+                    Text(pt(language, "2 raund kazanan\nmaçı kazanır", "First to 2 rounds\nwins the match"), color = PremierUi.Muted, fontSize = if (narrow) 6.sp else 7.sp, lineHeight = if (narrow) 8.sp else 9.sp, textAlign = TextAlign.Center)
                 }
             }
             PremierCalmPlayerCard(
@@ -1174,6 +1189,7 @@ private fun PremierArenaHeader(
                 modifier = Modifier.weight(1f),
                 language = language,
                 bot = room.isBot,
+                compact = compact,
             )
         }
 
@@ -1240,6 +1256,7 @@ private fun PremierCalmPlayerCard(
     modifier: Modifier,
     bot: Boolean = false,
     nameColor: Color = PremierUi.Ink,
+    compact: Boolean = false,
 ) {
     Surface(
         modifier = modifier,
@@ -1248,22 +1265,22 @@ private fun PremierCalmPlayerCard(
         border = BorderStroke(1.dp, accent.copy(alpha = .32f)),
         shadowElevation = 2.dp,
     ) {
-        Column(Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+        Column(Modifier.padding(if (compact) 6.dp else 8.dp), verticalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 5.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (bot) PremierBotAvatar(size = 42.dp, accent = accent)
+                if (bot) PremierBotAvatar(size = if (compact) 36.dp else 42.dp, accent = accent)
                 else ProfilePhotoAvatarRectWithGender(
                     avatarPath = if (visible) avatar else null,
                     gender = gender,
                     name = name,
-                    width = 46.dp,
-                    height = 40.dp,
+                    width = if (compact) 38.dp else 46.dp,
+                    height = if (compact) 34.dp else 40.dp,
                     accent = accent,
                 )
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(if (compact) 4.dp else 6.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(name, color = nameColor, fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(premierLeagueLabel(rating, language), color = accent, fontSize = 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                    Text("🏆 $rating", color = PremierUi.Muted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(name, color = nameColor, fontSize = if (compact) 10.sp else 12.sp, fontWeight = FontWeight.Black, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(premierLeagueLabel(rating, language), color = accent, fontSize = if (compact) 7.sp else 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text("🏆 $rating", color = PremierUi.Muted, fontSize = if (compact) 7.sp else 8.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                 }
             }
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
@@ -1271,7 +1288,7 @@ private fun PremierCalmPlayerCard(
                     Text(pt(language, "Raund Puanı", "Round Score"), color = PremierUi.Muted, fontSize = 7.sp)
                     if (streak >= 2) Text("🔥 $streak", color = PremierUi.Red, fontSize = 8.sp, fontWeight = FontWeight.Black)
                 }
-                Text(score.toString(), color = PremierUi.Ink, fontSize = 21.sp, fontWeight = FontWeight.Black)
+                Text(score.toString(), color = PremierUi.Ink, fontSize = if (compact) 18.sp else 21.sp, fontWeight = FontWeight.Black)
             }
         }
     }
@@ -1432,9 +1449,10 @@ private fun PremierProWordPanel(
     isPro: Boolean,
     entries: List<GameWordDto>,
     modifier: Modifier = Modifier,
+    minHeight: Dp = 150.dp,
 ) {
     Surface(
-        modifier = modifier.heightIn(min = 150.dp),
+        modifier = modifier.heightIn(min = minHeight),
         shape = RoundedCornerShape(18.dp),
         color = PremierUi.Surface,
         border = BorderStroke(1.dp, PremierUi.Border),
