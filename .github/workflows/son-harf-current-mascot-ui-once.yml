@@ -1,0 +1,140 @@
+name: Son Harf Current Mascot UI Once
+
+on:
+  push:
+    branches:
+      - fix/son-harf-current-mascot-ui-20260923
+    paths:
+      - '.github/workflows/son-harf-current-mascot-ui-once.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-smoke-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact current mascot branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/son-harf-current-mascot-ui-20260923
+          fetch-depth: 0
+
+      - name: Confirm current mascot ancestry
+        shell: bash
+        run: |
+          git merge-base --is-ancestor 511c10b65c3b05fd48d297570c9796ad09ea6cac HEAD
+          git log --oneline --decorate -6
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+
+      - name: Normalize one-shot patch for current target card
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('.github/scripts/apply_son_harf_current_mascot_ui_once.py')
+          text = p.read_text(encoding='utf-8')
+          obsolete = '''replace_once(
+          ''' + "'''            .background(Brush.radialGradient(listOf(Color(0xFF15355F), Color(0xFF07111F))))''',\n'''            .background(Brush.radialGradient(listOf(Color(0xFFF8FDFF), PremierArenaSky.SurfaceBlue)))''',\n\"target card sky surface\",\n)\n"
+          if obsolete not in text:
+              raise SystemExit('obsolete target-card helper block not found')
+          p.write_text(text.replace(obsolete, '', 1), encoding='utf-8')
+          PY
+
+      - name: Apply scoped Son Harf UI and contracts
+        shell: bash
+        run: |
+          python3 .github/scripts/apply_son_harf_current_mascot_ui_once.py
+          python3 .github/scripts/apply_son_harf_current_mascot_contracts_once.py
+          git checkout -- .github/scripts/apply_son_harf_current_mascot_ui_once.py
+
+      - name: Verify exact change scope
+        shell: bash
+        run: |
+          git diff --check
+          git diff --name-only | sort > /tmp/actual.txt
+          cat > /tmp/expected.txt <<'EOF'
+          app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          app/src/test/java/com/sonharf/game/PremierDuelUxRegressionTest.kt
+          app/src/test/java/com/sonharf/game/UnifiedThemeSourceContractTest.kt
+          EOF
+          sed -i 's/^          //' /tmp/expected.txt
+          sort -o /tmp/expected.txt /tmp/expected.txt
+          diff -u /tmp/expected.txt /tmp/actual.txt
+          grep -q 'PremierKeyboard(language, input' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          grep -q 'WordSiegeMascot(' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          grep -q 'Color(0xFFEAF8FF)' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          grep -q 'backend.submitPremierWord(active.id, candidate)' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          grep -q 'backend.claimTurnTimeout(active.id)' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+          grep -q 'backend.botTakeTurn(active.id)' app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt
+
+      - name: Compile, unit test and build APK
+        run: ./gradlew clean :app:compileDebugKotlin :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Verify APK identity and integrity
+        shell: bash
+        run: |
+          APK=app/build/outputs/apk/debug/app-debug.apk
+          test -s "$APK"
+          APKA="${ANDROID_HOME}/cmdline-tools/latest/bin/apkanalyzer"
+          if [ -x "$APKA" ]; then
+            test "$($APKA manifest application-id "$APK")" = "com.sonharf.game"
+            test "$($APKA manifest version-code "$APK")" = "35"
+          fi
+          unzip -t "$APK" >/dev/null
+
+      - name: Emulator cold-start smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb install -r app/build/outputs/apk/debug/app-debug.apk && adb logcat -c && adb shell am force-stop com.sonharf.game && adb shell am start -W -n com.sonharf.game/.MainActivity && sleep 10 && test -n "$(adb shell pidof com.sonharf.game | tr -d '\r')" && ! adb logcat -d | grep -E "FATAL EXCEPTION|Process: com\.sonharf\.game" && adb shell dumpsys activity activities | grep -q "com.sonharf.game/.MainActivity"
+
+      - name: Commit verified Son Harf production change
+        shell: bash
+        run: |
+          git config user.name "openai-sonharf-ui-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            app/src/main/java/com/sonharf/game/PremierWordDuelScreen.kt \
+            app/src/test/java/com/sonharf/game/PremierDuelUxRegressionTest.kt \
+            app/src/test/java/com/sonharf/game/UnifiedThemeSourceContractTest.kt
+          git commit -m "feat: refine Son Harf arena and add mascot"
+          git push origin HEAD:fix/son-harf-current-mascot-ui-20260923
+
+      - name: Prepare direct APK
+        shell: bash
+        run: |
+          mkdir -p final-apk
+          cp app/build/outputs/apk/debug/app-debug.apk final-apk/Kelime-Tahti-Guncel-SonHarf-Maskot.apk
+          sha256sum final-apk/Kelime-Tahti-Guncel-SonHarf-Maskot.apk > final-apk/SHA256.txt
+
+      - name: Upload verified APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kelime-tahti-guncel-sonharf-maskot
+          path: final-apk/
+          if-no-files-found: error
+          retention-days: 7
