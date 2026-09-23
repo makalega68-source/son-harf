@@ -1,0 +1,87 @@
+name: Kelime Kusatmasi Viewport Polish
+
+on:
+  push:
+    branches:
+      - claude/kelime-tahti-home-redesign-7ojb7d
+    paths:
+      - '.github/workflows/kelime-kusatmasi-viewport-polish.yml'
+      - 'tools/kelime_kusatmasi_viewport_pass.py'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  polish-test-build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout redesign branch
+        uses: actions/checkout@v4
+        with:
+          ref: claude/kelime-tahti-home-redesign-7ojb7d
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        shell: bash
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+
+      - name: Apply Kelime Kusatmasi viewport polish
+        run: python3 tools/kelime_kusatmasi_viewport_pass.py
+
+      - name: Unit tests and debug APK
+        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Commit verified polish
+        shell: bash
+        run: |
+          git config user.name "kelime-tahti-ci"
+          git config user.email "actions@github.com"
+          git add app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt \
+                  app/src/main/java/com/sonharf/game/WordSiegeBoardViewport.kt \
+                  app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegePanAreaContractTest.kt \
+                  app/src/test/java/com/sonharf/game/WordSiegeBoardViewportTest.kt
+          if ! git diff --cached --quiet; then
+            git commit -m "Polish siege zoom and board readability"
+            pushed=false
+            for attempt in 1 2 3; do
+              if git push origin HEAD:claude/kelime-tahti-home-redesign-7ojb7d; then
+                pushed=true
+                break
+              fi
+              sleep $((attempt * 4))
+            done
+            if [ "$pushed" != true ]; then
+              exit 1
+            fi
+          fi
+
+      - name: Prepare updated APK
+        shell: bash
+        run: |
+          mkdir -p final-apk
+          cp app/build/outputs/apk/debug/app-debug.apk final-apk/Kelime-Tahti-Kusatma-Viewport.apk
+          sha256sum final-apk/Kelime-Tahti-Kusatma-Viewport.apk > final-apk/SHA256.txt
+
+      - name: Upload updated APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kelime-tahti-kusatma-viewport-apk
+          path: final-apk/
+          if-no-files-found: error
+          retention-days: 7
