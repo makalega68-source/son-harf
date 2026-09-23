@@ -1,0 +1,95 @@
+name: Siege Premium Score Penalty
+
+on:
+  push:
+    branches:
+      - codex/siege-capture-score-flight
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Android SDK 36
+        run: |
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          "$SDKMANAGER" --sdk_root="$ANDROID_HOME" "platforms;android-36" "build-tools;36.0.0"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          validate-wrappers: false
+
+      - name: Apply requested siege patch
+        run: |
+          python3 tools/complete_siege_premium_score_penalty.py
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt')
+          t = p.read_text()
+          new = '''        val winner = forcedWinner ?: when {
+            totalScore(state, 1) > totalScore(state, 2) -> 1
+            totalScore(state, 2) > totalScore(state, 1) -> 2
+            state.playerArea > state.botArea -> 1
+            state.botArea > state.playerArea -> 2
+            else -> null
+        }'''
+          old = '''        val winner = forcedWinner ?: when {
+            state.playerArea > state.botArea -> 1
+            state.botArea > state.playerArea -> 2
+            else -> null
+        }'''
+          if new not in t:
+              raise SystemExit('expected temporary practice winner patch not found')
+          p.write_text(t.replace(new, old, 1))
+          PY
+
+      - name: Unit tests and debug build
+        run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
+
+      - name: Commit verified source
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm tools/complete_siege_premium_score_penalty.py .github/workflows/siege-premium-score-penalty.yml
+          git add \
+            app/src/main/java/com/sonharf/game/WordSiegeCaptureEffect.kt \
+            app/src/main/java/com/sonharf/game/WordSiegeCaptureMotion.kt \
+            app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt \
+            app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt \
+            app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt \
+            app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt \
+            app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt \
+            app/src/main/java/com/sonharf/game/WordSiegeFinalRules.kt \
+            app/src/test/java/com/sonharf/game/WordSiegeCaptureEffectTest.kt \
+            app/src/test/java/com/sonharf/game/WordSiegeFinalRulesTest.kt \
+            app/src/test/java/com/sonharf/game/WordSiegePremiumScorePenaltyContractTest.kt \
+            supabase/migrations/20260923131500_word_siege_capture_loss_penalty_v8.sql
+          git diff --cached --check
+          git commit -m "Polish siege HUD and apply capture loss penalty"
+          git push origin HEAD:codex/siege-capture-score-flight
+
+      - name: Prepare APK
+        run: cp app/build/outputs/apk/debug/app-debug.apk Kelime-Tahti-Guncel.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: kelime-tahti-premium-score-penalty
+          path: Kelime-Tahti-Guncel.apk
+          if-no-files-found: error
+          retention-days: 7
