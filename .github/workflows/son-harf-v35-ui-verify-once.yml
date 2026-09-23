@@ -88,20 +88,7 @@ jobs:
           profile: pixel_6
           disable-animations: true
           script: |
-            set -eu
-            APK=app/build/outputs/apk/debug/app-debug.apk
-            adb install -r "$APK"
-            adb logcat -c
-            adb shell am force-stop com.sonharf.game
-            adb shell am start -W -n com.sonharf.game/.MainActivity
-            sleep 10
-            PID="$(adb shell pidof com.sonharf.game | tr -d '\r')"
-            test -n "$PID"
-            if adb logcat -d | grep -E "FATAL EXCEPTION|Process: com\.sonharf\.game"; then
-              echo "Fatal startup crash detected"
-              exit 1
-            fi
-            adb shell dumpsys activity activities | grep -q "com.sonharf.game/.MainActivity"
+            adb install -r app/build/outputs/apk/debug/app-debug.apk && adb logcat -c && adb shell am force-stop com.sonharf.game && adb shell am start -W -n com.sonharf.game/.MainActivity && sleep 10 && test -n "$(adb shell pidof com.sonharf.game | tr -d '\r')" && ! adb logcat -d | grep -E "FATAL EXCEPTION|Process: com\.sonharf\.game" && adb shell dumpsys activity activities | grep -q "com.sonharf.game/.MainActivity"
 
       - name: Commit only verified production changes
         shell: bash
