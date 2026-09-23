@@ -8,7 +8,7 @@ import org.junit.Test
 
 class UnifiedThemeSourceContractTest {
     @Test
-    fun activeUnifiedShellUsesMonsterThemeAndPremierKeepsHighLegibilityArenaPalette() {
+    fun activeUnifiedShellKeepsMetaThemeAndPremierUsesSkyMascotArena()  {
         val unified = source("UnifiedProApp.kt")
         val premier = source("PremierWordDuelScreen.kt")
         val startup = source("StableV1App.kt")
@@ -32,14 +32,15 @@ class UnifiedThemeSourceContractTest {
         assertTrue(theme.contains("Color(0xFF14B8B0)"))
         assertTrue(theme.contains("Color(0xFF8B6CF0)"))
 
-        // The approved meta shell stays light; Son Harf intentionally switches to a high-contrast
-        // competitive night arena while retaining readable cyan, red and gold action states.
-        assertTrue(premier.contains("val Background = Color(0xFF06101D)"))
-        assertTrue(premier.contains("val Surface = Color(0xFF0D1B2A)"))
-        assertTrue(premier.contains("val Ocean = Color(0xFF00D6C9)"))
-        assertTrue(premier.contains("val Sky = Color(0xFF8B5CF6)"))
+        // The approved meta shell stays light; Son Harf now uses a scoped sky-blue arena
+        // with the shared in-game mascot while preserving the application theme elsewhere.
+        assertTrue(premier.contains("private object PremierArenaSky"))
+        assertTrue(premier.contains("Color(0xFFEAF8FF)"))
+        assertTrue(premier.contains("Color(0xFFDDF3FC)"))
+        assertTrue(premier.contains("Color(0xFFCFEAF7)"))
         assertTrue(premier.contains("Brush.verticalGradient("))
-        assertTrue(premier.contains("Color(0xFF050B14)"))
+        assertTrue(premier.contains("WordSiegeMascot("))
+        assertTrue(premier.contains("PremierKeyboard(language, input"))
         assertFalse(premier.contains("MageCatCompanion("))
         assertFalse(unified.contains("MonsterUi"))
         assertFalse(unified.contains("MonsterExperienceApp"))

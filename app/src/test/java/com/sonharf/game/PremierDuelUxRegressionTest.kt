@@ -24,6 +24,11 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("PremierBotAvatar(size = 70.dp"))
         assertFalse(screen.contains("MageCatCompanion("))
         assertFalse(screen.contains("SyntheticBotPortrait("))
+        assertTrue(screen.contains("WordSiegeMascot("))
+        assertTrue(screen.contains("WordSiegeMascotEmotion.FOCUS"))
+        assertTrue(screen.contains("PremierKeyboard(language, input"))
+        assertTrue(screen.contains("PremierArenaSky.BackgroundTop"))
+        assertTrue(screen.contains("Color(0xFFEAF8FF)"))
 
         // Chat remains typed/realtime and now has an unread red indicator.
         assertTrue(screen.contains("Text(pt(language, \"SOHBET\", \"CHAT\")"))
@@ -32,11 +37,12 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("if (latest != null && latest.id != previousId && latest.senderId != backend.currentUserId())"))
         assertTrue(screen.contains("hasUnreadChat = !showQuickChat"))
         assertTrue(screen.contains("unreadChat = hasUnreadChat"))
-        assertTrue(screen.contains("Modifier.align(Alignment.TopEnd).offset(x = 3.dp, y = (-3).dp).size(10.dp).clip(CircleShape).background(PremierUi.Red)"))
+        assertTrue(screen.contains("Modifier.align(Alignment.TopEnd).offset(x = 2.dp, y = (-2).dp)"))
         assertTrue(screen.contains("hasUnreadChat = false"))
 
-        assertTrue(screen.contains("Alignment.CenterStart"))
-        assertTrue(screen.contains("Alignment.CenterEnd"))
+        assertTrue(screen.contains("PremierSymmetricPlayerCard("))
+        assertTrue(screen.contains("Modifier.weight(1f).height(cardHeight)"))
+        assertTrue(screen.contains("Modifier.align(Alignment.CenterEnd).size(mascotSize)"))
         assertTrue(screen.contains("turnSeconds = 1"))
         assertTrue(screen.contains("backend.claimTurnTimeout(active.id)"))
         assertTrue(screen.contains("backend.botTakeTurn(active.id)"))
@@ -82,10 +88,11 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("eventKey = \"accepted:"))
 
         // Target card and central letter remain compact on real devices.
-        assertTrue(screen.contains("if (veryCompact) 78.dp"))
-        assertTrue(screen.contains("if (compact) 88.dp"))
-        assertTrue(screen.contains("if (tall) 118.dp"))
-        assertTrue(screen.contains("else 104.dp"))
+        assertTrue(screen.contains("if (veryCompact) 74.dp"))
+        assertTrue(screen.contains("if (compact) 86.dp"))
+        assertTrue(screen.contains("if (tall) 112.dp"))
+        assertTrue(screen.contains("else 100.dp"))
+        assertTrue(screen.contains("val mascotSize = if (veryCompact) 64.dp"))
         assertTrue(screen.contains("if (required.length > 1) .28f else .41f"))
         assertTrue(screen.contains("PremierPressureStrip("))
         assertTrue(screen.contains("KRİTİK 5 SANİYE"))
