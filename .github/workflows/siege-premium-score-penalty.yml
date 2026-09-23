@@ -38,6 +38,7 @@ jobs:
         run: |
           python3 tools/complete_siege_premium_score_penalty.py
           python3 tools/preserve_practice_winner_rule.py
+          python3 tools/align_siege_score_penalty_contracts.py
 
       - name: Unit tests and debug build
         run: ./gradlew clean :app:testDebugUnitTest :app:assembleDebug --stacktrace --warning-mode all
@@ -46,18 +47,25 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git rm tools/complete_siege_premium_score_penalty.py tools/preserve_practice_winner_rule.py .github/workflows/siege-premium-score-penalty.yml
+          git rm tools/complete_siege_premium_score_penalty.py tools/preserve_practice_winner_rule.py tools/align_siege_score_penalty_contracts.py .github/workflows/siege-premium-score-penalty.yml
           git add app/src/main/java/com/sonharf/game/WordSiegeCaptureEffect.kt
           git add app/src/main/java/com/sonharf/game/WordSiegeCaptureMotion.kt
           git add app/src/main/java/com/sonharf/game/WordSiegeGameUi.kt
           git add app/src/main/java/com/sonharf/game/WordSiegePracticeEngine.kt
           git add app/src/main/java/com/sonharf/game/WordSiegePracticeScreen.kt
           git add app/src/main/java/com/sonharf/game/WordSiegePracticeBoard.kt
+          git add app/src/main/java/com/sonharf/game/WordSiegePracticeGuidance.kt
           git add app/src/main/java/com/sonharf/game/WordSiegePanMatch.kt
           git add app/src/main/java/com/sonharf/game/WordSiegeFinalRules.kt
           git add app/src/test/java/com/sonharf/game/WordSiegeCaptureEffectTest.kt
           git add app/src/test/java/com/sonharf/game/WordSiegeFinalRulesTest.kt
           git add app/src/test/java/com/sonharf/game/WordSiegePremiumScorePenaltyContractTest.kt
+          git add app/src/test/java/com/sonharf/game/KelimeTahtiFinalBrandingContractTest.kt
+          git add app/src/test/java/com/sonharf/game/WordSiegeOnlineBoardVisualContractTest.kt
+          git add app/src/test/java/com/sonharf/game/WordSiegePanAreaContractTest.kt
+          git add app/src/test/java/com/sonharf/game/WordSiegePracticeUxAndBotRegressionTest.kt
+          git add app/src/test/java/com/sonharf/game/WordSiegeReadabilityContractTest.kt
+          git add app/src/test/java/com/sonharf/game/WordSiegeStableRegressionTest.kt
           git add supabase/migrations/20260923131500_word_siege_capture_loss_penalty_v8.sql
           git diff --cached --check
           git commit -m "Polish siege HUD and apply capture loss penalty"
