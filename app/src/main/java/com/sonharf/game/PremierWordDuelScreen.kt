@@ -27,14 +27,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.sonharf.game.data.*
@@ -555,6 +559,7 @@ fun PremierWordDuelScreen() {
                     meId = backend.currentUserId(),
                     busy = busy,
                     notice = notice,
+                    playerName = me?.displayName,
                     onRematch = {
                         if (busy) return@PremierResult
                         scope.launch {
@@ -952,8 +957,31 @@ private fun PremierArena(
     }
     val mascotUrgency = if (myTurn && turnSeconds in 1..5) (6 - turnSeconds) / 5f else 0f
     val mascotMomentum = (myScore - rivalScore) / maxOf(30, myScore + rivalScore).toFloat()
+    // Moments the companion may respond to; it decides itself whether to speak.
+    val mascotSignal = when {
+        moveFeedback?.accepted == true -> WordSiegeMascotSignal(
+            "ok:${room.id}:${room.validWordCount}",
+            if (latestMoveScore >= 20) WordSiegeMascotEvent.BIG_PRAISE else WordSiegeMascotEvent.PRAISE,
+        )
+        moveFeedback?.accepted == false -> WordSiegeMascotSignal("no:${room.id}:${words.size}:${moveFeedback.message}", WordSiegeMascotEvent.COMFORT)
+        myTurn && turnSeconds in 1..5 -> WordSiegeMascotSignal("time:${room.id}:${room.roundNo}:${words.size}", WordSiegeMascotEvent.CRITICAL)
+        latestMove != null && latestMove.playerId != meId && latestMoveScore >= 20 ->
+            WordSiegeMascotSignal("rival:${latestMove.id}", WordSiegeMascotEvent.RIVAL_STRONG)
+        rivalScore - myScore >= 25 -> WordSiegeMascotSignal("behind:${room.id}:${room.roundNo}", WordSiegeMascotEvent.BEHIND)
+        myScore - rivalScore >= 30 -> WordSiegeMascotSignal("ahead:${room.id}:${room.roundNo}", WordSiegeMascotEvent.AHEAD)
+        else -> null
+    }
+    // The mascot's home perch is the slot beside the target card; it can fly across the arena.
+    var arenaOrigin by remember { mutableStateOf(Offset.Zero) }
+    var arenaSize by remember { mutableStateOf(IntSize.Zero) }
+    var mascotSlotCenter by remember { mutableStateOf<Offset?>(null) }
 
-    BoxWithConstraints(Modifier.fillMaxSize()) {
+    BoxWithConstraints(
+        Modifier.fillMaxSize().onGloballyPositioned {
+            arenaOrigin = it.positionInRoot()
+            arenaSize = it.size
+        }
+    ) {
         val veryCompact = maxHeight < 610.dp
         val compact = maxHeight < 700.dp
         val tall = maxHeight > 820.dp
@@ -992,23 +1020,11 @@ private fun PremierArena(
                     contentAlignment = Alignment.Center,
                 ) {
                     PremierTargetCard(language, required, room.gameMode, room.roundNo, targetSize)
-                    WordSiegeMascot(
-                        moveId = latestMove?.id,
-                        lastMoveMine = latestMove?.playerId == meId,
-                        moveScore = latestMoveScore,
-                        capturedCells = 0,
-                        opponentCaptured = 0,
-                        moveCell = null,
-                        pendingCells = emptyList(),
-                        playerTurn = myTurn,
-                        requestedEmotion = mascotEmotion,
-                        modifier = Modifier.align(Alignment.CenterEnd).size(mascotSize),
-                        urgency = mascotUrgency,
-                        momentum = mascotMomentum,
-                        // Watch the keyboard on our turn, the rival's card on theirs.
-                        idleGazeX = if (myTurn) -.2f else .35f,
-                        idleGazeY = if (myTurn) .75f else -.85f,
-                        typingKey = input.length,
+                    Box(
+                        Modifier.align(Alignment.CenterEnd).size(mascotSize).onGloballyPositioned { slot ->
+                            val topLeft = slot.positionInRoot()
+                            mascotSlotCenter = Offset(topLeft.x + slot.size.width / 2f, topLeft.y + slot.size.height / 2f)
+                        }
                     )
                 }
                 Spacer(Modifier.height(primaryGap))
@@ -1084,6 +1100,35 @@ private fun PremierArena(
             )
             PremierKeyboard(language, input, enabled = myTurn && !busy, keyHeight = keyHeight, onInput = onInput, onSubmit = onSubmit)
         }
+
+        val slotCenter = mascotSlotCenter
+        val mascotAnchors = if (slotCenter == null || arenaSize.width == 0 || arenaSize.height == 0) {
+            emptyList()
+        } else {
+            val home = Offset(
+                (slotCenter.x - arenaOrigin.x) / arenaSize.width,
+                (slotCenter.y - arenaOrigin.y) / arenaSize.height,
+            )
+            listOf(home, Offset(1f - home.x, home.y))
+        }
+        WordSiegeMascotCompanion(
+            anchors = mascotAnchors,
+            mascotSize = mascotSize,
+            moveId = latestMove?.id,
+            lastMoveMine = latestMove?.playerId == meId,
+            playerTurn = myTurn,
+            modifier = Modifier.matchParentSize(),
+            moveScore = latestMoveScore,
+            requestedEmotion = mascotEmotion,
+            urgency = mascotUrgency,
+            momentum = mascotMomentum,
+            // Watch the keyboard on our turn, the rival's card on theirs.
+            idleGazeX = if (myTurn) -.2f else .35f,
+            idleGazeY = if (myTurn) .75f else -.85f,
+            typingKey = input.length,
+            signal = mascotSignal,
+            playerName = me?.displayName,
+        )
 
         if (myTurn && room.validWordCount > 0) {
             PurchasedVictoryVfx(
@@ -1835,7 +1880,7 @@ private fun PremierChatSheet(
 }
 
 @Composable
-private fun PremierResult(language: String, room: GameRoomDto, meId: String?, busy: Boolean, notice: String, onRematch: () -> Unit, onHome: () -> Unit) {
+private fun PremierResult(language: String, room: GameRoomDto, meId: String?, busy: Boolean, notice: String, onRematch: () -> Unit, onHome: () -> Unit, playerName: String? = null) {
     val amHost = meId == room.hostId
     val myScore = if (amHost) room.hostScore else room.guestScore
     val rivalScore = if (amHost) room.guestScore else room.hostScore
@@ -1843,6 +1888,12 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
         room.isBot -> room.winnerId == meId && !room.winnerIsBot
         else -> room.winnerId == meId
     }
+    val mascotOutcome = when {
+        won -> WordSiegeMascotOutcome.WIN
+        room.winnerId == null && !room.winnerIsBot -> WordSiegeMascotOutcome.DRAW
+        else -> WordSiegeMascotOutcome.LOSS
+    }
+    Box(Modifier.fillMaxSize()) {
     Column(
         Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(22.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -1878,6 +1929,21 @@ private fun PremierResult(language: String, room: GameRoomDto, meId: String?, bu
         OutlinedButton(onClick = onHome, modifier = Modifier.fillMaxWidth().height(52.dp), shape = RoundedCornerShape(17.dp), border = BorderStroke(1.dp, PremierUi.Border)) {
             Text(pt(language, "ANA MENÜ", "HOME"), color = PremierUi.Muted, fontWeight = FontWeight.Black)
         }
+    }
+    // The mascot flies in to celebrate a win (or to comfort after a loss), then perches above.
+    WordSiegeMascotCompanion(
+        anchors = listOf(Offset(.84f, .14f), Offset(.16f, .14f)),
+        mascotSize = 84.dp,
+        moveId = null,
+        lastMoveMine = false,
+        playerTurn = false,
+        modifier = Modifier.matchParentSize().statusBarsPadding(),
+        outcome = mascotOutcome,
+        playerName = playerName,
+        greet = false,
+        stageY = .2f,
+        celebrationScale = 1.9f,
+    )
     }
 }
 

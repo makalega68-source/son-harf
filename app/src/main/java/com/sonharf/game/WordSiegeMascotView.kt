@@ -36,6 +36,11 @@ internal enum class WordSiegeMascotEmotion {
     PROUD, SPEAKING, TEARY, BOWED, JUMP,
 }
 
+/** Whole-body moves the companion brain can ask for; each one is rare and short. */
+internal enum class WordSiegeMascotAction {
+    HOP, TWIRL, FLIP, LOOK_AROUND, NOD, SPARKLE, CHEER, LAND,
+}
+
 /** Local event-driven reaction selection; deterministic per move, with no network or model cost. */
 internal object WordSiegeMascotBehavior {
     fun choose(moveId: Long, mine: Boolean, score: Int, captured: Int, stolen: Int): WordSiegeMascotEmotion {
@@ -142,6 +147,35 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
     }
 
+    // Translucent glowing wings, only visible while flying.
+    private val wingPath = Path().apply {
+        moveTo(0f, 0f)
+        cubicTo(110f, -230f, 330f, -270f, 430f, -160f)
+        cubicTo(370f, -100f, 310f, -50f, 240f, -26f)
+        cubicTo(310f, 6f, 270f, 72f, 175f, 62f)
+        cubicTo(110f, 56f, 40f, 40f, 0f, 0f)
+        close()
+    }
+    private val wingFeatherPath = Path().apply {
+        moveTo(30f, -10f)
+        quadTo(200f, -150f, 380f, -150f)
+        moveTo(40f, 5f)
+        quadTo(190f, -60f, 250f, -30f)
+    }
+    private val wingPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        shader = android.graphics.LinearGradient(
+            0f, 0f, 430f, -160f,
+            intArrayOf(0xE6A8F4FF.toInt(), 0xB39A7CFF.toInt(), 0x66FFFFFF),
+            floatArrayOf(0f, .6f, 1f), Shader.TileMode.CLAMP,
+        )
+    }
+    private val wingLinePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeWidth = 7f
+        strokeCap = Paint.Cap.ROUND
+        color = 0xCCFFFFFF.toInt()
+    }
+
     // Reused drawing scratch objects: nothing is allocated per frame.
     private val path = Path()
     private val mouthPath = Path()
@@ -176,6 +210,20 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private var motionKind = WordSiegeMascotEmotion.CALM
     private var motionStartedAt = 0L
     private var motionUntil = 0L
+    private var actionKind: WordSiegeMascotAction? = null
+    private var actionKey = 0L
+    private var actionStartedAt = 0L
+    private var actionUntil = 0L
+    private var flying = false
+    private var flightDirection = 0f
+    private var speaking = false
+    private var watching = false
+    private var wing = 0f
+    private var wingVelocity = 0f
+    private var nextTwinkleAt = SystemClock.uptimeMillis() + 6_000L
+    private var twinkleStartedAt = 0L
+    private val twinkleX = FloatArray(3)
+    private val twinkleY = FloatArray(3)
     private var heartsStartedAt = 0L
     private var sparklesStartedAt = 0L
     private var reactionCell: Int? = null
@@ -228,6 +276,61 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         pendingCount = pendingCells.size
         pendingCell = pendingCells.lastOrNull()
         this.playerTurn = playerTurn
+        invalidate()
+    }
+
+    /**
+     * Requests from the companion brain. [actionKey] changes each time a new [action] should play;
+     * [flying] shows the wings, [speaking] animates the mouth while a speech bubble is visible and
+     * [watching] makes the mascot calm and attentive instead of fidgeting.
+     */
+    fun updateCompanion(
+        actionKey: Long, action: WordSiegeMascotAction?, flying: Boolean, flightDirection: Float,
+        speaking: Boolean, watching: Boolean,
+    ) {
+        val now = SystemClock.uptimeMillis()
+        if (actionKey != this.actionKey) {
+            this.actionKey = actionKey
+            if (action != null) perform(action, now)
+        }
+        if (flying != this.flying || speaking != this.speaking) markActive(now)
+        this.flying = flying
+        this.flightDirection = flightDirection.coerceIn(-1f, 1f)
+        this.speaking = speaking
+        this.watching = watching
+    }
+
+    private fun perform(action: WordSiegeMascotAction, now: Long) {
+        val duration = when (action) {
+            WordSiegeMascotAction.HOP -> 720L
+            WordSiegeMascotAction.TWIRL -> 1_050L
+            WordSiegeMascotAction.FLIP -> 2_200L
+            WordSiegeMascotAction.LOOK_AROUND -> 2_100L
+            WordSiegeMascotAction.NOD -> 800L
+            WordSiegeMascotAction.SPARKLE -> 1_300L
+            WordSiegeMascotAction.CHEER -> 1_300L
+            WordSiegeMascotAction.LAND -> 460L
+        }
+        actionKind = action
+        actionStartedAt = now
+        actionUntil = now + duration
+        // The face follows the move unless a stronger game reaction is already showing.
+        val face = when (action) {
+            WordSiegeMascotAction.HOP, WordSiegeMascotAction.TWIRL -> WordSiegeMascotEmotion.HAPPY
+            WordSiegeMascotAction.FLIP -> WordSiegeMascotEmotion.LAUGH
+            WordSiegeMascotAction.SPARKLE -> WordSiegeMascotEmotion.PROUD
+            WordSiegeMascotAction.CHEER -> WordSiegeMascotEmotion.EXCITED
+            else -> null
+        }
+        if (face != null && now >= reactionUntil) {
+            reaction = face
+            reactionStartedAt = now
+            reactionUntil = now + duration
+        }
+        if (action == WordSiegeMascotAction.TWIRL || action == WordSiegeMascotAction.SPARKLE ||
+            action == WordSiegeMascotAction.CHEER || action == WordSiegeMascotAction.FLIP
+        ) sparklesStartedAt = now
+        markActive(now)
         invalidate()
     }
 
@@ -339,7 +442,22 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val focusCell = pendingCell ?: reactionCell?.takeIf { now < reactionUntil }
         var targetX: Float
         var targetY: Float
+        val lookAround = actionKind == WordSiegeMascotAction.LOOK_AROUND && now < actionUntil
         when {
+            flying -> {
+                targetX = flightDirection
+                targetY = -.15f
+            }
+            lookAround -> {
+                val t = (now - actionStartedAt).toFloat() / (actionUntil - actionStartedAt)
+                targetX = when {
+                    t < .3f -> -.95f
+                    t < .38f -> 0f
+                    t < .7f -> .95f
+                    else -> 0f
+                }
+                targetY = if (t < .7f) -.2f else .15f
+            }
             focusCell != null -> {
                 targetX = ((focusCell % WordSiegeBoardSpec.Size - WordSiegeBoardSpec.CenterColumn) / 7f).coerceIn(-1f, 1f)
                 targetY = ((focusCell / WordSiegeBoardSpec.Size - WordSiegeBoardSpec.CenterRow) / 7f).coerceIn(-1f, 1f)
@@ -356,20 +474,26 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             }
             else -> {
                 if (now >= nextSaccadeAt) {
-                    val bored = idleMillis > 8_000L
+                    val bored = idleMillis > 8_000L && !watching
                     val spread = when {
                         urgency > .3f -> .55f
+                        watching -> .16f
                         bored -> .75f
                         else -> .38f
                     }
-                    if (random.nextFloat() < .22f) {
+                    if (random.nextFloat() < if (watching) .1f else .22f) {
                         saccadeX = 0f
                         saccadeY = 0f
                     } else {
                         saccadeX = (idleGazeX + (random.nextFloat() * 2f - 1f) * spread).coerceIn(-1f, 1f)
                         saccadeY = (idleGazeY + (random.nextFloat() * 2f - 1f) * spread * .6f).coerceIn(-1f, 1f)
                     }
-                    val interval = if (urgency > .3f) 350L + random.nextLong(450L) else 900L + random.nextLong(2_300L)
+                    val interval = when {
+                        urgency > .3f -> 350L + random.nextLong(450L)
+                        // Watching the game: long steady looks, few eye jumps.
+                        watching -> 2_400L + random.nextLong(3_200L)
+                        else -> 900L + random.nextLong(2_300L)
+                    }
                     nextSaccadeAt = now + interval
                     // Large eye jumps are often accompanied by a blink.
                     if (blinkStartedAt < 0L && random.nextFloat() < .18f) nextBlinkAt = now + 20L
@@ -429,12 +553,32 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         var dy = -breath * 4f * breathDepth + bow * 34f
         var sx = 1f - breath * .006f * breathDepth + poseValue[P_PUFF] + bow * .02f
         var sy = 1f + breath * .013f * breathDepth + poseValue[P_PUFF] - bow * .045f
-        var rotation = poseValue[P_TILT] + gazeX * 2.2f + sin(now / 2_300f) * 1.1f
+        val sway = if (watching) .35f else 1.1f
+        var rotation = poseValue[P_TILT] + gazeX * (if (lookAround) 4.5f else 2.2f) + sin(now / 2_300f) * sway
+        var spin = 0f
+
+        // Wings unfold with a slightly bouncy spring and fold away after landing.
+        val wingK = 110f
+        wingVelocity += (wingK * ((if (flying) 1f else 0f) - wing) - 2f * sqrt(wingK) * .7f * wingVelocity) * dt
+        wing = (wing + wingVelocity * dt).coerceIn(0f, 1.15f)
+        if (wing > .01f) {
+            rotation += flightDirection * 13f * min(1f, wing)
+            dy += sin(now / 105f) * 12f * min(1f, wing)
+            // The body draws in a little while airborne so the wings fit inside the view.
+            sx *= 1f - .19f * min(1f, wing)
+            sy *= 1f - .13f * min(1f, wing)
+        }
 
         if (now < motionUntil) {
             val motionT = ((now - motionStartedAt).toFloat() / (motionUntil - motionStartedAt)).coerceIn(0f, 1f)
             val m = bodyMotion(motionKind, motionT)
-            dx += m[0]; dy += m[1]; sx *= m[2]; sy *= m[3]; rotation += m[4]
+            dx += m[0]; dy += m[1]; sx *= m[2]; sy *= m[3]; rotation += m[4]; spin += m[5]
+        }
+        val activeAction = actionKind
+        if (activeAction != null && now < actionUntil) {
+            val actionT = ((now - actionStartedAt).toFloat() / (actionUntil - actionStartedAt)).coerceIn(0f, 1f)
+            val m = actionMotion(activeAction, actionT)
+            dx += m[0]; dy += m[1]; sx *= m[2]; sy *= m[3]; rotation += m[4]; spin += m[5]
         }
         if (mood == WordSiegeMascotEmotion.STRESSED || urgency > .3f) {
             dx += sin(now / 26f) * 1.8f * max(urgency, .4f)
@@ -449,9 +593,12 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.translate(dx, dy)
         canvas.rotate(rotation, ORB_CX, ORB_BOTTOM)
         canvas.scale(sx, sy, ORB_CX, ORB_BOTTOM)
+        if (spin != 0f) canvas.rotate(spin, ORB_CX, ORB_CY)
 
+        if (wing > .01f) drawWings(canvas, now)
         drawLayer(canvas, "orb_face_base")
-        val glow = if (mood == WordSiegeMascotEmotion.PROUD || mood == WordSiegeMascotEmotion.EXCITED) 45f else 0f
+        val sparkling = actionKind == WordSiegeMascotAction.SPARKLE && now < actionUntil
+        val glow = if (mood == WordSiegeMascotEmotion.PROUD || mood == WordSiegeMascotEmotion.EXCITED || sparkling) 45f else 0f
         edgePaint.alpha = (180f + 25f * sin(now / 950f) + glow).toInt().coerceIn(0, 255)
         ovalRect.set(ORB_CX - ORB_RX, ORB_CY - ORB_RY, ORB_CX + ORB_RX, ORB_CY + ORB_RY)
         canvas.drawOval(ovalRect, edgePaint)
@@ -493,12 +640,20 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         drawLayer(canvas, "cheek_left", 0f, -lower * 10f)
         drawLayer(canvas, "cheek_right", 0f, -lower * 10f)
 
-        drawMouth(canvas, poseValue[P_SMILE], poseValue[P_OPEN].coerceIn(0f, 1f), poseValue[P_WIDTH])
+        // Talking: irregular syllables layered on the current expression.
+        val mouthOpen = if (speaking) {
+            max(.14f, .16f + .46f * abs(sin(now / 88f) * sin(now / 231f + 1.3f)))
+        } else {
+            poseValue[P_OPEN].coerceIn(0f, 1f)
+        }
+        val mouthWidth = if (speaking) min(poseValue[P_WIDTH], 1.08f) else poseValue[P_WIDTH]
+        drawMouth(canvas, poseValue[P_SMILE], mouthOpen, mouthWidth)
         if (mood == WordSiegeMascotEmotion.TEARY) drawTears(canvas, now)
         canvas.restore()
 
         if (mood == WordSiegeMascotEmotion.STRESSED || urgency > .45f) drawSweat(canvas, now)
         drawSparkles(canvas, now)
+        drawTwinkles(canvas, now)
         drawHearts(canvas, now)
         canvas.restore()
 
@@ -541,11 +696,15 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         }
     }
 
-    private val motion = FloatArray(5)
+    private val motion = FloatArray(6)
 
-    /** Returns dx, dy, scaleX, scaleY, rotation for a one-shot reaction at normalized time [t]. */
+    private fun resetMotion() {
+        motion[0] = 0f; motion[1] = 0f; motion[2] = 1f; motion[3] = 1f; motion[4] = 0f; motion[5] = 0f
+    }
+
+    /** Returns dx, dy, scaleX, scaleY, rotation, spin for a one-shot reaction at normalized time [t]. */
     private fun bodyMotion(emotion: WordSiegeMascotEmotion, t: Float): FloatArray {
-        motion[0] = 0f; motion[1] = 0f; motion[2] = 1f; motion[3] = 1f; motion[4] = 0f
+        resetMotion()
         when (emotion) {
             WordSiegeMascotEmotion.JUMP -> jump(t, height = 112f, crouch = .15f, spin = 7f)
             WordSiegeMascotEmotion.HAPPY, WordSiegeMascotEmotion.EXCITED -> {
@@ -582,6 +741,80 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
                 motion[3] = 1f - .03f * (1f - t)
             }
             else -> Unit
+        }
+        return motion
+    }
+
+    /** Body motion for a companion action, in the same format as [bodyMotion]. */
+    private fun actionMotion(action: WordSiegeMascotAction, t: Float): FloatArray {
+        resetMotion()
+        val pi = PI.toFloat()
+        when (action) {
+            WordSiegeMascotAction.HOP -> jump(t, height = 58f, crouch = .09f, spin = 0f)
+            WordSiegeMascotAction.CHEER -> {
+                jump(t, height = 96f, crouch = .14f, spin = 0f)
+                motion[4] += 7f * sin(t * 4f * pi) * (1f - t)
+            }
+            WordSiegeMascotAction.TWIRL -> {
+                // A playful pirouette around its own centre with a little lift and a landing squash.
+                val e = easeInOut(t)
+                motion[5] = 360f * e
+                motion[1] = -44f * sin(t * pi)
+                val land = if (t > .82f) sin((t - .82f) / .18f * pi) else 0f
+                motion[2] = 1f + .07f * land
+                motion[3] = 1f - .08f * land
+            }
+            WordSiegeMascotAction.FLIP -> {
+                // Hops up, turns upside down, wiggles there giggling, then rolls back upright.
+                when {
+                    t < .1f -> {
+                        val e = easeOut(t / .1f)
+                        motion[1] = 16f * e
+                        motion[3] = 1f - .1f * e
+                        motion[2] = 1f + .07f * e
+                    }
+                    t < .3f -> {
+                        val u = (t - .1f) / .2f
+                        motion[5] = 180f * easeInOut(u)
+                        motion[1] = -70f * easeOut(u)
+                    }
+                    t < .72f -> {
+                        val u = (t - .3f) / .42f
+                        motion[5] = 180f + 9f * sin(u * 5f * pi) * (1f - u * .5f)
+                        motion[1] = -70f + 8f * sin(u * 3f * pi)
+                    }
+                    t < .9f -> {
+                        val u = (t - .72f) / .18f
+                        motion[5] = 180f + 180f * easeInOut(u)
+                        motion[1] = -70f * (1f - easeIn(u))
+                    }
+                    else -> {
+                        val e = sin((t - .9f) / .1f * pi)
+                        motion[5] = 360f
+                        motion[1] = 10f * e
+                        motion[2] = 1f + .07f * e
+                        motion[3] = 1f - .09f * e
+                    }
+                }
+            }
+            WordSiegeMascotAction.NOD -> {
+                val dip = abs(sin(t * 2f * pi))
+                motion[1] = 12f * dip
+                motion[3] = 1f - .025f * dip
+            }
+            WordSiegeMascotAction.SPARKLE -> {
+                val puff = sin(t * pi)
+                motion[2] = 1f + .03f * puff
+                motion[3] = 1f + .04f * puff
+                motion[1] = -10f * puff
+            }
+            WordSiegeMascotAction.LAND -> {
+                val e = sin(t * pi) * (1f - t * .3f)
+                motion[1] = 12f * e
+                motion[2] = 1f + .09f * e
+                motion[3] = 1f - .11f * e
+            }
+            WordSiegeMascotAction.LOOK_AROUND -> Unit
         }
         return motion
     }
@@ -735,16 +968,28 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     }
 
     private fun drawTears(canvas: Canvas, now: Long) {
-        val t = ((now - motionStartedAt) / WordSiegeMascotBehavior.durationMillis(WordSiegeMascotEmotion.TEARY).toFloat()).coerceIn(0f, 1f)
-        // The drop swells on the lid, then runs down the cheek and fades.
-        val grow = easeOut(min(1f, t / .3f))
-        val fall = easeIn(max(0f, t - .3f) / .7f)
-        detailPaint.color = 0xFF99E9FF.toInt()
-        detailPaint.alpha = (215f * (1f - max(0f, t - .85f) / .15f)).toInt().coerceIn(0, 255)
-        val r = 11f + 11f * grow
-        drawDrop(canvas, LEFT_EYE_X - 62f - fall * 14f, EYE_Y + 96f + fall * 170f, r)
-        drawDrop(canvas, RIGHT_EYE_X + 58f + fall * 14f, EYE_Y + 96f + fall * 170f, r)
+        // Drops keep coming while the mascot cries; the two eyes run out of phase.
+        val age = now - motionStartedAt
+        drawTear(canvas, ((age % TEAR_CYCLE) / TEAR_CYCLE.toFloat()), LEFT_EYE_X - 62f, -1f)
+        drawTear(canvas, (((age + TEAR_CYCLE * 45 / 100) % TEAR_CYCLE) / TEAR_CYCLE.toFloat()), RIGHT_EYE_X + 58f, 1f)
         detailPaint.alpha = 255
+    }
+
+    private fun drawTear(canvas: Canvas, t: Float, x: Float, side: Float) {
+        // The drop swells on the lid, then runs down the cheek and fades.
+        val grow = easeOut(min(1f, t / .32f))
+        val fall = easeIn(max(0f, t - .32f) / .68f)
+        val alpha = (215f * (1f - max(0f, t - .82f) / .18f)).toInt().coerceIn(0, 255)
+        detailPaint.color = 0xFF99E9FF.toInt()
+        detailPaint.alpha = alpha
+        val r = 10f + 11f * grow
+        val tx = x + side * fall * 16f
+        val ty = EYE_Y + 96f + fall * 175f
+        drawDrop(canvas, tx, ty, r)
+        // A tiny highlight makes the drop read as water.
+        detailPaint.color = 0xFFFFFFFF.toInt()
+        detailPaint.alpha = (alpha * .8f).toInt()
+        canvas.drawCircle(tx - r * .3f, ty - r * .1f, r * .28f, detailPaint)
     }
 
     private fun drawDrop(canvas: Canvas, x: Float, y: Float, r: Float) {
@@ -789,6 +1034,61 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             canvas.drawPath(path, detailPaint)
         }
         detailPaint.alpha = 255
+    }
+
+    private fun drawWings(canvas: Canvas, now: Long) {
+        // Fast flaps in flight; the wings spread as they unfold.
+        val open = min(1f, wing)
+        val flap = (sin(now / 52f) * 32f + 8f) * open
+        val alpha = (open * 255f).toInt().coerceIn(0, 255)
+        wingPaint.alpha = alpha
+        wingLinePaint.alpha = (alpha * .7f).toInt()
+        var side = -1
+        while (side <= 1) {
+            canvas.save()
+            canvas.translate(ORB_CX + side * 395f, 520f)
+            canvas.scale(side * (.48f + .14f * open), .48f + .14f * open)
+            canvas.rotate(-flap)
+            canvas.drawPath(wingPath, wingPaint)
+            canvas.drawPath(wingFeatherPath, wingLinePaint)
+            canvas.restore()
+            side += 2
+        }
+    }
+
+    private fun drawTwinkles(canvas: Canvas, now: Long) {
+        // Now and then a few tiny glints drift around the orb, like it is made of light.
+        if (now >= nextTwinkleAt) {
+            twinkleStartedAt = now
+            nextTwinkleAt = now + 7_000L + random.nextLong(9_000L)
+            for (i in twinkleX.indices) {
+                val angle = random.nextFloat() * 2f * PI.toFloat()
+                val radius = 430f + random.nextFloat() * 90f
+                twinkleX[i] = ORB_CX + kotlin.math.cos(angle) * radius
+                twinkleY[i] = ORB_CY + sin(angle) * radius
+            }
+        }
+        val age = now - twinkleStartedAt
+        if (twinkleStartedAt == 0L || age !in 0L..1_100L) return
+        for (i in twinkleX.indices) {
+            val p = ((age - i * 180L) / 700f)
+            if (p <= 0f || p >= 1f) continue
+            drawStar(canvas, twinkleX[i], twinkleY[i] - p * 24f, 20f * sin(p * PI.toFloat()), 0xFFFFF4C2.toInt(), (sin(p * PI.toFloat()) * 230f).toInt())
+        }
+        detailPaint.alpha = 255
+    }
+
+    private fun drawStar(canvas: Canvas, x: Float, y: Float, r: Float, color: Int, alpha: Int) {
+        detailPaint.color = color
+        detailPaint.alpha = alpha.coerceIn(0, 255)
+        path.rewind()
+        path.moveTo(x, y - r)
+        path.quadTo(x, y, x + r, y)
+        path.quadTo(x, y, x, y + r)
+        path.quadTo(x, y, x - r, y)
+        path.quadTo(x, y, x, y - r)
+        path.close()
+        canvas.drawPath(path, detailPaint)
     }
 
     private fun drawHearts(canvas: Canvas, now: Long) {
@@ -854,6 +1154,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         const val MOUTH_X = 708f
         const val MOUTH_Y = 790f
         const val DROWSY_AFTER = 22_000L
+        const val TEAR_CYCLE = 1_700L
         val SPARKLE_X = floatArrayOf(250f, 1_080f, 330f, 1_010f)
         val SPARKLE_Y = floatArrayOf(330f, 360f, 900f, 880f)
 
@@ -911,6 +1212,12 @@ internal fun WordSiegeMascot(
     idleGazeX: Float = 0f,
     idleGazeY: Float = .2f,
     typingKey: Int = 0,
+    actionKey: Long = 0L,
+    action: WordSiegeMascotAction? = null,
+    flying: Boolean = false,
+    flightDirection: Float = 0f,
+    speaking: Boolean = false,
+    watching: Boolean = false,
     onTap: () -> Unit = {},
 ) {
     AndroidView(
@@ -918,6 +1225,7 @@ internal fun WordSiegeMascot(
         factory = { context -> WordSiegeMascotView(context).apply { isClickable = true } },
         update = {
             it.updateContext(urgency, momentum, idleGazeX, idleGazeY, typingKey)
+            it.updateCompanion(actionKey, action, flying, flightDirection, speaking, watching)
             it.updateGame(moveId, lastMoveMine, moveScore, capturedCells, opponentCaptured, moveCell, pendingCells, playerTurn, requestedEmotion)
             it.setOnClickListener { view ->
                 (view as WordSiegeMascotView).reactToTap()

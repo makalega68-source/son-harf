@@ -359,6 +359,29 @@ internal fun WordSiegePanMatch(
             viewportMode = boardViewportMode,
             onViewportModeChange = { boardViewportMode = it },
             modifier = Modifier.fillMaxSize(),
+            mascotSignal = lastMove?.let { move ->
+                val mineMove = move.playerId == me
+                when {
+                    mineMove && (move.totalScore >= 25 || move.capturedCells >= 3 || move.opponentCaptured > 0) ->
+                        WordSiegeMascotSignal("big:${move.id}", WordSiegeMascotEvent.BIG_PRAISE)
+                    mineMove -> WordSiegeMascotSignal("ok:${move.id}", WordSiegeMascotEvent.PRAISE)
+                    move.totalScore >= 25 || move.opponentCaptured > 0 ->
+                        WordSiegeMascotSignal("rival:${move.id}", WordSiegeMascotEvent.RIVAL_STRONG)
+                    rivalTargetScore - myTargetScore >= 40 ->
+                        WordSiegeMascotSignal("behind:${move.id}", WordSiegeMascotEvent.BEHIND)
+                    else -> null
+                }
+            },
+            mascotOutcome = if (game.status == "finished") {
+                when (game.winnerId) {
+                    null -> WordSiegeMascotOutcome.DRAW
+                    me -> WordSiegeMascotOutcome.WIN
+                    else -> WordSiegeMascotOutcome.LOSS
+                }
+            } else {
+                null
+            },
+            playerName = mine?.displayName,
             onCell = onBoardCell,
             onChat = onChat,
         )
@@ -475,6 +498,9 @@ private fun PanSiegeBoard(
     viewportMode: WordSiegeBoardViewportMode,
     onViewportModeChange: (WordSiegeBoardViewportMode) -> Unit,
     modifier: Modifier = Modifier,
+    mascotSignal: WordSiegeMascotSignal? = null,
+    mascotOutcome: WordSiegeMascotOutcome? = null,
+    playerName: String? = null,
     onCell: (Int) -> Unit,
     onChat: () -> Unit,
 ) {
@@ -482,7 +508,6 @@ private fun PanSiegeBoard(
     val tilePx = with(density) { PanSiegeCellSize.toPx() }
     val boardPx = tilePx * WordSiegeBoardSpec.Size
     var viewport by remember(gameId) { mutableStateOf(IntSize.Zero) }
-    var mascotAtBottom by remember(gameId) { mutableStateOf(false) }
     var closePan by remember(gameId) { mutableStateOf(Offset.Zero) }
     var dragging by remember(gameId) { mutableStateOf(false) }
     var initialized by remember(gameId) { mutableStateOf(false) }
@@ -692,20 +717,23 @@ private fun PanSiegeBoard(
                 )
             }
 
-            WordSiegeMascot(
+            // Tapping the mascot sends it flying to another perch; the right corners stay free
+            // for the centre and chat buttons.
+            WordSiegeMascotCompanion(
+                anchors = WordSiegeBoardMascotPerches,
+                mascotSize = 94.dp,
                 moveId = lastMove?.id,
                 lastMoveMine = lastMoveMine,
+                playerTurn = playerTurn,
+                modifier = Modifier.matchParentSize().padding(3.dp),
                 moveScore = lastMove?.totalScore ?: 0,
                 capturedCells = lastMove?.capturedCells ?: 0,
                 opponentCaptured = lastMove?.opponentCaptured ?: 0,
                 moveCell = lastMove?.placedTiles?.firstOrNull()?.index,
                 pendingCells = placements.keys,
-                playerTurn = playerTurn,
-                modifier = Modifier
-                    .align(if (mascotAtBottom) Alignment.BottomStart else Alignment.TopStart)
-                    .padding(7.dp)
-                    .size(94.dp),
-                onTap = { mascotAtBottom = !mascotAtBottom },
+                signal = mascotSignal,
+                outcome = mascotOutcome,
+                playerName = playerName,
             )
 
             SmallFloatingActionButton(
@@ -1032,3 +1060,12 @@ private fun panSiegeLetterValue(letter: String): String = when (letter) {
     "J" -> "10"
     else -> "1"
 }
+
+/** Perches for the board mascot (fractions of the board viewport). */
+internal val WordSiegeBoardMascotPerches = listOf(
+    Offset(0f, 0f),
+    Offset(0f, .5f),
+    Offset(0f, 1f),
+    Offset(.5f, 1f),
+    Offset(1f, .5f),
+)

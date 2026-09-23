@@ -104,6 +104,15 @@ private fun WordSiegePracticeContent(
     var shuffleSeed by remember { mutableIntStateOf(0) }
     var boardViewportMode by remember { mutableStateOf(WordSiegeBoardViewportMode.FIT) }
     var actionVfxEvent by remember { mutableIntStateOf(0) }
+    // The result dialog waits a moment so the mascot's celebration on the board is seen first.
+    var showPracticeResult by remember { mutableStateOf(false) }
+    LaunchedEffect(state.status) {
+        showPracticeResult = false
+        if (state.status == "finished") {
+            delay(3_600L)
+            showPracticeResult = true
+        }
+    }
     var captureQueue by remember { mutableStateOf<List<WordSiegeCaptureBatch>>(emptyList()) }
     var pendingPlayerCapturePoints by remember { mutableIntStateOf(0) }
     var pendingBotCapturePoints by remember { mutableIntStateOf(0) }
@@ -507,6 +516,29 @@ private fun WordSiegePracticeContent(
                         resolvedIndices = lastMove?.placements?.keys ?: emptySet(),
                         captureEffect = captureEffect,
                         modifier = if (boardViewportMode == WordSiegeBoardViewportMode.CLOSE) Modifier.fillMaxSize() else Modifier.fillMaxWidth().aspectRatio(1f),
+                        mascotSignal = lastMove?.takeIf { actionVfxEvent > 0 }?.let { move ->
+                            val mineMove = state.currentOwner == 2
+                            when {
+                                mineMove && (move.wordScore >= 25 || move.capturedCells >= 3 || move.opponentCaptured > 0) ->
+                                    WordSiegeMascotSignal("big:$actionVfxEvent", WordSiegeMascotEvent.BIG_PRAISE)
+                                mineMove -> WordSiegeMascotSignal("ok:$actionVfxEvent", WordSiegeMascotEvent.PRAISE)
+                                move.wordScore >= 25 || move.opponentCaptured > 0 ->
+                                    WordSiegeMascotSignal("rival:$actionVfxEvent", WordSiegeMascotEvent.RIVAL_STRONG)
+                                botTargetScore - playerTargetScore >= 40 ->
+                                    WordSiegeMascotSignal("behind:$actionVfxEvent", WordSiegeMascotEvent.BEHIND)
+                                else -> null
+                            }
+                        },
+                        mascotOutcome = if (state.status == "finished") {
+                            when (state.winnerOwner) {
+                                1 -> WordSiegeMascotOutcome.WIN
+                                null -> WordSiegeMascotOutcome.DRAW
+                                else -> WordSiegeMascotOutcome.LOSS
+                            }
+                        } else {
+                            null
+                        },
+                        playerName = playerProfile?.displayName,
                         onViewportModeChange = { boardViewportMode = it },
                         onCell = { boardIndex ->
                             if (!canPlayerAct) return@WordSiegePracticeBoard
@@ -882,7 +914,7 @@ private fun WordSiegePracticeContent(
         )
     }
 
-    if (state.status == "finished") {
+    if (state.status == "finished" && showPracticeResult) {
         WordSiegePracticeResultDialog(
             winnerOwner = state.winnerOwner,
             opponentName = botProfile.name,

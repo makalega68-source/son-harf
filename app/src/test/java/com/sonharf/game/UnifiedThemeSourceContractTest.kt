@@ -39,7 +39,7 @@ class UnifiedThemeSourceContractTest {
         assertTrue(premier.contains("Color(0xFFDDF3FC)"))
         assertTrue(premier.contains("Color(0xFFCFEAF7)"))
         assertTrue(premier.contains("Brush.verticalGradient("))
-        assertTrue(premier.contains("WordSiegeMascot("))
+        assertTrue(premier.contains("WordSiegeMascotCompanion("))
         assertTrue(premier.contains("PremierKeyboard(language, input"))
         assertFalse(premier.contains("MageCatCompanion("))
         assertFalse(unified.contains("MonsterUi"))

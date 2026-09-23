@@ -79,6 +79,9 @@ internal fun WordSiegePracticeBoard(
     captureEffect: WordSiegeCaptureEffect? = null,
     language: String = SonHarfUiState.language,
     modifier: Modifier = Modifier,
+    mascotSignal: WordSiegeMascotSignal? = null,
+    mascotOutcome: WordSiegeMascotOutcome? = null,
+    playerName: String? = null,
     onViewportModeChange: (WordSiegeBoardViewportMode) -> Unit = {},
     onCell: (Int) -> Unit,
 ) {
@@ -86,7 +89,6 @@ internal fun WordSiegePracticeBoard(
     val tilePx = with(density) { PracticeSiegeCellSize.toPx() }
     val boardPx = tilePx * WordSiegeBoardSpec.Size
     var viewport by remember { mutableStateOf(IntSize.Zero) }
-    var mascotAtBottom by remember { mutableStateOf(false) }
     var closePan by remember { mutableStateOf(Offset.Zero) }
     var closeScale by remember { mutableFloatStateOf(WORD_SIEGE_PRACTICE_DOUBLE_TAP_SCALE) }
     var initialized by remember { mutableStateOf(false) }
@@ -260,20 +262,21 @@ internal fun WordSiegePracticeBoard(
                     anchorOriginInWindow = viewportOriginInWindow,
                 )
             }
-            WordSiegeMascot(
+            WordSiegeMascotCompanion(
+                anchors = WordSiegeBoardMascotPerches,
+                mascotSize = 94.dp,
                 moveId = moveEventKey?.toLong(),
                 lastMoveMine = lastMoveMine,
+                playerTurn = enabled,
+                modifier = Modifier.matchParentSize().padding(3.dp),
                 moveScore = moveScore,
                 capturedCells = capturedCells,
                 opponentCaptured = opponentCaptured,
                 moveCell = moveCell,
                 pendingCells = placements.keys,
-                playerTurn = enabled,
-                modifier = Modifier
-                    .align(if (mascotAtBottom) Alignment.BottomStart else Alignment.TopStart)
-                    .padding(7.dp)
-                    .size(94.dp),
-                onTap = { mascotAtBottom = !mascotAtBottom },
+                signal = mascotSignal,
+                outcome = mascotOutcome,
+                playerName = playerName,
             )
         }
     }

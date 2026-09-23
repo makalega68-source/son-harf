@@ -24,7 +24,7 @@ class PremierDuelUxRegressionTest {
         assertTrue(screen.contains("PremierBotAvatar(size = 70.dp"))
         assertFalse(screen.contains("MageCatCompanion("))
         assertFalse(screen.contains("SyntheticBotPortrait("))
-        assertTrue(screen.contains("WordSiegeMascot("))
+        assertTrue(screen.contains("WordSiegeMascotCompanion("))
         assertTrue(screen.contains("WordSiegeMascotEmotion.FOCUS"))
         assertTrue(screen.contains("PremierKeyboard(language, input"))
         assertTrue(screen.contains("PremierArenaSky.BackgroundTop"))
