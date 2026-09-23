@@ -695,6 +695,10 @@ private fun PanSiegeBoard(
             WordSiegeMascot(
                 moveId = lastMove?.id,
                 lastMoveMine = lastMoveMine,
+                moveScore = lastMove?.totalScore ?: 0,
+                capturedCells = lastMove?.capturedCells ?: 0,
+                opponentCaptured = lastMove?.opponentCaptured ?: 0,
+                moveCell = lastMove?.placedTiles?.firstOrNull()?.index,
                 pendingCells = placements.keys,
                 playerTurn = playerTurn,
                 modifier = Modifier

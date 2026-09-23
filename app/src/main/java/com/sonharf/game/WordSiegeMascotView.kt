@@ -53,25 +53,42 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
     private var targetX = 0f
     private var targetY = 0f
     private var pendingCount = 0
+    private var reactionCell: Int? = null
 
-    private enum class Reaction { CALM, FOCUS, HAPPY, SURPRISED, SAD }
+    private enum class Reaction { CALM, FOCUS, HAPPY, PROUD, SURPRISED, SAD }
 
-    fun updateGame(moveId: Long?, lastMoveMine: Boolean, pendingCells: Collection<Int>, playerTurn: Boolean) {
+    fun updateGame(
+        moveId: Long?, lastMoveMine: Boolean, moveScore: Int, capturedCells: Int,
+        opponentCaptured: Int, moveCell: Int?, pendingCells: Collection<Int>, playerTurn: Boolean,
+    ) {
         if (!hasInitialMove) {
             lastMoveId = moveId
             hasInitialMove = true
         } else if (moveId != null && moveId != lastMoveId) {
             lastMoveId = moveId
-            reaction = if (lastMoveMine) Reaction.HAPPY else Reaction.SURPRISED
+            reaction = when {
+                lastMoveMine && (moveScore >= 25 || capturedCells >= 3 || opponentCaptured > 0) -> Reaction.PROUD
+                lastMoveMine -> Reaction.HAPPY
+                opponentCaptured > 0 -> Reaction.SAD
+                else -> Reaction.SURPRISED
+            }
             val now = SystemClock.uptimeMillis()
-            reactionUntil = now + 1_350L
+            reactionUntil = now + if (reaction == Reaction.SAD) 1_700L else 1_350L
+            reactionCell = moveCell
             if (lastMoveMine) heartsStartedAt = now
         }
         pendingCount = pendingCells.size
         val cell = pendingCells.lastOrNull()
+            ?: reactionCell?.takeIf { reactionUntil > SystemClock.uptimeMillis() }
         targetX = if (cell != null) ((cell % WordSiegeBoardSpec.Size - WordSiegeBoardSpec.CenterColumn) / 7f).coerceIn(-1f, 1f) else 0f
         targetY = if (cell != null) ((cell / WordSiegeBoardSpec.Size - WordSiegeBoardSpec.CenterRow) / 7f).coerceIn(-1f, 1f) else .2f
         if (!playerTurn && cell == null && reactionUntil < SystemClock.uptimeMillis()) reaction = Reaction.CALM
+        invalidate()
+    }
+
+    fun reactToTap() {
+        reaction = Reaction.SURPRISED
+        reactionUntil = SystemClock.uptimeMillis() + 650L
         invalidate()
     }
 
@@ -82,6 +99,10 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         if (now - lastBlink > 2_600L + ((elapsed / 2_600L) % 3L) * 450L) lastBlink = now
         val blinkProgress = (now - lastBlink) / 210f
         val blink = if (blinkProgress in 0f..1f) sin(blinkProgress * PI).toFloat().coerceAtLeast(0f) else 0f
+        if (now >= reactionUntil && pendingCount == 0) {
+            targetX = 0f
+            targetY = .2f
+        }
         gazeX += (targetX - gazeX) * .14f
         gazeY += (targetY - gazeY) * .14f
         val mood = if (now < reactionUntil) reaction else if (pendingCount > 0) Reaction.FOCUS else Reaction.CALM
@@ -89,6 +110,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             Reaction.CALM -> 0f
             Reaction.FOCUS -> .18f
             Reaction.HAPPY -> .32f
+            Reaction.PROUD -> .23f
             Reaction.SURPRISED -> 0f
             Reaction.SAD -> .25f
         })
@@ -99,7 +121,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.translate(0f, sin(elapsed / 640f) * 3f)
         drawLayer(canvas, "orb_face_base")
         // A fine color-matched contour softens the dark silhouette without changing the orb.
-        edgePaint.alpha = (175 + 25 * sin(elapsed / 950f)).toInt().coerceIn(0, 255)
+        edgePaint.alpha = (175 + 25 * sin(elapsed / 950f) + if (mood == Reaction.PROUD) 35 else 0).toInt().coerceIn(0, 255)
         canvas.drawOval(RectF(258f, 231f, 1057f, 1052f), edgePaint)
         drawLayer(canvas, "eye_left")
         drawLayer(canvas, "eye_right")
@@ -111,11 +133,13 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
             Reaction.CALM -> 0f
             Reaction.FOCUS -> 9f
             Reaction.HAPPY -> -12f
+            Reaction.PROUD -> -16f
             Reaction.SURPRISED -> -25f
             Reaction.SAD -> 12f
         }
         val browRotation = when (mood) {
             Reaction.FOCUS -> -.13f
+            Reaction.PROUD -> .09f
             Reaction.SAD -> .15f
             else -> 0f
         }
@@ -123,6 +147,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         drawLayer(canvas, "brow_right", 0f, browY, 870f, 458f, -browRotation)
         val cheekStrength = when (mood) {
             Reaction.HAPPY -> 50
+            Reaction.PROUD -> 60
             Reaction.SURPRISED -> 28
             else -> 16
         }
@@ -134,6 +159,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         canvas.translate(708f, 800f)
         val mouthX = when (mood) {
             Reaction.HAPPY -> 1.18f
+            Reaction.PROUD -> 1.2f
             Reaction.SURPRISED -> .65f
             Reaction.SAD -> .82f
             else -> 1f
@@ -141,6 +167,7 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
         val mouthY = when (mood) {
             Reaction.FOCUS -> .65f
             Reaction.HAPPY -> 1.3f
+            Reaction.PROUD -> 1.16f
             Reaction.SURPRISED -> 1.2f
             Reaction.SAD -> .35f
             else -> 1f
@@ -217,6 +244,10 @@ internal class WordSiegeMascotView(context: Context) : View(context) {
 internal fun WordSiegeMascot(
     moveId: Long?,
     lastMoveMine: Boolean,
+    moveScore: Int = 0,
+    capturedCells: Int = 0,
+    opponentCaptured: Int = 0,
+    moveCell: Int? = null,
     pendingCells: Collection<Int>,
     playerTurn: Boolean,
     modifier: Modifier = Modifier.size(42.dp),
@@ -226,8 +257,11 @@ internal fun WordSiegeMascot(
         modifier = modifier,
         factory = { context -> WordSiegeMascotView(context).apply { isClickable = true } },
         update = {
-            it.updateGame(moveId, lastMoveMine, pendingCells, playerTurn)
-            it.setOnClickListener { onTap() }
+            it.updateGame(moveId, lastMoveMine, moveScore, capturedCells, opponentCaptured, moveCell, pendingCells, playerTurn)
+            it.setOnClickListener { view ->
+                (view as WordSiegeMascotView).reactToTap()
+                onTap()
+            }
         },
     )
 }
